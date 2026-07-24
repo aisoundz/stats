@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>STATS — The sports game that pays you to pay attention</title>
+<style>
+  :root{
+    --bg:#0a0e17; --bg2:#111726; --card:#161d2e; --card2:#1c2438;
+    --line:#26304a; --line2:#333f5e;
+    --ink:#eef2fb; --muted:#93a0bd; --dim:#5f6d8c;
+    --blue:#2f6bff; --blue2:#4d86ff; --teal:#19c3d6; --teal2:#28e0d0;
+    --red:#ff4d5e; --gold:#ffc54d; --green:#2ee6a6;
+    --shadow:0 18px 50px rgba(0,0,0,.55);
+    --r:18px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  body{min-height:100vh;display:flex;justify-content:center;
+    background:radial-gradient(1200px 700px at 50% -10%,#15213b 0%,var(--bg) 55%)}
+  .phone{width:100%;max-width:440px;min-height:100vh;position:relative;
+    background:linear-gradient(180deg,#0b1120,#0a0e17 40%);overflow:hidden;
+    display:flex;flex-direction:column}
+  .screen{flex:1;display:none;flex-direction:column;padding:20px 18px 96px;animation:fade .35s ease}
+  .screen.active{display:flex}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* header brand */
+  .brand{display:flex;align-items:center;gap:10px;justify-content:center;margin:6px 0 2px}
+  .logo{font-weight:900;letter-spacing:3px;font-size:30px;
+    background:linear-gradient(90deg,var(--teal2),var(--blue2));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .tag{color:var(--muted);font-size:12.5px;text-align:center;margin:2px 0 0;font-weight:500}
+  .pill{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.8px;
+    text-transform:uppercase;padding:5px 11px;border-radius:999px;
+    background:rgba(25,195,214,.13);color:var(--teal2);border:1px solid rgba(25,195,214,.3)}
+
+  h1{font-size:24px;margin:16px 0 6px;font-weight:850;line-height:1.15}
+  h2{font-size:17px;margin:0 0 4px;font-weight:800}
+  p.sub{color:var(--muted);font-size:13.5px;line-height:1.5;margin:0 0 8px}
+  .center{text-align:center}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    padding:16px;margin:10px 0;box-shadow:0 2px 0 rgba(0,0,0,.2)}
+  .card.tight{padding:13px}
+
+  .btn{display:block;width:100%;border:none;border-radius:14px;padding:16px;
+    font-size:16px;font-weight:800;color:#fff;cursor:pointer;margin-top:10px;
+    background:linear-gradient(90deg,var(--blue),var(--blue2));
+    box-shadow:0 10px 22px rgba(47,107,255,.32);transition:transform .12s,filter .12s}
+  .btn:active{transform:scale(.98)}
+  .btn.teal{background:linear-gradient(90deg,var(--teal),#12a7d8);box-shadow:0 10px 22px rgba(25,195,214,.28)}
+  .btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--ink);box-shadow:none}
+  .btn.gold{background:linear-gradient(90deg,#ffb020,var(--gold));color:#20160a;box-shadow:0 10px 22px rgba(255,197,77,.25)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.sm{padding:11px;font-size:14px;margin-top:0}
+
+  /* how it works steps */
+  .step{display:flex;gap:12px;align-items:flex-start;margin:12px 0}
+  .num{flex:0 0 30px;height:30px;border-radius:9px;display:grid;place-items:center;
+    font-weight:900;font-size:14px;color:#fff;background:linear-gradient(135deg,var(--blue),var(--teal))}
+  .step b{font-size:14px}.step div p{margin:2px 0 0;color:var(--muted);font-size:12.5px;line-height:1.45}
+
+  label.fld{display:block;font-size:12px;color:var(--muted);font-weight:700;margin:12px 0 6px;text-transform:uppercase;letter-spacing:.5px}
+  select,input{width:100%;background:var(--bg2);border:1px solid var(--line2);color:var(--ink);
+    border-radius:12px;padding:13px;font-size:15px;font-weight:600;appearance:none}
+  select:focus,input:focus{outline:none;border-color:var(--blue2)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .predrow{border-top:1px solid var(--line);padding:12px 0 4px}
+  .predrow:first-child{border-top:none}
+  .predlabel{font-size:13.5px;font-weight:700;margin-bottom:2px}
+  .predpts{font-size:11px;color:var(--teal2);font-weight:800}
+
+  /* option buttons */
+  .opts{display:flex;flex-direction:column;gap:9px;margin-top:10px}
+  .opt{background:var(--card2);border:1.5px solid var(--line2);border-radius:13px;
+    padding:14px 15px;font-size:14.5px;font-weight:650;color:var(--ink);text-align:left;
+    cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:.12s}
+  .opt:active{transform:scale(.99)}
+  .opt.sel{border-color:var(--blue2);background:rgba(47,107,255,.14)}
+  .opt.correct{border-color:var(--green);background:rgba(46,230,166,.14)}
+  .opt.wrong{border-color:var(--red);background:rgba(255,77,94,.12)}
+  .opt .mk{font-size:16px}
+
+  /* live game header */
+  .scorebar{display:flex;align-items:center;justify-content:space-between;
+    background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:8px}
+  .team{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1}
+  .team .nm{font-size:11px;color:var(--muted);font-weight:700}
+  .team .sc{font-size:26px;font-weight:900}
+  .qtag{font-size:11px;font-weight:800;color:var(--gold);background:rgba(255,197,77,.12);
+    padding:5px 10px;border-radius:999px;border:1px solid rgba(255,197,77,.3);white-space:nowrap}
+
+  .qmeta{display:flex;justify-content:space-between;align-items:center;margin:6px 2px}
+  .qmeta .qn{font-size:12px;color:var(--muted);font-weight:700}
+  .worth{font-size:12px;font-weight:800;color:var(--teal2)}
+
+  .timer{height:6px;border-radius:999px;background:var(--line);overflow:hidden;margin:10px 0 4px}
+  .timer > i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--blue2));width:100%;transition:width 1s linear}
+  .timer.low > i{background:linear-gradient(90deg,var(--red),#ff7a4d)}
+
+  .scoreself{position:sticky;top:0;z-index:5}
+  .youscore{display:flex;align-items:center;justify-content:space-between;
+    background:linear-gradient(90deg,rgba(47,107,255,.18),rgba(25,195,214,.12));
+    border:1px solid var(--line2);border-radius:13px;padding:10px 14px;margin-bottom:6px}
+  .youscore b{font-size:20px}.youscore span{font-size:11.5px;color:var(--muted);font-weight:700}
+
+  .reveal{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:10px;animation:fade .3s}
+  .reveal .r1{font-size:12px;font-weight:800;letter-spacing:.4px}
+  .reveal.good .r1{color:var(--green)}.reveal.bad .r1{color:var(--red)}
+  .reveal .r2{font-size:13.5px;color:var(--muted);margin-top:4px;line-height:1.45}
+
+  /* leaderboard */
+  .lb{display:flex;align-items:center;gap:12px;padding:12px 12px;border-radius:13px;
+    background:var(--card);border:1px solid var(--line);margin:8px 0}
+  .lb.me{border-color:var(--blue2);background:rgba(47,107,255,.12)}
+  .rank{flex:0 0 26px;text-align:center;font-weight:900;font-size:15px;color:var(--muted)}
+  .rank.g{color:var(--gold)}.rank.s{color:#cfd6e6}.rank.b{color:#e0955b}
+  .av{flex:0 0 38px;height:38px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:14px;color:#0a0e17}
+  .lbname{flex:1;font-weight:750;font-size:14.5px}
+  .lbname small{display:block;color:var(--dim);font-weight:600;font-size:11px}
+  .lbpts{font-weight:900;font-size:16px}
+
+  .toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);z-index:40;
+    background:#0d1424;border:1px solid var(--line2);color:var(--ink);padding:11px 16px;border-radius:12px;
+    font-size:13px;font-weight:700;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.3s;max-width:90%}
+  .toast.show{opacity:1;bottom:120px}
+
+  .foot{font-size:10.5px;color:var(--dim);text-align:center;line-height:1.5;margin-top:14px}
+  a.link{color:var(--teal2);text-decoration:none}
+
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+  .chip{font-size:11px;font-weight:700;color:var(--muted);background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:6px 11px}
+
+  /* host panel */
+  .hostwrap{background:repeating-linear-gradient(45deg,#0c1220,#0c1220 12px,#0e1526 12px,#0e1526 24px)}
+  .hq{border:1px solid var(--line2);border-radius:12px;padding:12px;margin:8px 0;background:var(--card)}
+  .hq b{font-size:13.5px}
+  .hq .ha{font-size:12px;color:var(--muted);margin-top:6px}
+  .status{display:inline-block;font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.5px}
+  .status.live{background:rgba(46,230,166,.15);color:var(--green)}
+  .status.queued{background:rgba(255,197,77,.14);color:var(--gold)}
+
+  .statgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:6px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .stat .v{font-size:22px;font-weight:900}
+  .stat .k{font-size:11px;color:var(--muted);font-weight:700;margin-top:2px}
+
+  .bignum{font-size:52px;font-weight:900;line-height:1;
+    background:linear-gradient(90deg,var(--teal2),var(--blue2));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+  .segbtns{display:flex;gap:8px;margin:4px 0 2px}
+  .seg{flex:1;text-align:center;padding:9px;border-radius:11px;font-size:12.5px;font-weight:800;
+    background:var(--bg2);border:1px solid var(--line);color:var(--muted);cursor:pointer}
+  .seg.on{background:rgba(47,107,255,.16);border-color:var(--blue2);color:var(--ink)}
+
+  .helpbtn{font-size:11.5px;color:var(--gold);font-weight:800;background:rgba(255,197,77,.1);
+    border:1px solid rgba(255,197,77,.3);border-radius:999px;padding:7px 12px;cursor:pointer}
+  .helpbtn:disabled{opacity:.4}
+
+  .backbtn{position:absolute;top:12px;left:12px;z-index:30;width:38px;height:38px;
+    border-radius:12px;border:1px solid var(--line2);background:rgba(22,29,46,.85);
+    color:var(--ink);font-size:18px;font-weight:800;cursor:pointer;display:none;
+    backdrop-filter:blur(4px);transition:.12s}
+  .backbtn:active{transform:scale(.94)}
+  .backbtn.show{display:block}
+
+  /* share card */
+  .modal{position:fixed;inset:0;z-index:60;background:rgba(5,8,15,.82);display:none;
+    align-items:center;justify-content:center;padding:22px;backdrop-filter:blur(4px)}
+  .modal.open{display:flex}
+  .sharecard{width:100%;max-width:340px;border-radius:20px;padding:22px 20px;
+    background:linear-gradient(150deg,#101a33 0%,#0b1120 60%,#0f1f33 100%);
+    border:1px solid var(--line2);box-shadow:var(--shadow);animation:fade .3s}
+  .sharecard .sc-logo{font-weight:900;letter-spacing:2.5px;font-size:20px;
+    background:linear-gradient(90deg,var(--teal2),var(--blue2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sharecard .sc-game{font-size:11px;color:var(--muted);font-weight:700;margin-top:2px}
+  .sc-pts{font-size:44px;font-weight:900;margin:10px 0 0;line-height:1}
+  .sc-sub{font-size:11.5px;color:var(--muted);font-weight:700}
+  .sc-grid{display:flex;gap:14px;margin:14px 0 4px}
+  .sc-q{flex:1;text-align:center}
+  .sc-q .qk{font-size:10px;color:var(--dim);font-weight:800;margin-bottom:5px}
+  .sc-q .cells{display:flex;gap:4px;justify-content:center}
+  .cell{width:16px;height:16px;border-radius:5px;background:var(--line)}
+  .cell.hit{background:linear-gradient(135deg,var(--green),var(--teal))}
+  .cell.miss{background:rgba(255,77,94,.55)}
+  .sc-foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;
+    border-top:1px solid var(--line);padding-top:12px}
+  .sc-foot .streak{font-size:13px;font-weight:800;color:var(--gold)}
+  .sc-foot .cta{font-size:10.5px;color:var(--dim);font-weight:700}
+
+  /* league */
+  .lg-head{display:flex;align-items:center;gap:12px;background:linear-gradient(90deg,rgba(47,107,255,.16),rgba(25,195,214,.1));
+    border:1px solid var(--line2);border-radius:16px;padding:14px;margin:10px 0 6px}
+  .lg-ic{flex:0 0 46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:22px;
+    background:linear-gradient(135deg,var(--blue),var(--teal))}
+  .lg-head b{font-size:16px}.lg-head small{display:block;color:var(--muted);font-weight:600;font-size:11.5px;margin-top:2px}
+  .rivalry{background:rgba(255,197,77,.09);border:1px solid rgba(255,197,77,.28);border-radius:13px;
+    padding:11px 13px;font-size:12.5px;font-weight:700;color:var(--gold);margin:8px 0}
+
+  /* plus / pricing */
+  .tier{border-radius:var(--r);padding:16px;margin:10px 0;border:1px solid var(--line);background:var(--card)}
+  .tier.hot{border-color:var(--teal);background:linear-gradient(160deg,rgba(25,195,214,.1),var(--card) 55%);position:relative}
+  .tier .price{font-size:24px;font-weight:900}.tier .price small{font-size:12px;color:var(--muted);font-weight:700}
+  .tier ul{margin:10px 0 0;padding:0;list-style:none}
+  .tier li{font-size:13px;color:var(--muted);font-weight:600;padding:5px 0;display:flex;gap:8px}
+  .tier li b{color:var(--ink)}
+  .bestpill{position:absolute;top:-9px;right:14px;font-size:9.5px;font-weight:900;letter-spacing:.6px;
+    background:linear-gradient(90deg,var(--teal),var(--blue2));color:#fff;padding:4px 10px;border-radius:999px}
+  .legalbox{background:rgba(46,230,166,.07);border:1px solid rgba(46,230,166,.25);border-radius:13px;
+    padding:12px 14px;font-size:12px;color:var(--muted);line-height:1.55;margin:10px 0}
+  .legalbox b{color:var(--green)}
+</style>
+</head>
+<body>
+<div class="phone" id="app">
+
+  <button class="backbtn" id="backBtn" onclick="goBack()">←</button>
+
+  <!-- 1. LANDING -->
+  <section class="screen active" id="s-landing">
+    <div class="brand"><span class="logo">STATS</span></div>
+    <p class="tag">The sports game that pays you to pay attention</p>
+    <div class="center" style="margin-top:8px"><span class="pill">Play from home • Free to enter</span></div>
+
+    <div class="card" style="margin-top:18px">
+      <h2>🔴 Game Night #1 · Mon July 28</h2>
+      <p class="sub" id="landingMatch"><b style="color:var(--ink)">Indiana Fever vs. Seattle Storm</b> — watch the broadcast, play from your couch. Predict before tip-off, answer at every quarter break. Right answers score. Fast right answers score more.</p>
+      <div class="chips">
+        <span class="chip">🏀 WNBA Game of the Night</span>
+        <span class="chip">⚡ Speed counts</span>
+        <span class="chip">⏱️ 4 quarters</span>
+      </div>
+      <button class="btn" onclick="startLive()">🔴 Play Game Night — July 28 →</button>
+      <button class="btn ghost" onclick="startDemo()">🎮 Practice first (simulated game)</button>
+    </div>
+
+    <div class="card">
+      <div class="step"><div class="num">1</div><div><b>Predict before tip-off</b><p>Fill your prediction sheet — winner, stat leaders & bonus amounts. Worth up to 50 pts.</p></div></div>
+      <div class="step"><div class="num">2</div><div><b>Answer at every quarter break</b><p>3 questions about what JUST happened. Points rise: Q1 = 1pt → Q4 = 4pt. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.</p></div></div>
+      <div class="step"><div class="num">3</div><div><b>Score with the crew</b><p>When the host posts the answers, tap them to score your quarter. Most points wins the night; ⚡ Speed breaks ties.</p></div></div>
+    </div>
+
+    <button class="btn ghost" onclick="go('rules')">📖 Read the full rules</button>
+    <p class="foot">Free to play. No purchase necessary. Friends & family beta — see the Rules page for scoring and fair play.</p>
+  </section>
+
+  <!-- RULES -->
+  <section class="screen" id="s-rules">
+    <div class="brand" style="margin-top:2px"><span class="logo" style="font-size:22px">STATS</span></div>
+    <h1 style="margin-top:10px">Official Rules 📖</h1>
+    <p class="sub">STATS Game Night · Friends & Family Beta · v1.0</p>
+
+    <div class="card tight">
+      <h2 style="font-size:14px">🎯 The game</h2>
+      <p class="sub" style="font-size:12.5px">STATS is a free skill-and-attention game played along with a live basketball broadcast. You score by predicting the game before tip-off and by answering questions about what just happened at each quarter break. No wagers, no entry fee — ever.</p>
+    </div>
+
+    <div class="card tight">
+      <h2 style="font-size:14px">📝 Predictions — up to 50 pts</h2>
+      <p class="sub" style="font-size:12.5px">Lock 6 picks before tip-off: winning team (5 pts) and the leader in points, assists, steals, rebounds & blocks (4 pts each). Nail the leader's exact stat total for a +5 bonus per category. Predictions can't be changed after tip-off.</p>
+    </div>
+
+    <div class="card tight">
+      <h2 style="font-size:14px">⏱️ Quarter questions — up to 30 pts</h2>
+      <p class="sub" style="font-size:12.5px">At the end of each quarter, answer 3 questions about the quarter you just watched. Correct answers are worth 1 pt each in Q1, 2 in Q2, 3 in Q3, and 4 in Q4. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.</p>
+    </div>
+
+    <div class="card tight">
+      <h2 style="font-size:14px">⚡ Speed points — the tiebreaker</h2>
+      <p class="sub" style="font-size:12.5px">Every correct quarter answer also banks the seconds you had left on the clock as Speed points. Example: answer correctly with 14 seconds left → +14 ⚡. Ties in total points are broken by Speed. Speed never beats accuracy — it only settles ties.</p>
+    </div>
+
+    <div class="card tight">
+      <h2 style="font-size:14px">✨ Lifeline — one per half</h2>
+      <p class="sub" style="font-size:12.5px">Once per half you can fire your Lifeline: in Practice mode it removes two wrong options; on Game Night it adds +15 seconds to the clock (time to ask the room — just like the arena timeout).</p>
+    </div>
+
+    <div class="card tight">
+      <h2 style="font-size:14px">🏁 Scoring the night</h2>
+      <p class="sub" style="font-size:12.5px">When the host announces each quarter's answers (from the broadcast + official box score), tap them in your app to score the quarter. After the final buzzer, enter the official stat leaders to score your predictions. Max regulation score: 80 (81 with an overtime question). Post your result card to the group chat — highest score wins the night, Speed breaks ties.</p>
+    </div>
+
+    <div class="card tight">
+      <h2 style="font-size:14px">🤝 Fair play</h2>
+      <p class="sub" style="font-size:12.5px">Answer from what you watched — not from a box score mid-question. The 20-second clock exists so lookups don't pay. Host's announced answers are final (official box score settles disputes). Be cool: it's game night, not the SEC.</p>
+    </div>
+
+    <div class="card tight">
+      <h2 style="font-size:14px">⚖️ The fine print</h2>
+      <p class="sub" style="font-size:12.5px">Free to play; no purchase or payment ever required to play or win. 18+. This beta is for entertainment among friends; any prizes are provided by the host/sponsor and awarded on final verified stats. STATS is not affiliated with the WNBA or its teams — we're a game about watching the game. Full sweepstakes rules will govern public seasons.</p>
+    </div>
+    <button class="btn" onclick="go('landing')">← Back</button>
+  </section>
+
+  <!-- 2. NAME -->
+  <section class="screen" id="s-name">
+    <div class="brand"><span class="logo">STATS</span></div>
+    <h1 class="center" style="margin-top:26px">Grab your handle</h1>
+    <p class="sub center">This is how you'll show up on the leaderboard.</p>
+    <div class="card">
+      <label class="fld">Display name</label>
+      <input id="playerName" maxlength="16" placeholder="e.g. CourtsideKing" oninput="checkName()">
+      <label class="fld">Pick your color</label>
+      <div class="chips" id="colorPick"></div>
+      <button class="btn" id="nameBtn" disabled onclick="startPredict()">Continue to picks →</button>
+    </div>
+    <p class="foot">Free to enter • No purchase necessary • 18+</p>
+  </section>
+
+  <!-- 3. PREDICTION SHEET -->
+  <section class="screen" id="s-predict">
+    <div class="qmeta" style="margin-top:4px">
+      <span class="qn">PRE-GAME PREDICTION SHEET</span><span class="worth">Up to 50 pts</span>
+    </div>
+    <h1 style="margin-top:2px">Make your picks 📝</h1>
+    <p class="sub">Lock these in before tip-off. Bonus points if you nail the exact number.</p>
+    <div class="card" id="predCard"></div>
+    <button class="btn teal" id="predBtn" disabled onclick="lockPredictions()">Lock it in — go to tip-off 🔒</button>
+    <p class="foot">You can't change picks once the game starts.</p>
+  </section>
+
+  <!-- 4. LOBBY / TIP-OFF -->
+  <section class="screen" id="s-lobby">
+    <div class="brand" style="margin-top:40px"><span class="logo">STATS</span></div>
+    <div class="center" style="margin-top:30px">
+      <span class="pill">Tipping off</span>
+      <h1 style="margin-top:16px">You're in. 🎯</h1>
+      <p class="sub center">Predictions locked. When each quarter ends, questions drop here — be fast, points are live.</p>
+    </div>
+    <div class="statgrid" style="margin-top:10px">
+      <div class="stat"><div class="v" id="lobPlayers">1,204</div><div class="k">Players tonight</div></div>
+      <div class="stat"><div class="v">50</div><div class="k">Your prediction pts (pending)</div></div>
+    </div>
+    <div style="flex:1"></div>
+    <button class="btn" onclick="startQuarter(0)">Start Quarter 1 ▶</button>
+    <p class="foot">In a real live run this waits for the on-court quarter to end. Here you drive it.</p>
+  </section>
+
+  <!-- 5. LIVE QUESTION -->
+  <section class="screen" id="s-live">
+    <div class="scoreself">
+      <div class="youscore"><div><b id="youPts">0</b> <span>your pts</span></div>
+        <div style="text-align:right"><b id="youRank">–</b> <span id="youRankLbl">rank / 1,204</span></div></div>
+    </div>
+    <div class="scorebar">
+      <div class="team"><span class="nm">🔥 IND</span><span class="sc" id="scHome">–</span></div>
+      <div class="qtag" id="qLabel">Q1</div>
+      <div class="team"><span class="nm">SEA ⛈️</span><span class="sc" id="scAway">–</span></div>
+    </div>
+    <div class="qmeta">
+      <span class="qn" id="qCount">Question 1 of 3</span>
+      <span class="worth" id="qWorth">Worth 1 pt</span>
+    </div>
+    <div class="timer" id="timerBar"><i id="timerFill"></i></div>
+    <div class="card tight" style="margin-top:6px">
+      <h2 id="qText" style="line-height:1.3">—</h2>
+      <div class="opts" id="qOpts"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+        <button class="helpbtn" id="helpBtn" onclick="useLifeline()">✨ Lifeline (1/half)</button>
+        <span style="font-size:11px;color:var(--dim)" id="helpNote"></span>
+      </div>
+      <div id="revealBox"></div>
+    </div>
+    <div style="flex:1"></div>
+    <button class="btn" id="nextBtn" style="display:none" onclick="nextQuestion()">Next →</button>
+  </section>
+
+  <!-- 6. QUARTER BREAK / LEADERBOARD -->
+  <section class="screen" id="s-break">
+    <div class="center" style="margin-top:8px"><span class="pill" id="breakPill">End of Q1</span></div>
+    <h1 class="center" style="margin-top:10px" id="breakTitle">Quarter 1 in the books</h1>
+    <p class="sub center" id="breakSub">Here's how the room stacks up.</p>
+    <div id="lbList"></div>
+    <button class="btn" id="breakBtn" onclick="nextFromBreak()">Start Quarter 2 ▶</button>
+  </section>
+
+  <!-- QUARTER REVIEW (Game Night) -->
+  <section class="screen" id="s-review">
+    <div class="center" style="margin-top:6px"><span class="pill" id="revPill">Score Q1</span></div>
+    <h1 class="center" style="margin-top:8px" id="revTitle">Score this quarter ✅</h1>
+    <p class="sub center">When the host posts the answers in the group chat, tap the correct answer for each question. Your picks are marked 🔵.</p>
+    <div id="revList"></div>
+    <button class="btn teal" id="revBtn" disabled onclick="confirmReview()">Confirm & score quarter</button>
+    <div id="revResult"></div>
+    <button class="btn" id="revNextBtn" style="display:none" onclick="afterReview()">Continue →</button>
+  </section>
+
+  <!-- PREDICTION REVIEW (Game Night final) -->
+  <section class="screen" id="s-predreview">
+    <div class="center" style="margin-top:6px"><span class="pill">Final buzzer 🚨</span></div>
+    <h1 class="center" style="margin-top:8px">Score your predictions 📝</h1>
+    <p class="sub center">Enter the official results (host announces from the final box score). Your picks are shown under each.</p>
+    <div class="card" id="prCard"></div>
+    <button class="btn teal" id="prBtn" disabled onclick="confirmPreds()">Confirm & see my final score</button>
+  </section>
+
+  <!-- 7. FINAL -->
+  <section class="screen" id="s-final">
+    <div class="center" style="margin-top:14px"><span class="pill">Final buzzer 🚨</span></div>
+    <h1 class="center" style="margin-top:12px" id="finalTitle">You finished!</h1>
+    <div class="card center">
+      <div class="bignum" id="finalPts">0</div>
+      <p class="sub" style="margin-top:6px">total points • out of 81 possible</p>
+      <div class="statgrid">
+        <div class="stat"><div class="v" id="finalRank">–</div><div class="k">Final rank</div></div>
+        <div class="stat"><div class="v" id="finalPct">–</div><div class="k">Beat this % of players</div></div>
+      </div>
+    </div>
+    <div id="finalLb"></div>
+    <div class="card tight" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div><b style="font-size:15px">🔥 <span id="streakN">4</span>-game streak</b>
+        <div style="font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px">Season rating: <b id="seasonRating" style="color:var(--teal2)">1,286</b> · Play the next game to keep it alive</div></div>
+    </div>
+    <button class="btn gold" onclick="openShare()">📲 Share my result card</button>
+    <button class="btn teal" onclick="openLeague()">🏟️ My League — The Barbershop</button>
+    <button class="btn ghost" onclick="go('plus')">⭐ See STATS+ (season pass)</button>
+    <button class="btn ghost" onclick="openHost()">👀 Peek behind the curtain (Host panel)</button>
+    <button class="btn ghost" onclick="restart()">Play again</button>
+    <p class="foot">Prizes awarded to the sponsor's verified top scorers after the final box score is confirmed. Winning never requires payment.</p>
+  </section>
+
+  <!-- 9. LEAGUE -->
+  <section class="screen" id="s-league">
+    <div class="brand" style="margin-top:2px"><span class="logo" style="font-size:22px">STATS</span></div>
+    <div class="lg-head">
+      <div class="lg-ic">💈</div>
+      <div><b>The Barbershop</b><small>Private league · 6 members · Week 7 of the season</small></div>
+    </div>
+    <div class="rivalry" id="rivalryLine">😤 Marcus is 6 pts ahead of you this season. Tonight's your shot.</div>
+    <h2 style="margin:12px 0 2px;font-size:14px">Tonight</h2>
+    <div id="lgTonight"></div>
+    <h2 style="margin:14px 0 2px;font-size:14px">Season standings</h2>
+    <div id="lgSeason"></div>
+    <button class="btn teal" onclick="toast('🔗 Invite link copied: stats.game/join/BARBER-7. Anyone who joins plays free.')">+ Invite a friend to the league</button>
+    <button class="btn ghost" onclick="go('final')">← Back to my result</button>
+    <p class="foot">Leagues are free to join. STATS+ members can create unlimited leagues with custom names & trash-talk boards.</p>
+  </section>
+
+  <!-- 10. STATS+ -->
+  <section class="screen" id="s-plus">
+    <div class="brand" style="margin-top:2px"><span class="logo" style="font-size:22px">STATS</span><span class="pill" style="align-self:center">Season pass</span></div>
+    <h1 style="margin-top:12px">Go STATS+ ⭐</h1>
+    <p class="sub">The game stays free. STATS+ is for the fans who want the full season experience — and it's what funds the prize pool.</p>
+
+    <div class="tier">
+      <div class="price">Free <small>forever</small></div>
+      <ul>
+        <li>✅ <b>Play every game</b> — full predictions + live questions</li>
+        <li>✅ <b>Win any prize</b> — every player is always prize-eligible</li>
+        <li>✅ Join one league · global leaderboard</li>
+      </ul>
+    </div>
+
+    <div class="tier hot"><span class="bestpill">SEASON PASS</span>
+      <div class="price">$4.99 <small>/ month</small></div>
+      <ul>
+        <li>💈 <b>Create unlimited private leagues</b> + trash-talk board</li>
+        <li>📊 <b>Season stat book</b> — your accuracy by category, streak history, rating graph</li>
+        <li>🎖️ <b>Badge & name flair</b> on every leaderboard</li>
+        <li>🎬 <b>Quarter recap clips</b> + host's picks before tip-off</li>
+        <li>🗳️ <b>Vote on next week's featured game</b></li>
+      </ul>
+      <button class="btn teal" onclick="toast('⭐ This is where checkout would go — Stripe, $4.99/mo season pass.')">Start my season pass</button>
+    </div>
+
+    <div class="legalbox"><b>Why it's built this way:</b> STATS+ buys features, never advantage — subscribers get zero extra points, easier questions, or better prize odds. Contest entry and prize eligibility are 100% free for everyone, always. That separation is what keeps STATS a free skill-and-attention game with prizes, not gambling.</div>
+    <button class="btn ghost" onclick="go('final')">← Back</button>
+  </section>
+
+  <!-- 8. HOST / AUTOMATION PANEL -->
+  <section class="screen hostwrap" id="s-host">
+    <div class="brand" style="margin-top:2px"><span class="logo" style="font-size:22px">STATS</span>
+      <span class="status live" style="align-self:center">Host mode</span></div>
+    <h1 style="font-size:20px;margin-top:10px">The engine room ⚙️</h1>
+    <p class="sub">This is what <b>you</b> (or an automation) control on game night. It's the seed of the "auto-post & auto-score" pipeline.</p>
+
+    <div class="card tight">
+      <h2 style="font-size:14px">🔴 Game Night toolkit — July 28</h2>
+      <p class="sub" style="font-size:12px">You're the host. At each quarter break: (1) tell the crew to answer in the app, (2) check the broadcast + box score, (3) post the answers in the group chat. ~60 seconds of work per quarter.</p>
+      <div class="segbtns">
+        <span class="seg on" onclick="copyQs(0)">📋 Q1</span><span class="seg" onclick="copyQs(1)">📋 Q2</span>
+        <span class="seg" onclick="copyQs(2)">📋 Q3</span><span class="seg" onclick="copyQs(3)">📋 Q4</span>
+      </div>
+      <p class="sub" style="font-size:11px;margin-top:8px;color:var(--dim)">Tap a quarter to copy its questions for the group chat. Answers come from watching + the live box score (ESPN gamecast has per-quarter stats).</p>
+    </div>
+
+    <div class="card tight">
+      <h2 style="font-size:14px">1 · Live data feed (play-by-play)</h2>
+      <p class="sub" style="font-size:12px">Every quarter, the stats feed streams in events like these. This is the raw material — no human watching required.</p>
+      <div id="pbpFeed" style="font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.9;color:var(--muted);background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:11px;max-height:150px;overflow:auto"></div>
+    </div>
+
+    <div class="card tight">
+      <h2 style="font-size:14px">2 · Question Engine ⚙️ <span class="status live">Working demo</span></h2>
+      <p class="sub" style="font-size:12px">Tap it. Templates scan the feed above and write the quarter's questions — with the correct answer already computed. Answers auto-lock from the same feed; every player is scored instantly.</p>
+      <button class="btn sm teal" onclick="runEngine()">⚡ Generate this quarter's questions</button>
+      <div id="engineOut"></div>
+    </div>
+
+    <div class="card tight">
+      <h2 style="font-size:14px">3 · Auto-post everywhere</h2>
+      <p class="sub" style="font-size:12px">One tap fans results out to your channels + updates the live leaderboard.</p>
+      <div class="chips">
+        <span class="chip">📸 Instagram Story</span><span class="chip">🎵 TikTok</span>
+        <span class="chip">🐦 X / Twitter</span><span class="chip">🌐 Web app</span>
+      </div>
+      <button class="btn sm" style="margin-top:10px" onclick="hostToast('📤 Result + leaderboard posted to 4 channels.')">Post result + leaderboard</button>
+    </div>
+    <button class="btn ghost" onclick="go('final')">← Back</button>
+  </section>
+
+  <!-- SHARE CARD MODAL -->
+  <div class="modal" id="shareModal" onclick="if(event.target===this)closeShare()">
+    <div>
+      <div class="sharecard" id="shareCard">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div><span class="sc-logo">STATS</span>
+            <div class="sc-game" id="scGameLine">GAME NIGHT #1 · FEVER vs STORM · JUL 28</div></div>
+          <div style="font-size:22px">🏀</div>
+        </div>
+        <div class="sc-pts" id="scPts">0 <span style="font-size:15px;color:var(--muted);font-weight:800">pts</span></div>
+        <div class="sc-sub" id="scRankLine">Rank #– of 1,204</div>
+        <div class="sc-grid" id="scGrid"></div>
+        <div class="sc-foot">
+          <span class="streak" id="scStreak">🔥 4-game streak</span>
+          <span class="cta">Play free → stats.game</span>
+        </div>
+      </div>
+      <button class="btn gold" style="max-width:340px" onclick="copyShareText()">Copy & share 📲</button>
+      <button class="btn ghost" style="max-width:340px" onclick="closeShare()">Close</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ---------------- GAME CONFIG ----------------
+   Team-agnostic: swap this one object and the whole app
+   re-skins to ANY game — NBA, G-League, college, WNBA.
+   In production this loads from the nightly schedule feed. */
+const GAME={
+  homeName:"Indiana Fever", homeAbbr:"IND", homeEmoji:"🔥",
+  awayName:"Seattle Storm", awayAbbr:"SEA", awayEmoji:"⛈️",
+  venue:"WNBA Game of the Night", date:"Mon · July 28", night:"Game Night #1"
+};
+const COLORS=["#2f6bff","#19c3d6","#ff4d5e","#ffc54d","#2ee6a6","#b57cff","#ff924d","#4dd0ff"];
+const roster={
+  home:["Clark","Mitchell","Boston","Cunningham","Billings","Hull"],
+  away:["Magbegor","Malonga","F. Johnson","Horston","Hiedeman","Dolson"]
+};
+// Prediction sheet definition (matches arena rules: 6 categories, base + bonus)
+const preds=[
+  {id:"winner", label:"Winning team", base:5, opts:[GAME.homeName,GAME.awayName], answer:GAME.homeName},
+  {id:"pts", label:"Most points", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Clark", num:27, numLabel:"How many pts?"},
+  {id:"ast", label:"Most assists", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Clark", num:9, numLabel:"How many assists?"},
+  {id:"stl", label:"Most steals", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Hiedeman", num:3, numLabel:"How many steals?"},
+  {id:"reb", label:"Most rebounds", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Boston", num:12, numLabel:"How many rebounds?"},
+  {id:"blk", label:"Most blocks", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Magbegor", num:4, numLabel:"How many blocks?"}
+];
+// 4 quarters × 3 questions. worth = quarter index+1 (WNBA plays 4 quarters — the arena rules map 1:1)
+// Every question is answerable by WATCHING + the box score at the break — that's the game.
+// In Practice mode the `a` field simulates the result; on Game Night the host announces real answers.
+const quarters=[
+  {home:23,away:19, q:[
+    {t:"Which player scored the first basket of the game?", o:["Clark","Magbegor","Boston","Malonga"], a:"Clark"},
+    {t:"How many 3-pointers were made in Q1 (both teams)?", o:["3","5","7","9+"], a:"5"},
+    {t:"Who committed the first foul of the game?", o:["Boston","Horston","Cunningham","Dolson"], a:"Horston"}
+  ]},
+  {home:45,away:41, q:[
+    {t:"Who leads ALL scorers at halftime?", o:["Clark","Mitchell","F. Johnson","Malonga"], a:"Clark"},
+    {t:"How many total timeouts were called in the 1st half?", o:["2","3","4","5+"], a:"3"},
+    {t:"Who committed the first foul of Q2?", o:["Billings","Dolson","Hull","Melbourne"], a:"Dolson"}
+  ]},
+  {home:66,away:64, q:[
+    {t:"Who made the most 3-pointers in Q3?", o:["Clark","Mitchell","Hiedeman","F. Johnson"], a:"Mitchell"},
+    {t:"How did the FIRST points of Q3 come?", o:["Fever field goal","Storm field goal","Fever free throw","Storm free throw"], a:"Storm field goal"},
+    {t:"How many lead changes in Q3?", o:["0","1","2","3+"], a:"2"}
+  ]},
+  {home:89,away:82, q:[
+    {t:"Which player scored the most points in Q4?", o:["Clark","Malonga","Mitchell","F. Johnson"], a:"Malonga"},
+    {t:"What was the final margin of victory?", o:["1–5 pts","6–10 pts","11–15 pts","16+ pts"], a:"6–10 pts"},
+    {t:"How many combined points were scored in Q4?", o:["Under 35","35–44","45–54","55+"], a:"35–44"}
+  ]}
+];
+const bots=[
+  {n:"HoopsOracle",c:"#ff4d5e"},{n:"StatQueen",c:"#2ee6a6"},{n:"CourtVision",c:"#ffc54d"},
+  {n:"BlueCoatBry",c:"#2f6bff"},{n:"NoLookNina",c:"#b57cff"},{n:"BuzzerBeater",c:"#19c3d6"},
+  {n:"TripleDub",c:"#ff924d"},{n:"BoxScoreBoss",c:"#4dd0ff"}
+];
+
+/* ---------------- STATE ---------------- */
+let S={mode:"demo",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},qi:0,ni:0,answered:false,
+  lifelineHalf1:true,lifelineHalf2:true,botScores:[],totalPlayers:1204,
+  results:[[],[],[],[]], liveAnswers:[[],[],[],[]], streak:0, seasonPts:0};
+let secondsLeft=0, timerDur=15;
+
+// mock friend league (in the real build this comes from the backend)
+const league={name:"The Barbershop",members:[
+  {n:"Marcus",c:"#ff4d5e",tonight:0,season:118},
+  {n:"DeeLo",c:"#2ee6a6",tonight:0,season:96},
+  {n:"UncleRay",c:"#ffc54d",tonight:0,season:88},
+  {n:"Tasha",c:"#b57cff",tonight:0,season:104},
+  {n:"JB",c:"#ff924d",tonight:0,season:71}
+]};
+
+/* ---------------- NAV ---------------- */
+const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-lobby",
+  live:"s-live",break:"s-break",final:"s-final",host:"s-host",league:"s-league",plus:"s-plus",
+  rules:"s-rules",review:"s-review",predreview:"s-predreview"};
+function startLive(){S.mode="live";go('name');}
+function startDemo(){S.mode="demo";go('name');}
+function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(map[k]).classList.add('active');
+  document.getElementById('app').scrollTop=0; window.scrollTo(0,0);
+  S.screen=k; pendingBack=false;
+  // where ← goes from each screen; null = no back button
+  const BACKMAP={landing:null,name:'landing',predict:'name',lobby:'landing',
+    live:'lobby',break:'lobby',review:'lobby',predreview:'lobby',
+    final:null,rules:'landing',league:'final',plus:'final',host:'final'};
+  const b=document.getElementById('backBtn');
+  b.classList.toggle('show', BACKMAP[k]!==null && BACKMAP[k]!==undefined);
+  b.dataset.to=BACKMAP[k]||'';}
+let pendingBack=false;
+function goBack(){
+  const to=document.getElementById('backBtn').dataset.to;
+  if(!to)return;
+  // leaving a live quarter or an unscored review wipes that quarter's answers — double-tap to confirm
+  const risky=(S.screen==='live') || (S.screen==='review' && document.getElementById('revBtn').style.display!=='none');
+  if(risky && !pendingBack){
+    pendingBack=true;
+    toast('⚠️ Leaving restarts this quarter\'s answers — tap ← again to confirm.');
+    setTimeout(()=>{pendingBack=false;},2500);
+    return;
+  }
+  if(S.screen==='live'){clearInterval(timerInt);}
+  if(to==='lobby'){renderLobby(S.screen==='break'?S.qi+1:S.qi);}
+  go(to);
+}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2400);}
+function hostToast(m){toast(m);}
+
+/* ---------------- NAME ---------------- */
+function initColors(){const w=document.getElementById('colorPick');w.innerHTML='';
+  COLORS.forEach((c,i)=>{const b=document.createElement('button');b.className='chip';
+    b.style.cssText=`background:${c};width:34px;height:34px;border-radius:10px;border:2px solid ${i==0?'#fff':'transparent'}`;
+    b.onclick=()=>{S.color=c;[...w.children].forEach(x=>x.style.border='2px solid transparent');b.style.border='2px solid #fff';};
+    w.appendChild(b);});}
+function checkName(){const v=document.getElementById('playerName').value.trim();
+  document.getElementById('nameBtn').disabled=v.length<2;S.name=v;}
+
+/* ---------------- PREDICTIONS ---------------- */
+function startPredict(){buildPred();go('predict');}
+function buildPred(){const c=document.getElementById('predCard');c.innerHTML='';
+  preds.forEach(p=>{
+    const row=document.createElement('div');row.className='predrow';
+    const bonusTxt=p.bonus?` (+${p.bonus} bonus for exact #)`:'';
+    row.innerHTML=`<div class="predlabel">${p.label} <span class="predpts">${p.base}pt${bonusTxt}</span></div>`;
+    const sel=document.createElement('select');sel.id='sel_'+p.id;
+    sel.innerHTML='<option value="">Choose…</option>'+p.opts.map(o=>`<option>${o}</option>`).join('');
+    if(S.predChoices[p.id])sel.value=S.predChoices[p.id]; // restore picks if returning
+    sel.onchange=()=>{S.predChoices[p.id]=sel.value;validatePred();};
+    row.appendChild(sel);
+    if(p.bonus){const inp=document.createElement('input');inp.type='number';inp.id='num_'+p.id;
+      inp.placeholder=p.numLabel;inp.style.marginTop='8px';
+      if(S.predChoices[p.id+'_num'])inp.value=S.predChoices[p.id+'_num'];
+      inp.oninput=()=>{S.predChoices[p.id+'_num']=inp.value;};row.appendChild(inp);}
+    c.appendChild(row);});
+  validatePred();}
+function validatePred(){const done=preds.filter(p=>S.predChoices[p.id]).length;
+  document.getElementById('predBtn').disabled=done<preds.length;}
+function lockPredictions(){
+  S.pts=0; S.speed=0;
+  if(S.mode==="demo"){
+    let pp=0;
+    preds.forEach(p=>{
+      if(S.predChoices[p.id]===p.answer){pp+=p.base;
+        if(p.bonus && Number(S.predChoices[p.id+'_num'])===p.num){pp+=p.bonus;}}
+    });
+    S.predPts=pp; seedBots();
+  }else{
+    S.predPts=null; // scored at final buzzer vs the real box score
+  }
+  renderLobby(0);
+  go('lobby');
+}
+function renderLobby(qi){
+  const btn=document.querySelector('#s-lobby .btn');
+  const foot=document.querySelector('#s-lobby .foot');
+  const sub=document.querySelector('#s-lobby p.sub');
+  if(S.mode==="live"){
+    sub.textContent = qi===0
+      ? "Predictions locked. Watch the game — the moment Q1 ends, come back and hit the button. The clock is real: 20 seconds a question, unused seconds bank as ⚡ Speed."
+      : `Q${qi} scored. Keep watching — when Q${qi+1} ends, come back and answer.`;
+    btn.textContent = `Quarter ${qi+1} just ended — answer now ▶`;
+    btn.onclick=()=>startQuarter(qi);
+    foot.textContent="Game Night mode: answers are scored when the host announces them at each break.";
+  }else{
+    sub.textContent="Predictions locked. When each quarter ends, questions drop here — be fast, points are live.";
+    btn.textContent = `Start Quarter ${qi+1} ▶`;
+    btn.onclick=()=>startQuarter(qi);
+    foot.textContent="Practice mode: a simulated Fever–Storm game with instant scoring.";
+  }
+}
+
+/* ---------------- BOTS ---------------- */
+function seedBots(){S.botScores=bots.map(b=>({...b,pts:0}));}
+function bumpBots(maxPer){S.botScores.forEach(b=>{b.pts+=Math.floor(Math.random()*(maxPer+1));});}
+function standings(){
+  const all=[{n:S.name||"You",c:S.color,pts:S.pts,me:true},...S.botScores.map(b=>({...b,me:false}))];
+  all.sort((a,b)=>b.pts-a.pts);return all;}
+function myRank(){const s=standings();return s.findIndex(x=>x.me)+1;}
+
+/* ---------------- QUARTER / LIVE ---------------- */
+let timerInt=null;
+function startQuarter(qi){S.qi=qi;S.ni=0;renderScore();loadQuestion();go('live');}
+function renderScore(){
+  if(S.mode==="demo"){
+    document.getElementById('scHome').textContent=quarters[S.qi].home;
+    document.getElementById('scAway').textContent=quarters[S.qi].away;
+    document.getElementById('youRank').textContent='#'+myRank();
+  }else{
+    document.getElementById('scHome').textContent='–';
+    document.getElementById('scAway').textContent='–';
+    document.getElementById('youRank').textContent=S.speed;
+    document.getElementById('youRankLbl').textContent='⚡ speed banked';
+  }
+  if(S.mode==="demo")document.getElementById('youRankLbl').textContent='rank / 1,204';
+  document.getElementById('qLabel').textContent='Q'+(S.qi+1);
+  document.getElementById('youPts').textContent=S.pts;
+}
+function loadQuestion(){
+  S.answered=false;
+  const q=quarters[S.qi].q[S.ni];const worth=S.qi+1;
+  document.getElementById('qText').textContent=q.t;
+  document.getElementById('qCount').textContent=`Question ${S.ni+1} of 3`;
+  document.getElementById('qWorth').textContent=`Worth ${worth} pt${worth>1?'s':''}${S.mode==="live"?' + ⚡':''}`;
+  document.getElementById('revealBox').innerHTML='';
+  document.getElementById('nextBtn').style.display='none';
+  document.getElementById('helpNote').textContent='';
+  const half=S.qi<2?'lifelineHalf1':'lifelineHalf2';
+  document.getElementById('helpBtn').disabled=!S[half];
+  document.getElementById('helpBtn').textContent = S.mode==="live" ? '✨ Lifeline: +15s (1/half)' : '✨ Lifeline (1/half)';
+  const o=document.getElementById('qOpts');o.innerHTML='';
+  q.o.forEach(opt=>{const b=document.createElement('button');b.className='opt';
+    b.innerHTML=`<span>${opt}</span><span class="mk"></span>`;
+    b.onclick=()=>answer(opt,b);o.appendChild(b);});
+  startTimer(S.mode==="live"?20:15);
+}
+function startTimer(dur){
+  clearInterval(timerInt);
+  timerDur=dur; let t=dur; secondsLeft=dur;
+  const fill=document.getElementById('timerFill');const bar=document.getElementById('timerBar');
+  fill.style.width='100%';bar.classList.remove('low');
+  timerInt=setInterval(()=>{t--;secondsLeft=t;fill.style.width=(Math.max(t,0)/timerDur*100)+'%';
+    if(t<=5)bar.classList.add('low');
+    if(t<=0){clearInterval(timerInt);if(!S.answered)answer(null,null);}
+  },1000);
+}
+function extendTimer(extra){
+  // add time onto the running clock (Game Night lifeline)
+  const fill=document.getElementById('timerFill');const bar=document.getElementById('timerBar');
+  clearInterval(timerInt);
+  let t=secondsLeft+extra; timerDur=Math.max(timerDur,t);
+  bar.classList.remove('low');
+  timerInt=setInterval(()=>{t--;secondsLeft=t;fill.style.width=(Math.max(t,0)/timerDur*100)+'%';
+    if(t<=5)bar.classList.add('low');
+    if(t<=0){clearInterval(timerInt);if(!S.answered)answer(null,null);}
+  },1000);
+}
+function answer(choice,btn){
+  if(S.answered)return;S.answered=true;clearInterval(timerInt);
+  const q=quarters[S.qi].q[S.ni];const worth=S.qi+1;
+  if(S.mode==="live"){
+    // Game Night: record pick + banked seconds; grading happens at the review
+    const bank=choice?Math.max(secondsLeft,0):0;
+    S.liveAnswers[S.qi][S.ni]={choice,bank};
+    document.querySelectorAll('#qOpts .opt').forEach(b=>{
+      b.style.pointerEvents='none';
+      if(b===btn){b.classList.add('sel');b.querySelector('.mk').textContent='🔵';}
+    });
+    const rb=document.getElementById('revealBox');
+    rb.innerHTML = choice
+      ? `<div class="reveal"><div class="r1" style="color:var(--teal2)">🔒 LOCKED — ${bank}s banked</div>
+         <div class="r2">If you're right, that's +${worth} pt${worth>1?'s':''} and +${bank} ⚡ when the host announces answers.</div></div>`
+      : `<div class="reveal bad"><div class="r1">⏰ TIME — no answer locked</div>
+         <div class="r2">This one can't score. Be quicker next question.</div></div>`;
+    document.getElementById('nextBtn').style.display='block';
+    document.getElementById('nextBtn').textContent = (S.ni<2)?'Next question →':'Done — wait for answers →';
+    return;
+  }
+  const correct=choice===q.a;
+  document.querySelectorAll('#qOpts .opt').forEach(b=>{
+    const label=b.querySelector('span').textContent;b.style.pointerEvents='none';
+    if(label===q.a){b.classList.add('correct');b.querySelector('.mk').textContent='✓';}
+    else if(b===btn){b.classList.add('wrong');b.querySelector('.mk').textContent='✕';}
+  });
+  S.results[S.qi].push(correct);
+  const rb=document.getElementById('revealBox');
+  if(correct){S.pts+=worth;
+    rb.innerHTML=`<div class="reveal good"><div class="r1">✓ CORRECT · +${worth} pt${worth>1?'s':''}</div>
+      <div class="r2">Nice read. You're now on <b>${S.pts}</b> points.</div></div>`;
+  }else{
+    const miss=choice?`You picked <b>${choice}</b>.`:`Time's up — no answer locked.`;
+    rb.innerHTML=`<div class="reveal bad"><div class="r1">✕ ${choice?'NOT QUITE':'MISSED IT'} · +0</div>
+      <div class="r2">${miss} Correct answer: <b>${q.a}</b>.</div></div>`;
+  }
+  bumpBots(worth); // other players score too
+  renderScore();
+  document.getElementById('nextBtn').style.display='block';
+  document.getElementById('nextBtn').textContent = (S.ni<2)?'Next question →':'See the leaderboard →';
+}
+function useLifeline(){
+  const half=S.qi<2?'lifelineHalf1':'lifelineHalf2';
+  if(!S[half]||S.answered)return;S[half]=false;
+  document.getElementById('helpBtn').disabled=true;
+  if(S.mode==="live"){
+    extendTimer(15);
+    document.getElementById('helpNote').textContent='Lifeline: +15 seconds — ask the room!';
+    return;
+  }
+  const q=quarters[S.qi].q[S.ni];
+  // remove two wrong options
+  const wrongs=[...document.querySelectorAll('#qOpts .opt')].filter(b=>b.querySelector('span').textContent!==q.a);
+  wrongs.slice(0,2).forEach(b=>{b.style.opacity='.25';b.style.pointerEvents='none';});
+  document.getElementById('helpNote').textContent='Lifeline used — 2 options removed';
+}
+function nextQuestion(){
+  if(S.ni<2){S.ni++;loadQuestion();}
+  else if(S.mode==="live"){openReview();}
+  else{showBreak();}
+}
+
+/* ---------------- GAME NIGHT: QUARTER REVIEW ---------------- */
+let revMarks=[null,null,null];
+function openReview(){
+  revMarks=[null,null,null];
+  document.getElementById('revPill').textContent='Score Q'+(S.qi+1);
+  document.getElementById('revTitle').textContent=`Score Quarter ${S.qi+1} ✅`;
+  document.getElementById('revResult').innerHTML='';
+  document.getElementById('revNextBtn').style.display='none';
+  document.getElementById('revBtn').style.display='block';
+  document.getElementById('revBtn').disabled=true;
+  const list=document.getElementById('revList');list.innerHTML='';
+  quarters[S.qi].q.forEach((q,i)=>{
+    const my=S.liveAnswers[S.qi][i]||{choice:null,bank:0};
+    const c=document.createElement('div');c.className='card tight';
+    c.innerHTML=`<div style="font-size:13px;font-weight:800;margin-bottom:4px">${i+1}. ${q.t}</div>
+      <div style="font-size:11px;color:var(--dim);font-weight:700;margin-bottom:8px">Your pick: ${my.choice?`🔵 ${my.choice} (${my.bank}s banked)`:'⏰ none'}</div>
+      <div class="opts" id="rev_${i}"></div>`;
+    list.appendChild(c);
+    const box=c.querySelector('#rev_'+i);
+    q.o.forEach(opt=>{const b=document.createElement('button');b.className='opt';
+      b.style.padding='10px 13px';b.style.fontSize='13px';
+      b.innerHTML=`<span>${opt}</span><span class="mk"></span>`;
+      b.onclick=()=>{revMarks[i]=opt;
+        [...box.children].forEach(x=>{x.classList.remove('sel');x.querySelector('.mk').textContent='';});
+        b.classList.add('sel');b.querySelector('.mk').textContent='✓';
+        document.getElementById('revBtn').disabled=revMarks.some(m=>m===null);};
+      box.appendChild(b);});
+  });
+  go('review');
+}
+function confirmReview(){
+  const worth=S.qi+1;let got=0,sp=0;
+  quarters[S.qi].q.forEach((q,i)=>{
+    const my=S.liveAnswers[S.qi][i]||{choice:null,bank:0};
+    const correct=my.choice!==null && my.choice===revMarks[i];
+    S.results[S.qi][i]=correct;
+    if(correct){got+=worth;sp+=my.bank;}
+  });
+  S.pts+=got;S.speed+=sp;
+  document.getElementById('revBtn').style.display='none';
+  document.getElementById('revResult').innerHTML=
+    `<div class="reveal ${got>0?'good':'bad'}"><div class="r1">${got>0?'✓':'✕'} Q${S.qi+1}: +${got} pts · +${sp} ⚡ speed</div>
+     <div class="r2">Running total: <b>${S.pts}</b> pts · <b>${S.speed}</b> ⚡. Post it in the chat and talk your talk.</div></div>`;
+  document.getElementById('revNextBtn').style.display='block';
+  document.getElementById('revNextBtn').textContent = S.qi<3 ? `Back to the game — Q${S.qi+2} next →` : 'Final buzzer — score predictions →';
+}
+function afterReview(){
+  if(S.qi<3){renderLobby(S.qi+1);go('lobby');}
+  else{openPredReview();}
+}
+
+/* ---------------- GAME NIGHT: PREDICTION REVIEW ---------------- */
+function openPredReview(){
+  const c=document.getElementById('prCard');c.innerHTML='';
+  preds.forEach(p=>{
+    const row=document.createElement('div');row.className='predrow';
+    const myPick=S.predChoices[p.id]||'—';
+    const myNum=p.bonus?(S.predChoices[p.id+'_num']||'—'):null;
+    row.innerHTML=`<div class="predlabel">${p.label} <span class="predpts">you picked: ${myPick}${myNum!==null?' ('+myNum+')':''}</span></div>`;
+    const sel=document.createElement('select');sel.id='pr_'+p.id;
+    sel.innerHTML='<option value="">Official result…</option>'+p.opts.map(o=>`<option>${o}</option>`).join('');
+    sel.onchange=validatePredReview;
+    row.appendChild(sel);
+    if(p.bonus){const inp=document.createElement('input');inp.type='number';inp.id='prn_'+p.id;
+      inp.placeholder='Official '+p.numLabel.toLowerCase();inp.style.marginTop='8px';row.appendChild(inp);}
+    c.appendChild(row);
+  });
+  go('predreview');
+}
+function validatePredReview(){
+  const done=preds.filter(p=>document.getElementById('pr_'+p.id).value).length;
+  document.getElementById('prBtn').disabled=done<preds.length;
+}
+function confirmPreds(){
+  let pp=0;
+  preds.forEach(p=>{
+    const actual=document.getElementById('pr_'+p.id).value;
+    if(S.predChoices[p.id]===actual){pp+=p.base;
+      if(p.bonus){const an=Number(document.getElementById('prn_'+p.id).value);
+        if(an && Number(S.predChoices[p.id+'_num'])===an)pp+=p.bonus;}}
+  });
+  S.predPts=pp;
+  showFinal();
+}
+
+/* ---------------- BREAK / LEADERBOARD ---------------- */
+function showBreak(){
+  const last=S.qi===3;
+  if(last){return showFinal();}
+  document.getElementById('breakPill').textContent='End of Q'+(S.qi+1);
+  document.getElementById('breakTitle').textContent=`Quarter ${S.qi+1} in the books`;
+  document.getElementById('breakSub').textContent=`You've got ${S.pts} live points. Here's the room.`;
+  renderLeaderboard('lbList',6);
+  document.getElementById('breakBtn').textContent=`Start Quarter ${S.qi+2} ▶`;
+  go('break');
+}
+function nextFromBreak(){startQuarter(S.qi+1);}
+function renderLeaderboard(elId,limit){
+  const s=standings();const el=document.getElementById(elId);el.innerHTML='';
+  s.slice(0,limit).forEach((p,i)=>{
+    const d=document.createElement('div');d.className='lb'+(p.me?' me':'');
+    const rc=i==0?'g':i==1?'s':i==2?'b':'';
+    d.innerHTML=`<div class="rank ${rc}">${i+1}</div>
+      <div class="av" style="background:${p.c}">${(p.n||'Y')[0].toUpperCase()}</div>
+      <div class="lbname">${p.me?(S.name||'You')+' (you)':p.n}${i==0?' 👑':''}</div>
+      <div class="lbpts">${p.pts}</div>`;
+    el.appendChild(d);
+  });
+}
+
+/* ---------------- FINAL ---------------- */
+function showFinal(){
+  // add prediction points now
+  S.pts+=S.predPts;
+  S.streak++;
+  document.getElementById('finalPts').textContent=S.pts;
+  document.getElementById('streakN').textContent=S.streak;
+  document.getElementById('seasonRating').textContent=(1000+S.seasonPts+S.pts+S.speed).toLocaleString();
+  if(S.mode==="live"){
+    document.getElementById('finalRank').textContent='⚡'+S.speed;
+    document.getElementById('finalPct').textContent='+'+S.predPts;
+    document.querySelector('#s-final .statgrid .stat:nth-child(1) .k').textContent='Speed points (tiebreaker)';
+    document.querySelector('#s-final .statgrid .stat:nth-child(2) .k').textContent='From predictions';
+    document.getElementById('finalTitle').textContent=`Final buzzer, ${S.name||'player'}!`;
+    document.getElementById('finalLb').innerHTML=
+      `<div class="card tight"><p class="sub" style="font-size:12.5px;margin:0">📲 Post your result card in the group chat. Highest points wins the night — ⚡ Speed breaks ties. Rematch at the next Game of the Night.</p></div>`;
+  }else{
+    const s=standings();const rank=s.findIndex(x=>x.me)+1;
+    const beat=Math.round((S.totalPlayers-rank)/S.totalPlayers*100);
+    document.getElementById('finalRank').textContent='#'+rank;
+    document.getElementById('finalPct').textContent=beat+'%';
+    document.querySelector('#s-final .statgrid .stat:nth-child(1) .k').textContent='Final rank';
+    document.querySelector('#s-final .statgrid .stat:nth-child(2) .k').textContent='Beat this % of players';
+    document.getElementById('finalTitle').textContent = rank===1?'🏆 You won the pot!':`Great game, ${S.name||'player'}!`;
+    renderLeaderboard('finalLb',6);
+  }
+  go('final');
+}
+/* ---------------- SHARE CARD ---------------- */
+function openShare(){
+  document.getElementById('scPts').innerHTML=`${S.pts} <span style="font-size:15px;color:var(--muted);font-weight:800">pts</span>${S.mode==="live"?` <span style="font-size:15px;color:var(--gold);font-weight:900">· ⚡${S.speed}</span>`:''}`;
+  document.getElementById('scRankLine').textContent = S.mode==="live"
+    ? `${S.predPts} from predictions · ${S.pts-S.predPts} live · ⚡${S.speed} speed`
+    : `Rank #${myRank()} of ${S.totalPlayers.toLocaleString()}`;
+  document.getElementById('scStreak').textContent=`🔥 ${S.streak}-game streak`;
+  const g=document.getElementById('scGrid');g.innerHTML='';
+  S.results.forEach((qr,i)=>{
+    const d=document.createElement('div');d.className='sc-q';
+    d.innerHTML=`<div class="qk">Q${i+1}</div><div class="cells">${
+      [0,1,2].map(j=>`<div class="cell ${qr[j]===undefined?'':qr[j]?'hit':'miss'}"></div>`).join('')}</div>`;
+    g.appendChild(d);
+  });
+  document.getElementById('shareModal').classList.add('open');
+}
+function closeShare(){document.getElementById('shareModal').classList.remove('open');}
+function shareEmoji(){
+  return S.results.map((qr,i)=>`Q${i+1} `+[0,1,2].map(j=>qr[j]===undefined?'⬛':qr[j]?'🟩':'🟥').join('')).join('\n');
+}
+function copyShareText(){
+  const head = S.mode==="live"
+    ? `STATS 🏀 Game Night #1 · Fever vs Storm\n${S.name||'Me'}: ${S.pts} pts · ⚡${S.speed} speed`
+    : `STATS 🏀 ${S.pts} pts · Rank #${myRank()}`;
+  const txt=`${head}\n${shareEmoji()}\n🔥 ${S.streak}-game streak\nPlay free → stats.game`;
+  try{navigator.clipboard&&navigator.clipboard.writeText(txt);}catch(e){}
+  toast('📋 Result card copied — paste it in the group chat.');
+}
+
+/* ---------------- LEAGUE ---------------- */
+function openLeague(){
+  // simulate league members' tonight scores off the global bots pace
+  league.members.forEach((m,i)=>{if(!m.tonight)m.tonight=Math.max(4,Math.floor(S.pts*(0.55+0.12*i))%(S.pts+8));});
+  const mine={n:(S.name||'You')+' (you)',c:S.color,tonight:S.pts,season:S.seasonPts+S.pts,me:true};
+  const all=[...league.members.map(m=>({...m,season:m.season+m.tonight})),mine];
+  const t=[...all].sort((a,b)=>b.tonight-a.tonight);
+  const ssn=[...all].sort((a,b)=>b.season-a.season);
+  const row=(p,i,key)=>`<div class="lb${p.me?' me':''}">
+    <div class="rank ${i==0?'g':i==1?'s':i==2?'b':''}">${i+1}</div>
+    <div class="av" style="background:${p.c}">${p.n[0].toUpperCase()}</div>
+    <div class="lbname">${p.n}${i==0?' 👑':''}</div><div class="lbpts">${p[key]}</div></div>`;
+  document.getElementById('lgTonight').innerHTML=t.map((p,i)=>row(p,i,'tonight')).join('');
+  document.getElementById('lgSeason').innerHTML=ssn.map((p,i)=>row(p,i,'season')).join('');
+  const me=ssn.findIndex(p=>p.me), lead=ssn[0];
+  document.getElementById('rivalryLine').textContent = me===0
+    ? `👑 You lead the league! ${ssn[1].n} is ${ssn[0].season-ssn[1].season} pts back — don't let up.`
+    : `😤 ${lead.n} leads you by ${lead.season-ssn[me].season} pts this season. Next game is your shot.`;
+  go('league');
+}
+function openHost(){renderPBP();document.getElementById('engineOut').innerHTML='';go('host');}
+function copyQs(qi){
+  const worth=qi+1;
+  const txt=`🏀 STATS Q${qi+1} — answer in the app NOW (${worth} pt${worth>1?'s':''} each + ⚡ speed)\n`+
+    quarters[qi].q.map((q,i)=>`${i+1}. ${q.t}\n   ${q.o.map((o,j)=>String.fromCharCode(65+j)+') '+o).join('  ')}`).join('\n');
+  try{navigator.clipboard&&navigator.clipboard.writeText(txt);}catch(e){}
+  toast(`📋 Q${qi+1} questions copied — paste in the group chat.`);
+}
+
+/* ---------------- QUESTION ENGINE (working demo) ----------------
+   In production: this exact logic runs on a server against a real
+   play-by-play API (SportsDataIO / Sportradar / nba_api). Same
+   templates, real events. */
+const PBP=[ // mock Q3 feed — shape mirrors real PBP APIs (SportsDataIO / Sportradar)
+  {t:"09:41",type:"3PM",player:"Mitchell",team:"IND"},
+  {t:"09:12",type:"FOUL",player:"Horston",team:"SEA"},
+  {t:"08:47",type:"FASTBREAK",player:"Clark",team:"IND"},
+  {t:"08:02",type:"3PM",player:"F. Johnson",team:"SEA"},
+  {t:"07:33",type:"SUB_IN",player:"Dolson",team:"SEA"},
+  {t:"06:58",type:"3PM",player:"Mitchell",team:"IND"},
+  {t:"06:21",type:"TIMEOUT",player:null,team:"SEA"},
+  {t:"05:44",type:"FASTBREAK",player:"Malonga",team:"SEA"},
+  {t:"05:02",type:"FOUL",player:"Cunningham",team:"IND"},
+  {t:"04:19",type:"3PM",player:"Mitchell",team:"IND"},
+  {t:"03:40",type:"FASTBREAK",player:"Clark",team:"IND"},
+  {t:"02:55",type:"3PM",player:"Hiedeman",team:"SEA"},
+  {t:"02:07",type:"TIMEOUT",player:null,team:"IND"},
+  {t:"01:12",type:"FOUL",player:"Horston",team:"SEA"}
+];
+const EVLABEL={ "3PM":"3-pointer ✅","FOUL":"Foul","FASTBREAK":"Fast-break bucket 💨","SUB_IN":"Checks in","TIMEOUT":"Timeout ⏱"};
+function renderPBP(){
+  document.getElementById('pbpFeed').innerHTML=PBP.map(e=>
+    `<div><span style="color:var(--dim)">${e.t}</span> · <b style="color:var(--ink)">${e.team}</b> ${EVLABEL[e.type]}${e.player?' — '+e.player:''}</div>`).join('');
+}
+// template library — each turns raw events into (question, answer)
+const TEMPLATES=[
+  {name:"leader", build:evs=>{
+    const c={};evs.filter(e=>e.type==="3PM").forEach(e=>c[e.player]=(c[e.player]||0)+1);
+    const top=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];
+    return {q:"Who made the most 3-pointers this quarter?",a:`${top[0]} (${top[1]})`};}},
+  {name:"first", build:evs=>{
+    const f=evs.find(e=>e.type==="FOUL");
+    return {q:"Who committed the first foul of the quarter?",a:f.player};}},
+  {name:"count", build:evs=>{
+    const n=evs.filter(e=>e.type==="FASTBREAK").length;
+    return {q:"How many fast-break buckets this quarter (both teams)?",a:String(n)};}},
+  {name:"count2", build:evs=>{
+    const n=evs.filter(e=>e.type==="TIMEOUT").length;
+    return {q:"How many timeouts were taken this quarter?",a:String(n)};}}
+];
+function runEngine(){
+  const out=document.getElementById('engineOut');
+  const picks=TEMPLATES.slice(0,3).map(t=>t.build(PBP));
+  out.innerHTML=picks.map((p,i)=>
+    `<div class="hq" style="animation:fade .4s ${i*0.15}s both"><b>Q3 · "${p.q}"</b>
+      <div class="ha">✅ Answer auto-locked from feed: <b style="color:var(--green)">${p.a}</b> · <span class="status live">Generated</span></div></div>`).join('')
+    +`<div class="ha" style="margin-top:8px;font-size:11.5px;color:var(--dim)">3 questions written, answers locked, 1,204 players scored — zero human input. A 4th template (timeouts) sits in reserve if a question gets voided.</div>`;
+  toast('⚙️ Engine ran: 3 questions generated from 14 feed events.');
+}
+function restart(){
+  S={mode:"demo",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},qi:0,ni:0,answered:false,
+    lifelineHalf1:true,lifelineHalf2:true,botScores:[],totalPlayers:1204,
+    results:[[],[],[],[]],liveAnswers:[[],[],[],[]],streak:S.streak,seasonPts:S.seasonPts+S.pts};
+  league.members.forEach(m=>m.tonight=0);
+  document.getElementById('playerName').value='';
+  document.getElementById('nameBtn').disabled=true;
+  initColors();go('landing');
+}
+initColors();
+</script>
+</body>
+</html>
