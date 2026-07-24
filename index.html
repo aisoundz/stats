@@ -548,18 +548,18 @@ const GAME={
   venue:"WNBA Game of the Night", date:"Mon · July 28", night:"Game Night #1"
 };
 const COLORS=["#2f6bff","#19c3d6","#ff4d5e","#ffc54d","#2ee6a6","#b57cff","#ff924d","#4dd0ff"];
-const roster={
-  home:["Clark","Mitchell","Boston","Cunningham","Billings","Hull"],
-  away:["Magbegor","Malonga","F. Johnson","Horston","Hiedeman","Dolson"]
+const roster={ // full names — used on the prediction sheet & final review
+  home:["Caitlin Clark","Kelsey Mitchell","Aliyah Boston","Sophie Cunningham","Monique Billings","Lexie Hull"],
+  away:["Ezi Magbegor","Dominique Malonga","Flau'jae Johnson","Jordan Horston","Natisha Hiedeman","Stefanie Dolson"]
 };
 // Prediction sheet definition (matches arena rules: 6 categories, base + bonus)
 const preds=[
   {id:"winner", label:"Winning team", base:5, opts:[GAME.homeName,GAME.awayName], answer:GAME.homeName},
-  {id:"pts", label:"Most points", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Clark", num:27, numLabel:"How many pts?"},
-  {id:"ast", label:"Most assists", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Clark", num:9, numLabel:"How many assists?"},
-  {id:"stl", label:"Most steals", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Hiedeman", num:3, numLabel:"How many steals?"},
-  {id:"reb", label:"Most rebounds", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Boston", num:12, numLabel:"How many rebounds?"},
-  {id:"blk", label:"Most blocks", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Magbegor", num:4, numLabel:"How many blocks?"}
+  {id:"pts", label:"Most points", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Caitlin Clark", num:27, numLabel:"How many pts?"},
+  {id:"ast", label:"Most assists", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Caitlin Clark", num:9, numLabel:"How many assists?"},
+  {id:"stl", label:"Most steals", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Natisha Hiedeman", num:3, numLabel:"How many steals?"},
+  {id:"reb", label:"Most rebounds", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Aliyah Boston", num:12, numLabel:"How many rebounds?"},
+  {id:"blk", label:"Most blocks", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Ezi Magbegor", num:4, numLabel:"How many blocks?"}
 ];
 // 4 quarters × 3 questions. worth = quarter index+1 (WNBA plays 4 quarters — the arena rules map 1:1)
 // Every question is answerable by WATCHING + the box score at the break — that's the game.
