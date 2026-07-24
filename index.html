@@ -443,7 +443,7 @@
     <div id="lgTonight"></div>
     <h2 style="margin:14px 0 2px;font-size:14px">Season standings</h2>
     <div id="lgSeason"></div>
-    <button class="btn teal" onclick="toast('🔗 Invite link copied: stats.game/join/BARBER-7. Anyone who joins plays free.')">+ Invite a friend to the league</button>
+    <button class="btn teal" onclick="toast('🔗 Invite link copied: statsgametime.com/join/BARBER-7. Anyone who joins plays free.')">+ Invite a friend to the league</button>
     <button class="btn ghost" onclick="go('final')">← Back to my result</button>
     <p class="foot">Leagues are free to join. STATS+ members can create unlimited leagues with custom names & trash-talk boards.</p>
   </section>
@@ -553,7 +553,7 @@
         <div class="sc-grid" id="scGrid"></div>
         <div class="sc-foot">
           <span class="streak" id="scStreak">🔥 4-game streak</span>
-          <span class="cta">Play free → stats.game</span>
+          <span class="cta">Play free → statsgametime.com</span>
         </div>
       </div>
       <button class="btn gold" style="max-width:340px" onclick="copyShareText()">Copy & share 📲</button>
@@ -1081,7 +1081,7 @@ function copyShareText(){
   const head = S.mode==="live"
     ? `STATS 🏀 Game Night #1 · Fever vs Storm\n${S.name||'Me'}: ${S.pts} pts · ⚡${S.speed} speed`
     : `STATS 🏀 ${S.pts} pts · Rank #${myRank()}`;
-  const txt=`${head}\n${shareEmoji()}\n🔥 ${S.streak}-game streak\nPlay free → stats.game`;
+  const txt=`${head}\n${shareEmoji()}\n🔥 ${S.streak}-game streak\nPlay free → statsgametime.com`;
   try{navigator.clipboard&&navigator.clipboard.writeText(txt);}catch(e){}
   toast('📋 Result card copied — paste it in the group chat.');
 }
