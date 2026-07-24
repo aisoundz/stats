@@ -221,12 +221,19 @@
 
   <!-- 1. LANDING -->
   <section class="screen active" id="s-landing">
+    <div class="card" id="resumeBar" style="display:none;border-color:var(--teal);background:rgba(25,195,214,.1);margin-bottom:6px">
+      <b style="font-size:14.5px">🔴 You have a game in progress</b>
+      <p class="sub" style="font-size:12px;margin:5px 0 11px">Your predictions and scored quarters are saved. Pick up where you left off.</p>
+      <button class="btn teal sm" onclick="doResume()">Resume my game →</button>
+      <button class="btn ghost sm" style="margin-top:8px" onclick="dismissResume()">Start a new game</button>
+    </div>
     <div class="brand"><span class="logo">STATS</span></div>
     <p class="tag">The sports game that pays you to pay attention</p>
     <div class="center" style="margin-top:8px"><span class="pill">Play from home • Free to enter</span></div>
 
     <div class="card" style="margin-top:18px">
       <h2>🔴 Game Night #1 · Tue July 28</h2>
+      <p style="font-size:12.5px;font-weight:800;color:var(--gold);margin:2px 0 6px" id="landingTip">🕐 Tip-off 9:00 PM ET / 8:00 PM CT</p>
       <p class="sub" id="landingMatch"><b style="color:var(--ink)">Indiana Fever vs. Seattle Storm</b> — watch the broadcast, play from your couch. Predict before tip-off, answer at every quarter break. Right answers score. Fast right answers score more.</p>
       <div class="chips">
         <span class="chip">🏀 WNBA Game of the Night</span>
@@ -331,8 +338,8 @@
       <p class="sub center">Predictions locked. When each quarter ends, questions drop here — be fast, points are live.</p>
     </div>
     <div class="statgrid" style="margin-top:10px">
-      <div class="stat"><div class="v" id="lobPlayers">1,204</div><div class="k">Players tonight</div></div>
-      <div class="stat"><div class="v">50</div><div class="k">Your prediction pts (pending)</div></div>
+      <div class="stat"><div class="v" id="lobStat1v">1,204</div><div class="k" id="lobStat1k">Players tonight</div></div>
+      <div class="stat"><div class="v" id="lobStat2v">50</div><div class="k" id="lobStat2k">Your prediction pts (pending)</div></div>
     </div>
     <div style="flex:1"></div>
     <button class="btn" onclick="startQuarter(0)">Start Quarter 1 ▶</button>
@@ -415,7 +422,8 @@
         <div style="font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px">Season rating: <b id="seasonRating" style="color:var(--teal2)">1,286</b> · Play the next game to keep it alive</div></div>
     </div>
     <button class="btn gold" onclick="openShare()">📲 Share my result card</button>
-    <button class="btn teal" onclick="openLeague()">🏟️ My League — The Barbershop</button>
+    <button class="btn teal" onclick="openTally()">🏆 Host: tally the crew &amp; crown a winner</button>
+    <button class="btn ghost" onclick="openLeague()">🏟️ Leagues (preview)</button>
     <button class="btn ghost" onclick="go('plus')">⭐ See STATS+ (season pass)</button>
     <button class="btn ghost" onclick="openHost()">👀 Peek behind the curtain (Host panel)</button>
     <button class="btn ghost" onclick="restart()">Play again</button>
@@ -425,9 +433,10 @@
   <!-- 9. LEAGUE -->
   <section class="screen" id="s-league">
     <div class="brand" style="margin-top:2px"><span class="logo" style="font-size:22px">STATS</span></div>
+    <div class="legalbox" style="background:rgba(255,197,77,.08);border-color:rgba(255,197,77,.3)"><b style="color:var(--gold)">Preview —</b> this is a sample of how Leagues will look. The members below are a demo; real friend leagues go live after the beta.</div>
     <div class="lg-head">
       <div class="lg-ic">💈</div>
-      <div><b>The Barbershop</b><small>Private league · 6 members · Week 7 of the season</small></div>
+      <div><b>The Barbershop</b><small>Sample league · 6 members · Week 7 of the season</small></div>
     </div>
     <div class="rivalry" id="rivalryLine">😤 Marcus is 6 pts ahead of you this season. Tonight's your shot.</div>
     <h2 style="margin:12px 0 2px;font-size:14px">Tonight</h2>
@@ -509,6 +518,24 @@
       </div>
       <button class="btn sm" style="margin-top:10px" onclick="hostToast('📤 Result + leaderboard posted to 4 channels.')">Post result + leaderboard</button>
     </div>
+
+    <div class="card tight">
+      <h2 style="font-size:14px">🏆 Crown the winner</h2>
+      <p class="sub" style="font-size:12px">After the final buzzer, collect everyone's scores from the group chat and enter them here to rank the crew and name the winner.</p>
+      <button class="btn sm teal" onclick="openTally()">Open the tally board</button>
+    </div>
+    <button class="btn ghost" onclick="go('final')">← Back</button>
+  </section>
+
+  <!-- HOST TALLY -->
+  <section class="screen" id="s-tally">
+    <div class="brand" style="margin-top:2px"><span class="logo" style="font-size:22px">STATS</span><span class="pill" style="align-self:center">Host tally</span></div>
+    <h1 style="margin-top:10px">Crown the winner 🏆</h1>
+    <p class="sub">Enter each player's final score from their result card. Highest points wins — ⚡ Speed breaks ties automatically.</p>
+    <div id="tallyRows"></div>
+    <button class="btn ghost sm" onclick="addTallyRow()">+ Add another player</button>
+    <button class="btn teal" onclick="crownWinner()">🏆 Crown the winner</button>
+    <div id="tallyResult"></div>
     <button class="btn ghost" onclick="go('final')">← Back</button>
   </section>
 
@@ -545,7 +572,8 @@
 const GAME={
   homeName:"Indiana Fever", homeAbbr:"IND", homeEmoji:"🔥",
   awayName:"Seattle Storm", awayAbbr:"SEA", awayEmoji:"⛈️",
-  venue:"WNBA Game of the Night", date:"Tue · July 28", night:"Game Night #1"
+  venue:"WNBA Game of the Night", date:"Tue · July 28", night:"Game Night #1",
+  tip:"Tip-off 9:00 PM ET / 8:00 PM CT" // ← set this to the confirmed broadcast time
 };
 const COLORS=["#2f6bff","#19c3d6","#ff4d5e","#ffc54d","#2ee6a6","#b57cff","#ff924d","#4dd0ff"];
 const roster={ // full names — used on the prediction sheet & final review
@@ -593,7 +621,7 @@ const bots=[
 ];
 
 /* ---------------- STATE ---------------- */
-let S={mode:"demo",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},qi:0,ni:0,answered:false,
+let S={mode:"demo",screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},qi:0,ni:0,nextQ:0,answered:false,
   lifelineHalf1:true,lifelineHalf2:true,botScores:[],totalPlayers:1204,
   results:[[],[],[],[]], liveAnswers:[[],[],[],[]], streak:0, seasonPts:0};
 let secondsLeft=0, timerDur=15;
@@ -610,9 +638,40 @@ const league={name:"The Barbershop",members:[
 /* ---------------- NAV ---------------- */
 const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-lobby",
   live:"s-live",break:"s-break",final:"s-final",host:"s-host",league:"s-league",plus:"s-plus",
-  rules:"s-rules",review:"s-review",predreview:"s-predreview"};
+  rules:"s-rules",review:"s-review",predreview:"s-predreview",tally:"s-tally"};
 function startLive(){S.mode="live";go('name');}
 function startDemo(){S.mode="demo";go('name');}
+
+/* ---------------- PERSISTENCE (Game Night only) ---------------- */
+const LS_KEY="stats_gamenight_v1";
+let resumeData=null;
+function save(){try{if(S.mode==="live")localStorage.setItem(LS_KEY,JSON.stringify(S));}catch(e){}}
+function clearSave(){try{localStorage.removeItem(LS_KEY);}catch(e){}}
+function checkResume(){
+  let saved=null;try{saved=JSON.parse(localStorage.getItem(LS_KEY));}catch(e){}
+  const RESUMABLE=["predict","lobby","live","review","predreview"];
+  if(saved && saved.mode==="live" && RESUMABLE.includes(saved.screen)){
+    resumeData=saved;
+    document.getElementById("resumeBar").style.display="block";
+  }
+}
+function doResume(){
+  if(!resumeData)return;
+  S=resumeData;
+  document.getElementById("resumeBar").style.display="none";
+  document.getElementById("playerName").value=S.name||"";
+  initColors();
+  const scr=S.screen;
+  if(scr==="predict"){buildPred();go("predict");}
+  else if(scr==="lobby"){renderLobby(S.nextQ!=null?S.nextQ:S.qi);go("lobby");}
+  else if(scr==="live"){ // mid-quarter refresh: replay the current quarter (nothing was scored yet)
+    S.liveAnswers[S.qi]=[];renderLobby(S.qi);go("lobby");
+    toast("Resumed — replay Q"+(S.qi+1)+" when you're ready.");
+  }
+  else if(scr==="review"){openReview();}
+  else if(scr==="predreview"){openPredReview();}
+}
+function dismissResume(){clearSave();resumeData=null;document.getElementById("resumeBar").style.display="none";}
 function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(map[k]).classList.add('active');
   document.getElementById('app').scrollTop=0; window.scrollTo(0,0);
@@ -620,10 +679,11 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
   // where ← goes from each screen; null = no back button
   const BACKMAP={landing:null,name:'landing',predict:'name',lobby:'landing',
     live:'lobby',break:'lobby',review:'lobby',predreview:'lobby',
-    final:null,rules:'landing',league:'final',plus:'final',host:'final'};
+    final:null,rules:'landing',league:'final',plus:'final',host:'final',tally:'final'};
   const b=document.getElementById('backBtn');
   b.classList.toggle('show', BACKMAP[k]!==null && BACKMAP[k]!==undefined);
-  b.dataset.to=BACKMAP[k]||'';}
+  b.dataset.to=BACKMAP[k]||'';
+  save();}
 let pendingBack=false;
 function goBack(){
   const to=document.getElementById('backBtn').dataset.to;
@@ -647,7 +707,8 @@ function hostToast(m){toast(m);}
 /* ---------------- NAME ---------------- */
 function initColors(){const w=document.getElementById('colorPick');w.innerHTML='';
   COLORS.forEach((c,i)=>{const b=document.createElement('button');b.className='chip';
-    b.style.cssText=`background:${c};width:34px;height:34px;border-radius:10px;border:2px solid ${i==0?'#fff':'transparent'}`;
+    const selc=(S.color===c)||(!S.color&&i===0);
+    b.style.cssText=`background:${c};width:34px;height:34px;border-radius:10px;border:2px solid ${selc?'#fff':'transparent'}`;
     b.onclick=()=>{S.color=c;[...w.children].forEach(x=>x.style.border='2px solid transparent');b.style.border='2px solid #fff';};
     w.appendChild(b);});}
 function checkName(){const v=document.getElementById('playerName').value.trim();
@@ -674,7 +735,7 @@ function buildPred(){const c=document.getElementById('predCard');c.innerHTML='';
 function validatePred(){const done=preds.filter(p=>S.predChoices[p.id]).length;
   document.getElementById('predBtn').disabled=done<preds.length;}
 function lockPredictions(){
-  S.pts=0; S.speed=0;
+  S.pts=0; S.speed=0; S.nextQ=0;
   if(S.mode==="demo"){
     let pp=0;
     preds.forEach(p=>{
@@ -692,18 +753,27 @@ function renderLobby(qi){
   const btn=document.querySelector('#s-lobby .btn');
   const foot=document.querySelector('#s-lobby .foot');
   const sub=document.querySelector('#s-lobby p.sub');
+  const s1v=document.getElementById('lobStat1v'),s1k=document.getElementById('lobStat1k');
+  const s2v=document.getElementById('lobStat2v'),s2k=document.getElementById('lobStat2k');
   if(S.mode==="live"){
     sub.textContent = qi===0
       ? "Predictions locked. Watch the game — the moment Q1 ends, come back and hit the button. The clock is real: 20 seconds a question, unused seconds bank as ⚡ Speed."
-      : `Q${qi} scored. Keep watching — when Q${qi+1} ends, come back and answer.`;
-    btn.textContent = `Quarter ${qi+1} just ended — answer now ▶`;
+      : `Q${qi} scored — you're on ${S.pts} pts. Keep watching; when Q${qi+1} ends, come back and answer.`;
+    btn.textContent = qi===0 ? `Q1 ended — answer now ▶` : `Quarter ${qi+1} ended — answer now ▶`;
     btn.onclick=()=>startQuarter(qi);
-    foot.textContent="Game Night mode: answers are scored when the host announces them at each break.";
+    foot.textContent="Game Night: answers score when the host announces them at each break. Your progress is saved.";
+    // honest live-mode stats (no fake crowd)
+    s1v.textContent = qi===0 ? '🔒' : S.pts;
+    s1k.textContent = qi===0 ? 'Predictions locked' : 'Your points so far';
+    s2v.textContent = qi===0 ? '20s' : '⚡'+S.speed;
+    s2k.textContent = qi===0 ? 'Clock per question' : 'Speed banked';
   }else{
     sub.textContent="Predictions locked. When each quarter ends, questions drop here — be fast, points are live.";
     btn.textContent = `Start Quarter ${qi+1} ▶`;
     btn.onclick=()=>startQuarter(qi);
     foot.textContent="Practice mode: a simulated Fever–Storm game with instant scoring.";
+    s1v.textContent='1,204';s1k.textContent='Players (simulated)';
+    s2v.textContent='50';s2k.textContent='Your prediction pts (pending)';
   }
 }
 
@@ -716,7 +786,18 @@ function standings(){
 function myRank(){const s=standings();return s.findIndex(x=>x.me)+1;}
 
 /* ---------------- QUARTER / LIVE ---------------- */
-let timerInt=null;
+let timerInt=null, audioCtx=null;
+function beep(freq,dur){try{
+  audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.connect(g);g.connect(audioCtx.destination);o.type='sine';o.frequency.value=freq;
+  g.gain.setValueAtTime(0.0001,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.3,audioCtx.currentTime+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+dur);
+  o.start();o.stop(audioCtx.currentTime+dur);
+}catch(e){}}
+function warnCue(){beep(880,0.15);try{navigator.vibrate&&navigator.vibrate(120);}catch(e){}}
+function timeCue(){beep(300,0.3);try{navigator.vibrate&&navigator.vibrate([80,60,80]);}catch(e){}}
 function startQuarter(qi){S.qi=qi;S.ni=0;renderScore();loadQuestion();go('live');}
 function renderScore(){
   if(S.mode==="demo"){
@@ -757,8 +838,9 @@ function startTimer(dur){
   const fill=document.getElementById('timerFill');const bar=document.getElementById('timerBar');
   fill.style.width='100%';bar.classList.remove('low');
   timerInt=setInterval(()=>{t--;secondsLeft=t;fill.style.width=(Math.max(t,0)/timerDur*100)+'%';
+    if(t===5)warnCue();
     if(t<=5)bar.classList.add('low');
-    if(t<=0){clearInterval(timerInt);if(!S.answered)answer(null,null);}
+    if(t<=0){clearInterval(timerInt);timeCue();if(!S.answered)answer(null,null);}
   },1000);
 }
 function extendTimer(extra){
@@ -768,8 +850,9 @@ function extendTimer(extra){
   let t=secondsLeft+extra; timerDur=Math.max(timerDur,t);
   bar.classList.remove('low');
   timerInt=setInterval(()=>{t--;secondsLeft=t;fill.style.width=(Math.max(t,0)/timerDur*100)+'%';
+    if(t===5)warnCue();
     if(t<=5)bar.classList.add('low');
-    if(t<=0){clearInterval(timerInt);if(!S.answered)answer(null,null);}
+    if(t<=0){clearInterval(timerInt);timeCue();if(!S.answered)answer(null,null);}
   },1000);
 }
 function answer(choice,btn){
@@ -882,7 +965,7 @@ function confirmReview(){
   document.getElementById('revNextBtn').textContent = S.qi<3 ? `Back to the game — Q${S.qi+2} next →` : 'Final buzzer — score predictions →';
 }
 function afterReview(){
-  if(S.qi<3){renderLobby(S.qi+1);go('lobby');}
+  if(S.qi<3){S.nextQ=S.qi+1;renderLobby(S.nextQ);go('lobby');}
   else{openPredReview();}
 }
 
@@ -950,6 +1033,7 @@ function showFinal(){
   // add prediction points now
   S.pts+=S.predPts;
   S.streak++;
+  clearSave(); // game complete — no resume needed
   document.getElementById('finalPts').textContent=S.pts;
   document.getElementById('streakN').textContent=S.streak;
   document.getElementById('seasonRating').textContent=(1000+S.seasonPts+S.pts+S.speed).toLocaleString();
@@ -1031,6 +1115,48 @@ function copyQs(qi){
   toast(`📋 Q${qi+1} questions copied — paste in the group chat.`);
 }
 
+/* ---------------- HOST TALLY ---------------- */
+function openTally(){
+  const wrap=document.getElementById('tallyRows');wrap.innerHTML='';
+  document.getElementById('tallyResult').innerHTML='';
+  // seed with the host's own result if we have one, then a couple blanks
+  if(S.mode==="live" && S.name){addTallyRow(S.name,S.pts,S.speed);}
+  addTallyRow();addTallyRow();
+  go('tally');
+}
+function addTallyRow(name,pts,spd){
+  const wrap=document.getElementById('tallyRows');
+  const d=document.createElement('div');d.className='card tight';d.style.padding='11px';
+  d.innerHTML=`<input class="tname" placeholder="Player name" maxlength="16" value="${name?String(name).replace(/"/g,'&quot;'):''}" style="margin-bottom:8px">
+    <div class="row2">
+      <input class="tpts" type="number" inputmode="numeric" placeholder="Points" value="${pts!==undefined?pts:''}">
+      <input class="tspd" type="number" inputmode="numeric" placeholder="⚡ Speed" value="${spd!==undefined?spd:''}">
+    </div>`;
+  wrap.appendChild(d);
+}
+function crownWinner(){
+  const rows=[...document.querySelectorAll('#tallyRows .card')];
+  const players=rows.map(r=>({
+    n:(r.querySelector('.tname').value||'').trim(),
+    pts:Number(r.querySelector('.tpts').value)||0,
+    spd:Number(r.querySelector('.tspd').value)||0
+  })).filter(p=>p.n);
+  if(players.length<2){toast('Add at least 2 players with names.');return;}
+  players.sort((a,b)=> b.pts-a.pts || b.spd-a.spd);
+  const tieOnPts = players.length>1 && players[0].pts===players[1].pts;
+  const el=document.getElementById('tallyResult');
+  el.innerHTML=`<div class="card tight" style="margin-top:12px">
+    <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:8px">🏆 ${players[0].n} wins the night!${tieOnPts?' <span style="color:var(--teal2);font-weight:700">(⚡ Speed broke the tie)</span>':''}</div>
+    ${players.map((p,i)=>`<div class="lb${i===0?' me':''}" style="margin:6px 0">
+      <div class="rank ${i==0?'g':i==1?'s':i==2?'b':''}">${i+1}</div>
+      <div class="av" style="background:${COLORS[i%COLORS.length]}">${p.n[0].toUpperCase()}</div>
+      <div class="lbname">${p.n}${i===0?' 👑':''}<small>⚡ ${p.spd} speed</small></div>
+      <div class="lbpts">${p.pts}</div></div>`).join('')}
+    <p class="sub" style="font-size:11px;margin:8px 0 0;color:var(--dim)">Screenshot this and drop it in the group chat.</p>
+  </div>`;
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
 /* ---------------- QUESTION ENGINE (working demo) ----------------
    In production: this exact logic runs on a server against a real
    play-by-play API (SportsDataIO / Sportradar / nba_api). Same
@@ -1082,7 +1208,8 @@ function runEngine(){
   toast('⚙️ Engine ran: 3 questions generated from 14 feed events.');
 }
 function restart(){
-  S={mode:"demo",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},qi:0,ni:0,answered:false,
+  clearSave();
+  S={mode:"demo",screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},qi:0,ni:0,nextQ:0,answered:false,
     lifelineHalf1:true,lifelineHalf2:true,botScores:[],totalPlayers:1204,
     results:[[],[],[],[]],liveAnswers:[[],[],[],[]],streak:S.streak,seasonPts:S.seasonPts+S.pts};
   league.members.forEach(m=>m.tonight=0);
@@ -1090,7 +1217,10 @@ function restart(){
   document.getElementById('nameBtn').disabled=true;
   initColors();go('landing');
 }
+// tip-off line from config
+try{document.getElementById('landingTip').textContent='🕐 '+GAME.tip;}catch(e){}
 initColors();
+checkResume();
 </script>
 </body>
 </html>
