@@ -1004,9 +1004,18 @@ window.STATS_FIREBASE = {
       if (Array.isArray(o.keys)) row.keys = o.keys.slice(0, 12).map(function (s) { return String(s == null ? '' : s).slice(0, 60); });
       if (Array.isArray(o.nums)) row.nums = o.nums.slice(0, 12).map(function (n) { return n == null || n === '' ? '' : String(n).slice(0, 8); });
       if (Array.isArray(o.bons)) row.bons = o.bons.slice(0, 12).map(function (n) { return Math.max(0, Math.min(60, Math.round(Number(n) || 0))); });
-      if (Array.isArray(o.opts)) row.opts = o.opts.slice(0, 12).map(function (a) {
-        return (a || []).slice(0, 30).map(function (s) { return String(s).slice(0, 60); });
-      });
+      // A MAP keyed by question number, not an array of arrays. Firestore
+      // refuses an array nested directly inside another array — the whole
+      // write throws, the catch below swallows it, and the round vanishes.
+      // The dashboard reads this back as opts[n], which works the same on a
+      // map with numeric keys as it did on an array.
+      if (Array.isArray(o.opts)) {
+        var om = {};
+        o.opts.slice(0, 12).forEach(function (a, i) {
+          om[String(i)] = (a || []).slice(0, 30).map(function (s) { return String(s).slice(0, 60); });
+        });
+        row.opts = om;
+      }
       if (typeof o.worth === 'number' && o.worth > 0 && o.worth <= 60) row.worth = Math.round(o.worth);
       if (o.src) row.src = String(o.src).slice(0, 12);
       if (o.label) row.label = String(o.label).slice(0, 40);
