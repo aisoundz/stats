@@ -278,6 +278,17 @@
   .legalbox{background:rgba(46,230,166,.07);border:1px solid rgba(46,230,166,.25);border-radius:13px;
     padding:12px 14px;font-size:12px;color:var(--muted);line-height:1.55;margin:10px 0}
   .legalbox b{color:var(--green)}
+
+/* ---- live room bar: only ever shows numbers the backend actually returned ---- */
+.roombar{display:flex;align-items:center;gap:8px;justify-content:center;
+  margin:10px 0 2px;padding:9px 12px;border-radius:12px;
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);
+  font-size:12.5px;color:var(--muted);font-weight:700}
+.rdot{width:8px;height:8px;border-radius:50%;background:#4b5563;flex:none}
+.rdot.on{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.15)}
+.rdot.err{background:#ef4444}
+.roombar b{color:var(--fg)}
+.roomrank{margin-left:auto;font-size:11.5px;color:var(--dim)}
 </style>
 </head>
 <body>
@@ -409,8 +420,13 @@
       <p class="sub center" id="lobbySub">Predictions locked. When each quarter ends, questions drop here — be fast, points are live.</p>
     </div>
     <div class="statgrid" style="margin-top:10px">
-      <div class="stat"><div class="v" id="lobStat1v">1,204</div><div class="k" id="lobStat1k">Players tonight</div></div>
+      <div class="stat"><div class="v" id="lobStat1v">—</div><div class="k" id="lobStat1k">Players tonight</div></div>
       <div class="stat"><div class="v" id="lobStat2v">50</div><div class="k" id="lobStat2k">Your prediction pts (pending)</div></div>
+    </div>
+    <div class="roombar" id="roomBar" style="display:none">
+      <span class="rdot" id="roomDot"></span>
+      <span id="roomTxt">Connecting to tonight's room…</span>
+      <span class="roomrank" id="roomRank"></span>
     </div>
     <div class="card" id="catchCard" style="display:none">
       <div class="catchhead"><b id="catchTitle">⚡ Live catches</b><span class="cpts" id="catchPtsLbl">6 × 1 pt</span></div>
@@ -427,7 +443,7 @@
   <section class="screen" id="s-live">
     <div class="scoreself">
       <div class="youscore"><div><b id="youPts">0</b> <span>your pts</span></div>
-        <div style="text-align:right"><b id="youRank">–</b> <span id="youRankLbl">rank / 1,204</span></div></div>
+        <div style="text-align:right"><b id="youRank">–</b> <span id="youRankLbl">rank</span></div></div>
     </div>
     <div class="scorebar">
       <div class="team"><span class="nm" id="teamHomeNm">🔥 IND</span><span class="sc" id="scHome">–</span></div>
@@ -632,7 +648,7 @@
           <div style="font-size:22px" id="scEmoji">🏀</div>
         </div>
         <div class="sc-pts" id="scPts">0 <span style="font-size:15px;color:var(--muted);font-weight:800">pts</span></div>
-        <div class="sc-sub" id="scRankLine">Rank #– of 1,204</div>
+        <div class="sc-sub" id="scRankLine">Rank #–</div>
         <div class="sc-grid" id="scGrid"></div>
         <div class="sc-foot">
           <span class="streak" id="scStreak">🔥 4-game streak</span>
@@ -671,12 +687,251 @@
   <div class="toast" id="toast"></div>
 </div>
 
+<!-- =====================================================================
+     BACKEND CONFIG — paste the Firebase web config here to turn on real
+     player counts and the live leaderboard. Leave it null and the app runs
+     exactly as before, showing "—" instead of any number it cannot prove.
+     These keys are safe in public source: Firebase web config identifies
+     the project, it does not authorise anything. Access is controlled by
+     firestore.rules, not by hiding this object.
+     ===================================================================== -->
+<script>
+window.STATS_FIREBASE = {
+  apiKey:            "AIzaSyB1g4u3L85sks1Phjz_Tim98urv1-IZBps",
+  authDomain:        "stats-gametime.firebaseapp.com",
+  projectId:         "stats-gametime",
+  storageBucket:     "stats-gametime.firebasestorage.app",
+  messagingSenderId: "349900988033",
+  appId:             "1:349900988033:web:7b2f8a5e6af1b2a7b27780"
+};
+</script>
+<script>
+/* =====================================================================
+   STATS — shared-state backend
+   ---------------------------------------------------------------------
+   Contract (window.SB). Every method is safe to call at any time, on any
+   build, with or without a configured backend. When there is no backend,
+   every read returns null and the UI must render "—". It must NEVER
+   substitute a number. A fabricated player count in front of real players
+   on game night is the exact failure this module exists to prevent.
+
+     SB.state      'off' | 'connecting' | 'on' | 'error'
+     SB.enabled    true only once a live connection is proven
+     SB.me         { uid, name } | null
+     SB.join(o)    -> bool      claim a seat for this device
+     SB.push(o)    -> bool      write my own score row
+     SB.count()    -> int|null  players present right now
+     SB.top(n)     -> [] |null  leaderboard, highest first
+     SB.rank()     -> int|null  my position among real players
+     SB.onState(f)              subscribe to state changes
+   ===================================================================== */
+(function () {
+  'use strict';
+
+  /* ---- cost control -------------------------------------------------
+     Firestore Spark (free) tier is 50k reads / 20k writes per day.
+     Budget for a 3-hour game night with 200 concurrent players:
+       heartbeat  150s, visible tabs only  -> ~72 writes/player  = 14.4k
+       count poll  90s, visible tabs only  -> ~120 reads/player  = 24k
+       leaderboard top 10, round ends only ->  ~50 reads/player  = 10k
+       rank        1 read, round ends only ->    ~5 reads/player = 1k
+     Totals ~15k writes / 35k reads. Under budget with headroom.
+     Raise these numbers before raising the player cap.                */
+  var HEARTBEAT_MS = 150000;
+  var COUNT_MS     = 90000;
+  var PRESENT_MS   = 360000;  // "here now" = seen in the last 6 minutes
+  var TOP_N        = 10;
+  var MAX_CALLS    = 4000;    // circuit breaker per device per session
+
+  /* ---- null backend: the honest default ---------------------------- */
+  var listeners = [];
+  var SB = {
+    state: 'off',
+    enabled: false,
+    me: null,
+    reason: 'no backend configured',
+    join:  function () { return Promise.resolve(false); },
+    push:  function () { return Promise.resolve(false); },
+    count: function () { return Promise.resolve(null); },
+    top:   function () { return Promise.resolve(null); },
+    rank:  function () { return Promise.resolve(null); },
+    onState: function (f) { listeners.push(f); try { f(SB.state); } catch (e) {} }
+  };
+  window.SB = SB;
+
+  function setState(s, reason) {
+    SB.state = s;
+    SB.enabled = (s === 'on');
+    if (reason) SB.reason = reason;
+    listeners.forEach(function (f) { try { f(s); } catch (e) {} });
+  }
+
+  /* ---- is there anything to connect to? ---------------------------- */
+  var CFG = window.STATS_FIREBASE || null;
+  if (!CFG || !CFG.projectId) {
+    setState('off', 'no backend configured');
+    return;
+  }
+
+  setState('connecting');
+
+  var SDK  = window.STATS_SDK_BASE || 'https://www.gstatic.com/firebasejs/10.12.2';
+  var EMU  = window.STATS_EMULATOR || null;   // {host, firestorePort, authPort} for local tests
+  var calls = 0;
+  function budget() {
+    if (calls++ > MAX_CALLS) { setState('error', 'call budget exhausted'); return false; }
+    return true;
+  }
+
+  var db, auth, F, nightId = null, meRef = null, hbTimer = null;
+  var mine = { name: '', color: '', pts: 0, speed: 0, predPts: 0, catchPts: 0, roundsDone: 0 };
+
+  function visible() { return document.visibilityState !== 'hidden'; }
+
+  (async function boot() {
+    try {
+      var appMod  = await import(SDK + '/firebase-app.js');
+      var authMod = await import(SDK + '/firebase-auth.js');
+      var fsMod   = await import(SDK + '/firebase-firestore.js');
+      F = fsMod;
+
+      var app = appMod.initializeApp(CFG);
+      auth = authMod.getAuth(app);
+      db   = fsMod.getFirestore(app);
+
+      if (EMU) {
+        authMod.connectAuthEmulator(auth, 'http://' + EMU.host + ':' + EMU.authPort, { disableWarnings: true });
+        fsMod.connectFirestoreEmulator(db, EMU.host, EMU.firestorePort);
+      }
+
+      await authMod.signInAnonymously(auth);
+      await new Promise(function (res) {
+        var un = authMod.onAuthStateChanged(auth, function (u) { if (u) { un(); res(u); } });
+      });
+
+      SB.me = { uid: auth.currentUser.uid, name: '' };
+      setState('on', 'connected');
+    } catch (e) {
+      setState('error', (e && e.message) || String(e));
+    }
+  })();
+
+  /* ---- join: claim a seat ------------------------------------------ */
+  SB.join = async function (o) {
+    if (!SB.enabled || !budget()) return false;
+    try {
+      nightId = o.nightId;
+      mine.name  = String(o.name || 'player').slice(0, 24);
+      mine.color = String(o.color || '#888').slice(0, 12);
+      SB.me.name = mine.name;
+      meRef = F.doc(db, 'nights', nightId, 'players', SB.me.uid);
+      await F.setDoc(meRef, {
+        name: mine.name, color: mine.color,
+        pts: 0, speed: 0, predPts: 0, catchPts: 0, roundsDone: 0,
+        joinedAt: F.serverTimestamp(), lastSeen: F.serverTimestamp()
+      }, { merge: true });
+      startHeartbeat();
+      return true;
+    } catch (e) { setState('error', e.message || String(e)); return false; }
+  };
+
+  function startHeartbeat() {
+    if (hbTimer) clearInterval(hbTimer);
+    hbTimer = setInterval(function () {
+      if (!meRef || !visible() || !budget()) return;
+      F.setDoc(meRef, { lastSeen: F.serverTimestamp() }, { merge: true }).catch(function () {});
+    }, HEARTBEAT_MS);
+    // stop burning quota when the tab is backgrounded, resume on return
+    document.addEventListener('visibilitychange', function () {
+      if (visible() && meRef && budget()) {
+        F.setDoc(meRef, { lastSeen: F.serverTimestamp() }, { merge: true }).catch(function () {});
+      }
+    });
+  }
+
+  /* ---- push my score ------------------------------------------------ */
+  SB.push = async function (o) {
+    if (!SB.enabled || !meRef || !budget()) return false;
+    try {
+      ['pts', 'speed', 'predPts', 'catchPts', 'roundsDone'].forEach(function (k) {
+        if (typeof o[k] === 'number' && isFinite(o[k])) mine[k] = Math.max(0, Math.round(o[k]));
+      });
+      await F.setDoc(meRef, {
+        pts: mine.pts, speed: mine.speed, predPts: mine.predPts,
+        catchPts: mine.catchPts, roundsDone: mine.roundsDone,
+        lastSeen: F.serverTimestamp()
+      }, { merge: true });
+      return true;
+    } catch (e) { return false; }
+  };
+
+  /* ---- how many are actually here ---------------------------------- */
+  SB.count = async function () {
+    if (!SB.enabled || !nightId || !budget()) return null;
+    try {
+      var cutoff = new Date(Date.now() - PRESENT_MS);
+      var q = F.query(
+        F.collection(db, 'nights', nightId, 'players'),
+        F.where('lastSeen', '>', cutoff)
+      );
+      var snap = await F.getCountFromServer(q);   // 1 read per 1000 docs
+      return snap.data().count;
+    } catch (e) { return null; }
+  };
+
+  /* ---- leaderboard --------------------------------------------------
+     Single-field orderBy only, so Firestore's automatic index covers it
+     and the user never has to create a composite index by hand.
+     Speed is the documented tiebreaker, applied client-side.          */
+  SB.top = async function (n) {
+    if (!SB.enabled || !nightId || !budget()) return null;
+    try {
+      var q = F.query(
+        F.collection(db, 'nights', nightId, 'players'),
+        F.orderBy('pts', 'desc'),
+        F.limit(Math.min(n || TOP_N, 25))
+      );
+      var snap = await F.getDocs(q);
+      var out = [];
+      snap.forEach(function (d) {
+        var v = d.data();
+        out.push({
+          name: v.name || 'player', color: v.color || '#888',
+          pts: v.pts || 0, speed: v.speed || 0,
+          me: d.id === SB.me.uid
+        });
+      });
+      out.sort(function (a, b) { return (b.pts - a.pts) || (b.speed - a.speed); });
+      return out;
+    } catch (e) { return null; }
+  };
+
+  /* ---- my true rank -------------------------------------------------
+     Counting the players above me is one read regardless of how many
+     players there are, so this stays cheap at any scale.              */
+  SB.rank = async function () {
+    if (!SB.enabled || !nightId || !budget()) return null;
+    try {
+      var q = F.query(
+        F.collection(db, 'nights', nightId, 'players'),
+        F.where('pts', '>', mine.pts)
+      );
+      var snap = await F.getCountFromServer(q);
+      return snap.data().count + 1;
+    } catch (e) { return null; }
+  };
+
+  SB.pollMs = COUNT_MS;
+})();
+
+</script>
 <script>
 /* ---------------- GAME CONFIG ----------------
    Team-agnostic: swap this one object and the whole app
    re-skins to ANY game — NBA, G-League, college, WNBA.
    In production this loads from the nightly schedule feed. */
 const BB_GAME={
+  nightId:"gn1-2026-07-28-ind-sea",
   homeName:"Indiana Fever", homeAbbr:"IND", homeNick:"Fever", homeEmoji:"🔥",
   awayName:"Seattle Storm", awayAbbr:"SEA", awayNick:"Storm", awayEmoji:"⛈️",
   venue:"WNBA Game of the Night", date:"Tue · July 28", short:"July 28", shareDate:"JUL 28", night:"Game Night #1",
@@ -732,6 +987,7 @@ const BBALL_ROUNDS=[
    Never build a scoring round on a goal — there isn't always a goal.
    ------------------------------------------------------------------------ */
 const SC_GAME={
+  nightId:"sn1-2026-08-04-mia-ame",
   homeName:"Inter Miami CF", homeAbbr:"MIA", homeNick:"Miami", homeEmoji:"🩷",
   awayName:"Club América",   awayAbbr:"AME", awayNick:"América", awayEmoji:"🦅",
   venue:"Leagues Cup · sample fixture", date:"Aug 4 – Sep 6", short:"Aug 4", shareDate:"AUG 4", night:"Soccer Night (sample)",
@@ -945,7 +1201,10 @@ function checkName(){const v=document.getElementById('playerName').value.trim();
   document.getElementById('nameBtn').disabled=v.length<2;S.name=v;}
 
 /* ---------------- PREDICTIONS ---------------- */
-function startPredict(){buildPred();go('predict');}
+function startPredict(){
+  if(S.mode==="live") joinNight();
+  buildPred();go('predict');
+}
 function buildPred(){const c=document.getElementById('predCard');c.innerHTML='';
   preds.forEach(p=>{
     const row=document.createElement('div');row.className='predrow';
@@ -1001,6 +1260,7 @@ function renderLobby(qi){
     s1k.textContent = qi===0 ? 'Predictions locked' : 'Your points so far';
     s2v.textContent = qi===0 ? '20s' : '⚡'+S.speed;
     s2k.textContent = qi===0 ? 'Clock per question' : 'Speed banked';
+    refreshRoom();
   }else{
     sub.textContent = qi===0
       ? `Predictions locked. When ${roundName(qi).toLowerCase()} ends, questions drop here — be fast, points are live.`
@@ -1298,6 +1558,10 @@ function confirmReview(){
     : `${L.End} — score predictions →`;
 }
 function afterReview(){
+  // Don't make the player wait on the network to change screens — but do
+  // re-read the room once the write lands, or the rank they see is a full
+  // round stale and they look pinned to last place all night.
+  pushScore().then(()=>{ if(S.screen==='lobby') refreshRoom(); }).catch(()=>{});
   if(!isLastRound(S.qi)){S.nextQ=S.qi+1;renderLobby(S.nextQ);go('lobby');}
   else{openPredReview();}
 }
@@ -1398,6 +1662,7 @@ function showFinal(){
     document.getElementById('finalTitle').textContent=`${L.End.replace(/[^A-Za-z]+$/,'')}, ${S.name||'player'}!`;
     document.getElementById('finalLb').innerHTML=
       `<div class="card tight"><p class="sub" style="font-size:12.5px;margin:0">📲 Post your result card in the group chat. Highest points wins the night — ⚡ Speed breaks ties. Rematch at the next Game of the Night.</p></div>`;
+    finishLive();
   }else{
     const s=standings();const rank=s.findIndex(x=>x.me)+1;
     const beat=Math.round((S.totalPlayers-rank)/S.totalPlayers*100);
@@ -1410,6 +1675,146 @@ function showFinal(){
   }
   go('final');
 }
+/* =====================================================================
+   REAL ROOM — the only place the app is allowed to talk about how many
+   other people are playing.
+   ---------------------------------------------------------------------
+   Every function here fails to "—", never to a number. If the backend is
+   off, unreachable, or slow, the player sees an honest blank. Inventing a
+   crowd in front of real players on game night is the failure mode this
+   whole layer exists to prevent.
+   ===================================================================== */
+let roomTimer=null, roomLast={count:null,rank:null};
+
+function nightKey(){ return GAME.nightId || (SPORT.key+'-unscheduled'); }
+
+async function joinNight(){
+  // Subscribe first, unconditionally. `enabled` is false while the backend
+  // is still booting and stays false if the boot fails — so hooking after
+  // the guard means the one case that most needs a repaint (dead network)
+  // never gets one, and the bar sits on "Connecting…" all night.
+  hookRoomState();
+  if(!window.SB || !SB.enabled) return false;
+  const ok = await SB.join({
+    nightId: nightKey(),
+    name: S.name || 'player',
+    color: S.color || '#888'
+  });
+  if(ok) startRoomPolling();
+  return ok;
+}
+
+async function pushScore(){
+  if(!window.SB || !SB.enabled) return;
+  await SB.push({
+    pts:S.pts, speed:S.speed,
+    predPts:S.predPts||0, catchPts:S.catchPts||0,
+    roundsDone:S.qi+1
+  });
+}
+
+function startRoomPolling(){
+  if(roomTimer) clearInterval(roomTimer);
+  roomTimer=setInterval(()=>{ if(S.mode==="live") refreshRoom(); },
+                        (window.SB && SB.pollMs) || 90000);
+}
+
+/* The poll only fires every 90 seconds. If the backend dies at boot — bad
+   wifi, an outage, a captive portal — the bar would sit on "Connecting to
+   tonight's room…" for up to a minute and a half, which reads as a hung
+   app. Repaint the moment the state actually settles instead. */
+let roomStateHooked=false;
+function hookRoomState(){
+  if(roomStateHooked || !window.SB || !SB.onState) return;
+  roomStateHooked=true;
+  SB.onState(()=>{ if(S.mode==="live") refreshRoom(); });
+}
+
+function setRoomBar(state, txt, rank){
+  const bar=document.getElementById('roomBar');
+  if(!bar) return;
+  if(S.mode!=="live" || !window.SB || SB.state==='off'){ bar.style.display='none'; return; }
+  bar.style.display='flex';
+  const dot=document.getElementById('roomDot');
+  dot.className='rdot'+(state==='on'?' on':state==='err'?' err':'');
+  document.getElementById('roomTxt').innerHTML=txt;
+  document.getElementById('roomRank').textContent=rank||'';
+}
+
+async function refreshRoom(){
+  if(S.mode!=="live") return;
+  if(!window.SB || SB.state==='off'){ setRoomBar('off',''); return; }
+  if(SB.state==='connecting'){ setRoomBar('','Connecting to tonight\'s room…'); return; }
+  if(SB.state==='error'){
+    setRoomBar('err','Live count unavailable — your game is unaffected.');
+    return;
+  }
+  const [c,r]=await Promise.all([SB.count(), SB.rank()]);
+  roomLast={count:c,rank:r};
+  // A null count means we could not confirm it. Say so; do not guess.
+  const cTxt = (c===null||c===undefined)
+    ? 'Live count unavailable'
+    : `<b>${c.toLocaleString()}</b> playing right now`;
+  setRoomBar('on', cTxt, (r===null||r===undefined)?'':`you're #${r}`);
+
+  const s1v=document.getElementById('lobStat1v'), s1k=document.getElementById('lobStat1k');
+  if(s1v && S.mode==="live" && c!==null && c!==undefined){
+    s1v.textContent=c.toLocaleString(); s1k.textContent='Players tonight';
+  }
+}
+
+/* Final screen: the one moment the full room matters. Real rank out of real
+   players, real top 10 — or the group-chat card we already had. */
+async function finishLive(){
+  if(!window.SB || !SB.enabled) return;
+  await pushScore();
+  const [rank,top,count]=await Promise.all([SB.rank(), SB.top(10), SB.count()]);
+  if(rank!==null && rank!==undefined && count){
+    document.getElementById('finalRank').textContent='#'+rank;
+    document.querySelector('#s-final .statgrid .stat:nth-child(1) .k').textContent=
+      `Final rank of ${count.toLocaleString()}`;
+    document.getElementById('finalTitle').textContent =
+      rank===1 ? '🏆 You won the night!' : `Great game, ${S.name||'player'}!`;
+    document.getElementById('scRankLine').textContent=`Rank #${rank} of ${count.toLocaleString()}`;
+  }
+  if(top && top.length) renderRealLb('finalLb', top, count);
+}
+
+function renderRealLb(elId, list, count){
+  const el=document.getElementById(elId); if(!el) return;
+  el.innerHTML='';
+  const head=document.createElement('p');
+  head.className='sub'; head.style.cssText='font-size:12px;margin:0 0 6px;text-align:center';
+  head.textContent = count ? `Tonight's top ${Math.min(list.length,10)} of ${count.toLocaleString()} players`
+                           : `Tonight's top ${list.length}`;
+  el.appendChild(head);
+  list.forEach((p,i)=>{
+    const d=document.createElement('div'); d.className='lb'+(p.me?' me':'');
+    const rc=i==0?'g':i==1?'s':i==2?'b':'';
+    d.innerHTML=`<div class="rank ${rc}">${i+1}</div>
+      <div class="av" style="background:${p.color}">${(p.name||'P')[0].toUpperCase()}</div>
+      <div class="lbname">${p.me?(p.name||'You')+' (you)':p.name}${i==0?' 👑':''}</div>
+      <div class="lbpts">${p.pts}</div>`;
+    el.appendChild(d);
+  });
+  const foot=document.createElement('p');
+  foot.className='foot'; foot.style.marginTop='8px';
+  foot.textContent='⚡ Speed breaks ties.';
+  el.appendChild(foot);
+}
+
+/* Host check: before tip-off you need to know the room is actually live.
+   Add ?debug=1 to see the connection state on the landing screen. */
+function backendBadge(){
+  if(!/[?&]debug=1/.test(location.search)) return;
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;bottom:6px;left:6px;z-index:999;font:700 10px/1.4 ui-monospace,monospace;'
+    +'padding:4px 7px;border-radius:6px;background:#111;color:#9ca3af;border:1px solid #333';
+  const paint=()=>{ d.textContent='backend: '+(window.SB?SB.state:'missing')+' · '+(window.SB?SB.reason:''); };
+  paint(); if(window.SB) SB.onState(paint);
+  document.body.appendChild(d);
+}
+
 /* ---------------- SHARE CARD ---------------- */
 function openShare(){
   document.getElementById('scEmoji').textContent=SPORT.emoji;
@@ -1980,6 +2385,7 @@ function applySport(){
 try{applySport();}catch(e){console.error('applySport',e);}
 initColors();
 checkResume();
+try{backendBadge();}catch(e){}
 </script>
 </body>
 </html>
