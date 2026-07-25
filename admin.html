@@ -338,6 +338,13 @@ async function boot(){
 }
 
 function onAuth(u){
+  // An anonymous session is not a wrong account, it is no account. The
+  // player app signs everyone in anonymously on this same domain, so any
+  // phone that has played the game arrives here already "signed in" with
+  // no email at all. Showing that person a refusal wall is a lie about
+  // what went wrong — they haven't done anything, they just haven't
+  // signed in yet. Treat it as signed out and hand them the button.
+  if(u && (u.isAnonymous || !u.email)) u = null;
   if(!u){
     user = null;
     $('gateMsg').textContent = 'Sign in to open the control room.';
