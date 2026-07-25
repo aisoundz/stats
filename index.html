@@ -323,7 +323,7 @@
 
     <div class="card">
       <div class="step"><div class="num">1</div><div><b id="step1h">Predict before tip-off</b><p id="step1p">Fill your prediction sheet — winner, stat leaders & bonus amounts. Worth up to 50 pts.</p></div></div>
-      <div class="step"><div class="num">2</div><div><b id="step2h">Answer at every quarter break</b><p id="step2p">3 questions about what JUST happened. Points rise: Q1 = 1pt → Q4 = 4pt. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.</p></div></div>
+      <div class="step"><div class="num">2</div><div><b id="step2h">Answer at every quarter break</b><p id="step2p">4 questions about what JUST happened — and not the ones you'd expect. Points rise: Q1 = 1pt → Q4 = 4pt, so the last quarter is worth four times the first. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.</p></div></div>
       <div class="step"><div class="num">3</div><div><b>Score with the crew</b><p id="step3p">When the host posts the answers, tap them to score your quarter. Most points wins the night; ⚡ Speed breaks ties.</p></div></div>
     </div>
 
@@ -354,7 +354,7 @@
 
     <div class="card tight">
       <h2 style="font-size:14px" id="ruleLiveH">⏱️ Quarter questions — up to 30 pts</h2>
-      <p class="sub" style="font-size:12.5px" id="ruleLiveP">At the end of each quarter, answer 3 questions about the quarter you just watched. Correct answers are worth 1 pt each in Q1, 2 in Q2, 3 in Q3, and 4 in Q4. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.</p>
+      <p class="sub" style="font-size:12.5px" id="ruleLiveP">At the end of each quarter, answer 4 questions about the quarter you just watched. They are not box-score trivia — they're the stuff you only catch if the game is actually on in front of you. Correct answers are worth 1 pt each in Q1, 2 in Q2, 3 in Q3, and 4 in Q4. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.</p>
     </div>
 
     <div class="card tight">
@@ -520,6 +520,24 @@
     <div class="card tight" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
       <div><b style="font-size:15px">🔥 <span id="streakN">4</span>-game streak</b>
         <div style="font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px">Season rating: <b id="seasonRating" style="color:var(--teal2)">1,286</b> · Play the next game to keep it alive</div></div>
+    </div>
+    <!-- THE LIST — shown only on Game Night, only once, and never in practice.
+         Placed here on purpose: this is the happiest thirty seconds a player
+         has all night, and it is the only moment they will ever type an email
+         into a game. Ask anywhere earlier and it reads as a gate. -->
+    <div class="card" id="signupCard" style="display:none;border-color:rgba(46,230,166,.35)">
+      <b style="font-size:15px">📬 Get the next Game Night</b>
+      <p class="sub" style="font-size:12.5px;margin:6px 0 0">One email before each game — when it's on, who's playing, what's up for grabs. That's it.</p>
+      <label class="fld" for="suEmail">Email</label>
+      <input id="suEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com">
+      <label class="fld" for="suPhone">Phone <span style="text-transform:none;letter-spacing:0;font-weight:600">— optional</span></label>
+      <input id="suPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(555) 555-5555">
+      <label style="display:flex;gap:10px;align-items:flex-start;margin:14px 0 0;font-size:11.5px;line-height:1.5;color:var(--muted);font-weight:600;cursor:pointer">
+        <input id="suConsent" type="checkbox" style="width:18px;height:18px;flex:0 0 18px;margin-top:1px;appearance:auto">
+        <span>Yes — email me about upcoming STATS game nights. If I entered a phone number, I also agree to receive recurring automated texts from STATS at that number. Consent is <b>not</b> a condition of playing, scoring, or winning anything. Message &amp; data rates may apply. Reply STOP to stop, HELP for help.</span>
+      </label>
+      <button class="btn teal" id="suBtn" style="margin-top:12px" onclick="submitSignup()">Count me in →</button>
+      <p class="foot" id="suNote" style="margin-top:8px">We don't sell your info. We're not texting anyone yet — the number just means you're on the list when we start.</p>
     </div>
     <button class="btn gold" onclick="openShare()">📲 Share my result card</button>
     <button class="btn teal" onclick="openTalk()">🔥 Talk trash in the group chat</button>
@@ -726,6 +744,7 @@ window.STATS_FIREBASE = {
      SB.watchRound(f)           newest host-pushed round, or null
      SB.submit(id,o)-> bool     lock my picks for a pushed round
      SB.mySub(id)  -> obj|null  what I already locked for that round
+     SB.signup(o)  -> bool      opt in to hear about the next game night
      SB.onState(f)              subscribe to state changes
    ===================================================================== */
 (function () {
@@ -761,6 +780,7 @@ window.STATS_FIREBASE = {
     watchRound: function () { return function () {}; },
     submit: function () { return Promise.resolve(false); },
     mySub:  function () { return Promise.resolve(null); },
+    signup: function () { return Promise.resolve(false); },
     onState: function (f) { listeners.push(f); try { f(SB.state); } catch (e) {} }
   };
   window.SB = SB;
@@ -987,6 +1007,51 @@ window.STATS_FIREBASE = {
     } catch (e) { return null; }
   };
 
+  /* ---- the list -----------------------------------------------------
+     One document per device, at /signups/{uid}. Deliberately NOT under
+     /nights — the whole point is that it outlives the night.
+
+     Three things this function does not do, on purpose:
+
+     It does not require a night. Unlike every other write in this module,
+     signup works before join() — someone can hand over an email from the
+     landing page without ever having played, and refusing that would be
+     silly.
+
+     It does not send anything. This writes a row and stops. Texting the
+     list means A2P 10DLC registration and TCPA consent handling, neither
+     of which exists yet; collecting now so the list is warm when that
+     clears is the entire strategy. A phone number sitting unused in a
+     database is an asset. A phone number texted without the paperwork is
+     a lawsuit.
+
+     It does not phrase consent for you. `consent` must be literally true,
+     enforced at the rules layer, and the checkbox that sets it carries
+     the disclosure. An unchecked box writes nothing at all.              */
+  SB.signup = async function (o) {
+    if (!SB.enabled || !SB.me || !o || !budget()) return false;
+    var email = String(o.email || '').trim().toLowerCase();
+    // Not validation theatre — the rules reject a bad row anyway. This is
+    // to avoid burning a write on something that cannot possibly be an
+    // address, because writes are the scarce resource on the free tier.
+    if (email.length < 6 || email.length > 120 ||
+        email.indexOf('@') < 1 || email.indexOf('.', email.indexOf('@')) < 0) return false;
+    if (o.consent !== true) return false;
+    var row = {
+      email:   email,
+      name:    String(o.name || mine.name || '').slice(0, 24),
+      consent: true,
+      night:   String(nightId || o.night || ''),
+      at:      F.serverTimestamp()
+    };
+    var phone = String(o.phone == null ? '' : o.phone).replace(/[^0-9+]/g, '');
+    if (phone.length >= 10 && phone.length <= 20) row.phone = phone;
+    try {
+      await F.setDoc(F.doc(db, 'signups', SB.me.uid), row);
+      return true;
+    } catch (e) { return false; }
+  };
+
   SB.pollMs = COUNT_MS;
 })();
 
@@ -1017,29 +1082,46 @@ const BB_PREDS=[
   {id:"reb", label:"Most rebounds", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Aliyah Boston", num:12, numLabel:"How many rebounds?"},
   {id:"blk", label:"Most blocks", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Ezi Magbegor", num:4, numLabel:"How many blocks?"}
 ];
-// 4 quarters × 3 questions. worth = quarter index+1 (WNBA plays 4 quarters — the arena rules map 1:1)
-// Every question is answerable by WATCHING + the box score at the break — that's the game.
-// In Practice mode the `a` field simulates the result; on Game Night the host announces real answers.
+/* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
+   Every question is answerable by WATCHING the broadcast at the break — no lookups,
+   no deep box-score dives. The house style here is deliberately NOT box-score trivia:
+   a good STATS question is one a room can argue about out loud, and one the host can
+   settle in three seconds without pausing the game.
+
+   Three rules every question obeys:
+     1. It resolves. No question can hang on something that might not happen.
+     2. The host can answer it from the broadcast alone, at the break, in seconds.
+     3. It asserts nothing. A question never claims a fact about a real player —
+        it asks what the room just watched. (In Practice mode the `a` field is a
+        SIMULATED result for a fake game, not a claim about the real one.)  */
 const BBALL_ROUNDS=[
+  // --- Q1 · 1 pt each · the warm-up. Low stakes, everybody in. ---
   {home:23,away:19, q:[
-    {t:"Which player scored the first basket of the game?", o:["Clark","Magbegor","Boston","Malonga"], a:"Clark"},
-    {t:"How many 3-pointers were made in Q1 (both teams)?", o:["3","5","7","9+"], a:"5"},
-    {t:"Who committed the first foul of the game?", o:["Boston","Horston","Cunningham","Dolson"], a:"Horston"}
+    {t:"The first bucket of the night — how did it go in?", o:["Layup or dunk","Mid-range jumper","Three","Free throw"], a:"Layup or dunk"},
+    {t:"The very first whistle of the game was for…", o:["A shooting foul","A non-shooting foul","Out of bounds / travel","A timeout"], a:"A non-shooting foul"},
+    {t:"🎙️ Booth Bingo — which did you hear from the broadcast FIRST?", o:["\"downhill\"","\"unselfish\"","\"veteran\"","None of them"], a:"\"downhill\""},
+    {t:"Q1 ended on…", o:["A made basket","A missed shot","A turnover","Free throws"], a:"A missed shot"}
   ]},
+  // --- Q2 · 2 pts each · getting weird. Counting the stuff nobody counts. ---
   {home:45,away:41, q:[
-    {t:"Who leads ALL scorers at halftime?", o:["Clark","Mitchell","F. Johnson","Malonga"], a:"Clark"},
-    {t:"How many total timeouts were called in the 1st half?", o:["2","3","4","5+"], a:"3"},
-    {t:"Who committed the first foul of Q2?", o:["Billings","Dolson","Hull","Melbourne"], a:"Dolson"}
+    {t:"Free throws MISSED by both teams in Q2 — how many?", o:["0","1","2","3 or more"], a:"2"},
+    {t:"Which of these happened FIRST in Q2?", o:["A made three","A turnover","An offensive rebound","A timeout"], a:"A turnover"},
+    {t:"🎲 Halftime combined score — odd or even?", o:["Odd","Even"], a:"Even"},
+    {t:"The last shot before the halftime buzzer…", o:["Went in","Missed","Nobody got one off"], a:"Missed"}
   ]},
+  // --- Q3 · 3 pts each · the turn. Now it costs you to look away. ---
   {home:66,away:64, q:[
-    {t:"Who made the most 3-pointers in Q3?", o:["Clark","Mitchell","Hiedeman","F. Johnson"], a:"Mitchell"},
-    {t:"How did the FIRST points of Q3 come?", o:["Fever field goal","Storm field goal","Fever free throw","Storm free throw"], a:"Storm field goal"},
-    {t:"How many lead changes in Q3?", o:["0","1","2","3+"], a:"2"}
+    {t:"Biggest lead by EITHER team at any point in Q3?", o:["0–4 pts","5–9 pts","10–14 pts","15+ pts"], a:"5–9 pts"},
+    {t:"In Q3, which happened MORE?", o:["Made threes","Made free throws","Dead even"], a:"Made free throws"},
+    {t:"Did anyone score in the final 10 seconds of Q3?", o:["Yes","No"], a:"Yes"},
+    {t:"Did the Storm score more in Q3 than they did in Q1?", o:["Yes","No","Exactly the same"], a:"Yes"}
   ]},
+  // --- Q4 · 4 pts each · money time. The quarter that decides the night. ---
   {home:89,away:82, q:[
-    {t:"Which player scored the most points in Q4?", o:["Clark","Malonga","Mitchell","F. Johnson"], a:"Malonga"},
-    {t:"What was the final margin of victory?", o:["1–5 pts","6–10 pts","11–15 pts","16+ pts"], a:"6–10 pts"},
-    {t:"How many combined points were scored in Q4?", o:["Under 35","35–44","45–54","55+"], a:"35–44"}
+    {t:"The final basket of the game was worth…", o:["1","2","3","No basket — it ended on a miss or a turnover"], a:"2"},
+    {t:"Who scored the LAST points of the game?", o:["Clark","Mitchell","Malonga","Magbegor"], a:"Mitchell"},
+    {t:"Did any player foul out?", o:["Yes","No"], a:"No"},
+    {t:"In the last two minutes, which happened more?", o:["Free throws attempted","Field goals attempted","Equal"], a:"Free throws attempted"}
   ]}
 ];
 /* ================= SOCCER =================================================
@@ -1121,10 +1203,10 @@ const SPORTS={
     landing:"<b style=\"color:var(--ink)\">Indiana Fever @ Seattle Storm</b> — on ESPN. Watch the broadcast, play from your couch. Predict before tip-off, answer at every quarter break. Right answers score. Fast right answers score more.",
     step1:"Fill your prediction sheet — winner, stat leaders & bonus amounts. Worth up to 50 pts.",
     step2h:"Answer at every quarter break",
-    step2:"3 questions about what JUST happened. Points rise: Q1 = 1pt → Q4 = 4pt. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.",
+    step2:"4 questions about what JUST happened — and not the ones you'd expect. Points rise: Q1 = 1pt → Q4 = 4pt, so the last quarter is worth four times the first. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.",
     step3:"When the host posts the answers, tap them to score your quarter. Most points wins the night; ⚡ Speed breaks ties.",
     rulePred:"Lock 6 picks before tip-off: winning team (5 pts) and the leader in points, assists, steals, rebounds & blocks (4 pts each). Nail the leader's exact stat total for a +5 bonus per category. Predictions can't be changed after tip-off.",
-    ruleLive:"At the end of each quarter, answer 3 questions about the quarter you just watched. Correct answers are worth 1 pt each in Q1, 2 in Q2, 3 in Q3, and 4 in Q4. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.",
+    ruleLive:"At the end of each quarter, answer 4 questions about the quarter you just watched. They are not box-score trivia — they're the stuff you only catch if the game is actually on in front of you. Correct answers are worth 1 pt each in Q1, 2 in Q2, 3 in Q3, and 4 in Q4. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.",
     ruleScore:"When the host announces each quarter's answers (from the broadcast + official box score), tap them in your app to score the quarter. After the final buzzer, enter the official stat leaders to score your predictions."
   },
   soccer:{
@@ -1760,7 +1842,85 @@ function showFinal(){
     document.getElementById('finalTitle').textContent = rank===1?'🏆 You won the pot!':`Great game, ${S.name||'player'}!`;
     renderLeaderboard('finalLb',6);
   }
+  renderSignup();
   go('final');
+}
+
+/* =====================================================================
+   THE LIST — an email now, a text channel later.
+   ---------------------------------------------------------------------
+   Deliberately the smallest thing that could possibly work. No provider,
+   no sending, no verification round-trip. It writes one row and gets out
+   of the way, because the value here is not the plumbing — it is that
+   three days from now there is a list of people who asked to hear from
+   us, gathered at the one moment they were glad they played.
+
+   It is shown on Game Night only. In practice mode there is no real
+   player behind the screen and no real backend to write to, so asking
+   would be collecting nothing while looking like we collect everything.
+
+   The flag lives in its own localStorage key rather than in S, because
+   showFinal() calls clearSave() and S is gone by the time this renders.
+   ===================================================================== */
+const SIGNUP_KEY='stats_signup_v1';
+function alreadySignedUp(){ try{ return localStorage.getItem(SIGNUP_KEY)==='1'; }catch(e){ return false; } }
+function markSignedUp(){ try{ localStorage.setItem(SIGNUP_KEY,'1'); }catch(e){} }
+
+function renderSignup(){
+  const card=document.getElementById('signupCard');
+  if(!card) return;
+  // Live mode, a backend that is actually up, and they haven't done it yet.
+  // Any of those false and the card simply isn't there — no dead form, no
+  // button that quietly fails, no "thanks!" for a row that was never written.
+  const show = S.mode==='live' && !alreadySignedUp() && !!(window.SB && SB.enabled);
+  card.style.display = show ? 'block' : 'none';
+  if(show){
+    const e=document.getElementById('suEmail');
+    if(e && !e.value && S.name) e.placeholder = (S.name.split(' ')[0].toLowerCase()||'you')+'@email.com';
+  }
+}
+
+async function submitSignup(){
+  const btn=document.getElementById('suBtn');
+  const note=document.getElementById('suNote');
+  const email=(document.getElementById('suEmail').value||'').trim();
+  const phone=(document.getElementById('suPhone').value||'').trim();
+  const consent=document.getElementById('suConsent').checked;
+
+  // Say what's wrong, one thing at a time, without moving the form.
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){
+    note.innerHTML='<b style="color:var(--gold)">That email doesn\'t look right.</b> Check it and try again.';
+    document.getElementById('suEmail').focus(); return;
+  }
+  const digits=phone.replace(/[^0-9]/g,'');
+  if(phone && (digits.length<10 || digits.length>15)){
+    note.innerHTML='<b style="color:var(--gold)">That phone number doesn\'t look right.</b> Leave it blank if you\'d rather not.';
+    document.getElementById('suPhone').focus(); return;
+  }
+  if(!consent){
+    note.innerHTML='<b style="color:var(--gold)">Tick the box first.</b> We won\'t add you to anything you didn\'t agree to.';
+    return;
+  }
+
+  btn.disabled=true; btn.textContent='Adding you…';
+  let ok=false;
+  try{ ok = await SB.signup({email:email, phone:phone, consent:true, name:S.name||''}); }catch(e){ ok=false; }
+
+  if(ok){
+    markSignedUp();
+    document.getElementById('signupCard').innerHTML=
+      '<b style="font-size:15px;color:var(--teal2)">✅ You\'re on the list.</b>'+
+      '<p class="sub" style="font-size:12.5px;margin:6px 0 0">We\'ll email you before the next Game Night. '+
+      'Change your mind any time — every email has an unsubscribe link.</p>';
+    toast('📬 You\'re on the list for the next game night.');
+  }else{
+    // An honest failure. The one thing we must never do is say "thanks!"
+    // for a row the database refused — they'd stop expecting the email and
+    // never find out why it didn't come.
+    btn.disabled=false; btn.textContent='Try again →';
+    note.innerHTML='<b style="color:var(--gold)">That didn\'t save.</b> Connection\'s probably out. '+
+      'Nothing was recorded — tap again in a second and it should go through.';
+  }
 }
 /* =====================================================================
    REAL ROOM — the only place the app is allowed to talk about how many
