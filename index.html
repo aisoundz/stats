@@ -73,6 +73,29 @@
   .predlabel{font-size:13.5px;font-weight:700;margin-bottom:2px}
   .predpts{font-size:11px;color:var(--teal2);font-weight:800}
 
+  /* live catches — set pre-match, resolve themselves during play */
+  .catchhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:2px}
+  .catchhead b{font-size:14px}
+  .catchhead .cpts{font-size:11px;font-weight:800;color:var(--teal2);white-space:nowrap}
+  .catchgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px}
+  .catch{background:var(--card2);border:1.5px solid var(--line2);border-radius:13px;padding:10px 11px;
+    transition:border-color .25s,background .25s,opacity .25s}
+  .catch .cico{font-size:16px;line-height:1}
+  .catch .clab{font-size:11.5px;font-weight:800;margin-top:3px;line-height:1.25}
+  .catch .cmin{font-size:10px;font-weight:700;color:var(--dim);margin-top:1px}
+  .catchopts{display:flex;gap:5px;margin-top:7px}
+  .catchopts button{flex:1;background:var(--bg2);border:1.5px solid var(--line2);border-radius:9px;
+    padding:7px 4px;font-size:11px;font-weight:800;color:var(--muted);cursor:pointer;transition:.15s}
+  .catchopts button.on{background:rgba(47,107,255,.16);border-color:var(--blue2);color:var(--ink)}
+  .catch.locked .catchopts button{pointer-events:none;opacity:.45}
+  .catch.locked .catchopts button.on{opacity:1}
+  .catch.hit{border-color:var(--green);background:rgba(46,230,166,.10)}
+  .catch.hit .cres{color:var(--green)}
+  .catch.miss{border-color:var(--line2);opacity:.55}
+  .catch.miss .cres{color:var(--red)}
+  .cres{font-size:10.5px;font-weight:800;margin-top:6px}
+  .catch.pending .cres{color:var(--dim)}
+
   /* option buttons */
   .opts{display:flex;flex-direction:column;gap:9px;margin-top:10px}
   .opt{background:var(--card2);border:1.5px solid var(--line2);border-radius:13px;
@@ -191,6 +214,49 @@
   .sc-foot .streak{font-size:13px;font-weight:800;color:var(--gold)}
   .sc-foot .cta{font-size:10.5px;color:var(--dim);font-weight:700}
 
+  /* trash talk */
+  .tt-sheet{width:100%;max-width:380px;max-height:86vh;overflow:auto;border-radius:20px;padding:16px 15px 14px;
+    background:linear-gradient(160deg,#111a2e 0%,#0b1120 70%);border:1px solid var(--line2);
+    box-shadow:var(--shadow);animation:fade .25s}
+  .tt-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .tt-head b{font-size:15px}
+  .tt-x{background:transparent;border:none;color:var(--muted);font-size:19px;font-weight:800;cursor:pointer;padding:0 2px}
+  .tt-tabs{display:flex;gap:6px;margin-bottom:10px}
+  .tt-tab{flex:1;text-align:center;font-size:11.5px;font-weight:800;padding:9px 4px;border-radius:11px;
+    border:1px solid var(--line);background:var(--card);color:var(--muted);cursor:pointer}
+  .tt-tab.on{border-color:var(--teal);color:var(--ink);background:linear-gradient(160deg,rgba(25,195,214,.15),var(--card) 60%)}
+  .tt-burn{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:11px 12px;margin:8px 0;
+    cursor:pointer;display:flex;gap:10px;align-items:flex-start;transition:border-color .15s,transform .09s}
+  .tt-burn:active{transform:scale(.985)}
+  .tt-burn:hover{border-color:var(--teal)}
+  .tt-burn .fire{font-size:15px;line-height:1.35}
+  .tt-burn .txt{font-size:13px;font-weight:700;line-height:1.45;color:var(--ink)}
+  .tt-burn .cp{font-size:9.5px;color:var(--dim);font-weight:800;letter-spacing:.5px;margin-top:5px}
+  .tt-chips{display:flex;flex-direction:column;gap:7px;margin-top:4px}
+  .tt-chip{font-size:12.5px;font-weight:700;padding:10px 11px;border-radius:11px;border:1px solid var(--line);
+    background:var(--card);color:var(--muted);cursor:pointer;line-height:1.4;text-align:left}
+  .tt-chip:hover{border-color:var(--gold);color:var(--ink)}
+  .tt-crew{display:flex;gap:7px;align-items:center;margin:7px 0}
+  .tt-crew input{margin:0}
+  .tt-crew input.n{flex:1;min-width:0}
+  .tt-crew input.p{flex:0 0 72px;width:72px;text-align:center}
+  .tt-crew .go{flex:0 0 auto;font-size:11px;font-weight:800;padding:10px 10px;border-radius:11px;
+    border:1px solid var(--line2);background:rgba(255,197,77,.12);color:var(--gold);cursor:pointer}
+  .tt-crew .rm{flex:0 0 auto;background:transparent;border:none;color:var(--dim);font-size:15px;cursor:pointer;padding:0 2px}
+  .tt-out{border:1px solid rgba(255,197,77,.32);background:rgba(255,197,77,.08);border-radius:13px;
+    padding:11px 12px;margin-top:10px;font-size:12.5px;font-weight:700;line-height:1.5;color:var(--ink);cursor:pointer}
+  .roastcard{width:100%;max-width:350px;border-radius:20px;padding:20px 18px;
+    background:linear-gradient(155deg,#2a1220 0%,#140b18 55%,#1a0f10 100%);
+    border:1px solid rgba(255,77,94,.32);box-shadow:var(--shadow);animation:fade .3s}
+  .roastcard .rc-t{font-size:10.5px;font-weight:900;letter-spacing:2px;color:var(--red)}
+  .roastcard .rc-g{font-size:11px;color:var(--muted);font-weight:700;margin-top:3px}
+  .rc-line{display:flex;gap:9px;align-items:flex-start;margin:11px 0;font-size:12.5px;font-weight:700;line-height:1.45}
+  .rc-line .e{font-size:14px;line-height:1.25}
+  .rc-board{border-top:1px solid rgba(255,255,255,.09);margin-top:12px;padding-top:10px}
+  .rc-row{display:flex;justify-content:space-between;font-size:11.5px;font-weight:700;color:var(--muted);padding:3px 0}
+  .rc-row.w{color:var(--gold)}.rc-row.l{color:var(--red)}
+  .rc-cta{font-size:10px;color:var(--dim);font-weight:700;margin-top:11px;text-align:right}
+
   /* league */
   .lg-head{display:flex;align-items:center;gap:12px;background:linear-gradient(90deg,rgba(47,107,255,.16),rgba(25,195,214,.1));
     border:1px solid var(--line2);border-radius:16px;padding:14px;margin:10px 0 6px}
@@ -223,7 +289,7 @@
   <section class="screen active" id="s-landing">
     <div class="card" id="resumeBar" style="display:none;border-color:var(--teal);background:rgba(25,195,214,.1);margin-bottom:6px">
       <b style="font-size:14.5px">🔴 You have a game in progress</b>
-      <p class="sub" style="font-size:12px;margin:5px 0 11px">Your predictions and scored quarters are saved. Pick up where you left off.</p>
+      <p class="sub" style="font-size:12px;margin:5px 0 11px" id="resumeSub">Your predictions and scored quarters are saved. Pick up where you left off.</p>
       <button class="btn teal sm" onclick="doResume()">Resume my game →</button>
       <button class="btn ghost sm" style="margin-top:8px" onclick="dismissResume()">Start a new game</button>
     </div>
@@ -232,22 +298,22 @@
     <div class="center" style="margin-top:8px"><span class="pill">Play from home • Free to enter</span></div>
 
     <div class="card" style="margin-top:18px">
-      <h2>🔴 Game Night #1 · Tue July 28</h2>
-      <p style="font-size:12.5px;font-weight:800;color:var(--gold);margin:2px 0 6px" id="landingTip">🕐 Tip-off 8:30 PM CT · 6:30 PT · ESPN</p>
+      <h2 id="landingHead">🔴 Game Night #1 · Tue July 28</h2>
+      <p style="font-size:12.5px;font-weight:800;color:var(--gold);margin:2px 0 6px" id="landingTip">🕐 Tip-off 9:30 ET · 8:30 CT · 6:30 PT · ESPN</p>
       <p class="sub" id="landingMatch"><b style="color:var(--ink)">Indiana Fever @ Seattle Storm</b> — on ESPN. Watch the broadcast, play from your couch. Predict before tip-off, answer at every quarter break. Right answers score. Fast right answers score more.</p>
       <div class="chips">
-        <span class="chip">🏀 WNBA Game of the Night</span>
+        <span class="chip" id="landingChip1">🏀 WNBA Game of the Night</span>
         <span class="chip">⚡ Speed counts</span>
-        <span class="chip">⏱️ 4 quarters</span>
+        <span class="chip" id="landingChip3">⏱️ 4 quarters</span>
       </div>
-      <button class="btn" onclick="startLive()">🔴 Play Game Night — July 28 →</button>
-      <button class="btn ghost" onclick="startDemo()">🎮 Practice first (simulated game)</button>
+      <button class="btn" id="landingBtn" onclick="startLive()">🔴 Play Game Night — July 28 →</button>
+      <button class="btn ghost" id="landingDemoBtn" onclick="startDemo()">🎮 Practice first (simulated game)</button>
     </div>
 
     <div class="card">
-      <div class="step"><div class="num">1</div><div><b>Predict before tip-off</b><p>Fill your prediction sheet — winner, stat leaders & bonus amounts. Worth up to 50 pts.</p></div></div>
-      <div class="step"><div class="num">2</div><div><b>Answer at every quarter break</b><p>3 questions about what JUST happened. Points rise: Q1 = 1pt → Q4 = 4pt. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.</p></div></div>
-      <div class="step"><div class="num">3</div><div><b>Score with the crew</b><p>When the host posts the answers, tap them to score your quarter. Most points wins the night; ⚡ Speed breaks ties.</p></div></div>
+      <div class="step"><div class="num">1</div><div><b id="step1h">Predict before tip-off</b><p id="step1p">Fill your prediction sheet — winner, stat leaders & bonus amounts. Worth up to 50 pts.</p></div></div>
+      <div class="step"><div class="num">2</div><div><b id="step2h">Answer at every quarter break</b><p id="step2p">3 questions about what JUST happened. Points rise: Q1 = 1pt → Q4 = 4pt. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.</p></div></div>
+      <div class="step"><div class="num">3</div><div><b>Score with the crew</b><p id="step3p">When the host posts the answers, tap them to score your quarter. Most points wins the night; ⚡ Speed breaks ties.</p></div></div>
     </div>
 
     <button class="btn ghost" onclick="go('rules')">📖 Read the full rules</button>
@@ -262,32 +328,37 @@
 
     <div class="card tight">
       <h2 style="font-size:14px">🎯 The game</h2>
-      <p class="sub" style="font-size:12.5px">STATS is a free skill-and-attention game played along with a live basketball broadcast. You score by predicting the game before tip-off and by answering questions about what just happened at each quarter break. No wagers, no entry fee — ever.</p>
+      <p class="sub" style="font-size:12.5px" id="ruleGame">STATS is a free skill-and-attention game played along with a live basketball broadcast. You score by predicting the game before tip-off and by answering questions about what just happened at each quarter break. No wagers, no entry fee — ever.</p>
     </div>
 
     <div class="card tight">
-      <h2 style="font-size:14px">📝 Predictions — up to 50 pts</h2>
-      <p class="sub" style="font-size:12.5px">Lock 6 picks before tip-off: winning team (5 pts) and the leader in points, assists, steals, rebounds & blocks (4 pts each). Nail the leader's exact stat total for a +5 bonus per category. Predictions can't be changed after tip-off.</p>
+      <h2 style="font-size:14px" id="rulePredH">📝 Predictions — up to 50 pts</h2>
+      <p class="sub" style="font-size:12.5px" id="rulePredP">Lock 6 picks before tip-off: winning team (5 pts) and the leader in points, assists, steals, rebounds & blocks (4 pts each). Nail the leader's exact stat total for a +5 bonus per category. Predictions can't be changed after tip-off.</p>
+    </div>
+
+    <div class="card tight" id="ruleCatch" style="display:none">
+      <h2 style="font-size:14px">⚡ Live catches — 1 pt each</h2>
+      <p class="sub" style="font-size:12.5px" id="ruleCatchP"></p>
     </div>
 
     <div class="card tight">
-      <h2 style="font-size:14px">⏱️ Quarter questions — up to 30 pts</h2>
-      <p class="sub" style="font-size:12.5px">At the end of each quarter, answer 3 questions about the quarter you just watched. Correct answers are worth 1 pt each in Q1, 2 in Q2, 3 in Q3, and 4 in Q4. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.</p>
+      <h2 style="font-size:14px" id="ruleLiveH">⏱️ Quarter questions — up to 30 pts</h2>
+      <p class="sub" style="font-size:12.5px" id="ruleLiveP">At the end of each quarter, answer 3 questions about the quarter you just watched. Correct answers are worth 1 pt each in Q1, 2 in Q2, 3 in Q3, and 4 in Q4. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.</p>
     </div>
 
     <div class="card tight">
       <h2 style="font-size:14px">⚡ Speed points — the tiebreaker</h2>
-      <p class="sub" style="font-size:12.5px">Every correct quarter answer also banks the seconds you had left on the clock as Speed points. Example: answer correctly with 14 seconds left → +14 ⚡. Ties in total points are broken by Speed. Speed never beats accuracy — it only settles ties.</p>
+      <p class="sub" style="font-size:12.5px" id="ruleSpeedP">Every correct quarter answer also banks the seconds you had left on the clock as Speed points. Example: answer correctly with 14 seconds left → +14 ⚡. Ties in total points are broken by Speed. Speed never beats accuracy — it only settles ties.</p>
     </div>
 
     <div class="card tight">
       <h2 style="font-size:14px">✨ Lifeline — one per half</h2>
-      <p class="sub" style="font-size:12.5px">Once per half you can fire your Lifeline: in Practice mode it removes two wrong options; on Game Night it adds +15 seconds to the clock (time to ask the room — just like the arena timeout).</p>
+      <p class="sub" style="font-size:12.5px" id="ruleLifeP">Once per half you can fire your Lifeline: in Practice mode it removes wrong options; on Game Night it adds +15 seconds to the clock (time to ask the room — just like the arena timeout).</p>
     </div>
 
     <div class="card tight">
       <h2 style="font-size:14px">🏁 Scoring the night</h2>
-      <p class="sub" style="font-size:12.5px">When the host announces each quarter's answers (from the broadcast + official box score), tap them in your app to score the quarter. After the final buzzer, enter the official stat leaders to score your predictions. Max regulation score: 80 (81 with an overtime question). Post your result card to the group chat — highest score wins the night, Speed breaks ties.</p>
+      <p class="sub" style="font-size:12.5px" id="ruleScoreP">When the host announces each quarter's answers (from the broadcast + official box score), tap them in your app to score the quarter. After the final buzzer, enter the official stat leaders to score your predictions. Max regulation score: 80. Post your result card to the group chat — highest score wins the night, Speed breaks ties.</p>
     </div>
 
     <div class="card tight">
@@ -297,7 +368,7 @@
 
     <div class="card tight">
       <h2 style="font-size:14px">⚖️ The fine print</h2>
-      <p class="sub" style="font-size:12.5px">Free to play; no purchase or payment ever required to play or win. 18+. This beta is for entertainment among friends; any prizes are provided by the host/sponsor and awarded on final verified stats. STATS is not affiliated with the WNBA or its teams — we're a game about watching the game. Full sweepstakes rules will govern public seasons.</p>
+      <p class="sub" style="font-size:12.5px" id="ruleFineP">Free to play; no purchase or payment ever required to play or win. 18+. This beta is for entertainment among friends; any prizes are provided by the host/sponsor and awarded on final verified stats. STATS is not affiliated with any league, club or broadcaster — we're a game about watching the game. Full sweepstakes rules will govern public seasons.</p>
     </div>
     <button class="btn" onclick="go('landing')">← Back</button>
   </section>
@@ -320,30 +391,36 @@
   <!-- 3. PREDICTION SHEET -->
   <section class="screen" id="s-predict">
     <div class="qmeta" style="margin-top:4px">
-      <span class="qn">PRE-GAME PREDICTION SHEET</span><span class="worth">Up to 50 pts</span>
+      <span class="qn" id="predMeta">PRE-GAME PREDICTION SHEET</span><span class="worth" id="predWorth">Up to 50 pts</span>
     </div>
-    <h1 style="margin-top:2px">Make your picks 📝</h1>
-    <p class="sub">Lock these in before tip-off. Bonus points if you nail the exact number.</p>
+    <h1 style="margin-top:2px" id="predHead">Make your picks 📝</h1>
+    <p class="sub" id="predSub">Lock these in before tip-off. Bonus points if you nail the exact number.</p>
     <div class="card" id="predCard"></div>
     <button class="btn teal" id="predBtn" disabled onclick="lockPredictions()">Lock it in — go to tip-off 🔒</button>
-    <p class="foot">You can't change picks once the game starts.</p>
+    <p class="foot" id="predFoot">You can't change picks once the game starts.</p>
   </section>
 
   <!-- 4. LOBBY / TIP-OFF -->
   <section class="screen" id="s-lobby">
     <div class="brand" style="margin-top:40px"><span class="logo">STATS</span></div>
     <div class="center" style="margin-top:30px">
-      <span class="pill">Tipping off</span>
+      <span class="pill" id="lobbyPill">Tipping off</span>
       <h1 style="margin-top:16px">You're in. 🎯</h1>
-      <p class="sub center">Predictions locked. When each quarter ends, questions drop here — be fast, points are live.</p>
+      <p class="sub center" id="lobbySub">Predictions locked. When each quarter ends, questions drop here — be fast, points are live.</p>
     </div>
     <div class="statgrid" style="margin-top:10px">
       <div class="stat"><div class="v" id="lobStat1v">1,204</div><div class="k" id="lobStat1k">Players tonight</div></div>
       <div class="stat"><div class="v" id="lobStat2v">50</div><div class="k" id="lobStat2k">Your prediction pts (pending)</div></div>
     </div>
+    <div class="card" id="catchCard" style="display:none">
+      <div class="catchhead"><b id="catchTitle">⚡ Live catches</b><span class="cpts" id="catchPtsLbl">6 × 1 pt</span></div>
+      <p class="sub" id="catchSub" style="font-size:12px;margin:4px 0 0">Set these before kickoff. They score themselves while you watch — no tapping during the match.</p>
+      <div class="catchgrid" id="catchGrid"></div>
+    </div>
     <div style="flex:1"></div>
-    <button class="btn" onclick="startQuarter(0)">Start Quarter 1 ▶</button>
-    <p class="foot">In a real live run this waits for the on-court quarter to end. Here you drive it.</p>
+    <button class="btn" id="lobbyBtn" onclick="startQuarter(0)">Start Quarter 1 ▶</button>
+    <button class="btn ghost" onclick="openTalk()">🔥 Talk trash in the group chat</button>
+    <p class="foot" id="lobbyFoot">In a real live run this waits for the on-court quarter to end. Here you drive it.</p>
   </section>
 
   <!-- 5. LIVE QUESTION -->
@@ -353,9 +430,9 @@
         <div style="text-align:right"><b id="youRank">–</b> <span id="youRankLbl">rank / 1,204</span></div></div>
     </div>
     <div class="scorebar">
-      <div class="team"><span class="nm">🔥 IND</span><span class="sc" id="scHome">–</span></div>
+      <div class="team"><span class="nm" id="teamHomeNm">🔥 IND</span><span class="sc" id="scHome">–</span></div>
       <div class="qtag" id="qLabel">Q1</div>
-      <div class="team"><span class="nm">SEA ⛈️</span><span class="sc" id="scAway">–</span></div>
+      <div class="team"><span class="nm" id="teamAwayNm">SEA ⛈️</span><span class="sc" id="scAway">–</span></div>
     </div>
     <div class="qmeta">
       <span class="qn" id="qCount">Question 1 of 3</span>
@@ -382,6 +459,7 @@
     <p class="sub center" id="breakSub">Here's how the room stacks up.</p>
     <div id="lbList"></div>
     <button class="btn" id="breakBtn" onclick="nextFromBreak()">Start Quarter 2 ▶</button>
+    <button class="btn ghost" onclick="openTalk()">🔥 Talk trash in the group chat</button>
   </section>
 
   <!-- QUARTER REVIEW (Game Night) -->
@@ -390,27 +468,33 @@
     <h1 class="center" style="margin-top:8px" id="revTitle">Score this quarter ✅</h1>
     <p class="sub center">When the host posts the answers in the group chat, tap the correct answer for each question. Your picks are marked 🔵.</p>
     <div id="revList"></div>
-    <button class="btn teal" id="revBtn" disabled onclick="confirmReview()">Confirm & score quarter</button>
+    <button class="btn teal" id="revBtn" disabled onclick="confirmReview()">Confirm &amp; score quarter</button>
     <div id="revResult"></div>
     <button class="btn" id="revNextBtn" style="display:none" onclick="afterReview()">Continue →</button>
+    <button class="btn ghost" id="revTalkBtn" style="display:none" onclick="openTalk()">🔥 Talk trash in the group chat</button>
   </section>
 
   <!-- PREDICTION REVIEW (Game Night final) -->
   <section class="screen" id="s-predreview">
-    <div class="center" style="margin-top:6px"><span class="pill">Final buzzer 🚨</span></div>
+    <div class="center" style="margin-top:6px"><span class="pill" id="prPill">Final buzzer 🚨</span></div>
     <h1 class="center" style="margin-top:8px">Score your predictions 📝</h1>
     <p class="sub center">Enter the official results (host announces from the final box score). Your picks are shown under each.</p>
     <div class="card" id="prCard"></div>
+    <div class="card" id="prCatchCard" style="display:none">
+      <div class="catchhead"><b>⚡ Live catches</b><span class="cpts" id="prCatchPts">6 × 1 pt</span></div>
+      <p class="sub" style="font-size:12px;margin:4px 0 0">Tap what actually happened. Your catch is marked 🔵.</p>
+      <div class="catchgrid" id="prCatchGrid"></div>
+    </div>
     <button class="btn teal" id="prBtn" disabled onclick="confirmPreds()">Confirm & see my final score</button>
   </section>
 
   <!-- 7. FINAL -->
   <section class="screen" id="s-final">
-    <div class="center" style="margin-top:14px"><span class="pill">Final buzzer 🚨</span></div>
+    <div class="center" style="margin-top:14px"><span class="pill" id="finalPill">Final buzzer 🚨</span></div>
     <h1 class="center" style="margin-top:12px" id="finalTitle">You finished!</h1>
     <div class="card center">
       <div class="bignum" id="finalPts">0</div>
-      <p class="sub" style="margin-top:6px">total points • out of 81 possible</p>
+      <p class="sub" style="margin-top:6px" id="finalMax">total points • out of 80 possible</p>
       <div class="statgrid">
         <div class="stat"><div class="v" id="finalRank">–</div><div class="k">Final rank</div></div>
         <div class="stat"><div class="v" id="finalPct">–</div><div class="k">Beat this % of players</div></div>
@@ -422,7 +506,9 @@
         <div style="font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px">Season rating: <b id="seasonRating" style="color:var(--teal2)">1,286</b> · Play the next game to keep it alive</div></div>
     </div>
     <button class="btn gold" onclick="openShare()">📲 Share my result card</button>
+    <button class="btn teal" onclick="openTalk()">🔥 Talk trash in the group chat</button>
     <button class="btn teal" onclick="openTally()">🏆 Host: tally the crew &amp; crown a winner</button>
+    <button class="btn ghost" onclick="openRoast()">😈 Post-game roast card</button>
     <button class="btn ghost" onclick="openLeague()">🏟️ Leagues (preview)</button>
     <button class="btn ghost" onclick="go('plus')">⭐ See STATS+ (season pass)</button>
     <button class="btn ghost" onclick="openHost()">👀 Peek behind the curtain (Host panel)</button>
@@ -469,7 +555,7 @@
         <li>💈 <b>Create unlimited private leagues</b> + trash-talk board</li>
         <li>📊 <b>Season stat book</b> — your accuracy by category, streak history, rating graph</li>
         <li>🎖️ <b>Badge & name flair</b> on every leaderboard</li>
-        <li>🎬 <b>Quarter recap clips</b> + host's picks before tip-off</li>
+        <li id="plusClips">🎬 <b>Quarter recap clips</b> + host's picks before tip-off</li>
         <li>🗳️ <b>Vote on next week's featured game</b></li>
       </ul>
       <button class="btn teal" onclick="toast('⭐ This is where checkout would go — Stripe, $4.99/mo season pass.')">Start my season pass</button>
@@ -487,22 +573,19 @@
     <p class="sub">This is what <b>you</b> (or an automation) control on game night. It's the seed of the "auto-post & auto-score" pipeline.</p>
 
     <div class="card tight">
-      <h2 style="font-size:14px">🔴 Game Night toolkit — July 28</h2>
-      <p class="sub" style="font-size:12px">You're the host. At each quarter break: (1) tell the crew to answer in the app, (2) check the broadcast + box score, (3) post the answers in the group chat. ~60 seconds of work per quarter.</p>
-      <div class="segbtns">
-        <span class="seg on" onclick="copyQs(0)">📋 Q1</span><span class="seg" onclick="copyQs(1)">📋 Q2</span>
-        <span class="seg" onclick="copyQs(2)">📋 Q3</span><span class="seg" onclick="copyQs(3)">📋 Q4</span>
-      </div>
-      <p class="sub" style="font-size:11px;margin-top:8px;color:var(--dim)">Tap a quarter to copy its questions for the group chat. Answers come from watching + the live box score (ESPN gamecast has per-quarter stats).</p>
+      <h2 style="font-size:14px" id="hostToolTitle">🔴 Game Night toolkit — July 28</h2>
+      <p class="sub" style="font-size:12px" id="hostToolSub">You're the host. At each quarter break: (1) tell the crew to answer in the app, (2) check the broadcast + box score, (3) post the answers in the group chat. ~60 seconds of work per quarter.</p>
+      <div class="segbtns" id="hostSegs"></div>
+      <p class="sub" style="font-size:11px;margin-top:8px;color:var(--dim)" id="hostToolFoot">Tap a quarter to copy its questions for the group chat. Answers come from watching + the live box score (ESPN gamecast has per-quarter stats).</p>
     </div>
 
-    <div class="card tight">
+    <div class="card tight" id="pbpCard">
       <h2 style="font-size:14px">1 · Live data feed (play-by-play)</h2>
       <p class="sub" style="font-size:12px">Every quarter, the stats feed streams in events like these. This is the raw material — no human watching required.</p>
       <div id="pbpFeed" style="font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.9;color:var(--muted);background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:11px;max-height:150px;overflow:auto"></div>
     </div>
 
-    <div class="card tight">
+    <div class="card tight" id="engineCard">
       <h2 style="font-size:14px">2 · Question Engine ⚙️ <span class="status live">Working demo</span></h2>
       <p class="sub" style="font-size:12px">Tap it. Templates scan the feed above and write the quarter's questions — with the correct answer already computed. Answers auto-lock from the same feed; every player is scored instantly.</p>
       <button class="btn sm teal" onclick="runEngine()">⚡ Generate this quarter's questions</button>
@@ -521,7 +604,7 @@
 
     <div class="card tight">
       <h2 style="font-size:14px">🏆 Crown the winner</h2>
-      <p class="sub" style="font-size:12px">After the final buzzer, collect everyone's scores from the group chat and enter them here to rank the crew and name the winner.</p>
+      <p class="sub" style="font-size:12px" id="tallySub">After the final buzzer, collect everyone's scores from the group chat and enter them here to rank the crew and name the winner.</p>
       <button class="btn sm teal" onclick="openTally()">Open the tally board</button>
     </div>
     <button class="btn ghost" onclick="go('final')">← Back</button>
@@ -546,7 +629,7 @@
         <div style="display:flex;justify-content:space-between;align-items:flex-start">
           <div><span class="sc-logo">STATS</span>
             <div class="sc-game" id="scGameLine">GAME NIGHT #1 · FEVER vs STORM · JUL 28</div></div>
-          <div style="font-size:22px">🏀</div>
+          <div style="font-size:22px" id="scEmoji">🏀</div>
         </div>
         <div class="sc-pts" id="scPts">0 <span style="font-size:15px;color:var(--muted);font-weight:800">pts</span></div>
         <div class="sc-sub" id="scRankLine">Rank #– of 1,204</div>
@@ -561,6 +644,30 @@
     </div>
   </div>
 
+  <!-- TRASH TALK -->
+  <div class="modal" id="talkModal" onclick="if(event.target===this)closeTalk()">
+    <div class="tt-sheet">
+      <div class="tt-head"><b id="ttTitle">🔥 Talk trash</b>
+        <button class="tt-x" onclick="closeTalk()">✕</button></div>
+      <div class="tt-tabs" id="talkTabs">
+        <div class="tt-tab on" data-t="burns" onclick="setTtTab('burns')">🔥 Burns</div>
+        <div class="tt-tab" data-t="callout" onclick="setTtTab('callout')">🎯 Callout</div>
+        <div class="tt-tab" data-t="taunts" onclick="setTtTab('taunts')">💬 Taunts</div>
+      </div>
+      <div id="talkBody"></div>
+      <p class="foot" style="margin-top:12px">One tap copies the line. Paste it in the group chat you already run — STATS never sends anything for you.</p>
+    </div>
+  </div>
+
+  <!-- POST-GAME ROAST CARD -->
+  <div class="modal" id="roastModal" onclick="if(event.target===this)closeRoast()">
+    <div>
+      <div class="roastcard" id="roastCard"></div>
+      <button class="btn gold" style="max-width:350px" onclick="copyRoast()">Copy the roast 🔥</button>
+      <button class="btn ghost" style="max-width:350px" onclick="closeRoast()">Close</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 </div>
 
@@ -569,30 +676,30 @@
    Team-agnostic: swap this one object and the whole app
    re-skins to ANY game — NBA, G-League, college, WNBA.
    In production this loads from the nightly schedule feed. */
-const GAME={
-  homeName:"Indiana Fever", homeAbbr:"IND", homeEmoji:"🔥",
-  awayName:"Seattle Storm", awayAbbr:"SEA", awayEmoji:"⛈️",
-  venue:"WNBA Game of the Night", date:"Tue · July 28", night:"Game Night #1",
-  tip:"Tip-off 8:30 PM CT · 6:30 PT · ESPN" // confirmed: IND @ SEA on ESPN
+const BB_GAME={
+  homeName:"Indiana Fever", homeAbbr:"IND", homeNick:"Fever", homeEmoji:"🔥",
+  awayName:"Seattle Storm", awayAbbr:"SEA", awayNick:"Storm", awayEmoji:"⛈️",
+  venue:"WNBA Game of the Night", date:"Tue · July 28", short:"July 28", shareDate:"JUL 28", night:"Game Night #1",
+  tip:"Tip-off 9:30 ET · 8:30 CT · 6:30 PT · ESPN" // confirmed: IND @ SEA on ESPN, 6:30 PM PT tip
 };
 const COLORS=["#2f6bff","#19c3d6","#ff4d5e","#ffc54d","#2ee6a6","#b57cff","#ff924d","#4dd0ff"];
-const roster={ // full names — used on the prediction sheet & final review
+const BB_ROSTER={ // full names — used on the prediction sheet & final review
   home:["Caitlin Clark","Kelsey Mitchell","Aliyah Boston","Sophie Cunningham","Monique Billings","Lexie Hull"],
   away:["Ezi Magbegor","Dominique Malonga","Flau'jae Johnson","Jordan Horston","Natisha Hiedeman","Stefanie Dolson"]
 };
 // Prediction sheet definition (matches arena rules: 6 categories, base + bonus)
-const preds=[
-  {id:"winner", label:"Winning team", base:5, opts:[GAME.homeName,GAME.awayName], answer:GAME.homeName},
-  {id:"pts", label:"Most points", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Caitlin Clark", num:27, numLabel:"How many pts?"},
-  {id:"ast", label:"Most assists", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Caitlin Clark", num:9, numLabel:"How many assists?"},
-  {id:"stl", label:"Most steals", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Natisha Hiedeman", num:3, numLabel:"How many steals?"},
-  {id:"reb", label:"Most rebounds", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Aliyah Boston", num:12, numLabel:"How many rebounds?"},
-  {id:"blk", label:"Most blocks", base:4, bonus:5, opts:roster.home.concat(roster.away), answer:"Ezi Magbegor", num:4, numLabel:"How many blocks?"}
+const BB_PREDS=[
+  {id:"winner", label:"Winning team", base:5, opts:[BB_GAME.homeName,BB_GAME.awayName], answer:BB_GAME.homeName},
+  {id:"pts", label:"Most points", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Caitlin Clark", num:27, numLabel:"How many pts?"},
+  {id:"ast", label:"Most assists", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Caitlin Clark", num:9, numLabel:"How many assists?"},
+  {id:"stl", label:"Most steals", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Natisha Hiedeman", num:3, numLabel:"How many steals?"},
+  {id:"reb", label:"Most rebounds", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Aliyah Boston", num:12, numLabel:"How many rebounds?"},
+  {id:"blk", label:"Most blocks", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Ezi Magbegor", num:4, numLabel:"How many blocks?"}
 ];
 // 4 quarters × 3 questions. worth = quarter index+1 (WNBA plays 4 quarters — the arena rules map 1:1)
 // Every question is answerable by WATCHING + the box score at the break — that's the game.
 // In Practice mode the `a` field simulates the result; on Game Night the host announces real answers.
-const quarters=[
+const BBALL_ROUNDS=[
   {home:23,away:19, q:[
     {t:"Which player scored the first basket of the game?", o:["Clark","Magbegor","Boston","Malonga"], a:"Clark"},
     {t:"How many 3-pointers were made in Q1 (both teams)?", o:["3","5","7","9+"], a:"5"},
@@ -614,6 +721,127 @@ const quarters=[
     {t:"How many combined points were scored in Q4?", o:["Under 35","35–44","45–54","55+"], a:"35–44"}
   ]}
 ];
+/* ================= SOCCER =================================================
+   Soccer breaks the basketball shape: TWO halves, ONE break, and long
+   stretches where the box score doesn't move. So the game changes shape too —
+   heavier on the pre-match sheet, lighter on live interruptions, plus "live
+   catches" that resolve themselves while you just watch the match.
+
+   Hard rule for every soccer question: it must key on something that CANNOT
+   fail to happen. Corners, cards, subs, offsides, shots on target, added time.
+   Never build a scoring round on a goal — there isn't always a goal.
+   ------------------------------------------------------------------------ */
+const SC_GAME={
+  homeName:"Inter Miami CF", homeAbbr:"MIA", homeNick:"Miami", homeEmoji:"🩷",
+  awayName:"Club América",   awayAbbr:"AME", awayNick:"América", awayEmoji:"🦅",
+  venue:"Leagues Cup · sample fixture", date:"Aug 4 – Sep 6", short:"Aug 4", shareDate:"AUG 4", night:"Soccer Night (sample)",
+  tip:"Kickoff TBD — swap this when the Leagues Cup draw lands"
+};
+// 10 picks × 5 pts = 50. Every one of them always resolves.
+const SC_PREDS=[
+  {id:"result",  label:"Result",                      base:5, opts:[SC_GAME.homeName,"Draw",SC_GAME.awayName], answer:SC_GAME.homeName},
+  {id:"goals",   label:"Total goals",                 base:5, opts:["Under 2.5","Over 2.5"], answer:"Over 2.5"},
+  {id:"first",   label:"First goal comes from",       base:5, opts:[SC_GAME.homeName,SC_GAME.awayName,"No goals"], answer:SC_GAME.awayName},
+  {id:"btts",    label:"Both teams to score?",        base:5, opts:["Yes","No"], answer:"Yes"},
+  {id:"bighalf", label:"Higher-scoring half",         base:5, opts:["1st half","2nd half","Equal"], answer:"2nd half"},
+  {id:"corner",  label:"First corner",                base:5, opts:[SC_GAME.homeName,SC_GAME.awayName], answer:SC_GAME.awayName},
+  {id:"card",    label:"First yellow card",           base:5, opts:[SC_GAME.homeName,SC_GAME.awayName], answer:SC_GAME.homeName},
+  {id:"stopgoal",label:"Goal in added time?",         base:5, opts:["Yes","No"], answer:"Yes"},
+  {id:"sot",     label:"More shots on target",        base:5, opts:[SC_GAME.homeName,SC_GAME.awayName,"Equal"], answer:SC_GAME.homeName},
+  {id:"margin",  label:"Winning margin",              base:5, opts:["Draw","By 1","By 2+"], answer:"By 1"}
+];
+/* LIVE CATCHES — the soccer-native mechanic, 6 × 1 pt.
+   You set these before kickoff and then you do NOTHING. They flip themselves
+   as the match happens. No buzzing phone during a counter-attack — which is
+   the whole reason a basketball-style quiz doesn't work for this sport. */
+const SC_CATCHES=[
+  {id:"c_corner", icon:"🚩", label:"First corner",            opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.awayAbbr, at:"7'"},
+  {id:"c_sot",    icon:"🎯", label:"First shot on target",    opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.homeAbbr, at:"12'"},
+  {id:"c_card",   icon:"🟨", label:"First yellow card",       opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.homeAbbr, at:"31'"},
+  {id:"c_off",    icon:"🚫", label:"First offside",           opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.awayAbbr, at:"38'"},
+  {id:"c_stop",   icon:"⏱️", label:"Added time, 1st half",    opts:["Under 2 min","2 min or more"], answer:"2 min or more", at:"45'"},
+  {id:"c_sub",    icon:"🔄", label:"First substitution",      opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.awayAbbr, at:"58'"}
+];
+// 2 rounds × 3 questions. Halftime = 3 pts each (9), full-time = 5 pts each (15).
+// 50 predictions + 6 catches + 24 live = 80. Same spine as basketball, so the
+// leaderboard stays comparable across every sport.
+const SOCCER_ROUNDS=[
+  {home:0,away:1, q:[
+    {t:"Who took the first shot on target?", o:["Inter Miami","Club América","Nobody did"], a:"Inter Miami"},
+    {t:"How many corners in the first half (both teams)?", o:["0–2","3–4","5–6","7+"], a:"3–4"},
+    {t:"How many minutes of added time at the end of the half?", o:["1","2","3","4+"], a:"2"}
+  ]},
+  {home:2,away:1, q:[
+    {t:"Who won the second half on goals?", o:["Inter Miami","Club América","Drawn"], a:"Inter Miami"},
+    {t:"How many yellow cards in the whole match?", o:["0–1","2–3","4–5","6+"], a:"2–3"},
+    {t:"How many minutes of added time at the end of the match?", o:["1–2","3–4","5–6","7+"], a:"5–6"}
+  ]}
+];
+
+/* ================= SPORT REGISTRY =========================================
+   This is the object that turns a basketball app into a sports app. Every
+   period count, label and point value in the game flows from here — nothing
+   downstream hardcodes "quarter" or the number 4 any more.
+   Add a sport by adding a key. Pick one with ?sport=soccer in the URL.
+   ------------------------------------------------------------------------ */
+const SPORTS={
+  basketball:{
+    key:"basketball", emoji:"🏀", word:"basketball",
+    game:BB_GAME, roster:BB_ROSTER, preds:BB_PREDS, rounds:BBALL_ROUNDS, catches:[],
+    worth:[1,2,3,4],                                  // Q1=1 … Q4=4  → 30 pts
+    tags:["Q1","Q2","Q3","Q4"],
+    names:["Quarter 1","Quarter 2","Quarter 3","Quarter 4"],
+    L:{ start:"tip-off", Start:"Tip-off", starting:"Tipping off",
+        end:"final buzzer", End:"Final buzzer 🚨",
+        unit:"game", Unit:"Game", period:"quarter", Period:"Quarter",
+        league:"🏀 WNBA Game of the Night", cadence:"⏱️ 4 quarters" },
+    startLbl:"Start {n} ▶", lifelineNote:"just like the arena timeout",
+    landing:"<b style=\"color:var(--ink)\">Indiana Fever @ Seattle Storm</b> — on ESPN. Watch the broadcast, play from your couch. Predict before tip-off, answer at every quarter break. Right answers score. Fast right answers score more.",
+    step1:"Fill your prediction sheet — winner, stat leaders & bonus amounts. Worth up to 50 pts.",
+    step2h:"Answer at every quarter break",
+    step2:"3 questions about what JUST happened. Points rise: Q1 = 1pt → Q4 = 4pt. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.",
+    step3:"When the host posts the answers, tap them to score your quarter. Most points wins the night; ⚡ Speed breaks ties.",
+    rulePred:"Lock 6 picks before tip-off: winning team (5 pts) and the leader in points, assists, steals, rebounds & blocks (4 pts each). Nail the leader's exact stat total for a +5 bonus per category. Predictions can't be changed after tip-off.",
+    ruleLive:"At the end of each quarter, answer 3 questions about the quarter you just watched. Correct answers are worth 1 pt each in Q1, 2 in Q2, 3 in Q3, and 4 in Q4. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.",
+    ruleScore:"When the host announces each quarter's answers (from the broadcast + official box score), tap them in your app to score the quarter. After the final buzzer, enter the official stat leaders to score your predictions."
+  },
+  soccer:{
+    key:"soccer", emoji:"⚽️", word:"soccer",
+    game:SC_GAME, roster:null, preds:SC_PREDS, rounds:SOCCER_ROUNDS, catches:SC_CATCHES,
+    worth:[3,5],                                      // halftime=3, full-time=5 → 24 pts
+    tags:["1H","FT"],
+    names:["1st half","Full time"],
+    L:{ start:"kickoff", Start:"Kickoff", starting:"Kicking off",
+        end:"final whistle", End:"Final whistle 📣",
+        unit:"match", Unit:"Match", period:"half", Period:"Half",
+        league:"⚽️ Leagues Cup · MLS v LIGA MX", cadence:"⏱️ 2 halves" },
+    startLbl:"{n} questions ▶", lifelineNote:"the break is long enough",
+    landing:"<b style=\"color:var(--ink)\">MLS v LIGA MX</b> — a month of it, Aug 4 to Sep 6. Set your card before kickoff, then put the phone down: your live catches score themselves while you watch. Two rounds of questions, halftime and full time. That's it.",
+    step1:"Ten picks before kickoff — result, goals, first corner, first card, added time. All of them always resolve. Worth up to 50 pts.",
+    step2h:"Set 6 live catches, then just watch",
+    step2:"First corner, first card, first sub, first offside. You set them before kickoff and they flip themselves as the match happens — no tapping, no phone during a counter-attack. 1 pt each.",
+    step3:"Two question rounds only — halftime (3 pts each) and full time (5 pts each). Most points wins the night; ⚡ Speed breaks ties.",
+    rulePred:"Lock 10 picks before kickoff, 5 pts each: result, total goals, first goal, both teams to score, higher-scoring half, first corner, first yellow, added-time goal, shots on target and winning margin. Every one of them resolves — there are no dead picks. Locked at kickoff.",
+    ruleLive:"Two rounds only, because soccer only gives you two breaks. At halftime, 3 questions about the first 45 (3 pts each). At the final whistle, 3 questions about the whole match (5 pts each). 20 seconds per question, no lookups.",
+    ruleScore:"When the host announces the halftime and full-time answers (from the broadcast + official match stats), tap them in to score the round. At the final whistle you also settle your pre-match sheet and your live catches."
+  }
+};
+const SPORT_KEY=(()=>{try{return (new URLSearchParams(location.search).get('sport')||'basketball').toLowerCase();}catch(e){return 'basketball';}})();
+const SPORT=SPORTS[SPORT_KEY]||SPORTS.basketball;
+const L=SPORT.L;
+const GAME=SPORT.game, roster=SPORT.roster, preds=SPORT.preds, rounds=SPORT.rounds, CATCHES=SPORT.catches;
+const NR=rounds.length;                               // number of scoring rounds
+function roundWorth(i){return SPORT.worth[i];}
+function roundTag(i){return SPORT.tags[i];}
+function roundName(i){return SPORT.names[i];}
+function startLabel(i){return (SPORT.startLbl||"Start {n} ▶").replace("{n}",roundName(i));}
+function isLastRound(i){return i>=NR-1;}
+// Lifeline is "one per half of the contest" in every sport: quarters 1–2 vs 3–4,
+// or the 1st half vs the 2nd.
+function lifelineKey(i){return i < Math.ceil(NR/2) ? 'lifelineHalf1' : 'lifelineHalf2';}
+function emptyRounds(){return Array.from({length:NR},()=>[]);}
+const CATCH_PTS=CATCHES.length;                       // 1 pt per catch
+
 const bots=[
   {n:"HoopsOracle",c:"#ff4d5e"},{n:"StatQueen",c:"#2ee6a6"},{n:"CourtVision",c:"#ffc54d"},
   {n:"BlueCoatBry",c:"#2f6bff"},{n:"NoLookNina",c:"#b57cff"},{n:"BuzzerBeater",c:"#19c3d6"},
@@ -623,7 +851,9 @@ const bots=[
 /* ---------------- STATE ---------------- */
 let S={mode:"demo",screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},qi:0,ni:0,nextQ:0,answered:false,
   lifelineHalf1:true,lifelineHalf2:true,botScores:[],totalPlayers:1204,
-  results:[[],[],[],[]], liveAnswers:[[],[],[],[]], streak:0, seasonPts:0};
+  results:emptyRounds(), liveAnswers:emptyRounds(), streak:0, seasonPts:0,
+  catchChoices:{}, catchPts:null, catchesScored:false,
+  predTruth:null, predTruthNum:null, lifelineAt:null, tally:null};
 let secondsLeft=0, timerDur=15;
 
 // mock friend league (in the real build this comes from the backend)
@@ -643,7 +873,7 @@ function startLive(){S.mode="live";go('name');}
 function startDemo(){S.mode="demo";go('name');}
 
 /* ---------------- PERSISTENCE (Game Night only) ---------------- */
-const LS_KEY="stats_gamenight_v1";
+const LS_KEY="stats_gamenight_v1_"+SPORT_KEY; // saves never cross sports
 let resumeData=null;
 function save(){try{if(S.mode==="live")localStorage.setItem(LS_KEY,JSON.stringify(S));}catch(e){}}
 function clearSave(){try{localStorage.removeItem(LS_KEY);}catch(e){}}
@@ -664,9 +894,9 @@ function doResume(){
   const scr=S.screen;
   if(scr==="predict"){buildPred();go("predict");}
   else if(scr==="lobby"){renderLobby(S.nextQ!=null?S.nextQ:S.qi);go("lobby");}
-  else if(scr==="live"){ // mid-quarter refresh: replay the current quarter (nothing was scored yet)
+  else if(scr==="live"){ // mid-round refresh: replay the current round (nothing was scored yet)
     S.liveAnswers[S.qi]=[];renderLobby(S.qi);go("lobby");
-    toast("Resumed — replay Q"+(S.qi+1)+" when you're ready.");
+    toast(`Resumed — replay ${roundName(S.qi).toLowerCase()} when you're ready.`);
   }
   else if(scr==="review"){openReview();}
   else if(scr==="predreview"){openPredReview();}
@@ -692,7 +922,7 @@ function goBack(){
   const risky=(S.screen==='live') || (S.screen==='review' && document.getElementById('revBtn').style.display!=='none');
   if(risky && !pendingBack){
     pendingBack=true;
-    toast('⚠️ Leaving restarts this quarter\'s answers — tap ← again to confirm.');
+    toast(`⚠️ Leaving restarts this ${L.period}'s answers — tap ← again to confirm.`);
     setTimeout(()=>{pendingBack=false;},2500);
     return;
   }
@@ -742,6 +972,9 @@ function lockPredictions(){
       if(S.predChoices[p.id]===p.answer){pp+=p.base;
         if(p.bonus && Number(S.predChoices[p.id+'_num'])===p.num){pp+=p.bonus;}}
     });
+    // remember the truth so the trash-talk engine can cite real picks
+    S.predTruth={};S.predTruthNum={};
+    preds.forEach(p=>{S.predTruth[p.id]=p.answer;if(p.bonus)S.predTruthNum[p.id]=p.num;});
     S.predPts=pp; seedBots();
   }else{
     S.predPts=null; // scored at final buzzer vs the real box score
@@ -750,16 +983,17 @@ function lockPredictions(){
   go('lobby');
 }
 function renderLobby(qi){
-  const btn=document.querySelector('#s-lobby .btn');
-  const foot=document.querySelector('#s-lobby .foot');
-  const sub=document.querySelector('#s-lobby p.sub');
+  const btn=document.getElementById('lobbyBtn');
+  const foot=document.getElementById('lobbyFoot');
+  const sub=document.getElementById('lobbySub');
+  document.getElementById('lobbyPill').textContent=L.starting;
   const s1v=document.getElementById('lobStat1v'),s1k=document.getElementById('lobStat1k');
   const s2v=document.getElementById('lobStat2v'),s2k=document.getElementById('lobStat2k');
   if(S.mode==="live"){
     sub.textContent = qi===0
-      ? "Predictions locked. Watch the game — the moment Q1 ends, come back and hit the button. The clock is real: 20 seconds a question, unused seconds bank as ⚡ Speed."
-      : `Q${qi} scored — you're on ${S.pts} pts. Keep watching; when Q${qi+1} ends, come back and answer.`;
-    btn.textContent = qi===0 ? `Q1 ended — answer now ▶` : `Quarter ${qi+1} ended — answer now ▶`;
+      ? `Predictions locked. Watch the ${L.unit} — the moment ${roundTag(0)} ends, come back and hit the button. The clock is real: 20 seconds a question, unused seconds bank as ⚡ Speed.`
+      : `${roundTag(qi-1)} scored — you're on ${S.pts} pts. Keep watching; when ${roundName(qi).toLowerCase()} comes, come back and answer.`;
+    btn.textContent = `${roundTag(qi)} ended — answer now ▶`;
     btn.onclick=()=>startQuarter(qi);
     foot.textContent="Game Night: answers score when the host announces them at each break. Your progress is saved.";
     // honest live-mode stats (no fake crowd)
@@ -768,14 +1002,106 @@ function renderLobby(qi){
     s2v.textContent = qi===0 ? '20s' : '⚡'+S.speed;
     s2k.textContent = qi===0 ? 'Clock per question' : 'Speed banked';
   }else{
-    sub.textContent="Predictions locked. When each quarter ends, questions drop here — be fast, points are live.";
-    btn.textContent = `Start Quarter ${qi+1} ▶`;
+    sub.textContent = qi===0
+      ? `Predictions locked. When ${roundName(qi).toLowerCase()} ends, questions drop here — be fast, points are live.`
+      : `${roundTag(qi-1)} done — you're on ${S.pts} pts. ${roundName(qi)} next.`;
+    btn.textContent = startLabel(qi);
     btn.onclick=()=>startQuarter(qi);
-    foot.textContent="Practice mode: a simulated Fever–Storm game with instant scoring.";
+    foot.textContent=`Practice mode: a simulated ${GAME.homeNick||GAME.homeAbbr}–${GAME.awayNick||GAME.awayAbbr} ${L.unit} with instant scoring.`;
     s1v.textContent='1,204';s1k.textContent='Players (simulated)';
     s2v.textContent='50';s2k.textContent='Your prediction pts (pending)';
   }
+  // the live-catches strip only exists in sports that have one
+  renderCatchStrip(qi);
 }
+
+/* ---------------- LIVE CATCHES ----------------
+   Cards set before the match that resolve themselves as it plays.
+   Soccer's native mechanic: no tapping during a counter-attack. */
+function renderCatchStrip(qi){
+  const card=document.getElementById('catchCard');
+  if(!CATCHES.length){card.style.display='none';return;}
+  card.style.display='';
+  const locked=(qi>0);
+  const set=CATCHES.filter(c=>S.catchChoices[c.id]).length;
+  const done=CATCHES.filter(c=>S.catchResults&&S.catchResults[c.id]!==undefined).length;
+  const pend=CATCHES.length-done;
+  document.getElementById('catchPtsLbl').textContent=`${CATCHES.length} × 1 pt`;
+  // never say "5 of 6" while one is still live — that reads as a miss
+  document.getElementById('catchSub').textContent = locked
+    ? `Locked at ${L.start}. `+(!done ? `They resolve as the ${L.unit} plays.`
+        : pend ? `You've caught ${S.catchPts||0} of the ${done} that resolved — ${pend} still live.`
+               : `You caught ${S.catchPts||0} of ${CATCHES.length}.`)
+    : `Set these before ${L.start}. They score themselves while you watch — no tapping during the ${L.unit}.`;
+  const g=document.getElementById('catchGrid');g.innerHTML='';
+  CATCHES.forEach(c=>{
+    const mine=S.catchChoices[c.id]||null;
+    const done=S.catchResults&&S.catchResults[c.id]!==undefined;
+    const hit=done&&mine===S.catchResults[c.id];
+    const d=document.createElement('div');
+    d.className='catch'+(locked?' locked':'')+(done?(hit?' hit':' miss'):(locked?' pending':''));
+    d.innerHTML=`<div class="cico">${c.icon}</div><div class="clab">${c.label}</div>
+      <div class="cmin">${done?'resolved '+c.at:'~'+c.at}</div>
+      <div class="catchopts"></div>
+      <div class="cres">${done?(hit?'✓ caught +1':'✕ '+S.catchResults[c.id]):(locked?'⏳ live':'')}</div>`;
+    const box=d.querySelector('.catchopts');
+    c.opts.forEach(o=>{
+      const b=document.createElement('button');b.textContent=o;
+      if(mine===o)b.classList.add('on');
+      b.onclick=()=>{if(locked)return;S.catchChoices[c.id]=o;save();renderCatchStrip(qi);};
+      box.appendChild(b);
+    });
+    g.appendChild(d);
+  });
+  // nudge, but never block: unset catches simply can't score
+  if(!locked && set<CATCHES.length){
+    document.getElementById('catchSub').textContent+=` (${set}/${CATCHES.length} set)`;
+  }
+}
+// demo mode: catches resolve on their own as the match reaches their minute
+function resolveCatches(throughRound){
+  if(!CATCHES.length)return;
+  S.catchResults=S.catchResults||{};
+  const half1=throughRound===0;
+  let newHits=0,newRes=0;
+  CATCHES.forEach(c=>{
+    if(S.catchResults[c.id]!==undefined)return;
+    const min=parseInt(c.at,10)||0;
+    if(half1 && min>45)return;           // second-half catches wait for full time
+    S.catchResults[c.id]=c.answer;newRes++;
+    if(S.catchChoices[c.id]===c.answer)newHits++;
+  });
+  if(!newRes)return;
+  S.catchPts=(S.catchPts||0)+newHits;
+  toast(newHits?`⚡ ${newHits} live catch${newHits>1?'es':''} hit — +${newHits} pts banked.`
+               :`⚡ ${newRes} catch${newRes>1?'es':''} resolved — none caught.`);
+}
+// game night: the host announces what happened, the player taps it in
+function renderCatchReview(){
+  const card=document.getElementById('prCatchCard');
+  if(!CATCHES.length){card.style.display='none';return;}
+  card.style.display='';
+  document.getElementById('prCatchPts').textContent=`${CATCHES.length} × 1 pt`;
+  const g=document.getElementById('prCatchGrid');g.innerHTML='';
+  prCatchMarks={};
+  CATCHES.forEach(c=>{
+    const mine=S.catchChoices[c.id]||null;
+    const d=document.createElement('div');d.className='catch';
+    d.innerHTML=`<div class="cico">${c.icon}</div><div class="clab">${c.label}</div>
+      <div class="cmin">you caught: ${mine?'🔵 '+mine:'— none'}</div>
+      <div class="catchopts"></div>`;
+    const box=d.querySelector('.catchopts');
+    c.opts.forEach(o=>{
+      const b=document.createElement('button');b.textContent=o;
+      b.onclick=()=>{prCatchMarks[c.id]=o;
+        [...box.children].forEach(x=>x.classList.remove('on'));
+        b.classList.add('on');validatePredReview();};
+      box.appendChild(b);
+    });
+    g.appendChild(d);
+  });
+}
+let prCatchMarks={};
 
 /* ---------------- BOTS ---------------- */
 function seedBots(){S.botScores=bots.map(b=>({...b,pts:0}));}
@@ -801,8 +1127,8 @@ function timeCue(){beep(300,0.3);try{navigator.vibrate&&navigator.vibrate([80,60
 function startQuarter(qi){S.qi=qi;S.ni=0;renderScore();loadQuestion();go('live');}
 function renderScore(){
   if(S.mode==="demo"){
-    document.getElementById('scHome').textContent=quarters[S.qi].home;
-    document.getElementById('scAway').textContent=quarters[S.qi].away;
+    document.getElementById('scHome').textContent=rounds[S.qi].home;
+    document.getElementById('scAway').textContent=rounds[S.qi].away;
     document.getElementById('youRank').textContent='#'+myRank();
   }else{
     document.getElementById('scHome').textContent='–';
@@ -811,19 +1137,20 @@ function renderScore(){
     document.getElementById('youRankLbl').textContent='⚡ speed banked';
   }
   if(S.mode==="demo")document.getElementById('youRankLbl').textContent='rank / 1,204';
-  document.getElementById('qLabel').textContent='Q'+(S.qi+1);
+  document.getElementById('qLabel').textContent=roundTag(S.qi);
   document.getElementById('youPts').textContent=S.pts;
 }
+function nq(){return rounds[S.qi].q.length;}
 function loadQuestion(){
   S.answered=false;
-  const q=quarters[S.qi].q[S.ni];const worth=S.qi+1;
+  const q=rounds[S.qi].q[S.ni];const worth=roundWorth(S.qi);
   document.getElementById('qText').textContent=q.t;
-  document.getElementById('qCount').textContent=`Question ${S.ni+1} of 3`;
+  document.getElementById('qCount').textContent=`Question ${S.ni+1} of ${nq()}`;
   document.getElementById('qWorth').textContent=`Worth ${worth} pt${worth>1?'s':''}${S.mode==="live"?' + ⚡':''}`;
   document.getElementById('revealBox').innerHTML='';
   document.getElementById('nextBtn').style.display='none';
   document.getElementById('helpNote').textContent='';
-  const half=S.qi<2?'lifelineHalf1':'lifelineHalf2';
+  const half=lifelineKey(S.qi);
   document.getElementById('helpBtn').disabled=!S[half];
   document.getElementById('helpBtn').textContent = S.mode==="live" ? '✨ Lifeline: +15s (1/half)' : '✨ Lifeline (1/half)';
   const o=document.getElementById('qOpts');o.innerHTML='';
@@ -857,7 +1184,7 @@ function extendTimer(extra){
 }
 function answer(choice,btn){
   if(S.answered)return;S.answered=true;clearInterval(timerInt);
-  const q=quarters[S.qi].q[S.ni];const worth=S.qi+1;
+  const q=rounds[S.qi].q[S.ni];const worth=roundWorth(S.qi);
   if(S.mode==="live"){
     // Game Night: record pick + banked seconds; grading happens at the review
     const bank=choice?Math.max(secondsLeft,0):0;
@@ -873,7 +1200,7 @@ function answer(choice,btn){
       : `<div class="reveal bad"><div class="r1">⏰ TIME — no answer locked</div>
          <div class="r2">This one can't score. Be quicker next question.</div></div>`;
     document.getElementById('nextBtn').style.display='block';
-    document.getElementById('nextBtn').textContent = (S.ni<2)?'Next question →':'Done — wait for answers →';
+    document.getElementById('nextBtn').textContent = (S.ni<nq()-1)?'Next question →':'Done — wait for answers →';
     return;
   }
   const correct=choice===q.a;
@@ -895,41 +1222,44 @@ function answer(choice,btn){
   bumpBots(worth); // other players score too
   renderScore();
   document.getElementById('nextBtn').style.display='block';
-  document.getElementById('nextBtn').textContent = (S.ni<2)?'Next question →':'See the leaderboard →';
+  document.getElementById('nextBtn').textContent = (S.ni<nq()-1)?'Next question →':'See the leaderboard →';
 }
 function useLifeline(){
-  const half=S.qi<2?'lifelineHalf1':'lifelineHalf2';
+  const half=lifelineKey(S.qi);
   if(!S[half]||S.answered)return;S[half]=false;
+  if(!S.lifelineAt)S.lifelineAt=roundTag(S.qi);   // roast material
   document.getElementById('helpBtn').disabled=true;
   if(S.mode==="live"){
     extendTimer(15);
     document.getElementById('helpNote').textContent='Lifeline: +15 seconds — ask the room!';
     return;
   }
-  const q=quarters[S.qi].q[S.ni];
-  // remove two wrong options
+  const q=rounds[S.qi].q[S.ni];
+  // remove wrong options, but always leave a real choice — soccer questions
+  // are often 3-way, and killing two would just hand over the answer
   const wrongs=[...document.querySelectorAll('#qOpts .opt')].filter(b=>b.querySelector('span').textContent!==q.a);
-  wrongs.slice(0,2).forEach(b=>{b.style.opacity='.25';b.style.pointerEvents='none';});
-  document.getElementById('helpNote').textContent='Lifeline used — 2 options removed';
+  const kill=Math.max(1,Math.min(2,wrongs.length-1));
+  wrongs.slice(0,kill).forEach(b=>{b.style.opacity='.25';b.style.pointerEvents='none';});
+  document.getElementById('helpNote').textContent=`Lifeline used — ${kill} option${kill>1?'s':''} removed`;
 }
 function nextQuestion(){
-  if(S.ni<2){S.ni++;loadQuestion();}
+  if(S.ni<nq()-1){S.ni++;loadQuestion();}
   else if(S.mode==="live"){openReview();}
   else{showBreak();}
 }
 
-/* ---------------- GAME NIGHT: QUARTER REVIEW ---------------- */
-let revMarks=[null,null,null];
+/* ---------------- GAME NIGHT: ROUND REVIEW ---------------- */
+let revMarks=[];
 function openReview(){
-  revMarks=[null,null,null];
-  document.getElementById('revPill').textContent='Score Q'+(S.qi+1);
-  document.getElementById('revTitle').textContent=`Score Quarter ${S.qi+1} ✅`;
+  revMarks=Array(nq()).fill(null);
+  document.getElementById('revPill').textContent='Score '+roundTag(S.qi);
+  document.getElementById('revTitle').textContent=`Score ${roundName(S.qi)} ✅`;
   document.getElementById('revResult').innerHTML='';
   document.getElementById('revNextBtn').style.display='none';
   document.getElementById('revBtn').style.display='block';
   document.getElementById('revBtn').disabled=true;
   const list=document.getElementById('revList');list.innerHTML='';
-  quarters[S.qi].q.forEach((q,i)=>{
+  rounds[S.qi].q.forEach((q,i)=>{
     const my=S.liveAnswers[S.qi][i]||{choice:null,bank:0};
     const c=document.createElement('div');c.className='card tight';
     c.innerHTML=`<div style="font-size:13px;font-weight:800;margin-bottom:4px">${i+1}. ${q.t}</div>
@@ -949,8 +1279,8 @@ function openReview(){
   go('review');
 }
 function confirmReview(){
-  const worth=S.qi+1;let got=0,sp=0;
-  quarters[S.qi].q.forEach((q,i)=>{
+  const worth=roundWorth(S.qi);let got=0,sp=0;
+  rounds[S.qi].q.forEach((q,i)=>{
     const my=S.liveAnswers[S.qi][i]||{choice:null,bank:0};
     const correct=my.choice!==null && my.choice===revMarks[i];
     S.results[S.qi][i]=correct;
@@ -959,13 +1289,16 @@ function confirmReview(){
   S.pts+=got;S.speed+=sp;
   document.getElementById('revBtn').style.display='none';
   document.getElementById('revResult').innerHTML=
-    `<div class="reveal ${got>0?'good':'bad'}"><div class="r1">${got>0?'✓':'✕'} Q${S.qi+1}: +${got} pts · +${sp} ⚡ speed</div>
+    `<div class="reveal ${got>0?'good':'bad'}"><div class="r1">${got>0?'✓':'✕'} ${roundTag(S.qi)}: +${got} pts · +${sp} ⚡ speed</div>
      <div class="r2">Running total: <b>${S.pts}</b> pts · <b>${S.speed}</b> ⚡. Post it in the chat and talk your talk.</div></div>`;
   document.getElementById('revNextBtn').style.display='block';
-  document.getElementById('revNextBtn').textContent = S.qi<3 ? `Back to the game — Q${S.qi+2} next →` : 'Final buzzer — score predictions →';
+  document.getElementById('revTalkBtn').style.display='block';
+  document.getElementById('revNextBtn').textContent = !isLastRound(S.qi)
+    ? `Back to the ${L.unit} — ${roundName(S.qi+1).toLowerCase()} next →`
+    : `${L.End} — score predictions →`;
 }
 function afterReview(){
-  if(S.qi<3){S.nextQ=S.qi+1;renderLobby(S.nextQ);go('lobby');}
+  if(!isLastRound(S.qi)){S.nextQ=S.qi+1;renderLobby(S.nextQ);go('lobby');}
   else{openPredReview();}
 }
 
@@ -985,36 +1318,54 @@ function openPredReview(){
       inp.placeholder='Official '+p.numLabel.toLowerCase();inp.style.marginTop='8px';row.appendChild(inp);}
     c.appendChild(row);
   });
+  document.getElementById('prPill').textContent=L.End;
+  renderCatchReview();
   go('predreview');
 }
 function validatePredReview(){
   const done=preds.filter(p=>document.getElementById('pr_'+p.id).value).length;
-  document.getElementById('prBtn').disabled=done<preds.length;
+  const cdone=CATCHES.filter(c=>prCatchMarks[c.id]).length;
+  document.getElementById('prBtn').disabled = done<preds.length || cdone<CATCHES.length;
 }
 function confirmPreds(){
   let pp=0;
+  S.predTruth={};S.predTruthNum={};
   preds.forEach(p=>{
     const actual=document.getElementById('pr_'+p.id).value;
+    S.predTruth[p.id]=actual;
+    if(p.bonus)S.predTruthNum[p.id]=Number(document.getElementById('prn_'+p.id).value)||null;
     if(S.predChoices[p.id]===actual){pp+=p.base;
       if(p.bonus){const an=Number(document.getElementById('prn_'+p.id).value);
         if(an && Number(S.predChoices[p.id+'_num'])===an)pp+=p.bonus;}}
   });
   S.predPts=pp;
+  // catches settle here on Game Night — one screen, one pass
+  if(CATCHES.length){
+    S.catchResults={};let cp=0;
+    CATCHES.forEach(c=>{S.catchResults[c.id]=prCatchMarks[c.id];
+      if(S.catchChoices[c.id] && S.catchChoices[c.id]===prCatchMarks[c.id])cp++;});
+    S.catchPts=cp;
+  }
+  S.catchesScored=true;
   showFinal();
 }
 
 /* ---------------- BREAK / LEADERBOARD ---------------- */
 function showBreak(){
-  const last=S.qi===3;
-  if(last){return showFinal();}
-  document.getElementById('breakPill').textContent='End of Q'+(S.qi+1);
-  document.getElementById('breakTitle').textContent=`Quarter ${S.qi+1} in the books`;
+  resolveCatches(S.qi); // demo: the catches that have happened by now flip themselves
+  if(isLastRound(S.qi)){return showFinal();}
+  document.getElementById('breakPill').textContent='End of '+roundTag(S.qi);
+  document.getElementById('breakTitle').textContent=`${roundName(S.qi)} in the books`;
   document.getElementById('breakSub').textContent=`You've got ${S.pts} live points. Here's the room.`;
   renderLeaderboard('lbList',6);
-  document.getElementById('breakBtn').textContent=`Start Quarter ${S.qi+2} ▶`;
+  document.getElementById('breakBtn').textContent=startLabel(S.qi+1);
   go('break');
 }
-function nextFromBreak(){startQuarter(S.qi+1);}
+function nextFromBreak(){
+  // with catches in play, route back through the lobby so the player sees them flip
+  if(CATCHES.length){S.nextQ=S.qi+1;renderLobby(S.qi+1);go('lobby');}
+  else startQuarter(S.qi+1);
+}
 function renderLeaderboard(elId,limit){
   const s=standings();const el=document.getElementById(elId);el.innerHTML='';
   s.slice(0,limit).forEach((p,i)=>{
@@ -1030,19 +1381,21 @@ function renderLeaderboard(elId,limit){
 
 /* ---------------- FINAL ---------------- */
 function showFinal(){
-  // add prediction points now
-  S.pts+=S.predPts;
+  // add prediction points + live catches now
+  S.pts+=S.predPts+(S.catchPts||0);
   S.streak++;
+  document.getElementById('finalMax').textContent=`total points • out of ${MAXPTS} possible`;
   clearSave(); // game complete — no resume needed
   document.getElementById('finalPts').textContent=S.pts;
   document.getElementById('streakN').textContent=S.streak;
   document.getElementById('seasonRating').textContent=(1000+S.seasonPts+S.pts+S.speed).toLocaleString();
   if(S.mode==="live"){
     document.getElementById('finalRank').textContent='⚡'+S.speed;
-    document.getElementById('finalPct').textContent='+'+S.predPts;
+    document.getElementById('finalPct').textContent='+'+(S.predPts+(S.catchPts||0));
     document.querySelector('#s-final .statgrid .stat:nth-child(1) .k').textContent='Speed points (tiebreaker)';
-    document.querySelector('#s-final .statgrid .stat:nth-child(2) .k').textContent='From predictions';
-    document.getElementById('finalTitle').textContent=`Final buzzer, ${S.name||'player'}!`;
+    document.querySelector('#s-final .statgrid .stat:nth-child(2) .k').textContent=
+      CATCHES.length?'Predictions + catches':'From predictions';
+    document.getElementById('finalTitle').textContent=`${L.End.replace(/[^A-Za-z]+$/,'')}, ${S.name||'player'}!`;
     document.getElementById('finalLb').innerHTML=
       `<div class="card tight"><p class="sub" style="font-size:12.5px;margin:0">📲 Post your result card in the group chat. Highest points wins the night — ⚡ Speed breaks ties. Rematch at the next Game of the Night.</p></div>`;
   }else{
@@ -1059,31 +1412,357 @@ function showFinal(){
 }
 /* ---------------- SHARE CARD ---------------- */
 function openShare(){
+  document.getElementById('scEmoji').textContent=SPORT.emoji;
+  document.getElementById('scGameLine').textContent=
+    `${GAME.night.toUpperCase()} · ${(GAME.homeNick||GAME.homeAbbr).toUpperCase()} vs `+
+    `${(GAME.awayNick||GAME.awayAbbr).toUpperCase()} · ${GAME.shareDate||GAME.short.toUpperCase()}`;
   document.getElementById('scPts').innerHTML=`${S.pts} <span style="font-size:15px;color:var(--muted);font-weight:800">pts</span>${S.mode==="live"?` <span style="font-size:15px;color:var(--gold);font-weight:900">· ⚡${S.speed}</span>`:''}`;
+  const bonus=S.predPts+(S.catchPts||0);
   document.getElementById('scRankLine').textContent = S.mode==="live"
-    ? `${S.predPts} from predictions · ${S.pts-S.predPts} live · ⚡${S.speed} speed`
+    ? `${S.predPts} from predictions${CATCHES.length?` · ⚡${S.catchPts||0} catches`:''} · ${S.pts-bonus} live · ⚡${S.speed} speed`
     : `Rank #${myRank()} of ${S.totalPlayers.toLocaleString()}`;
   document.getElementById('scStreak').textContent=`🔥 ${S.streak}-game streak`;
   const g=document.getElementById('scGrid');g.innerHTML='';
   S.results.forEach((qr,i)=>{
+    const n=rounds[i].q.length;
     const d=document.createElement('div');d.className='sc-q';
-    d.innerHTML=`<div class="qk">Q${i+1}</div><div class="cells">${
-      [0,1,2].map(j=>`<div class="cell ${qr[j]===undefined?'':qr[j]?'hit':'miss'}"></div>`).join('')}</div>`;
+    d.innerHTML=`<div class="qk">${roundTag(i)}</div><div class="cells">${
+      Array.from({length:n},(_,j)=>`<div class="cell ${qr[j]===undefined?'':qr[j]?'hit':'miss'}"></div>`).join('')}</div>`;
     g.appendChild(d);
   });
+  if(CATCHES.length && S.catchResults){   // mirror the ⚡ row that's in the copied text
+    const d=document.createElement('div');d.className='sc-q';
+    d.innerHTML=`<div class="qk">⚡</div><div class="cells">${
+      CATCHES.map(c=>`<div class="cell ${S.catchResults[c.id]===undefined?''
+        :(S.catchChoices[c.id]===S.catchResults[c.id]?'hit':'miss')}"></div>`).join('')}</div>`;
+    g.appendChild(d);
+  }
   document.getElementById('shareModal').classList.add('open');
 }
 function closeShare(){document.getElementById('shareModal').classList.remove('open');}
 function shareEmoji(){
-  return S.results.map((qr,i)=>`Q${i+1} `+[0,1,2].map(j=>qr[j]===undefined?'⬛':qr[j]?'🟩':'🟥').join('')).join('\n');
+  const rows=S.results.map((qr,i)=>`${roundTag(i)} `+
+    Array.from({length:rounds[i].q.length},(_,j)=>qr[j]===undefined?'⬛':qr[j]?'🟩':'🟥').join(''));
+  if(CATCHES.length && S.catchResults){
+    rows.push('⚡ '+CATCHES.map(c=>S.catchResults[c.id]===undefined?'⬛'
+      :(S.catchChoices[c.id]===S.catchResults[c.id]?'🟩':'🟥')).join(''));
+  }
+  return rows.join('\n');
 }
 function copyShareText(){
   const head = S.mode==="live"
-    ? `STATS 🏀 Game Night #1 · Fever vs Storm\n${S.name||'Me'}: ${S.pts} pts · ⚡${S.speed} speed`
-    : `STATS 🏀 ${S.pts} pts · Rank #${myRank()}`;
+    ? `STATS ${SPORT.emoji} ${GAME.night} · ${GAME.homeAbbr} vs ${GAME.awayAbbr}\n${S.name||'Me'}: ${S.pts} pts · ⚡${S.speed} speed`
+    : `STATS ${SPORT.emoji} ${S.pts} pts · Rank #${myRank()}`;
   const txt=`${head}\n${shareEmoji()}\n🔥 ${S.streak}-game streak\nPlay free → statsgametime.com`;
   try{navigator.clipboard&&navigator.clipboard.writeText(txt);}catch(e){}
   toast('📋 Result card copied — paste it in the group chat.');
+}
+
+/* ---------------- TRASH TALK ----------------
+   The group chat is already the social layer of this game, so the app
+   doesn't try to be a messenger. It reads real state, writes the line,
+   and hands it to the clipboard. No backend, no accounts, nothing to
+   moderate. Every burn below has to be TRUE of the player's card —
+   if the state doesn't support it, the line doesn't get generated. */
+const CREW_KEY='stats_crew_v1';   // friends persist across sports and nights
+function loadCrew(){try{const c=JSON.parse(localStorage.getItem(CREW_KEY));return Array.isArray(c)?c:[];}catch(e){return [];}}
+function saveCrew(c){try{localStorage.setItem(CREW_KEY,JSON.stringify(c));}catch(e){}}
+let crew=loadCrew();
+
+function ttCopy(txt,label){
+  // Practice mode is a simulation — the game hasn't happened yet. Never let a
+  // simulated receipt land in a group chat reading like a real one.
+  const out = S.mode==='demo' ? `${txt}\n(practice run — the real one is ${GAME.date})` : txt;
+  try{navigator.clipboard&&navigator.clipboard.writeText(out);}catch(e){}
+  toast(label||'🔥 Copied — paste it in the group chat.');
+}
+function nickH(){return GAME.homeNick||GAME.homeAbbr;}
+function nickA(){return GAME.awayNick||GAME.awayAbbr;}
+function predNoun(p){const m=/how many\s+(.+?)\s*\??$/i.exec(p.numLabel||'');return m?m[1]:'';}
+
+/* every fact the burn writer is allowed to use */
+function ttFacts(){
+  const f={me:S.name||'Me',pts:S.pts,speed:S.speed,streak:S.streak,mode:S.mode,
+    final:S.screen==='final',rounds:[]};
+  S.results.forEach((qr,i)=>{
+    const done=qr.filter(v=>v!==undefined).length;if(!done)return;
+    f.rounds.push({i,tag:roundTag(i),name:roundName(i),done,n:rounds[i].q.length,
+      hits:qr.filter(v=>v===true).length,worth:roundWorth(i)});
+  });
+  f.last=f.rounds.length?f.rounds[f.rounds.length-1]:null;
+  f.prev=f.rounds.length>1?f.rounds[f.rounds.length-2]:null;
+  f.hits=f.rounds.reduce((a,r)=>a+r.hits,0);
+  f.asked=f.rounds.reduce((a,r)=>a+r.done,0);
+  f.perfect=f.rounds.filter(r=>r.done===r.n&&r.hits===r.n);
+  f.curTag=roundTag(Math.min(S.qi,NR-1));
+  f.nextName=(S.qi+1<NR)?roundName(S.qi+1):null;
+  // predictions only become material once the truth is actually known
+  f.predHits=[];f.predMiss=[];f.exact=[];f.predTotal=preds.length;
+  const T=S.predTruth,TN=S.predTruthNum||{};
+  f.predScored=!!T;
+  if(T){
+    preds.forEach(p=>{
+      const pick=S.predChoices[p.id];if(!pick)return;
+      const truth=T[p.id];if(truth===undefined||truth==='')return;
+      if(pick===truth){
+        f.predHits.push({p,pick});
+        const my=Number(S.predChoices[p.id+'_num']),tn=Number(TN[p.id]);
+        if(p.bonus&&my&&tn&&my===tn)f.exact.push({p,pick,n:my});
+      }else f.predMiss.push({p,pick,truth});
+    });
+  }
+  f.catchN=CATCHES.length;
+  f.catchHits=S.catchPts||0;
+  f.catchDone=CATCHES.filter(c=>S.catchResults&&S.catchResults[c.id]!==undefined).length;
+  f.lifeLeft=(S.lifelineHalf1?1:0)+(S.lifelineHalf2?1:0);
+  f.lifeAt=S.lifelineAt||null;
+  return f;
+}
+
+/* auto-generated burns — sorted by how specific (and therefore how
+   unanswerable) the line is. Nothing generic outranks a real receipt. */
+function ttBurns(){
+  const f=ttFacts(),out=[];
+  const add=(w,t)=>{if(t)out.push({w,t});};
+
+  if(f.final)
+    add(99,`Final: ${S.pts} out of ${MAXPTS}${S.speed?` · ⚡${S.speed} speed`:''}. That's the number. Post yours or stay humble. 🏁`);
+  if(f.exact.length){
+    const e=f.exact[0],n=predNoun(e.p);
+    add(98,`I called ${e.pick} for ${e.n}${n?' '+n:''} before ${L.start}. Not "around" ${e.n}. Exactly ${e.n}. 🎯`);
+  }
+  if(f.asked>=4&&f.hits===f.asked&&f.last)
+    add(96,`${f.hits} for ${f.hits} through ${f.last.tag}. I have not missed a single question. Somebody check on me. 😮‍💨`);
+  if(f.predHits.length>=Math.max(2,Math.ceil(f.predTotal*.6)))
+    add(94,`${f.predHits.length} of ${f.predTotal} predictions hit — every one locked before ${L.start}. Want next ${L.unit}'s too? 📝`);
+  if(f.perfect.length){
+    const r=f.perfect[f.perfect.length-1];
+    add(90,`Perfect ${r.tag}. ${r.n} for ${r.n}. We watched the same ${L.unit} — I was just paying attention. 👀`);
+  }
+  if(f.catchN&&f.catchDone&&f.catchHits>=Math.ceil(f.catchDone*.6))
+    add(88,`${f.catchHits} of ${f.catchDone} live catches, set before ${L.start} and never touched again. That's not luck, that's homework. ⚡`);
+  if(f.prev&&f.last&&f.prev.hits<f.prev.n&&f.last.hits===f.last.n)
+    add(84,`${f.prev.tag} I was cold. ${f.last.tag} I went ${f.last.n} for ${f.last.n}. Adjust or get left. 📈`);
+  if(f.lifeLeft>0&&!f.lifeAt&&f.rounds.length>=Math.ceil(NR/2)&&!f.final)
+    add(82,`Haven't touched my Lifeline${f.nextName?` and ${f.nextName.toLowerCase()} is still to come`:''}. I don't need the help. One of you might. ✨`);
+  if(!f.rounds.length)
+    add(74,`Picks are locked. ${L.Start} in a minute. Last chance to change yours — I'm not changing mine. 🔒`);
+  if(f.speed>=25)
+    add(62,`⚡${f.speed} speed banked. I'm locking answers while y'all are still reading the question.`);
+  const w=f.predHits.find(h=>/winner|result/i.test(h.p.id));
+  if(w) add(58,`I had ${w.pick} from the jump. ${L.Start} was a formality. 🧠`);
+  if(f.pts>0&&!f.final)
+    add(52,`${f.pts} points and we haven't even reached ${L.end}. Somebody post a number. Anybody. 👀`);
+  if(f.predMiss.length&&f.pts>0){
+    const m=f.predMiss.slice().sort((a,b)=>(b.p.base+(b.p.bonus||0))-(a.p.base+(a.p.bonus||0)))[0];
+    add(48,`I completely whiffed "${m.p.label.toLowerCase()}" and I'm still on ${f.pts}. Do the math on that one. 🧮`);
+  }
+  if(f.lifeAt&&f.pts>0)
+    add(44,`Yes, I burned my Lifeline back in ${f.lifeAt}. Still on ${f.pts}. Imagine me with help. 😌`);
+  if(f.streak>=2)
+    add(42,`🔥 ${f.streak}-${L.unit} streak. At this point it isn't a hot streak, it's a personality trait.`);
+  if(f.last&&f.last.hits===0)
+    add(34,`${f.last.tag} humbled me, I'll say it out loud. Now post YOUR ${f.last.tag}. I'll wait. 🪑`);
+  add(18,`${nickH()} vs ${nickA()} — I'm on ${f.pts}. The scoreboard doesn't lie and neither do I. 📊`);
+
+  out.sort((a,b)=>b.w-a.w);
+  const seen={};
+  return out.filter(b=>seen[b.t]?false:(seen[b.t]=1)).map(b=>b.t);
+}
+
+/* one-tap canned lines, score dropped in */
+const TAUNTS={
+  pre:[
+    "Predictions locked. {Start} in a minute — be watching, not typing. 📵",
+    "If you're not in the app by {start}, don't come crying at {end}. ⏰",
+    "I already know how this {unit} goes. I wrote it down. 🔒",
+    "{home} vs {away}. My picks are in. Post yours or forfeit your trash-talk license. 🎫",
+    "Free to play — the only price is attention. Some of y'all can't afford it. 💸"
+  ],
+  mid:[
+    "{pts} pts through {round}. Anybody close? Anybody? 👀",
+    "Y'all have been real quiet since {round}. 🦗",
+    "Screenshot your score or it didn't happen. 📸",
+    "I'm not saying I'm winning. I'm saying nobody has said otherwise. 🤷",
+    "⚡{speed} speed. Some of you are still reading {round}.",
+    "Whoever's last — there's still time to get worse. 📉",
+    "{pts} points. Reply with yours. Silence is an answer too. 🤫"
+  ],
+  post:[
+    "Final: {pts}/{max}. Y'all can stop typing now. 🏁",
+    "{End} Somebody's about to explain how they were 'distracted.' 🙄",
+    "{pts} points. Same seat next {unit} — bring backup. 🪑",
+    "I'd say good game, but let's be honest about what just happened. 🏆",
+    "Loser posts the group photo. I don't make the rules. 📸"
+  ]
+};
+function ttTokens(){
+  const f=ttFacts();
+  return {pts:S.pts,speed:S.speed,max:MAXPTS,me:S.name||'Me',
+    round:f.last?f.last.tag:roundTag(0),start:L.start,Start:L.Start,
+    unit:L.unit,Unit:L.Unit,end:L.end,End:L.End,period:L.period,Period:L.Period,
+    home:nickH(),away:nickA()};
+}
+function ttFill(t){const T=ttTokens();return t.replace(/\{(\w+)\}/g,(m,k)=>T[k]!==undefined?T[k]:m);}
+function ttPhase(){
+  if(S.screen==='final')return 'post';
+  return S.results.some(qr=>qr.some(v=>v!==undefined))?'mid':'pre';
+}
+
+/* callout — aims a line at one person in the crew */
+function ttSting(f){
+  if(f.exact.length){const e=f.exact[0];return `I called ${e.pick} for ${e.n} before ${L.start}.`;}
+  if(f.perfect.length)return `I went perfect in ${f.perfect[f.perfect.length-1].tag}.`;
+  if(f.catchN&&f.catchHits>=2)return `${f.catchHits} live catches, all locked before ${L.start}.`;
+  if(f.predHits.length)return `${f.predHits.length} of ${f.predTotal} predictions hit.`;
+  if(f.speed>=20)return `⚡${f.speed} speed banked.`;
+  if(f.last)return `${f.hits} of ${f.asked} right through ${f.last.tag}.`;
+  return `Picks locked before ${L.start}.`;
+}
+function ttCallout(name,their){
+  const n=String(name||'').trim();if(!n)return '';
+  const f=ttFacts(),sting=ttSting(f);
+  const hand=f.predMiss.length?` And I whiffed "${f.predMiss[0].p.label.toLowerCase()}" — imagine if I hadn't.`:'';
+  const t=Number(their);
+  const known=their!==''&&their!==null&&their!==undefined&&!isNaN(t);
+  if(known){
+    const d=S.pts-t;
+    if(d>0)return `@${n} — ${S.pts} to ${t}. That's ${d} point${d===1?'':'s'} of daylight. ${sting}${hand}`;
+    if(d<0)return `@${n} — you're up ${-d} on me, ${t} to ${S.pts}. Enjoy the view. ${f.nextName?`${f.nextName} is mine.`:`Rematch next ${L.unit}.`} ${sting}`;
+    return `@${n} — dead even at ${S.pts}. ⚡${S.speed} speed says I still take it. Check your card. 😏`;
+  }
+  return `@${n} — I'm on ${S.pts}${f.last?` through ${f.last.tag}`:''}. ${sting} Post your number or admit it. 👀${hand}`;
+}
+
+/* ---------------- TRASH TALK UI ---------------- */
+let ttTab='burns',ttOffset=0;
+function openTalk(tab){
+  ttTab=tab||'burns';ttOffset=0;
+  document.getElementById('ttTitle').textContent =
+    S.screen==='final'?'🔥 Talk trash · final':'🔥 Talk trash';
+  renderTalk();
+  document.getElementById('talkModal').classList.add('open');
+}
+function closeTalk(){document.getElementById('talkModal').classList.remove('open');}
+function setTtTab(t){ttTab=t;ttOffset=0;renderTalk();}
+function ttNode(cls,txt){const d=document.createElement('div');d.className=cls;if(txt!==undefined)d.textContent=txt;return d;}
+function ttBurnCard(text){
+  const d=ttNode('tt-burn');
+  const f=ttNode('fire','🔥'),b=document.createElement('div');
+  b.appendChild(ttNode('txt',text));b.appendChild(ttNode('cp','TAP TO COPY'));
+  d.appendChild(f);d.appendChild(b);
+  d.onclick=()=>ttCopy(text);
+  return d;
+}
+function renderTalk(){
+  [...document.querySelectorAll('#talkTabs .tt-tab')].forEach(b=>b.classList.toggle('on',b.dataset.t===ttTab));
+  const body=document.getElementById('talkBody');body.innerHTML='';
+  if(ttTab==='burns'){
+    const all=ttBurns();
+    const sub=ttNode('sub','Every line is built from your actual card — if it isn’t true, it doesn’t get written. Tap to copy.');
+    sub.style.cssText='font-size:12px;margin:0 0 4px';body.appendChild(sub);
+    const start=all.length?ttOffset%all.length:0;
+    all.slice(start).concat(all.slice(0,start)).slice(0,4).forEach(t=>body.appendChild(ttBurnCard(t)));
+    if(all.length>4){
+      const b=document.createElement('button');b.className='btn ghost sm';b.style.marginTop='10px';
+      b.textContent='🎲 Different burns';b.onclick=()=>{ttOffset+=4;renderTalk();};
+      body.appendChild(b);
+    }
+  }else if(ttTab==='taunts'){
+    const ph=ttPhase();
+    const sub=ttNode('sub',ph==='pre'?`Pre-${L.start} lines. Tap to copy.`
+      :ph==='mid'?'Mid-game lines with your score dropped in. Tap to copy.'
+      :`Post-${L.end} lines. Tap to copy.`);
+    sub.style.cssText='font-size:12px;margin:0 0 8px';body.appendChild(sub);
+    const wrap=ttNode('tt-chips');
+    TAUNTS[ph].forEach(t=>{
+      const line=ttFill(t);
+      const c=ttNode('tt-chip',line);c.onclick=()=>ttCopy(line);wrap.appendChild(c);
+    });
+    body.appendChild(wrap);
+  }else{
+    const sub=ttNode('sub','Add your crew once — names are saved on this device. Drop in their score from the group chat and the callout writes itself.');
+    sub.style.cssText='font-size:12px;margin:0 0 8px';body.appendChild(sub);
+    if(!crew.length)crew=[{n:'',pts:''}];
+    crew.forEach((c,i)=>body.appendChild(ttCrewRow(c,i)));
+    const add=document.createElement('button');add.className='btn ghost sm';add.style.marginTop='8px';
+    add.textContent='+ Add someone';add.onclick=()=>{crew.push({n:'',pts:''});saveCrew(crew);renderTalk();};
+    body.appendChild(add);
+    const out=ttNode('tt-out');out.id='ttOut';out.style.display='none';
+    body.appendChild(out);
+  }
+}
+function ttCrewRow(c,i){
+  const row=ttNode('tt-crew');
+  const n=document.createElement('input');n.className='n';n.placeholder='Name';n.maxLength=16;n.value=c.n||'';
+  n.oninput=()=>{crew[i].n=n.value;saveCrew(crew);};
+  const p=document.createElement('input');p.className='p';p.type='number';p.inputMode='numeric';
+  p.placeholder='Pts';p.value=(c.pts===0||c.pts)?c.pts:'';
+  p.oninput=()=>{crew[i].pts=p.value;saveCrew(crew);};
+  const go=document.createElement('button');go.className='go';go.textContent='Call out';
+  go.onclick=()=>{
+    const line=ttCallout(n.value,p.value);
+    if(!line){toast('Add a name first.');return;}
+    const out=document.getElementById('ttOut');
+    out.textContent=line+'   ·   TAP TO COPY';out.style.display='block';
+    out.onclick=()=>ttCopy(line,'🎯 Callout copied — go get him.');
+    ttCopy(line,'🎯 Callout copied — go get him.');
+  };
+  const rm=document.createElement('button');rm.className='rm';rm.textContent='✕';
+  rm.onclick=()=>{crew.splice(i,1);saveCrew(crew);renderTalk();};
+  row.appendChild(n);row.appendChild(p);row.appendChild(go);row.appendChild(rm);
+  return row;
+}
+
+/* ---------------- POST-GAME ROAST CARD ---------------- */
+function ttRoastData(){
+  let p=(S.tally||[]).filter(x=>x.n);
+  if(p.length<2){
+    p=crew.filter(c=>c.n&&c.pts!==''&&c.pts!==null&&c.pts!==undefined&&!isNaN(Number(c.pts)))
+         .map(c=>({n:c.n,pts:Number(c.pts),spd:0}));
+    if(p.length)p.push({n:S.name||'Me',pts:S.pts,spd:S.speed});
+  }
+  return p.slice().sort((a,b)=>b.pts-a.pts||b.spd-a.spd);
+}
+function ttRoastLines(p){
+  const f=ttFacts(),W=p[0],Z=p[p.length-1],out=[];
+  out.push({e:'👑',t:`${W.n} takes the night on ${W.pts}.`});
+  out.push({e:'🥴',t:`${Z.n} finished last on ${Z.pts} — ${W.pts-Z.pts} behind. That's not a gap, that's a genre.`});
+  if(p.length>2){
+    const g=W.pts-p[1].pts;
+    if(g===0)out.push({e:'⚡',t:`${p[1].n} tied on points and lost to a stopwatch. Speed settled it.`});
+    else if(g<=2)out.push({e:'😤',t:`${p[1].n} missed it by ${g}. One question. Sit with that all week.`});
+  }
+  const zero=p.filter(x=>x.pts===0);
+  if(zero.length)out.push({e:'📵',t:`${zero.map(x=>x.n).join(', ')} posted a zero. Were you even watching?`});
+  if(f.predMiss.length)out.push({e:'🤡',t:`Confession: I whiffed "${f.predMiss[0].p.label.toLowerCase()}" and still finished on ${S.pts}.`});
+  if(f.lifeAt)out.push({e:'✨',t:`Also I burned my Lifeline in ${f.lifeAt}. Panic move. Noted for the archives.`});
+  if(f.exact.length)out.push({e:'🎯',t:`For the record I called ${f.exact[0].pick} for ${f.exact[0].n} before ${L.start}.`});
+  return out.slice(0,5);
+}
+function openRoast(){
+  const p=ttRoastData();
+  if(p.length<2){toast('Tally at least 2 players first — then the roast writes itself.');openTally();return;}
+  const c=document.getElementById('roastCard');
+  const lines=ttRoastLines(p);
+  c.innerHTML=`<div class="rc-t">🔥 STATS ROAST CARD</div>
+    <div class="rc-g">${GAME.night.toUpperCase()} · ${nickH().toUpperCase()} vs ${nickA().toUpperCase()} · ${GAME.shareDate||GAME.short.toUpperCase()}</div>
+    ${lines.map(l=>`<div class="rc-line"><span class="e">${l.e}</span><span>${l.t}</span></div>`).join('')}
+    <div class="rc-board">${p.map((x,i)=>`<div class="rc-row ${i===0?'w':i===p.length-1?'l':''}">
+      <span>${i+1}. ${x.n}${i===0?' 👑':i===p.length-1?' 🥴':''}</span>
+      <span>${x.pts}${x.spd?` · ⚡${x.spd}`:''}</span></div>`).join('')}</div>
+    <div class="rc-cta">statsgametime.com</div>`;
+  document.getElementById('roastModal').classList.add('open');
+}
+function closeRoast(){document.getElementById('roastModal').classList.remove('open');}
+function copyRoast(){
+  const p=ttRoastData();
+  if(p.length<2){toast('Tally the crew first.');return;}
+  const txt=`🔥 STATS ROAST CARD — ${GAME.night} · ${nickH()} vs ${nickA()}\n`+
+    ttRoastLines(p).map(l=>`${l.e} ${l.t}`).join('\n')+`\n\n`+
+    p.map((x,i)=>`${i+1}. ${x.n} — ${x.pts}${x.spd?` (⚡${x.spd})`:''}`).join('\n')+
+    `\n\nPlay free → statsgametime.com`;
+  ttCopy(txt,'🔥 Roast card copied — paste it in the group chat.');
 }
 
 /* ---------------- LEAGUE ---------------- */
@@ -1106,13 +1785,20 @@ function openLeague(){
     : `😤 ${lead.n} leads you by ${lead.season-ssn[me].season} pts this season. Next game is your shot.`;
   go('league');
 }
-function openHost(){renderPBP();document.getElementById('engineOut').innerHTML='';go('host');}
+function openHost(){renderHostSegs();renderPBP();document.getElementById('engineOut').innerHTML='';go('host');}
 function copyQs(qi){
-  const worth=qi+1;
-  const txt=`🏀 STATS Q${qi+1} — answer in the app NOW (${worth} pt${worth>1?'s':''} each + ⚡ speed)\n`+
-    quarters[qi].q.map((q,i)=>`${i+1}. ${q.t}\n   ${q.o.map((o,j)=>String.fromCharCode(65+j)+') '+o).join('  ')}`).join('\n');
+  const worth=roundWorth(qi);
+  const txt=`${SPORT.emoji} STATS ${roundName(qi)} — answer in the app NOW (${worth} pt${worth>1?'s':''} each + ⚡ speed)\n`+
+    rounds[qi].q.map((q,i)=>`${i+1}. ${q.t}\n   ${q.o.map((o,j)=>String.fromCharCode(65+j)+') '+o).join('  ')}`).join('\n');
   try{navigator.clipboard&&navigator.clipboard.writeText(txt);}catch(e){}
-  toast(`📋 Q${qi+1} questions copied — paste in the group chat.`);
+  toast(`📋 ${roundTag(qi)} questions copied — paste in the group chat.`);
+}
+function renderHostSegs(){
+  const w=document.getElementById('hostSegs');w.innerHTML='';
+  rounds.forEach((r,i)=>{
+    const s=document.createElement('span');s.className='seg'+(i===0?' on':'');
+    s.textContent='📋 '+roundTag(i);s.onclick=()=>copyQs(i);w.appendChild(s);
+  });
 }
 
 /* ---------------- HOST TALLY ---------------- */
@@ -1143,6 +1829,8 @@ function crownWinner(){
   })).filter(p=>p.n);
   if(players.length<2){toast('Add at least 2 players with names.');return;}
   players.sort((a,b)=> b.pts-a.pts || b.spd-a.spd);
+  S.tally=players;
+  crew=players.filter(p=>!S.name||p.n!==S.name).map(p=>({n:p.n,pts:p.pts}));saveCrew(crew);
   const tieOnPts = players.length>1 && players[0].pts===players[1].pts;
   const el=document.getElementById('tallyResult');
   el.innerHTML=`<div class="card tight" style="margin-top:12px">
@@ -1153,7 +1841,8 @@ function crownWinner(){
       <div class="lbname">${p.n}${i===0?' 👑':''}<small>⚡ ${p.spd} speed</small></div>
       <div class="lbpts">${p.pts}</div></div>`).join('')}
     <p class="sub" style="font-size:11px;margin:8px 0 0;color:var(--dim)">Screenshot this and drop it in the group chat.</p>
-  </div>`;
+  </div>
+  <button class="btn ghost sm" style="margin-top:10px" onclick="openRoast()">😈 Roast card — name the loser</button>`;
   el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
@@ -1211,14 +1900,84 @@ function restart(){
   clearSave();
   S={mode:"demo",screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},qi:0,ni:0,nextQ:0,answered:false,
     lifelineHalf1:true,lifelineHalf2:true,botScores:[],totalPlayers:1204,
-    results:[[],[],[],[]],liveAnswers:[[],[],[],[]],streak:S.streak,seasonPts:S.seasonPts+S.pts};
+    results:emptyRounds(),liveAnswers:emptyRounds(),streak:S.streak,seasonPts:S.seasonPts+S.pts,
+    catchChoices:{},catchResults:{},catchPts:null,catchesScored:false,
+    predTruth:null,predTruthNum:null,lifelineAt:null,tally:null};
   league.members.forEach(m=>m.tonight=0);
   document.getElementById('playerName').value='';
   document.getElementById('nameBtn').disabled=true;
   initColors();go('landing');
 }
-// tip-off line from config
-try{document.getElementById('landingTip').textContent='🕐 '+GAME.tip;}catch(e){}
+/* ---------------- SPORT BOOT ----------------
+   Everything the landing/rules pages say is derived from SPORT, so
+   ?sport=soccer reskins the whole app without touching basketball. */
+const PRED_MAX=preds.reduce((a,p)=>a+p.base+(p.bonus||0),0);
+const LIVE_MAX=rounds.reduce((a,r,i)=>a+r.q.length*roundWorth(i),0);
+const MAXPTS=PRED_MAX+LIVE_MAX+CATCH_PTS;
+function applySport(){
+  const $=id=>document.getElementById(id);
+  const set=(id,txt)=>{const e=$(id);if(e)e.textContent=txt;};
+  const html=(id,h)=>{const e=$(id);if(e)e.innerHTML=h;};
+  set('landingTip','🕐 '+GAME.tip);
+  html('landingMatch',SPORT.landing);
+  set('landingHead',`🔴 ${GAME.night} · ${GAME.date}`.replace(' · ·',' ·'));
+  set('landingChip1',SPORT.L.league);
+  set('landingChip3',SPORT.L.cadence);
+  set('landingBtn',`🔴 Play ${GAME.night} — ${GAME.short} →`);
+  set('landingDemoBtn',`🎮 Practice first (simulated ${L.unit})`);
+  set('step1h',`Predict before ${L.start}`);
+  set('step1p',SPORT.step1);
+  set('step2h',SPORT.step2h);
+  set('step2p',SPORT.step2);
+  set('step3p',SPORT.step3);
+  // live screen team plates
+  set('teamHomeNm',`${GAME.homeEmoji} ${GAME.homeAbbr}`);
+  set('teamAwayNm',`${GAME.awayAbbr} ${GAME.awayEmoji}`);
+  set('qLabel',roundTag(0));
+  // predictions screen
+  set('predHead',`Make your picks 📝`);
+  set('predSub',`Lock these in before ${L.start}. ${preds.some(p=>p.bonus)?'Bonus points if you nail the exact number.':'All '+preds.length+' always resolve — no dead picks.'}`);
+  set('predBtn',`Lock it in — go to ${L.start} 🔒`);
+  set('predMeta',`PRE-${L.Unit.toUpperCase()} PREDICTION SHEET`);
+  set('predWorth',`Up to ${PRED_MAX} pts`);
+  set('finalMax',`total points • out of ${MAXPTS} possible`);
+  set('finalPill',L.End);
+  set('prPill',L.End);
+  set('breakPill','End of '+roundTag(0));
+  set('revPill','Score '+roundTag(0));
+  set('lobbyPill',L.starting);
+  set('lobbyBtn',startLabel(0));
+  set('lobbyFoot',`In a real live run this waits for the ${L.unit} to reach the break. Here you drive it.`);
+  set('hostToolTitle',`🔴 ${GAME.night} toolkit — ${GAME.short}`);
+  set('hostToolSub',`You're the host. At each ${L.period} break: (1) tell the crew to answer in the app, (2) check the broadcast + box score, (3) post the answers in the group chat. ~60 seconds of work per ${L.period}.`);
+  set('hostToolFoot',`Tap a ${L.period} to copy its questions for the group chat. Answers come from watching + the live box score.`);
+  // rules
+  set('ruleGame',`STATS is a free skill-and-attention game played along with a live ${SPORT.word} broadcast. You score by predicting the ${L.unit} before ${L.start} and by answering questions about what just happened at each break. No wagers, no entry fee — ever.`);
+  set('rulePredH',`📝 Predictions — up to ${PRED_MAX} pts`);
+  set('rulePredP',SPORT.rulePred);
+  set('ruleLiveH',`⏱️ ${L.Period} questions — up to ${LIVE_MAX} pts`);
+  set('ruleLiveP',SPORT.ruleLive);
+  set('ruleScoreP',`${SPORT.ruleScore} Max score: ${MAXPTS}. Post your result card to the group chat — highest score wins the night, ⚡ Speed breaks ties.`);
+  set('resumeSub',`Your predictions and scored ${L.period}s are saved. Pick up where you left off.`);
+  set('ruleSpeedP',`Every correct ${L.period} answer also banks the seconds you had left on the clock `
+    + `as Speed points. Example: answer correctly with 14 seconds left → +14 ⚡. Ties in total points `
+    + `are broken by Speed. Speed never beats accuracy — it only settles ties.`);
+  html('plusClips',`🎬 <b>${L.Period} recap clips</b> + host's picks before ${L.start}`);
+  set('tallySub',`After the ${L.end}, collect everyone's scores from the group chat and enter them here to rank the crew and name the winner.`);
+  set('revBtn',`Confirm & score ${L.period}`);
+  set('ruleLifeP',`Once per half you can fire your Lifeline: in Practice mode it removes wrong options; `
+    + `on Game Night it adds +15 seconds to the clock (time to ask the room — ${SPORT.lifelineNote}).`);
+  if(CATCH_PTS){
+    const el=$('ruleCatch');if(el)el.style.display='';
+    set('ruleCatchP',`Before ${L.start} you set ${CATCH_PTS} live catches — first corner, first card, first sub and the like. They resolve themselves as the ${L.unit} plays, 1 pt each, and need no input from you while you're watching.`);
+  }
+  // the play-by-play/engine demo runs on a basketball mock feed — don't show it elsewhere
+  if(SPORT.key!=='basketball'){
+    ['pbpCard','engineCard'].forEach(id=>{const e=$(id);if(e)e.style.display='none';});
+  }
+  document.title=`STATS — ${GAME.homeName} v ${GAME.awayName}`;
+}
+try{applySport();}catch(e){console.error('applySport',e);}
 initColors();
 checkResume();
 </script>
