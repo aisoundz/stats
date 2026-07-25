@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>STATS · Control Room</title>
+<style>
+  :root{
+    --bg:#0a0e17; --bg2:#111726; --card:#161d2e; --card2:#1c2438;
+    --line:#26304a; --line2:#333f5e;
+    --ink:#eef2fb; --muted:#93a0bd; --dim:#5f6d8c;
+    --blue:#2f6bff; --blue2:#4d86ff; --teal:#19c3d6; --teal2:#28e0d0;
+    --red:#ff4d5e; --gold:#ffc54d; --green:#2ee6a6;
+    --r:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding-bottom:60px}
+  h1,h2,h3{margin:0;letter-spacing:-.02em}
+  a{color:var(--teal2)}
+  .wrap{max-width:860px;margin:0 auto;padding:0 14px}
+
+  /* ---- header ---- */
+  header{position:sticky;top:0;z-index:20;background:rgba(10,14,23,.94);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .hrow{display:flex;align-items:center;gap:10px;padding:12px 0}
+  .logo{font-weight:900;font-size:19px;letter-spacing:-.04em}
+  .logo em{font-style:normal;color:var(--red)}
+  .tag{font-size:10px;font-weight:800;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+  .spacer{flex:1}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--dim);flex:none}
+  .dot.on{background:var(--green);box-shadow:0 0 9px var(--green)}
+  .dot.err{background:var(--red)}
+  .who{font-size:11px;color:var(--muted);font-weight:700;max-width:150px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* ---- tabs ---- */
+  nav{display:flex;gap:6px;padding:0 0 10px}
+  nav button{flex:1;background:var(--card);border:1px solid var(--line);color:var(--muted);
+    font:800 12px/1 inherit;letter-spacing:.06em;text-transform:uppercase;
+    padding:11px 6px;border-radius:10px;cursor:pointer}
+  nav button.on{background:var(--blue);border-color:var(--blue2);color:#fff}
+
+  /* ---- blocks ---- */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    padding:14px;margin:0 0 12px}
+  .card.tight{padding:11px}
+  .card h3{font-size:14px;margin-bottom:4px}
+  .sub{color:var(--muted);font-size:12.5px;margin:4px 0 0}
+  .sub.tip{color:var(--dim);font-size:11.5px}
+  label{display:block;font-size:10.5px;font-weight:800;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--dim);margin:12px 0 5px}
+  input,select,textarea{width:100%;background:var(--bg2);border:1px solid var(--line2);
+    color:var(--ink);border-radius:10px;padding:11px 12px;font:600 14px/1.35 inherit}
+  input:focus,select,textarea:focus{outline:2px solid var(--blue);outline-offset:-1px}
+  textarea{resize:vertical;min-height:56px}
+  .row{display:flex;gap:8px;align-items:center}
+  .row>*{min-width:0}
+
+  button.btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;
+    font:900 14.5px/1 inherit;letter-spacing:-.01em;cursor:pointer;
+    background:var(--blue);color:#fff;margin-top:10px}
+  button.btn.red{background:var(--red)}
+  button.btn.teal{background:var(--teal);color:#06222a}
+  button.btn.gold{background:var(--gold);color:#2a1f00}
+  button.btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--muted)}
+  button.btn:disabled{opacity:.34;cursor:not-allowed}
+  button.mini{background:var(--card2);border:1px solid var(--line2);color:var(--muted);
+    border-radius:9px;padding:7px 10px;font:800 11.5px/1 inherit;cursor:pointer;flex:none}
+  button.mini.danger{color:var(--red);border-color:#4a2430}
+
+  .chip{display:inline-block;font:800 10px/1 inherit;letter-spacing:.1em;text-transform:uppercase;
+    padding:6px 9px;border-radius:99px;background:var(--card2);color:var(--dim);border:1px solid var(--line)}
+  .chip.live{background:#3a1220;color:#ff8b97;border-color:#5c1d2f}
+  .chip.done{background:#0e3327;color:var(--green);border-color:#17513c}
+  .chip.draft{background:#1a2340;color:var(--blue2);border-color:#2b3a63}
+
+  .qcard{background:var(--card2);border:1px solid var(--line);border-radius:12px;
+    padding:11px;margin-top:10px}
+  .qhead{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .qhead b{font-size:11px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
+  .opt{display:flex;gap:8px;align-items:center;margin-top:6px}
+  .opt input[type=text]{flex:1;padding:9px 11px;font-size:13.5px}
+  .keybtn{flex:none;width:38px;height:38px;border-radius:9px;border:1px solid var(--line2);
+    background:var(--bg2);color:var(--dim);font:900 15px/1 inherit;cursor:pointer}
+  .keybtn.on{background:var(--green);border-color:var(--green);color:#04241a}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--dim);padding:6px 4px;border-bottom:1px solid var(--line)}
+  td{padding:8px 4px;border-bottom:1px solid var(--line)}
+  td.n{font-weight:900}
+  .big{font-size:34px;font-weight:900;letter-spacing:-.03em;line-height:1}
+  .statrow{display:flex;gap:10px;margin-top:10px}
+  .statrow .s{flex:1;background:var(--card2);border:1px solid var(--line);
+    border-radius:12px;padding:12px;text-align:center}
+  .statrow .s .v{font-size:26px;font-weight:900;letter-spacing:-.03em}
+  .statrow .s .k{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin-top:3px}
+
+  .banner{border-radius:12px;padding:12px 13px;font-size:13px;font-weight:700;margin:0 0 12px}
+  .banner.warn{background:#3a2a0d;color:var(--gold);border:1px solid #5b4415}
+  .banner.bad{background:#3a1220;color:#ff8b97;border:1px solid #5c1d2f}
+  .banner.good{background:#0e3327;color:var(--green);border:1px solid #17513c}
+
+  #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(120%);
+    background:var(--card2);border:1px solid var(--line2);border-radius:12px;
+    padding:12px 16px;font-size:13px;font-weight:700;max-width:92vw;text-align:center;
+    transition:transform .25s ease;z-index:60;box-shadow:0 14px 40px rgba(0,0,0,.6)}
+  #toast.show{transform:translateX(-50%) translateY(0)}
+  .hide{display:none !important}
+  .gate{max-width:420px;margin:14vh auto 0;text-align:center}
+  .gate .logo{font-size:34px;display:block;margin-bottom:6px}
+</style>
+</head>
+<body>
+
+<!-- =================== SIGN-IN GATE =================== -->
+<div id="gate" class="wrap gate">
+  <span class="logo">ST<em>A</em>TS</span>
+  <div class="tag">Control room</div>
+  <p class="sub" id="gateMsg" style="margin-top:18px">Checking your sign-in…</p>
+  <button class="btn" id="signinBtn" style="display:none">Sign in with Google</button>
+  <button class="btn ghost" id="signoutBtn" style="display:none">Sign out</button>
+  <p class="sub tip" style="margin-top:20px">This dashboard is locked to one Google account. Nobody else can open it, and the security rules refuse its writes even if they somehow load this page.</p>
+</div>
+
+<!-- =================== THE DASHBOARD =================== -->
+<div id="app" class="hide">
+  <header>
+    <div class="wrap hrow">
+      <div>
+        <div class="logo">ST<em>A</em>TS</div>
+        <div class="tag">Control room</div>
+      </div>
+      <div class="spacer"></div>
+      <span class="dot" id="beDot"></span>
+      <span class="who" id="whoTxt">…</span>
+      <button class="mini" id="outBtn">Sign out</button>
+    </div>
+    <div class="wrap">
+      <nav>
+        <button data-tab="write" class="on">1 · Write</button>
+        <button data-tab="run">2 · Run</button>
+        <button data-tab="room">3 · Room</button>
+      </nav>
+    </div>
+  </header>
+
+  <div class="wrap">
+
+    <!-- ---------- TAB 1: WRITE ---------- -->
+    <section id="t-write">
+      <div class="card">
+        <h3>Tonight's game</h3>
+        <p class="sub">Everything below is written into this room. Players who opened a different night can't see it.</p>
+        <label for="nightSel">Night</label>
+        <select id="nightSel"></select>
+        <label for="nightId">Night ID (must match the app exactly)</label>
+        <input id="nightId" spellcheck="false" autocapitalize="off">
+        <p class="sub tip">The app sends players to this ID automatically. Only change it if you know you changed it in the app too.</p>
+      </div>
+
+      <div class="card">
+        <h3>Rounds</h3>
+        <p class="sub">Write all of them now — Monday on the couch is a better time than 9:40 on Tuesday. Drafts save to this browser as you type.</p>
+        <label>Round</label>
+        <select id="roundSel"></select>
+        <div class="row" style="margin-top:10px">
+          <div style="flex:1">
+            <label for="worthIn" style="margin-top:0">Points per question</label>
+            <input id="worthIn" type="number" min="1" max="20" value="1">
+          </div>
+          <div style="flex:1">
+            <label style="margin-top:0">Questions</label>
+            <div class="row">
+              <button class="mini" id="addQ">+ Add question</button>
+              <span class="chip" id="qCountChip">0</span>
+            </div>
+          </div>
+        </div>
+        <div id="qList"></div>
+        <p class="sub tip" style="margin-top:12px">Tap the ✓ next to an option to mark it the right answer. The answer never leaves this browser until you press Reveal — it isn't written to the round players can read.</p>
+      </div>
+
+      <div class="card">
+        <h3>Backup</h3>
+        <p class="sub">Drafts live in this browser. If you'll run the night from a different device, back them up — they go to an owner-only corner of the database that no player can read.</p>
+        <button class="btn ghost" id="backupBtn">Back up all rounds to Firebase</button>
+        <button class="btn ghost" id="restoreBtn">Restore from Firebase</button>
+        <p class="sub tip" id="backupNote" style="margin-top:10px"></p>
+      </div>
+    </section>
+
+    <!-- ---------- TAB 2: RUN ---------- -->
+    <section id="t-run" class="hide">
+      <div id="runBanner"></div>
+      <div class="card">
+        <h3>Push a round to every phone</h3>
+        <p class="sub">One round at a time. Push when the quarter ends on TV, reveal when you've checked the box score.</p>
+      </div>
+      <div id="runList"></div>
+      <div class="card">
+        <h3 style="color:var(--muted)">If something goes wrong</h3>
+        <p class="sub tip">Nothing here can break a player's game. If you never push a round, or this laptop dies mid-night, every phone quietly falls back to the way it works today: they answer, you read the answers out, they tap them in. Say the word "group chat" and everyone knows what to do.</p>
+      </div>
+    </section>
+
+    <!-- ---------- TAB 3: ROOM ---------- -->
+    <section id="t-room" class="hide">
+      <div class="card">
+        <h3>Who's actually playing</h3>
+        <div class="statrow">
+          <div class="s"><div class="v" id="roomCount">—</div><div class="k">In the room</div></div>
+          <div class="s"><div class="v" id="roomSubs">—</div><div class="k">Answered this round</div></div>
+        </div>
+        <button class="btn ghost" id="refreshBtn">Refresh</button>
+        <p class="sub tip" id="roomNote" style="margin-top:8px"></p>
+      </div>
+      <div class="card">
+        <h3>Leaderboard</h3>
+        <table><thead><tr><th>#</th><th>Player</th><th>Pts</th><th>⚡</th><th></th></tr></thead>
+        <tbody id="lbBody"><tr><td colspan="5" style="color:var(--dim)">Nothing yet.</td></tr></tbody></table>
+        <p class="sub tip" style="margin-top:10px">Remove is for test rows and spam. It deletes that player's score and can't be undone.</p>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* =====================================================================
+   STATS — Control Room
+   ---------------------------------------------------------------------
+   One page, one operator, one night. It does four things:
+
+     1. lets you write questions and mark the answers, days early
+     2. pushes a round to every phone at once
+     3. holds the answer key back until you reveal it
+     4. reveals, at which point every phone scores itself
+
+   The design constraint that governs all of it: this page is optional.
+   If it never loads, if you never open it, if the wifi at the bar is
+   hostile — the game on everyone's phone is unaffected. They answer,
+   you read the answers out, they tap them in, exactly as before. The
+   dashboard adds convenience, never dependency.
+
+   The key never touches a document a player can read until you press
+   Reveal. Before that it lives here in your browser, and (if you back
+   it up) in an owner-only subcollection the rules refuse to serve to
+   anyone but you.
+   ===================================================================== */
+
+const OWNER = 'aisoundz9@gmail.com';
+
+window.STATS_FIREBASE = {
+  apiKey:            "AIzaSyB1g4u3L85sks1Phjz_Tim98urv1-IZBps",
+  authDomain:        "stats-gametime.firebaseapp.com",
+  projectId:         "stats-gametime",
+  storageBucket:     "stats-gametime.firebasestorage.app",
+  messagingSenderId: "349900988033",
+  appId:             "1:349900988033:web:7b2f8a5e6af1b2a7b27780"
+};
+
+/* The nights the app knows about, and the round labels each one uses.
+   These mirror the app's sport configs — the IDs match GAME.nightId and
+   the worth arrays match SPORT.worth, so leaving a round on its default
+   is the same game the players already read about in the rules. If you
+   change a night ID here, change it there too: a mismatch means an empty
+   room, not an error, which is the worst kind of mistake to make at
+   9:30 on a Tuesday. */
+const NIGHTS = [
+  { id:'gn1-2026-07-28-ind-sea', label:'Game Night #1 — Fever @ Storm (Jul 28)',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[1,2,3,4] },
+  { id:'sn1-2026-08-04-mia-ame', label:'Soccer Night — Miami v América (Aug 4)',
+    tags:['1H','2H'],
+    names:['First half','Second half'],
+    worth:[3,5] }
+];
+
+const LS = 'stats_admin_v1';
+
+let FB = null;          // {app, auth, db, F, authMod}
+let user = null;
+let night = NIGHTS[0].id;
+let draft = {};         // nightId -> { rounds: [ {worth, qs:[{t,o:[],k:idx}]} ] }
+let liveDocs = {};      // roundId -> the pushed round document, as we last saw it
+let subCounts = {};     // roundId -> how many phones have answered
+let roundIdx = 0;
+let subsUnsub = null;
+
+/* ---------------- tiny helpers ---------------- */
+const $ = id => document.getElementById(id);
+let toastT = null;
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'), 2800);
+}
+function nightCfg(id){ return NIGHTS.find(n=>n.id===id) || NIGHTS[0]; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function saveDraft(){ try{ localStorage.setItem(LS, JSON.stringify(draft)); }catch(e){} }
+function loadDraft(){
+  try{ draft = JSON.parse(localStorage.getItem(LS)) || {}; }catch(e){ draft = {}; }
+}
+function nightDraft(id){
+  const cfg = nightCfg(id);
+  if(!draft[id]) draft[id] = { rounds: cfg.tags.map((t,i)=>({ worth: cfg.worth[i]||1, qs: [] })) };
+  // a night whose round count changed under us should not throw
+  while(draft[id].rounds.length < cfg.tags.length) draft[id].rounds.push({worth:1,qs:[]});
+  return draft[id];
+}
+const roundDocId = i => 'r' + i;
+
+/* ---------------- sign-in ---------------- */
+async function boot(){
+  loadDraft();
+  const SDK = 'https://www.gstatic.com/firebasejs/10.12.2';
+  try{
+    const appMod  = await import(SDK + '/firebase-app.js');
+    const authMod = await import(SDK + '/firebase-auth.js');
+    const fsMod   = await import(SDK + '/firebase-firestore.js');
+    const app  = appMod.initializeApp(window.STATS_FIREBASE);
+    const auth = authMod.getAuth(app);
+    const db   = fsMod.getFirestore(app);
+    FB = { app, auth, db, F: fsMod, A: authMod };
+
+    authMod.onAuthStateChanged(auth, u => onAuth(u));
+  }catch(e){
+    $('gateMsg').innerHTML = 'Couldn\'t load Firebase.<br><span style="color:var(--dim);font-size:12px">' +
+      esc((e&&e.message)||e) + '</span><br><br>Check your connection and reload. ' +
+      'Nothing on the players\' side depends on this page loading.';
+  }
+}
+
+function onAuth(u){
+  if(!u){
+    user = null;
+    $('gateMsg').textContent = 'Sign in to open the control room.';
+    $('signinBtn').style.display = 'block';
+    $('signoutBtn').style.display = 'none';
+    $('gate').classList.remove('hide');
+    $('app').classList.add('hide');
+    return;
+  }
+  if((u.email||'').toLowerCase() !== OWNER){
+    user = null;
+    $('gateMsg').innerHTML = 'Signed in as <b>' + esc(u.email||'unknown') + '</b>, which is not the owner account.' +
+      '<br><br>This dashboard only opens for <b>' + esc(OWNER) + '</b> — and the database refuses its writes ' +
+      'from any other account regardless, so there is nothing to work around here.';
+    $('signinBtn').style.display = 'none';
+    $('signoutBtn').style.display = 'block';
+    $('gate').classList.remove('hide');
+    $('app').classList.add('hide');
+    return;
+  }
+  user = u;
+  $('gate').classList.add('hide');
+  $('app').classList.remove('hide');
+  $('whoTxt').textContent = u.email;
+  $('beDot').className = 'dot on';
+  initUI();
+}
+
+$('signinBtn').onclick = async () => {
+  try{
+    const p = new FB.A.GoogleAuthProvider();
+    p.setCustomParameters({ prompt:'select_account' });
+    await FB.A.signInWithPopup(FB.auth, p);
+  }catch(e){ toast('Sign-in failed: ' + ((e&&e.code)||e)); }
+};
+const doOut = async () => { try{ await FB.A.signOut(FB.auth); }catch(e){} };
+$('signoutBtn').onclick = doOut;
+$('outBtn').onclick = doOut;
+
+/* ---------------- UI wiring ---------------- */
+let uiReady = false;
+function initUI(){
+  if(uiReady){ watchRounds(); return; }
+  uiReady = true;
+
+  const ns = $('nightSel');
+  ns.innerHTML = NIGHTS.map(n=>`<option value="${esc(n.id)}">${esc(n.label)}</option>`).join('');
+  ns.onchange = () => { night = ns.value; $('nightId').value = night; onNightChange(); };
+  $('nightId').value = night;
+  $('nightId').onchange = () => { night = $('nightId').value.trim() || night; onNightChange(); };
+
+  document.querySelectorAll('nav button').forEach(b=>{
+    b.onclick = () => {
+      document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on', x===b));
+      ['write','run','room'].forEach(t=>$('t-'+t).classList.toggle('hide', t!==b.dataset.tab));
+      if(b.dataset.tab==='run')  renderRun();
+      if(b.dataset.tab==='room') refreshRoom();
+    };
+  });
+
+  $('roundSel').onchange = () => { roundIdx = +$('roundSel').value; renderWrite(); };
+  $('worthIn').onchange = () => {
+    const v = Math.max(1, Math.min(20, +$('worthIn').value || 1));
+    $('worthIn').value = v;
+    nightDraft(night).rounds[roundIdx].worth = v; saveDraft();
+  };
+  $('addQ').onclick = () => {
+    const r = nightDraft(night).rounds[roundIdx];
+    if(r.qs.length >= 12){ toast('Twelve questions is the cap — the rules refuse more.'); return; }
+    r.qs.push({ t:'', o:['',''], k:null });
+    saveDraft(); renderWrite();
+  };
+  $('backupBtn').onclick  = backupToCloud;
+  $('restoreBtn').onclick = restoreFromCloud;
+  $('refreshBtn').onclick = refreshRoom;
+
+  onNightChange();
+}
+
+function onNightChange(){
+  const cfg = nightCfg(night);
+  nightDraft(night);
+  roundIdx = 0;
+  $('roundSel').innerHTML = cfg.tags.map((t,i)=>
+    `<option value="${i}">${esc(cfg.tags[i])} — ${esc(cfg.names[i])}</option>`).join('');
+  liveDocs = {}; subCounts = {};
+  // Round IDs repeat across nights, so the sub-watcher has to forget which
+  // one it was on or it will happily keep counting last night's r0.
+  if(subsUnsub){ try{subsUnsub();}catch(e){} subsUnsub=null; }
+  subsWatching = null;
+  $('roomSubs').textContent = '—';
+  renderWrite(); renderRun();
+  watchRounds();
+}
+
+/* ---------------- TAB 1: writing ---------------- */
+function renderWrite(){
+  const cfg = nightCfg(night);
+  const r = nightDraft(night).rounds[roundIdx];
+  $('roundSel').value = roundIdx;
+  $('worthIn').value = r.worth;
+  $('qCountChip').textContent = r.qs.length + (r.qs.length===1?' question':' questions');
+
+  const list = $('qList'); list.innerHTML = '';
+  r.qs.forEach((q,qi)=>{
+    const d = document.createElement('div'); d.className='qcard';
+    d.innerHTML =
+      `<div class="qhead"><b>${esc(cfg.tags[roundIdx])} · Q${qi+1}</b><div class="spacer" style="flex:1"></div>
+        <button class="mini" data-up="${qi}">↑</button>
+        <button class="mini danger" data-del="${qi}">Remove</button></div>
+       <textarea data-t="${qi}" placeholder="Who led the quarter in rebounds?">${esc(q.t)}</textarea>
+       <div data-opts="${qi}"></div>
+       <button class="mini" data-addo="${qi}" style="margin-top:8px">+ Add option</button>`;
+    const ob = d.querySelector('[data-opts]');
+    q.o.forEach((o,oi)=>{
+      const row = document.createElement('div'); row.className='opt';
+      row.innerHTML =
+        `<button class="keybtn${q.k===oi?' on':''}" data-key="${qi}:${oi}" title="Mark as the correct answer">✓</button>
+         <input type="text" data-o="${qi}:${oi}" value="${esc(o)}" placeholder="Option ${oi+1}">
+         <button class="mini danger" data-delo="${qi}:${oi}">✕</button>`;
+      ob.appendChild(row);
+    });
+    list.appendChild(d);
+  });
+
+  // one delegated handler beats forty closures
+  list.oninput = e => {
+    const t = e.target;
+    if(t.dataset.t !== undefined){ r.qs[+t.dataset.t].t = t.value; saveDraft(); return; }
+    if(t.dataset.o){ const [a,b]=t.dataset.o.split(':').map(Number); r.qs[a].o[b]=t.value; saveDraft(); }
+  };
+  list.onclick = e => {
+    const t = e.target.closest('button'); if(!t) return;
+    if(t.dataset.key){ const [a,b]=t.dataset.key.split(':').map(Number);
+      r.qs[a].k = (r.qs[a].k===b) ? null : b; saveDraft(); renderWrite(); return; }
+    if(t.dataset.del !== undefined){ r.qs.splice(+t.dataset.del,1); saveDraft(); renderWrite(); return; }
+    if(t.dataset.up !== undefined){ const i=+t.dataset.up; if(i>0){
+      const x=r.qs.splice(i,1)[0]; r.qs.splice(i-1,0,x); saveDraft(); renderWrite(); } return; }
+    if(t.dataset.addo !== undefined){ const i=+t.dataset.addo;
+      if(r.qs[i].o.length<6) r.qs[i].o.push(''); saveDraft(); renderWrite(); return; }
+    if(t.dataset.delo){ const [a,b]=t.dataset.delo.split(':').map(Number);
+      if(r.qs[a].o.length<=2){ toast('A question needs at least two options.'); return; }
+      r.qs[a].o.splice(b,1);
+      if(r.qs[a].k===b) r.qs[a].k=null; else if(r.qs[a].k>b) r.qs[a].k--;
+      saveDraft(); renderWrite(); }
+  };
+}
+
+/* A round is only pushable if every question has text, at least two real
+   options, and a marked answer. Saying so up front beats a half-written
+   question landing on two hundred phones. */
+function roundIssues(i){
+  const r = nightDraft(night).rounds[i], out = [];
+  if(!r.qs.length) out.push('no questions yet');
+  r.qs.forEach((q,qi)=>{
+    const opts = q.o.map(o=>String(o||'').trim()).filter(Boolean);
+    if(!String(q.t||'').trim()) out.push(`Q${qi+1} has no question text`);
+    if(opts.length < 2)         out.push(`Q${qi+1} needs at least two options`);
+    if(new Set(opts).size !== opts.length) out.push(`Q${qi+1} has duplicate options`);
+    if(q.k===null || q.k===undefined || !String(q.o[q.k]||'').trim())
+      out.push(`Q${qi+1} has no answer marked`);
+  });
+  return out;
+}
+function cleanRound(i){
+  const r = nightDraft(night).rounds[i];
+  const qs = r.qs.map(q=>{
+    // Resolve the marked answer to its TEXT before the blanks are stripped.
+    // Indexes do not survive the filter: an empty option sitting above the
+    // marked one shifts every index below it, and the round would ship a
+    // key that is off by one with nothing on screen to show it. The phone
+    // compares answer text to pick text anyway, so text is the honest unit.
+    const ans = String(q.o[q.k] == null ? '' : q.o[q.k]).trim();
+    return { t:String(q.t).trim(), o:q.o.map(o=>String(o).trim()).filter(Boolean), k:ans };
+  });
+  return {
+    worth: r.worth,
+    questions: qs.map(q=>({ t:q.t, o:q.o })),
+    key: qs.map(q=>q.k)
+  };
+}
+
+/* ---------------- TAB 2: running the night ---------------- */
+let roundsUnsub = null;
+function watchRounds(){
+  if(!FB || !user) return;
+  // Switching nights, or a second auth callback, must not stack listeners.
+  // Each stacked one is a second copy of every round read, all night.
+  if(roundsUnsub){ try{ roundsUnsub(); }catch(e){} roundsUnsub = null; }
+  const { F, db } = FB;
+  try{
+    roundsUnsub = F.onSnapshot(F.collection(db,'nights',night,'rounds'), snap=>{
+      liveDocs = {};
+      snap.forEach(d=>{ liveDocs[d.id] = Object.assign({id:d.id}, d.data()); });
+      // A reload mid-night lands here with a round already live. Start
+      // counting its submissions without waiting for a push that already
+      // happened.
+      const open = Object.values(liveDocs).find(d=>d.state==='live');
+      if(open && subsWatching !== roundDocId(open.idx)) watchSubs(open.idx);
+      renderRun();
+    }, ()=>{});
+  }catch(e){}
+}
+
+function renderRun(){
+  const cfg = nightCfg(night);
+  const wrap = $('runList'); if(!wrap) return;
+  wrap.innerHTML = '';
+
+  // the ordering rule, stated where it matters
+  const openLive = Object.values(liveDocs).find(d=>d.state==='live');
+  $('runBanner').innerHTML = openLive
+    ? `<div class="banner warn">${esc(cfg.tags[openLive.idx]||'A round')} is live on every phone right now. Reveal it before you push the next one — phones follow the newest round, so pushing over a live one loses its answers.</div>`
+    : '';
+
+  cfg.tags.forEach((tag,i)=>{
+    const doc = liveDocs[roundDocId(i)] || null;
+    const state = doc ? doc.state : 'draft';
+    const issues = roundIssues(i);
+    const subs = subCounts[roundDocId(i)];
+    const c = document.createElement('div'); c.className='card';
+    c.innerHTML =
+      `<div class="row"><h3 style="flex:1">${esc(tag)} — ${esc(cfg.names[i])}</h3>
+        <span class="chip ${state==='live'?'live':state==='scored'?'done':'draft'}">
+          ${state==='live'?'● LIVE':state==='scored'?'Scored':'Not pushed'}</span></div>
+       <p class="sub">${nightDraft(night).rounds[i].qs.length} question(s) · ${nightDraft(night).rounds[i].worth} pt each${
+          state!=='draft' && subs!==undefined ? ` · <b style="color:var(--teal2)">${subs} answered</b>` : ''}</p>
+       ${issues.length ? `<div class="banner bad" style="margin-top:10px">Not ready: ${esc(issues.slice(0,3).join(' · '))}${issues.length>3?' …':''}</div>` : ''}
+       <div data-actions="${i}"></div>`;
+    const a = c.querySelector('[data-actions]');
+
+    if(state==='draft'){
+      const b = document.createElement('button');
+      b.className='btn red'; b.textContent = `🔴 Push ${tag} to every phone`;
+      b.disabled = issues.length>0 || (openLive && openLive.idx!==i);
+      b.onclick = ()=>pushRound(i);
+      a.appendChild(b);
+    }else if(state==='live'){
+      const b = document.createElement('button');
+      b.className='btn teal'; b.textContent = `✅ Reveal answers & score ${tag}`;
+      b.onclick = ()=>revealRound(i);
+      a.appendChild(b);
+      const r = document.createElement('button');
+      r.className='btn ghost'; r.textContent = 'Re-push (fix a typo in the questions)';
+      r.disabled = issues.length>0;
+      r.onclick = ()=>pushRound(i, true);
+      a.appendChild(r);
+    }else{
+      const p = document.createElement('p'); p.className='sub tip';
+      p.textContent = 'Revealed. Every phone that answered has scored itself.';
+      a.appendChild(p);
+      const r = document.createElement('button');
+      r.className='btn ghost'; r.textContent = 'Re-reveal (if you got an answer wrong)';
+      r.disabled = issues.length>0;
+      r.onclick = ()=>revealRound(i, true);
+      a.appendChild(r);
+    }
+    wrap.appendChild(c);
+  });
+}
+
+async function pushRound(i, silent){
+  const issues = roundIssues(i);
+  if(issues.length){ toast('Fix that round first: ' + issues[0]); return; }
+  const cfg = nightCfg(night), r = cleanRound(i);
+  if(!silent && !confirm(
+      `Push ${cfg.tags[i]} to every phone in the room?\n\n` +
+      `${r.questions.length} questions at ${r.worth} pt each.\n\n` +
+      `Players answer immediately. The answers stay hidden until you press Reveal.`)) return;
+  try{
+    const { F, db } = FB;
+    await F.setDoc(F.doc(db,'nights',night,'rounds',roundDocId(i)), {
+      seq: Date.now(),
+      idx: i,
+      tag: cfg.tags[i],
+      name: cfg.names[i],
+      worth: r.worth,
+      state: 'live',
+      questions: r.questions,     // text and options only — never the key
+      key: F.deleteField(),       // if this is a re-push, wipe any stale key
+      openedAt: F.serverTimestamp()
+    }, { merge: true });
+    watchSubs(i);
+    toast(`${cfg.tags[i]} is live on every phone.`);
+  }catch(e){ toast('Push failed: ' + ((e&&e.message)||e)); }
+}
+
+async function revealRound(i, again){
+  const issues = roundIssues(i);
+  if(issues.length){ toast('Fix that round first: ' + issues[0]); return; }
+  const cfg = nightCfg(night), r = cleanRound(i);
+  if(!confirm(
+      `Reveal the answers for ${cfg.tags[i]}?\n\n` +
+      r.key.map((k,n)=>`${n+1}. ${k}`).join('\n') +
+      `\n\nEvery phone scores itself the moment you press OK.` +
+      (again ? '\n\nThis re-reveals a round that was already scored. Phones that already scored it will NOT score it twice.' : ''))) return;
+  try{
+    const { F, db } = FB;
+    await F.setDoc(F.doc(db,'nights',night,'rounds',roundDocId(i)), {
+      seq: Date.now(),
+      state: 'scored',
+      key: r.key,
+      closedAt: F.serverTimestamp()
+    }, { merge: true });
+    toast(`${cfg.tags[i]} scored. Phones are updating.`);
+  }catch(e){ toast('Reveal failed: ' + ((e&&e.message)||e)); }
+}
+
+/* How many phones have locked their picks for the round in play. One read
+   per submission, and only while you're watching a live round. */
+let subsWatching = null;
+function watchSubs(i){
+  if(subsUnsub){ try{subsUnsub();}catch(e){} subsUnsub=null; }
+  subsWatching = roundDocId(i);
+  const { F, db } = FB;
+  try{
+    subsUnsub = F.onSnapshot(F.collection(db,'nights',night,'rounds',roundDocId(i),'subs'), snap=>{
+      subCounts[roundDocId(i)] = snap.size;
+      $('roomSubs').textContent = snap.size;
+      renderRun();
+    }, ()=>{});
+  }catch(e){}
+}
+
+/* ---------------- TAB 3: the room ---------------- */
+async function refreshRoom(){
+  if(!FB || !user) return;
+  const { F, db } = FB;
+  try{
+    const col = F.collection(db,'nights',night,'players');
+    const cnt = await F.getCountFromServer(col);
+    $('roomCount').textContent = cnt.data().count;
+    const q = F.query(col, F.orderBy('pts','desc'), F.limit(10));
+    const snap = await F.getDocs(q);
+    const rows = [];
+    snap.forEach(d=>rows.push(Object.assign({uid:d.id}, d.data())));
+    rows.sort((a,z)=>(z.pts||0)-(a.pts||0) || (z.speed||0)-(a.speed||0));
+    const b = $('lbBody');
+    b.innerHTML = rows.length
+      ? rows.map((p,i)=>`<tr><td class="n">${i+1}</td><td>${esc(p.name||'player')}</td>
+          <td class="n">${p.pts||0}</td><td>${p.speed||0}</td>
+          <td><button class="mini danger" data-kill="${esc(p.uid)}">Remove</button></td></tr>`).join('')
+      : '<tr><td colspan="5" style="color:var(--dim)">Nobody has joined this room yet.</td></tr>';
+    b.onclick = async e => {
+      const t = e.target.closest('button[data-kill]'); if(!t) return;
+      if(!confirm('Remove this player row for good? This cannot be undone.')) return;
+      try{ await F.deleteDoc(F.doc(db,'nights',night,'players',t.dataset.kill)); toast('Removed.'); refreshRoom(); }
+      catch(err){ toast('Could not remove: ' + ((err&&err.message)||err)); }
+    };
+    $('roomNote').textContent = 'Counted straight from the database just now.';
+  }catch(e){
+    $('roomCount').textContent = '—';
+    $('roomNote').textContent = 'Could not read the room: ' + ((e&&e.message)||e) +
+      '. That is a dashboard problem only — the players\' game is unaffected.';
+  }
+}
+
+/* ---------------- backup / restore ---------------- */
+async function backupToCloud(){
+  if(!FB || !user) return;
+  const { F, db } = FB;
+  const d = nightDraft(night);
+  try{
+    for(let i=0;i<d.rounds.length;i++){
+      await F.setDoc(F.doc(db,'nights',night,'rounds',roundDocId(i),'key','draft'),
+        { worth:d.rounds[i].worth, qs:d.rounds[i].qs, savedAt:F.serverTimestamp() });
+    }
+    $('backupNote').textContent = 'Backed up ' + d.rounds.length + ' round(s). Only your account can read them.';
+    toast('Backed up.');
+  }catch(e){
+    $('backupNote').textContent = 'Backup failed: ' + ((e&&e.message)||e);
+  }
+}
+async function restoreFromCloud(){
+  if(!FB || !user) return;
+  if(!confirm('Replace the drafts in this browser with the backup? Anything unsaved here is lost.')) return;
+  const { F, db } = FB;
+  const cfg = nightCfg(night);
+  try{
+    const rounds = [];
+    for(let i=0;i<cfg.tags.length;i++){
+      const s = await F.getDoc(F.doc(db,'nights',night,'rounds',roundDocId(i),'key','draft'));
+      rounds.push(s.exists() ? { worth:s.data().worth||1, qs:s.data().qs||[] } : { worth:cfg.worth[i]||1, qs:[] });
+    }
+    draft[night] = { rounds };
+    saveDraft(); renderWrite(); renderRun();
+    $('backupNote').textContent = 'Restored from Firebase.';
+    toast('Restored.');
+  }catch(e){
+    $('backupNote').textContent = 'Restore failed: ' + ((e&&e.message)||e);
+  }
+}
+
+boot();
+</script>
+</body>
+</html>

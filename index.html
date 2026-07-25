@@ -482,7 +482,7 @@
   <section class="screen" id="s-review">
     <div class="center" style="margin-top:6px"><span class="pill" id="revPill">Score Q1</span></div>
     <h1 class="center" style="margin-top:8px" id="revTitle">Score this quarter ✅</h1>
-    <p class="sub center">When the host posts the answers in the group chat, tap the correct answer for each question. Your picks are marked 🔵.</p>
+    <p class="sub center" id="revNote">When the host posts the answers in the group chat, tap the correct answer for each question. Your picks are marked 🔵.</p>
     <div id="revList"></div>
     <button class="btn teal" id="revBtn" disabled onclick="confirmReview()">Confirm &amp; score quarter</button>
     <div id="revResult"></div>
@@ -723,6 +723,9 @@ window.STATS_FIREBASE = {
      SB.count()    -> int|null  players present right now
      SB.top(n)     -> [] |null  leaderboard, highest first
      SB.rank()     -> int|null  my position among real players
+     SB.watchRound(f)           newest host-pushed round, or null
+     SB.submit(id,o)-> bool     lock my picks for a pushed round
+     SB.mySub(id)  -> obj|null  what I already locked for that round
      SB.onState(f)              subscribe to state changes
    ===================================================================== */
 (function () {
@@ -755,6 +758,9 @@ window.STATS_FIREBASE = {
     count: function () { return Promise.resolve(null); },
     top:   function () { return Promise.resolve(null); },
     rank:  function () { return Promise.resolve(null); },
+    watchRound: function () { return function () {}; },
+    submit: function () { return Promise.resolve(false); },
+    mySub:  function () { return Promise.resolve(null); },
     onState: function (f) { listeners.push(f); try { f(SB.state); } catch (e) {} }
   };
   window.SB = SB;
@@ -918,6 +924,66 @@ window.STATS_FIREBASE = {
       );
       var snap = await F.getCountFromServer(q);
       return snap.data().count + 1;
+    } catch (e) { return null; }
+  };
+
+  /* ---- host-pushed rounds -------------------------------------------
+     The host writes one document per round and then mutates it: 'live'
+     when the questions go out, 'scored' when the key is revealed. Every
+     phone watches only the NEWEST round document — one read to attach,
+     one read per transition — so a twelve-round night costs a player
+     about two dozen reads instead of a live listener on the whole
+     collection.
+
+     The answer key is not in this document while the round is live. It
+     sits in an owner-only subcollection and is copied in at reveal. A
+     player who opens the network tab mid-round finds questions and
+     nothing else.                                                      */
+  SB.watchRound = function (cb) {
+    if (!SB.enabled || !nightId) return function () {};
+    try {
+      var q = F.query(
+        F.collection(db, 'nights', nightId, 'rounds'),
+        F.orderBy('seq', 'desc'),
+        F.limit(1)
+      );
+      return F.onSnapshot(q, function (snap) {
+        if (snap.empty) { cb(null); return; }
+        var d = snap.docs[0];
+        var v = d.data() || {};
+        v.id = d.id;
+        cb(v);
+      }, function () { cb(null); });   // an error is "no round", never a fake one
+    } catch (e) { return function () {}; }
+  };
+
+  /* One submission per player per round, written the moment they finish
+     and before any key is public. Create-only at the rules layer, so a
+     second attempt is refused by the database rather than by politeness. */
+  SB.submit = async function (roundId, o) {
+    if (!SB.enabled || !nightId || !roundId || !budget()) return false;
+    try {
+      await F.setDoc(
+        F.doc(db, 'nights', nightId, 'rounds', roundId, 'subs', SB.me.uid),
+        {
+          name:  String((o && o.name) || mine.name || 'player').slice(0, 24),
+          picks: (o && o.picks) || [],
+          banks: (o && o.banks) || [],
+          at:    F.serverTimestamp()
+        }
+      );
+      return true;
+    } catch (e) { return false; }   // already submitted, or offline. Not fatal.
+  };
+
+  /* Did I already answer this round? Used on resume, so a player who
+     reloads mid-round is not handed the same questions a second time.  */
+  SB.mySub = async function (roundId) {
+    if (!SB.enabled || !nightId || !roundId || !budget()) return null;
+    try {
+      var s = await F.getDoc(
+        F.doc(db, 'nights', nightId, 'rounds', roundId, 'subs', SB.me.uid));
+      return s.exists() ? s.data() : null;
     } catch (e) { return null; }
   };
 
@@ -1087,7 +1153,11 @@ const SPORT=SPORTS[SPORT_KEY]||SPORTS.basketball;
 const L=SPORT.L;
 const GAME=SPORT.game, roster=SPORT.roster, preds=SPORT.preds, rounds=SPORT.rounds, CATCHES=SPORT.catches;
 const NR=rounds.length;                               // number of scoring rounds
-function roundWorth(i){return SPORT.worth[i];}
+// A pushed round can be worth something other than the built-in schedule —
+// the host decides on the night. Empty until a round is actually pushed, so
+// with no dashboard running this is exactly SPORT.worth[i] and nothing else.
+let HOSTW={};
+function roundWorth(i){return (HOSTW[i]!=null?HOSTW[i]:SPORT.worth[i]);}
 function roundTag(i){return SPORT.tags[i];}
 function roundName(i){return SPORT.names[i];}
 function startLabel(i){return (SPORT.startLbl||"Start {n} ▶").replace("{n}",roundName(i));}
@@ -1252,9 +1322,18 @@ function renderLobby(qi){
     sub.textContent = qi===0
       ? `Predictions locked. Watch the ${L.unit} — the moment ${roundTag(0)} ends, come back and hit the button. The clock is real: 20 seconds a question, unused seconds bank as ⚡ Speed.`
       : `${roundTag(qi-1)} scored — you're on ${S.pts} pts. Keep watching; when ${roundName(qi).toLowerCase()} comes, come back and answer.`;
-    btn.textContent = `${roundTag(qi)} ended — answer now ▶`;
+    // If the host has pushed this round to every phone, say so — that button
+    // is now a red light, not a suggestion. With no dashboard running, hd is
+    // null and every line below reads exactly as it did before.
+    const hd=hostedDoc(qi);
+    const hLive=hd && hd.state==='live' && !HR.submitted[hd.id] && !HR.scored[hd.id];
+    btn.textContent = hLive
+      ? `🔴 ${roundName(qi)} is LIVE — answer now ▶`
+      : `${roundTag(qi)} ended — answer now ▶`;
     btn.onclick=()=>startQuarter(qi);
-    foot.textContent="Game Night: answers score when the host announces them at each break. Your progress is saved.";
+    foot.textContent = hd
+      ? "The host is pushing questions straight to your phone and scoring them here. Your progress is saved."
+      : "Game Night: answers score when the host announces them at each break. Your progress is saved.";
     // honest live-mode stats (no fake crowd)
     s1v.textContent = qi===0 ? '🔒' : S.pts;
     s1k.textContent = qi===0 ? 'Predictions locked' : 'Your points so far';
@@ -1504,7 +1583,13 @@ function useLifeline(){
 }
 function nextQuestion(){
   if(S.ni<nq()-1){S.ni++;loadQuestion();}
-  else if(S.mode==="live"){openReview();}
+  else if(S.mode==="live"){
+    // A hosted round locks on the server and waits for the reveal. Anything
+    // else — no dashboard, dead backend, a round the host never pushed —
+    // falls through to the tap-in review that has always been here.
+    const h=hostedFor(S.qi);
+    if(h) submitHosted(h); else openReview();
+  }
   else{showBreak();}
 }
 
@@ -1516,6 +1601,8 @@ function openReview(){
   document.getElementById('revTitle').textContent=`Score ${roundName(S.qi)} ✅`;
   document.getElementById('revResult').innerHTML='';
   document.getElementById('revNextBtn').style.display='none';
+  document.getElementById('revTalkBtn').style.display='none';
+  document.getElementById('revNote').textContent='When the host posts the answers in the group chat, tap the correct answer for each question. Your picks are marked 🔵.';
   document.getElementById('revBtn').style.display='block';
   document.getElementById('revBtn').disabled=true;
   const list=document.getElementById('revList');list.innerHTML='';
@@ -1700,7 +1787,7 @@ async function joinNight(){
     name: S.name || 'player',
     color: S.color || '#888'
   });
-  if(ok) startRoomPolling();
+  if(ok){ startRoomPolling(); startHostedWatch(); }
   return ok;
 }
 
@@ -1761,6 +1848,223 @@ async function refreshRoom(){
   if(s1v && S.mode==="live" && c!==null && c!==undefined){
     s1v.textContent=c.toLocaleString(); s1k.textContent='Players tonight';
   }
+}
+
+/* =====================================================================
+   HOSTED ROUNDS — the control room pushes, the phone follows.
+   ---------------------------------------------------------------------
+   Everything in this block is additive and self-cancelling. If no round is
+   ever pushed — the host never opens the dashboard, the backend is off, a
+   phone is on captive-portal wifi — `HR.doc` stays null, every helper here
+   returns null, and the player plays the self-scored game exactly as they
+   do today, tapping in answers from the group chat. That is the invariant
+   the whole build is organised around: a broken control room costs the
+   player nothing.
+
+   The reveal is the only moment scoring changes hands. Until the host
+   flips a round to 'scored', the answer key does not exist anywhere the
+   phone can read it — it sits in an owner-only subcollection. So a player
+   with the network tab open during a live round finds questions and
+   nothing else.
+   ===================================================================== */
+const HR={
+  unsub:null,          // detacher for the round watch
+  doc:null,            // newest pushed round document
+  started:{},          // roundId -> we served these questions
+  submitted:{},        // roundId -> picks are locked on the server
+  scored:{},           // roundId -> the key came back and we graded it
+  pending:null,        // a live round waiting for the player to reach the lobby
+  pendingScore:null    // host revealed while they were still answering
+};
+
+// The raw newest-round document for a round index, whatever its state.
+function hostedDoc(qi){ const d=HR.doc; return (d && d.idx===qi) ? d : null; }
+// ...and the narrower question: is THIS player actually inside that round?
+function hostedFor(qi){
+  const d=hostedDoc(qi);
+  return (d && (HR.started[d.id] || HR.submitted[d.id])) ? d : null;
+}
+
+function startHostedWatch(){
+  if(HR.unsub || !window.SB || !SB.watchRound) return;
+  try{ HR.unsub = SB.watchRound(onHostedRound) || null; }catch(e){}
+}
+
+function onHostedRound(r){
+  if(S.mode!=="live") return;              // practice mode is never hijacked
+  if(!r || !r.id) return;                  // no round pushed: nothing changes
+  const idx = (typeof r.idx==='number') ? r.idx : -1;
+  if(idx<0 || idx>=NR) return;             // a round this build doesn't have
+  r.idx = idx;
+  HR.doc = r;
+
+  // Adopt the questions the host actually asked. A pushed question carries
+  // text and options only — never an answer.
+  if(Array.isArray(r.questions) && r.questions.length){
+    rounds[idx].q = r.questions.slice(0,12).map(q=>({
+      t:String((q&&q.t)||''),
+      o:((q&&q.o)||[]).slice(0,6).map(String)
+    })).filter(q=>q.t && q.o.length>=2);
+    if(!rounds[idx].q.length) return;      // an empty push is not a round
+  }
+  if(typeof r.worth==='number' && r.worth>0 && r.worth<=20) HOSTW[idx]=r.worth;
+
+  if(r.state==='live')   onHostedLive(r, idx);
+  if(r.state==='scored') onHostedScored(r, idx);
+  if(S.screen==='lobby') renderLobby(idx);
+}
+
+function onHostedLive(r, idx){
+  if(HR.started[r.id] || HR.submitted[r.id] || HR.scored[r.id]) return;
+  // A reload mid-round must not hand the same questions out twice. Ask the
+  // server what we already locked before serving anything.
+  if(window.SB && SB.mySub){
+    SB.mySub(r.id).then(sub=>{
+      if(sub){ HR.submitted[r.id]=true; adoptHostedSub(r, idx, sub); }
+      else openHostedRound(r, idx);
+    }).catch(()=>openHostedRound(r, idx));
+  }else openHostedRound(r, idx);
+}
+
+function adoptHostedSub(r, idx, sub){
+  S.qi=idx;
+  const picks=sub.picks||[], banks=sub.banks||[];
+  S.liveAnswers[idx]=picks.map((p,i)=>({
+    choice:(p===''||p==null)?null:String(p),
+    bank:Number(banks[i])||0
+  }));
+  save();
+  // Restore the picks wherever they are, but only take over the screen if
+  // they are actually in the game. Yanking someone off the prediction sheet
+  // — or off the landing page — to show them a round they finished on a
+  // different tab is worse than doing nothing.
+  if(S.screen==='lobby' || S.screen==='live' || S.screen==='review'){
+    renderHostedReview(r, idx, false);
+    go('review');
+  }
+}
+
+function openHostedRound(r, idx){
+  if(HR.started[r.id]) return;
+  HR.started[r.id]=true;
+  HR.pending=r;
+  S.nextQ=idx;
+  if(S.screen==='lobby'){
+    renderLobby(idx);
+    toast(`🔴 Host pushed ${roundName(idx).toLowerCase()} — starting…`);
+    // A short beat so the screen change is something they watched happen
+    // rather than something that happened to them.
+    setTimeout(()=>{
+      if(S.screen==='lobby' && HR.pending===r) startHostedQuarter(idx);
+    }, 2200);
+  }else if(S.screen==='live' || S.screen==='review'){
+    toast(`🔴 ${roundName(idx)} is live — finish this one first.`);
+  }else{
+    toast(`🔴 Host pushed ${roundName(idx).toLowerCase()} — head back to the lobby.`);
+  }
+}
+
+function startHostedQuarter(idx){
+  HR.pending=null;
+  S.liveAnswers[idx]=[];
+  startQuarter(idx);
+}
+
+/* The player has finished the questions. Lock the picks on the server —
+   create-only, before any key is public — and wait. Nothing to tap. */
+function submitHosted(h){
+  const idx=S.qi;
+  const picks=rounds[idx].q.map((q,i)=>{const m=S.liveAnswers[idx][i];return (m&&m.choice)||'';});
+  const banks=rounds[idx].q.map((q,i)=>{const m=S.liveAnswers[idx][i];return (m&&m.bank)||0;});
+  renderHostedReview(h, idx, false);
+  go('review');
+  save();
+  if(window.SB && SB.submit){
+    SB.submit(h.id,{picks:picks,banks:banks,name:S.name||'player'}).then(okv=>{
+      HR.submitted[h.id]=true;
+      const note=document.getElementById('revNote');
+      if(note && S.screen==='review' && !HR.scored[h.id]){
+        // If the write failed we say so, because the honest version is still
+        // fine: the key arrives over the same watch and scores them locally.
+        note.textContent = okv
+          ? 'Your picks are locked. The second the host reveals the answers, this screen scores itself — nothing to tap.'
+          : 'Couldn\'t reach the server, so your picks are held on this phone. They still score the moment the host reveals.';
+      }
+    }).catch(()=>{});
+  }
+  // Host revealed while they were still answering — score it now.
+  if(HR.pendingScore && HR.pendingScore.id===h.id){
+    const pr=HR.pendingScore; HR.pendingScore=null;
+    applyHostedScore(pr, idx);
+  }
+}
+
+function onHostedScored(r, idx){
+  if(HR.scored[r.id]) return;
+  if(!HR.started[r.id] && !HR.submitted[r.id]) return;  // they never played it
+  // Mid-question when the host closed the round: let them finish the one
+  // they're staring at rather than snatching it off the screen.
+  if(S.screen==='live' && S.qi===idx){
+    HR.pendingScore=r;
+    toast('⏱ Host closed the round — finish up and it scores.');
+    return;
+  }
+  applyHostedScore(r, idx);
+}
+
+function applyHostedScore(r, idx){
+  if(HR.scored[r.id]) return;
+  const key=Array.isArray(r.key)?r.key:null;
+  if(!key || !key.length) return;          // "scored" with no key is not scored
+  HR.scored[r.id]=true;
+  S.qi=idx;
+  revMarks=rounds[idx].q.map((q,i)=>{
+    const k=key[i];
+    return (k===''||k==null)?null:String(k);
+  });
+  renderHostedReview(r, idx, true);
+  go('review');
+  confirmReview();                         // the existing scoring core, unchanged
+  const res=document.getElementById('revResult');
+  const r2=res && res.querySelector('.r2');
+  if(r2) r2.innerHTML=`Running total: <b>${S.pts}</b> pts · <b>${S.speed}</b> ⚡. Scored by the host — no group chat needed.`;
+  save();
+  // Send the new total to the room NOW, not when they get around to tapping
+  // Continue. In the self-scored game those are the same moment — the player
+  // presses a button and that button both scores and reports. Here the host
+  // scores them, so a phone face-down on the bar would otherwise read as zero
+  // on the host's leaderboard, and on everyone's rank, for the rest of the
+  // night. Failing this write costs nothing: afterReview() pushes again.
+  pushScore().then(()=>{ if(S.screen==='lobby') refreshRoom(); }).catch(()=>{});
+}
+
+/* The review screen in hosted dress: read-only. Before the reveal it shows
+   what they locked; after it, what was right. The tap-in grid never appears,
+   because in a hosted round the player is not the scorer. */
+function renderHostedReview(r, idx, revealed){
+  S.qi=idx;
+  document.getElementById('revPill').textContent = revealed
+    ? 'Scored '+roundTag(idx) : roundTag(idx)+' locked';
+  document.getElementById('revTitle').textContent = revealed
+    ? `${roundName(idx)} scored ✅` : 'Locked in — waiting on the host ⏳';
+  document.getElementById('revNote').textContent = revealed
+    ? 'The host revealed the answers. This is what you got.'
+    : 'Your picks are locked. The second the host reveals the answers, this screen scores itself — nothing to tap.';
+  document.getElementById('revResult').innerHTML='';
+  document.getElementById('revBtn').style.display='none';
+  document.getElementById('revNextBtn').style.display='none';
+  document.getElementById('revTalkBtn').style.display='none';
+  const list=document.getElementById('revList');list.innerHTML='';
+  rounds[idx].q.forEach((q,i)=>{
+    const my=S.liveAnswers[idx][i]||{choice:null,bank:0};
+    const k=revealed?revMarks[i]:null;
+    const hit=revealed && my.choice!==null && my.choice===k;
+    const c=document.createElement('div');c.className='card tight';
+    c.innerHTML=`<div style="font-size:13px;font-weight:800;margin-bottom:4px">${i+1}. ${q.t}</div>
+      <div style="font-size:11px;color:var(--dim);font-weight:700">Your pick: ${my.choice?`🔵 ${my.choice} (${my.bank}s banked)`:'⏰ none'}</div>
+      ${revealed?`<div style="font-size:11px;font-weight:800;margin-top:6px;color:${hit?'var(--teal2)':'var(--dim)'}">${hit?'✓ correct':'✕ answer: '+(k||'—')}</div>`:''}`;
+    list.appendChild(c);
+  });
 }
 
 /* Final screen: the one moment the full room matters. Real rank out of real
