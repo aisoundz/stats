@@ -979,19 +979,39 @@ window.STATS_FIREBASE = {
 
   /* One submission per player per round, written the moment they finish
      and before any key is public. Create-only at the rules layer, so a
-     second attempt is refused by the database rather than by politeness. */
+     second attempt is refused by the database rather than by politeness.
+
+     The optional fields exist for the dashboard, not for the phone. When
+     the host never pushed a round, the questions the player saw came from
+     the build, and the dashboard has no way of knowing what they were —
+     so the phone reports them: `qs` the question text, `opts` the choices
+     it offered, `keys` the answers the build believes are correct. The
+     dashboard treats all three as a starting point it can overrule, never
+     as the truth. It is the host who decides who was right. */
   SB.submit = async function (roundId, o) {
     if (!SB.enabled || !nightId || !roundId || !budget()) return false;
+    o = o || {};
     try {
+      var row = {
+        name:  String(o.name || mine.name || 'player').slice(0, 24),
+        picks: o.picks || [],
+        banks: o.banks || [],
+        at:    F.serverTimestamp()
+      };
+      // Everything below is advisory. Kept short so a round document stays
+      // one small write even with twelve questions on it.
+      if (Array.isArray(o.qs))   row.qs   = o.qs.slice(0, 12).map(function (s) { return String(s).slice(0, 160); });
+      if (Array.isArray(o.keys)) row.keys = o.keys.slice(0, 12).map(function (s) { return String(s == null ? '' : s).slice(0, 60); });
+      if (Array.isArray(o.nums)) row.nums = o.nums.slice(0, 12).map(function (n) { return n == null || n === '' ? '' : String(n).slice(0, 8); });
+      if (Array.isArray(o.bons)) row.bons = o.bons.slice(0, 12).map(function (n) { return Math.max(0, Math.min(60, Math.round(Number(n) || 0))); });
+      if (Array.isArray(o.opts)) row.opts = o.opts.slice(0, 12).map(function (a) {
+        return (a || []).slice(0, 30).map(function (s) { return String(s).slice(0, 60); });
+      });
+      if (typeof o.worth === 'number' && o.worth > 0 && o.worth <= 60) row.worth = Math.round(o.worth);
+      if (o.src) row.src = String(o.src).slice(0, 12);
+      if (o.label) row.label = String(o.label).slice(0, 40);
       await F.setDoc(
-        F.doc(db, 'nights', nightId, 'rounds', roundId, 'subs', SB.me.uid),
-        {
-          name:  String((o && o.name) || mine.name || 'player').slice(0, 24),
-          picks: (o && o.picks) || [],
-          banks: (o && o.banks) || [],
-          at:    F.serverTimestamp()
-        }
-      );
+        F.doc(db, 'nights', nightId, 'rounds', roundId, 'subs', SB.me.uid), row);
       return true;
     } catch (e) { return false; }   // already submitted, or offline. Not fatal.
   };
@@ -1119,7 +1139,10 @@ const BBALL_ROUNDS=[
   // --- Q4 · 4 pts each · money time. The quarter that decides the night. ---
   {home:89,away:82, q:[
     {t:"The final basket of the game was worth…", o:["1","2","3","No basket — it ended on a miss or a turnover"], a:"2"},
-    {t:"Who scored the LAST points of the game?", o:["Clark","Mitchell","Malonga","Magbegor"], a:"Mitchell"},
+    // Four named players cannot cover a whole roster, and a question that
+    // can end with no correct option breaks the first house rule. The fifth
+    // option is not filler — on most nights it is the answer.
+    {t:"Who scored the LAST points of the game?", o:["Clark","Mitchell","Malonga","Magbegor","Somebody else"], a:"Somebody else"},
     {t:"Did any player foul out?", o:["Yes","No"], a:"No"},
     {t:"In the last two minutes, which happened more?", o:["Free throws attempted","Field goals attempted","Equal"], a:"Free throws attempted"}
   ]}
@@ -1389,6 +1412,7 @@ function lockPredictions(){
     S.predPts=pp; seedBots();
   }else{
     S.predPts=null; // scored at final buzzer vs the real box score
+    lockPredPicks();  // …and sent to the dashboard now, while nobody knows them
   }
   renderLobby(0);
   go('lobby');
@@ -1670,9 +1694,82 @@ function nextQuestion(){
     // else — no dashboard, dead backend, a round the host never pushed —
     // falls through to the tap-in review that has always been here.
     const h=hostedFor(S.qi);
-    if(h) submitHosted(h); else openReview();
+    if(h) submitHosted(h); else { lockPicks(S.qi); openReview(); }
   }
   else{showBreak();}
+}
+
+/* ---------------- GAME NIGHT: SENDING PICKS TO THE DASHBOARD ----------
+   The host has to be able to see who was right without walking round the
+   room reading phones. That means the picks have to leave the phone, and
+   they have to leave it BEFORE the answers are read out — otherwise the
+   dashboard is just collecting self-reported scores, which is not a
+   scoreboard, it is an honour system with extra steps.
+
+   This runs on the plain path: live mode, no dashboard push, questions
+   straight out of the build. The hosted path already had its own write
+   (submitHosted) and is untouched. Both land on the same document, so the
+   dashboard reads one place either way.
+
+   A write that fails gets two more goes, three and six seconds later —
+   inside the break, well before the host reads anything out. It resends
+   the same frozen picks: nothing touches S.liveAnswers once the round is
+   over, so a retry cannot smuggle in a changed answer. After that it
+   gives up quietly. A player whose write never lands still plays a
+   completely normal night — they just won't appear in the grid, and the
+   host can still take their score off the phone by hand.                */
+const LOCKED = {};                     // roundId -> already sent from here
+function lockPicks(idx, tries){
+  if(S.mode!=="live") return false;
+  const rid = 'r'+idx;
+  if(LOCKED[rid]) return false;
+  const qs = (rounds[idx] && rounds[idx].q) || [];
+  if(!qs.length) return false;
+  const again = ()=>{ const n=(tries||0)+1; if(n<=2) setTimeout(()=>lockPicks(idx, n), 3000*n); };
+  if(!window.SB || !SB.enabled || !SB.submit){ again(); return false; }
+  LOCKED[rid] = true;
+  const mine = S.liveAnswers[idx] || [];
+  SB.submit(rid, {
+    name:  S.name || 'player',
+    picks: qs.map((q,i)=>{ const m=mine[i]; return (m&&m.choice)||''; }),
+    banks: qs.map((q,i)=>{ const m=mine[i]; return (m&&m.bank)||0; }),
+    qs:    qs.map(q=>q.t),
+    opts:  qs.map(q=>q.o||[]),
+    keys:  qs.map(q=>q.a||''),        // advisory — the host can overrule it
+    worth: roundWorth(idx),
+    label: roundTag(idx),
+    src:   'built-in'
+  }).then(ok=>{ if(!ok){ LOCKED[rid]=false; again(); } }).catch(()=>{ LOCKED[rid]=false; again(); });
+  return true;
+}
+
+/* The prediction sheet is fifty of the ninety points on the night and,
+   until now, the only record of it lived on the phone that made it. It
+   locks before tip-off with no answers known to anyone, which makes it
+   the safest thing in the app to send early — there is nothing to leak. */
+function lockPredPicks(tries){
+  if(S.mode!=="live") return false;
+  if(LOCKED['rP']) return false;
+  if(!preds || !preds.length) return false;
+  const again = ()=>{ const n=(tries||0)+1; if(n<=3) setTimeout(()=>lockPredPicks(n), 4000*n); };
+  // The predictions screen can be finished faster than the room join
+  // resolves, and a seat that hasn't landed yet has no night to write to.
+  // Rather than lose the sheet, wait and ask again.
+  if(!window.SB || !SB.enabled || !SB.submit){ again(); return false; }
+  LOCKED['rP'] = true;
+  SB.submit('rP', {
+    name:  S.name || 'player',
+    picks: preds.map(p=>S.predChoices[p.id]||''),
+    banks: preds.map(p=>p.base||0),        // what each line is worth, plainly
+    nums:  preds.map(p=>p.bonus?(S.predChoices[p.id+'_num']||''):''),
+    bons:  preds.map(p=>p.bonus||0),       // what an exact number is worth
+    qs:    preds.map(p=>p.label),
+    opts:  preds.map(p=>p.opts||[]),
+    keys:  [],                             // nobody knows these yet
+    label: 'Predictions',
+    src:   'built-in'
+  }).then(ok=>{ if(!ok){ LOCKED['rP']=false; again(); } }).catch(()=>{ LOCKED['rP']=false; again(); });
+  return true;
 }
 
 /* ---------------- GAME NIGHT: ROUND REVIEW ---------------- */

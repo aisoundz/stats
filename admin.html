@@ -110,6 +110,28 @@
     transition:transform .25s ease;z-index:60;box-shadow:0 14px 40px rgba(0,0,0,.6)}
   #toast.show{transform:translateX(-50%) translateY(0)}
   .hide{display:none !important}
+
+  /* The grid can be twelve questions wide on a laptop the host is also
+     using to watch the game. It scrolls sideways, and the name column
+     stays put — a row of ticks with no name attached is useless. */
+  .gwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -13px;padding:0 13px}
+  table.grid{min-width:100%;font-size:12.5px}
+  table.grid th,table.grid td{white-space:nowrap;padding:7px 8px}
+  table.grid th.p,table.grid td.p{position:sticky;left:0;z-index:2;background:var(--card);
+    box-shadow:1px 0 0 var(--line);max-width:132px;overflow:hidden;text-overflow:ellipsis}
+  table.grid td.p{white-space:nowrap;font-weight:800}
+  table.grid tr:nth-child(even) td{background:rgba(255,255,255,.018)}
+  table.grid tr:nth-child(even) td.p{background:var(--card2)}
+  .mkc{display:inline-block;min-width:15px;font-weight:900}
+  td.hit{color:var(--green)} td.mis{color:#ff8b97} td.non{color:var(--dim)}
+  td.tot{font-weight:900;border-left:1px solid var(--line)}
+  .pk{color:var(--muted);font-weight:700}
+  .keyrow{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .keyrow .kn{flex:none;width:22px;font:900 11px/1 inherit;color:var(--dim)}
+  .keyrow select{margin-top:0;flex:1}
+  .keyrow input{margin-top:0;flex:none;width:96px}
+  .keyq{font-size:12px;color:var(--muted);font-weight:700;margin:12px 0 0}
+
   .gate{max-width:420px;margin:14vh auto 0;text-align:center}
   .gate .logo{font-size:34px;display:block;margin-bottom:6px}
 </style>
@@ -143,7 +165,8 @@
       <nav>
         <button data-tab="write" class="on">1 · Write</button>
         <button data-tab="run">2 · Run</button>
-        <button data-tab="room">3 · Room</button>
+        <button data-tab="grade">3 · Grade</button>
+        <button data-tab="room">4 · Room</button>
       </nav>
     </div>
   </header>
@@ -207,7 +230,44 @@
       </div>
     </section>
 
-    <!-- ---------- TAB 3: ROOM ---------- -->
+    <!-- ---------- TAB 3: GRADE ---------- -->
+    <section id="t-grade" class="hide">
+      <div class="card">
+        <h3>Who got what right</h3>
+        <p class="sub">Every phone sends its picks the moment the round ends — before anyone hears an answer. Pick the right answer for each question below and the grid marks itself. Nothing here is guessed from what a player says they scored.</p>
+        <label for="gradeSel">Round</label>
+        <select id="gradeSel"></select>
+        <div class="row" style="margin-top:10px">
+          <button class="mini" id="gradeReload">Reload</button>
+          <span class="chip" id="gradeCount">—</span>
+          <span class="chip" id="gradeSrcChip"></span>
+        </div>
+        <p class="sub tip" id="gradeNote" style="margin-top:10px"></p>
+      </div>
+
+      <div class="card" id="gradeKeyCard">
+        <h3>The answers</h3>
+        <p class="sub" id="gradeKeySub">Set what actually happened. This saves to this browser as you go, so a refresh mid-night loses nothing.</p>
+        <div id="gradeKey"></div>
+        <button class="btn ghost" id="gradeKeyClear">Clear these answers</button>
+      </div>
+
+      <div class="card" id="gradeGridCard">
+        <h3>The grid</h3>
+        <div class="gwrap"><div id="gradeGrid"></div></div>
+        <button class="btn ghost" id="gradeCopy">Copy the results for the group chat</button>
+        <button class="btn ghost" id="gradeCsv">Download as a spreadsheet</button>
+      </div>
+
+      <div class="card">
+        <h3>The whole night</h3>
+        <p class="sub">Adds up every round plus the prediction sheet, in one read. This is the list you read out at the end.</p>
+        <button class="btn gold" id="gradeTotalsBtn">Add up the whole night</button>
+        <div id="gradeTotals" style="margin-top:12px"></div>
+      </div>
+    </section>
+
+    <!-- ---------- TAB 4: ROOM ---------- -->
     <section id="t-room" class="hide">
       <div class="card">
         <h3>Who's actually playing</h3>
@@ -399,9 +459,10 @@ function initUI(){
   document.querySelectorAll('nav button').forEach(b=>{
     b.onclick = () => {
       document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on', x===b));
-      ['write','run','room'].forEach(t=>$('t-'+t).classList.toggle('hide', t!==b.dataset.tab));
+      ['write','run','grade','room'].forEach(t=>$('t-'+t).classList.toggle('hide', t!==b.dataset.tab));
       if(b.dataset.tab==='run')  renderRun();
       if(b.dataset.tab==='room') refreshRoom();
+      if(b.dataset.tab==='grade'){ fillGradeSel(); watchGradeSubs(); renderGrade(); }
     };
   });
 
@@ -421,6 +482,27 @@ function initUI(){
   $('restoreBtn').onclick = restoreFromCloud;
   $('refreshBtn').onclick = refreshRoom;
 
+  loadKeys();
+  $('gradeSel').onchange   = () => { gradeRid = $('gradeSel').value; watchGradeSubs(); renderGrade(); };
+  $('gradeReload').onclick = () => { watchGradeSubs(); toast('Re-reading the answers…'); };
+  $('gradeCopy').onclick   = () => {
+    const t = gradeText();
+    if(!t){ toast('Nothing to copy yet.'); return; }
+    // Clipboard access can be refused (an insecure origin, a locked-down
+    // browser). Falling back to a prompt is ugly and always works.
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(()=>toast('Copied — paste it in the chat.'),
+                                           ()=>window.prompt('Copy this:', t));
+    }else window.prompt('Copy this:', t);
+  };
+  $('gradeCsv').onclick      = gradeCsv;
+  $('gradeTotalsBtn').onclick= gradeTotals;
+  $('gradeKeyClear').onclick = () => {
+    if(!confirm('Clear the answers you set for this round?\n\nThe players\' picks are untouched — only your marking is cleared.')) return;
+    hostKeys[night + '|' + gradeRid] = { key:[], nums:[] };
+    saveKeys(); renderGrade(); toast('Answers cleared.');
+  };
+
   onNightChange();
 }
 
@@ -436,8 +518,14 @@ function onNightChange(){
   if(subsUnsub){ try{subsUnsub();}catch(e){} subsUnsub=null; }
   subsWatching = null;
   $('roomSubs').textContent = '—';
-  renderWrite(); renderRun();
+  // Same trap on the grading side: r0 means a different room now.
+  if(gradeUnsub){ try{gradeUnsub();}catch(e){} gradeUnsub=null; }
+  gradeSubs = []; gradeRid = cfg.tags.length ? 'r0' : 'rP';
+  fillGradeSel();
+  $('gradeTotals').innerHTML = '';
+  renderWrite(); renderRun(); renderGrade();
   watchRounds();
+  if(!$('t-grade').classList.contains('hide')) watchGradeSubs();
 }
 
 /* ---------------- TAB 1: writing ---------------- */
@@ -669,7 +757,336 @@ function watchSubs(i){
   }catch(e){}
 }
 
-/* ---------------- TAB 3: the room ---------------- */
+/* =====================================================================
+   TAB 3: GRADE — who was right, and what that's worth
+   ---------------------------------------------------------------------
+   This is the part that turns a room full of phones into a scoreboard
+   you can hand a prize from.
+
+   Every phone writes one document per round, at the moment the round
+   ends, containing the picks and nothing else — no score, no claim about
+   whether they were right. It cannot contain a claim, because when it is
+   written nobody in the building knows the answers yet. That ordering is
+   the whole reason this is trustworthy: a player who wanted to cheat
+   would have to know the future, not just edit some JavaScript.
+
+   Grading happens here, from a key you set. Where the key comes from
+   depends on how the night ran:
+
+     you pushed the round      -> your own key, already typed in tab 1
+     you didn't push anything  -> the phones report which questions they
+                                  were shown and what the build thinks
+                                  the answers are, and you correct it
+
+   In both cases the dropdowns below are the last word. If the broadcast
+   was ambiguous, if you want to void a question, if the build's idea of
+   the answer is wrong — change it here and the grid re-marks instantly.
+   Nothing is written back to the players from this tab.
+   ===================================================================== */
+
+const KEYLS = 'stats_admin_keys_v1';
+let gradeRid   = 'r0';        // which round the grid is showing
+let gradeSubs  = [];          // [{uid, ...the row the phone wrote}]
+let gradeUnsub = null;
+let hostKeys   = {};          // "night|rid" -> {key:[], nums:[]}
+
+function loadKeys(){
+  try{ hostKeys = JSON.parse(localStorage.getItem(KEYLS) || '{}') || {}; }catch(e){ hostKeys = {}; }
+}
+function saveKeys(){ try{ localStorage.setItem(KEYLS, JSON.stringify(hostKeys)); }catch(e){} }
+function keySlot(rid){
+  const k = night + '|' + rid;
+  if(!hostKeys[k]) hostKeys[k] = { key:[], nums:[] };
+  return hostKeys[k];
+}
+
+const gradeIdx = rid => rid === 'rP' ? -1 : (parseInt(rid.slice(1), 10));
+
+/* The round selector carries every round this night has, plus the
+   prediction sheet — which is fifty of the ninety points and therefore
+   not an afterthought, whatever its position on the list. */
+function fillGradeSel(){
+  const cfg = nightCfg(night), sel = $('gradeSel'); if(!sel) return;
+  sel.innerHTML = cfg.tags.map((t,i)=>
+      `<option value="r${i}">${esc(cfg.tags[i])} — ${esc(cfg.names[i])}</option>`).join('')
+    + `<option value="rP">Predictions — the pre-game sheet</option>`;
+  if(!cfg.tags.length) gradeRid = 'rP';
+  sel.value = gradeRid;
+}
+
+/* What was asked, what it's worth, and the best guess at the answers.
+   Everything here is a default the host can overrule. */
+function gradeSpec(rid){
+  const cfg = nightCfg(night), i = gradeIdx(rid);
+  const pushed = (i >= 0) ? (liveDocs[rid] || null) : null;
+  const draft  = (i >= 0 && nightDraft(night).rounds[i]) || null;
+  const first  = gradeSubs.find(s => Array.isArray(s.qs) && s.qs.length) || null;
+
+  let qs = [], src = 'none';
+  if(pushed && Array.isArray(pushed.questions) && pushed.questions.length){
+    qs = pushed.questions.map(q => ({ t:String(q.t||''), o:(q.o||[]).map(String) }));
+    src = 'pushed';
+  }else if(draft && draft.qs.length && draft.qs.some(q=>q.t)){
+    qs = draft.qs.map(q => ({ t:String(q.t||''), o:(q.o||[]).map(String) }));
+    src = 'draft';
+  }else if(first){
+    qs = first.qs.map((t,n) => ({ t:String(t||''), o:((first.opts||[])[n]||[]).map(String) }));
+    src = 'phones';
+  }
+
+  // Points per question. A pushed round says so; otherwise the phones
+  // report what the build charged; otherwise fall back to the night's
+  // configured ladder.
+  let worth = null;
+  if(pushed && typeof pushed.worth === 'number') worth = pushed.worth;
+  else if(first && typeof first.worth === 'number') worth = first.worth;
+  else if(draft) worth = draft.worth;
+  else if(i >= 0) worth = cfg.worth[i];
+
+  // The prediction sheet prices each line separately — five for the
+  // winner, four-plus-five for each stat leader — so it carries its own
+  // numbers rather than one flat rate.
+  const bases = (rid === 'rP' && first && Array.isArray(first.banks)) ? first.banks.map(Number) : null;
+  const bons  = (rid === 'rP' && first && Array.isArray(first.bons))  ? first.bons.map(Number)  : null;
+
+  // The answer key, in order of who is most likely to be right about it.
+  const slot = keySlot(rid);
+  const key = qs.map((q,n) => {
+    if(slot.key[n] != null && slot.key[n] !== undefined) return slot.key[n];
+    if(pushed && Array.isArray(pushed.key) && pushed.key[n] != null) return String(pushed.key[n]);
+    if(draft && draft.qs[n] && draft.qs[n].k != null && draft.qs[n].o) return String(draft.qs[n].o[draft.qs[n].k] || '');
+    if(first && Array.isArray(first.keys) && first.keys[n]) return String(first.keys[n]);
+    return '';
+  });
+
+  const label = (i >= 0) ? (cfg.tags[i] || rid) : 'Predictions';
+  return { qs, src, worth, bases, bons, key, label, idx:i };
+}
+
+/* One correct answer, one player, one question. Returns 'hit' | 'mis' |
+   'non' — 'non' being "they didn't answer", which is not the same as
+   wrong and shouldn't look the same either. */
+function markOf(pick, ans){
+  if(!ans) return 'non';                       // no key yet, or a voided question
+  if(pick === '' || pick == null) return 'non';
+  return pick === ans ? 'hit' : 'mis';
+}
+
+function scoreSub(sub, spec){
+  const picks = sub.picks || [], nums = sub.nums || [], banks = sub.banks || [];
+  const slot = keySlot(gradeRid);
+  let right = 0, pts = 0, speed = 0, answered = 0;
+  const marks = spec.qs.map((q,n) => {
+    const m = markOf(picks[n], spec.key[n]);
+    if(picks[n]) answered++;
+    if(m === 'hit'){
+      right++;
+      const val = spec.bases ? (Number(spec.bases[n]) || 0) : (spec.worth || 0);
+      pts += val;
+      if(spec.bases){
+        // the number bonus, only when the host has entered the official one
+        const official = slot.nums[n];
+        if(official !== '' && official != null && String(nums[n]) === String(official))
+          pts += spec.bons ? (Number(spec.bons[n]) || 0) : 0;
+      }else{
+        speed += Number(banks[n]) || 0;
+      }
+    }
+    return m;
+  });
+  return { marks, right, pts, speed, answered };
+}
+
+function watchGradeSubs(){
+  if(gradeUnsub){ try{ gradeUnsub(); }catch(e){} gradeUnsub = null; }
+  gradeSubs = [];
+  if(!FB || !user) return;
+  const { F, db } = FB;
+  const rid = gradeRid;
+  try{
+    gradeUnsub = F.onSnapshot(F.collection(db,'nights',night,'rounds',rid,'subs'), snap=>{
+      if(rid !== gradeRid) return;              // a switch beat the callback home
+      gradeSubs = [];
+      snap.forEach(d => gradeSubs.push(Object.assign({ uid:d.id }, d.data())));
+      gradeSubs.sort((a,z)=>String(a.name||'').localeCompare(String(z.name||'')));
+      renderGrade();
+    }, err=>{
+      $('gradeNote').textContent = 'Could not read the answers: ' + ((err&&err.message)||err) +
+        '. That is a dashboard problem only — the players\' game is unaffected.';
+    });
+  }catch(e){}
+}
+
+function renderGrade(){
+  if(!$('gradeGrid')) return;
+  const spec = gradeSpec(gradeRid);
+  const n = gradeSubs.length;
+
+  $('gradeCount').textContent = n === 1 ? '1 phone' : n + ' phones';
+  const srcTxt = { pushed:'from your pushed round', draft:'from your draft',
+                   phones:'reported by the phones', none:'no questions yet' }[spec.src];
+  $('gradeSrcChip').textContent = srcTxt;
+
+  $('gradeNote').textContent = !n
+    ? 'Nothing has come in for this round yet. Phones send their picks the moment they finish the round — if the round hasn\'t been played, this stays empty.'
+    : spec.src === 'phones'
+      ? 'You didn\'t push this round, so the questions and a first guess at the answers came from the phones themselves. Check the answers below before you trust the ticks.'
+      : 'Graded against your key. Change any answer below and every row re-marks.';
+
+  /* ---- the key editor ---- */
+  const kw = $('gradeKey'); kw.innerHTML = '';
+  const slot = keySlot(gradeRid);
+  if(!spec.qs.length){
+    kw.innerHTML = '<p class="sub tip">No questions to score yet.</p>';
+  }else spec.qs.forEach((q,i)=>{
+    const p = document.createElement('p'); p.className='keyq';
+    p.textContent = (i+1) + '. ' + (q.t || '(no question text)');
+    kw.appendChild(p);
+    const row = document.createElement('div'); row.className='keyrow';
+    const num = document.createElement('span'); num.className='kn'; num.textContent='✓';
+    const sel = document.createElement('select');
+    sel.innerHTML = '<option value="">— nobody scores this one —</option>' +
+      q.o.map(o=>`<option value="${esc(o)}"${spec.key[i]===o?' selected':''}>${esc(o)}</option>`).join('');
+    sel.onchange = ()=>{ slot.key[i] = sel.value; saveKeys(); renderGrade(); };
+    row.appendChild(num); row.appendChild(sel);
+    // the prediction sheet's number bonuses
+    if(spec.bons && (Number(spec.bons[i])||0) > 0){
+      const inp = document.createElement('input');
+      inp.type='number'; inp.placeholder='official #';
+      inp.value = (slot.nums[i] == null ? '' : slot.nums[i]);
+      inp.onchange = ()=>{ slot.nums[i] = inp.value; saveKeys(); renderGrade(); };
+      row.appendChild(inp);
+    }
+    kw.appendChild(row);
+  });
+  $('gradeKeySub').textContent = spec.bons
+    ? 'Set the official result for each line. Where there\'s a number bonus, type the official number too — an exact match adds the bonus.'
+    : 'Set what actually happened. This saves to this browser as you go, so a refresh mid-night loses nothing.';
+
+  /* ---- the grid ---- */
+  const g = $('gradeGrid');
+  if(!n || !spec.qs.length){
+    g.innerHTML = '<p class="sub tip">The grid fills in as phones finish the round.</p>';
+    return;
+  }
+  const rows = gradeSubs.map(s => Object.assign({ s }, scoreSub(s, spec)));
+  rows.sort((a,z)=> z.pts - a.pts || z.speed - a.speed || z.right - a.right);
+
+  const head = '<tr><th class="p">Player</th>' +
+    spec.qs.map((q,i)=>`<th title="${esc(q.t)}">Q${i+1}</th>`).join('') +
+    '<th class="tot">Right</th><th class="tot">Pts</th>' +
+    (spec.bases ? '' : '<th class="tot">⚡</th>') + '</tr>';
+
+  const body = rows.map(r=>{
+    const cells = r.marks.map((m,i)=>{
+      const pick = (r.s.picks||[])[i] || '';
+      const numv = (r.s.nums||[])[i];
+      const glyph = m==='hit' ? '✓' : m==='mis' ? '✕' : '·';
+      const shown = pick ? esc(pick) + (numv ? ` <span class="pk">(${esc(numv)})</span>` : '') : '—';
+      return `<td class="${m}"><span class="mkc">${glyph}</span> ${shown}</td>`;
+    }).join('');
+    return `<tr><td class="p" title="${esc(r.s.uid)}">${esc(r.s.name||'player')}</td>${cells}` +
+      `<td class="tot">${r.right}/${spec.qs.length}</td><td class="tot">${r.pts}</td>` +
+      (spec.bases ? '' : `<td class="tot">${r.speed}</td>`) + '</tr>';
+  }).join('');
+
+  g.innerHTML = `<table class="grid"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+
+/* What the host actually reads out. Plain text, no table drawing — it
+   has to survive being pasted into a group chat. */
+function gradeText(){
+  const spec = gradeSpec(gradeRid);
+  if(!gradeSubs.length || !spec.qs.length) return '';
+  const rows = gradeSubs.map(s => Object.assign({ s }, scoreSub(s, spec)))
+                        .sort((a,z)=> z.pts - a.pts || z.speed - a.speed);
+  const lines = [`STATS — ${spec.label}`,
+    spec.key.map((k,i)=>`${i+1}. ${k||'(voided)'}`).join('  ·  '), ''];
+  rows.forEach((r,i)=>{
+    lines.push(`${i+1}. ${r.s.name||'player'} — ${r.right}/${spec.qs.length} · ${r.pts} pt${r.pts===1?'':'s'}` +
+      (spec.bases ? '' : ` · ⚡${r.speed}`));
+  });
+  return lines.join('\n');
+}
+
+function gradeCsv(){
+  const spec = gradeSpec(gradeRid);
+  const q = s => '"' + String(s==null?'':s).replace(/"/g,'""') + '"';
+  const rows = gradeSubs.map(s => Object.assign({ s }, scoreSub(s, spec)))
+                        .sort((a,z)=> z.pts - a.pts);
+  // The tail is built once and shared, because filtering empties out of a
+  // row is how a spreadsheet silently shifts every column left the moment
+  // one player skips one question.
+  const tail = ['Right','Points'].concat(spec.bases ? [] : ['Speed']);
+  const out = [['Player','Device'].concat(spec.qs.map((x,i)=>'Q'+(i+1)))
+                .concat(spec.qs.map((x,i)=>'Q'+(i+1)+' right?'))
+                .concat(tail).map(q).join(',')];
+  rows.forEach(r=>{
+    out.push([r.s.name||'player', r.s.uid]
+      .concat(spec.qs.map((x,i)=>(r.s.picks||[])[i]||''))
+      .concat(r.marks.map(m=>m==='hit'?'right':m==='mis'?'wrong':'no answer'))
+      .concat([r.right, r.pts]).concat(spec.bases ? [] : [r.speed])
+      .map(q).join(','));
+  });
+  const blob = new Blob(['﻿' + out.join('\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `stats-${night}-${gradeRid}.csv`;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+
+/* The end-of-night roll-up. One getDocs per round rather than a listener
+   per round — five reads times however many played, once, when you ask
+   for it. Leaving five live listeners open all night is how a free tier
+   turns into a dead app in the fourth quarter. */
+async function gradeTotals(){
+  if(!FB || !user) return;
+  const { F, db } = FB, cfg = nightCfg(night);
+  const rids = cfg.tags.map((t,i)=>'r'+i).concat(['rP']);
+  const box = $('gradeTotals');
+  box.innerHTML = '<p class="sub">Reading every round…</p>';
+  const tally = {};   // uid -> {name, pts, speed, right, asked, per:{}}
+  const savedRid = gradeRid, savedSubs = gradeSubs;
+  try{
+    for(const rid of rids){
+      const snap = await F.getDocs(F.collection(db,'nights',night,'rounds',rid,'subs'));
+      const subs = []; snap.forEach(d=>subs.push(Object.assign({uid:d.id}, d.data())));
+      if(!subs.length) continue;
+      // gradeSpec / scoreSub read the module's current round; borrow it.
+      gradeRid = rid; gradeSubs = subs;
+      const spec = gradeSpec(rid);
+      if(!spec.qs.length) continue;
+      subs.forEach(s=>{
+        const r = scoreSub(s, spec);
+        const t = tally[s.uid] || (tally[s.uid] = { name:s.name||'player', pts:0, speed:0, right:0, asked:0, per:{} });
+        if(s.name) t.name = s.name;
+        t.pts += r.pts; t.speed += r.speed; t.right += r.right; t.asked += spec.qs.length;
+        t.per[rid] = r.pts;
+      });
+    }
+  }catch(e){
+    box.innerHTML = `<div class="banner bad">Could not add up the night: ${esc((e&&e.message)||e)}</div>`;
+    gradeRid = savedRid; gradeSubs = savedSubs; return;
+  }
+  gradeRid = savedRid; gradeSubs = savedSubs;
+
+  const list = Object.values(tally).sort((a,z)=> z.pts - a.pts || z.speed - a.speed);
+  if(!list.length){ box.innerHTML = '<p class="sub tip">Nobody has finished a round yet.</p>'; return; }
+  const cols = rids.filter(rid => list.some(t => t.per[rid] !== undefined));
+  const hdr = cols.map(rid => rid==='rP' ? 'Pred' : (cfg.tags[gradeIdx(rid)] || rid));
+  box.innerHTML =
+    '<div class="gwrap"><table class="grid"><thead><tr><th class="p">Player</th>' +
+      hdr.map(h=>`<th>${esc(h)}</th>`).join('') +
+      '<th class="tot">Right</th><th class="tot">TOTAL</th><th class="tot">⚡</th></tr></thead><tbody>' +
+    list.map((t,i)=>`<tr><td class="p">${i+1}. ${esc(t.name)}</td>` +
+      cols.map(rid=>`<td>${t.per[rid] === undefined ? '—' : t.per[rid]}</td>`).join('') +
+      `<td class="tot">${t.right}/${t.asked}</td><td class="tot">${t.pts}</td><td class="tot">${t.speed}</td></tr>`).join('') +
+    '</tbody></table></div>' +
+    `<p class="sub tip" style="margin-top:10px">Ranked by points, ties broken by ⚡ speed — the same rule the phones use. Rounds nobody has played are left off.</p>`;
+}
+
+/* ---------------- TAB 4: the room ---------------- */
 async function refreshRoom(){
   if(!FB || !user) return;
   const { F, db } = FB;
