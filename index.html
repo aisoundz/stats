@@ -26,6 +26,7 @@
   .screen{flex:1;display:none;flex-direction:column;padding:20px 18px 96px;animation:fade .35s ease}
   .screen.active{display:flex}
   @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.72)}}
 
   /* header brand */
   .brand{display:flex;align-items:center;gap:10px;justify-content:center;margin:6px 0 2px}
@@ -254,6 +255,29 @@
   .tt-chip{font-size:12.5px;font-weight:700;padding:10px 11px;border-radius:11px;border:1px solid var(--line);
     background:var(--card);color:var(--muted);cursor:pointer;line-height:1.4;text-align:left}
   .tt-chip:hover{border-color:var(--gold);color:var(--ink)}
+  /* ---- the room ---------------------------------------------------
+     A posted line has to look different from a line you are about to
+     post, or the sheet reads as one long undifferentiated list and
+     nobody can tell what already happened from what might.          */
+  .tt-act{display:flex;gap:7px;margin-top:7px}
+  .tt-act button{flex:1;font-size:10.5px;font-weight:900;letter-spacing:.04em;padding:8px 6px;
+    border-radius:10px;border:1px solid var(--line2);background:var(--card2);color:var(--muted);cursor:pointer}
+  .tt-act button.send{border-color:rgba(25,195,214,.5);color:var(--teal2);background:rgba(25,195,214,.10)}
+  .tt-act button:disabled{opacity:.45;cursor:default}
+  .tt-feed{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+  .tt-msg{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:10px 12px}
+  .tt-msg.mine{border-color:rgba(25,195,214,.45);background:linear-gradient(160deg,rgba(25,195,214,.09),var(--card) 70%)}
+  .tt-msg .who{display:flex;align-items:baseline;gap:7px;font-size:11px;font-weight:900;letter-spacing:.03em}
+  .tt-msg .who .dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px;align-self:center}
+  .tt-msg .who .ago{margin-left:auto;font-size:10px;color:var(--dim);font-weight:700;letter-spacing:0}
+  .tt-msg .line{font-size:13px;font-weight:700;line-height:1.45;color:var(--ink);margin-top:5px}
+  .tt-empty{text-align:center;padding:22px 12px;color:var(--dim);font-size:12.5px;font-weight:650;line-height:1.55}
+  .tt-live{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:900;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--green);margin-bottom:8px}
+  .tt-live i{width:7px;height:7px;border-radius:50%;background:var(--green);display:block;
+    animation:pulse 1.9s ease-in-out infinite;font-style:normal}
+  .tt-live.off{color:var(--dim)}
+  .tt-live.off i{background:var(--dim);animation:none}
   .tt-crew{display:flex;gap:7px;align-items:center;margin:7px 0}
   .tt-crew input{margin:0}
   .tt-crew input.n{flex:1;min-width:0}
@@ -305,8 +329,112 @@
 .rdot{width:8px;height:8px;border-radius:50%;background:#4b5563;flex:none}
 .rdot.on{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.15)}
 .rdot.err{background:#ef4444}
-.roombar b{color:var(--fg)}
+.roombar b{color:var(--ink)}
 .roomrank{margin-left:auto;font-size:11.5px;color:var(--dim)}
+
+/* ---- the waiting room ----------------------------------------------
+   Eleven minutes is a long time to look at a screen with nothing on it,
+   and between quarters that is exactly what this app was. These two
+   cards are what fills the wait: the score of the actual game, and where
+   you stand in the actual room. Both stay hidden until there is
+   something true to put in them — an empty scoreboard reading 0–0 at
+   halftime is worse than no scoreboard at all. */
+.sbcard{margin:10px 0 0;padding:12px 14px;border-radius:14px;
+  background:linear-gradient(180deg,rgba(47,107,255,.10),rgba(255,255,255,.02));
+  border:1px solid var(--line)}
+.sbhead{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  font-size:10.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
+.sbhead .sblive{color:var(--red)}
+.sbrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px}
+.sbteam{display:flex;align-items:center;gap:6px;min-width:0}
+.sbemo{font-size:17px;line-height:1}
+.sbabbr{font-size:14px;font-weight:900;letter-spacing:.04em}
+.sbnums{white-space:nowrap}
+.sbnum{font-size:29px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
+.sbnum.lead{color:var(--teal2)}
+.sbdash{color:var(--line2);font-weight:900;font-size:20px;padding:0 2px}
+.sbnote{font-size:11.5px;color:var(--muted);margin:9px 0 0;line-height:1.45}
+.sbstale{font-size:10.5px;color:var(--dim);margin:5px 0 0}
+
+.standcard{margin:10px 0 0;padding:12px 14px;border-radius:14px;
+  background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.standhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+  font-size:10.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:4px}
+.standrow{display:flex;align-items:center;gap:9px;padding:6px 0;
+  border-top:1px solid rgba(255,255,255,.05);font-size:13px}
+.standrow:first-child{border-top:0}
+.standrow .sr{width:18px;text-align:right;font-size:11px;font-weight:900;color:var(--dim);flex:none}
+.standrow .sdot{width:9px;height:9px;border-radius:50%;flex:none}
+.standrow .sn{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.standrow .sp{font-weight:900;font-variant-numeric:tabular-nums}
+.standrow.me{color:var(--teal2)}
+.standrow.me .sn{font-weight:900}
+.standrow.me .sr{color:var(--teal2)}
+.standyou{font-size:11.5px;color:var(--dim);margin:8px 0 0;line-height:1.45}
+
+/* ---- the final buzzer ----------------------------------------------
+   "The ending can be much cleaner and better."
+
+   What it was: a number with no context, two stat tiles that meant
+   different things in different modes, and then eight buttons stacked
+   down the page — three of which open previews of things that do not
+   exist yet. The last thing a player saw was a menu.
+
+   What it is now, in order: the number as a ring out of the real
+   maximum, where the points came from, anything still sitting with the
+   host, the one call they should screenshot, and the room. One gold
+   button. Everything else folded away behind "More". */
+.fhero{padding:18px 14px 16px}
+.fring{position:relative;width:168px;height:168px;margin:2px auto 4px}
+.fring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.fring circle{fill:none;stroke-width:11;stroke-linecap:round}
+.fring .ftrack{stroke:var(--line)}
+.fring .farc{stroke:url(#fgrad);transition:stroke-dashoffset 1.1s cubic-bezier(.2,.8,.25,1)}
+.fring .fin{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:2px}
+.fring .fin .bignum{font-size:46px}
+.fof{font-size:11.5px;color:var(--dim);font-weight:800;letter-spacing:.05em}
+
+.fbhead{font-size:10.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:10px}
+.fbrow{margin-top:12px}
+.fbrow:first-child{margin-top:0}
+.fbtop{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:13.5px}
+.fbl{font-weight:750}
+.fbv{font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fbv i{font-style:normal;font-weight:800;font-size:11.5px;color:var(--dim)}
+.fbbar{height:7px;border-radius:999px;background:var(--line);overflow:hidden;margin-top:6px}
+.fbbar > i{display:block;height:100%;border-radius:999px;
+  background:linear-gradient(90deg,var(--teal),var(--blue2));width:0;
+  transition:width .9s cubic-bezier(.2,.8,.25,1)}
+.fbbar.gold > i{background:linear-gradient(90deg,#ffb020,var(--gold))}
+.fbbar.flat > i{background:var(--line2)}
+.fbnote{font-size:11px;color:var(--dim);font-weight:600;margin-top:5px}
+.fbspeed{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:13.5px}
+
+/* A score that is still moving must say so. This is the same promise the
+   review screen makes when it refuses to grade an un-pushed round — kept
+   here so the last screen of the night cannot quietly contradict it. */
+.fpend{margin:10px 0 0;padding:12px 14px;border-radius:14px;font-size:12.5px;line-height:1.5;
+  color:var(--ink);background:rgba(255,197,77,.09);border:1px solid rgba(255,197,77,.32)}
+.fpend b{color:var(--gold)}
+
+.fcall{border-color:rgba(46,230,166,.35);
+  background:linear-gradient(180deg,rgba(46,230,166,.09),rgba(255,255,255,.02))}
+.fchead{font-size:10.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--green)}
+.fcq{font-size:15px;font-weight:800;line-height:1.35;margin-top:7px}
+.fca{font-size:13px;font-weight:750;color:var(--muted);margin-top:7px}
+.fca b{color:var(--teal2)}
+
+.fmore{margin-top:10px;border:1px solid var(--line);border-radius:14px;background:var(--card);overflow:hidden}
+.fmore > summary{list-style:none;cursor:pointer;padding:14px 16px;font-size:13.5px;font-weight:800;
+  color:var(--muted);display:flex;align-items:center;justify-content:space-between}
+.fmore > summary::-webkit-details-marker{display:none}
+.fmore > summary::after{content:'▾';font-size:12px;color:var(--dim)}
+.fmore[open] > summary::after{content:'▴'}
+.fmore .fmorein{padding:0 12px 12px}
+.fmore .btn{margin-top:8px}
 </style>
 </head>
 <body>
@@ -343,7 +471,7 @@
     </div>
 
     <div class="card">
-      <div class="step"><div class="num">1</div><div><b id="step1h">Predict before tip-off</b><p id="step1p">Fill your prediction sheet — winner, stat leaders & bonus amounts. Worth up to 50 pts.</p></div></div>
+      <div class="step"><div class="num">1</div><div><b id="step1h">Predict before tip-off</b><p id="step1p">Fill your prediction sheet — winner, stat leaders &amp; bonus amounts. Worth up to 60 of the night's 100 pts.</p></div></div>
       <div class="step"><div class="num">2</div><div><b id="step2h">Answer at every quarter break</b><p id="step2p">4 questions about what JUST happened — and not the ones you'd expect. Points rise: Q1 = 1pt → Q4 = 4pt, so the last quarter is worth four times the first. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.</p></div></div>
       <div class="step"><div class="num">3</div><div><b>Score with the crew</b><p id="step3p">When the host posts the answers, tap them to score your quarter. Most points wins the night; ⚡ Speed breaks ties.</p></div></div>
     </div>
@@ -433,8 +561,8 @@
     </div>
 
     <div class="card tight">
-      <h2 style="font-size:14px" id="rulePredH">📝 Predictions — up to 50 pts</h2>
-      <p class="sub" style="font-size:12.5px" id="rulePredP">Lock 6 picks before tip-off: winning team (5 pts) and the leader in points, assists, steals, rebounds & blocks (4 pts each). Nail the leader's exact stat total for a +5 bonus per category. Predictions can't be changed after tip-off.</p>
+      <h2 style="font-size:14px" id="rulePredH">📝 Predictions — up to 60 pts</h2>
+      <p class="sub" style="font-size:12.5px" id="rulePredP">Lock 6 picks before tip-off: winning team (10 pts) and the leader in points, assists, steals, rebounds &amp; blocks (5 pts each). Nail the leader's exact stat total for a +5 bonus per category — so a category you fully nail is worth 10. Predictions can't be changed after tip-off.</p>
     </div>
 
     <div class="card tight" id="ruleCatch" style="display:none">
@@ -459,7 +587,7 @@
 
     <div class="card tight">
       <h2 style="font-size:14px">🏁 Scoring the night</h2>
-      <p class="sub" style="font-size:12.5px" id="ruleScoreP">When the host announces each quarter's answers (from the broadcast + official box score), tap them in your app to score the quarter. After the final buzzer, enter the official stat leaders to score your predictions. Max regulation score: 80. Post your result card to the group chat — highest score wins the night, Speed breaks ties.</p>
+      <p class="sub" style="font-size:12.5px" id="ruleScoreP">When the host posts each quarter's answers (from the broadcast + official box score), your quarter scores itself — there is nothing to tap. After the final buzzer the host enters the official stat leaders and your prediction sheet scores too. Max score: 100. Post your result card to the group chat — highest score wins the night, Speed breaks ties.</p>
     </div>
 
     <div class="card tight">
@@ -474,7 +602,21 @@
     <button class="btn" onclick="go('landing')">← Back</button>
   </section>
 
-  <!-- 2. NAME -->
+  <!-- 2. NAME + EMAIL — the sign-up gate.
+       The ask is here rather than on a screen of its own, and that is the
+       whole design. Game Night #1's loudest note was "to many touches" and
+       "the next page having the user confirm is a huge friction", so a
+       dedicated sign-up page would have been paid for in the one currency
+       we don't have. This screen already existed and already had a
+       Continue button; the email rides along on it for zero extra taps.
+
+       One field. No password, no magic link, no confirmation screen, no
+       "check your inbox". We remember it on the device, so it is asked
+       once ever — a returning player sees it pre-filled and taps straight
+       through. And it never blocks play: the write to the backend is
+       fire-and-forget, and if it fails the player still plays. An email we
+       missed is a bad afternoon; a player locked out of a live game
+       because a database was down is the end of the night. -->
   <section class="screen" id="s-name">
     <div class="brand"><span class="logo">STATS</span></div>
     <h1 class="center" style="margin-top:26px">Grab your handle</h1>
@@ -482,17 +624,33 @@
     <div class="card">
       <label class="fld">Display name</label>
       <input id="playerName" maxlength="16" placeholder="e.g. CourtsideKing" oninput="checkName()">
+      <label class="fld" for="gateEmail">Email</label>
+      <input id="gateEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" oninput="checkName()">
+      <p class="foot" style="margin:6px 0 0" id="gateNote">So your card has a name on it when the host settles the night. No password, and we only ask once.</p>
+      <!-- The opt-in is a real, separate, unticked box. It is not the email
+           field, and it is not required to continue — the button below stays
+           live either way. That is not caution for its own sake: the database
+           itself refuses to store a contact row without consent == true (see
+           firestore.rules /signups), so a pre-ticked box here would not buy a
+           single extra address, it would only make the ones we have worth
+           less. Phone is deliberately NOT on this screen; texting means TCPA
+           and 10DLC, and neither is signed off yet. -->
+      <label style="display:flex;gap:9px;align-items:flex-start;margin-top:12px;font-size:12px;line-height:1.45;color:var(--dim);cursor:pointer">
+        <input type="checkbox" id="gateConsent" style="margin-top:2px;flex:0 0 auto;width:17px;height:17px;accent-color:var(--teal)">
+        <span>Email me when the next STATS game night is on — one heads-up, nothing else. Not required to play, score, or win. Unsubscribe any time.</span>
+      </label>
       <label class="fld">Pick your color</label>
       <div class="chips" id="colorPick"></div>
       <button class="btn" id="nameBtn" disabled onclick="startPredict()">Continue to picks →</button>
+      <button class="btn ghost" style="margin-top:8px;font-size:12.5px" onclick="openJoin('name',gateEmailValue())">Tell us what you watch →</button>
     </div>
-    <p class="foot">Free to enter • No purchase necessary • 18+</p>
+    <p class="foot">Free to enter • No purchase necessary • 18+ • We don't sell your address.</p>
   </section>
 
   <!-- 3. PREDICTION SHEET -->
   <section class="screen" id="s-predict">
     <div class="qmeta" style="margin-top:4px">
-      <span class="qn" id="predMeta">PRE-GAME PREDICTION SHEET</span><span class="worth" id="predWorth">Up to 50 pts</span>
+      <span class="qn" id="predMeta">PRE-GAME PREDICTION SHEET</span><span class="worth" id="predWorth">Up to 60 pts</span>
     </div>
     <h1 style="margin-top:2px" id="predHead">Make your picks 📝</h1>
     <p class="sub" id="predSub">Lock these in before tip-off. Bonus points if you nail the exact number.</p>
@@ -522,6 +680,33 @@
       <span id="roomTxt">Connecting to tonight's room…</span>
       <span class="roomrank" id="roomRank"></span>
     </div>
+    <!-- LIVE SCORE + LIVE STANDINGS.
+         Game Night #1's flattest stretch was the wait between quarters:
+         locked picks, a button that does nothing yet, and no reason to
+         keep the app open. "No live scores shown", "no participant scores
+         shown", "game updates while waiting for Q3" were three separate
+         notes about the same eleven minutes.
+
+         Neither card is ever guessed at. The score is whatever the host
+         typed into the Control Room while watching the same broadcast the
+         player is watching, and the standings are the room's real rows.
+         When we don't have either, the cards are not there. -->
+    <div class="sbcard" id="sbCard" style="display:none">
+      <div class="sbhead"><span id="sbPeriod">Score</span><span class="sblive" id="sbLive"></span></div>
+      <div class="sbrow">
+        <div class="sbteam"><span class="sbemo" id="sbAwayEmo"></span><span class="sbabbr" id="sbAwayAbbr"></span></div>
+        <div class="sbnums"><span class="sbnum" id="sbAwayNum">0</span><span class="sbdash">-</span><span class="sbnum" id="sbHomeNum">0</span></div>
+        <div class="sbteam"><span class="sbabbr" id="sbHomeAbbr"></span><span class="sbemo" id="sbHomeEmo"></span></div>
+      </div>
+      <p class="sbnote" id="sbNote" style="display:none"></p>
+      <p class="sbstale" id="sbStale"></p>
+    </div>
+
+    <div class="standcard" id="standCard" style="display:none">
+      <div class="standhead"><span id="standTitle">Tonight's top 5</span><span id="standWhen"></span></div>
+      <div id="standList"></div>
+      <p class="standyou" id="standYou"></p>
+    </div>
     <div class="card" id="catchCard" style="display:none">
       <div class="catchhead"><b id="catchTitle">⚡ Live catches</b><span class="cpts" id="catchPtsLbl">6 × 1 pt</span></div>
       <p class="sub" id="catchSub" style="font-size:12px;margin:4px 0 0">Set these before kickoff. They score themselves while you watch — no tapping during the match.</p>
@@ -529,7 +714,7 @@
     </div>
     <div style="flex:1"></div>
     <button class="btn" id="lobbyBtn" onclick="startQuarter(0)">Start Quarter 1 ▶</button>
-    <button class="btn ghost" onclick="openTalk()">🔥 Talk trash in the group chat</button>
+    <button class="btn ghost" onclick="openTalk()">🔥 Talk trash</button>
     <p class="foot" id="lobbyFoot">In a real live run this waits for the on-court quarter to end. Here you drive it.</p>
   </section>
 
@@ -569,7 +754,7 @@
     <p class="sub center" id="breakSub">Here's how the room stacks up.</p>
     <div id="lbList"></div>
     <button class="btn" id="breakBtn" onclick="nextFromBreak()">Start Quarter 2 ▶</button>
-    <button class="btn ghost" onclick="openTalk()">🔥 Talk trash in the group chat</button>
+    <button class="btn ghost" onclick="openTalk()">🔥 Talk trash</button>
   </section>
 
   <!-- QUARTER REVIEW (Game Night) -->
@@ -581,7 +766,7 @@
     <button class="btn teal" id="revBtn" disabled onclick="confirmReview()">Confirm &amp; score quarter</button>
     <div id="revResult"></div>
     <button class="btn" id="revNextBtn" style="display:none" onclick="afterReview()">Continue →</button>
-    <button class="btn ghost" id="revTalkBtn" style="display:none" onclick="openTalk()">🔥 Talk trash in the group chat</button>
+    <button class="btn ghost" id="revTalkBtn" style="display:none" onclick="openTalk()">🔥 Talk trash</button>
   </section>
 
   <!-- PREDICTION REVIEW (Game Night final) -->
@@ -602,14 +787,53 @@
   <section class="screen" id="s-final">
     <div class="center" style="margin-top:14px"><span class="pill" id="finalPill">Final buzzer 🚨</span></div>
     <h1 class="center" style="margin-top:12px" id="finalTitle">You finished!</h1>
-    <div class="card center">
-      <div class="bignum" id="finalPts">0</div>
-      <p class="sub" style="margin-top:6px" id="finalMax">total points • out of 80 possible</p>
+
+    <!-- THE NUMBER. A ring instead of a bare digit, because "62" means
+         nothing and "62 of 100, three quarters of the way round" means
+         something at a glance — which is the whole job of the screen
+         people screenshot. -->
+    <div class="card center fhero">
+      <div class="fring">
+        <svg viewBox="0 0 132 132" aria-hidden="true">
+          <defs><linearGradient id="fgrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#28e0d0"/><stop offset="100%" stop-color="#4d86ff"/>
+          </linearGradient></defs>
+          <circle class="ftrack" cx="66" cy="66" r="58"></circle>
+          <circle class="farc" id="fArc" cx="66" cy="66" r="58"></circle>
+        </svg>
+        <div class="fin">
+          <div class="bignum" id="finalPts">0</div>
+          <div class="fof" id="finalMax">OUT OF 100</div>
+        </div>
+      </div>
       <div class="statgrid">
-        <div class="stat"><div class="v" id="finalRank">–</div><div class="k">Final rank</div></div>
-        <div class="stat"><div class="v" id="finalPct">–</div><div class="k">Beat this % of players</div></div>
+        <div class="stat"><div class="v" id="finalRank">–</div><div class="k" id="finalRankK">Final rank</div></div>
+        <div class="stat"><div class="v" id="finalPct">–</div><div class="k" id="finalPctK">Beat this % of players</div></div>
       </div>
     </div>
+
+    <!-- WHERE THE POINTS CAME FROM. Two players finishing on 54 did not
+         play the same night — one read the game, one read the box score.
+         The split is the interesting part and it was nowhere on this
+         screen. -->
+    <div class="card" id="fBreak" style="display:none">
+      <div class="fbhead">Where the points came from</div>
+      <div id="fBreakRows"></div>
+    </div>
+
+    <!-- ANYTHING STILL WITH THE HOST. A live round the host never posted
+         answers for is held, not scored — so the final number is not
+         final yet, and the last screen of the night is not allowed to
+         pretend otherwise. -->
+    <div class="fpend" id="fPend" style="display:none"></div>
+
+    <!-- THE ONE TO SCREENSHOT. -->
+    <div class="card fcall" id="fCall" style="display:none">
+      <div class="fchead" id="fCallHead">🎯 Best call of the night</div>
+      <div class="fcq" id="fCallQ"></div>
+      <div class="fca" id="fCallA"></div>
+    </div>
+
     <div id="finalLb"></div>
     <div class="card tight" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
       <div><b style="font-size:15px">🔥 <span id="streakN">4</span>-game streak</b>
@@ -633,14 +857,23 @@
       <button class="btn teal" id="suBtn" style="margin-top:12px" onclick="submitSignup()">Count me in →</button>
       <p class="foot" id="suNote" style="margin-top:8px">We don't sell your info. We're not texting anyone yet — the number just means you're on the list when we start.</p>
     </div>
+    <!-- One thing to do, then one more, then a drawer. The old stack put
+         "Leagues (preview)" and "STATS+" at the same visual weight as the
+         share card — so the last thing a player saw at the best moment of
+         their night was a menu of things that are not built yet. -->
     <button class="btn gold" onclick="openShare()">📲 Share my result card</button>
-    <button class="btn teal" onclick="openTalk()">🔥 Talk trash in the group chat</button>
-    <button class="btn teal" onclick="openTally()">🏆 Host: tally the crew &amp; crown a winner</button>
-    <button class="btn ghost" onclick="openRoast()">😈 Post-game roast card</button>
-    <button class="btn ghost" onclick="openLeague()">🏟️ Leagues (preview)</button>
-    <button class="btn ghost" onclick="go('plus')">⭐ See STATS+ (season pass)</button>
-    <button class="btn ghost" onclick="openHost()">👀 Peek behind the curtain (Host panel)</button>
-    <button class="btn ghost" onclick="restart()">Play again</button>
+    <button class="btn teal" onclick="openTalk()">🔥 Talk trash</button>
+    <details class="fmore">
+      <summary>More — host tools, roast card, season pass</summary>
+      <div class="fmorein">
+        <button class="btn ghost" onclick="openTally()">🏆 Host: tally the crew &amp; crown a winner</button>
+        <button class="btn ghost" onclick="openRoast()">😈 Post-game roast card</button>
+        <button class="btn ghost" onclick="openLeague()">🏟️ Leagues (preview)</button>
+        <button class="btn ghost" onclick="go('plus')">⭐ See STATS+ (season pass)</button>
+        <button class="btn ghost" onclick="openHost()">👀 Peek behind the curtain (Host panel)</button>
+        <button class="btn ghost" onclick="restart()">Play again</button>
+      </div>
+    </details>
     <p class="foot">Prizes awarded to the sponsor's verified top scorers after the final box score is confirmed. Winning never requires payment.</p>
   </section>
 
@@ -778,12 +1011,13 @@
       <div class="tt-head"><b id="ttTitle">🔥 Talk trash</b>
         <button class="tt-x" onclick="closeTalk()">✕</button></div>
       <div class="tt-tabs" id="talkTabs">
+        <div class="tt-tab" data-t="room" onclick="setTtTab('room')">📣 The room</div>
         <div class="tt-tab on" data-t="burns" onclick="setTtTab('burns')">🔥 Burns</div>
         <div class="tt-tab" data-t="callout" onclick="setTtTab('callout')">🎯 Callout</div>
         <div class="tt-tab" data-t="taunts" onclick="setTtTab('taunts')">💬 Taunts</div>
       </div>
       <div id="talkBody"></div>
-      <p class="foot" style="margin-top:12px">One tap copies the line. Paste it in the group chat you already run — STATS never sends anything for you.</p>
+      <p class="foot" style="margin-top:12px" id="ttFoot">Post it to the room so everyone playing tonight sees it, or copy it for the group chat you already run.</p>
     </div>
   </div>
 
@@ -840,6 +1074,8 @@ window.STATS_FIREBASE = {
      SB.mySub(id)  -> obj|null  what I already locked for that round
      SB.joined()   -> int|null  everyone who played tonight, no time cutoff
      SB.signup(o)  -> {ok,why}  opt in to hear about the next game night
+     SB.say(o)     -> {ok,why}  post one line into tonight's room
+     SB.talk(sinceMs) -> [] |null  lines posted since that moment
      SB.onState(f)              subscribe to state changes
    ===================================================================== */
 (function () {
@@ -858,6 +1094,9 @@ window.STATS_FIREBASE = {
   var COUNT_MS     = 90000;
   var PRESENT_MS   = 360000;  // "here now" = seen in the last 6 minutes
   var TOP_N        = 10;
+  var TALK_N       = 30;      // lines held in the room
+  var TALK_MAX     = 25;      // most one device may post in a night
+  var TALK_GAP_MS  = 8000;    // and how fast — a floor on the shout button
   var MAX_CALLS    = 4000;    // circuit breaker per device per session
 
   /* ---- null backend: the honest default ---------------------------- */
@@ -877,6 +1116,9 @@ window.STATS_FIREBASE = {
     submit: function () { return Promise.resolve(false); },
     mySub:  function () { return Promise.resolve(null); },
     signup: function () { return Promise.resolve(false); },
+    scoreboard: function () { return Promise.resolve(null); },
+    say:   function () { return Promise.resolve({ ok:false, why:'offline' }); },
+    talk:  function () { return Promise.resolve(null); },
     onState: function (f) { listeners.push(f); try { f(SB.state); } catch (e) {} }
   };
   window.SB = SB;
@@ -1019,6 +1261,44 @@ window.STATS_FIREBASE = {
       var snap = await F.getCountFromServer(
         F.collection(db, 'nights', nightId, 'players'));
       return snap.data().count;
+    } catch (e) { return null; }
+  };
+
+  /* ---- the actual game score ----------------------------------------
+     Eleven minutes is a long time to look at a screen that has nothing on
+     it, and between quarters that is exactly what this app was: locked
+     picks, a button that does nothing yet, and silence. The host's note
+     after Game Night #1 was blunt about it — no live score, no live
+     standings, nothing to look at while you wait.
+
+     There is no play-by-play feed behind this (a paid provider is a
+     decision for later), so the number comes from the one source we
+     actually have: the host types it into the Control Room. That is a
+     human typing a score they can see on their own television, which is
+     slower than a feed and more honest than a guess.
+
+     One read. It is the night document, which every phone already has
+     permission to read, so this costs a single document read per poll
+     and needs no new index and no rules change.                        */
+  SB.scoreboard = async function () {
+    if (!SB.enabled || !nightId || !budget()) return null;
+    try {
+      var snap = await F.getDoc(F.doc(db, 'nights', nightId));
+      if (!snap.exists()) return null;
+      var v = snap.data() || {};
+      if (!v.score) return null;
+      var sc = v.score;
+      // Never hand the UI a half-written scoreboard. A host mid-typing is a
+      // real state and "Fever 41 — Lynx undefined" is not a thing to show.
+      var h = Number(sc.home), a = Number(sc.away);
+      if (!isFinite(h) || !isFinite(a)) return null;
+      return {
+        home: Math.max(0, Math.round(h)),
+        away: Math.max(0, Math.round(a)),
+        period: String(sc.period || '').slice(0, 24),
+        note:   String(sc.note   || '').slice(0, 90),
+        at:     sc.at || null
+      };
     } catch (e) { return null; }
   };
 
@@ -1237,13 +1517,24 @@ window.STATS_FIREBASE = {
     var prize  = strList(o.prize,   8, 40); if (prize)  row.prize  = prize;
     var teams  = String(o.teams || '').slice(0, 120).trim(); if (teams) row.teams = teams;
     var freq   = String(o.freq  || '').slice(0, 40).trim();  if (freq)  row.freq  = freq;
+    // Which form produced this row. Two of them exist now — the one-field
+    // gate on the handle screen and the full "what do you watch" sheet —
+    // and when a consent wording is ever questioned, "which screen was she
+    // looking at" is the first thing anyone will ask.
+    var src    = String(o.src   || '').slice(0, 24).trim();  if (src)   row.src   = src;
     // One silent retry. Firestore's transient errors ('unavailable',
     // 'deadline-exceeded') are exactly the ones that clear on their own,
     // and asking someone to re-type an email because a packet dropped is
     // how you lose the contact.
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
-        await F.setDoc(F.doc(db, 'signups', SB.me.uid), row);
+        // MERGE vs REPLACE, and it matters. The full sheet REPLACES, because
+        // un-ticking a sport has to actually remove it. The one-field gate
+        // MERGES, because it knows about an email and a name and nothing
+        // else — a replace there would quietly wipe a profile somebody had
+        // already filled in on the join screen.
+        await F.setDoc(F.doc(db, 'signups', SB.me.uid), row,
+                       o.merge === true ? { merge: true } : undefined);
         return { ok:true };
       } catch (e) {
         var code = (e && (e.code || e.name)) || 'unknown';
@@ -1259,6 +1550,95 @@ window.STATS_FIREBASE = {
       }
     }
     return { ok:false, why:'unknown' };
+  };
+
+  /* ---- the room -----------------------------------------------------
+     Game Night #1's blunt note: "trash talk has nowhere to post." The
+     app wrote the line and then handed it to the clipboard, which means
+     the joke landed in whatever group chat you happened to have open —
+     or nowhere, if you were playing alone.
+
+     So there is now a room. One collection per night, public to read,
+     append-only for players, deletable by the host. Three deliberate
+     limits, each of which is a decision and not an oversight:
+
+     ONE — a player may only post a line the APP WROTE. There is no free
+     text box. Every burn is generated from that player's own real card
+     and every taunt comes from a fixed library, so the room cannot carry
+     a slur, a phone number, a link or somebody's address — not because
+     we filter those well, but because there is no path for them to
+     arrive. A free-text composer is a moderation programme, not a
+     feature, and it is not shipping the week we are still counting
+     players in dozens. The one thing a player types is a crew member's
+     first name, which is capped, stripped and escaped on the way in.
+
+     TWO — twenty-five lines a night per device, one every eight
+     seconds. A room somebody can flood is a room nobody reads.
+
+     THREE — reads are incremental. The first open costs up to thirty
+     document reads; every poll after that asks only for what is newer
+     than the newest line already on the phone, which is one read when
+     nothing has happened. On the free tier that difference is the
+     feature being affordable versus not.                              */
+  var saidAt = 0, saidN = 0;
+  SB.say = async function (o) {
+    if (!SB.enabled || !SB.me || !nightId) return { ok:false, why:'offline' };
+    var text = String((o && o.text) || '').replace(/\s+/g, ' ').trim();
+    if (!text) return { ok:false, why:'empty' };
+    if (text.length > 140) text = text.slice(0, 140);
+    if (saidN >= TALK_MAX) return { ok:false, why:'limit' };
+    var now = Date.now();
+    if (now - saidAt < TALK_GAP_MS) return { ok:false, why:'slow' };
+    if (!budget()) return { ok:false, why:'budget' };
+    try {
+      await F.addDoc(F.collection(db, 'nights', nightId, 'talk'), {
+        uid:   SB.me.uid,
+        name:  String((o && o.name) || mine.name || 'player').slice(0, 24),
+        color: String((o && o.color) || mine.color || '#888').slice(0, 12),
+        kind:  String((o && o.kind) || 'burn').slice(0, 12),
+        text:  text,
+        at:    F.serverTimestamp()
+      });
+      saidAt = now; saidN++;
+      return { ok:true };
+    } catch (e) {
+      var code = (e && (e.code || e.name)) || 'unknown';
+      try { console.error('[STATS] say failed:', code, e && e.message); } catch (_) {}
+      return { ok:false, why:code };
+    }
+  };
+
+  /* sinceMs: a millisecond timestamp from a previous call's newest line.
+     Pass 0 or nothing for the opening read. Returns newest-first, and
+     every line carries `at` in milliseconds so the caller can hand it
+     straight back next time. A line the server has accepted but not yet
+     stamped comes back with at:0 — it is real, it is just a moment early,
+     and it must not be treated as 1970.                                */
+  SB.talk = async function (sinceMs) {
+    if (!SB.enabled || !nightId || !budget()) return null;
+    try {
+      var col = F.collection(db, 'nights', nightId, 'talk');
+      var q = sinceMs
+        ? F.query(col, F.where('at', '>', new Date(Number(sinceMs))),
+                  F.orderBy('at', 'asc'), F.limit(TALK_N))
+        : F.query(col, F.orderBy('at', 'desc'), F.limit(TALK_N));
+      var snap = await F.getDocs(q);
+      var out = [];
+      snap.forEach(function (d) {
+        var v = d.data() || {};
+        var t = v.at && v.at.toMillis ? v.at.toMillis() : 0;
+        out.push({
+          id: d.id,
+          name:  String(v.name || 'player').slice(0, 24),
+          color: String(v.color || '#888').slice(0, 12),
+          kind:  String(v.kind || 'burn').slice(0, 12),
+          text:  String(v.text || '').slice(0, 140),
+          at: t,
+          me: !!(SB.me && d.id && v.uid === SB.me.uid)
+        });
+      });
+      return out;
+    } catch (e) { return null; }
   };
 
   SB.pollMs = COUNT_MS;
@@ -1289,16 +1669,32 @@ const BB_ROSTER={ // full names — used on the prediction sheet & final review
   home:["Napheesa Collier","Kayla McBride","Courtney Williams","Natasha Howard","Olivia Miles","Teaira McCowan"],
   away:["Caitlin Clark","Kelsey Mitchell","Aliyah Boston","Sophie Cunningham","Monique Billings","Lexie Hull"]
 };
-// Prediction sheet definition (matches arena rules: 6 categories, base + bonus)
-// NOTE: every `answer` below is a SIMULATED result used only by Practice mode.
-// It is not a prediction, and it is not a claim about anything that happened.
+/* Prediction sheet definition (matches arena rules: 6 categories, base + bonus)
+   NOTE: every `answer` below is a SIMULATED result used only by Practice mode.
+   It is not a prediction, and it is not a claim about anything that happened.
+
+   POINTS, and why they are these numbers. The night is worth 100: this sheet
+   is 60 of it and the four live rounds are the other 40. The ten points that
+   took us from 90 to 100 were deliberately added HERE rather than as extra
+   questions, because every note from Game Night #1 said the same thing —
+   "to many touches", "the next page having the user confirm is a huge
+   friction". More questions is more taps. Reweighting is free.
+
+   The shape is three round numbers a host can say out loud without a card:
+     winner .............. 10
+     each stat leader ..... 5   (five of them)
+     exact number ........ +5   (per category)
+   → 10 + 5×(5+5) = 60.
+   Winner carries 10 because it is the one line every single person in the
+   room has an opinion about before tip-off, including the person who has
+   never watched a full WNBA game. It is the hook that gets a sheet filled. */
 const BB_PREDS=[
-  {id:"winner", label:"Winning team", base:5, opts:[BB_GAME.homeName,BB_GAME.awayName], answer:BB_GAME.homeName},
-  {id:"pts", label:"Most points", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Napheesa Collier", num:27, numLabel:"How many pts?"},
-  {id:"ast", label:"Most assists", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Caitlin Clark", num:9, numLabel:"How many assists?"},
-  {id:"stl", label:"Most steals", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Courtney Williams", num:3, numLabel:"How many steals?"},
-  {id:"reb", label:"Most rebounds", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Aliyah Boston", num:12, numLabel:"How many rebounds?"},
-  {id:"blk", label:"Most blocks", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Teaira McCowan", num:4, numLabel:"How many blocks?"}
+  {id:"winner", label:"Winning team", base:10, opts:[BB_GAME.homeName,BB_GAME.awayName], answer:BB_GAME.homeName},
+  {id:"pts", label:"Most points", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Napheesa Collier", num:27, numLabel:"How many pts?"},
+  {id:"ast", label:"Most assists", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Caitlin Clark", num:9, numLabel:"How many assists?"},
+  {id:"stl", label:"Most steals", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Courtney Williams", num:3, numLabel:"How many steals?"},
+  {id:"reb", label:"Most rebounds", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Aliyah Boston", num:12, numLabel:"How many rebounds?"},
+  {id:"blk", label:"Most blocks", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Teaira McCowan", num:4, numLabel:"How many blocks?"}
 ];
 /* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
    Every question is answerable by WATCHING the broadcast at the break — no lookups,
@@ -1442,7 +1838,9 @@ const SPORTS={
   basketball:{
     key:"basketball", emoji:"🏀", word:"basketball",
     game:BB_GAME, roster:BB_ROSTER, preds:BB_PREDS, rounds:BBALL_ROUNDS, catches:[],
-    worth:[1,2,3,4],                                  // Q1=1 … Q4=4  → 30 pts
+    // 4 questions a quarter × these weights = 4+8+12+16 = 40 live pts.
+    // (The old comment here said 30. It was wrong the day it was written.)
+    worth:[1,2,3,4],                                  // Q1=1 … Q4=4  → 40 pts
     tags:["Q1","Q2","Q3","Q4"],
     names:["Quarter 1","Quarter 2","Quarter 3","Quarter 4"],
     L:{ start:"tip-off", Start:"Tip-off", starting:"Tipping off",
@@ -1454,13 +1852,13 @@ const SPORTS={
     // never again leave last week's matchup sitting on the front door.
     // Away team first — that is how a road game reads everywhere else.
     landing:"<b style=\"color:var(--ink)\">"+BB_GAME.awayName+" @ "+BB_GAME.homeName+"</b> — on "+BB_GAME.net+". Watch the broadcast, play from your couch. Predict before tip-off, answer at every quarter break. Right answers score. Fast right answers score more.",
-    step1:"Fill your prediction sheet — winner, stat leaders & bonus amounts. Worth up to 50 pts.",
+    step1:"Fill your prediction sheet — winner, stat leaders & bonus amounts. Worth up to 60 of the night's 100 pts.",
     step2h:"Answer at every quarter break",
     step2:"4 questions about what JUST happened — and not the ones you'd expect. Points rise: Q1 = 1pt → Q4 = 4pt, so the last quarter is worth four times the first. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.",
     step3:"When the host posts the answers, tap them to score your quarter. Most points wins the night; ⚡ Speed breaks ties.",
-    rulePred:"Lock 6 picks before tip-off: winning team (5 pts) and the leader in points, assists, steals, rebounds & blocks (4 pts each). Nail the leader's exact stat total for a +5 bonus per category. Predictions can't be changed after tip-off.",
-    ruleLive:"At the end of each quarter, answer 4 questions about the quarter you just watched. They are not box-score trivia — they're the stuff you only catch if the game is actually on in front of you. Correct answers are worth 1 pt each in Q1, 2 in Q2, 3 in Q3, and 4 in Q4. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.",
-    ruleScore:"When the host announces each quarter's answers (from the broadcast + official box score), tap them in your app to score the quarter. After the final buzzer, enter the official stat leaders to score your predictions."
+    rulePred:"Lock 6 picks before tip-off: winning team (10 pts) and the leader in points, assists, steals, rebounds & blocks (5 pts each). Nail the leader's exact stat total for a +5 bonus per category — so a category you fully nail is worth 10. Predictions can't be changed after tip-off.",
+    ruleLive:"At the end of each quarter, answer 4 questions about the quarter you just watched. They are not box-score trivia — they're the stuff you only catch if the game is actually on in front of you. Correct answers are worth 1 pt each in Q1, 2 in Q2, 3 in Q3, and 4 in Q4 — 40 points across the night, and the fourth quarter alone is worth 16 of them. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.",
+    ruleScore:"When the host posts each quarter's answers (from the broadcast + official box score), your quarter scores itself on your phone — there is nothing for you to tap in. After the final buzzer the host settles the official stat leaders and your prediction sheet scores too."
   },
   soccer:{
     key:"soccer", emoji:"⚽️", word:"soccer",
@@ -1480,7 +1878,7 @@ const SPORTS={
     step3:"Two question rounds only — halftime (3 pts each) and full time (5 pts each). Most points wins the night; ⚡ Speed breaks ties.",
     rulePred:"Lock 10 picks before kickoff, 5 pts each: result, total goals, first goal, both teams to score, higher-scoring half, first corner, first yellow, added-time goal, shots on target and winning margin. Every one of them resolves — there are no dead picks. Locked at kickoff.",
     ruleLive:"Two rounds only, because soccer only gives you two breaks. At halftime, 3 questions about the first 45 (3 pts each). At the final whistle, 3 questions about the whole match (5 pts each). 20 seconds per question, no lookups.",
-    ruleScore:"When the host announces the halftime and full-time answers (from the broadcast + official match stats), tap them in to score the round. At the final whistle you also settle your pre-match sheet and your live catches."
+    ruleScore:"When the host posts the halftime and full-time answers (from the broadcast + official match stats), your half scores itself — nothing for you to tap in. At the final whistle the host settles your pre-match sheet and your live catches too."
   }
 };
 const SPORT_KEY=(()=>{try{return (new URLSearchParams(location.search).get('sport')||'basketball').toLowerCase();}catch(e){return 'basketball';}})();
@@ -1531,8 +1929,8 @@ const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-lobby"
   live:"s-live",break:"s-break",final:"s-final",host:"s-host",league:"s-league",plus:"s-plus",
   rules:"s-rules",review:"s-review",predreview:"s-predreview",tally:"s-tally",
   join:"s-join"};
-function startLive(){S.mode="live";go('name');}
-function startDemo(){S.mode="demo";go('name');}
+function startLive(){S.mode="live";go('name');prefillGate();}
+function startDemo(){S.mode="demo";go('name');prefillGate();}
 
 /* ---------------- PERSISTENCE (Game Night only) ---------------- */
 const LS_KEY="stats_gamenight_v1_"+SPORT_KEY; // saves never cross sports
@@ -1560,7 +1958,13 @@ function doResume(){
     S.liveAnswers[S.qi]=[];renderLobby(S.qi);go("lobby");
     toast(`Resumed — replay ${roundName(S.qi).toLowerCase()} when you're ready.`);
   }
-  else if(scr==="review"){openReview();}
+  // A live round sitting on the review screen comes back to the LOBBY, not
+  // to the tap-in grid. On a real night the player is not the scorer, and
+  // re-opening the grid after a refresh is how you get a round scored twice.
+  else if(scr==="review"){
+    if(S.mode==="live"){ renderLobby(S.qi); go('lobby'); toast('Resumed — your locked picks are safe.'); }
+    else openReview();
+  }
   else if(scr==="predreview"){openPredReview();}
 }
 function dismissResume(){clearSave();resumeData=null;document.getElementById("resumeBar").style.display="none";}
@@ -1576,6 +1980,7 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
   const b=document.getElementById('backBtn');
   b.classList.toggle('show', BACKMAP[k]!==null && BACKMAP[k]!==undefined);
   b.dataset.to=BACKMAP[k]||'';
+  syncLobbyPolling();
   save();}
 let pendingBack=false;
 function goBack(){
@@ -1604,11 +2009,81 @@ function initColors(){const w=document.getElementById('colorPick');w.innerHTML='
     b.style.cssText=`background:${c};width:34px;height:34px;border-radius:10px;border:2px solid ${selc?'#fff':'transparent'}`;
     b.onclick=()=>{S.color=c;[...w.children].forEach(x=>x.style.border='2px solid transparent');b.style.border='2px solid #fff';};
     w.appendChild(b);});}
-function checkName(){const v=document.getElementById('playerName').value.trim();
-  document.getElementById('nameBtn').disabled=v.length<2;S.name=v;}
+/* ---------------- THE SIGN-UP GATE ----------------
+   One remembered address, asked once, on a screen that already existed.
+   Everything here is written so that the WORST case is a lost email and
+   never a lost player: a bad address blocks the button (so we don't
+   collect garbage), but a dead backend, a full localStorage or a browser
+   with storage disabled all fall through to "let them play".          */
+const EMAIL_KEY='stats_email_v1';
+const EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+function savedEmail(){ try{ return localStorage.getItem(EMAIL_KEY)||''; }catch(e){ return ''; } }
+function rememberEmail(v){ try{ localStorage.setItem(EMAIL_KEY,v); }catch(e){} }
+function gateEmailValue(){ const e=document.getElementById('gateEmail'); return e?(e.value||'').trim():''; }
+
+/* Practice mode is not gated. Someone tapping "Practice first" is deciding
+   whether this game is worth their evening, and charging them an email for
+   that is how you lose the ones who would have signed up after. */
+function gateNeeded(){ return S.mode==='live'; }
+
+function prefillGate(){
+  const e=document.getElementById('gateEmail'); if(!e) return;
+  const saved=savedEmail();
+  if(saved && !e.value) e.value=saved;
+  const note=document.getElementById('gateNote');
+  if(note && saved) note.innerHTML='✅ <b>Welcome back.</b> Same address as last time — change it if you like.';
+  const box=document.getElementById('gateConsent');
+  if(box && alreadySignedUp()){
+    // Already on the list. Show it as done rather than asking a second time
+    // — a form that re-asks a question you already answered is a form that
+    // wasn't listening, and it is how people start typing fake addresses.
+    box.checked=true; box.disabled=true;
+    const lbl=box.parentElement && box.parentElement.querySelector('span');
+    if(lbl) lbl.textContent='You\u2019re on the list for the next game night.';
+  }
+  if(!gateNeeded()){
+    // Practice: the field stays, but it is plainly optional and never blocks.
+    if(note) note.textContent='Optional in practice mode — add it and we\'ll tell you when the real night is on.';
+  }
+  checkName();
+}
+
+function checkName(){
+  const v=document.getElementById('playerName').value.trim();
+  const em=gateEmailValue();
+  S.name=v;
+  const emailOk = gateNeeded() ? EMAIL_RE.test(em) : (!em || EMAIL_RE.test(em));
+  document.getElementById('nameBtn').disabled = (v.length<2) || !emailOk;
+  const note=document.getElementById('gateNote');
+  if(note && em && !EMAIL_RE.test(em)) note.innerHTML='<b style="color:var(--gold)">That address doesn\'t look right yet.</b>';
+  else if(note && em && EMAIL_RE.test(em) && /doesn/.test(note.textContent||'')) note.textContent='Looks good.';
+}
+
+/* Fire-and-forget. No await anywhere on the play path. */
+function saveGateEmail(){
+  const em=gateEmailValue();
+  if(!EMAIL_RE.test(em)) return;
+  rememberEmail(em);
+  S.email=em;
+  // Nothing leaves the phone without the box. An address typed to get past
+  // the gate is an account, not a mailing list, and the two are different
+  // promises. The database enforces the same rule from the other side.
+  const box=document.getElementById('gateConsent');
+  if(!box || !box.checked) return;
+  if(alreadySignedUp()) return;          // asked once ever, not once a night
+  try{
+    if(window.SB && SB.enabled){
+      Promise.resolve(SB.signup({email:em, name:S.name||'', consent:true, merge:true,
+                                 src:'gate', night:nightKey?nightKey():''}))
+        .then(r=>{ if(r&&r.ok) markSignedUp(); })
+        .catch(()=>{});
+    }
+  }catch(e){}
+}
 
 /* ---------------- PREDICTIONS ---------------- */
 function startPredict(){
+  saveGateEmail();
   if(S.mode==="live") joinNight();
   buildPred();go('predict');
 }
@@ -1704,6 +2179,12 @@ function renderLobby(qi){
     s2v.textContent = qi===0 ? '20s' : '⚡'+S.speed;
     s2k.textContent = qi===0 ? 'Clock per question' : 'Speed banked';
     refreshRoom();
+    // Paint from the last known values first so the cards are already there
+    // when the screen appears, then go and ask for fresher ones. Re-entering
+    // the lobby after a quarter should not look like a cold boot.
+    if(lastScore) paintScore(lastScore);
+    if(lastStand) paintStand(lastStand);
+    refreshLobby(true);
   }else{
     sub.textContent = qi===0
       ? `Predictions locked. When ${roundName(qi).toLowerCase()} ends, questions drop here — be fast, points are live.`
@@ -1948,12 +2429,12 @@ function useLifeline(){
 function nextQuestion(){
   if(S.ni<nq()-1){S.ni++;loadQuestion();}
   else if(S.mode==="live"){
-    // A hosted round locks on the server and waits for the reveal. Anything
-    // else — no dashboard, dead backend, a round the host never pushed —
-    // falls through to the tap-in review that has always been here.
+    // A hosted round locks on the server and waits for the reveal. A round
+    // the host never pushed does the same thing locally — see holdForHost.
+    // What it must NEVER do again is score itself: see the note there.
     const h=hostedFor(S.qi);
     if(h) submitHosted(h);
-    else { lockPicks(S.qi); if(roundHasKey(S.qi)) autoScore(S.qi); else openReview(); }
+    else { lockPicks(S.qi); holdForHost(S.qi); }
   }
   else{showBreak();}
 }
@@ -2088,78 +2569,27 @@ function confirmReview(){
     ? `Back to the ${L.unit} — ${roundName(S.qi+1).toLowerCase()} next →`
     : `${L.End} — score predictions →`;
 }
-/* ---------------- AUTO-SCORING -------------------------------------
-   Every question compiled into the build already carries its own answer.
-   When a whole round has one, there is nothing the player can tell us that
-   we do not already know — so asking them to tap the correct answer was
-   both a wasted screen and a scoring hole, because a player marking their
-   own paper can mark it any way they like. It was also a hard stop: the
-   Continue button stayed disabled until every question had been tapped,
-   so one missed tap ended somebody's night.
+/* ---------------- AUTO-SCORING: REMOVED FROM LIVE MODE --------------
+   There used to be a roundHasKey()/autoScore() pair here. They graded a
+   live round against the answers compiled into the build — which are
+   SIMULATED results for a fake game, written so Practice mode has
+   something to play against — and then printed the fabricated answer to
+   the player in white bold as though it were the real one.
 
-   The tap-in below (openReview) is not deleted. It is the fallback for a
-   round we genuinely do not have a key for — a host-pushed round with no
-   answers set — because in that case the room really is the only source
-   of truth. Everything else scores itself the moment the last question
-   is answered.                                                        */
-function roundHasKey(idx){
-  const qs=(rounds[idx]&&rounds[idx].q)||[];
-  return qs.length>0 && qs.every(q=>{
-    const a=String(q.a==null?'':q.a).trim();
-    // The answer must not merely exist — it must be one of the options on
-    // screen, or we would mark a whole room wrong against a typo.
-    return a !== '' && (q.o||[]).some(o=>String(o)===a);
-  });
-}
+   Both functions are deleted rather than merely bypassed. A dead function
+   that can state a false fact about a real game is a loaded gun in a
+   drawer: the next person to wire something up finds it, sees that it
+   scores a round in one line, and uses it.
 
-function autoScore(idx){
-  const qs=rounds[idx].q, worth=roundWorth(idx);
-  // Points are added once and only once. A round that already has results
-  // has already been paid for — re-rendering it must never top anyone up.
-  const fresh = !(S.results[idx] && S.results[idx].length);
-  const hit = i => {
-    const my=S.liveAnswers[idx][i]||{choice:null,bank:0};
-    return { my, ok: my.choice!==null && String(my.choice)===String(qs[i].a) };
-  };
+   Live rounds now go one of two ways and no others:
+     · the host pushed the round  → submitHosted → applyHostedScore
+     · the host did not           → holdForHost, scored later or by hand
+   Practice mode never came through here at all; it scores as you answer
+   and finishes at showBreak().
 
-  let got=0, sp=0;
-  qs.forEach((q,i)=>{
-    const {my, ok}=hit(i);
-    if(fresh) S.results[idx][i]=ok;
-    if(ok){ got+=worth; sp+=(my.bank||0); }
-  });
-  if(fresh){ S.pts+=got; S.speed+=sp; }
-
-  document.getElementById('revPill').textContent=roundTag(idx)+' scored';
-  document.getElementById('revTitle').textContent=`${roundName(idx)} scored ✅`;
-  document.getElementById('revNote').textContent=
-    'Scored the second you finished — nothing to tap, nothing to wait for.';
-  document.getElementById('revBtn').style.display='none';
-
-  const list=document.getElementById('revList'); list.innerHTML='';
-  qs.forEach((q,i)=>{
-    const {my, ok}=hit(i);
-    const c=document.createElement('div'); c.className='card tight';
-    c.innerHTML=
-      `<div style="font-size:13px;font-weight:800;margin-bottom:6px">${i+1}. ${q.t}</div>
-       <div style="font-size:12px;font-weight:800;color:${ok?'#2ee6a6':'#ff4d5e'}">
-         ${ok?'✓':'✕'} ${my.choice?my.choice:'⏰ no answer'}${
-           ok?` · +${worth} pt${worth===1?'':'s'}${my.bank?` · +${my.bank} ⚡`:''}`:''}</div>
-       ${ok?'':`<div style="font-size:12px;font-weight:700;color:var(--dim);margin-top:3px">Answer: <b style="color:#fff">${q.a}</b></div>`}`;
-    list.appendChild(c);
-  });
-
-  document.getElementById('revResult').innerHTML=
-    `<div class="reveal ${got>0?'good':'bad'}"><div class="r1">${got>0?'✓':'✕'} ${roundTag(idx)}: +${got} pts · +${sp} ⚡ speed</div>
-     <div class="r2">Running total: <b>${S.pts}</b> pts · <b>${S.speed}</b> ⚡. Post it in the chat and talk your talk.</div></div>`;
-  document.getElementById('revNextBtn').style.display='block';
-  document.getElementById('revTalkBtn').style.display='block';
-  document.getElementById('revNextBtn').textContent = !isLastRound(idx)
-    ? `Back to the ${L.unit} — ${roundName(idx+1).toLowerCase()} next →`
-    : `${L.End} — score predictions →`;
-  save();
-  go('review');
-}
+   openReview(), just above, is the tap-in grid. It is no longer reachable
+   in live mode — the host's key is the only key — and is kept only so a
+   practice-mode resume has somewhere to land.                          */
 
 function afterReview(){
   // Don't make the player wait on the network to change screens — but do
@@ -2250,38 +2680,235 @@ function renderLeaderboard(elId,limit){
   });
 }
 
-/* ---------------- FINAL ---------------- */
+/* ====================================================================
+   THE FINAL BUZZER
+
+   "The ending can be much cleaner and better."
+
+   The old version showed one number, two tiles whose meaning silently
+   changed between practice and Game Night, and then eight buttons — the
+   last thing a player saw at the happiest moment of their night was a
+   menu, three items of which open previews of things that do not exist.
+
+   The rebuild answers four questions in the order people actually ask
+   them: what did I get (out of what), where did it come from, is it
+   finished, and what was my best moment. Then the room, then one gold
+   button.
+   ==================================================================== */
 function showFinal(){
-  // add prediction points + live catches now
-  S.pts+=S.predPts+(S.catchPts||0);
+  // Whatever is already on S.pts came from live rounds. Capture it before
+  // the sheet and the catches land, or the breakdown below cannot tell
+  // the two halves of the night apart.
+  const livePts = S.pts;
+  S.pts += (S.predPts||0) + (S.catchPts||0);
   S.streak++;
-  document.getElementById('finalMax').textContent=`total points • out of ${MAXPTS} possible`;
+  const $f = id => document.getElementById(id);
+  $f('finalMax').textContent = `OUT OF ${MAXPTS}`;
   clearSave(); // game complete — no resume needed
-  document.getElementById('finalPts').textContent=S.pts;
-  document.getElementById('streakN').textContent=S.streak;
-  document.getElementById('seasonRating').textContent=(1000+S.seasonPts+S.pts+S.speed).toLocaleString();
+  $f('finalPts').textContent = S.pts;
+  $f('streakN').textContent = S.streak;
+  $f('seasonRating').textContent = (1000+S.seasonPts+S.pts+S.speed).toLocaleString();
+  paintRing(S.pts, MAXPTS);
+  renderBreakdown(livePts);
+  renderPending();
+  renderBestCall();
+
   if(S.mode==="live"){
-    document.getElementById('finalRank').textContent='⚡'+S.speed;
-    document.getElementById('finalPct').textContent='+'+(S.predPts+(S.catchPts||0));
-    document.querySelector('#s-final .statgrid .stat:nth-child(1) .k').textContent='Speed points (tiebreaker)';
-    document.querySelector('#s-final .statgrid .stat:nth-child(2) .k').textContent=
-      CATCHES.length?'Predictions + catches':'From predictions';
-    document.getElementById('finalTitle').textContent=`${L.End.replace(/[^A-Za-z]+$/,'')}, ${S.name||'player'}!`;
-    document.getElementById('finalLb').innerHTML=
+    // Rank is the honest headline here and finishLive() fills it in from
+    // the room a moment later. Until it answers we say so, rather than
+    // parking speed points in a tile labelled "Final rank".
+    setStat(1,'—','Final rank');
+    setStat(2,'⚡'+S.speed,'Speed points (tiebreaker)');
+    $f('finalTitle').textContent=`${L.End.replace(/[^A-Za-z]+$/,'')}, ${S.name||'player'}!`;
+    $f('finalLb').innerHTML=
       `<div class="card tight"><p class="sub" style="font-size:12.5px;margin:0">📲 Post your result card in the group chat. Highest points wins the night — ⚡ Speed breaks ties. Rematch at the next Game of the Night.</p></div>`;
     finishLive();
   }else{
     const s=standings();const rank=s.findIndex(x=>x.me)+1;
     const beat=Math.round((S.totalPlayers-rank)/S.totalPlayers*100);
-    document.getElementById('finalRank').textContent='#'+rank;
-    document.getElementById('finalPct').textContent=beat+'%';
-    document.querySelector('#s-final .statgrid .stat:nth-child(1) .k').textContent='Final rank';
-    document.querySelector('#s-final .statgrid .stat:nth-child(2) .k').textContent='Beat this % of players';
-    document.getElementById('finalTitle').textContent = rank===1?'🏆 You won the pot!':`Great game, ${S.name||'player'}!`;
+    setStat(1,'#'+rank,'Final rank');
+    setStat(2,beat+'%','Beat this % of players');
+    $f('finalTitle').textContent = rank===1?'🏆 You won the pot!':`Great game, ${S.name||'player'}!`;
     renderLeaderboard('finalLb',6);
   }
   renderSignup();
   go('final');
+}
+
+/* One writer for the two tiles. They used to be set by
+   `#s-final .statgrid .stat:nth-child(n) .k`, from three different
+   places, which meant re-ordering one line of HTML could silently put
+   the wrong caption under the right number. */
+function setStat(n, value, label){
+  const v=document.getElementById(n===1?'finalRank':'finalPct');
+  const k=document.getElementById(n===1?'finalRankK':'finalPctK');
+  if(v) v.textContent=value;
+  if(k) k.textContent=label;
+}
+
+/* 62 means nothing. 62 of 100, five-eighths of the way round, means
+   something before you have finished reading it. */
+function paintRing(pts,max){
+  const arc=document.getElementById('fArc'); if(!arc) return;
+  const C=2*Math.PI*58;
+  const frac=Math.max(0,Math.min(1, max ? pts/max : 0));
+  arc.style.strokeDasharray=C.toFixed(1);
+  arc.style.strokeDashoffset=C.toFixed(1);
+  // Two frames, so the browser has actually committed the empty state
+  // and the transition has something to animate away from.
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    arc.style.strokeDashoffset=(C*(1-frac)).toFixed(1);
+  }));
+}
+
+/* ---- where the points came from -----------------------------------
+   Two players finishing on 54 did not play the same night: one read the
+   game as it happened, the other read the matchup before tip-off. That
+   split is the most interesting thing on the screen and it was not on
+   the screen at all. */
+function renderBreakdown(livePts){
+  const box=document.getElementById('fBreak'), rows=document.getElementById('fBreakRows');
+  if(!box||!rows) return;
+  const out=[];
+
+  const graded = countGraded();
+  out.push(bRow('⏱️ ' + L.Period + ' questions', livePts, LIVE_MAX, '',
+    graded.total ? `${graded.hits} of ${graded.total} scored answers landed` : ''));
+
+  // In live mode the sheet is scored against the numbers the host typed
+  // in; hitCount only counts lines we actually have a real result for.
+  const ph = predHits();
+  out.push(bRow('📝 Prediction sheet', S.predPts||0, PRED_MAX, 'gold',
+    ph.total ? `${ph.hits} of ${ph.total} lines landed` : ''));
+
+  if(CATCHES.length){
+    out.push(bRow('👀 Live catches', S.catchPts||0, CATCH_PTS, '',
+      `${S.catchPts||0} of ${CATCHES.length} caught`));
+  }
+
+  rows.innerHTML = out.join('')
+    + `<div class="fbspeed"><span class="fbl">⚡ Speed banked</span>`
+    + `<span class="fbv">${S.speed}<i> sec</i></span></div>`
+    + `<p class="fbnote" style="margin-top:6px">Speed never beats accuracy — it only settles ties.</p>`;
+  box.style.display='block';
+  // Bars start at zero in the markup and are widened on the next frame,
+  // for the same reason the ring is.
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    [...rows.querySelectorAll('.fbbar > i')].forEach(i=>{ i.style.width=i.dataset.w||'0%'; });
+  }));
+}
+
+function bRow(label, got, max, cls, note){
+  const pct = max>0 ? Math.max(0,Math.min(100, Math.round(got/max*100))) : 0;
+  return `<div class="fbrow">`
+    + `<div class="fbtop"><span class="fbl">${esc(label)}</span>`
+    + `<span class="fbv">${Number(got)||0}<i>/${max}</i></span></div>`
+    + `<div class="fbbar ${got>0?cls:'flat'}"><i data-w="${pct}%"></i></div>`
+    + (note?`<div class="fbnote">${esc(note)}</div>`:'')
+    + `</div>`;
+}
+
+/* Only questions that were actually graded are counted. A round the host
+   never posted answers for has no verdicts in S.results, and it must not
+   quietly become "0 of 4 landed" — that reads as four misses. */
+function countGraded(){
+  let hits=0,total=0;
+  rounds.forEach((r,i)=>{
+    (S.results[i]||[]).forEach(v=>{ if(v===undefined||v===null) return; total++; if(v===true) hits++; });
+  });
+  return {hits,total};
+}
+
+/* The truth for a prediction line. In live mode that is only ever what
+   the host entered on the review screen; the p.answer compiled into the
+   build describes a simulated game and stating it as fact on Game Night
+   is the same defect we deleted autoScore() for. */
+function predTruthOf(p){
+  if(S.predTruth && Object.prototype.hasOwnProperty.call(S.predTruth,p.id)) return S.predTruth[p.id];
+  return S.mode==='live' ? null : p.answer;
+}
+function predHits(){
+  let hits=0,total=0;
+  preds.forEach(p=>{
+    const truth=predTruthOf(p);
+    if(truth===null||truth===undefined||truth==='') return;
+    total++;
+    if(S.predChoices[p.id] && S.predChoices[p.id]===truth) hits++;
+  });
+  return {hits,total};
+}
+
+/* ---- anything still sitting with the host --------------------------
+   A live round nobody posted answers for is held, not scored. The review
+   screen already says so at the time. The last screen of the night is not
+   allowed to quietly contradict it by printing a number as though it
+   were finished. */
+function pendingRounds(){
+  if(S.mode!=='live') return [];
+  const out=[];
+  rounds.forEach((r,i)=>{
+    const answered=(S.liveAnswers[i]||[]).some(a=>a && a.choice);
+    const graded=(S.results[i]||[]).some(v=>v!==undefined && v!==null);
+    if(answered && !graded) out.push(i);
+  });
+  return out;
+}
+function renderPending(){
+  const el=document.getElementById('fPend'); if(!el) return;
+  const p=pendingRounds();
+  if(!p.length){ el.style.display='none'; return; }
+  const names=p.map(i=>roundTag(i));
+  const list=names.length===1?names[0]
+    :names.slice(0,-1).join(', ')+' and '+names[names.length-1];
+  const upto=p.reduce((a,i)=>a+rounds[i].q.length*roundWorth(i),0);
+  el.innerHTML=`<b>Not final yet.</b> ${esc(list)} ${names.length===1?'is':'are'} still with the host — `
+    +`up to <b>${upto} more point${upto===1?'':'s'}</b> to come. Your picks are locked and saved; `
+    +`the moment the answers are posted this score moves on its own.`;
+  el.style.display='block';
+}
+
+/* ---- the one to screenshot ----------------------------------------
+   Somebody who finishes 9th out of 30 still had one moment where they
+   saw it before anyone else. That moment is the reason they post about
+   the app, and it was nowhere on this screen. */
+function bestCall(){
+  let best=null;
+  const better=(c)=>!best || c.pts>best.pts || (c.pts===best.pts && c.bank>best.bank);
+  rounds.forEach((r,i)=>{
+    const res=S.results[i]||[];
+    r.q.forEach((q,j)=>{
+      if(res[j]!==true) return;
+      const my=((S.liveAnswers[i]||[])[j])||{};
+      const c={pts:roundWorth(i), bank:Number(my.bank)||0, q:q.t,
+               pick:my.choice||'', where:roundName(i)};
+      if(better(c)) best=c;
+    });
+  });
+  preds.forEach(p=>{
+    const truth=predTruthOf(p), pick=S.predChoices[p.id];
+    if(!pick || truth===null || truth===undefined || truth==='' || pick!==truth) return;
+    let w=predWorthOf(p);
+    const myNum=Number(S.predChoices[p.id+'_num']);
+    const trueNum=(S.predTruthNum && S.predTruthNum[p.id]!=null) ? Number(S.predTruthNum[p.id])
+                  : (S.mode==='live' ? null : Number(p.num));
+    if(p.bonus && trueNum!==null && myNum && myNum===trueNum) w+=p.bonus;
+    const c={pts:w, bank:0, q:p.label, pick, where:'Prediction sheet'};
+    if(better(c)) best=c;
+  });
+  return best;
+}
+function renderBestCall(){
+  const card=document.getElementById('fCall'); if(!card) return;
+  const b=bestCall();
+  // Nothing landed is a real outcome and gets no consolation card. An
+  // empty "best call" box would be the screen rubbing it in.
+  if(!b){ card.style.display='none'; return; }
+  document.getElementById('fCallQ').textContent=b.q;
+  const speed=b.bank?` with <b>${b.bank}s</b> still on the clock`:'';
+  document.getElementById('fCallA').innerHTML=
+    `You said <b>${esc(b.pick||'—')}</b>${speed}. `
+    + `<span style="color:var(--dim)">${esc(b.where)} · +${b.pts} pt${b.pts===1?'':'s'}</span>`;
+  card.style.display='block';
 }
 
 /* =====================================================================
@@ -2483,7 +3110,14 @@ function openJoin(from,prefillEmail){
   go('join');
 }
 
-function joinBack(){ go(JOIN.from==='final'?'final':'landing'); }
+function joinBack(){
+  // Three doors into this form now, and each one has to lead back to where
+  // the player actually was. Dropping someone on the landing page after they
+  // detoured from the handle screen loses their half-typed name.
+  if(JOIN.from==='final') return go('final');
+  if(JOIN.from==='name'){ go('name'); prefillGate(); return; }
+  go('landing');
+}
 
 async function submitJoin(){
   const btn=document.getElementById('jBtn'), note=document.getElementById('jNote');
@@ -2584,7 +3218,11 @@ async function pushScore(){
 
 function startRoomPolling(){
   if(roomTimer) clearInterval(roomTimer);
-  roomTimer=setInterval(()=>{ if(S.mode==="live") refreshRoom(); },
+  // document.hidden is the cheapest read-budget win available to this app.
+  // A phone watching a basketball game is a backgrounded tab most of the
+  // night, and every tick it spends there buys a number nobody is looking
+  // at. Skipping those ticks pays for the two new lobby cards outright.
+  roomTimer=setInterval(()=>{ if(S.mode==="live" && !document.hidden) refreshRoom(); },
                         (window.SB && SB.pollMs) || 90000);
 }
 
@@ -2655,6 +3293,171 @@ async function refreshRoom(){
   // room bar above, and that is the only place it belongs.
 }
 
+/* ---------------- THE WAITING ROOM ----------------
+   Two live cards on the lobby screen, and a poll that is deliberately the
+   stingiest thing in this app.
+
+   Game Night #1's flattest stretch was the eleven minutes between
+   quarters: locked picks, a button that did nothing yet, and no reason to
+   keep the app open. Three separate notes that night were about the same
+   gap — no live score, no participant scores, nothing to look at while
+   waiting for Q3.
+
+   READ BUDGET, because this is a Spark-tier project with a hard free
+   ceiling of 50,000 document reads a day, and going over it does not
+   degrade the app, it stops it. Hanging a 5-row leaderboard and a
+   scoreboard off the existing all-night 90-second timer would have taken
+   a 200-player night from roughly 35k reads to north of 200k — blown
+   before halftime, and the backend goes read-only mid-game.
+
+   So this timer is scoped three ways instead:
+     - it exists only while the player is ON the lobby screen,
+     - it goes silent when the tab is hidden, and a phone watching a
+       basketball game is a hidden tab most of the night,
+     - the 5-document standings read fires on every OTHER tick; the
+       1-document scoreboard read fires on every tick, because the score
+       is the thing people opened the app to see.
+   The same visibility guard now sits on the all-night room poll too,
+   which makes the total cheaper than it was before this feature existed.
+
+   Worst case is a player who stares at the waiting screen for a full
+   break without switching away: ~15 scoreboard reads and ~40 standings
+   reads. Most people glance for thirty seconds and go back to the game. */
+const LOBBY_MS=45000;
+let lobbyTimer=null, lobbyTick=0, lastScore=null, lastStand=null;
+
+function lobbyLive(){ return S.mode==='live' && S.screen==='lobby'; }
+
+function syncLobbyPolling(){ lobbyLive() ? startLobbyPolling() : stopLobbyPolling(); }
+
+function startLobbyPolling(){
+  if(lobbyTimer) return;
+  lobbyTimer=setInterval(()=>{
+    if(!lobbyLive() || document.hidden) return;
+    refreshLobby();
+  }, LOBBY_MS);
+  refreshLobby(true);
+}
+function stopLobbyPolling(){
+  if(lobbyTimer){ clearInterval(lobbyTimer); lobbyTimer=null; }
+}
+
+/* Coming back to the app IS the moment somebody looks. Repaint then,
+   rather than making them read a stale number for the rest of the tick. */
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden) return;
+  if(lobbyLive()) refreshLobby(true);
+  // Same reasoning for the room: while the phone was in a pocket we asked
+  // for nothing at all, so the first thing to do on the way back is catch
+  // up on what got said.
+  if(typeof ttRoomOpen==='function' && ttRoomOpen()) ttRoomPull(true);
+});
+
+async function refreshLobby(force){
+  if(!lobbyLive()) return;
+  if(!window.SB || !SB.enabled){ paintScore(null); paintStand(null); return; }
+  // Same defensive shape as refreshRoom(): every read degrades to null
+  // rather than taking the whole refresh down with it. A phone holding an
+  // older bundle mid-deploy has no SB.scoreboard at all, and the correct
+  // outcome there is a lobby with no score card — not a thrown promise.
+  const ask=(fn,...a)=>(typeof fn==='function'
+    ? Promise.resolve(fn(...a)).catch(()=>null) : Promise.resolve(null));
+  const wantStand = force || (lobbyTick % 2 === 0);
+  lobbyTick++;
+  const [sc,tp]=await Promise.all([
+    ask(SB.scoreboard),
+    wantStand ? ask(SB.top,5) : Promise.resolve(undefined)
+  ]);
+  paintScore(sc);
+  if(tp!==undefined) paintStand(tp);
+}
+
+/* Names and colours on these rows come out of a collection every phone in
+   the room can write its own document in, and they land in innerHTML.
+   Sixteen characters is plenty for an onerror handler. */
+function esc(v){
+  return String(v==null?'':v).replace(/[&<>"']/g,c=>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function paintScore(sc){
+  const card=document.getElementById('sbCard');
+  if(!card) return;
+  // Nothing from the host yet means no card. A scoreboard reading 0-0 in
+  // the third quarter is a lie told by a placeholder, and the player is
+  // sitting in front of the television that proves it.
+  if(!sc){ card.style.display='none'; lastScore=null; return; }
+  lastScore=sc;
+  card.style.display='block';
+  document.getElementById('sbAwayEmo').textContent=GAME.awayEmoji||'';
+  document.getElementById('sbHomeEmo').textContent=GAME.homeEmoji||'';
+  document.getElementById('sbAwayAbbr').textContent=GAME.awayAbbr||'AWAY';
+  document.getElementById('sbHomeAbbr').textContent=GAME.homeAbbr||'HOME';
+  const an=document.getElementById('sbAwayNum'), hn=document.getElementById('sbHomeNum');
+  an.textContent=sc.away; hn.textContent=sc.home;
+  an.className='sbnum'+(sc.away>sc.home?' lead':'');
+  hn.className='sbnum'+(sc.home>sc.away?' lead':'');
+  const fin=/final|full|ft\b/i.test(sc.period||'');
+  document.getElementById('sbPeriod').textContent=sc.period||'Score';
+  document.getElementById('sbLive').textContent=fin?'':'● LIVE';
+  const note=document.getElementById('sbNote');
+  if(sc.note){ note.style.display='block'; note.textContent=sc.note; }
+  else note.style.display='none';
+  document.getElementById('sbStale').textContent=agoLine(sc.at);
+}
+
+/* The host is a person, not a feed. Saying when the number was last
+   touched is the difference between a scoreboard that is four minutes
+   behind and a scoreboard that is wrong. */
+function agoLine(at){
+  let d=null;
+  try{
+    d = at && typeof at.toDate==='function' ? at.toDate()
+      : (at instanceof Date ? at : null);
+  }catch(e){ d=null; }
+  if(!d) return 'Posted by the host.';
+  const m=Math.floor((Date.now()-d.getTime())/60000);
+  if(m<0)   return 'Posted by the host.';
+  if(m<1)   return 'Updated just now by the host.';
+  if(m===1) return 'Updated 1 min ago by the host.';
+  if(m<60)  return 'Updated '+m+' min ago by the host.';
+  return 'Posted by the host.';
+}
+
+function paintStand(list){
+  const card=document.getElementById('standCard');
+  if(!card) return;
+  // One player is not a leaderboard, it is a mirror. Game Night #1 ended
+  // on the words "Tonight's top 5 of 1 players", and that screenshot is
+  // the entire reason for the length check on this line.
+  if(!list || list.length<2){ card.style.display='none'; lastStand=null; return; }
+  lastStand=list;
+  card.style.display='block';
+  const five=list.slice(0,5);
+  document.getElementById('standList').innerHTML=five.map((p,i)=>
+    '<div class="standrow'+(p.me?' me':'')+'">'
+    +'<span class="sr">'+(i+1)+'</span>'
+    +'<span class="sdot" style="background:'+esc(p.color||'#888')+'"></span>'
+    +'<span class="sn">'+esc(p.name||'player')+(p.me?' (you)':'')+'</span>'
+    +'<span class="sp">'+(Number(p.pts)||0)+'</span></div>').join('');
+  document.getElementById('standTitle').textContent =
+    'Tonight’s top '+five.length;
+  document.getElementById('standWhen').textContent='live';
+  // The line under the board is the one that keeps somebody in 30th place
+  // watching. Give them the actual gap, not a participation trophy.
+  const mine=five.find(p=>p.me);
+  const you=document.getElementById('standYou');
+  if(mine){
+    you.textContent='You’re on the board — '+(Number(mine.pts)||0)+' pts. ⚡ Speed breaks ties.';
+  }else{
+    const cut=Number(five[five.length-1].pts)||0;
+    const gap=Math.max(1, cut - (S.pts||0) + 1);
+    const r=roomLast && roomLast.rank;
+    you.textContent=(r!=null?'You’re #'+r+' on '+(S.pts||0)+' pts. ':'You’re on '+(S.pts||0)+' pts. ')
+      + gap+' more puts you on this board.';
+  }
+}
+
 /* =====================================================================
    HOSTED ROUNDS — the control room pushes, the phone follows.
    ---------------------------------------------------------------------
@@ -2679,7 +3482,9 @@ const HR={
   submitted:{},        // roundId -> picks are locked on the server
   scored:{},           // roundId -> the key came back and we graded it
   pending:null,        // a live round waiting for the player to reach the lobby
-  pendingScore:null    // host revealed while they were still answering
+  pendingScore:null,   // host revealed while they were still answering
+  held:{},             // round INDEX -> played off the built-in questions, unscored
+  heldQs:{}            // round INDEX -> the exact question texts that phone answered
 };
 
 // The raw newest-round document for a round index, whatever its state.
@@ -2806,7 +3611,11 @@ function submitHosted(h){
 
 function onHostedScored(r, idx){
   if(HR.scored[r.id]) return;
-  if(!HR.started[r.id] && !HR.submitted[r.id]) return;  // they never played it
+  // "They never played it" — with one addition: a player who answered this
+  // round off the built-in questions before the host ever pushed it HAS
+  // played it. holdForHost parked them without a score precisely so that
+  // this key, when it finally arrives, is the thing that pays them.
+  if(!HR.started[r.id] && !HR.submitted[r.id] && !HR.held[idx]) return;
   // Mid-question when the host closed the round: let them finish the one
   // they're staring at rather than snatching it off the screen.
   if(S.screen==='live' && S.qi===idx){
@@ -2821,6 +3630,19 @@ function applyHostedScore(r, idx){
   if(HR.scored[r.id]) return;
   const key=Array.isArray(r.key)?r.key:null;
   if(!key || !key.length) return;          // "scored" with no key is not scored
+  // A held round is scored positionally against a key the host wrote for
+  // THEIR list of questions. If that list isn't the one this phone answered,
+  // position i means two different things on the two sides and the grade is
+  // garbage. Refuse rather than guess; the host still has the row in the
+  // Control Room and can settle it by hand.
+  if(HR.held[idx]){
+    const asked=HR.heldQs[idx]||[], now=((rounds[idx]&&rounds[idx].q)||[]).map(q=>q.t);
+    if(asked.length!==now.length || asked.some((t,i)=>t!==now[i])){
+      HR.scored[r.id]=true;                // don't sit here retrying it all night
+      toast(`The host posted different ${roundTag(idx)} questions — that ${L.period} is being scored by hand.`);
+      return;
+    }
+  }
   HR.scored[r.id]=true;
   S.qi=idx;
   revMarks=rounds[idx].q.map((q,i)=>{
@@ -2872,6 +3694,75 @@ function renderHostedReview(r, idx, revealed){
   });
 }
 
+/* ======================================================================
+   AN UN-PUSHED LIVE ROUND IS HELD, NOT SCORED.
+
+   This is the fix for the worst defect this app has ever shipped.
+
+   Until now, a live round the host never pushed fell through to
+   autoScore(), which graded the entire room against rounds[idx].q[i].a —
+   the SIMULATED answers that exist so Practice mode has a fake game to
+   play against. On a real night those values describe a game nobody
+   watched. Worse, the results card then printed
+
+       Answer: <fiction>
+
+   in white bold, which is the app stating a false fact about a real
+   basketball game to a real person who was watching that game. There is
+   no version of that which is acceptable, and no amount of "well, the
+   host should have pushed the round" makes it acceptable.
+
+   So, in live mode, a round is scored when and only when a real answer
+   key arrives from the host. Until then it is HELD: the picks are locked
+   and already on the server (lockPicks), the player sees exactly what
+   they chose, nothing is graded, and no answer is shown — because we do
+   not have one. HR.held[idx] records it so that a key arriving later
+   still pays them (see the guard in onHostedScored).
+
+   Practice mode is deliberately untouched and still scores itself the
+   instant you finish. There the simulated answers ARE the honest answer,
+   because the game they describe is openly fake.                       */
+function holdForHost(idx){
+  S.qi=idx;
+  HR.held[idx]=true;
+  // Remember WHICH questions this phone answered. If the host later pushes a
+  // different set for the same quarter, scoring answer 3 against question 3
+  // of somebody else's quiz is its own flavour of the same lie, so we check.
+  HR.heldQs[idx]=((rounds[idx]&&rounds[idx].q)||[]).map(q=>q.t);
+  save();
+  const $=id=>document.getElementById(id);
+  $('revPill').textContent = roundTag(idx)+' locked';
+  $('revTitle').textContent = 'Locked in — waiting on the host ⏳';
+  $('revNote').textContent =
+    'Your answers are locked and sent. Nothing to tap. The moment the host '
+    +'posts this '+L.period+"'s answers, this screen scores itself.";
+  $('revBtn').style.display='none';
+
+  const list=$('revList'); list.innerHTML='';
+  ((rounds[idx]&&rounds[idx].q)||[]).forEach((q,i)=>{
+    const my=(S.liveAnswers[idx]||[])[i]||{choice:null,bank:0};
+    const c=document.createElement('div'); c.className='card tight';
+    // No tick, no cross, no answer. We do not know any of those yet, and
+    // guessing at them is the entire bug this function exists to kill.
+    c.innerHTML=
+      `<div style="font-size:13px;font-weight:800;margin-bottom:4px">${i+1}. ${q.t}</div>
+       <div style="font-size:11px;color:var(--dim);font-weight:700">Your pick: ${
+         my.choice?`🔵 ${my.choice}${my.bank?` (${my.bank}s banked)`:''}`:'⏰ none'}</div>`;
+    list.appendChild(c);
+  });
+
+  $('revResult').innerHTML=
+    `<div class="reveal"><div class="r1">⏳ ${roundTag(idx)}: locked, not yet scored</div>
+     <div class="r2">Running total so far: <b>${S.pts}</b> pts · <b>${S.speed}</b> ⚡ — this `
+    +`${L.period} is still to come.</div></div>`;
+  $('revNextBtn').style.display='block';
+  $('revTalkBtn').style.display='block';
+  $('revNextBtn').textContent = !isLastRound(idx)
+    ? `Back to the ${L.unit} — ${roundName(idx+1).toLowerCase()} next →`
+    : `${L.End} — score predictions →`;
+  go('review');
+}
+
 /* Final screen: the one moment the full room matters. Real rank out of real
    players, real top 10 — or the group-chat card we already had. */
 async function finishLive(){
@@ -2891,9 +3782,7 @@ async function finishLive(){
   const total = (joined!==null && joined!==undefined && top && top.length)
     ? Math.max(joined, top.length) : joined;
   if(rank!==null && rank!==undefined && total){
-    document.getElementById('finalRank').textContent='#'+rank;
-    document.querySelector('#s-final .statgrid .stat:nth-child(1) .k').textContent=
-      `Final rank of ${total.toLocaleString()}`;
+    setStat(1,'#'+rank,`Final rank of ${total.toLocaleString()}`);
     document.getElementById('finalTitle').textContent =
       rank===1 ? '🏆 You won the night!' : `Great game, ${S.name||'player'}!`;
     document.getElementById('scRankLine').textContent=`Rank #${rank} of ${total.toLocaleString()}`;
@@ -2917,10 +3806,12 @@ function renderRealLb(elId, list, count){
   list.forEach((p,i)=>{
     const d=document.createElement('div'); d.className='lb'+(p.me?' me':'');
     const rc=i==0?'g':i==1?'s':i==2?'b':'';
+    // These names and colours arrive from a collection every phone in the
+    // room writes its own row in, and they are going into innerHTML.
     d.innerHTML=`<div class="rank ${rc}">${i+1}</div>
-      <div class="av" style="background:${p.color}">${(p.name||'P')[0].toUpperCase()}</div>
-      <div class="lbname">${p.me?(p.name||'You')+' (you)':p.name}${i==0?' 👑':''}</div>
-      <div class="lbpts">${p.pts}</div>`;
+      <div class="av" style="background:${esc(p.color||'#888')}">${esc((p.name||'P')[0].toUpperCase())}</div>
+      <div class="lbname">${esc(p.me?(p.name||'You')+' (you)':(p.name||'player'))}${i==0?' 👑':''}</div>
+      <div class="lbpts">${Number(p.pts)||0}</div>`;
     el.appendChild(d);
   });
   const foot=document.createElement('p');
@@ -3173,24 +4064,188 @@ function openTalk(tab){
     S.screen==='final'?'🔥 Talk trash · final':'🔥 Talk trash';
   renderTalk();
   document.getElementById('talkModal').classList.add('open');
+  if(ttTab==='room')ttRoomStart();
 }
-function closeTalk(){document.getElementById('talkModal').classList.remove('open');}
-function setTtTab(t){ttTab=t;ttOffset=0;renderTalk();}
+function closeTalk(){document.getElementById('talkModal').classList.remove('open');ttRoomStop();}
+function setTtTab(t){ttTab=t;ttOffset=0;renderTalk();if(t==='room')ttRoomStart();else ttRoomStop();}
 function ttNode(cls,txt){const d=document.createElement('div');d.className=cls;if(txt!==undefined)d.textContent=txt;return d;}
-function ttBurnCard(text){
+
+/* ---------------- POSTING ----------------
+   Game Night #1's bluntest note was that the trash talk had nowhere to
+   go: the app wrote the line and handed it to the clipboard, so the joke
+   landed in whatever group chat happened to be open, or nowhere at all
+   if you were playing alone. Every line now offers two things, in this
+   order — post it where the other players actually are, or copy it for
+   the group chat you already run. The clipboard does not get taken away,
+   because half the audience still lives there. */
+async function ttPost(text,kind){
+  if(S.mode==='demo'){
+    ttCopy(text,'Practice run — the room opens on game night. Copied it instead.');
+    return false;
+  }
+  if(!window.SB||!SB.enabled){
+    ttCopy(text,'No room to post to right now — copied it instead.');
+    return false;
+  }
+  let r=null;
+  try{ r=await SB.say({text:text,kind:kind||'burn',name:S.name||'player',color:S.color||'#888'}); }catch(e){ r=null; }
+  if(r&&r.ok){
+    toast('📣 Posted. Everyone playing tonight sees it.');
+    ttRoomPull(true);
+    return true;
+  }
+  const why=(r&&r.why)||'unknown';
+  // A rate limit is not a failure, so it does not get the failure copy —
+  // and it must not silently dump a duplicate on the clipboard either.
+  if(why==='slow'){ toast('Easy. One line every few seconds.'); return false; }
+  if(why==='limit'){ toast('That’s your 25 for tonight. Save something for the fourth.'); return false; }
+  ttCopy(text,'That didn’t post — copied it instead.');
+  return false;
+}
+
+function ttActs(text,kind){
+  const w=ttNode('tt-act');
+  const s=document.createElement('button');
+  s.className='send';s.textContent='📣 Post to the room';
+  s.onclick=e=>{
+    e.stopPropagation();
+    s.disabled=true;
+    Promise.resolve(ttPost(text,kind)).then(()=>{setTimeout(()=>{s.disabled=false;},1400);});
+  };
+  const c=document.createElement('button');
+  c.textContent='📋 Copy';
+  c.onclick=e=>{e.stopPropagation();ttCopy(text);};
+  w.appendChild(s);w.appendChild(c);
+  return w;
+}
+
+function ttLineCard(icon,text,kind){
   const d=ttNode('tt-burn');
-  const f=ttNode('fire','🔥'),b=document.createElement('div');
-  b.appendChild(ttNode('txt',text));b.appendChild(ttNode('cp','TAP TO COPY'));
+  const f=ttNode('fire',icon),b=document.createElement('div');
+  b.style.flex='1';
+  b.appendChild(ttNode('txt',text));
+  b.appendChild(ttActs(text,kind));
   d.appendChild(f);d.appendChild(b);
-  d.onclick=()=>ttCopy(text);
   return d;
 }
+function ttBurnCard(text){return ttLineCard('🔥',text,'burn');}
+
+/* ---------------- THE ROOM ----------------
+   One feed per night. Read cost is the whole design constraint here: the
+   first open costs up to thirty document reads, and every poll after it
+   asks only for lines newer than the newest line already on the phone,
+   which on a quiet minute is one read. Nothing polls while the sheet is
+   shut or the phone is face-down in a pocket. On the free tier that is
+   the difference between the room being affordable and not. */
+let ttLines=[],ttLastAt=0,ttTimer=null,ttPulling=false;
+const TT_FEED_MAX=30, TT_POLL_MS=12000;
+
+function ttRoomOpen(){
+  const m=document.getElementById('talkModal');
+  return !!(m&&m.classList.contains('open')&&ttTab==='room');
+}
+async function ttRoomPull(force){
+  if(!window.SB||!SB.enabled||S.mode==='demo') return;
+  if(!force&&(!ttRoomOpen()||document.hidden)) return;
+  if(ttPulling) return;
+  ttPulling=true;
+  try{
+    const rows=await SB.talk(ttLastAt);
+    if(rows&&rows.length){
+      // A line already on the phone gets OVERWRITTEN by the copy that
+      // comes back, not skipped: a line posted a second ago returns with
+      // at:0 because the server hasn't stamped it yet, and the next pull
+      // is what turns "just now" into a real timestamp.
+      const map={};
+      ttLines.forEach(l=>{map[l.id]=l;});
+      rows.forEach(l=>{map[l.id]=l;});
+      ttLines=Object.keys(map).map(k=>map[k])
+        .sort((x,y)=>(y.at||0)-(x.at||0))
+        .slice(0,TT_FEED_MAX);
+      ttLines.forEach(l=>{ if(l.at>ttLastAt) ttLastAt=l.at; });
+      if(ttRoomOpen()) renderRoom();
+    }
+  }catch(e){}
+  ttPulling=false;
+}
+function ttRoomStart(){ ttRoomStop(); ttRoomPull(true); ttTimer=setInterval(function(){ttRoomPull(false);},TT_POLL_MS); }
+function ttRoomStop(){ if(ttTimer){clearInterval(ttTimer);ttTimer=null;} }
+
+function ttAgo(ms){
+  if(!ms) return 'just now';
+  const s=Math.floor((Date.now()-ms)/1000);
+  if(s<10) return 'just now';
+  if(s<60) return s+'s ago';
+  const m=Math.floor(s/60);
+  if(m<60) return m+'m ago';
+  return Math.floor(m/60)+'h ago';
+}
+
+/* Nothing on this sheet touches innerHTML. Names and colours arrive from
+   a collection every phone in the room can write to, so the name goes in
+   through textContent and the colour has to match a hex literal before it
+   is allowed near a style property. That is a stronger guarantee than
+   escaping, because there is no markup path at all. */
+function renderRoom(){
+  const body=document.getElementById('talkBody');
+  body.innerHTML='';
+  const live=!!(window.SB&&SB.enabled&&S.mode!=='demo');
+  const head=ttNode('tt-live'+(live?'':' off'));
+  head.appendChild(document.createElement('i'));
+  head.appendChild(document.createTextNode(live?'The room · live tonight':'The room · offline'));
+  body.appendChild(head);
+
+  if(S.mode==='demo'){
+    body.appendChild(ttNode('tt-empty','This is the practice run, so there’s nobody else in here. On game night every line anybody posts lands on this sheet.'));
+    return;
+  }
+  if(!live){
+    body.appendChild(ttNode('tt-empty','Can’t reach tonight’s room. Your burns still work — tap Copy on any line and paste it wherever your people are.'));
+    return;
+  }
+  if(!ttLines.length){
+    body.appendChild(ttNode('tt-empty','Nothing said yet. Go to Burns, find a line your card actually earns, and be first in.'));
+    return;
+  }
+  const feed=ttNode('tt-feed');
+  ttLines.forEach(l=>{
+    const m=ttNode('tt-msg'+(l.me?' mine':''));
+    const who=ttNode('who');
+    const dot=document.createElement('span');
+    dot.className='dot';
+    dot.style.background=/^#[0-9a-fA-F]{3,8}$/.test(l.color||'')?l.color:'#888';
+    who.appendChild(dot);
+    const nm=document.createElement('span');
+    nm.className='nm';
+    nm.textContent=l.me?((l.name||'you')+' (you)'):(l.name||'player');
+    who.appendChild(nm);
+    const ag=document.createElement('span');
+    ag.className='ago';ag.textContent=ttAgo(l.at);
+    who.appendChild(ag);
+    m.appendChild(who);
+    m.appendChild(ttNode('line',l.text||''));
+    feed.appendChild(m);
+  });
+  body.appendChild(feed);
+}
+
+const TT_FOOT={
+  room:'Every line in here was written by the app from somebody’s real card. There’s no free text box, which is why there’s nothing to moderate.',
+  burns:'Post it to the room so everyone playing tonight sees it, or copy it for the group chat you already run.',
+  taunts:'Post it to the room so everyone playing tonight sees it, or copy it for the group chat you already run.',
+  callout:'Names stay on this device. Post the callout to the room or copy it — your call.'
+};
+
 function renderTalk(){
   [...document.querySelectorAll('#talkTabs .tt-tab')].forEach(b=>b.classList.toggle('on',b.dataset.t===ttTab));
+  const foot=document.getElementById('ttFoot');
+  if(foot) foot.textContent=TT_FOOT[ttTab]||TT_FOOT.burns;
   const body=document.getElementById('talkBody');body.innerHTML='';
-  if(ttTab==='burns'){
+  if(ttTab==='room'){
+    renderRoom();
+  }else if(ttTab==='burns'){
     const all=ttBurns();
-    const sub=ttNode('sub','Every line is built from your actual card — if it isn’t true, it doesn’t get written. Tap to copy.');
+    const sub=ttNode('sub','Every line is built from your actual card — if it isn’t true, it doesn’t get written.');
     sub.style.cssText='font-size:12px;margin:0 0 4px';body.appendChild(sub);
     const start=all.length?ttOffset%all.length:0;
     all.slice(start).concat(all.slice(0,start)).slice(0,4).forEach(t=>body.appendChild(ttBurnCard(t)));
@@ -3201,18 +4256,13 @@ function renderTalk(){
     }
   }else if(ttTab==='taunts'){
     const ph=ttPhase();
-    const sub=ttNode('sub',ph==='pre'?`Pre-${L.start} lines. Tap to copy.`
-      :ph==='mid'?'Mid-game lines with your score dropped in. Tap to copy.'
-      :`Post-${L.end} lines. Tap to copy.`);
+    const sub=ttNode('sub',ph==='pre'?`Pre-${L.start} lines.`
+      :ph==='mid'?'Mid-game lines with your score dropped in.'
+      :`Post-${L.end} lines.`);
     sub.style.cssText='font-size:12px;margin:0 0 8px';body.appendChild(sub);
-    const wrap=ttNode('tt-chips');
-    TAUNTS[ph].forEach(t=>{
-      const line=ttFill(t);
-      const c=ttNode('tt-chip',line);c.onclick=()=>ttCopy(line);wrap.appendChild(c);
-    });
-    body.appendChild(wrap);
+    TAUNTS[ph].forEach(t=>body.appendChild(ttLineCard('💬',ttFill(t),'taunt')));
   }else{
-    const sub=ttNode('sub','Add your crew once — names are saved on this device. Drop in their score from the group chat and the callout writes itself.');
+    const sub=ttNode('sub','Add your crew once — names are saved on this device. Drop in their score and the callout writes itself.');
     sub.style.cssText='font-size:12px;margin:0 0 8px';body.appendChild(sub);
     if(!crew.length)crew=[{n:'',pts:''}];
     crew.forEach((c,i)=>body.appendChild(ttCrewRow(c,i)));
@@ -3221,12 +4271,21 @@ function renderTalk(){
     body.appendChild(add);
     const out=ttNode('tt-out');out.id='ttOut';out.style.display='none';
     body.appendChild(out);
+    const acts=ttActs('','callout');acts.id='ttOutActs';acts.style.display='none';
+    body.appendChild(acts);
   }
 }
 function ttCrewRow(c,i){
   const row=ttNode('tt-crew');
   const n=document.createElement('input');n.className='n';n.placeholder='Name';n.maxLength=16;n.value=c.n||'';
-  n.oninput=()=>{crew[i].n=n.value;saveCrew(crew);};
+  // The one free-text surface left in the whole trash-talk sheet, and it
+  // can end up inside a line that gets posted to a public room. Angle
+  // brackets, quotes and backticks never survive the keystroke.
+  n.oninput=()=>{
+    const v=n.value.replace(/[<>&"'`\\]/g,'').replace(/\s+/g,' ').slice(0,16);
+    if(v!==n.value)n.value=v;
+    crew[i].n=v;saveCrew(crew);
+  };
   const p=document.createElement('input');p.className='p';p.type='number';p.inputMode='numeric';
   p.placeholder='Pts';p.value=(c.pts===0||c.pts)?c.pts:'';
   p.oninput=()=>{crew[i].pts=p.value;saveCrew(crew);};
@@ -3235,9 +4294,19 @@ function ttCrewRow(c,i){
     const line=ttCallout(n.value,p.value);
     if(!line){toast('Add a name first.');return;}
     const out=document.getElementById('ttOut');
-    out.textContent=line+'   ·   TAP TO COPY';out.style.display='block';
+    out.textContent=line;out.style.display='block';
     out.onclick=()=>ttCopy(line,'🎯 Callout copied — go get him.');
-    ttCopy(line,'🎯 Callout copied — go get him.');
+    const acts=document.getElementById('ttOutActs');
+    if(acts){
+      acts.style.display='flex';
+      const btns=acts.querySelectorAll('button');
+      btns[0].disabled=false;
+      btns[0].onclick=e=>{
+        e.stopPropagation();btns[0].disabled=true;
+        Promise.resolve(ttPost(line,'callout')).then(()=>{setTimeout(()=>{btns[0].disabled=false;},1400);});
+      };
+      btns[1].onclick=e=>{e.stopPropagation();ttCopy(line,'🎯 Callout copied — go get him.');};
+    }
   };
   const rm=document.createElement('button');rm.className='rm';rm.textContent='✕';
   rm.onclick=()=>{crew.splice(i,1);saveCrew(crew);renderTalk();};
@@ -3463,12 +4532,13 @@ function restart(){
    care about any of this just makes their picks and taps Lock exactly
    like before. The arrows are opt-in effort for opt-in edge. */
 const CONF_LADDERS={
-  4:[10,7,5,3], 5:[9,7,5,3,1], 6:[9,6,4,3,2,1],
+  4:[10,7,5,3], 5:[9,7,5,3,1], 6:[12,8,6,4,3,2],
   7:[10,7,5,4,3,2,1], 8:[11,8,6,4,3,2,2,1],
   10:[12,9,7,5,4,4,3,3,2,1]
 };
 /* Fit a ladder to this sport's line count AND its exact base total. The
-   hand-authored ones above already land on the total for basketball (25)
+   hand-authored ones above already land on the total for basketball (35 —
+   the 6-line ladder was retuned from 25 when the sheet went to 60 pts)
    and soccer (50); the rescale below is the safety net for a bank
    somebody edits later, and it is written so the sum comes out exact,
    never merely close. */
@@ -3547,7 +4617,7 @@ function applySport(){
   set('predBtn',`Lock it in — go to ${L.start} 🔒`);
   set('predMeta',`PRE-${L.Unit.toUpperCase()} PREDICTION SHEET`);
   set('predWorth',`Up to ${PRED_MAX} pts`);
-  set('finalMax',`total points • out of ${MAXPTS} possible`);
+  set('finalMax',`OUT OF ${MAXPTS}`);
   set('finalPill',L.End);
   set('prPill',L.End);
   set('breakPill','End of '+roundTag(0));

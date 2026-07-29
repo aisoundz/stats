@@ -220,6 +220,41 @@
     <!-- ---------- TAB 2: RUN ---------- -->
     <section id="t-run" class="hide">
       <div id="runBanner"></div>
+
+      <!-- ---------- the live scoreboard ----------
+           This is the answer to "the app goes dark for eleven minutes".
+           Between quarters a player's phone had locked picks, a button
+           that did nothing yet, and silence. Now it has the score of the
+           game they are watching and where they stand in the room.
+
+           There is no play-by-play feed behind this and it does not
+           pretend there is. It is you, typing a number you can see on
+           your own television, and every phone in the room labels it
+           "posted by the host" with the minute you last touched it.
+           Slower than a feed, and honest, which is the trade we chose.
+
+           Leave it blank and no card appears on anybody's phone. A
+           scoreboard that says 0-0 at halftime is worse than none. -->
+      <div class="card">
+        <h3>Live score <span class="chip" id="scState">not posted</span></h3>
+        <p class="sub">Type what's on your screen and press Post. Every phone waiting between rounds picks it up within about a minute. One line of text is optional — that's the bit people come back for.</p>
+        <div class="row" style="margin-top:10px;align-items:flex-end">
+          <div style="flex:1"><label for="scAway" id="scAwayLbl">Away</label>
+            <input id="scAway" type="number" inputmode="numeric" min="0" max="300" step="1" placeholder="0"></div>
+          <div style="flex:1"><label for="scHome" id="scHomeLbl">Home</label>
+            <input id="scHome" type="number" inputmode="numeric" min="0" max="300" step="1" placeholder="0"></div>
+        </div>
+        <label for="scPeriod" style="margin-top:10px;display:block">Where the game is</label>
+        <select id="scPeriod"></select>
+        <label for="scNote" style="margin-top:10px;display:block">One line for the room (optional)</label>
+        <input id="scNote" maxlength="90" placeholder="e.g. Fever on an 8-0 run — Clark has 14.">
+        <div class="row" style="margin-top:12px">
+          <button class="btn" id="scPost" style="flex:1">Post the score</button>
+          <button class="btn ghost" id="scClear">Take it down</button>
+        </div>
+        <p class="sub tip" id="scNote2" style="margin-top:10px">Nothing here touches scoring. It is a number on a card — if you never post one, the night runs exactly as it does today.</p>
+      </div>
+
       <div class="card">
         <h3>Push a round to every phone</h3>
         <p class="sub">One round at a time. Push when the quarter ends on TV, reveal when you've checked the box score.</p>
@@ -285,6 +320,14 @@
         <tbody id="lbBody"><tr><td colspan="5" style="color:var(--dim)">Nothing yet.</td></tr></tbody></table>
         <p class="sub tip" style="margin-top:10px">Remove is for test rows and spam. It deletes that player's score and can't be undone.</p>
       </div>
+      <div class="card">
+        <h3>Trash talk</h3>
+        <p class="sub">Every line players posted in tonight's room, newest first. There is no free text box in the app &mdash; each line was written by the app from that player's own card &mdash; so there should be nothing here to take down. This is the panel that exists so that if there ever is, you can.</p>
+        <button class="btn ghost" id="talkBtn">Load the room</button>
+        <table style="margin-top:10px"><thead><tr><th>When</th><th>Player</th><th>Line</th><th></th></tr></thead>
+        <tbody id="talkBody"><tr><td colspan="4" style="color:var(--dim)">Not loaded.</td></tr></tbody></table>
+        <p class="sub tip" id="talkNote" style="margin-top:8px"></p>
+      </div>
     </section>
 
   </div>
@@ -337,15 +380,21 @@ const NIGHTS = [
   // First in this list is the night the Control Room opens on, so the live
   // fixture goes at the top. Past nights stay listed — Game Night #1 is not
   // settled yet, and the picker is the only way back to its grading screen.
+  // away/home are the two short names on the live scoreboard in tab 2, in
+  // that order — the app draws the road team on the left, so the order here
+  // is not decorative. Everything else on this list is the round structure.
   { id:'gn2-2026-08-02-min-ind', label:'Game Night #2 — Fever @ Lynx (Aug 2)',
+    away:'IND', home:'MIN',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
     worth:[1,2,3,4] },
   { id:'gn1-2026-07-28-ind-sea', label:'Game Night #1 — Fever @ Storm (Jul 28) · played',
+    away:'IND', home:'SEA',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
     worth:[1,2,3,4] },
   { id:'sn1-2026-08-04-mia-ame', label:'Soccer Night — Miami v América (Aug 4)',
+    away:'AME', home:'MIA',
     tags:['1H','2H'],
     names:['First half','Second half'],
     worth:[3,5] }];
@@ -588,11 +637,15 @@ function initUI(){
     b.onclick = () => {
       document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on', x===b));
       ['write','run','grade','room'].forEach(t=>$('t-'+t).classList.toggle('hide', t!==b.dataset.tab));
-      if(b.dataset.tab==='run')  renderRun();
+      if(b.dataset.tab==='run'){ renderRun(); loadScore(); }
       if(b.dataset.tab==='room') refreshRoom();
       if(b.dataset.tab==='grade'){ fillGradeSel(); watchGradeSubs(); renderGrade(); }
     };
   });
+
+  $('scPost').onclick  = postScore;
+  $('scClear').onclick = clearScore;
+  fillScoreUI();
 
   $('roundSel').onchange = () => { roundIdx = +$('roundSel').value; renderWrite(); };
   $('worthIn').onchange = () => {
@@ -609,6 +662,7 @@ function initUI(){
   $('backupBtn').onclick  = backupToCloud;
   $('restoreBtn').onclick = restoreFromCloud;
   $('refreshBtn').onclick = refreshRoom;
+  $('talkBtn').onclick    = refreshTalk;
 
   loadKeys();
   $('gradeSel').onchange   = () => { gradeRid = $('gradeSel').value; watchGradeSubs(); renderGrade(); };
@@ -652,6 +706,10 @@ function onNightChange(){
   fillGradeSel();
   $('gradeTotals').innerHTML = '';
   renderWrite(); renderRun(); renderGrade();
+  // A score belongs to a night. Switching the picker must not leave last
+  // night's numbers sitting in the boxes ready to be posted to this one.
+  $('scAway').value=''; $('scHome').value=''; $('scNote').value='';
+  loadScore();
   watchRounds();
   if(!$('t-grade').classList.contains('hide')) watchGradeSubs();
 }
@@ -848,6 +906,92 @@ async function pushRound(i, silent){
   }catch(e){ toast('Push failed: ' + ((e&&e.message)||e)); }
 }
 
+/* ---------------- THE LIVE SCOREBOARD ----------------
+   Writes one field on the night document: nights/{night}.score. Phones
+   already read that document, the rules already say "everyone reads, only
+   you write", so this needs no rules change and no new index. One document
+   read per phone per poll, which is what made it affordable at all.
+
+   It is deliberately NOT wired into scoring. A typo here costs a wrong
+   number on a card for one minute. A typo in anything that scores costs
+   the night. */
+function scoreOptions(){
+  const cfg = nightCfg(night), n = cfg.tags.length, o = [];
+  cfg.tags.forEach((t,i)=>{
+    o.push(t + ' in progress');
+    // The break after the middle round is not "End of Q2", it is half-time,
+    // and the one after the last round is not "End of Q4", it is the final.
+    // Derived from the tag list so soccer's two halves come out right too.
+    if(i === n-1)                       o.push('Final');
+    else if(i === Math.floor(n/2) - 1)  o.push('Half-time');
+    else                                o.push('End of ' + t);
+  });
+  return o;
+}
+
+function fillScoreUI(){
+  const cfg = nightCfg(night);
+  $('scAwayLbl').textContent = cfg.away || 'Away';
+  $('scHomeLbl').textContent = cfg.home || 'Home';
+  const sel = $('scPeriod'), keep = sel.value;
+  sel.innerHTML = scoreOptions().map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('');
+  if(keep) sel.value = keep;
+}
+
+/* Read back whatever is already posted, so switching nights or reloading
+   the laptop mid-game does not show an empty box over a live card. */
+async function loadScore(){
+  fillScoreUI();
+  $('scState').textContent = 'not posted';
+  $('scState').className = 'chip draft';
+  if(!FB || !night) return;
+  try{
+    const { F, db } = FB;
+    const snap = await F.getDoc(F.doc(db,'nights',night));
+    const sc = snap.exists() && (snap.data()||{}).score;
+    if(!sc) return;
+    if(sc.away!=null) $('scAway').value = sc.away;
+    if(sc.home!=null) $('scHome').value = sc.home;
+    if(sc.period) $('scPeriod').value = sc.period;
+    $('scNote').value = sc.note || '';
+    $('scState').textContent = '● showing on phones';
+    $('scState').className = 'chip live';
+  }catch(e){ /* a scoreboard that cannot be read is not worth a banner */ }
+}
+
+async function postScore(){
+  const a = parseInt($('scAway').value, 10), h = parseInt($('scHome').value, 10);
+  // Refuse a half-typed score rather than publishing "IND 41 — MIN NaN".
+  // The phones refuse it too, on the way in; this is the polite half.
+  if(!isFinite(a) || !isFinite(h)){ toast('Both scores, please — a half-typed score would show as a blank on every phone.'); return; }
+  if(a<0 || h<0 || a>300 || h>300){ toast('That score is out of range.'); return; }
+  try{
+    const { F, db } = FB;
+    await F.setDoc(F.doc(db,'nights',night), {
+      score: {
+        away: a, home: h,
+        period: $('scPeriod').value || '',
+        note: ($('scNote').value || '').trim().slice(0,90),
+        at: F.serverTimestamp()
+      }
+    }, { merge: true });
+    $('scState').textContent = '● showing on phones';
+    $('scState').className = 'chip live';
+    toast('Score posted. Phones waiting between rounds will show it within a minute.');
+  }catch(e){ toast('Could not post that: ' + ((e&&e.message)||e)); }
+}
+
+async function clearScore(){
+  if(!confirm('Take the scoreboard down?\n\nThe card disappears from every phone. Nothing that has been scored is affected.')) return;
+  try{
+    const { F, db } = FB;
+    await F.setDoc(F.doc(db,'nights',night), { score: F.deleteField() }, { merge: true });
+    $('scState').textContent = 'not posted';
+    $('scState').className = 'chip draft';
+    toast('Scoreboard taken down.');
+  }catch(e){ toast('Could not take it down: ' + ((e&&e.message)||e)); }
+}
+
 async function revealRound(i, again){
   const issues = roundIssues(i);
   if(issues.length){ toast('Fix that round first: ' + issues[0]); return; }
@@ -980,9 +1124,11 @@ function gradeSpec(rid){
   else if(draft) worth = draft.worth;
   else if(i >= 0) worth = cfg.worth[i];
 
-  // The prediction sheet prices each line separately — five for the
-  // winner, four-plus-five for each stat leader — so it carries its own
-  // numbers rather than one flat rate.
+  // The prediction sheet prices each line separately — ten for the
+  // winner, five-plus-five for each stat leader — so it carries its own
+  // numbers rather than one flat rate. These are READ off the phone's own
+  // submission (`banks`/`bons`), never hardcoded here, which is why raising
+  // the sheet from 50 to 60 needed no change on this side.
   const bases = (rid === 'rP' && first && Array.isArray(first.banks)) ? first.banks.map(Number) : null;
   const bons  = (rid === 'rP' && first && Array.isArray(first.bons))  ? first.bons.map(Number)  : null;
 
@@ -1265,6 +1411,55 @@ async function refreshRoom(){
   }catch(e){
     $('roomCount').textContent = '—';
     $('roomNote').textContent = 'Could not read the room: ' + ((e&&e.message)||e) +
+      '. That is a dashboard problem only — the players\' game is unaffected.';
+  }
+}
+
+/* ---------------- the room's trash talk ----------------
+   Loaded on demand and never on a timer. The host is the only person who
+   ever reads this panel and they read it when something goes wrong, so
+   paying fifty document reads every thirty seconds for a table nobody is
+   looking at would be the most expensive way in the whole product to
+   learn nothing.
+
+   Delete is the only write available here, and it is available only to
+   you: the rules let a player create a line and nothing else, so a line
+   cannot be edited into something different after people have read it,
+   and cannot be removed by the person who posted it either. That
+   asymmetry is what makes an append-only public log with one moderator
+   something we can reason about. */
+async function refreshTalk(){
+  if(!FB || !user) return;
+  const { F, db } = FB;
+  try{
+    const q = F.query(F.collection(db,'nights',night,'talk'), F.orderBy('at','desc'), F.limit(60));
+    const snap = await F.getDocs(q);
+    const rows = [];
+    snap.forEach(d=>rows.push(Object.assign({id:d.id}, d.data())));
+    const when = v => {
+      try{
+        const dt = v && v.toDate ? v.toDate() : null;
+        if(!dt) return 'just now';
+        return dt.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+      }catch(e){ return '—'; }
+    };
+    const b = $('talkBody');
+    b.innerHTML = rows.length
+      ? rows.map(r=>`<tr><td style="color:var(--dim);white-space:nowrap">${esc(when(r.at))}</td>
+          <td>${esc(r.name||'player')}</td><td>${esc(r.text||'')}</td>
+          <td><button class="mini danger" data-drop="${esc(r.id)}">Take down</button></td></tr>`).join('')
+      : '<tr><td colspan="4" style="color:var(--dim)">Nobody has said anything in this room yet.</td></tr>';
+    b.onclick = async e => {
+      const t = e.target.closest('button[data-drop]'); if(!t) return;
+      if(!confirm('Take this line down for everyone? This cannot be undone.')) return;
+      try{ await F.deleteDoc(F.doc(db,'nights',night,'talk',t.dataset.drop)); toast('Taken down.'); refreshTalk(); }
+      catch(err){ toast('Could not take it down: ' + ((err&&err.message)||err)); }
+    };
+    $('talkNote').textContent = rows.length
+      ? 'Showing the ' + rows.length + ' most recent line(s). Read straight from the database just now.'
+      : 'Read straight from the database just now.';
+  }catch(e){
+    $('talkNote').textContent = 'Could not read the room: ' + ((e&&e.message)||e) +
       '. That is a dashboard problem only — the players\' game is unaffected.';
   }
 }
