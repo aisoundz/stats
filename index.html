@@ -434,7 +434,11 @@
       <p class="sub center" id="lobbySub">Predictions locked. When each quarter ends, questions drop here — be fast, points are live.</p>
     </div>
     <div class="statgrid" style="margin-top:10px">
-      <div class="stat"><div class="v" id="lobStat1v">—</div><div class="k" id="lobStat1k">Players tonight</div></div>
+      <!-- These two nodes belong to the player, not the room. The crowd
+           count lives in the room bar below. The old default label here
+           said "Players tonight" over a dash, which is a promise this
+           slot never keeps. -->
+      <div class="stat"><div class="v" id="lobStat1v">—</div><div class="k" id="lobStat1k">Your points so far</div></div>
       <div class="stat"><div class="v" id="lobStat2v">50</div><div class="k" id="lobStat2k">Your prediction pts (pending)</div></div>
     </div>
     <div class="roombar" id="roomBar" style="display:none">
@@ -758,7 +762,8 @@ window.STATS_FIREBASE = {
      SB.watchRound(f)           newest host-pushed round, or null
      SB.submit(id,o)-> bool     lock my picks for a pushed round
      SB.mySub(id)  -> obj|null  what I already locked for that round
-     SB.signup(o)  -> bool      opt in to hear about the next game night
+     SB.joined()   -> int|null  everyone who played tonight, no time cutoff
+     SB.signup(o)  -> {ok,why}  opt in to hear about the next game night
      SB.onState(f)              subscribe to state changes
    ===================================================================== */
 (function () {
@@ -789,6 +794,7 @@ window.STATS_FIREBASE = {
     join:  function () { return Promise.resolve(false); },
     push:  function () { return Promise.resolve(false); },
     count: function () { return Promise.resolve(null); },
+    joined:function () { return Promise.resolve(null); },
     top:   function () { return Promise.resolve(null); },
     rank:  function () { return Promise.resolve(null); },
     watchRound: function () { return function () {}; },
@@ -915,6 +921,27 @@ window.STATS_FIREBASE = {
         F.where('lastSeen', '>', cutoff)
       );
       var snap = await F.getCountFromServer(q);   // 1 read per 1000 docs
+      return snap.data().count;
+    } catch (e) { return null; }
+  };
+
+  /* ---- how many joined at any point tonight -------------------------
+     SB.count() answers "who has their phone open in the last six
+     minutes". That is the right number for a room bar and the wrong
+     number for everything else, and using it for everything else is
+     what produced "Tonight's top 5 of 1 players" on the final screen:
+     five people on the board, a denominator that only counted whoever
+     happened to be present when the query ran.
+
+     This one has no cutoff. It is every player doc for the night, which
+     is the honest denominator for a rank and for a leaderboard. Same
+     cost as count() — an aggregate query is 1 read per 1000 docs, not
+     1 per doc — so having both is not an expense worth optimising. */
+  SB.joined = async function () {
+    if (!SB.enabled || !nightId || !budget()) return null;
+    try {
+      var snap = await F.getCountFromServer(
+        F.collection(db, 'nights', nightId, 'players'));
       return snap.data().count;
     } catch (e) { return null; }
   };
@@ -1077,16 +1104,29 @@ window.STATS_FIREBASE = {
 
      It does not phrase consent for you. `consent` must be literally true,
      enforced at the rules layer, and the checkbox that sets it carries
-     the disclosure. An unchecked box writes nothing at all.              */
+     the disclosure. An unchecked box writes nothing at all.
+
+     Returns {ok:true} or {ok:false, why:<code>}. It used to return a bare
+     false for all six distinct failure modes, which meant the card told
+     every one of them the same story — "connection's probably out" — even
+     when the connection was fine and the real cause was something else
+     entirely. A signup that fails silently is a contact we never get and
+     never find out we lost, so the reason now comes back with the answer. */
   SB.signup = async function (o) {
-    if (!SB.enabled || !SB.me || !o || !budget()) return false;
+    // Split deliberately: "the backend never came up" and "we hit the call
+    // ceiling" are different problems with different fixes, and lumping
+    // them cost us a whole night of not knowing which one we had.
+    if (!SB.enabled || !SB.me) return { ok:false, why:'offline' };
+    if (!o) return { ok:false, why:'empty' };
+    if (!budget()) return { ok:false, why:'budget' };
     var email = String(o.email || '').trim().toLowerCase();
     // Not validation theatre — the rules reject a bad row anyway. This is
     // to avoid burning a write on something that cannot possibly be an
     // address, because writes are the scarce resource on the free tier.
     if (email.length < 6 || email.length > 120 ||
-        email.indexOf('@') < 1 || email.indexOf('.', email.indexOf('@')) < 0) return false;
-    if (o.consent !== true) return false;
+        email.indexOf('@') < 1 || email.indexOf('.', email.indexOf('@')) < 0)
+      return { ok:false, why:'email' };
+    if (o.consent !== true) return { ok:false, why:'consent' };
     var row = {
       email:   email,
       name:    String(o.name || mine.name || '').slice(0, 24),
@@ -1096,10 +1136,28 @@ window.STATS_FIREBASE = {
     };
     var phone = String(o.phone == null ? '' : o.phone).replace(/[^0-9+]/g, '');
     if (phone.length >= 10 && phone.length <= 20) row.phone = phone;
-    try {
-      await F.setDoc(F.doc(db, 'signups', SB.me.uid), row);
-      return true;
-    } catch (e) { return false; }
+    // One silent retry. Firestore's transient errors ('unavailable',
+    // 'deadline-exceeded') are exactly the ones that clear on their own,
+    // and asking someone to re-type an email because a packet dropped is
+    // how you lose the contact.
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        await F.setDoc(F.doc(db, 'signups', SB.me.uid), row);
+        return { ok:true };
+      } catch (e) {
+        var code = (e && (e.code || e.name)) || 'unknown';
+        var soft = (code === 'unavailable' || code === 'deadline-exceeded' ||
+                    code === 'aborted' || code === 'internal');
+        if (!soft || attempt === 1) {
+          // Log it. This is the line that would have told us on Tuesday
+          // night what the card could not.
+          try { console.error('[STATS] signup failed:', code, e && e.message); } catch (_) {}
+          return { ok:false, why:code, detail:(e && e.message) || '' };
+        }
+        await new Promise(function (r) { setTimeout(r, 700); });
+      }
+    }
+    return { ok:false, why:'unknown' };
   };
 
   SB.pollMs = COUNT_MS;
@@ -2152,8 +2210,10 @@ async function submitSignup(){
   }
 
   btn.disabled=true; btn.textContent='Adding you…';
-  let ok=false;
-  try{ ok = await SB.signup({email:email, phone:phone, consent:true, name:S.name||''}); }catch(e){ ok=false; }
+  let res={ok:false,why:'threw'};
+  try{ res = await SB.signup({email:email, phone:phone, consent:true, name:S.name||''}) || res; }
+  catch(e){ res={ok:false, why:(e&&(e.code||e.name))||'threw', detail:(e&&e.message)||''}; }
+  const ok = res.ok===true;
 
   if(ok){
     markSignedUp();
@@ -2166,9 +2226,32 @@ async function submitSignup(){
     // An honest failure. The one thing we must never do is say "thanks!"
     // for a row the database refused — they'd stop expecting the email and
     // never find out why it didn't come.
+    //
+    // Each reason gets its own sentence, because "try again" is only good
+    // advice for some of them. Telling someone to retry a permission-denied
+    // write just makes them tap a button that can never work.
+    const SAY={
+      offline:  ['We couldn\'t reach the server.','Your phone connected to the game but not to the list. '+
+                 'Check your signal and tap again.'],
+      budget:   ['This device hit its limit for tonight.','Nothing\'s wrong with your email — reload the page '+
+                 'and it\'ll go straight through.'],
+      email:    ['That email didn\'t pass.','Double-check it and tap again.'],
+      consent:  ['We need the box ticked.','Tick it and tap again.'],
+      'permission-denied':
+                ['The list turned that one away.','Usually it\'s a phone number that\'s too short or too long — '+
+                 'try leaving it blank, or send this code to the STATS crew.'],
+      unavailable:['The connection dropped mid-save.','Nothing was recorded. Tap again in a second.'],
+      'deadline-exceeded':['That took too long to save.','Nothing was recorded. Tap again in a second.']
+    };
+    const said = SAY[res.why] || ['That didn\'t save.','Nothing was recorded. Tap again in a second — '+
+                                  'if it keeps failing, send this code to the STATS crew.'];
     btn.disabled=false; btn.textContent='Try again →';
-    note.innerHTML='<b style="color:var(--gold)">That didn\'t save.</b> Connection\'s probably out. '+
-      'Nothing was recorded — tap again in a second and it should go through.';
+    // The code is small and grey, not an error dump — but it is on screen,
+    // so a screenshot from any player is now a real bug report.
+    note.innerHTML='<b style="color:var(--gold)">'+said[0]+'</b> '+said[1]+
+      '<span style="display:block;margin-top:5px;font-size:11px;color:var(--dim)">code: '+
+      String(res.why||'unknown')+'</span>';
+    try{ console.error('[STATS] signup card failure:', res.why, res.detail||''); }catch(_){}
   }
 }
 /* =====================================================================
@@ -2180,7 +2263,7 @@ async function submitSignup(){
    crowd in front of real players on game night is the failure mode this
    whole layer exists to prevent.
    ===================================================================== */
-let roomTimer=null, roomLast={count:null,rank:null};
+let roomTimer=null, roomLast={count:null,joined:null,rank:null};
 
 function nightKey(){ return GAME.nightId || (SPORT.key+'-unscheduled'); }
 
@@ -2245,18 +2328,41 @@ async function refreshRoom(){
     setRoomBar('err','Live count unavailable — your game is unaffected.');
     return;
   }
-  const [c,r]=await Promise.all([SB.count(), SB.rank()]);
-  roomLast={count:c,rank:r};
+  // joined() is newer than the rest of this contract, and the room bar is
+  // not worth breaking over a backend that predates it. During a rolling
+  // deploy a phone can hold an older bundle for a minute; an un-guarded call
+  // there throws inside Promise.all, kills the whole refresh, and freezes the
+  // bar on "Connecting…" — a worse failure than simply not knowing the
+  // all-night number. Every other read here already degrades to null; this
+  // one now does too.
+  const ask = (fn, ...a) => (typeof fn === 'function'
+    ? Promise.resolve(fn(...a)).catch(() => null)
+    : Promise.resolve(null));
+  const [c,j,r]=await Promise.all([ask(SB.count), ask(SB.joined), ask(SB.rank)]);
+  roomLast={count:c,joined:j,rank:r};
   // A null count means we could not confirm it. Say so; do not guess.
-  const cTxt = (c===null||c===undefined)
-    ? 'Live count unavailable'
-    : `<b>${c.toLocaleString()}</b> playing right now`;
+  // Two numbers, two labels, never the same word for both: "here now" is
+  // whoever has the app open, "joined" is everyone who showed up tonight.
+  // They are different numbers and the difference is the point — a room
+  // that says 3 here now / 41 joined is telling you something true about
+  // your night that a single number cannot.
+  let cTxt;
+  if(c===null||c===undefined){
+    cTxt = (j===null||j===undefined) ? 'Live count unavailable'
+                                     : `<b>${j.toLocaleString()}</b> joined tonight`;
+  } else {
+    cTxt = `<b>${c.toLocaleString()}</b> here now`;
+    if(j!==null && j!==undefined && j>c) cTxt += ` · ${j.toLocaleString()} joined tonight`;
+  }
   setRoomBar('on', cTxt, (r===null||r===undefined)?'':`you're #${r}`);
 
-  const s1v=document.getElementById('lobStat1v'), s1k=document.getElementById('lobStat1k');
-  if(s1v && S.mode==="live" && c!==null && c!==undefined){
-    s1v.textContent=c.toLocaleString(); s1k.textContent='Players tonight';
-  }
+  // Deliberately does NOT touch lobStat1. renderLobby() has just written
+  // the player's own score into those two nodes; this function used to
+  // race in behind it and overwrite them with the crowd count under the
+  // label "Players tonight". Two different quantities, one pair of nodes,
+  // whichever finished last won — which is why the waiting room showed a
+  // number nobody could explain. The crowd count has its own home in the
+  // room bar above, and that is the only place it belongs.
 }
 
 /* =====================================================================
@@ -2481,16 +2587,28 @@ function renderHostedReview(r, idx, revealed){
 async function finishLive(){
   if(!window.SB || !SB.enabled) return;
   await pushScore();
-  const [rank,top,count]=await Promise.all([SB.rank(), SB.top(10), SB.count()]);
-  if(rank!==null && rank!==undefined && count){
+  // joined(), not count(). A final rank is a rank out of everyone who
+  // played tonight — not out of whoever still had the tab open when the
+  // buzzer went. That mismatch is what printed "#1 Final rank of 1" on a
+  // screen that was simultaneously listing five other people.
+  // Same guard as refreshRoom: an older bundle without joined() should cost
+  // us the denominator, not the entire final screen.
+  const ask = (fn, ...a) => (typeof fn === 'function'
+    ? Promise.resolve(fn(...a)).catch(() => null)
+    : Promise.resolve(null));
+  const [rank,top,joined]=await Promise.all([ask(SB.rank), ask(SB.top,10), ask(SB.joined)]);
+  // Never let the denominator be smaller than the board it sits above.
+  const total = (joined!==null && joined!==undefined && top && top.length)
+    ? Math.max(joined, top.length) : joined;
+  if(rank!==null && rank!==undefined && total){
     document.getElementById('finalRank').textContent='#'+rank;
     document.querySelector('#s-final .statgrid .stat:nth-child(1) .k').textContent=
-      `Final rank of ${count.toLocaleString()}`;
+      `Final rank of ${total.toLocaleString()}`;
     document.getElementById('finalTitle').textContent =
       rank===1 ? '🏆 You won the night!' : `Great game, ${S.name||'player'}!`;
-    document.getElementById('scRankLine').textContent=`Rank #${rank} of ${count.toLocaleString()}`;
+    document.getElementById('scRankLine').textContent=`Rank #${rank} of ${total.toLocaleString()}`;
   }
-  if(top && top.length) renderRealLb('finalLb', top, count);
+  if(top && top.length) renderRealLb('finalLb', top, total);
 }
 
 function renderRealLb(elId, list, count){
@@ -2498,8 +2616,13 @@ function renderRealLb(elId, list, count){
   el.innerHTML='';
   const head=document.createElement('p');
   head.className='sub'; head.style.cssText='font-size:12px;margin:0 0 6px;text-align:center';
-  head.textContent = count ? `Tonight's top ${Math.min(list.length,10)} of ${count.toLocaleString()} players`
-                           : `Tonight's top ${list.length}`;
+  // "of N" only when N is a number that can actually contain this list.
+  // A denominator smaller than the numerator is not a rounding problem,
+  // it is a sentence that tells the player the screen is broken.
+  const shown = Math.min(list.length, 10);
+  head.textContent = (count && count >= shown)
+    ? `Tonight's top ${shown} of ${count.toLocaleString()} players`
+    : `Tonight's top ${shown}`;
   el.appendChild(head);
   list.forEach((p,i)=>{
     const d=document.createElement('div'); d.className='lb'+(p.me?' me':'');
