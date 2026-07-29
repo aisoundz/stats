@@ -170,6 +170,10 @@
 
   .chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
   .chip{font-size:11px;font-weight:700;color:var(--muted);background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:6px 11px}
+  /* selectable version of the same chip, used by the signup screen */
+  .chip.pick{cursor:pointer;user-select:none;font-size:11.5px;padding:7px 12px;-webkit-tap-highlight-color:transparent}
+  .chip.pick.on{color:#04121a;background:var(--teal2,#2ee6a6);border-color:var(--teal2,#2ee6a6)}
+  .jgrp{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:14px 0 7px}
 
   /* host panel */
   .hostwrap{background:repeating-linear-gradient(45deg,#0c1220,#0c1220 12px,#0e1526 12px,#0e1526 24px)}
@@ -323,15 +327,18 @@
     <div class="center" style="margin-top:8px"><span class="pill">Play from home • Free to enter</span></div>
 
     <div class="card" style="margin-top:18px">
-      <h2 id="landingHead">🔴 Game Night #1 · Tue July 28</h2>
-      <p style="font-size:12.5px;font-weight:800;color:var(--gold);margin:2px 0 6px" id="landingTip">🕐 Tip-off 9:30 ET · 8:30 CT · 6:30 PT · ESPN</p>
-      <p class="sub" id="landingMatch"><b style="color:var(--ink)">Indiana Fever @ Seattle Storm</b> — on ESPN. Watch the broadcast, play from your couch. Predict before tip-off, answer at every quarter break. Right answers score. Fast right answers score more.</p>
+      <!-- These three are overwritten from BB_GAME on load; they are here only
+           so the first paint is not blank. Keep them in sync with the fixture
+           anyway — a stale flash of last week's game is still a stale flash. -->
+      <h2 id="landingHead">🔴 Game Night #2 · Sun · August 2</h2>
+      <p style="font-size:12.5px;font-weight:800;color:var(--gold);margin:2px 0 6px" id="landingTip">🕐 Tip-off 1:00 ET · 12:00 CT · 10:00 PT · ABC</p>
+      <p class="sub" id="landingMatch"><b style="color:var(--ink)">Indiana Fever @ Minnesota Lynx</b> — on ABC. Watch the broadcast, play from your couch. Predict before tip-off, answer at every quarter break. Right answers score. Fast right answers score more.</p>
       <div class="chips">
         <span class="chip" id="landingChip1">🏀 WNBA Game of the Night</span>
         <span class="chip">⚡ Speed counts</span>
         <span class="chip" id="landingChip3">⏱️ 4 quarters</span>
       </div>
-      <button class="btn" id="landingBtn" onclick="startLive()">🔴 Play Game Night — July 28 →</button>
+      <button class="btn" id="landingBtn" onclick="startLive()">🔴 Play Game Night — August 2 →</button>
       <button class="btn ghost" id="landingDemoBtn" onclick="startDemo()">🎮 Practice first (simulated game)</button>
     </div>
 
@@ -341,8 +348,77 @@
       <div class="step"><div class="num">3</div><div><b>Score with the crew</b><p id="step3p">When the host posts the answers, tap them to score your quarter. Most points wins the night; ⚡ Speed breaks ties.</p></div></div>
     </div>
 
+    <!-- The ask, on the front page. Someone who lands here between game
+         nights has nothing to play and no reason to come back; this is the
+         only thing on the page that works when there is no game on. -->
+    <div class="card" style="border-color:rgba(46,230,166,.35)">
+      <b style="font-size:15px">📬 Can't play tonight?</b>
+      <p class="sub" style="font-size:12.5px;margin:6px 0 0">Get one email before each game night, and tell us what you watch — we build the next night around the answers.</p>
+      <button class="btn teal" style="margin-top:12px" onclick="openJoin('landing')">Join the list →</button>
+    </div>
+
     <button class="btn ghost" onclick="go('rules')">📖 Read the full rules</button>
     <p class="foot">Free to play. No purchase necessary. Friends & family beta — see the Rules page for scoring and fair play.</p>
+  </section>
+
+  <!-- JOIN — the front door.
+       Until now the only place anyone could hand over an email was the very
+       last card of a finished game, which meant we could only collect from
+       people who had already played a whole night. Everyone who showed up
+       between games, or bounced at the prediction sheet, was invisible.
+       This screen is reachable from the landing page and from the final
+       screen, and it is the same form in both places — one validator, one
+       failure path, one thing to fix when it breaks.
+
+       The sports block is the point. An email alone is a mailing list; an
+       email plus "WNBA, NWSL, F1, watches on streaming, four nights a week"
+       is the thing a sponsor or a rights-holder will actually take a meeting
+       about. Everything below the address is optional on purpose — a
+       required question is a question people lie to. -->
+  <section class="screen" id="s-join">
+    <div class="brand"><span class="logo">STATS</span></div>
+    <h1 class="center" style="margin-top:20px" id="joinHead">Get in the game</h1>
+    <p class="sub center" id="joinSub">One email before each game night — when it's on, who's playing, what's up for grabs. Then tell us what you actually watch, so we build nights you'd show up for.</p>
+
+    <div class="card">
+      <label class="fld" for="jName">Name <span style="text-transform:none;letter-spacing:0;font-weight:600">— optional</span></label>
+      <input id="jName" maxlength="24" autocomplete="name" placeholder="What should we call you?">
+      <label class="fld" for="jEmail">Email</label>
+      <input id="jEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com">
+      <label class="fld" for="jPhone">Phone <span style="text-transform:none;letter-spacing:0;font-weight:600">— optional</span></label>
+      <input id="jPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(555) 555-5555">
+      <p class="foot" style="margin-top:8px">A number means you can play by text later, without the app. We're not texting anyone yet.</p>
+    </div>
+
+    <div class="card">
+      <b style="font-size:14.5px">🏆 What do you watch?</b>
+      <p class="sub" style="font-size:12.5px;margin:5px 0 0">Tap everything that's true. This is how we pick the next game night.</p>
+      <div id="jSports"></div>
+      <div style="margin-top:12px">
+        <label class="fld" for="jTeams">Your teams <span style="text-transform:none;letter-spacing:0;font-weight:600">— optional</span></label>
+        <input id="jTeams" maxlength="120" placeholder="e.g. Fever, Cowboys, Arsenal">
+      </div>
+    </div>
+
+    <div class="card">
+      <b style="font-size:14.5px">📺 How do you watch?</b>
+      <p class="sub" style="font-size:12.5px;margin:5px 0 0">You asked about rewinding — this is the question that tells us who can.</p>
+      <div class="chips" id="jWatch" style="margin-top:10px"></div>
+      <b style="font-size:14.5px;display:block;margin-top:16px">📅 How often is a game actually on?</b>
+      <div class="chips" id="jFreq" style="margin-top:10px"></div>
+      <b style="font-size:14.5px;display:block;margin-top:16px">🎁 What would make you play every week?</b>
+      <div class="chips" id="jPrize" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <label style="display:flex;gap:10px;align-items:flex-start;margin:0;font-size:11.5px;line-height:1.5;color:var(--muted);font-weight:600;cursor:pointer">
+        <input id="jConsent" type="checkbox" style="width:18px;height:18px;flex:0 0 18px;margin-top:1px;appearance:auto">
+        <span>Yes — email me about upcoming STATS game nights. If I entered a phone number, I also agree to receive recurring automated texts from STATS at that number. Consent is <b>not</b> a condition of playing, scoring, or winning anything. Message &amp; data rates may apply. Reply STOP to stop, HELP for help.</span>
+      </label>
+      <button class="btn teal" id="jBtn" style="margin-top:14px" onclick="submitJoin()">Count me in →</button>
+      <p class="foot" id="jNote" style="margin-top:8px">We don't sell your info. You can ask us to delete it any time.</p>
+    </div>
+    <button class="btn ghost" id="jSkip" onclick="joinBack()">Not right now</button>
   </section>
 
   <!-- RULES -->
@@ -625,10 +701,10 @@
     <p class="sub">This is what <b>you</b> (or an automation) control on game night. It's the seed of the "auto-post & auto-score" pipeline.</p>
 
     <div class="card tight">
-      <h2 style="font-size:14px" id="hostToolTitle">🔴 Game Night toolkit — July 28</h2>
+      <h2 style="font-size:14px" id="hostToolTitle">🔴 Game Night toolkit — August 2</h2>
       <p class="sub" style="font-size:12px" id="hostToolSub">You're the host. At each quarter break: (1) tell the crew to answer in the app, (2) check the broadcast + box score, (3) post the answers in the group chat. ~60 seconds of work per quarter.</p>
       <div class="segbtns" id="hostSegs"></div>
-      <p class="sub" style="font-size:11px;margin-top:8px;color:var(--dim)" id="hostToolFoot">Tap a quarter to copy its questions for the group chat. Answers come from watching + the live box score (ESPN gamecast has per-quarter stats).</p>
+      <p class="sub" style="font-size:11px;margin-top:8px;color:var(--dim)" id="hostToolFoot">Tap a quarter to copy its questions for the group chat. Answers come from watching + the live box score.</p>
     </div>
 
     <div class="card tight" id="pbpCard">
@@ -680,7 +756,7 @@
       <div class="sharecard" id="shareCard">
         <div style="display:flex;justify-content:space-between;align-items:flex-start">
           <div><span class="sc-logo">STATS</span>
-            <div class="sc-game" id="scGameLine">GAME NIGHT #1 · FEVER vs STORM · JUL 28</div></div>
+            <div class="sc-game" id="scGameLine">GAME NIGHT #2 · FEVER vs LYNX · AUG 2</div></div>
           <div style="font-size:22px" id="scEmoji">🏀</div>
         </div>
         <div class="sc-pts" id="scPts">0 <span style="font-size:15px;color:var(--muted);font-weight:800">pts</span></div>
@@ -1136,6 +1212,31 @@ window.STATS_FIREBASE = {
     };
     var phone = String(o.phone == null ? '' : o.phone).replace(/[^0-9+]/g, '');
     if (phone.length >= 10 && phone.length <= 20) row.phone = phone;
+
+    /* The sports profile. This is a WHITELIST, not a passthrough — anything
+       not copied here is silently dropped, which is exactly how a new field
+       goes missing without a single error being logged. If you add a
+       question to the join screen you must add it here too.
+
+       Bounds on everything: these are strings a person typed, they get
+       stored under their own uid, and an unbounded write is how one bored
+       tester fills the free tier. Arrays of plain strings only — Firestore
+       will not store an array inside an array, and a silent reject here
+       would lose the whole document, not just the field. */
+    var strList = function (v, maxN, maxLen) {
+      if (!Array.isArray(v)) return null;
+      var out = [];
+      for (var i = 0; i < v.length && out.length < maxN; i++) {
+        var s = String(v[i] == null ? '' : v[i]).slice(0, maxLen).trim();
+        if (s && out.indexOf(s) < 0) out.push(s);
+      }
+      return out.length ? out : null;
+    };
+    var sports = strList(o.sports, 40, 40); if (sports) row.sports = sports;
+    var watch  = strList(o.watch,   8, 40); if (watch)  row.watch  = watch;
+    var prize  = strList(o.prize,   8, 40); if (prize)  row.prize  = prize;
+    var teams  = String(o.teams || '').slice(0, 120).trim(); if (teams) row.teams = teams;
+    var freq   = String(o.freq  || '').slice(0, 40).trim();  if (freq)  row.freq  = freq;
     // One silent retry. Firestore's transient errors ('unavailable',
     // 'deadline-exceeded') are exactly the ones that clear on their own,
     // and asking someone to re-type an email because a packet dropped is
@@ -1170,25 +1271,34 @@ window.STATS_FIREBASE = {
    re-skins to ANY game — NBA, G-League, college, WNBA.
    In production this loads from the nightly schedule feed. */
 const BB_GAME={
-  nightId:"gn1-2026-07-28-ind-sea",
-  homeName:"Indiana Fever", homeAbbr:"IND", homeNick:"Fever", homeEmoji:"🔥",
-  awayName:"Seattle Storm", awayAbbr:"SEA", awayNick:"Storm", awayEmoji:"⛈️",
-  venue:"WNBA Game of the Night", date:"Tue · July 28", short:"July 28", shareDate:"JUL 28", night:"Game Night #1",
-  tip:"Tip-off 9:30 ET · 8:30 CT · 6:30 PT · ESPN" // confirmed: IND @ SEA on ESPN, 6:30 PM PT tip
+  nightId:"gn2-2026-08-02-min-ind",
+  homeName:"Minnesota Lynx", homeAbbr:"MIN", homeNick:"Lynx", homeEmoji:"🐆",
+  awayName:"Indiana Fever", awayAbbr:"IND", awayNick:"Fever", awayEmoji:"🔥",
+  venue:"WNBA Game of the Night", date:"Sun · August 2", short:"August 2", shareDate:"AUG 2", night:"Game Night #2",
+  // Verified against the published 2026 Fever schedule: Aug 2 at Minnesota,
+  // 1 p.m. ET, national window on ABC. Fever are the road team, so the Lynx
+  // are `home` here — the app renders home on the right of the VS badge.
+  net:"ABC",
+  tip:"Tip-off 1:00 ET · 12:00 CT · 10:00 PT · ABC"
 };
 const COLORS=["#2f6bff","#19c3d6","#ff4d5e","#ffc54d","#2ee6a6","#b57cff","#ff924d","#4dd0ff"];
 const BB_ROSTER={ // full names — used on the prediction sheet & final review
-  home:["Caitlin Clark","Kelsey Mitchell","Aliyah Boston","Sophie Cunningham","Monique Billings","Lexie Hull"],
-  away:["Ezi Magbegor","Dominique Malonga","Flau'jae Johnson","Jordan Horston","Natisha Hiedeman","Stefanie Dolson"]
+  // Six per side, taken from the published 2026 rosters. Six is a deliberate
+  // cap, not laziness: a prediction sheet with fifteen names is a scroll, and
+  // a scroll is the friction the host told us to cut.
+  home:["Napheesa Collier","Kayla McBride","Courtney Williams","Natasha Howard","Olivia Miles","Teaira McCowan"],
+  away:["Caitlin Clark","Kelsey Mitchell","Aliyah Boston","Sophie Cunningham","Monique Billings","Lexie Hull"]
 };
 // Prediction sheet definition (matches arena rules: 6 categories, base + bonus)
+// NOTE: every `answer` below is a SIMULATED result used only by Practice mode.
+// It is not a prediction, and it is not a claim about anything that happened.
 const BB_PREDS=[
   {id:"winner", label:"Winning team", base:5, opts:[BB_GAME.homeName,BB_GAME.awayName], answer:BB_GAME.homeName},
-  {id:"pts", label:"Most points", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Caitlin Clark", num:27, numLabel:"How many pts?"},
+  {id:"pts", label:"Most points", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Napheesa Collier", num:27, numLabel:"How many pts?"},
   {id:"ast", label:"Most assists", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Caitlin Clark", num:9, numLabel:"How many assists?"},
-  {id:"stl", label:"Most steals", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Natisha Hiedeman", num:3, numLabel:"How many steals?"},
+  {id:"stl", label:"Most steals", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Courtney Williams", num:3, numLabel:"How many steals?"},
   {id:"reb", label:"Most rebounds", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Aliyah Boston", num:12, numLabel:"How many rebounds?"},
-  {id:"blk", label:"Most blocks", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Ezi Magbegor", num:4, numLabel:"How many blocks?"}
+  {id:"blk", label:"Most blocks", base:4, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Teaira McCowan", num:4, numLabel:"How many blocks?"}
 ];
 /* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
    Every question is answerable by WATCHING the broadcast at the break — no lookups,
@@ -1223,19 +1333,35 @@ const BBALL_ROUNDS=[
     {t:"🎯 The first free throw of the game…", o:["Went in","Missed","Nobody shot one in Q1"], a:"Went in"},
     {t:"Q1 ended on…", o:["A made basket","A missed shot","A turnover","Free throws"], a:"A missed shot"}
   ]},
-  // --- Q2 · 2 pts each · getting weird. Counting the stuff nobody counts. ---
+  /* --- Q2 · 2 pts each · the room warms up. ---
+     Rewritten for Game Night #2. The host's note from Game #1 was blunt:
+     "2nd Quarter Questions arent good… Things that you watch not math."
+     The old opener asked players to COUNT missed free throws across a whole
+     quarter, which is bookkeeping, not watching — you cannot answer it unless
+     you were tallying. It's gone. What replaces it is the single thing every
+     person in the room already knows at the buzzer without being asked. */
   {home:45,away:41, q:[
-    {t:"Free throws MISSED by both teams in Q2 — how many?", o:["0","1","2","3 or more"], a:"2"},
+    {t:"Who led at halftime?", o:[BB_GAME.homeNick,BB_GAME.awayNick,"Tied"], a:BB_GAME.homeNick},
     {t:"Which of these happened FIRST in Q2?", o:["A made three","A turnover","An offensive rebound","A timeout"], a:"A turnover"},
     {t:"🎲 Halftime combined score — odd or even?", o:["Odd","Even"], a:"Even"},
     {t:"The last shot before the halftime buzzer…", o:["Went in","Missed","Nobody got one off"], a:"Missed"}
   ]},
-  // --- Q3 · 3 pts each · the turn. Now it costs you to look away. ---
+  /* --- Q3 · 3 pts each · the turn. Now it costs you to look away. ---
+     Rewritten wholesale. The host: "3rd Quarter questions are not good at all…
+     I feel those are better prediction questions." He was right — biggest-lead
+     brackets and made-threes-vs-made-free-throws are both retrospective box
+     score reads. Neither one is a thing you SEE; both are things you look up.
+     All four below resolve off the picture alone, and three of them resolve
+     the instant they happen rather than at the buzzer, which is the point:
+     a question you can settle in the moment keeps eyes on the screen. */
   {home:66,away:64, q:[
-    {t:"Biggest lead by EITHER team at any point in Q3?", o:["0–4 pts","5–9 pts","10–14 pts","15+ pts"], a:"5–9 pts"},
-    {t:"In Q3, which happened MORE?", o:["Made threes","Made free throws","Dead even"], a:"Made free throws"},
+    {t:"Which team scored FIRST in Q3?", o:[BB_GAME.homeNick,BB_GAME.awayNick], a:BB_GAME.awayNick},
+    {t:"Was there a lead change in Q3?", o:["Yes","No"], a:"Yes"},
     {t:"Did anyone score in the final 10 seconds of Q3?", o:["Yes","No"], a:"Yes"},
-    {t:"Did the Storm score more in Q3 than they did in Q1?", o:["Yes","No","Exactly the same"], a:"Yes"}
+    // Mirrors the Q1 opener on purpose — same shape, other end of the game.
+    // The last option exists so the question still resolves on the freak
+    // night a team is shut out for a quarter.
+    {t:"The "+BB_GAME.awayNick+"'s first basket of Q3 — how did it go in?", o:["Layup or dunk","Mid-range jumper","Three","Free throws","They didn't score in Q3"], a:"Three"}
   ]},
   // --- Q4 · 4 pts each · money time. The quarter that decides the night. ---
   {home:89,away:82, q:[
@@ -1243,7 +1369,7 @@ const BBALL_ROUNDS=[
     // Four named players cannot cover a whole roster, and a question that
     // can end with no correct option breaks the first house rule. The fifth
     // option is not filler — on most nights it is the answer.
-    {t:"Who scored the LAST points of the game?", o:["Clark","Mitchell","Malonga","Magbegor","Somebody else"], a:"Somebody else"},
+    {t:"Who scored the LAST points of the game?", o:["Clark","Mitchell","Collier","McBride","Somebody else"], a:"Somebody else"},
     {t:"Did any player foul out?", o:["Yes","No"], a:"No"},
     {t:"In the last two minutes, which happened more?", o:["Free throws attempted","Field goals attempted","Equal"], a:"Free throws attempted"}
   ]}
@@ -1324,7 +1450,10 @@ const SPORTS={
         unit:"game", Unit:"Game", period:"quarter", Period:"Quarter",
         league:"🏀 WNBA Game of the Night", cadence:"⏱️ 4 quarters" },
     startLbl:"Start {n} ▶", lifelineNote:"just like the arena timeout",
-    landing:"<b style=\"color:var(--ink)\">Indiana Fever @ Seattle Storm</b> — on ESPN. Watch the broadcast, play from your couch. Predict before tip-off, answer at every quarter break. Right answers score. Fast right answers score more.",
+    // Built from BB_GAME rather than typed out, so swapping the fixture can
+    // never again leave last week's matchup sitting on the front door.
+    // Away team first — that is how a road game reads everywhere else.
+    landing:"<b style=\"color:var(--ink)\">"+BB_GAME.awayName+" @ "+BB_GAME.homeName+"</b> — on "+BB_GAME.net+". Watch the broadcast, play from your couch. Predict before tip-off, answer at every quarter break. Right answers score. Fast right answers score more.",
     step1:"Fill your prediction sheet — winner, stat leaders & bonus amounts. Worth up to 50 pts.",
     step2h:"Answer at every quarter break",
     step2:"4 questions about what JUST happened — and not the ones you'd expect. Points rise: Q1 = 1pt → Q4 = 4pt, so the last quarter is worth four times the first. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.",
@@ -1400,7 +1529,8 @@ const league={name:"The Barbershop",members:[
 /* ---------------- NAV ---------------- */
 const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-lobby",
   live:"s-live",break:"s-break",final:"s-final",host:"s-host",league:"s-league",plus:"s-plus",
-  rules:"s-rules",review:"s-review",predreview:"s-predreview",tally:"s-tally"};
+  rules:"s-rules",review:"s-review",predreview:"s-predreview",tally:"s-tally",
+  join:"s-join"};
 function startLive(){S.mode="live";go('name');}
 function startDemo(){S.mode="demo";go('name');}
 
@@ -1441,7 +1571,8 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
   // where ← goes from each screen; null = no back button
   const BACKMAP={landing:null,name:'landing',predict:'name',lobby:'landing',
     live:'lobby',break:'lobby',review:'lobby',predreview:'lobby',
-    final:null,rules:'landing',league:'final',plus:'final',host:'final',tally:'final'};
+    final:null,rules:'landing',league:'final',plus:'final',host:'final',tally:'final',
+    join:'landing'};
   const b=document.getElementById('backBtn');
   b.classList.toggle('show', BACKMAP[k]!==null && BACKMAP[k]!==undefined);
   b.dataset.to=BACKMAP[k]||'';
@@ -2217,10 +2348,16 @@ async function submitSignup(){
 
   if(ok){
     markSignedUp();
+    // The address is the hard part and it's done. Asking what they watch
+    // right now — while they're still looking at their score — costs them
+    // thirty seconds and is worth more to us than the address alone.
     document.getElementById('signupCard').innerHTML=
       '<b style="font-size:15px;color:var(--teal2)">✅ You\'re on the list.</b>'+
       '<p class="sub" style="font-size:12.5px;margin:6px 0 0">We\'ll email you before the next Game Night. '+
-      'Change your mind any time — every email has an unsubscribe link.</p>';
+      'Change your mind any time — every email has an unsubscribe link.</p>'+
+      '<button class="btn ghost sm" style="margin-top:11px" '+
+      'onclick="openJoin(\'final\',' + JSON.stringify(email) + ')">'+
+      '🏆 Tell us what else you watch →</button>';
     toast('📬 You\'re on the list for the next game night.');
   }else{
     // An honest failure. The one thing we must never do is say "thanks!"
@@ -2252,6 +2389,159 @@ async function submitSignup(){
       '<span style="display:block;margin-top:5px;font-size:11px;color:var(--dim)">code: '+
       String(res.why||'unknown')+'</span>';
     try{ console.error('[STATS] signup card failure:', res.why, res.detail||''); }catch(_){}
+  }
+}
+
+/* =====================================================================
+   JOIN — the front-door signup, and the sports profile.
+   ---------------------------------------------------------------------
+   Writes to the same /signups/{uid} document as the post-game card above,
+   through the same SB.signup(). Two entry points, one destination: if the
+   write path ever breaks it breaks in one place and gets fixed once.
+
+   The catalogue below is deliberately long. A short list looks like a
+   basketball app that also tolerates other sports; a long one tells a
+   visitor we intend to run their sport eventually, and it turns a mailing
+   list into an audience we can actually describe to a sponsor. Every
+   entry is a league or a competition rather than a bare sport ("NWSL",
+   not "Soccer") because "soccer fan" is not something anyone can sell a
+   game night against, and because the specific name is what a real fan
+   recognises themselves in.
+
+   No leagues' logos or marks appear anywhere — these are plain names,
+   used to describe what someone watches. STATS is not affiliated with
+   any of them, which the Rules page says out loud.
+   ===================================================================== */
+const SPORT_GROUPS=[
+  ['Basketball', ['WNBA','NBA','NCAA Women’s Basketball','NCAA Men’s Basketball','Unrivaled','EuroLeague']],
+  ['Football',   ['NFL','NCAA Football','UFL','CFL']],
+  ['Soccer',     ['NWSL','MLS','Liga MX','Premier League','La Liga','Serie A','Bundesliga','Ligue 1','Champions League','Leagues Cup','World Cup / national teams']],
+  ['Baseball',   ['MLB','NCAA Softball','College Baseball']],
+  ['Hockey',     ['NHL','PWHL']],
+  ['Combat',     ['UFC','Boxing','WWE / pro wrestling']],
+  ['Racing',     ['Formula 1','NASCAR','IndyCar']],
+  ['Golf & tennis', ['PGA Tour','LPGA','ATP','WTA']],
+  ['Everything else', ['Olympics','Track & field','Volleyball','Cricket','Rugby','Esports','Gymnastics','Swimming']]
+];
+const WATCH_OPTS=['Cable / satellite','Streaming app','Free over-the-air TV','At a bar or watch party','League pass','Mostly highlights & socials'];
+const FREQ_OPTS=['Almost every night','A few nights a week','Weekends','Big games only','Playoffs only'];
+const PRIZE_OPTS=['Cash','Gift cards','Tickets','Team merch','Charity donation','Just bragging rights'];
+
+// Sets, not arrays: tapping a chip twice has to be the same as never
+// tapping it, and de-duping on submit is the kind of thing you forget.
+const JOIN={sports:new Set(),watch:new Set(),freq:new Set(),prize:new Set(),from:'landing'};
+
+function joinChip(box,label,bucket){
+  const el=document.createElement('span');
+  el.className='chip pick'+(JOIN[bucket].has(label)?' on':'');
+  el.textContent=label;
+  el.setAttribute('role','button');
+  el.onclick=function(){
+    if(JOIN[bucket].has(label)) JOIN[bucket].delete(label); else JOIN[bucket].add(label);
+    // "How often" and "how do you watch" are single-answer questions, so a
+    // new pick replaces the old one instead of stacking. Sports and prizes
+    // are genuinely multi-select and stay that way.
+    if((bucket==='freq') && JOIN[bucket].has(label)){ JOIN[bucket].clear(); JOIN[bucket].add(label); }
+    el.parentNode.querySelectorAll('.chip.pick').forEach(function(c){
+      c.classList.toggle('on', JOIN[bucket].has(c.textContent));
+    });
+  };
+  box.appendChild(el);
+}
+
+function renderJoinChips(){
+  const s=document.getElementById('jSports');
+  if(!s) return;
+  s.innerHTML='';
+  SPORT_GROUPS.forEach(function(g){
+    const h=document.createElement('div'); h.className='jgrp'; h.textContent=g[0]; s.appendChild(h);
+    const row=document.createElement('div'); row.className='chips'; s.appendChild(row);
+    g[1].forEach(function(name){ joinChip(row,name,'sports'); });
+  });
+  [['jWatch',WATCH_OPTS,'watch'],['jFreq',FREQ_OPTS,'freq'],['jPrize',PRIZE_OPTS,'prize']].forEach(function(t){
+    const box=document.getElementById(t[0]); if(!box) return;
+    box.innerHTML='';
+    t[1].forEach(function(name){ joinChip(box,name,t[2]); });
+  });
+}
+
+function openJoin(from,prefillEmail){
+  JOIN.from = from || 'landing';
+  renderJoinChips();
+  const n=document.getElementById('jName'), e=document.getElementById('jEmail');
+  if(n && !n.value && S.name) n.value=S.name;
+  if(e && prefillEmail && !e.value) e.value=prefillEmail;
+  // Someone arriving from the final screen has already ticked the box on the
+  // card back there; re-asking reads as a form that didn't listen.
+  const c=document.getElementById('jConsent');
+  if(c && from==='final' && alreadySignedUp()) c.checked=true;
+  const head=document.getElementById('joinHead'), sub=document.getElementById('joinSub');
+  if(head&&sub&&from==='final'&&alreadySignedUp()){
+    head.textContent='Tell us what you watch';
+    sub.textContent='You’re already on the list. This part is what decides which game we run next.';
+  }
+  go('join');
+}
+
+function joinBack(){ go(JOIN.from==='final'?'final':'landing'); }
+
+async function submitJoin(){
+  const btn=document.getElementById('jBtn'), note=document.getElementById('jNote');
+  const email=(document.getElementById('jEmail').value||'').trim();
+  const phone=(document.getElementById('jPhone').value||'').trim();
+  const name=(document.getElementById('jName').value||'').trim();
+  const teams=(document.getElementById('jTeams').value||'').trim();
+  const consent=document.getElementById('jConsent').checked;
+
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){
+    note.innerHTML='<b style="color:var(--gold)">That email doesn\'t look right.</b> Check it and try again.';
+    document.getElementById('jEmail').focus(); return;
+  }
+  const digits=phone.replace(/[^0-9]/g,'');
+  if(phone && (digits.length<10 || digits.length>15)){
+    note.innerHTML='<b style="color:var(--gold)">That phone number doesn\'t look right.</b> Leave it blank if you\'d rather not.';
+    document.getElementById('jPhone').focus(); return;
+  }
+  if(!consent){
+    note.innerHTML='<b style="color:var(--gold)">Tick the box first.</b> We won\'t add you to anything you didn\'t agree to.';
+    return;
+  }
+
+  btn.disabled=true; btn.textContent='Saving…';
+  let res={ok:false,why:'threw'};
+  try{
+    res = await SB.signup({
+      email:email, phone:phone, consent:true, name:name||S.name||'',
+      sports:Array.from(JOIN.sports), teams:teams,
+      watch:Array.from(JOIN.watch), freq:Array.from(JOIN.freq)[0]||'',
+      prize:Array.from(JOIN.prize)
+    }) || res;
+  }catch(e){ res={ok:false, why:(e&&(e.code||e.name))||'threw', detail:(e&&e.message)||''}; }
+
+  if(res.ok===true){
+    markSignedUp();
+    const picked=JOIN.sports.size;
+    note.innerHTML='<b style="color:var(--teal2)">✅ You\'re in.</b> '+
+      (picked? 'We\'ve got your '+picked+' sport'+(picked>1?'s':'')+' on file — ' : '')+
+      'we\'ll email you before the next game night.';
+    btn.textContent='Saved ✓';
+    toast('📬 You\'re on the list.');
+    setTimeout(joinBack, 1400);
+  }else{
+    const SAY={
+      offline:['We couldn\'t reach the server.','Check your signal and tap again.'],
+      budget:['This device hit its limit for tonight.','Reload the page and it\'ll go straight through.'],
+      email:['That email didn\'t pass.','Double-check it and tap again.'],
+      consent:['We need the box ticked.','Tick it and tap again.'],
+      'permission-denied':['The list turned that one away.','Usually it\'s a phone number that\'s too short or too long — try leaving it blank.'],
+      unavailable:['The connection dropped mid-save.','Nothing was recorded. Tap again in a second.'],
+      'deadline-exceeded':['That took too long to save.','Nothing was recorded. Tap again in a second.']
+    };
+    const said=SAY[res.why]||['That didn\'t save.','Nothing was recorded. Tap again in a second.'];
+    btn.disabled=false; btn.textContent='Try again →';
+    note.innerHTML='<b style="color:var(--gold)">'+said[0]+'</b> '+said[1]+
+      '<span style="display:block;margin-top:5px;font-size:11px;color:var(--dim)">code: '+String(res.why||'unknown')+'</span>';
+    try{ console.error('[STATS] join failure:', res.why, res.detail||''); }catch(_){}
   }
 }
 /* =====================================================================
@@ -3091,21 +3381,25 @@ function crownWinner(){
    In production: this exact logic runs on a server against a real
    play-by-play API (SportsDataIO / Sportradar / nba_api). Same
    templates, real events. */
+/* MOCK feed. Invented events, real names, and that pairing is only acceptable
+   because this list never leaves the demo panel that is labelled a demo — it
+   drives no question, no score and no share card. If it ever feeds anything a
+   player sees as fact, it has to be replaced by a real provider first. */
 const PBP=[ // mock Q3 feed — shape mirrors real PBP APIs (SportsDataIO / Sportradar)
   {t:"09:41",type:"3PM",player:"Mitchell",team:"IND"},
-  {t:"09:12",type:"FOUL",player:"Horston",team:"SEA"},
+  {t:"09:12",type:"FOUL",player:"Howard",team:"MIN"},
   {t:"08:47",type:"FASTBREAK",player:"Clark",team:"IND"},
-  {t:"08:02",type:"3PM",player:"F. Johnson",team:"SEA"},
-  {t:"07:33",type:"SUB_IN",player:"Dolson",team:"SEA"},
+  {t:"08:02",type:"3PM",player:"McBride",team:"MIN"},
+  {t:"07:33",type:"SUB_IN",player:"McCowan",team:"MIN"},
   {t:"06:58",type:"3PM",player:"Mitchell",team:"IND"},
-  {t:"06:21",type:"TIMEOUT",player:null,team:"SEA"},
-  {t:"05:44",type:"FASTBREAK",player:"Malonga",team:"SEA"},
+  {t:"06:21",type:"TIMEOUT",player:null,team:"MIN"},
+  {t:"05:44",type:"FASTBREAK",player:"Miles",team:"MIN"},
   {t:"05:02",type:"FOUL",player:"Cunningham",team:"IND"},
   {t:"04:19",type:"3PM",player:"Mitchell",team:"IND"},
   {t:"03:40",type:"FASTBREAK",player:"Clark",team:"IND"},
-  {t:"02:55",type:"3PM",player:"Hiedeman",team:"SEA"},
+  {t:"02:55",type:"3PM",player:"Collier",team:"MIN"},
   {t:"02:07",type:"TIMEOUT",player:null,team:"IND"},
-  {t:"01:12",type:"FOUL",player:"Horston",team:"SEA"}
+  {t:"01:12",type:"FOUL",player:"Howard",team:"MIN"}
 ];
 const EVLABEL={ "3PM":"3-pointer ✅","FOUL":"Foul","FASTBREAK":"Fast-break bucket 💨","SUB_IN":"Checks in","TIMEOUT":"Timeout ⏱"};
 function renderPBP(){

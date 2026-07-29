@@ -199,12 +199,13 @@
             <label style="margin-top:0">Questions</label>
             <div class="row">
               <button class="mini" id="addQ">+ Add question</button>
+              <button class="mini" id="bankBtn" onclick="reloadBank()" title="Replace this round with the questions built into the app">↺ Load the app's questions</button>
               <span class="chip" id="qCountChip">0</span>
             </div>
           </div>
         </div>
         <div id="qList"></div>
-        <p class="sub tip" style="margin-top:12px">Tap the ✓ next to an option to mark it the right answer. The answer never leaves this browser until you press Reveal — it isn't written to the round players can read.</p>
+        <p class="sub tip" style="margin-top:12px">The app's questions for this round are already loaded — you only need to mark the answers. Tap the ✓ next to an option to mark it the right one. The answer never leaves this browser until you press Reveal; it isn't written to the round players can read.</p>
       </div>
 
       <div class="card">
@@ -330,19 +331,96 @@ window.STATS_FIREBASE = {
    the worth arrays match SPORT.worth, so leaving a round on its default
    is the same game the players already read about in the rules. If you
    change a night ID here, change it there too: a mismatch means an empty
-   room, not an error, which is the worst kind of mistake to make at
-   9:30 on a Tuesday. */
+   room, not an error, which is the worst kind of mistake to make one
+   minute before tip-off. */
 const NIGHTS = [
-  { id:'gn1-2026-07-28-ind-sea', label:'Game Night #1 — Fever @ Storm (Jul 28)',
+  // First in this list is the night the Control Room opens on, so the live
+  // fixture goes at the top. Past nights stay listed — Game Night #1 is not
+  // settled yet, and the picker is the only way back to its grading screen.
+  { id:'gn2-2026-08-02-min-ind', label:'Game Night #2 — Fever @ Lynx (Aug 2)',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[1,2,3,4] },
+  { id:'gn1-2026-07-28-ind-sea', label:'Game Night #1 — Fever @ Storm (Jul 28) · played',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
     worth:[1,2,3,4] },
   { id:'sn1-2026-08-04-mia-ame', label:'Soccer Night — Miami v América (Aug 4)',
     tags:['1H','2H'],
     names:['First half','Second half'],
-    worth:[3,5] }
-];
+    worth:[3,5] }];
 
+// The questions the app already ships with, mirrored here so the Write tab
+// is never an empty box on game night. Text and options only: the answers are
+// deliberately left unmarked, because the built-in answers in the app are
+// simulated results for a fake game, not claims about the real one. The host
+// marks the real answer at the break, then pushes.
+const BANK = {
+  'gn2-2026-08-02-min-ind': [
+    [
+      { t: 'The first bucket of the night — how did it go in?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throw'] },
+      { t: 'The very first whistle of the game was for…', o: ['A shooting foul', 'A non-shooting foul', 'Out of bounds / travel', 'A timeout'] },
+      { t: '🎯 The first free throw of the game…', o: ['Went in', 'Missed', 'Nobody shot one in Q1'] },
+      { t: 'Q1 ended on…', o: ['A made basket', 'A missed shot', 'A turnover', 'Free throws'] }
+    ],
+    [
+      { t: 'Who led at halftime?', o: ['Lynx', 'Fever', 'Tied'] },
+      { t: 'Which of these happened FIRST in Q2?', o: ['A made three', 'A turnover', 'An offensive rebound', 'A timeout'] },
+      { t: '🎲 Halftime combined score — odd or even?', o: ['Odd', 'Even'] },
+      { t: 'The last shot before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'] }
+    ],
+    [
+      { t: 'Which team scored FIRST in Q3?', o: ['Lynx', 'Fever'] },
+      { t: 'Was there a lead change in Q3?', o: ['Yes', 'No'] },
+      { t: 'Did anyone score in the final 10 seconds of Q3?', o: ['Yes', 'No'] },
+      { t: 'The Fever\'s first basket of Q3 — how did it go in?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throws', 'They didn\'t score in Q3'] }
+    ],
+    [
+      { t: 'The final basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'] },
+      { t: 'Who scored the LAST points of the game?', o: ['Clark', 'Mitchell', 'Collier', 'McBride', 'Somebody else'] },
+      { t: 'Did any player foul out?', o: ['Yes', 'No'] },
+      { t: 'In the last two minutes, which happened more?', o: ['Free throws attempted', 'Field goals attempted', 'Equal'] }
+    ]
+  ],
+  'gn1-2026-07-28-ind-sea': [
+    [
+      { t: 'The first bucket of the night — how did it go in?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throw'] },
+      { t: 'The very first whistle of the game was for…', o: ['A shooting foul', 'A non-shooting foul', 'Out of bounds / travel', 'A timeout'] },
+      { t: '🎯 The first free throw of the game…', o: ['Went in', 'Missed', 'Nobody shot one in Q1'] },
+      { t: 'Q1 ended on…', o: ['A made basket', 'A missed shot', 'A turnover', 'Free throws'] }
+    ],
+    [
+      { t: 'Free throws MISSED by both teams in Q2 — how many?', o: ['0', '1', '2', '3 or more'] },
+      { t: 'Which of these happened FIRST in Q2?', o: ['A made three', 'A turnover', 'An offensive rebound', 'A timeout'] },
+      { t: '🎲 Halftime combined score — odd or even?', o: ['Odd', 'Even'] },
+      { t: 'The last shot before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'] }
+    ],
+    [
+      { t: 'Biggest lead by EITHER team at any point in Q3?', o: ['0–4 pts', '5–9 pts', '10–14 pts', '15+ pts'] },
+      { t: 'In Q3, which happened MORE?', o: ['Made threes', 'Made free throws', 'Dead even'] },
+      { t: 'Did anyone score in the final 10 seconds of Q3?', o: ['Yes', 'No'] },
+      { t: 'Did the Storm score more in Q3 than they did in Q1?', o: ['Yes', 'No', 'Exactly the same'] }
+    ],
+    [
+      { t: 'The final basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'] },
+      { t: 'Who scored the LAST points of the game?', o: ['Clark', 'Mitchell', 'Malonga', 'Magbegor', 'Somebody else'] },
+      { t: 'Did any player foul out?', o: ['Yes', 'No'] },
+      { t: 'In the last two minutes, which happened more?', o: ['Free throws attempted', 'Field goals attempted', 'Equal'] }
+    ]
+  ],
+  'sn1-2026-08-04-mia-ame': [
+    [
+      { t: 'Who took the first shot on target?', o: ['Inter Miami', 'Club América', 'Nobody did'] },
+      { t: 'How many corners in the first half (both teams)?', o: ['0–2', '3–4', '5–6', '7+'] },
+      { t: 'How many minutes of added time at the end of the half?', o: ['1', '2', '3', '4+'] }
+    ],
+    [
+      { t: 'Who won the second half on goals?', o: ['Inter Miami', 'Club América', 'Drawn'] },
+      { t: 'How many yellow cards in the whole match?', o: ['0–1', '2–3', '4–5', '6+'] },
+      { t: 'How many minutes of added time at the end of the match?', o: ['1–2', '3–4', '5–6', '7+'] }
+    ]
+  ]
+};
 const LS = 'stats_admin_v1';
 
 let FB = null;          // {app, auth, db, F, authMod}
@@ -367,12 +445,62 @@ function saveDraft(){ try{ localStorage.setItem(LS, JSON.stringify(draft)); }cat
 function loadDraft(){
   try{ draft = JSON.parse(localStorage.getItem(LS)) || {}; }catch(e){ draft = {}; }
 }
+/* The fix for "Q3 in the control room is wrong — there is nothing for me to
+   add." The app has always shipped with a full set of questions for every
+   round; the Write tab just didn't know about them, so the host opened it
+   mid-game and found an empty box with a game clock running.
+
+   Seeding rule, and it only has one: fill a round that is EMPTY. Never
+   touch a round that already has a question in it. The host's own typing
+   outranks the bank every time, and a "helpful" overwrite at the Q3 break
+   would destroy work that cannot be retyped in a two-minute timeout.
+
+   The answers are NOT seeded, on purpose. The `a` values inside the app are
+   simulated results for a practice game — they describe a fake game, not
+   the one on TV. Marking them here would push a fabricated answer key to
+   every phone in the room. So the questions arrive ready and the answer
+   arrives from the host, which is exactly the split that makes the number
+   on the leaderboard mean something. */
+function bankRound(id, i){
+  const rs = BANK[id];
+  if(!rs || !rs[i]) return [];
+  return rs[i].map(q => ({ t:String(q.t||''), o:(q.o||[]).map(String), k:null }));
+}
+function seedRound(id, i, force){
+  const nd = draft[id];
+  if(!nd || !nd.rounds[i]) return 0;
+  if(!nd.fed) nd.fed = {};
+  // Never clobber real work, and never re-fill a round the host deliberately
+  // emptied. `fed` remembers that this round has already been offered the
+  // bank once, so "delete all four and write my own" stays deleted.
+  if(!force && (nd.rounds[i].qs.length || nd.fed[i])) return 0;
+  const seeded = bankRound(id, i);
+  if(!seeded.length) return 0;
+  nd.rounds[i].qs = seeded;
+  nd.fed[i] = 1;
+  return seeded.length;
+}
 function nightDraft(id){
   const cfg = nightCfg(id);
   if(!draft[id]) draft[id] = { rounds: cfg.tags.map((t,i)=>({ worth: cfg.worth[i]||1, qs: [] })) };
   // a night whose round count changed under us should not throw
   while(draft[id].rounds.length < cfg.tags.length) draft[id].rounds.push({worth:1,qs:[]});
+  // Seed on read, not only at creation: the draft already saved in this
+  // browser has four empty rounds left over from Game Night #1, and a
+  // create-time-only seed would leave that host exactly as stuck as before.
+  // The `fed` flag above makes it a one-time offer per round even so.
+  let filled = 0;
+  for(let i=0;i<draft[id].rounds.length;i++) filled += seedRound(id, i, false) ? 1 : 0;
+  if(filled) { try{ localStorage.setItem(LS, JSON.stringify(draft)); }catch(e){} }
   return draft[id];
+}
+// Explicit reload, for the host who cleared a round and wants it back. This
+// one IS allowed to overwrite, because the host asked for it by name.
+function reloadBank(){
+  const n = seedRound(night, roundIdx, true);
+  if(!n){ toast('No stored questions for this round.'); return; }
+  saveDraft(); renderWrite();
+  toast('Loaded ' + n + ' question' + (n>1?'s':'') + ' — mark the real answers, then push.');
 }
 const roundDocId = i => 'r' + i;
 
@@ -822,16 +950,25 @@ function gradeSpec(rid){
   const draft  = (i >= 0 && nightDraft(night).rounds[i]) || null;
   const first  = gradeSubs.find(s => Array.isArray(s.qs) && s.qs.length) || null;
 
+  /* Order of trust, and it is not the obvious one. Grading asks "was this
+     player right", so the only question set that can answer it is the one
+     the player actually saw. A pushed round is that by definition. Failing
+     that, the phones report what they rendered — which, for an unpushed
+     round, is the app's own built-in set, NOT whatever is sitting in the
+     Write tab. The draft comes last: since the composer now arrives
+     preloaded, a draft always exists, and grading against a round the host
+     typed but never sent would mark players against questions nobody was
+     ever asked. */
   let qs = [], src = 'none';
   if(pushed && Array.isArray(pushed.questions) && pushed.questions.length){
     qs = pushed.questions.map(q => ({ t:String(q.t||''), o:(q.o||[]).map(String) }));
     src = 'pushed';
-  }else if(draft && draft.qs.length && draft.qs.some(q=>q.t)){
-    qs = draft.qs.map(q => ({ t:String(q.t||''), o:(q.o||[]).map(String) }));
-    src = 'draft';
   }else if(first){
     qs = first.qs.map((t,n) => ({ t:String(t||''), o:((first.opts||[])[n]||[]).map(String) }));
     src = 'phones';
+  }else if(draft && draft.qs.length && draft.qs.some(q=>q.t)){
+    qs = draft.qs.map(q => ({ t:String(q.t||''), o:(q.o||[]).map(String) }));
+    src = 'draft';
   }
 
   // Points per question. A pushed round says so; otherwise the phones
