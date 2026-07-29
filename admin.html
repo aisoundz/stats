@@ -881,7 +881,14 @@ function scoreSub(sub, spec){
     if(picks[n]) answered++;
     if(m === 'hit'){
       right++;
-      const val = spec.bases ? (Number(spec.bases[n]) || 0) : (spec.worth || 0);
+      // On the prediction sheet each phone sends the price IT put on each
+      // line. With confidence ranking on, two players who both called the
+      // rebound leader can be paid differently — that IS the game. Fall
+      // back to the sheet's flat prices for anyone who ranked nothing.
+      const own = (spec.bases && banks[n] != null && banks[n] !== '') ? Number(banks[n]) : NaN;
+      const val = spec.bases
+        ? (isFinite(own) ? own : (Number(spec.bases[n]) || 0))
+        : (spec.worth || 0);
       pts += val;
       if(spec.bases){
         // the number bonus, only when the host has entered the official one
@@ -982,7 +989,13 @@ function renderGrade(){
       const pick = (r.s.picks||[])[i] || '';
       const numv = (r.s.nums||[])[i];
       const glyph = m==='hit' ? '✓' : m==='mis' ? '✕' : '·';
-      const shown = pick ? esc(pick) + (numv ? ` <span class="pk">(${esc(numv)})</span>` : '') : '—';
+      // When the room ranked its sheet, show each player's own stake on the
+      // line — otherwise two ✓s worth 9 and 1 look identical and the totals
+      // read like a bug.
+      const rk = (r.s.ranks||[])[i];
+      const bk = (r.s.banks||[])[i];
+      const stake = (spec.bases && rk) ? ` <span class="pk">#${esc(rk)}·${esc(bk)}pt</span>` : '';
+      const shown = pick ? esc(pick) + (numv ? ` <span class="pk">(${esc(numv)})</span>` : '') + stake : '—';
       return `<td class="${m}"><span class="mkc">${glyph}</span> ${shown}</td>`;
     }).join('');
     return `<tr><td class="p" title="${esc(r.s.uid)}">${esc(r.s.name||'player')}</td>${cells}` +

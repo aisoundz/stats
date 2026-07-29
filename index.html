@@ -72,6 +72,20 @@
   .predrow:first-child{border-top:none}
   .predlabel{font-size:13.5px;font-weight:700;margin-bottom:2px}
   .predpts{font-size:11px;color:var(--teal2);font-weight:800}
+  /* Confidence ranking. The rank badge and the two nudge arrows sit on one
+     line above the picker so the thumb never has to travel far. */
+  .predtop{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .predtop .predlabel{margin-bottom:0;flex:1}
+  .rankbadge{flex:0 0 auto;min-width:30px;height:30px;border-radius:9px;display:flex;
+    align-items:center;justify-content:center;font-size:12.5px;font-weight:900;
+    background:rgba(46,230,166,.13);color:var(--teal2);border:1px solid rgba(46,230,166,.3)}
+  .ranknudge{display:flex;flex-direction:column;gap:2px;flex:0 0 auto}
+  .ranknudge button{width:30px;height:15px;line-height:1;padding:0;border-radius:5px;
+    border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink);
+    font-size:9px;cursor:pointer}
+  .ranknudge button:disabled{opacity:.25;cursor:default}
+  .ranknudge button:not(:disabled):active{background:rgba(46,230,166,.2)}
+  .confnote{font-size:11.5px;color:var(--dim);margin:0 0 10px;line-height:1.45}
 
   /* live catches — set pre-match, resolve themselves during play */
   .catchhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:2px}
@@ -1004,6 +1018,13 @@ window.STATS_FIREBASE = {
       if (Array.isArray(o.keys)) row.keys = o.keys.slice(0, 12).map(function (s) { return String(s == null ? '' : s).slice(0, 60); });
       if (Array.isArray(o.nums)) row.nums = o.nums.slice(0, 12).map(function (n) { return n == null || n === '' ? '' : String(n).slice(0, 8); });
       if (Array.isArray(o.bons)) row.bons = o.bons.slice(0, 12).map(function (n) { return Math.max(0, Math.min(60, Math.round(Number(n) || 0))); });
+      // Confidence ranking. `banks` above already carries what each line is
+      // worth to THIS player; these two say why. `ranks` is 1 = most
+      // confident, index-aligned to picks, and empty when the sheet was
+      // flat. `conf` is the flag itself, so the dashboard can tell a room
+      // that ranked nothing from a room that ranked everything the same.
+      if (Array.isArray(o.ranks)) row.ranks = o.ranks.slice(0, 12).map(function (n) { return Math.max(0, Math.min(12, Math.round(Number(n) || 0))); });
+      if (typeof o.conf === 'boolean') row.conf = o.conf;
       // A MAP keyed by question number, not an array of arrays. Firestore
       // refuses an array nested directly inside another array — the whole
       // write throws, the catch below swallows it, and the round vanishes.
@@ -1117,18 +1138,31 @@ const BB_PREDS=[
    a good STATS question is one a room can argue about out loud, and one the host can
    settle in three seconds without pausing the game.
 
-   Three rules every question obeys:
+   Four rules every question obeys:
      1. It resolves. No question can hang on something that might not happen.
      2. The host can answer it from the broadcast alone, at the break, in seconds.
      3. It asserts nothing. A question never claims a fact about a real player —
         it asks what the room just watched. (In Practice mode the `a` field is a
-        SIMULATED result for a fake game, not a claim about the real one.)  */
+        SIMULATED result for a fake game, not a claim about the real one.)
+     4. It is about the GAME, not about a broadcast of the game. Sound off, any
+        language, or sitting in the building — the question still has to work.
+        That rules out anything keyed to what an announcer said, an on-screen
+        graphic, a sideline hit or a commercial break. We don't own the feed and
+        our players aren't all watching the same one: some are on a Spanish
+        call, some have the sound down in a bar, some are in section 214. A
+        question that only works on one English-language feed is a question that
+        quietly excludes part of the room. (Announcer-driven questions come back
+        the day we have an exclusive network partnership and control the audio —
+        see the shelved Booth Bingo note in the host card.)  */
 const BBALL_ROUNDS=[
   // --- Q1 · 1 pt each · the warm-up. Low stakes, everybody in. ---
   {home:23,away:19, q:[
     {t:"The first bucket of the night — how did it go in?", o:["Layup or dunk","Mid-range jumper","Three","Free throw"], a:"Layup or dunk"},
     {t:"The very first whistle of the game was for…", o:["A shooting foul","A non-shooting foul","Out of bounds / travel","A timeout"], a:"A non-shooting foul"},
-    {t:"🎙️ Booth Bingo — which did you hear from the broadcast FIRST?", o:["\"downhill\"","\"unselfish\"","\"veteran\"","None of them"], a:"\"downhill\""},
+    // Was Booth Bingo, which keyed on announcer lines. Pulled: it needs the
+    // sound up, in English, on our feed. This one is pure picture — everybody
+    // in the room watches a free throw, whatever language they're hearing it in.
+    {t:"🎯 The first free throw of the game…", o:["Went in","Missed","Nobody shot one in Q1"], a:"Went in"},
     {t:"Q1 ended on…", o:["A made basket","A missed shot","A turnover","Free throws"], a:"A missed shot"}
   ]},
   // --- Q2 · 2 pts each · getting weird. Counting the stuff nobody counts. ---
@@ -1289,7 +1323,7 @@ const bots=[
 ];
 
 /* ---------------- STATE ---------------- */
-let S={mode:"demo",screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},qi:0,ni:0,nextQ:0,answered:false,
+let S={mode:"demo",screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},predOrder:[],qi:0,ni:0,nextQ:0,answered:false,
   lifelineHalf1:true,lifelineHalf2:true,botScores:[],totalPlayers:1204,
   results:emptyRounds(), liveAnswers:emptyRounds(), streak:0, seasonPts:0,
   catchChoices:{}, catchPts:null, catchesScored:false,
@@ -1390,10 +1424,36 @@ function startPredict(){
   buildPred();go('predict');
 }
 function buildPred(){const c=document.getElementById('predCard');c.innerHTML='';
-  preds.forEach(p=>{
+  // Draw order is confidence order when ranking is on, canonical order when
+  // it isn't. Either way the SUBMITTED order stays canonical — see lockPredPicks.
+  const order = CONF_ON ? ensurePredOrder().map(id=>preds.find(p=>p.id===id)).filter(Boolean) : preds;
+  if(CONF_ON){
+    const note=document.createElement('p');note.className='confnote';
+    note.innerHTML=`<b>Most confident at the top.</b> Use ▲▼ to reorder — your top pick is worth `
+      +`<b>${CONF_LADDER[0]} pts</b>, your bottom one <b>${CONF_LADDER[CONF_LADDER.length-1]} pt`
+      +`${CONF_LADDER[CONF_LADDER.length-1]===1?'':'s'}</b>. Same total either way, so leaving it alone is a real choice.`;
+    c.appendChild(note);
+  }
+  order.forEach((p,slot)=>{
     const row=document.createElement('div');row.className='predrow';
+    const worth=predWorthOf(p);
     const bonusTxt=p.bonus?` (+${p.bonus} bonus for exact #)`:'';
-    row.innerHTML=`<div class="predlabel">${p.label} <span class="predpts">${p.base}pt${bonusTxt}</span></div>`;
+    if(CONF_ON){
+      const top=document.createElement('div');top.className='predtop';
+      top.innerHTML=`<span class="rankbadge" title="Confidence rank ${slot+1} of ${order.length}">#${slot+1}</span>`
+        +`<div class="predlabel">${p.label} <span class="predpts">${worth}pt${worth===1?'':'s'}${bonusTxt}</span></div>`;
+      const nudge=document.createElement('div');nudge.className='ranknudge';
+      const up=document.createElement('button');up.type='button';up.textContent='▲';
+      up.setAttribute('aria-label',`Move ${p.label} up`);
+      up.disabled=slot===0; up.onclick=()=>movePred(p.id,-1);
+      const dn=document.createElement('button');dn.type='button';dn.textContent='▼';
+      dn.setAttribute('aria-label',`Move ${p.label} down`);
+      dn.disabled=slot===order.length-1; dn.onclick=()=>movePred(p.id,1);
+      nudge.appendChild(up);nudge.appendChild(dn);top.appendChild(nudge);
+      row.appendChild(top);
+    }else{
+      row.innerHTML=`<div class="predlabel">${p.label} <span class="predpts">${worth}pt${bonusTxt}</span></div>`;
+    }
     const sel=document.createElement('select');sel.id='sel_'+p.id;
     sel.innerHTML='<option value="">Choose…</option>'+p.opts.map(o=>`<option>${o}</option>`).join('');
     if(S.predChoices[p.id])sel.value=S.predChoices[p.id]; // restore picks if returning
@@ -1412,7 +1472,7 @@ function lockPredictions(){
   if(S.mode==="demo"){
     let pp=0;
     preds.forEach(p=>{
-      if(S.predChoices[p.id]===p.answer){pp+=p.base;
+      if(S.predChoices[p.id]===p.answer){pp+=predWorthOf(p);
         if(p.bonus && Number(S.predChoices[p.id+'_num'])===p.num){pp+=p.bonus;}}
     });
     // remember the truth so the trash-talk engine can cite real picks
@@ -1768,8 +1828,14 @@ function lockPredPicks(tries){
   LOCKED['rP'] = true;
   SB.submit('rP', {
     name:  S.name || 'player',
+    // ALWAYS canonical order — the dashboard's columns are per question, so
+    // a player's confidence order must never reorder what it sends. The
+    // ranking rides along in `banks` (this player's own price for each
+    // line) and `ranks` (1 = most confident), both still index-aligned.
     picks: preds.map(p=>S.predChoices[p.id]||''),
-    banks: preds.map(p=>p.base||0),        // what each line is worth, plainly
+    banks: preds.map(p=>predWorthOf(p)),   // what each line is worth TO THEM
+    ranks: CONF_ON ? preds.map(p=>predRank(p.id)||0) : [],
+    conf:  CONF_ON,
     nums:  preds.map(p=>p.bonus?(S.predChoices[p.id+'_num']||''):''),
     bons:  preds.map(p=>p.bonus||0),       // what an exact number is worth
     qs:    preds.map(p=>p.label),
@@ -1848,7 +1914,10 @@ function openPredReview(){
     const row=document.createElement('div');row.className='predrow';
     const myPick=S.predChoices[p.id]||'—';
     const myNum=p.bonus?(S.predChoices[p.id+'_num']||'—'):null;
-    row.innerHTML=`<div class="predlabel">${p.label} <span class="predpts">you picked: ${myPick}${myNum!==null?' ('+myNum+')':''}</span></div>`;
+    // Show what this line is worth to THIS player, so the moment of truth
+    // reminds them what their own ranking put on the table.
+    const stake=CONF_ON?` · <b>#${predRank(p.id)} · ${predWorthOf(p)}pt${predWorthOf(p)===1?'':'s'}</b>`:'';
+    row.innerHTML=`<div class="predlabel">${p.label} <span class="predpts">you picked: ${myPick}${myNum!==null?' ('+myNum+')':''}${stake}</span></div>`;
     const sel=document.createElement('select');sel.id='pr_'+p.id;
     sel.innerHTML='<option value="">Official result…</option>'+p.opts.map(o=>`<option>${o}</option>`).join('');
     sel.onchange=validatePredReview;
@@ -1873,7 +1942,7 @@ function confirmPreds(){
     const actual=document.getElementById('pr_'+p.id).value;
     S.predTruth[p.id]=actual;
     if(p.bonus)S.predTruthNum[p.id]=Number(document.getElementById('prn_'+p.id).value)||null;
-    if(S.predChoices[p.id]===actual){pp+=p.base;
+    if(S.predChoices[p.id]===actual){pp+=predWorthOf(p);
       if(p.bonus){const an=Number(document.getElementById('prn_'+p.id).value);
         if(an && Number(S.predChoices[p.id+'_num'])===an)pp+=p.bonus;}}
   });
@@ -2873,7 +2942,7 @@ function runEngine(){
 }
 function restart(){
   clearSave();
-  S={mode:"demo",screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},qi:0,ni:0,nextQ:0,answered:false,
+  S={mode:"demo",screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},predOrder:[],qi:0,ni:0,nextQ:0,answered:false,
     lifelineHalf1:true,lifelineHalf2:true,botScores:[],totalPlayers:1204,
     results:emptyRounds(),liveAnswers:emptyRounds(),streak:S.streak,seasonPts:S.seasonPts+S.pts,
     catchChoices:{},catchResults:{},catchPts:null,catchesScored:false,
@@ -2886,6 +2955,77 @@ function restart(){
 /* ---------------- SPORT BOOT ----------------
    Everything the landing/rules pages say is derived from SPORT, so
    ?sport=soccer reskins the whole app without touching basketball. */
+/* ---------------- CONFIDENCE RANKING ----------------
+   The prediction sheet used to be flat: six picks, near-identical prices,
+   no decision beyond the picks themselves. Ranking turns it into a real
+   one — you are not only saying who leads the game in rebounds, you are
+   saying how sure you are relative to your other five picks.
+
+   The rule that matters: this REDISTRIBUTES the sheet, it never inflates
+   it. The ladder always sums to exactly the same base total the flat
+   sheet had, so a perfect sheet is worth what it always was and the
+   prediction/live-round balance doesn't move. Nailing your ranking can't
+   win you more than a sweep — it can only protect you when you don't
+   sweep, which is every real night.
+
+   Rows are pre-ranked in the bank's own order, so a player who doesn't
+   care about any of this just makes their picks and taps Lock exactly
+   like before. The arrows are opt-in effort for opt-in edge. */
+const CONF_LADDERS={
+  4:[10,7,5,3], 5:[9,7,5,3,1], 6:[9,6,4,3,2,1],
+  7:[10,7,5,4,3,2,1], 8:[11,8,6,4,3,2,2,1],
+  10:[12,9,7,5,4,4,3,3,2,1]
+};
+/* Fit a ladder to this sport's line count AND its exact base total. The
+   hand-authored ones above already land on the total for basketball (25)
+   and soccer (50); the rescale below is the safety net for a bank
+   somebody edits later, and it is written so the sum comes out exact,
+   never merely close. */
+function buildConfLadder(){
+  const n=preds.length;
+  const total=preds.reduce((a,p)=>a+(p.base||0),0);
+  let L=(CONF_LADDERS[n]||Array.from({length:n},(_,i)=>n-i)).slice(0,n);
+  while(L.length<n) L.push(1);
+  let sum=L.reduce((a,b)=>a+b,0);
+  if(sum!==total && sum>0 && total>=n){
+    L=L.map(v=>Math.max(1,Math.floor(v*total/sum)));
+    let diff=total-L.reduce((a,b)=>a+b,0);
+    // hand any rounding remainder to the most-confident slots first, and
+    // claw any overshoot back off the cheapest ones that can spare it
+    for(let i=0;diff>0;i++,diff--) L[i%n]++;
+    for(let i=n-1;diff<0;i--){ const k=((i%n)+n)%n; if(L[k]>1){L[k]--;diff++;} else if(L.every(v=>v<=1)) break; }
+  }
+  return L;
+}
+const CONF_LADDER=buildConfLadder();
+/* Off by default — Game Night #1 ships flat. ?conf=1 turns it on for a
+   dry run, and a sport opts in permanently with conf:true on its GAME. */
+const CONF_ON=(function(){
+  try{ if(new URLSearchParams(location.search).get('conf')==='1') return true; }catch(e){}
+  return !!(typeof GAME!=='undefined' && GAME && GAME.conf);
+})();
+/* The canonical order never changes — the dashboard's columns depend on
+   it. Ranking only reorders how the sheet is DRAWN and what each line is
+   worth to the one player who ranked it. */
+function ensurePredOrder(){
+  const ids=preds.map(p=>p.id);
+  const cur=(S.predOrder||[]).filter(id=>ids.indexOf(id)>=0);
+  ids.forEach(id=>{ if(cur.indexOf(id)<0) cur.push(id); });
+  S.predOrder=cur;
+  return cur;
+}
+function predRank(id){ const i=ensurePredOrder().indexOf(id); return i<0?null:i+1; }
+function predWorthOf(p){
+  if(!CONF_ON) return p.base||0;
+  const i=ensurePredOrder().indexOf(p.id);
+  return i<0 ? (p.base||0) : (CONF_LADDER[i]||0);
+}
+function movePred(id,dir){
+  const o=ensurePredOrder(); const i=o.indexOf(id); const j=i+dir;
+  if(i<0||j<0||j>=o.length) return;
+  o[i]=o[j]; o[j]=id; S.predOrder=o;
+  buildPred(); if(typeof save==='function') save();
+}
 const PRED_MAX=preds.reduce((a,p)=>a+p.base+(p.bonus||0),0);
 const LIVE_MAX=rounds.reduce((a,r,i)=>a+r.q.length*roundWorth(i),0);
 const MAXPTS=PRED_MAX+LIVE_MAX+CATCH_PTS;
@@ -2911,7 +3051,8 @@ function applySport(){
   set('qLabel',roundTag(0));
   // predictions screen
   set('predHead',`Make your picks 📝`);
-  set('predSub',`Lock these in before ${L.start}. ${preds.some(p=>p.bonus)?'Bonus points if you nail the exact number.':'All '+preds.length+' always resolve — no dead picks.'}`);
+  set('predSub',`Lock these in before ${L.start}. ${preds.some(p=>p.bonus)?'Bonus points if you nail the exact number.':'All '+preds.length+' always resolve — no dead picks.'}`
+    +(CONF_ON?' Then rank them — the ones you back hardest pay the most.':''));
   set('predBtn',`Lock it in — go to ${L.start} 🔒`);
   set('predMeta',`PRE-${L.Unit.toUpperCase()} PREDICTION SHEET`);
   set('predWorth',`Up to ${PRED_MAX} pts`);
