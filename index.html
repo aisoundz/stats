@@ -1763,7 +1763,8 @@ function nextQuestion(){
     // else — no dashboard, dead backend, a round the host never pushed —
     // falls through to the tap-in review that has always been here.
     const h=hostedFor(S.qi);
-    if(h) submitHosted(h); else { lockPicks(S.qi); openReview(); }
+    if(h) submitHosted(h);
+    else { lockPicks(S.qi); if(roundHasKey(S.qi)) autoScore(S.qi); else openReview(); }
   }
   else{showBreak();}
 }
@@ -1898,6 +1899,79 @@ function confirmReview(){
     ? `Back to the ${L.unit} — ${roundName(S.qi+1).toLowerCase()} next →`
     : `${L.End} — score predictions →`;
 }
+/* ---------------- AUTO-SCORING -------------------------------------
+   Every question compiled into the build already carries its own answer.
+   When a whole round has one, there is nothing the player can tell us that
+   we do not already know — so asking them to tap the correct answer was
+   both a wasted screen and a scoring hole, because a player marking their
+   own paper can mark it any way they like. It was also a hard stop: the
+   Continue button stayed disabled until every question had been tapped,
+   so one missed tap ended somebody's night.
+
+   The tap-in below (openReview) is not deleted. It is the fallback for a
+   round we genuinely do not have a key for — a host-pushed round with no
+   answers set — because in that case the room really is the only source
+   of truth. Everything else scores itself the moment the last question
+   is answered.                                                        */
+function roundHasKey(idx){
+  const qs=(rounds[idx]&&rounds[idx].q)||[];
+  return qs.length>0 && qs.every(q=>{
+    const a=String(q.a==null?'':q.a).trim();
+    // The answer must not merely exist — it must be one of the options on
+    // screen, or we would mark a whole room wrong against a typo.
+    return a !== '' && (q.o||[]).some(o=>String(o)===a);
+  });
+}
+
+function autoScore(idx){
+  const qs=rounds[idx].q, worth=roundWorth(idx);
+  // Points are added once and only once. A round that already has results
+  // has already been paid for — re-rendering it must never top anyone up.
+  const fresh = !(S.results[idx] && S.results[idx].length);
+  const hit = i => {
+    const my=S.liveAnswers[idx][i]||{choice:null,bank:0};
+    return { my, ok: my.choice!==null && String(my.choice)===String(qs[i].a) };
+  };
+
+  let got=0, sp=0;
+  qs.forEach((q,i)=>{
+    const {my, ok}=hit(i);
+    if(fresh) S.results[idx][i]=ok;
+    if(ok){ got+=worth; sp+=(my.bank||0); }
+  });
+  if(fresh){ S.pts+=got; S.speed+=sp; }
+
+  document.getElementById('revPill').textContent=roundTag(idx)+' scored';
+  document.getElementById('revTitle').textContent=`${roundName(idx)} scored ✅`;
+  document.getElementById('revNote').textContent=
+    'Scored the second you finished — nothing to tap, nothing to wait for.';
+  document.getElementById('revBtn').style.display='none';
+
+  const list=document.getElementById('revList'); list.innerHTML='';
+  qs.forEach((q,i)=>{
+    const {my, ok}=hit(i);
+    const c=document.createElement('div'); c.className='card tight';
+    c.innerHTML=
+      `<div style="font-size:13px;font-weight:800;margin-bottom:6px">${i+1}. ${q.t}</div>
+       <div style="font-size:12px;font-weight:800;color:${ok?'#2ee6a6':'#ff4d5e'}">
+         ${ok?'✓':'✕'} ${my.choice?my.choice:'⏰ no answer'}${
+           ok?` · +${worth} pt${worth===1?'':'s'}${my.bank?` · +${my.bank} ⚡`:''}`:''}</div>
+       ${ok?'':`<div style="font-size:12px;font-weight:700;color:var(--dim);margin-top:3px">Answer: <b style="color:#fff">${q.a}</b></div>`}`;
+    list.appendChild(c);
+  });
+
+  document.getElementById('revResult').innerHTML=
+    `<div class="reveal ${got>0?'good':'bad'}"><div class="r1">${got>0?'✓':'✕'} ${roundTag(idx)}: +${got} pts · +${sp} ⚡ speed</div>
+     <div class="r2">Running total: <b>${S.pts}</b> pts · <b>${S.speed}</b> ⚡. Post it in the chat and talk your talk.</div></div>`;
+  document.getElementById('revNextBtn').style.display='block';
+  document.getElementById('revTalkBtn').style.display='block';
+  document.getElementById('revNextBtn').textContent = !isLastRound(idx)
+    ? `Back to the ${L.unit} — ${roundName(idx+1).toLowerCase()} next →`
+    : `${L.End} — score predictions →`;
+  save();
+  go('review');
+}
+
 function afterReview(){
   // Don't make the player wait on the network to change screens — but do
   // re-read the room once the write lands, or the rank they see is a full
