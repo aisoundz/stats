@@ -87,6 +87,24 @@
     background:var(--bg2);color:var(--dim);font:900 15px/1 inherit;cursor:pointer}
   .keybtn.on{background:var(--green);border-color:var(--green);color:#04241a}
 
+  /* ---- the inline answer key that lives on the RUN tab ----
+     Sized for a thumb, in a dark arena, one-handed, while the game is
+     still going. Nothing here is a 38px icon you have to aim at. */
+  .rk{margin-top:12px}
+  .rkq{border-top:1px solid var(--line);padding-top:11px;margin-top:11px}
+  .rkq:first-child{border-top:0;padding-top:0;margin-top:0}
+  .rkq .qn{font:800 10.5px/1.3 inherit;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--dim);margin-bottom:3px}
+  .rkq .qt{font:800 14px/1.35 inherit;color:var(--ink);margin-bottom:8px}
+  .rko{display:flex;flex-wrap:wrap;gap:7px}
+  .rko button{flex:1 1 44%;min-height:46px;text-align:left;padding:11px 12px;
+    border-radius:11px;border:1px solid var(--line2);background:var(--bg2);
+    color:var(--muted);font:700 13.5px/1.25 inherit;cursor:pointer}
+  .rko button.on{background:var(--green);border-color:var(--green);color:#04241a;font-weight:900}
+  .rko button.on::before{content:"\2713  "}
+  .keycount{font:800 12px/1 inherit;color:var(--dim);margin-top:12px;text-align:center}
+  .keycount.ready{color:var(--green)}
+
   table{width:100%;border-collapse:collapse;font-size:13px}
   th{text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
     color:var(--dim);padding:6px 4px;border-bottom:1px solid var(--line)}
@@ -103,6 +121,7 @@
   .banner.warn{background:#3a2a0d;color:var(--gold);border:1px solid #5b4415}
   .banner.bad{background:#3a1220;color:#ff8b97;border:1px solid #5c1d2f}
   .banner.good{background:#0e3327;color:var(--green);border:1px solid #17513c}
+  .banner.info{background:#141c33;color:var(--blue2);border:1px solid #2b3a63}
 
   #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(120%);
     background:var(--card2);border:1px solid var(--line2);border-radius:12px;
@@ -257,7 +276,7 @@
 
       <div class="card">
         <h3>Push a round to every phone</h3>
-        <p class="sub">One round at a time. Push when the quarter ends on TV, reveal when you've checked the box score.</p>
+        <p class="sub">One round at a time, and you never have to leave this tab. Push the second the quarter ends — players start answering while you check the box score. Mark what actually happened on the round's own card below, then reveal. Every phone scores itself.</p>
       </div>
       <div id="runList"></div>
       <div class="card">
@@ -780,7 +799,25 @@ function renderWrite(){
 /* A round is only pushable if every question has text, at least two real
    options, and a marked answer. Saying so up front beats a half-written
    question landing on two hundred phones. */
-function roundIssues(i){
+/* Two different questions, and Game Night #1 proved the hard way that they
+   are not the same question.
+
+   A round is PUSHABLE the moment its questions are readable: text, and two
+   real options to choose between. It does not need an answer, because at the
+   moment you push a quarter, the quarter has not been played yet. Nobody in
+   the building knows the answer. That is the entire point of pushing.
+
+   The old code ran one combined check and demanded a marked answer before
+   the push button would even enable. So on the night, the host opened the
+   Run tab, found every round greyed out and labelled "not ready", and had
+   nowhere on that screen to do anything about it: "Nothing for me to add in
+   the run part of the control room. It's off." He was right. The button was
+   waiting on information the game had not produced yet.
+
+   A round is REVEALABLE only when the answers are in. That is the check that
+   actually protects players, and it is exactly as strict as it always was —
+   it just fires at the right moment now. */
+function pushIssues(i){
   const r = nightDraft(night).rounds[i], out = [];
   if(!r.qs.length) out.push('no questions yet');
   r.qs.forEach((q,qi)=>{
@@ -788,11 +825,27 @@ function roundIssues(i){
     if(!String(q.t||'').trim()) out.push(`Q${qi+1} has no question text`);
     if(opts.length < 2)         out.push(`Q${qi+1} needs at least two options`);
     if(new Set(opts).size !== opts.length) out.push(`Q${qi+1} has duplicate options`);
+  });
+  return out;
+}
+function keyIssues(i){
+  const r = nightDraft(night).rounds[i], out = [];
+  r.qs.forEach((q,qi)=>{
     if(q.k===null || q.k===undefined || !String(q.o[q.k]||'').trim())
       out.push(`Q${qi+1} has no answer marked`);
   });
   return out;
 }
+// How many answers are in, out of how many. Drives the counter under the
+// reveal button so the host can see the finish line without counting ticks.
+function keyProgress(i){
+  const r = nightDraft(night).rounds[i];
+  const done = r.qs.filter(q=>q.k!==null && q.k!==undefined && String(q.o[q.k]||'').trim()).length;
+  return { done, total: r.qs.length };
+}
+/* Everything that grades or exports still wants "is this whole round sound",
+   so that question keeps its old name and its old answer. */
+function roundIssues(i){ return pushIssues(i).concat(keyIssues(i)); }
 function cleanRound(i){
   const r = nightDraft(night).rounds[i];
   const qs = r.qs.map(q=>{
@@ -833,71 +886,235 @@ function watchRounds(){
   }catch(e){}
 }
 
+/* =====================================================================
+   TAB 2: RUN — the only screen that matters once the ball is up
+   ---------------------------------------------------------------------
+   Rebuilt after Game Night #1, where the host's own notes were, in order:
+   "Q3 in the control room is wrong. There is nothing for me to add",
+   "Nothing for me to add in the run part of the control room. It's off",
+   and "when I go to the control room theres nothing for me to put in.
+   Its a bad way to navigate."
+
+   All three are the same bug wearing different hats. Running a quarter took
+   three tabs: push it from tab 2, walk back to tab 1 to tick the answers
+   into a 38-pixel checkbox next to an editable text field, then return to
+   tab 2 to reveal. On a phone, in the dark, with the game still going, in
+   the eleven minutes between quarters. And until those ticks existed the
+   push button on tab 2 sat greyed out with no hint that tab 1 was the cure.
+
+   So: the answers now live on this screen, on the round they belong to, at
+   the size of a thumb, and they appear the moment the round goes live —
+   which is also the moment the host starts learning what the answers are.
+   Tab 1 is where you WRITE the night. Tab 2 is where you RUN it. Nobody
+   should have to visit the first one after tip-off.
+   ================================================================== */
+
+/* The single next thing to do, in one sentence, at the top of the screen.
+   During a live game the host is not reading a dashboard, they are looking
+   for the one button. */
+function runNextUp(){
+  const cfg = nightCfg(night);
+  const live = Object.values(liveDocs).find(d=>d.state==='live');
+  if(live){
+    const pr = keyProgress(live.idx);
+    const tag = cfg.tags[live.idx] || 'The round';
+    // The ordering rule rides along with every live banner, because it is the
+    // one mistake on this screen that costs a whole round of answers.
+    const rule = ' Reveal it before you push the next one — phones follow the newest round, so pushing over a live one loses its answers.';
+    return pr.done >= pr.total && pr.total
+      ? { cls:'good', txt:`${tag} is live and all ${pr.total} answers are in. Reveal it whenever you're ready.` + rule }
+      : { cls:'warn', txt:`${tag} is live on every phone. Mark the answers below as the quarter plays — ${pr.done} of ${pr.total} in.` + rule };
+  }
+  const next = cfg.tags.findIndex((t,i)=>{
+    const d = liveDocs[roundDocId(i)];
+    return !d || d.state === 'draft';
+  });
+  if(next < 0) return { cls:'good', txt:'Every round is scored. Tab 3 adds up the night.' };
+  const iss = pushIssues(next);
+  return iss.length
+    ? { cls:'bad',  txt:`${cfg.tags[next]} isn't written yet — ${iss[0]}. Fix it on tab 1.` }
+    : { cls:'info',  txt:`Nothing is live. Push ${cfg.tags[next]} when the quarter ends on TV.` };
+}
+
+/* Repaint just the reveal button and its counter for one round, without
+   rebuilding the list. Tapping an answer must not scroll the host back to
+   the top of the page mid-quarter. */
+function syncRevealState(i){
+  const card = document.querySelector(`[data-roundcard="${i}"]`); if(!card) return;
+  const pr = keyProgress(i), ready = pr.total > 0 && pr.done >= pr.total;
+  const btn = card.querySelector('[data-revealbtn]');
+  const cnt = card.querySelector('.keycount');
+  if(btn) btn.disabled = !ready;
+  if(cnt){
+    cnt.className = 'keycount' + (ready ? ' ready' : '');
+    cnt.textContent = ready
+      ? `All ${pr.total} answers in.`
+      : `${pr.done} of ${pr.total} answers marked — the reveal button turns on at ${pr.total}.`;
+  }
+  const b = $('runBanner'), n = runNextUp();
+  if(b) b.innerHTML = n.txt ? `<div class="banner ${n.cls}">${esc(n.txt)}</div>` : '';
+}
+
+/* The answer key for one round, rendered as tap targets rather than ticks.
+   Writes straight into the same draft field tab 1 edits, so the two screens
+   can never disagree and the grade tab keeps picking it up for free. */
+function keyBlock(i){
+  const r = nightDraft(night).rounds[i];
+  if(!r.qs.length) return '<p class="sub tip">No questions in this round yet.</p>';
+  return '<div class="rk">' + r.qs.map((q,qi)=>
+    `<div class="rkq">
+       <div class="qn">Q${qi+1}</div>
+       <div class="qt">${esc(q.t || '(no question text)')}</div>
+       <div class="rko">${
+         q.o.map((o,oi)=> String(o||'').trim()
+           ? `<button data-rkey="${i}:${qi}:${oi}" class="${q.k===oi?'on':''}">${esc(o)}</button>`
+           : '').join('')
+       }</div>
+     </div>`).join('') + '</div>';
+}
+
 function renderRun(){
   const cfg = nightCfg(night);
   const wrap = $('runList'); if(!wrap) return;
   wrap.innerHTML = '';
 
-  // the ordering rule, stated where it matters
   const openLive = Object.values(liveDocs).find(d=>d.state==='live');
-  $('runBanner').innerHTML = openLive
-    ? `<div class="banner warn">${esc(cfg.tags[openLive.idx]||'A round')} is live on every phone right now. Reveal it before you push the next one — phones follow the newest round, so pushing over a live one loses its answers.</div>`
-    : '';
+  const n = runNextUp();
+  $('runBanner').innerHTML = n.txt ? `<div class="banner ${n.cls}">${esc(n.txt)}</div>` : '';
 
   cfg.tags.forEach((tag,i)=>{
     const doc = liveDocs[roundDocId(i)] || null;
     const state = doc ? doc.state : 'draft';
-    const issues = roundIssues(i);
+    const pIssues = pushIssues(i);
+    const pr = keyProgress(i);
+    const keyReady = pr.total > 0 && pr.done >= pr.total;
     const subs = subCounts[roundDocId(i)];
     const c = document.createElement('div'); c.className='card';
+    c.setAttribute('data-roundcard', i);
     c.innerHTML =
       `<div class="row"><h3 style="flex:1">${esc(tag)} — ${esc(cfg.names[i])}</h3>
         <span class="chip ${state==='live'?'live':state==='scored'?'done':'draft'}">
           ${state==='live'?'● LIVE':state==='scored'?'Scored':'Not pushed'}</span></div>
        <p class="sub">${nightDraft(night).rounds[i].qs.length} question(s) · ${nightDraft(night).rounds[i].worth} pt each${
           state!=='draft' && subs!==undefined ? ` · <b style="color:var(--teal2)">${subs} answered</b>` : ''}</p>
-       ${issues.length ? `<div class="banner bad" style="margin-top:10px">Not ready: ${esc(issues.slice(0,3).join(' · '))}${issues.length>3?' …':''}</div>` : ''}
+       ${pIssues.length ? `<div class="banner bad" style="margin-top:10px">Can't push this yet: ${esc(pIssues.slice(0,3).join(' · '))}${pIssues.length>3?' …':''}</div>` : ''}
        <div data-actions="${i}"></div>`;
     const a = c.querySelector('[data-actions]');
 
+    /* "Q3 in the control room is wrong. There is nothing for me to add."
+       An empty round is the one problem this tab genuinely cannot solve on
+       its own — but the app already ships questions for it, so offer those
+       right here rather than sending the host away mid-game to find them. */
+    if(!nightDraft(night).rounds[i].qs.length){
+      const lb = document.createElement('button');
+      lb.className='btn ghost'; lb.textContent = `↺ Load the app's ${tag} questions`;
+      lb.onclick = ()=>{
+        const got = seedRound(night, i, true);
+        if(!got){ toast('No stored questions for this round — write them on tab 1.'); return; }
+        saveDraft(); renderRun(); try{ renderWrite(); }catch(err){}
+        toast(`Loaded ${got} question${got>1?'s':''} for ${tag}.`);
+      };
+      a.appendChild(lb);
+    }
+
     if(state==='draft'){
       const b = document.createElement('button');
-      b.className='btn red'; b.textContent = `🔴 Push ${tag} to every phone`;
-      b.disabled = issues.length>0 || (openLive && openLive.idx!==i);
+      b.className='btn red'; b.setAttribute('data-pushbtn','1');
+      b.textContent = `🔴 Push ${tag} to every phone`;
+      // The answers are deliberately NOT part of this condition any more.
+      b.disabled = pIssues.length>0 || (openLive && openLive.idx!==i);
       b.onclick = ()=>pushRound(i);
       a.appendChild(b);
+      const p = document.createElement('p'); p.className='sub tip'; p.style.marginTop='10px';
+      p.textContent = openLive && openLive.idx!==i
+        ? `${cfg.tags[openLive.idx]} is still live — reveal that one first, or its answers are lost.`
+        : keyReady
+          ? 'The answers are already marked, so this one is ready to reveal the second the quarter ends.'
+          : 'Push it now — you mark the answers on this same screen while the quarter plays.';
+      a.appendChild(p);
+
     }else if(state==='live'){
+      /* The whole point of the rebuild: the answers, here, now. */
+      const h = document.createElement('div');
+      h.innerHTML = `<h3 style="margin-top:16px">What actually happened</h3>
+        <p class="sub">Tap the right answer as each one settles. Nothing leaves this phone until you press reveal — players can't see these.</p>
+        ${keyBlock(i)}`;
+      a.appendChild(h);
+
       const b = document.createElement('button');
-      b.className='btn teal'; b.textContent = `✅ Reveal answers & score ${tag}`;
+      b.className='btn teal'; b.setAttribute('data-revealbtn','1');
+      b.textContent = `✅ Reveal answers & score ${tag}`;
+      b.disabled = !keyReady;
       b.onclick = ()=>revealRound(i);
       a.appendChild(b);
+
+      const cnt = document.createElement('div');
+      cnt.className = 'keycount' + (keyReady?' ready':'');
+      cnt.textContent = keyReady
+        ? `All ${pr.total} answers in.`
+        : `${pr.done} of ${pr.total} answers marked — the reveal button turns on at ${pr.total}.`;
+      a.appendChild(cnt);
+
       const r = document.createElement('button');
       r.className='btn ghost'; r.textContent = 'Re-push (fix a typo in the questions)';
-      r.disabled = issues.length>0;
+      r.disabled = pIssues.length>0;
       r.onclick = ()=>pushRound(i, true);
       a.appendChild(r);
+
     }else{
       const p = document.createElement('p'); p.className='sub tip';
       p.textContent = 'Revealed. Every phone that answered has scored itself.';
       a.appendChild(p);
+
+      /* A wrong answer after the fact is a real thing that happens — a stat
+         gets corrected, or you misread the box score. Fixing it should not
+         mean going back to tab 1 to hunt for the tick either. */
+      const tog = document.createElement('button');
+      tog.className='btn ghost'; tog.textContent='Change an answer';
+      const box = document.createElement('div'); box.className='hide';
+      box.innerHTML = keyBlock(i);
+      tog.onclick = ()=>{ box.classList.toggle('hide');
+        tog.textContent = box.classList.contains('hide') ? 'Change an answer' : 'Hide the answers'; };
+      a.appendChild(tog); a.appendChild(box);
+
       const r = document.createElement('button');
       r.className='btn ghost'; r.textContent = 'Re-reveal (if you got an answer wrong)';
-      r.disabled = issues.length>0;
+      r.disabled = roundIssues(i).length>0;
       r.onclick = ()=>revealRound(i, true);
       a.appendChild(r);
     }
     wrap.appendChild(c);
   });
+
+  /* One delegated handler for every answer button on the tab. Updates the
+     draft in place and repaints only what changed, so the page does not
+     jump under a thumb that is already reaching for the next option. */
+  wrap.onclick = e => {
+    const b = e.target.closest('button[data-rkey]'); if(!b) return;
+    const [ri,qi,oi] = b.dataset.rkey.split(':').map(Number);
+    const rd = nightDraft(night).rounds[ri];
+    rd.qs[qi].k = (rd.qs[qi].k === oi) ? null : oi;
+    saveDraft();
+    b.parentNode.querySelectorAll('button[data-rkey]').forEach(x=>
+      x.classList.toggle('on', Number(x.dataset.rkey.split(':')[2]) === rd.qs[qi].k));
+    syncRevealState(ri);
+    // keep tab 1 honest, since it is showing the same field
+    try{ renderWrite(); }catch(err){}
+  };
 }
 
 async function pushRound(i, silent){
-  const issues = roundIssues(i);
+  // Pushing needs readable questions, NOT answers. See pushIssues.
+  const issues = pushIssues(i);
   if(issues.length){ toast('Fix that round first: ' + issues[0]); return; }
-  const cfg = nightCfg(night), r = cleanRound(i);
+  const cfg = nightCfg(night), r = cleanRound(i), pr = keyProgress(i);
   if(!silent && !confirm(
       `Push ${cfg.tags[i]} to every phone in the room?\n\n` +
       `${r.questions.length} questions at ${r.worth} pt each.\n\n` +
-      `Players answer immediately. The answers stay hidden until you press Reveal.`)) return;
+      `Players answer immediately. Nothing scores until you press Reveal.` +
+      (pr.done < pr.total
+        ? `\n\nYou haven't marked the answers yet — that's fine. Mark them on this screen while the room plays.`
+        : ''))) return;
   try{
     const { F, db } = FB;
     await F.setDoc(F.doc(db,'nights',night,'rounds',roundDocId(i)), {

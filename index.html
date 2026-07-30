@@ -445,6 +445,56 @@
 .fca{font-size:13px;font-weight:750;color:var(--muted);margin-top:7px}
 .fca b{color:var(--teal2)}
 
+/* ---- THE AWARD -----------------------------------------------------
+   The beta tester's note was that competitive players want to feel good
+   after they win. A score does that for exactly one person in the room.
+   An award does it for everybody who did something true.
+
+   It is deliberately the loudest object on the screen and it arrives
+   LAST — the ring fills, the number counts up underneath it, and only
+   then does this drop in. Three beats. One beat is a static screen. */
+.award{position:relative;margin:14px 0 0;padding:18px 16px 16px;border-radius:var(--r);
+  text-align:center;overflow:hidden;
+  border:1px solid rgba(255,197,77,.45);
+  background:linear-gradient(180deg,rgba(255,197,77,.15),rgba(255,197,77,.03) 62%,rgba(255,255,255,.02));
+  box-shadow:0 14px 40px rgba(255,197,77,.10);
+  opacity:0;transform:scale(.86) translateY(8px)}
+.award.in{animation:awpop .62s cubic-bezier(.16,1.1,.3,1) forwards}
+@keyframes awpop{
+  0%{opacity:0;transform:scale(.86) translateY(8px)}
+  55%{opacity:1;transform:scale(1.045) translateY(0)}
+  100%{opacity:1;transform:scale(1) translateY(0)}}
+.award .awshine{position:absolute;top:-60%;left:-40%;width:55%;height:220%;pointer-events:none;opacity:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.17),transparent);transform:rotate(14deg)}
+.award.in .awshine{animation:awshine 1.05s .3s ease-out forwards}
+@keyframes awshine{0%{opacity:0;left:-40%}25%{opacity:1}100%{opacity:0;left:125%}}
+.awlabel{font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.awtrophy{font-size:40px;line-height:1.15;margin-top:6px}
+.awname{font-size:22px;font-weight:900;letter-spacing:-.01em;margin-top:1px;
+  background:linear-gradient(90deg,#ffe1a0,var(--gold));-webkit-background-clip:text;
+  background-clip:text;color:transparent}
+.awwhy{font-size:12.5px;font-weight:700;color:var(--muted);line-height:1.5;margin:8px auto 0;max-width:30em}
+.awwhy b{color:var(--ink)}
+.awmore{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:13px}
+.awchip{font-size:11px;font-weight:800;padding:6px 10px;border-radius:999px;
+  border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--muted)}
+.awchip b{color:var(--ink);font-weight:900}
+.awsnd{position:absolute;top:9px;right:9px;width:30px;height:30px;border-radius:9px;padding:0;
+  border:1px solid var(--line);background:rgba(0,0,0,.28);color:var(--muted);font-size:13px;
+  line-height:1;cursor:pointer}
+
+/* ---- THE STAT LINE — the season record on the device ---------------- */
+.slgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:12px}
+.slc{text-align:center;padding:9px 3px;border-radius:12px;
+  background:rgba(255,255,255,.035);border:1px solid var(--line)}
+.slc .v{font-size:17px;font-weight:900;font-variant-numeric:tabular-nums}
+.slc .k{font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--dim);margin-top:3px}
+.tcase{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+.tc{font-size:11px;font-weight:800;color:var(--muted);padding:5px 9px;border-radius:999px;
+  border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.tc b{color:var(--gold);font-weight:900}
+
 .fmore{margin-top:10px;border:1px solid var(--line);border-radius:14px;background:var(--card);overflow:hidden}
 .fmore > summary{list-style:none;cursor:pointer;padding:14px 16px;font-size:13.5px;font-weight:800;
   color:var(--muted);display:flex;align-items:center;justify-content:space-between}
@@ -820,6 +870,19 @@
     <div class="center" style="margin-top:14px"><span class="pill" id="finalPill">Final buzzer 🚨</span></div>
     <h1 class="center" style="margin-top:12px" id="finalTitle">You finished!</h1>
 
+    <!-- THE AWARD. Lands last on purpose: ring, then number, then this.
+         Every award is derived from data the app already holds and none
+         of them are given for showing up — see the AWARDS table. -->
+    <div class="award" id="fAward" style="display:none">
+      <span class="awshine"></span>
+      <button class="awsnd" id="awSnd" onclick="toggleAwardSound()" title="Sound" aria-label="Sound">&#128266;</button>
+      <div class="awlabel" id="fAwardLabel">Award of the night</div>
+      <div class="awtrophy" id="fAwardEmoji">&#127942;</div>
+      <div class="awname" id="fAwardName">&mdash;</div>
+      <div class="awwhy" id="fAwardWhy"></div>
+      <div class="awmore" id="fAwardMore"></div>
+    </div>
+
     <!-- THE NUMBER. A ring instead of a bare digit, because "62" means
          nothing and "62 of 100, three quarters of the way round" means
          something at a glance — which is the whole job of the screen
@@ -867,9 +930,20 @@
     </div>
 
     <div id="finalLb"></div>
-    <div class="card tight" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-      <div><b style="font-size:15px">🔥 <span id="streakN">4</span>-game streak</b>
-        <div style="font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px">Season rating: <b id="seasonRating" style="color:var(--teal2)">1,286</b> · Play the next game to keep it alive</div></div>
+    <!-- THE STAT LINE. A season record kept on this device, so game night
+         #2 is worth something game night #1 wasn't. Written once per night
+         by recordStatLine() and deduped by night id, so a refresh cannot
+         inflate it. Practice never touches it. -->
+    <div class="card" id="fStatLine">
+      <div class="fbhead">📈 Your stat line · Season 1</div>
+      <div class="slgrid">
+        <div class="slc"><div class="v" id="slGames">1</div><div class="k">Games</div></div>
+        <div class="slc"><div class="v" id="slPts">0</div><div class="k">Points</div></div>
+        <div class="slc"><div class="v" id="slAcc">—</div><div class="k">Accuracy</div></div>
+        <div class="slc"><div class="v">🔥<span id="streakN">1</span></div><div class="k">Streak</div></div>
+      </div>
+      <div class="tcase" id="slCase"></div>
+      <p class="fbnote" style="margin-top:10px">Season rating <b id="seasonRating" style="color:var(--teal2)">1,000</b> · Play the next game to keep the streak alive.</p>
     </div>
     <!-- THE LIST — shown only on Game Night, only once, and never in practice.
          Placed here on purpose: this is the happiest thirty seconds a player
@@ -3060,13 +3134,17 @@ function showFinal(){
   const $f = id => document.getElementById(id);
   $f('finalMax').textContent = `OUT OF ${MAXPTS}`;
   clearSave(); // game complete — no resume needed
-  $f('finalPts').textContent = S.pts;
-  $f('streakN').textContent = S.streak;
-  $f('seasonRating').textContent = (1000+S.seasonPts+S.pts+S.speed).toLocaleString();
+  // Counted up rather than printed. The ring, the number and the award are
+  // three separate beats and they are the whole reason this screen feels
+  // like an ending instead of a receipt.
+  countUp($f('finalPts'), S.pts, 900);
   paintRing(S.pts, MAXPTS);
   renderBreakdown(livePts);
   renderPending();
   renderBestCall();
+  // Rank is not known yet in live mode — finishLive() calls this again with
+  // it, and renderAwards only replays the animation if the headline changed.
+  renderStatLine(recordStatLine(renderAwards(null)));
 
   if(S.mode==="live"){
     // Rank is the honest headline here and finishLive() fills it in from
@@ -3264,6 +3342,345 @@ function renderBestCall(){
     `You said <b>${esc(b.pick||'—')}</b>${speed}. `
     + `<span style="color:var(--dim)">${esc(b.where)} · +${b.pts} pt${b.pts===1?'':'s'}</span>`;
   card.style.display='block';
+}
+
+/* =====================================================================
+   THE AWARDS — the part of the ending that is not a score
+   ---------------------------------------------------------------------
+   "My beta tester said they love to compete and so they should feel
+   well after winning. We need something to provide Dopamine."
+
+   A leaderboard makes one person feel good and everybody else feel
+   ranked. So the night hands out awards, under three rules that are not
+   negotiable:
+
+     1. Every award is TRUE and derived from data we actually hold —
+        the same honesty rule that governs the STATS drop cards. Nothing
+        here is awarded for merely being present.
+     2. The headline is the RAREST true thing. Rarity IS the dopamine;
+        a trophy everybody gets is a receipt.
+     3. Everybody leaves with something true. The floor award still
+        names a real fact about their night, so the ending is not one
+        winner and N losers.
+
+   Two awards that only STATS could ever print — THE ONLY ONE (the sole
+   correct answer in the room) and AGAINST THE ROOM (right on an option
+   almost nobody picked) — are the highest-dopamine awards in the design
+   and are deliberately absent, because SB exposes no per-question answer
+   distribution yet (count/joined/top/rank only). The moment it does they
+   drop straight in at the top of this table; nothing else has to change.
+   ===================================================================== */
+
+/* Everything the tests below are allowed to look at, gathered once, so no
+   award can quietly disagree with another about what happened tonight. */
+function awardCtx(rank){
+  const c={
+    rank:(rank===undefined?null:rank),
+    pts:S.pts||0, speed:S.speed||0, streak:S.streak||1, mode:S.mode,
+    graded:countGraded(), preds:predHits(),
+    roundClean:[], roundGraded:[],
+    bestBank:0, answered:0, answeredAll:false, exactNum:false,
+    catchHits:S.catchPts||0, catchTotal:CATCHES.length, catchAll:false
+  };
+  let asked=0;
+  rounds.forEach((r,i)=>{
+    const res=S.results[i]||[], ans=S.liveAnswers[i]||[];
+    let g=0,h=0;
+    r.q.forEach((q,j)=>{
+      const v=res[j], my=ans[j];
+      if(v!==undefined && v!==null){ g++; if(v===true) h++; }
+      // A round the host never pushed was never my chance to miss, so it
+      // is not counted against "answered everything".
+      if(my && my.choice){ c.answered++; asked++; }
+      else if(v!==undefined && v!==null){ asked++; }
+      if(v===true && my && (Number(my.bank)||0)>c.bestBank) c.bestBank=Number(my.bank)||0;
+    });
+    c.roundGraded[i]=g;
+    c.roundClean[i]=(g>=2 && h===g);
+  });
+  c.answeredAll = asked>0 && c.answered===asked;
+  // The exact-number bonus on the prediction sheet, resolved exactly the
+  // way bestCall() resolves it — one truth, one place.
+  preds.forEach(p=>{
+    if(!p.bonus) return;
+    const truth=predTruthOf(p), pick=S.predChoices[p.id];
+    if(!pick || truth===null || truth===undefined || truth==='' || pick!==truth) return;
+    const myNum=Number(S.predChoices[p.id+'_num']);
+    const trueNum=(S.predTruthNum && S.predTruthNum[p.id]!=null) ? Number(S.predTruthNum[p.id])
+                  : (S.mode==='live' ? null : Number(p.num));
+    if(trueNum!==null && !isNaN(trueNum) && myNum && myNum===trueNum) c.exactNum=true;
+  });
+  c.catchAll = c.catchTotal>0 && c.catchHits===c.catchTotal;
+  return c;
+}
+
+/* Ordered HEADLINE-FIRST, which is rarest-first with one deliberate
+   exception: winning the room outranks a perfect card. A perfect card is
+   the rarer event, but the player came to compete, and being told "you
+   went 16 for 16" when what you did was WIN is answering a question
+   nobody asked. PERFECT NIGHT drops to the first chip underneath.
+
+   The first award that tests true is the headline;
+   the next two become chips under it. `hides` stops an award being printed
+   beside a stronger one that already contains it — "perfect night" sitting
+   above "perfect quarter" reads as padding, not as two achievements. */
+const AWARDS=[
+  { id:'gameball', emoji:'🏆',
+    name:()=> SPORT_KEY==='soccer' ? 'PLAYER OF THE MATCH' : 'THE GAME BALL',
+    hides:['podium'],
+    test:c=>c.rank===1,
+    why:c=>`First place. <b>${c.pts} points</b> — nobody in the room read this ${L.unit} better than you.`,
+    short:()=>'won the night' },
+
+  { id:'perfect', emoji:'💎', name:'PERFECT NIGHT',
+    hides:['closer','hotstart','perfectq','quickdraw','board','wire'],
+    test:c=>c.graded.total>=4 && c.graded.hits===c.graded.total,
+    why:c=>`<b>${c.graded.total} of ${c.graded.total}</b> — you did not miss a single graded question all night.`,
+    short:c=>`${c.graded.total}/${c.graded.total} clean` },
+
+  { id:'number', emoji:'🎯', name:'CALLED THE NUMBER',
+    test:c=>c.exactNum===true,
+    why:()=>`You didn't just pick the leader — you called their <b>exact stat total</b>. Almost nobody hits that.`,
+    short:()=>'nailed an exact total' },
+
+  { id:'oracle', emoji:'🔮', name:'THE ORACLE',
+    test:c=>c.preds.total>=4 && (c.preds.hits/c.preds.total)>=0.6,
+    why:c=>`<b>${c.preds.hits} of ${c.preds.total}</b> prediction lines landed — you called this one before ${L.start}.`,
+    short:c=>`${c.preds.hits}/${c.preds.total} predictions` },
+
+  { id:'closer', emoji:'🧊', name:'THE CLOSER',
+    hides:['perfectq'],
+    test:c=>c.roundClean[NR-1]===true,
+    why:()=>`Clean sweep of <b>${roundName(NR-1)}</b> — the round worth the most, when everyone else is guessing.`,
+    short:()=>`clean ${roundTag(NR-1)}` },
+
+  { id:'eagle', emoji:'👀', name:'EAGLE EYE',
+    test:c=>c.catchAll===true,
+    why:c=>`All <b>${c.catchTotal}</b> live catches. You saw every one of them coming.`,
+    short:c=>`${c.catchTotal}/${c.catchTotal} catches` },
+
+  { id:'perfectq', emoji:'🧹', name:()=>`PERFECT ${String(L.Period).toUpperCase()}`,
+    test:c=>c.roundClean.some((v,i)=>v===true && i>0 && i<NR-1),
+    why:c=>{ const i=c.roundClean.findIndex((v,k)=>v===true && k>0 && k<NR-1);
+             return `Every question in <b>${roundName(i)}</b>, correct. A full round without a scratch.`; },
+    short:()=>'a full clean round' },
+
+  { id:'hotstart', emoji:'🚀', name:'HOT START',
+    test:c=>c.roundClean[0]===true,
+    why:()=>`Clean sweep of <b>${roundName(0)}</b>. Locked in from ${L.start}.`,
+    short:()=>`clean ${roundTag(0)}` },
+
+  { id:'quickdraw', emoji:'⚡', name:'QUICK DRAW',
+    test:c=>c.bestBank>=15,
+    why:c=>`You locked a correct answer with <b>${c.bestBank} seconds</b> still on the clock. That's knowing it, not working it out.`,
+    short:c=>`${c.bestBank}s banked` },
+
+  { id:'podium', emoji:'🥉', name:'PODIUM FINISH',
+    test:c=>c.rank!==null && c.rank>=2 && c.rank<=3,
+    why:c=>`Finished <b>#${c.rank}</b> in the room. That close to the top.`,
+    short:c=>`#${c.rank} finish` },
+
+  { id:'wire', emoji:'🔒', name:'WIRE TO WIRE',
+    test:c=>c.answeredAll && c.answered>=4,
+    why:c=>`You answered <b>every single question</b> put in front of you — all ${c.answered}. Most people drop one.`,
+    short:()=>'answered everything' },
+
+  { id:'board', emoji:'📌', name:'ON THE BOARD',
+    test:c=>c.graded.hits>=1,
+    why:c=>`<b>${c.graded.hits}</b> right${c.pts?` and ${c.pts} points`:''} on the board. Every season starts with one.`,
+    short:c=>`${c.graded.hits} correct` },
+
+  /* The floor. Still true, still specific to this player, never a
+     participation lie — it names the streak or it names the fact that a
+     season record now exists that did not exist an hour ago. */
+  { id:'record', emoji:'🎬', name:'ON THE RECORD',
+    test:()=>true,
+    why:c=>c.streak>1
+      ? `<b>${c.streak} game nights in a row.</b> The streak is the record — keep it alive.`
+      : `Game 1 of your season is <b>on the record</b>. Everything from here is a personal best.`,
+    short:c=>c.streak>1?`${c.streak}-night streak`:'season opened' }
+];
+
+function awardName(a){ return typeof a.name==='function' ? a.name() : a.name; }
+
+/* Returns { ctx, list (headline first, max 3), all }. A test that throws
+   loses its own award and nothing else — one bad line must never be able
+   to take the last screen of the night down with it. */
+function earnedAwards(rank){
+  const ctx=awardCtx(rank);
+  const hit=[];
+  AWARDS.forEach(a=>{ let ok=false; try{ ok=!!a.test(ctx); }catch(e){ ok=false; } if(ok) hit.push(a); });
+  const hidden={};
+  hit.forEach(a=>(a.hides||[]).forEach(h=>{ hidden[h]=1; }));
+  const all=hit.filter(a=>!hidden[a.id]);
+  return { ctx, all, list:all.slice(0,3) };
+}
+
+/* ---- the reveal ----------------------------------------------------
+   In live mode the rank arrives a second or two after this screen paints,
+   so this gets called twice: once with rank null and again from
+   finishLive(). It only replays the animation when the HEADLINE actually
+   changed — being told twice that you won is worse than being told once. */
+let AW_LAST=null, AW_TIMER=null;
+function renderAwards(rank){
+  const card=document.getElementById('fAward'); if(!card) return null;
+  const got=earnedAwards(rank);
+  const head=got.list[0];
+  if(!head){ card.style.display='none'; return got; }
+  const prev = AW_LAST && AW_LAST.list[0] ? AW_LAST.list[0].id : null;
+  AW_LAST=got;
+  const set=(id,v,html)=>{ const e=document.getElementById(id); if(e){ if(html) e.innerHTML=v; else e.textContent=v; } };
+  set('fAwardEmoji', head.emoji);
+  set('fAwardName', awardName(head));
+  set('fAwardWhy', head.why(got.ctx), true);
+  const rest=got.list.slice(1);
+  set('fAwardMore', rest.map(a=>
+    `<span class="awchip">${a.emoji} <b>${esc(awardName(a))}</b> · ${esc(a.short(got.ctx))}</span>`).join(''), true);
+  const snd=document.getElementById('awSnd'); if(snd) snd.textContent = awardSoundOn()?'🔊':'🔇';
+  card.style.display='block';
+
+  const popped=card.classList.contains('in');
+  if(popped && prev===head.id) return got;    // same trophy, already celebrated
+  card.classList.remove('in');
+  void card.offsetWidth;                       // force the animation to restart
+  clearTimeout(AW_TIMER);
+  // Beat 1 the ring (0s), beat 2 the number counting up (0.3s), beat 3 this.
+  AW_TIMER=setTimeout(()=>{
+    card.classList.add('in');
+    buzz([16,44,16,44,90]);
+    awardChime();
+  }, popped ? 80 : 2150);
+  return got;
+}
+
+function buzz(pattern){ try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){} }
+
+/* Sound is on by default here and nowhere else in the app: the entire
+   point of this screen is the hit. One 900ms arpeggio, only on the final
+   screen, with the mute sitting on the card itself so nobody has to go
+   hunting for it. Synthesised rather than shipped as a file, so the page
+   stays a single download. */
+const SND_KEY='stats_sound_v1';
+function awardSoundOn(){ try{ return localStorage.getItem(SND_KEY)!=='0'; }catch(e){ return true; } }
+function toggleAwardSound(){
+  const on=!awardSoundOn();
+  try{ localStorage.setItem(SND_KEY, on?'1':'0'); }catch(e){}
+  const b=document.getElementById('awSnd'); if(b) b.textContent = on?'🔊':'🔇';
+  if(on) awardChime(); else buzz(10);
+}
+function awardChime(){
+  if(!awardSoundOn()) return;
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+    const ac=new AC(); if(ac.state==='suspended' && ac.resume) ac.resume();
+    const now=ac.currentTime;
+    // C6 E6 G6 C7 — a major arpeggio resolving upward. Bright, short, and
+    // quiet enough not to embarrass anyone holding a phone in a full room.
+    [1046.5,1318.5,1568.0,2093.0].forEach((f,i)=>{
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.type='triangle'; o.frequency.value=f;
+      const t=now+i*0.085;
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.exponentialRampToValueAtTime(0.12,t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+0.42);
+      o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+0.45);
+    });
+    setTimeout(()=>{ try{ ac.close(); }catch(e){} },1500);
+  }catch(e){}
+}
+
+/* The number used to appear fully formed. Counting it up is the cheapest
+   dopamine in the file — the player watches their own score arrive. */
+function countUp(el, to, ms){
+  if(!el) return;
+  to=Number(to)||0;
+  if(to<=0 || typeof requestAnimationFrame!=='function'){ el.textContent=to; return; }
+  el.textContent='0';
+  const t0=(window.performance&&performance.now?performance.now():Date.now())+300;
+  const step=(t)=>{
+    const p=Math.max(0,Math.min(1,(t-t0)/ms));
+    el.textContent=Math.round(to*(1-Math.pow(1-p,3)));
+    if(p<1) requestAnimationFrame(step); else el.textContent=to;
+  };
+  requestAnimationFrame(step);
+}
+
+/* =====================================================================
+   THE STAT LINE — what makes game night #2 worth more than game night #1
+   ---------------------------------------------------------------------
+   A fantasy league holds you all season because the season has a record
+   in it. STATS had none: every night started and ended at zero, which is
+   why the ending had nothing to point at except "play the next one".
+
+   This is the smallest honest version — games, points, accuracy, streak
+   and a trophy case — kept on the device, written once per night and
+   deduped by night id so a refresh cannot inflate it. Accuracy is the
+   identity number because it is the only one that compares across nights
+   with different numbers of questions.
+
+   Its own localStorage key, not S, for exactly the reason the signup flag
+   has one: showFinal() calls clearSave() and S is gone by the time the
+   late renders run. Firestore mirroring arrives with accounts; recording
+   starts NOW regardless, because a season you did not record is a season
+   that did not happen.
+   ===================================================================== */
+const LINE_KEY='stats_statline_v1';
+function loadLine(){
+  try{ const o=JSON.parse(localStorage.getItem(LINE_KEY));
+       if(o && Array.isArray(o.games)) return o; }catch(e){}
+  return {v:1, games:[]};
+}
+function saveLine(o){ try{ localStorage.setItem(LINE_KEY, JSON.stringify(o)); }catch(e){} }
+
+function recordStatLine(got){
+  // Practice is a simulation of a game that has not been played. Letting it
+  // into the season record would make every number on the card a lie.
+  if(S.mode!=='live' || !got) return loadLine();
+  const line=loadLine();
+  const key=String(GAME.nightId || (SPORT_KEY+'|'+(GAME.date||'')));
+  const row={ night:key, sport:SPORT_KEY, label:GAME.night||'', date:GAME.shareDate||GAME.short||'',
+              pts:S.pts||0, max:MAXPTS, speed:S.speed||0,
+              hits:got.ctx.graded.hits, total:got.ctx.graded.total,
+              rank:(got.ctx.rank===undefined?null:got.ctx.rank),
+              awards:got.all.map(a=>a.id) };
+  const at=line.games.findIndex(g=>g && g.night===key);
+  if(at>=0) line.games[at]=row; else line.games.push(row);
+  saveLine(line);
+  return line;
+}
+
+function lineTotals(line){
+  let pts=0,hits=0,total=0,speed=0,best=0; const trophies={};
+  (line.games||[]).forEach(x=>{
+    pts+=Number(x.pts)||0; hits+=Number(x.hits)||0; total+=Number(x.total)||0;
+    speed+=Number(x.speed)||0; if((Number(x.pts)||0)>best) best=Number(x.pts)||0;
+    (x.awards||[]).forEach(id=>{ trophies[id]=(trophies[id]||0)+1; });
+  });
+  return { games:(line.games||[]).length, pts, hits, total, speed, best, trophies,
+           acc: total ? Math.round(hits/total*100) : null };
+}
+
+function renderStatLine(line){
+  const box=document.getElementById('fStatLine'); if(!box) return;
+  const t=lineTotals(line||loadLine());
+  const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+  // With no season record yet — practice, or a live night that was not
+  // written — this still has to say something true, so it falls back to
+  // tonight rather than printing zeros over a game that just happened.
+  const live = t.games>0;
+  set('slGames', live?t.games:1);
+  set('slPts',  (live?t.pts:(S.pts||0)).toLocaleString());
+  set('slAcc',  (live && t.total) ? t.acc+'%' : '—');
+  set('streakN', S.streak || (live?t.games:1));
+  set('seasonRating',
+      (1000 + (live ? t.pts+t.speed : (S.seasonPts||0)+(S.pts||0)+(S.speed||0))).toLocaleString());
+  const cs=document.getElementById('slCase'); if(!cs) return;
+  const ids=Object.keys(t.trophies).sort((a,b)=>t.trophies[b]-t.trophies[a]);
+  cs.innerHTML = ids.length
+    ? ids.map(id=>{ const a=AWARDS.find(x=>x.id===id); if(!a) return '';
+        return `<span class="tc">${a.emoji} ${esc(awardName(a))}`
+             + (t.trophies[id]>1?` <b>×${t.trophies[id]}</b>`:'') + `</span>`; }).join('')
+    : `<span class="tc" style="color:var(--dim)">Your trophy case fills up as you play</span>`;
 }
 
 /* =====================================================================
@@ -4297,6 +4714,9 @@ async function finishLive(){
     document.getElementById('finalTitle').textContent =
       rank===1 ? '🏆 You won the night!' : `Great game, ${S.name||'player'}!`;
     document.getElementById('scRankLine').textContent=`Rank #${rank} of ${total.toLocaleString()}`;
+    // The two rarest awards in the table need the room. Now that we have it,
+    // re-run the engine and rewrite tonight's row in the season record.
+    renderStatLine(recordStatLine(renderAwards(rank)));
   }
   if(top && top.length) renderRealLb('finalLb', top, total);
 }
@@ -4386,7 +4806,10 @@ function copyShareText(){
   const head = S.mode==="live"
     ? `STATS ${SPORT.emoji} ${GAME.night} · ${GAME.homeAbbr} vs ${GAME.awayAbbr}\n${S.name||'Me'}: ${S.pts} pts · ⚡${S.speed} speed`
     : `STATS ${SPORT.emoji} ${S.pts} pts · Rank #${myRank()}`;
-  const txt=`${head}\n${shareEmoji()}\n🔥 ${S.streak}-game streak\nPlay free → statsgametime.com`;
+  // The award is the line people actually screenshot, so it goes above the grid.
+  const aw = AW_LAST && AW_LAST.list && AW_LAST.list[0];
+  const awLine = aw ? `\n${aw.emoji} ${awardName(aw)}` : '';
+  const txt=`${head}${awLine}\n${shareEmoji()}\n🔥 ${S.streak}-game streak\nPlay free → statsgametime.com`;
   try{navigator.clipboard&&navigator.clipboard.writeText(txt);}catch(e){}
   toast('📋 Result card copied — paste it in the group chat.');
 }
