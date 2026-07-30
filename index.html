@@ -68,6 +68,23 @@
   select,input{width:100%;background:var(--bg2);border:1px solid var(--line2);color:var(--ink);
     border-radius:12px;padding:13px;font-size:15px;font-weight:600;appearance:none}
   select:focus,input:focus{outline:none;border-color:var(--blue2)}
+  /* The rule above sets appearance:none on EVERY input, which is right for
+     text fields and quietly fatal for checkboxes: it strips the native tick
+     and makes accent-color a no-op, so the box takes the click, flips its
+     state, and shows absolutely nothing. On the handle screen that read as
+     "the check box doesn't work" — it worked, it just never admitted it.
+     So checkboxes get their tick drawn back on, in brand colours, once,
+     here, instead of being patched inline one at a time. */
+  input[type=checkbox]{width:20px;height:20px;min-width:20px;flex:0 0 20px;padding:0;margin:0;
+    border-radius:6px;border:2px solid var(--line2);background:var(--bg2);cursor:pointer;
+    display:inline-grid;place-content:center;vertical-align:middle;
+    transition:background .12s ease,border-color .12s ease}
+  input[type=checkbox]::after{content:"";width:10px;height:5px;
+    border-left:2.5px solid #06210f;border-bottom:2.5px solid #06210f;
+    transform:rotate(-45deg) translate(0,-1px);opacity:0;transition:opacity .12s ease}
+  input[type=checkbox]:checked{background:var(--teal2);border-color:var(--teal2)}
+  input[type=checkbox]:checked::after{opacity:1}
+  input[type=checkbox]:focus-visible{outline:2px solid var(--blue2);outline-offset:2px}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .predrow{border-top:1px solid var(--line);padding:12px 0 4px}
   .predrow:first-child{border-top:none}
@@ -194,6 +211,17 @@
   .chip.pick.on{color:#04121a;background:var(--teal2,#2ee6a6);border-color:var(--teal2,#2ee6a6)}
   .jgrp{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:14px 0 7px}
 
+  /* verification row on the handle screen */
+  .vrow{margin-top:14px;padding-top:13px;border-top:1px solid var(--line)}
+  .vrow .btn{margin-top:0;font-size:12.5px;padding:11px 14px}
+  .vrow.done{border-top-color:var(--green)}
+  .vrow.done #verifyBtn{display:none}
+  .vrow.sent #verifyBtn{opacity:.55;pointer-events:none}
+  .vrow .foot b{color:var(--ink)}
+  .vmsg{font-size:12px;font-weight:800;margin:0 0 4px}
+  .vmsg.good{color:var(--green)}
+  .vmsg.warn{color:var(--gold)}
+
   /* host panel */
   .hostwrap{background:repeating-linear-gradient(45deg,#0c1220,#0c1220 12px,#0e1526 12px,#0e1526 24px)}
   .hq{border:1px solid var(--line2);border-radius:12px;padding:12px;margin:8px 0;background:var(--card)}
@@ -252,9 +280,30 @@
   .sc-foot .cta{font-size:10.5px;color:var(--dim);font-weight:700}
 
   /* trash talk */
-  .tt-sheet{width:100%;max-width:380px;max-height:86vh;overflow:auto;border-radius:20px;padding:16px 15px 14px;
+  /* A chat sheet, not a scrolling document: fixed height, the feed takes
+     the slack and scrolls, the composer stays pinned where a thumb is. */
+  .tt-sheet{width:100%;max-width:380px;height:min(86vh,660px);display:flex;flex-direction:column;
+    overflow:hidden;border-radius:20px;padding:16px 15px 14px;
     background:linear-gradient(160deg,#111a2e 0%,#0b1120 70%);border:1px solid var(--line2);
     box-shadow:var(--shadow);animation:fade .25s}
+  #talkBody{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+  .tt-compose{flex:0 0 auto;border-top:1px solid var(--line);padding-top:10px;margin-top:8px}
+  .tt-emoji{display:flex;gap:5px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none}
+  .tt-emoji::-webkit-scrollbar{display:none}
+  .tt-emoji button{flex:0 0 auto;font-size:17px;line-height:1;background:var(--card);
+    border:1px solid var(--line);border-radius:10px;padding:6px 8px;cursor:pointer}
+  .tt-emoji button:active{transform:scale(.9)}
+  .tt-inrow{display:flex;gap:7px;align-items:center}
+  .tt-inrow input{padding:11px 12px;font-size:14px;font-weight:600;border-radius:12px}
+  .tt-send{flex:0 0 46px;width:46px;height:43px;border-radius:12px;border:none;cursor:pointer;
+    background:linear-gradient(135deg,var(--blue),var(--teal));color:#fff;font-size:15px;font-weight:900}
+  .tt-send:disabled{opacity:.35;cursor:default}
+  .tt-under{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .tt-dice{font-size:11px;font-weight:800;padding:7px 10px;border-radius:10px;border:1px solid var(--line2);
+    background:var(--card2);color:var(--muted);cursor:pointer}
+  .tt-dice:hover{border-color:var(--teal);color:var(--ink)}
+  .tt-count{margin-left:auto;font-size:10.5px;color:var(--dim);font-weight:700}
+  .tt-count.warn{color:var(--gold)}
   .tt-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .tt-head b{font-size:15px}
   .tt-x{background:transparent;border:none;color:var(--muted);font-size:19px;font-weight:800;cursor:pointer;padding:0 2px}
@@ -289,9 +338,14 @@
   .tt-msg .who .dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px;align-self:center}
   .tt-msg .who .ago{margin-left:auto;font-size:10px;color:var(--dim);font-weight:700;letter-spacing:0}
   .tt-msg .line{font-size:13px;font-weight:700;line-height:1.45;color:var(--ink);margin-top:5px}
+  .tt-msg.pending{opacity:.55}
   .tt-empty{text-align:center;padding:22px 12px;color:var(--dim);font-size:12.5px;font-weight:650;line-height:1.55}
+  /* The feed scrolls under this, so it has to carry its own backdrop —
+     otherwise message text slides through the LIVE pill. */
   .tt-live{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:900;letter-spacing:.08em;
-    text-transform:uppercase;color:var(--green);margin-bottom:8px}
+    text-transform:uppercase;color:var(--green);margin-bottom:8px;
+    position:sticky;top:0;z-index:2;padding:3px 0 5px;
+    background:linear-gradient(180deg,#101829 72%,rgba(16,24,41,0))}
   .tt-live i{width:7px;height:7px;border-radius:50%;background:var(--green);display:block;
     animation:pulse 1.9s ease-in-out infinite;font-style:normal}
   .tt-live.off{color:var(--dim)}
@@ -608,7 +662,7 @@
 
     <div class="card">
       <label style="display:flex;gap:10px;align-items:flex-start;margin:0;font-size:11.5px;line-height:1.5;color:var(--muted);font-weight:600;cursor:pointer">
-        <input id="jConsent" type="checkbox" style="width:18px;height:18px;flex:0 0 18px;margin-top:1px;appearance:auto">
+        <input id="jConsent" type="checkbox" style="margin-top:1px">
         <span>Yes — email me about upcoming STATS game nights. If I enter a phone number, I also agree to receive recurring automated texts from STATS at that number once texting starts. Consent is <b>not</b> a condition of playing, scoring, or winning anything. Message &amp; data rates may apply. Reply STOP to any text to stop, HELP for help. You can delete your email and phone yourself any time from the end-of-game screen, or email <a href="mailto:aisoundz9@gmail.com" style="color:var(--teal2)">aisoundz9@gmail.com</a>.</span>
       </label>
       <button class="btn teal" id="jBtn" style="margin-top:14px" onclick="submitJoin()">Count me in →</button>
@@ -704,9 +758,18 @@
            less. Phone is deliberately NOT on this screen; texting means TCPA
            and 10DLC, and neither is signed off yet. -->
       <label style="display:flex;gap:9px;align-items:flex-start;margin-top:12px;font-size:12px;line-height:1.45;color:var(--dim);cursor:pointer">
-        <input type="checkbox" id="gateConsent" style="margin-top:2px;flex:0 0 auto;width:17px;height:17px;accent-color:var(--teal)">
+        <input type="checkbox" id="gateConsent" style="margin-top:1px">
         <span>Email me when the next STATS game night is on — one heads-up, nothing else. Not required to play, score, or win. You can delete yourself from the list any time on the end-of-game screen.</span>
       </label>
+      <!-- Verification. The button only wakes up once the address above is
+           a real one, and it never blocks the Continue button below — see
+           VERIFY_REQUIRED in the script for why that call was made. -->
+      <div id="verifyRow" class="vrow">
+        <button class="btn ghost" id="verifyBtn" onclick="sendVerify()">✉️ Verify my email</button>
+        <p class="foot" id="verifyNote" style="margin:7px 0 0">Verify to save your handle, your points and your card across phones. Takes one tap in your inbox — you can do it now or after the game.</p>
+      </div>
+      <label class="fld">Favorite sport</label>
+      <div class="chips" id="sportPick"></div>
       <label class="fld">Pick your color</label>
       <div class="chips" id="colorPick"></div>
       <button class="btn" id="nameBtn" disabled onclick="startPredict()">Continue to picks →</button>
@@ -957,7 +1020,7 @@
       <label class="fld" for="suPhone">Phone <span style="text-transform:none;letter-spacing:0;font-weight:600">— optional</span></label>
       <input id="suPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(555) 555-5555">
       <label style="display:flex;gap:10px;align-items:flex-start;margin:14px 0 0;font-size:11.5px;line-height:1.5;color:var(--muted);font-weight:600;cursor:pointer">
-        <input id="suConsent" type="checkbox" style="width:18px;height:18px;flex:0 0 18px;margin-top:1px;appearance:auto">
+        <input id="suConsent" type="checkbox" style="margin-top:1px">
         <span>Yes — email me about upcoming STATS game nights. If I enter a phone number, I also agree to receive recurring automated texts from STATS at that number once texting starts. Consent is <b>not</b> a condition of playing, scoring, or winning anything. Message &amp; data rates may apply. Reply STOP to any text to stop, HELP for help. You can delete your email and phone yourself any time from the end-of-game screen, or email <a href="mailto:aisoundz9@gmail.com" style="color:var(--teal2)">aisoundz9@gmail.com</a>.</span>
       </label>
       <button class="btn teal" id="suBtn" style="margin-top:12px" onclick="submitSignup()">Count me in →</button>
@@ -1120,19 +1183,33 @@
     </div>
   </div>
 
-  <!-- TRASH TALK -->
+  <!-- THE ROOM — one chat box, free text, live.
+       This started life as four tabs of app-written lines with a copy
+       button, on the reasoning that a room with no free text box is a
+       room with nothing to moderate. That reasoning was sound and the
+       feature was still wrong: nobody copies and pastes. People type.
+       So it is a chat box now, and the moderation it creates is real
+       work we have chosen to take on — see ttScrub() and the host's
+       clear-the-room control. -->
   <div class="modal" id="talkModal" onclick="if(event.target===this)closeTalk()">
     <div class="tt-sheet">
-      <div class="tt-head"><b id="ttTitle">🔥 Talk trash</b>
+      <div class="tt-head"><b id="ttTitle">🔥 The room</b>
         <button class="tt-x" onclick="closeTalk()">✕</button></div>
-      <div class="tt-tabs" id="talkTabs">
-        <div class="tt-tab" data-t="room" onclick="setTtTab('room')">📣 The room</div>
-        <div class="tt-tab on" data-t="burns" onclick="setTtTab('burns')">🔥 Burns</div>
-        <div class="tt-tab" data-t="callout" onclick="setTtTab('callout')">🎯 Callout</div>
-        <div class="tt-tab" data-t="taunts" onclick="setTtTab('taunts')">💬 Taunts</div>
-      </div>
       <div id="talkBody"></div>
-      <p class="foot" style="margin-top:12px" id="ttFoot">Post it to the room so everyone playing tonight sees it, or copy it for the group chat you already run.</p>
+      <div class="tt-compose" id="ttCompose">
+        <div class="tt-emoji" id="ttEmoji"></div>
+        <div class="tt-inrow">
+          <input id="ttInput" maxlength="140" placeholder="Say something…" autocomplete="off"
+                 enterkeyhint="send" oninput="ttTyped()"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();ttSend();}">
+          <button class="tt-send" id="ttSendBtn" onclick="ttSend()" aria-label="Send">➤</button>
+        </div>
+        <div class="tt-under">
+          <button class="tt-dice" onclick="ttDice()">🎲 Give me a line</button>
+          <span class="tt-count" id="ttCount"></span>
+        </div>
+      </div>
+      <p class="foot" style="margin-top:9px;margin-bottom:0" id="ttFoot">Everyone playing tonight sees this. Keep it about the game.</p>
     </div>
   </div>
 
@@ -1210,9 +1287,15 @@ window.STATS_FIREBASE = {
   var COUNT_MS     = 90000;
   var PRESENT_MS   = 360000;  // "here now" = seen in the last 6 minutes
   var TOP_N        = 10;
-  var TALK_N       = 30;      // lines held in the room
-  var TALK_MAX     = 25;      // most one device may post in a night
-  var TALK_GAP_MS  = 8000;    // and how fast — a floor on the shout button
+  // These were sized for a button that fired one pre-written line. It is
+  // a chat box now, and a chat box that cuts you off after 25 messages
+  // or makes you wait eight seconds between them is not a chat box. The
+  // limits stay — they are what stops one phone flooding the room, and
+  // what keeps a night inside the free read/write tier — but they are
+  // now set to numbers a talkative person will never notice.
+  var TALK_N       = 60;      // lines held in the room
+  var TALK_MAX     = 120;     // most one device may post in a night
+  var TALK_GAP_MS  = 2500;    // and how fast — a floor on the send button
   var MAX_CALLS    = 4000;    // circuit breaker per device per session
 
   /* ---- null backend: the honest default ---------------------------- */
@@ -1232,6 +1315,7 @@ window.STATS_FIREBASE = {
     submit: function () { return Promise.resolve(false); },
     mySub:  function () { return Promise.resolve(null); },
     signup: function () { return Promise.resolve(false); },
+    sendLink: function () { return Promise.resolve({ ok:false, why:'offline' }); },
     unsubscribe: function () { return Promise.resolve({ ok:false, why:'offline' }); },
     scoreboard: function () { return Promise.resolve(null); },
     say:   function () { return Promise.resolve({ ok:false, why:'offline' }); },
@@ -1265,7 +1349,109 @@ window.STATS_FIREBASE = {
   }
 
   var db, auth, F, nightId = null, meRef = null, hbTimer = null;
+  /* The live uid. Never cache this in a variable that outlives a call:
+     the signed-in user can change mid-session (email verification
+     upgrades an anonymous player into a real account) and a stale copy
+     turns every write into permission-denied. */
+  function uid() {
+    if (auth && auth.currentUser) return auth.currentUser.uid;
+    return (SB.me && SB.me.uid) || '';
+  }
+  SB.uid = uid;
   var mine = { name: '', color: '', pts: 0, speed: 0, predPts: 0, catchPts: 0, roundsDone: 0 };
+
+  /* ---- REAL ACCOUNTS, VIA THE INBOX --------------------------------
+     A is the auth module, kept at module scope so the verification
+     helpers below can reach it after boot has finished.
+
+     The method is Firebase's email-link sign-in: no password to choose,
+     forget, or leak, and the click on the link IS the proof the address
+     is real. That is the whole ask — "sign up with their email and then
+     they get a verification email" — with the one piece of it that
+     usually goes wrong handled up front: the link lands back on THIS
+     page, so there is no second page to build and keep alive, and the
+     account it produces is the anonymous one the player already has,
+     upgraded in place, so nothing they earned tonight gets orphaned. */
+  var A = null;
+  var LINK_KEY = 'stats.linkEmail';
+
+  function linkEmailSaved() { try { return localStorage.getItem(LINK_KEY) || ''; } catch (e) { return ''; } }
+
+  async function completeEmailLink(authMod) {
+    try { if (!authMod.isSignInWithEmailLink(auth, window.location.href)) return null; }
+    catch (e) { return null; }
+
+    // The address is remembered on the device that asked for the link.
+    // Opening the mail on a different device is a normal thing to do —
+    // link on the phone, game on the laptop — and there the address has
+    // to be asked for again rather than silently failing. The UI hands
+    // it over on window.STATS_LINK_EMAIL when that happens.
+    var email = linkEmailSaved() || String(window.STATS_LINK_EMAIL || '').trim();
+    if (!email) return { ok:false, why:'need-email' };
+
+    var out = { ok:false, why:'unknown' };
+    try {
+      var cred = authMod.EmailAuthProvider.credentialWithLink(email, window.location.href);
+      if (auth.currentUser && auth.currentUser.isAnonymous) {
+        // UPGRADE, not sign-in. Same uid on the other side, so tonight's
+        // picks, points and messages stay attached to the person who
+        // made them. signInWithEmailLink here would mint a new uid and
+        // quietly orphan all of it.
+        await authMod.linkWithCredential(auth.currentUser, cred);
+        out = { ok:true, why:'linked' };
+      } else if (auth.currentUser) {
+        out = { ok:true, why:'already' };
+      } else {
+        await authMod.signInWithEmailLink(auth, email, window.location.href);
+        out = { ok:true, why:'linked' };
+      }
+    } catch (e) {
+      var code = (e && e.code) || 'unknown';
+      // Not a failure from where the player is standing: it means this
+      // address already has an account, because they verified on another
+      // device or clicked the link twice. Put them in the account that
+      // already exists.
+      if (code === 'auth/credential-already-in-use' || code === 'auth/email-already-in-use') {
+        try { await authMod.signInWithEmailLink(auth, email, window.location.href); out = { ok:true, why:'switched' }; }
+        catch (e2) { out = { ok:false, why:(e2 && e2.code) || 'unknown' }; }
+      } else { out = { ok:false, why:code }; }
+    }
+
+    try { localStorage.removeItem(LINK_KEY); } catch (e) {}
+    // The code in the query string is single-use and it is the entire
+    // secret. It does not stay in the address bar, in history, or in
+    // anything somebody might paste to a friend.
+    try { window.history.replaceState({}, document.title, window.location.pathname); } catch (e) {}
+    return out;
+  }
+
+  /* Send the verification email. Returns the Firebase error code on
+     failure rather than a bare false, because the two that matter here
+     are configuration, not user error: 'auth/operation-not-allowed'
+     means the Email-link provider has not been switched on in the
+     console, and 'auth/unauthorized-continue-uri' means this domain is
+     not on the authorized list. Both are one toggle each, and both look
+     exactly like "the app is broken" if the code is swallowed. */
+  SB.sendLink = async function (email) {
+    if (!A || !auth) return { ok:false, why:'offline' };
+    var em = String(email || '').trim().toLowerCase();
+    if (em.length < 6 || em.indexOf('@') < 1 || em.indexOf('.', em.indexOf('@')) < 0)
+      return { ok:false, why:'email' };
+    try {
+      await A.sendSignInLinkToEmail(auth, em, {
+        url: window.location.origin + window.location.pathname,
+        handleCodeInApp: true
+      });
+      try { localStorage.setItem(LINK_KEY, em); } catch (e) {}
+      return { ok:true };
+    } catch (e) {
+      var code = (e && e.code) || 'unknown';
+      try { console.error('[STATS] sendLink failed:', code, e && e.message); } catch (_) {}
+      return { ok:false, why:code };
+    }
+  };
+
+  SB.verified = function () { return !!(SB.me && SB.me.verified); };
 
   function visible() { return document.visibilityState !== 'hidden'; }
 
@@ -1279,18 +1465,82 @@ window.STATS_FIREBASE = {
       var app = appMod.initializeApp(CFG);
       auth = authMod.getAuth(app);
       db   = fsMod.getFirestore(app);
+      A    = authMod;
 
       if (EMU) {
         authMod.connectAuthEmulator(auth, 'http://' + EMU.host + ':' + EMU.authPort, { disableWarnings: true });
         fsMod.connectFirestoreEmulator(db, EMU.host, EMU.firestorePort);
       }
 
-      await authMod.signInAnonymously(auth);
+      /* ---- IDENTITY, AND WHY IT IS WATCHED AND NOT SNAPSHOTTED -------
+         This used to be one line: sign in anonymously, read the uid once,
+         keep it forever. That is wrong, and it is the bug that ate Game
+         Night #1.
+
+         Firebase Auth keeps the signed-in user in IndexedDB per origin and
+         broadcasts a change to every open tab. The control room lives on
+         this same domain, so the moment the host signed in there with
+         Google, `auth.currentUser` changed underneath this page while our
+         copy of the uid did not. Every write then went to a document named
+         after the old uid while the server saw the new one, and every rule
+         that reads `request.auth.uid == uid` — signups, picks, scores —
+         refused with permission-denied. The app blamed the phone number.
+
+         Two fixes, and both are needed. The control room now runs on its
+         own named Firebase app so it cannot reach this session at all.
+         And here, the uid is READ FROM THE LIVE USER at the moment of
+         every write, never cached, with a permanent listener that
+         re-points anything already holding a uid in a path.
+
+         Anonymous sign-in only happens when there is genuinely nobody
+         signed in — a player who has verified their email must keep that
+         account, not be handed a fresh anonymous one on every reload.
+
+         And before we can ask that question we have to WAIT. Persistence
+         is read back out of IndexedDB asynchronously, so auth.currentUser
+         is null for the first handful of milliseconds even for somebody
+         who has been signed in for a week. Checking it too early hands
+         that player a brand-new anonymous account and orphans everything
+         they earned. The first onAuthStateChanged callback is the signal
+         that the restore has finished — it fires with the restored user,
+         or with null if there genuinely isn't one. */
       await new Promise(function (res) {
-        var un = authMod.onAuthStateChanged(auth, function (u) { if (u) { un(); res(u); } });
+        var un = authMod.onAuthStateChanged(auth, function () { try { un(); } catch (_) {} res(); });
       });
 
-      SB.me = { uid: auth.currentUser.uid, name: '' };
+      /* If this page was opened from the link in somebody's inbox, the
+         query string carries a single-use code. Spend it here, BEFORE the
+         anonymous fallback below — otherwise we'd create a throwaway
+         account a half-second before upgrading a different one. */
+      try { SB.linkResult = await completeEmailLink(authMod); }
+      catch (e) { SB.linkResult = { ok: false, why: (e && e.code) || 'unknown' }; }
+      if (SB.linkResult) {
+        try { window.dispatchEvent(new CustomEvent('stats-verify', { detail: SB.linkResult })); } catch (_) {}
+      }
+
+      if (!auth.currentUser) {
+        await authMod.signInAnonymously(auth);
+        await new Promise(function (res) {
+          var un = authMod.onAuthStateChanged(auth, function (u) { if (u) { un(); res(u); } });
+        });
+      }
+
+      SB.me = { uid: auth.currentUser.uid, name: '', email: auth.currentUser.email || '',
+                verified: !!auth.currentUser.email && auth.currentUser.emailVerified !== false,
+                anon: auth.currentUser.isAnonymous === true };
+
+      authMod.onAuthStateChanged(auth, function (u) {
+        if (!u) return;
+        var changed = !SB.me || SB.me.uid !== u.uid;
+        SB.me = SB.me || { name: '' };
+        SB.me.uid      = u.uid;
+        SB.me.email    = u.email || '';
+        SB.me.verified = !!u.email && u.emailVerified !== false;
+        SB.me.anon     = u.isAnonymous === true;
+        if (changed && nightId) meRef = F.doc(db, 'nights', nightId, 'players', u.uid);
+        if (changed) { try { window.dispatchEvent(new Event('stats-identity')); } catch (_) {} }
+      });
+
       setState('on', 'connected');
     } catch (e) {
       setState('error', (e && e.message) || String(e));
@@ -1305,7 +1555,7 @@ window.STATS_FIREBASE = {
       mine.name  = String(o.name || 'player').slice(0, 24);
       mine.color = String(o.color || '#888').slice(0, 12);
       SB.me.name = mine.name;
-      meRef = F.doc(db, 'nights', nightId, 'players', SB.me.uid);
+      meRef = F.doc(db, 'nights', nightId, 'players', uid());
       await F.setDoc(meRef, {
         name: mine.name, color: mine.color,
         pts: 0, speed: 0, predPts: 0, catchPts: 0, roundsDone: 0,
@@ -1438,7 +1688,7 @@ window.STATS_FIREBASE = {
         out.push({
           name: v.name || 'player', color: v.color || '#888',
           pts: v.pts || 0, speed: v.speed || 0,
-          me: d.id === SB.me.uid
+          me: d.id === uid()
         });
       });
       out.sort(function (a, b) { return (b.pts - a.pts) || (b.speed - a.speed); });
@@ -1541,7 +1791,7 @@ window.STATS_FIREBASE = {
       if (o.src) row.src = String(o.src).slice(0, 12);
       if (o.label) row.label = String(o.label).slice(0, 40);
       await F.setDoc(
-        F.doc(db, 'nights', nightId, 'rounds', roundId, 'subs', SB.me.uid), row);
+        F.doc(db, 'nights', nightId, 'rounds', roundId, 'subs', uid()), row);
       return true;
     } catch (e) { return false; }   // already submitted, or offline. Not fatal.
   };
@@ -1552,7 +1802,7 @@ window.STATS_FIREBASE = {
     if (!SB.enabled || !nightId || !roundId || !budget()) return null;
     try {
       var s = await F.getDoc(
-        F.doc(db, 'nights', nightId, 'rounds', roundId, 'subs', SB.me.uid));
+        F.doc(db, 'nights', nightId, 'rounds', roundId, 'subs', uid()));
       return s.exists() ? s.data() : null;
     } catch (e) { return null; }
   };
@@ -1639,6 +1889,18 @@ window.STATS_FIREBASE = {
     // and when a consent wording is ever questioned, "which screen was she
     // looking at" is the first thing anyone will ask.
     var src    = String(o.src   || '').slice(0, 24).trim();  if (src)   row.src   = src;
+    // Favourite sport, singular. `sports` above is the long multi-select on
+    // the full join sheet; this is the one-tap question on the handle
+    // screen, and the two are kept separate on purpose — "the sport she
+    // picked in three seconds before tip-off" and "the forty she ticked in
+    // a survey" are not the same signal, and collapsing them loses the
+    // stronger one.
+    var sport  = String(o.sport || '').slice(0, 40).trim();  if (sport) row.sport = sport;
+    // Whether the address on this row has been proven to belong to
+    // whoever is holding the phone. Written from the live auth user, never
+    // from anything the caller passed in — a client-supplied "verified:true"
+    // would be worth exactly nothing.
+    if (SB.me && SB.me.verified === true && SB.me.anon !== true) row.verified = true;
     // One silent retry. Firestore's transient errors ('unavailable',
     // 'deadline-exceeded') are exactly the ones that clear on their own,
     // and asking someone to re-type an email because a packet dropped is
@@ -1650,7 +1912,7 @@ window.STATS_FIREBASE = {
         // MERGES, because it knows about an email and a name and nothing
         // else — a replace there would quietly wipe a profile somebody had
         // already filled in on the join screen.
-        await F.setDoc(F.doc(db, 'signups', SB.me.uid), row,
+        await F.setDoc(F.doc(db, 'signups', uid()), row,
                        o.merge === true ? { merge: true } : undefined);
         return { ok:true };
       } catch (e) {
@@ -1683,7 +1945,7 @@ window.STATS_FIREBASE = {
     if (!SB.enabled || !SB.me) return { ok:false, why:'offline' };
     if (!budget()) return { ok:false, why:'budget' };
     try {
-      await F.deleteDoc(F.doc(db, 'signups', SB.me.uid));
+      await F.deleteDoc(F.doc(db, 'signups', uid()));
       return { ok:true };
     } catch (e) {
       var code = (e && (e.code || e.name)) || 'unknown';
@@ -1732,7 +1994,7 @@ window.STATS_FIREBASE = {
     if (!budget()) return { ok:false, why:'budget' };
     try {
       await F.addDoc(F.collection(db, 'nights', nightId, 'talk'), {
-        uid:   SB.me.uid,
+        uid:   uid(),
         name:  String((o && o.name) || mine.name || 'player').slice(0, 24),
         color: String((o && o.color) || mine.color || '#888').slice(0, 12),
         kind:  String((o && o.kind) || 'burn').slice(0, 12),
@@ -1774,7 +2036,7 @@ window.STATS_FIREBASE = {
           kind:  String(v.kind || 'burn').slice(0, 12),
           text:  String(v.text || '').slice(0, 140),
           at: t,
-          me: !!(SB.me && d.id && v.uid === SB.me.uid)
+          me: !!(d.id && v.uid && v.uid === uid())
         });
       });
       return out;
@@ -2072,7 +2334,7 @@ let S={mode:"demo",screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,predCh
   lifelineHalf1:true,lifelineHalf2:true,botScores:[],totalPlayers:1204,
   results:emptyRounds(), liveAnswers:emptyRounds(), streak:0, seasonPts:0,
   catchChoices:{}, catchPts:null, catchesScored:false,
-  predTruth:null, predTruthNum:null, lifelineAt:null, tally:null};
+  predTruth:null, predTruthNum:null, lifelineAt:null, tally:null, sport:''};
 let secondsLeft=0, timerDur=15;
 // Set when the 20s clock expires on a question that is still open. It kills
 // the ⚡ bank without killing the question - see answer(null).
@@ -2278,6 +2540,146 @@ function initColors(){const w=document.getElementById('colorPick');w.innerHTML='
     b.style.cssText=`background:${c};width:34px;height:34px;border-radius:10px;border:2px solid ${selc?'#fff':'transparent'}`;
     b.onclick=()=>{S.color=c;[...w.children].forEach(x=>x.style.border='2px solid transparent');b.style.border='2px solid #fff';};
     w.appendChild(b);});}
+
+/* ---------------- FAVORITE SPORT ----------------
+   One tap, eight options, no "other" text box. The long forty-sport
+   multi-select still lives on the "Tell us what you watch" sheet and is
+   the right tool when somebody has opted into a survey. This is the
+   version you can answer while the anthem is playing, which is the only
+   version most people will ever answer. It is optional and it never
+   blocks the button — a required question here would cost more players
+   than the answer is worth.                                            */
+const FAV_SPORTS=['Basketball','Football','Soccer','Baseball','Hockey','Tennis','Golf','Combat sports'];
+function initSports(){
+  const w=document.getElementById('sportPick'); if(!w) return;
+  w.innerHTML='';
+  FAV_SPORTS.forEach(name=>{
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='chip pick'+(S.sport===name?' on':'');
+    b.textContent=name;
+    b.onclick=()=>{
+      // Tapping the one you already picked clears it. Otherwise the first
+      // tap is permanent and there is no way to say "actually, none".
+      S.sport = (S.sport===name) ? '' : name;
+      [...w.children].forEach(x=>x.classList.remove('on'));
+      if(S.sport===name) b.classList.add('on');
+      try{ save(); }catch(e){}
+    };
+    w.appendChild(b);
+  });
+}
+
+/* ---------------- VERIFICATION ----------------
+   The note said: "you should have someone sign up with their email and
+   then they get a verification email and then they start."
+
+   It is built, with one deliberate difference that is worth saying out
+   loud rather than burying. A HARD gate — nobody plays until they have
+   opened their inbox — collides with the other note from the same tester:
+   "The next page having the user confirm is a huge friction." Game night
+   starts at tip-off. A player who has to leave the app, find the mail,
+   tap the link and come back is a player who misses the first quarter,
+   and a chunk of them never come back at all.
+
+   So: the email goes out immediately, the account upgrades the moment
+   they click, and in the meantime they play. Nothing is lost by waiting
+   — linkWithCredential upgrades the SAME anonymous uid in place, so the
+   points they bank before clicking are still theirs after.
+
+   If the strict reading is wanted, VERIFY_REQUIRED below is the whole
+   switch: flip it to true and the Continue button waits on a verified
+   address. It is one constant, on purpose.                              */
+const VERIFY_REQUIRED = false;
+let verifySent = '';
+
+function verifiedNow(){
+  try{ return !!(window.SB && SB.verified && SB.verified()); }catch(e){ return false; }
+}
+
+function renderVerify(){
+  const row=document.getElementById('verifyRow'); if(!row) return;
+  const btn=document.getElementById('verifyBtn');
+  const note=document.getElementById('verifyNote');
+  const em=gateEmailValue();
+  // Practice mode has no account to attach anything to.
+  if(!gateNeeded()){ row.style.display='none'; return; }
+  row.style.display='';
+  if(verifiedNow()){
+    row.className='vrow done';
+    if(note) note.innerHTML='<span class="vmsg good">✅ Email verified.</span>Your handle, your points and your card follow you to any phone you sign in on.';
+    return;
+  }
+  if(verifySent && verifySent===em.toLowerCase()){
+    row.className='vrow sent';
+    if(note) note.innerHTML='<span class="vmsg good">✉️ Check your inbox.</span>We sent a link to <b>'+esc(em)+'</b>. Tap it whenever — it opens right back here and you keep everything you’ve scored. Look in spam if it’s hiding.';
+    return;
+  }
+  row.className='vrow';
+  if(btn) btn.disabled=!EMAIL_RE.test(em);
+  if(note) note.innerHTML = EMAIL_RE.test(em)
+    ? 'Verify to save your handle, your points and your card across phones. One tap in your inbox — now or after the game.'
+    : 'Add your email above and we’ll send you a one-tap link, so your points follow you to any phone.';
+}
+
+async function sendVerify(){
+  const em=gateEmailValue();
+  if(!EMAIL_RE.test(em)){ toast('Add a real email above first.'); return; }
+  const btn=document.getElementById('verifyBtn');
+  const note=document.getElementById('verifyNote');
+  if(!window.SB || !SB.enabled || !SB.sendLink){
+    toast('Can’t reach the server right now — you can still play.'); return;
+  }
+  if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+  rememberEmail(em); S.email=em;
+  let r=null;
+  try{ r=await SB.sendLink(em); }catch(e){ r=null; }
+  if(btn){ btn.textContent='✉️ Verify my email'; btn.disabled=false; }
+  if(r && r.ok){ verifySent=em.toLowerCase(); renderVerify(); return; }
+  const why=(r&&r.why)||'unknown';
+  // These two are OUR setup, not the player's problem, and they are the
+  // two that will actually happen. Saying "something went wrong" to a
+  // player when the real cause is a toggle nobody flipped in the Firebase
+  // console wastes their time and hides ours.
+  const SAY={
+    'auth/operation-not-allowed':'Email sign-in isn’t switched on yet on our end. Play on — we’ll sort it and you lose nothing.',
+    'auth/unauthorized-continue-uri':'This address isn’t cleared on our end yet. Play on — nothing you score is lost.',
+    'auth/invalid-email':'That address doesn’t look right — check it and tap again.',
+    'auth/too-many-requests':'That’s a few too many in a row. Give it a minute.',
+    'auth/network-request-failed':'Your connection dropped mid-send. Tap again.',
+    'email':'That address doesn’t look right — check it and tap again.',
+    'offline':'Can’t reach the server right now — you can still play.'
+  };
+  if(note) note.innerHTML='<span class="vmsg warn">Couldn’t send that.</span>'
+    +(SAY[why]||'Tap again in a second. Either way you can keep playing — nothing you score is lost.');
+}
+
+/* The link in the inbox opens THIS page with a single-use code on it.
+   The SB module spends the code during boot and fires this. */
+window.addEventListener('stats-verify', function(ev){
+  const d=(ev && ev.detail) || null;
+  if(!d) return;
+  if(d.ok){
+    try{ verifySent=''; }catch(e){}
+    renderVerify();
+    toast('✅ Email verified — you’re saved.');
+    // Re-write the contact row so the list knows this address is proven.
+    try{ saveGateEmail(true); }catch(e){}
+  }else if(d.why==='need-email'){
+    // Cross-device: link opened on a phone, requested on a laptop. Firebase
+    // needs the address back before it will spend the code, and it is not
+    // in this browser's storage.
+    // No modal prompt — a browser dialog on a phone mid-game is hostile.
+    // Ask for it in the form they're already looking at. Navigate FIRST:
+    // prefillGate() repaints this row, so writing the message before the
+    // move would just have it wiped a millisecond later.
+    try{ go('name'); prefillGate(); }catch(e){}
+    const note=document.getElementById('verifyNote');
+    if(note) note.innerHTML='<span class="vmsg warn">Nearly there.</span>Type the same email you asked us to verify in the box above, then tap Verify again on this device.';
+  }
+});
+window.addEventListener('stats-identity', function(){ try{ renderVerify(); }catch(e){} });
+
 /* ---------------- THE SIGN-UP GATE ----------------
    One remembered address, asked once, on a screen that already existed.
    Everything here is written so that the WORST case is a lost email and
@@ -2314,6 +2716,8 @@ function prefillGate(){
     // Practice: the field stays, but it is plainly optional and never blocks.
     if(note) note.textContent='Optional in practice mode — add it and we\'ll tell you when the real night is on.';
   }
+  initSports();
+  renderVerify();
   checkName();
 }
 
@@ -2326,10 +2730,12 @@ function checkName(){
   const note=document.getElementById('gateNote');
   if(note && em && !EMAIL_RE.test(em)) note.innerHTML='<b style="color:var(--gold)">That address doesn\'t look right yet.</b>';
   else if(note && em && EMAIL_RE.test(em) && /doesn/.test(note.textContent||'')) note.textContent='Looks good.';
+  // The verify button lives or dies on the same address this just judged.
+  try{ renderVerify(); }catch(e){}
 }
 
 /* Fire-and-forget. No await anywhere on the play path. */
-function saveGateEmail(){
+function saveGateEmail(force){
   const em=gateEmailValue();
   if(!EMAIL_RE.test(em)) return;
   rememberEmail(em);
@@ -2339,11 +2745,15 @@ function saveGateEmail(){
   // promises. The database enforces the same rule from the other side.
   const box=document.getElementById('gateConsent');
   if(!box || !box.checked) return;
-  if(alreadySignedUp()) return;          // asked once ever, not once a night
+  // Asked once ever, not once a night. `force` is the one exception: after
+  // an address is verified the row is worth rewriting, because a proven
+  // address and an unproven one are worth very different things to us.
+  if(alreadySignedUp() && force!==true) return;
   try{
     if(window.SB && SB.enabled){
       Promise.resolve(SB.signup({email:em, name:S.name||'', consent:true, merge:true,
-                                 src:'gate', night:nightKey?nightKey():''}))
+                                 sport:S.sport||'', src:'gate',
+                                 night:nightKey?nightKey():''}))
         .then(r=>{ if(r&&r.ok) markSignedUp(); })
         .catch(()=>{});
     }
@@ -3817,9 +4227,13 @@ async function submitSignup(){
                  'and it\'ll go straight through.'],
       email:    ['That email didn\'t pass.','Double-check it and tap again.'],
       consent:  ['We need the box ticked.','Tick it and tap again.'],
+      // This used to blame the phone number. It was wrong every single
+      // time: the real cause was a stale sign-in — the page was writing
+      // under an ID the server no longer recognised. Reloading re-reads
+      // the live one, which is the only advice that has ever fixed it.
       'permission-denied':
-                ['The list turned that one away.','Usually it\'s a phone number that\'s too short or too long — '+
-                 'try leaving it blank, or send this code to the STATS crew.'],
+                ['Your session went stale.','Reload the page and tap once more — it\'ll go straight through. '+
+                 'Nothing you typed was wrong.'],
       unavailable:['The connection dropped mid-save.','Nothing was recorded. Tap again in a second.'],
       'deadline-exceeded':['That took too long to save.','Nothing was recorded. Tap again in a second.']
     };
@@ -4990,79 +5404,146 @@ function ttCallout(name,their){
   return `@${n} — I'm on ${S.pts}${f.last?` through ${f.last.tag}`:''}. ${sting} Post your number or admit it. 👀${hand}`;
 }
 
-/* ---------------- TRASH TALK UI ---------------- */
-let ttTab='burns',ttOffset=0;
-function openTalk(tab){
-  ttTab=tab||'burns';ttOffset=0;
-  document.getElementById('ttTitle').textContent =
-    S.screen==='final'?'🔥 Talk trash · final':'🔥 Talk trash';
-  renderTalk();
-  document.getElementById('talkModal').classList.add('open');
-  if(ttTab==='room')ttRoomStart();
-}
-function closeTalk(){document.getElementById('talkModal').classList.remove('open');ttRoomStop();}
-function setTtTab(t){ttTab=t;ttOffset=0;renderTalk();if(t==='room')ttRoomStart();else ttRoomStop();}
+/* ---------------- TRASH TALK UI ----------------
+   This used to be four tabs of pre-written lines with a Copy button,
+   and the footer boasted that there was no free text box, "which is
+   why there's nothing to moderate." The reasoning held. The feature
+   still failed, for the reason a tester put plainly after Game Night
+   #1: nobody copies and pastes. A room you cannot type in is not a
+   room.
+
+   So it is one room now, with a text box and an emoji strip. The
+   moderation that buys back is real work we have chosen to take on —
+   see ttScrub() below, which is the only thing standing between a
+   publicly readable feed and somebody's phone number. The generated
+   lines survive as the dice button: they drop into the box, and you
+   send them or edit them first, the way you would a keyboard
+   suggestion. Nothing is written for you and posted on your behalf
+   any more. */
+let ttOffset=0;
 function ttNode(cls,txt){const d=document.createElement('div');d.className=cls;if(txt!==undefined)d.textContent=txt;return d;}
 
-/* ---------------- POSTING ----------------
-   Game Night #1's bluntest note was that the trash talk had nowhere to
-   go: the app wrote the line and handed it to the clipboard, so the joke
-   landed in whatever group chat happened to be open, or nowhere at all
-   if you were playing alone. Every line now offers two things, in this
-   order — post it where the other players actually are, or copy it for
-   the group chat you already run. The clipboard does not get taken away,
-   because half the audience still lives there. */
-async function ttPost(text,kind){
-  if(S.mode==='demo'){
-    ttCopy(text,'Practice run — the room opens on game night. Copied it instead.');
-    return false;
+const TT_EMOJI=['🔥','😂','👀','💀','🎯','🐐','😭','🥶','🙌','😤','📈','📉','🤡','⚡'];
+
+function openTalk(){
+  document.getElementById('ttTitle').textContent =
+    S.screen==='final'?'🔥 The room · final':'🔥 The room';
+  ttBuildEmoji();
+  renderRoom();
+  document.getElementById('talkModal').classList.add('open');
+  ttRoomStart();
+  ttTyped();
+  // Focus is deliberately withheld on a phone. A keyboard slamming up
+  // the instant the sheet opens covers the feed you came in to read.
+  const inp=document.getElementById('ttInput');
+  if(inp&&window.matchMedia&&window.matchMedia('(min-width:700px)').matches)
+    setTimeout(function(){try{inp.focus();}catch(e){}},60);
+}
+function closeTalk(){document.getElementById('talkModal').classList.remove('open');ttRoomStop();}
+function renderTalk(){renderRoom();}
+
+function ttBuildEmoji(){
+  const row=document.getElementById('ttEmoji');
+  if(!row||row.childNodes.length) return;
+  TT_EMOJI.forEach(function(e){
+    const b=document.createElement('button');
+    b.type='button';b.textContent=e;b.setAttribute('aria-label','Add '+e);
+    b.onclick=function(){
+      const i=document.getElementById('ttInput');
+      if(!i||i.value.length+e.length>140) return;
+      i.value+=e;ttTyped();
+      try{i.focus();}catch(_){}
+    };
+    row.appendChild(b);
+  });
+}
+
+/* Everything typed here lands in a collection every phone in the room
+   can read. Two things never survive the trip. Links, because a public
+   feed with no accounts behind it is a spam target and always has been.
+   And long runs of digits, because the quickest way somebody gets hurt
+   on a night like this is typing their own phone number into a room of
+   strangers who are only strangers until somebody screenshots it. */
+function ttScrub(t){
+  return String(t||'')
+    .replace(/\s+/g,' ')
+    .replace(/(https?:\/\/|www\.)\S+/gi,'')
+    .replace(/[<>&"`\\]/g,'')
+    .replace(/\d[\d\-().\s]{6,}\d/g,'')
+    .replace(/\s+/g,' ')
+    .trim()
+    .slice(0,140);
+}
+
+function ttTyped(){
+  const i=document.getElementById('ttInput'),
+        b=document.getElementById('ttSendBtn'),
+        c=document.getElementById('ttCount');
+  if(!i) return;
+  if(b) b.disabled=i.disabled||!i.value.trim().length;
+  if(c){
+    const left=140-i.value.length;
+    c.textContent=left<=30?(left+' left'):'';
+    c.classList.toggle('warn',left<=15);
   }
-  if(!window.SB||!SB.enabled){
-    ttCopy(text,'No room to post to right now — copied it instead.');
-    return false;
+}
+
+/* The dice is what the four tabs turned into. Same generators, same
+   rule that a line is only written if the card actually earns it —
+   it just loads the box instead of the clipboard. */
+function ttDice(){
+  const i=document.getElementById('ttInput');
+  if(!i) return;
+  let all=[];
+  try{ all=(ttBurns()||[]).concat((TAUNTS[ttPhase()]||[]).map(ttFill)); }catch(e){ all=[]; }
+  if(!all.length) return;
+  i.value=String(all[ttOffset%all.length]).slice(0,140);
+  ttOffset++;
+  ttTyped();
+  try{i.focus();}catch(e){}
+}
+
+async function ttSend(){
+  const i=document.getElementById('ttInput'),b=document.getElementById('ttSendBtn');
+  if(!i) return;
+  const raw=i.value, text=ttScrub(raw);
+  if(!text){
+    if(raw.trim()) toast('Links and phone numbers don\u2019t post here.');
+    i.value='';ttTyped();return;
   }
+  if(S.mode==='demo'){ toast('Practice run \u2014 the room opens on game night.'); return; }
+  if(!window.SB||!SB.enabled){ toast('Can\u2019t reach the room right now. Give it a second.'); return; }
+  if(b) b.disabled=true;
+
+  // Optimistic echo. Your own line appears the instant you send it,
+  // stamped at:0 so the next pull replaces it with the server's copy.
+  // Waiting on a round trip to see what you just typed is the single
+  // thing that makes a chat box feel broken.
+  const tmp={id:'local-'+(ttLocalN++), name:S.name||'you', color:S.color||'#888',
+             kind:'chat', text:text, at:0, me:true, pending:true};
+  ttLines.push(tmp);
+  i.value='';ttTyped();renderRoom();
+  ttHotUntil=Date.now()+90000;
+
   let r=null;
-  try{ r=await SB.say({text:text,kind:kind||'burn',name:S.name||'player',color:S.color||'#888'}); }catch(e){ r=null; }
-  if(r&&r.ok){
-    toast('📣 Posted. Everyone playing tonight sees it.');
-    ttRoomPull(true);
-    return true;
+  try{ r=await SB.say({text:text,kind:'chat',name:S.name||'player',color:S.color||'#888'}); }
+  catch(e){ r=null; }
+
+  if(r&&r.ok){ ttRoomPull(true); }
+  else{
+    const why=(r&&r.why)||'unknown';
+    ttLines=ttLines.filter(function(l){return l.id!==tmp.id;});
+    renderRoom();
+    // Whatever went wrong, the words go back in the box. Nobody should
+    // have to retype a line because our end had a bad second.
+    i.value=text;
+    if(why==='slow')                    toast('Easy. One line every couple of seconds.');
+    else if(why==='limit')              toast('That\u2019s your lot for tonight. Save something for the fourth.');
+    else if(why==='permission-denied')  toast('Your session went stale. Reload the page and it\u2019ll send.');
+    else                                toast('That didn\u2019t send \u2014 tap again.');
   }
-  const why=(r&&r.why)||'unknown';
-  // A rate limit is not a failure, so it does not get the failure copy —
-  // and it must not silently dump a duplicate on the clipboard either.
-  if(why==='slow'){ toast('Easy. One line every few seconds.'); return false; }
-  if(why==='limit'){ toast('That’s your 25 for tonight. Save something for the fourth.'); return false; }
-  ttCopy(text,'That didn’t post — copied it instead.');
-  return false;
+  ttTyped();
 }
-
-function ttActs(text,kind){
-  const w=ttNode('tt-act');
-  const s=document.createElement('button');
-  s.className='send';s.textContent='📣 Post to the room';
-  s.onclick=e=>{
-    e.stopPropagation();
-    s.disabled=true;
-    Promise.resolve(ttPost(text,kind)).then(()=>{setTimeout(()=>{s.disabled=false;},1400);});
-  };
-  const c=document.createElement('button');
-  c.textContent='📋 Copy';
-  c.onclick=e=>{e.stopPropagation();ttCopy(text);};
-  w.appendChild(s);w.appendChild(c);
-  return w;
-}
-
-function ttLineCard(icon,text,kind){
-  const d=ttNode('tt-burn');
-  const f=ttNode('fire',icon),b=document.createElement('div');
-  b.style.flex='1';
-  b.appendChild(ttNode('txt',text));
-  b.appendChild(ttActs(text,kind));
-  d.appendChild(f);d.appendChild(b);
-  return d;
-}
-function ttBurnCard(text){return ttLineCard('🔥',text,'burn');}
 
 /* ---------------- THE ROOM ----------------
    One feed per night. Read cost is the whole design constraint here: the
@@ -5071,12 +5552,12 @@ function ttBurnCard(text){return ttLineCard('🔥',text,'burn');}
    which on a quiet minute is one read. Nothing polls while the sheet is
    shut or the phone is face-down in a pocket. On the free tier that is
    the difference between the room being affordable and not. */
-let ttLines=[],ttLastAt=0,ttTimer=null,ttPulling=false;
-const TT_FEED_MAX=30, TT_POLL_MS=12000;
+let ttLines=[],ttLastAt=0,ttTimer=null,ttPulling=false,ttLocalN=0,ttTick=0,ttHotUntil=0;
+const TT_FEED_MAX=60, TT_TICK_MS=4000;
 
 function ttRoomOpen(){
   const m=document.getElementById('talkModal');
-  return !!(m&&m.classList.contains('open')&&ttTab==='room');
+  return !!(m&&m.classList.contains('open'));
 }
 async function ttRoomPull(force){
   if(!window.SB||!SB.enabled||S.mode==='demo') return;
@@ -5093,16 +5574,35 @@ async function ttRoomPull(force){
       const map={};
       ttLines.forEach(l=>{map[l.id]=l;});
       rows.forEach(l=>{map[l.id]=l;});
+      // A locally-echoed line and the server's copy of it are two
+      // different ids for one message. When the real one arrives the
+      // echo has to go, or you watch yourself say it twice.
+      const landed={};
+      rows.forEach(l=>{ if(l.me) landed[l.text]=1; });
+      Object.keys(map).forEach(k=>{
+        if(map[k].pending&&landed[map[k].text]) delete map[k];
+      });
       ttLines=Object.keys(map).map(k=>map[k])
-        .sort((x,y)=>(y.at||0)-(x.at||0))
-        .slice(0,TT_FEED_MAX);
+        .sort((x,y)=>(x.at||Infinity)-(y.at||Infinity))
+        .slice(-TT_FEED_MAX);
       ttLines.forEach(l=>{ if(l.at>ttLastAt) ttLastAt=l.at; });
+      // Somebody is talking, so check back often; when the room goes
+      // quiet the cadence drops itself back to one pull every twelve
+      // seconds, which is what keeps a whole night inside the free
+      // read allowance.
+      ttHotUntil=Date.now()+90000;
       if(ttRoomOpen()) renderRoom();
     }
   }catch(e){}
   ttPulling=false;
 }
-function ttRoomStart(){ ttRoomStop(); ttRoomPull(true); ttTimer=setInterval(function(){ttRoomPull(false);},TT_POLL_MS); }
+function ttRoomStart(){
+  ttRoomStop(); ttTick=0; ttRoomPull(true);
+  ttTimer=setInterval(function(){
+    ttTick++;
+    if(Date.now()<ttHotUntil || ttTick%3===0) ttRoomPull(false);
+  },TT_TICK_MS);
+}
 function ttRoomStop(){ if(ttTimer){clearInterval(ttTimer);ttTimer=null;} }
 
 function ttAgo(ms){
@@ -5122,6 +5622,11 @@ function ttAgo(ms){
    escaping, because there is no markup path at all. */
 function renderRoom(){
   const body=document.getElementById('talkBody');
+  if(!body) return;
+  // Whether to follow the feed down is the reader's call, not ours. If
+  // they have scrolled up to read something, a new line must not yank
+  // the view out from under them.
+  const stick = body.scrollHeight - body.scrollTop - body.clientHeight < 70;
   body.innerHTML='';
   const live=!!(window.SB&&SB.enabled&&S.mode!=='demo');
   const head=ttNode('tt-live'+(live?'':' off'));
@@ -5129,21 +5634,41 @@ function renderRoom(){
   head.appendChild(document.createTextNode(live?'The room · live tonight':'The room · offline'));
   body.appendChild(head);
 
+  // The composer stays on screen even when there is nothing to post to.
+  // Hiding it was the first version of this and it was the old bug
+  // wearing a new coat: you open the room, there is no box, and you
+  // conclude the app can't do it. Better to show the box and say why
+  // it's asleep.
+  const inp=document.getElementById('ttInput');
+  const foot=document.getElementById('ttFoot');
+  if(inp){
+    inp.disabled=!live;
+    inp.placeholder = live ? 'Say something…'
+      : (S.mode==='demo' ? 'The room opens on game night' : 'Reconnecting to the room…');
+  }
+
   if(S.mode==='demo'){
-    body.appendChild(ttNode('tt-empty','This is the practice run, so there’s nobody else in here. On game night every line anybody posts lands on this sheet.'));
+    body.appendChild(ttNode('tt-empty','This is the practice run, so there’s nobody else in here. On game night this is one room and everyone playing is in it — same box, same feed.'));
+    if(foot) foot.textContent='The room opens on game night.';
+    ttTyped();
     return;
   }
   if(!live){
-    body.appendChild(ttNode('tt-empty','Can’t reach tonight’s room. Your burns still work — tap Copy on any line and paste it wherever your people are.'));
+    body.appendChild(ttNode('tt-empty','Can’t reach tonight’s room. It comes back on its own — leave this open.'));
+    if(foot) foot.textContent='Reconnecting…';
+    ttTyped();
     return;
   }
+  if(foot) foot.textContent='Everyone playing tonight sees this. Keep it about the game — links and phone numbers don’t post.';
+
   if(!ttLines.length){
-    body.appendChild(ttNode('tt-empty','Nothing said yet. Go to Burns, find a line your card actually earns, and be first in.'));
+    body.appendChild(ttNode('tt-empty','Nothing said yet. Be first in — or tap 🎲 and let the app write you one.'));
     return;
   }
+
   const feed=ttNode('tt-feed');
   ttLines.forEach(l=>{
-    const m=ttNode('tt-msg'+(l.me?' mine':''));
+    const m=ttNode('tt-msg'+(l.me?' mine':'')+(l.pending?' pending':''));
     const who=ttNode('who');
     const dot=document.createElement('span');
     dot.className='dot';
@@ -5154,99 +5679,21 @@ function renderRoom(){
     nm.textContent=l.me?((l.name||'you')+' (you)'):(l.name||'player');
     who.appendChild(nm);
     const ag=document.createElement('span');
-    ag.className='ago';ag.textContent=ttAgo(l.at);
+    ag.className='ago';ag.textContent=l.pending?'sending…':ttAgo(l.at);
     who.appendChild(ag);
     m.appendChild(who);
     m.appendChild(ttNode('line',l.text||''));
     feed.appendChild(m);
   });
   body.appendChild(feed);
+  if(stick) body.scrollTop=body.scrollHeight;
 }
 
-const TT_FOOT={
-  room:'Every line in here was written by the app from somebody’s real card. There’s no free text box, which is why there’s nothing to moderate.',
-  burns:'Post it to the room so everyone playing tonight sees it, or copy it for the group chat you already run.',
-  taunts:'Post it to the room so everyone playing tonight sees it, or copy it for the group chat you already run.',
-  callout:'Names stay on this device. Post the callout to the room or copy it — your call.'
-};
-
-function renderTalk(){
-  [...document.querySelectorAll('#talkTabs .tt-tab')].forEach(b=>b.classList.toggle('on',b.dataset.t===ttTab));
-  const foot=document.getElementById('ttFoot');
-  if(foot) foot.textContent=TT_FOOT[ttTab]||TT_FOOT.burns;
-  const body=document.getElementById('talkBody');body.innerHTML='';
-  if(ttTab==='room'){
-    renderRoom();
-  }else if(ttTab==='burns'){
-    const all=ttBurns();
-    const sub=ttNode('sub','Every line is built from your actual card — if it isn’t true, it doesn’t get written.');
-    sub.style.cssText='font-size:12px;margin:0 0 4px';body.appendChild(sub);
-    const start=all.length?ttOffset%all.length:0;
-    all.slice(start).concat(all.slice(0,start)).slice(0,4).forEach(t=>body.appendChild(ttBurnCard(t)));
-    if(all.length>4){
-      const b=document.createElement('button');b.className='btn ghost sm';b.style.marginTop='10px';
-      b.textContent='🎲 Different burns';b.onclick=()=>{ttOffset+=4;renderTalk();};
-      body.appendChild(b);
-    }
-  }else if(ttTab==='taunts'){
-    const ph=ttPhase();
-    const sub=ttNode('sub',ph==='pre'?`Pre-${L.start} lines.`
-      :ph==='mid'?'Mid-game lines with your score dropped in.'
-      :`Post-${L.end} lines.`);
-    sub.style.cssText='font-size:12px;margin:0 0 8px';body.appendChild(sub);
-    TAUNTS[ph].forEach(t=>body.appendChild(ttLineCard('💬',ttFill(t),'taunt')));
-  }else{
-    const sub=ttNode('sub','Add your crew once — names are saved on this device. Drop in their score and the callout writes itself.');
-    sub.style.cssText='font-size:12px;margin:0 0 8px';body.appendChild(sub);
-    if(!crew.length)crew=[{n:'',pts:''}];
-    crew.forEach((c,i)=>body.appendChild(ttCrewRow(c,i)));
-    const add=document.createElement('button');add.className='btn ghost sm';add.style.marginTop='8px';
-    add.textContent='+ Add someone';add.onclick=()=>{crew.push({n:'',pts:''});saveCrew(crew);renderTalk();};
-    body.appendChild(add);
-    const out=ttNode('tt-out');out.id='ttOut';out.style.display='none';
-    body.appendChild(out);
-    const acts=ttActs('','callout');acts.id='ttOutActs';acts.style.display='none';
-    body.appendChild(acts);
-  }
-}
-function ttCrewRow(c,i){
-  const row=ttNode('tt-crew');
-  const n=document.createElement('input');n.className='n';n.placeholder='Name';n.maxLength=16;n.value=c.n||'';
-  // The one free-text surface left in the whole trash-talk sheet, and it
-  // can end up inside a line that gets posted to a public room. Angle
-  // brackets, quotes and backticks never survive the keystroke.
-  n.oninput=()=>{
-    const v=n.value.replace(/[<>&"'`\\]/g,'').replace(/\s+/g,' ').slice(0,16);
-    if(v!==n.value)n.value=v;
-    crew[i].n=v;saveCrew(crew);
-  };
-  const p=document.createElement('input');p.className='p';p.type='number';p.inputMode='numeric';
-  p.placeholder='Pts';p.value=(c.pts===0||c.pts)?c.pts:'';
-  p.oninput=()=>{crew[i].pts=p.value;saveCrew(crew);};
-  const go=document.createElement('button');go.className='go';go.textContent='Call out';
-  go.onclick=()=>{
-    const line=ttCallout(n.value,p.value);
-    if(!line){toast('Add a name first.');return;}
-    const out=document.getElementById('ttOut');
-    out.textContent=line;out.style.display='block';
-    out.onclick=()=>ttCopy(line,'🎯 Callout copied — go get him.');
-    const acts=document.getElementById('ttOutActs');
-    if(acts){
-      acts.style.display='flex';
-      const btns=acts.querySelectorAll('button');
-      btns[0].disabled=false;
-      btns[0].onclick=e=>{
-        e.stopPropagation();btns[0].disabled=true;
-        Promise.resolve(ttPost(line,'callout')).then(()=>{setTimeout(()=>{btns[0].disabled=false;},1400);});
-      };
-      btns[1].onclick=e=>{e.stopPropagation();ttCopy(line,'🎯 Callout copied — go get him.');};
-    }
-  };
-  const rm=document.createElement('button');rm.className='rm';rm.textContent='✕';
-  rm.onclick=()=>{crew.splice(i,1);saveCrew(crew);renderTalk();};
-  row.appendChild(n);row.appendChild(p);row.appendChild(go);row.appendChild(rm);
-  return row;
-}
+/* The four-tab renderer, the Copy/Post buttons and the crew-callout
+   rows lived here. They are gone with the tabs. ttCallout() and
+   ttSting() are kept above: they are the generators an @-mention
+   in the room will want, and they are the only place the rule
+   “only say it if the card earns it” is actually written down. */
 
 /* ---------------- POST-GAME ROAST CARD ---------------- */
 function ttRoastData(){
