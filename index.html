@@ -745,6 +745,7 @@
     </div>
     <div style="flex:1"></div>
     <button class="btn" id="nextBtn" style="display:none" onclick="nextQuestion()">Next →</button>
+    <div class="center" id="lockNote" style="display:none;font-size:11.5px;color:var(--dim);margin-top:8px">⚠️ Once you lock it in, you can't change it.</div>
   </section>
 
   <!-- 6. QUARTER BREAK / LEADERBOARD -->
@@ -1718,56 +1719,76 @@ const BB_PREDS=[
         quietly excludes part of the room. (Announcer-driven questions come back
         the day we have an exclusive network partnership and control the audio —
         see the shelved Booth Bingo note in the host card.)  */
+/* ================= THE QUESTION SPINE =====================================
+   Rebuilt after Game Night #1 on what the room actually reacted to. Two
+   notes did the work. One tester was keeping a tally in a notebook. And the
+   two questions people called out by name were "which was more, field goals
+   or free throws" and "how many 24-second violations were there".
+
+   Both of those are counting questions — which looked like a contradiction,
+   because the Q2 counting question got pulled after Game #1 for being
+   bookkeeping. It isn't a contradiction. The difference is FREQUENCY:
+
+     count something that happens 0-3 times  -> you remember every one
+     count something that happens 12 times   -> you need a notebook
+
+   And the real test a question has to pass: DOES IT MAKE YOU WATCH SOMETHING
+   YOU WOULD OTHERWISE IGNORE? Nobody watches the shot clock. Ask about
+   24-second violations and everybody watches the shot clock, all night. That
+   is the whole product in one line - "it keeps you glued in."
+
+   So every quarter now runs the same four-question spine, and each one
+   points your eyes somewhere different:
+
+     1. FIRST / LAST   - resolves in a single moment, no memory needed
+     2. TALLY          - a rare, loud, memorable event. 0-3, never more
+     3. WHICH WAS MORE - two streams tracked loosely; no exact count needed
+     4. OUTCOME        - a yes/no or a result that cannot fail to resolve
+
+   What is banned: percentages, per-player advanced stats, anything that
+   needs the box score. If you can only answer it by looking it up, it is a
+   prediction-sheet question, not a live one.
+   ------------------------------------------------------------------------ */
 const BBALL_ROUNDS=[
-  // --- Q1 · 1 pt each · the warm-up. Low stakes, everybody in. ---
+  // --- Q1 - 1 pt each - the warm-up. Low stakes, everybody in. ---
   {home:23,away:19, q:[
     {t:"The first bucket of the night — how did it go in?", o:["Layup or dunk","Mid-range jumper","Three","Free throw"], a:"Layup or dunk"},
-    {t:"The very first whistle of the game was for…", o:["A shooting foul","A non-shooting foul","Out of bounds / travel","A timeout"], a:"A non-shooting foul"},
-    // Was Booth Bingo, which keyed on announcer lines. Pulled: it needs the
-    // sound up, in English, on our feed. This one is pure picture — everybody
-    // in the room watches a free throw, whatever language they're hearing it in.
-    {t:"🎯 The first free throw of the game…", o:["Went in","Missed","Nobody shot one in Q1"], a:"Went in"},
+    // TALLY. Timeouts are loud, they stop the game, and you cannot miss one.
+    {t:"How many timeouts were called in Q1?", o:["None","1","2","3 or more"], a:"2"},
+    // WHICH WAS MORE. The question the room named. You do not need the count -
+    // you need a feel for whether it was a whistle quarter or a shooting one.
+    {t:"In Q1, which was more — made field goals or made free throws?", o:["Made field goals","Made free throws","Equal"], a:"Made field goals"},
     {t:"Q1 ended on…", o:["A made basket","A missed shot","A turnover","Free throws"], a:"A missed shot"}
   ]},
-  /* --- Q2 · 2 pts each · the room warms up. ---
-     Rewritten for Game Night #2. The host's note from Game #1 was blunt:
-     "2nd Quarter Questions arent good… Things that you watch not math."
-     The old opener asked players to COUNT missed free throws across a whole
-     quarter, which is bookkeeping, not watching — you cannot answer it unless
-     you were tallying. It's gone. What replaces it is the single thing every
-     person in the room already knows at the buzzer without being asked. */
+  /* --- Q2 - 2 pts each - the room warms up. --- */
   {home:45,away:41, q:[
     {t:"Who led at halftime?", o:[BB_GAME.homeNick,BB_GAME.awayNick,"Tied"], a:BB_GAME.homeNick},
-    {t:"Which of these happened FIRST in Q2?", o:["A made three","A turnover","An offensive rebound","A timeout"], a:"A turnover"},
-    {t:"🎲 Halftime combined score — odd or even?", o:["Odd","Even"], a:"Even"},
+    // TALLY. An and-one is a make and a whistle at the same time. Ask this
+    // and people start listening for the whistle on every made basket.
+    {t:"How many and-ones in Q2? (made the shot AND got the foul)", o:["None","1","2","3 or more"], a:"1"},
+    // WHICH WAS MORE. Turnovers are the one thing both benches scream about.
+    {t:"In Q2, which team coughed it up more?", o:[BB_GAME.homeNick,BB_GAME.awayNick,"About even"], a:BB_GAME.awayNick},
     {t:"The last shot before the halftime buzzer…", o:["Went in","Missed","Nobody got one off"], a:"Missed"}
   ]},
-  /* --- Q3 · 3 pts each · the turn. Now it costs you to look away. ---
-     Rewritten wholesale. The host: "3rd Quarter questions are not good at all…
-     I feel those are better prediction questions." He was right — biggest-lead
-     brackets and made-threes-vs-made-free-throws are both retrospective box
-     score reads. Neither one is a thing you SEE; both are things you look up.
-     All four below resolve off the picture alone, and three of them resolve
-     the instant they happen rather than at the buzzer, which is the point:
-     a question you can settle in the moment keeps eyes on the screen. */
+  /* --- Q3 - 3 pts each - the turn. Now it costs you to look away. --- */
   {home:66,away:64, q:[
     {t:"Which team scored FIRST in Q3?", o:[BB_GAME.homeNick,BB_GAME.awayNick], a:BB_GAME.awayNick},
-    {t:"Was there a lead change in Q3?", o:["Yes","No"], a:"Yes"},
-    {t:"Did anyone score in the final 10 seconds of Q3?", o:["Yes","No"], a:"Yes"},
-    // Mirrors the Q1 opener on purpose — same shape, other end of the game.
-    // The last option exists so the question still resolves on the freak
-    // night a team is shut out for a quarter.
-    {t:"The "+BB_GAME.awayNick+"'s first basket of Q3 — how did it go in?", o:["Layup or dunk","Mid-range jumper","Three","Free throws","They didn't score in Q3"], a:"Three"}
+    // TALLY. A replay review is dead time everybody tunes out of. Put a
+    // point on it and dead time becomes the most-watched part of the quarter.
+    {t:"How many times did the refs go to the monitor in Q3?", o:["None","1","2","3 or more"], a:"1"},
+    // WHICH WAS MORE. Two streams at once, and neither needs an exact number.
+    {t:"In Q3, which was more — threes made or turnovers? (both teams)", o:["Threes made","Turnovers","Equal"], a:"Turnovers"},
+    {t:"Was there a lead change in Q3?", o:["Yes","No"], a:"Yes"}
   ]},
-  // --- Q4 · 4 pts each · money time. The quarter that decides the night. ---
+  // --- Q4 - 4 pts each - money time. The quarter that decides the night. ---
   {home:89,away:82, q:[
     {t:"The final basket of the game was worth…", o:["1","2","3","No basket — it ended on a miss or a turnover"], a:"2"},
-    // Four named players cannot cover a whole roster, and a question that
-    // can end with no correct option breaks the first house rule. The fifth
-    // option is not filler — on most nights it is the answer.
-    {t:"Who scored the LAST points of the game?", o:["Clark","Mitchell","Collier","McBride","Somebody else"], a:"Somebody else"},
-    {t:"Did any player foul out?", o:["Yes","No"], a:"No"},
-    {t:"In the last two minutes, which happened more?", o:["Free throws attempted","Field goals attempted","Equal"], a:"Free throws attempted"}
+    // TALLY, and the best question anyone gave us. It runs the WHOLE game,
+    // it is asked at the end, and to answer it you have to watch the shot
+    // clock for 48 minutes - a thing literally nobody does for fun.
+    {t:"🎯 How many 24-second violations in the WHOLE game?", o:["None","1","2","3 or more"], a:"1"},
+    {t:"In the last two minutes, which happened more?", o:["Free throws attempted","Field goals attempted","Equal"], a:"Free throws attempted"},
+    {t:"Did any player foul out?", o:["Yes","No"], a:"No"}
   ]}
 ];
 /* ================= SOCCER =================================================
@@ -2333,6 +2354,7 @@ function loadQuestion(){
   document.getElementById('qWorth').textContent=`Worth ${worth} pt${worth>1?'s':''}${S.mode==="live"?' + ⚡':''}`;
   document.getElementById('revealBox').innerHTML='';
   document.getElementById('nextBtn').style.display='none';
+  hideLockNote();
   document.getElementById('helpNote').textContent='';
   const half=lifelineKey(S.qi);
   document.getElementById('helpBtn').disabled=!S[half];
@@ -2351,7 +2373,7 @@ function startTimer(dur){
   timerInt=setInterval(()=>{t--;secondsLeft=t;fill.style.width=(Math.max(t,0)/timerDur*100)+'%';
     if(t===5)warnCue();
     if(t<=5)bar.classList.add('low');
-    if(t<=0){clearInterval(timerInt);timeCue();if(!S.answered)answer(null,null);}
+    if(t<=0){clearInterval(timerInt);timeCue();timeUp();}
   },1000);
 }
 function extendTimer(extra){
@@ -2363,30 +2385,87 @@ function extendTimer(extra){
   timerInt=setInterval(()=>{t--;secondsLeft=t;fill.style.width=(Math.max(t,0)/timerDur*100)+'%';
     if(t===5)warnCue();
     if(t<=5)bar.classList.add('low');
-    if(t<=0){clearInterval(timerInt);timeCue();if(!S.answered)answer(null,null);}
+    if(t<=0){clearInterval(timerInt);timeCue();timeUp();}
   },1000);
 }
-function answer(choice,btn){
+/* ---- Game Night picks stay changeable ---------------------------------
+   A tap is a PICK, not a commitment. The clock keeps running, every option
+   stays live, and the banked seconds are recomputed on each change - so
+   changing your mind costs exactly the time it took you to change it.
+   The question only closes when the player presses the button below, or
+   when the clock hits zero. A fat thumb on a 20 second timer should not
+   end the question. That was the whole complaint from Game Night 1.
+   ---------------------------------------------------------------------- */
+function showNext(){
+  const n=document.getElementById('nextBtn');
+  const last=!(S.ni<nq()-1);
+  n.style.display='block';
+  n.textContent = last?'Lock it in — wait for answers →':'Lock it in →';
+  const ln=document.getElementById('lockNote');
+  ln.style.display='block';
+  ln.textContent = last
+    ? "⚠️ Once you lock it in, your answers are final — they go straight to the host."
+    : "⚠️ Once you lock it in, you can't change this answer.";
+}
+function hideLockNote(){ document.getElementById('lockNote').style.display='none'; }
+function freezeOpts(){
+  document.querySelectorAll('#qOpts .opt').forEach(b=>{b.style.pointerEvents='none';});
+}
+function timeUp(){
+  // Clock hit zero. In Game Night whatever is currently selected becomes the
+  // answer - a provisional pick still counts, it just stops being editable.
+  if(S.answered)return;
+  if(S.mode==="live"){
+    const m=S.liveAnswers[S.qi][S.ni];
+    if(m&&m.choice){ commitLive(); return; }
+  }
+  answer(null,null);
+}
+function commitLive(){
+  // Close the question in Game Night. Called by the Next button and by the
+  // clock. Idempotent - a double tap must not double count.
   if(S.answered)return;S.answered=true;clearInterval(timerInt);
+  freezeOpts();hideLockNote();
+  const worth=roundWorth(S.qi);
+  const m=S.liveAnswers[S.qi][S.ni]||{};
+  const bank=m.bank||0;
+  const rb=document.getElementById('revealBox');
+  rb.innerHTML = m.choice
+    ? `<div class="reveal"><div class="r1" style="color:var(--teal2)">🔒 LOCKED — ${bank}s banked</div>
+       <div class="r2">If you're right, that's +${worth} pt${worth>1?'s':''} and +${bank} ⚡ when the host announces answers.</div></div>`
+    : `<div class="reveal bad"><div class="r1">⏰ TIME — no answer locked</div>
+       <div class="r2">This one can't score. Be quicker next question.</div></div>`;
+}
+function answer(choice,btn){
+  if(S.answered)return;
   const q=rounds[S.qi].q[S.ni];const worth=roundWorth(S.qi);
   if(S.mode==="live"){
-    // Game Night: record pick + banked seconds; grading happens at the review
-    const bank=choice?Math.max(secondsLeft,0):0;
+    if(choice===null){
+      // clock ran out with nothing picked - this one is done
+      S.answered=true;clearInterval(timerInt);
+      S.liveAnswers[S.qi][S.ni]={choice:null,bank:0};
+      freezeOpts();hideLockNote();
+      document.getElementById('revealBox').innerHTML =
+        `<div class="reveal bad"><div class="r1">⏰ TIME — no answer locked</div>
+         <div class="r2">This one can't score. Be quicker next question.</div></div>`;
+      document.getElementById('nextBtn').style.display='block';
+      document.getElementById('nextBtn').textContent = (S.ni<nq()-1)?'Next question →':'Done — wait for answers →';
+      return;
+    }
+    // A pick, not a lock. Bank is whatever the clock says RIGHT NOW.
+    const bank=Math.max(secondsLeft,0);
     S.liveAnswers[S.qi][S.ni]={choice,bank};
     document.querySelectorAll('#qOpts .opt').forEach(b=>{
-      b.style.pointerEvents='none';
+      b.classList.remove('sel');b.querySelector('.mk').textContent='';
       if(b===btn){b.classList.add('sel');b.querySelector('.mk').textContent='🔵';}
     });
     const rb=document.getElementById('revealBox');
-    rb.innerHTML = choice
-      ? `<div class="reveal"><div class="r1" style="color:var(--teal2)">🔒 LOCKED — ${bank}s banked</div>
-         <div class="r2">If you're right, that's +${worth} pt${worth>1?'s':''} and +${bank} ⚡ when the host announces answers.</div></div>`
-      : `<div class="reveal bad"><div class="r1">⏰ TIME — no answer locked</div>
-         <div class="r2">This one can't score. Be quicker next question.</div></div>`;
-    document.getElementById('nextBtn').style.display='block';
-    document.getElementById('nextBtn').textContent = (S.ni<nq()-1)?'Next question →':'Done — wait for answers →';
+    rb.innerHTML=`<div class="reveal"><div class="r1" style="color:var(--teal2)">🔵 YOUR PICK — ${bank}s banked</div>
+      <div class="r2">Changed your mind? Tap another one — the clock's still running and nothing's final until you hit the button below. Right answer is worth +${worth} pt${worth>1?'s':''} and +${bank} ⚡.</div></div>`;
+    showNext();
     return;
   }
+  S.answered=true;clearInterval(timerInt);
   const correct=choice===q.a;
   document.querySelectorAll('#qOpts .opt').forEach(b=>{
     const label=b.querySelector('span').textContent;b.style.pointerEvents='none';
@@ -2427,6 +2506,7 @@ function useLifeline(){
   document.getElementById('helpNote').textContent=`Lifeline used — ${kill} option${kill>1?'s':''} removed`;
 }
 function nextQuestion(){
+  if(S.mode==="live")commitLive();   // the button IS the lock
   if(S.ni<nq()-1){S.ni++;loadQuestion();}
   else if(S.mode==="live"){
     // A hosted round locks on the server and waits for the reveal. A round
