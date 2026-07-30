@@ -301,6 +301,13 @@
         <button class="btn gold" id="gradeTotalsBtn">Add up the whole night</button>
         <div id="gradeTotals" style="margin-top:12px"></div>
       </div>
+
+      <div class="card">
+        <h3>The Stat Drop</h3>
+        <p class="sub">Everything the post-game cards need, in one file: what the room guessed on every question, the real answer, the hit rate, and tonight's top five. Same single read as the roll-up above. The one thing it can't know is the box score — you fill that part in.</p>
+        <button class="btn gold" id="dropBtn">Export the Stat Drop</button>
+        <div id="dropOut" style="margin-top:12px"></div>
+      </div>
     </section>
 
     <!-- ---------- TAB 4: ROOM ---------- -->
@@ -397,7 +404,8 @@ const NIGHTS = [
     away:'AME', home:'MIA',
     tags:['1H','2H'],
     names:['First half','Second half'],
-    worth:[3,5] }];
+    worth:[3,5] }
+];
 
 // The questions the app already ships with, mirrored here so the Write tab
 // is never an empty box on game night. Text and options only: the answers are
@@ -408,27 +416,27 @@ const BANK = {
   'gn2-2026-08-02-min-ind': [
     [
       { t: 'The first bucket of the night — how did it go in?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throw'] },
-      { t: 'The very first whistle of the game was for…', o: ['A shooting foul', 'A non-shooting foul', 'Out of bounds / travel', 'A timeout'] },
-      { t: '🎯 The first free throw of the game…', o: ['Went in', 'Missed', 'Nobody shot one in Q1'] },
+      { t: 'How many timeouts were called in Q1?', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In Q1, which was more — made field goals or made free throws?', o: ['Made field goals', 'Made free throws', 'Equal'] },
       { t: 'Q1 ended on…', o: ['A made basket', 'A missed shot', 'A turnover', 'Free throws'] }
     ],
     [
       { t: 'Who led at halftime?', o: ['Lynx', 'Fever', 'Tied'] },
-      { t: 'Which of these happened FIRST in Q2?', o: ['A made three', 'A turnover', 'An offensive rebound', 'A timeout'] },
-      { t: '🎲 Halftime combined score — odd or even?', o: ['Odd', 'Even'] },
+      { t: 'How many and-ones in Q2? (made the shot AND got the foul)', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In Q2, which team coughed it up more?', o: ['Lynx', 'Fever', 'About even'] },
       { t: 'The last shot before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'] }
     ],
     [
       { t: 'Which team scored FIRST in Q3?', o: ['Lynx', 'Fever'] },
-      { t: 'Was there a lead change in Q3?', o: ['Yes', 'No'] },
-      { t: 'Did anyone score in the final 10 seconds of Q3?', o: ['Yes', 'No'] },
-      { t: 'The Fever\'s first basket of Q3 — how did it go in?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throws', 'They didn\'t score in Q3'] }
+      { t: 'How many times did the refs go to the monitor in Q3?', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In Q3, which was more — threes made or turnovers? (both teams)', o: ['Threes made', 'Turnovers', 'Equal'] },
+      { t: 'Was there a lead change in Q3?', o: ['Yes', 'No'] }
     ],
     [
       { t: 'The final basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'] },
-      { t: 'Who scored the LAST points of the game?', o: ['Clark', 'Mitchell', 'Collier', 'McBride', 'Somebody else'] },
-      { t: 'Did any player foul out?', o: ['Yes', 'No'] },
-      { t: 'In the last two minutes, which happened more?', o: ['Free throws attempted', 'Field goals attempted', 'Equal'] }
+      { t: '🎯 How many 24-second violations in the WHOLE game?', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In the last two minutes, which happened more?', o: ['Free throws attempted', 'Field goals attempted', 'Equal'] },
+      { t: 'Did any player foul out?', o: ['Yes', 'No'] }
     ]
   ],
   'gn1-2026-07-28-ind-sea': [
@@ -679,6 +687,7 @@ function initUI(){
   };
   $('gradeCsv').onclick      = gradeCsv;
   $('gradeTotalsBtn').onclick= gradeTotals;
+  $('dropBtn').onclick       = exportDrop;
   $('gradeKeyClear').onclick = () => {
     if(!confirm('Clear the answers you set for this round?\n\nThe players\' picks are untouched — only your marking is cleared.')) return;
     hostKeys[night + '|' + gradeRid] = { key:[], nums:[] };
@@ -705,6 +714,7 @@ function onNightChange(){
   gradeSubs = []; gradeRid = cfg.tags.length ? 'r0' : 'rP';
   fillGradeSel();
   $('gradeTotals').innerHTML = '';
+  $('dropOut').innerHTML = '';
   renderWrite(); renderRun(); renderGrade();
   // A score belongs to a night. Switching the picker must not leave last
   // night's numbers sitting in the boxes ready to be posted to this one.
@@ -1380,6 +1390,157 @@ async function gradeTotals(){
       `<td class="tot">${t.right}/${t.asked}</td><td class="tot">${t.pts}</td><td class="tot">${t.speed}</td></tr>`).join('') +
     '</tbody></table></div>' +
     `<p class="sub tip" style="margin-top:10px">Ranked by points, ties broken by ⚡ speed — the same rule the phones use. Rounds nobody has played are left off.</p>`;
+}
+
+/* The Stat Drop export.
+
+   Box-score stats are a commodity — every account in the country has them
+   within a minute of the buzzer. The one number nobody else can post is
+   what OUR room guessed: 58% said B, the answer was C. That is the whole
+   differentiator, it is literally the brand name, and until now it lived
+   only in Firestore where nobody could see it.
+
+   This reads exactly what gradeTotals() reads — one getDocs per round —
+   and writes a JSON file shaped for make_statdrop.py. Two rules it obeys
+   without exception:
+
+     1. It never invents a fact. Every number here is counted from real
+        submissions. The box-score card is left as PLACEHOLDER text,
+        because the box score is not in this database and guessing at it
+        is exactly the failure mode worth engineering against.
+     2. No names, no emails, no uids. The top five carry the display names
+        players chose for the leaderboard and nothing else. */
+async function exportDrop(){
+  if(!FB || !user) return;
+  const { F, db } = FB, cfg = nightCfg(night);
+  const rids = cfg.tags.map((t,i)=>'r'+i).concat(['rP']);
+  const box = $('dropOut');
+  box.innerHTML = '<p class="sub">Reading every round…</p>';
+
+  const savedRid = gradeRid, savedSubs = gradeSubs;
+  const qrows = [];            // one per question asked all night
+  const tally = {};            // uid -> {name, pts, speed}
+  try{
+    for(const rid of rids){
+      const snap = await F.getDocs(F.collection(db,'nights',night,'rounds',rid,'subs'));
+      const subs = []; snap.forEach(d=>subs.push(Object.assign({uid:d.id}, d.data())));
+      if(!subs.length) continue;
+      gradeRid = rid; gradeSubs = subs;
+      const spec = gradeSpec(rid);
+      if(!spec.qs.length) continue;
+
+      subs.forEach(s=>{
+        const r = scoreSub(s, spec);
+        const t = tally[s.uid] || (tally[s.uid] = { name:s.name||'player', pts:0, speed:0 });
+        if(s.name) t.name = s.name;
+        t.pts += r.pts; t.speed += r.speed;
+      });
+
+      spec.qs.forEach((q,n)=>{
+        const ans = spec.key[n] || '';
+        // Count every option, including the ones nobody picked — a zero is
+        // a real result and dropping it makes a four-way question render
+        // as a three-way one.
+        const counts = {}; (q.o||[]).forEach(o=>{ counts[o] = 0; });
+        let answered = 0, right = 0;
+        subs.forEach(s=>{
+          const p = (s.picks||[])[n];
+          if(p == null || p === '') return;
+          answered++;
+          if(counts[p] === undefined) counts[p] = 0;
+          counts[p]++;
+          if(ans && p === ans) right++;
+        });
+        if(!answered) return;                        // nobody played it
+        qrows.push({
+          tag: spec.label,
+          q: q.t,
+          a: ans,
+          answered: answered,
+          rightN: right,
+          pct: Math.round(right * 100 / answered),
+          opts: (q.o||[]).map(o=>({
+            label: o,
+            pct: Math.round((counts[o]||0) * 100 / answered),
+            n: counts[o] || 0
+          }))
+        });
+      });
+    }
+  }catch(e){
+    gradeRid = savedRid; gradeSubs = savedSubs;
+    box.innerHTML = `<div class="banner bad">Could not build the drop: ${esc((e&&e.message)||e)}</div>`;
+    return;
+  }
+  gradeRid = savedRid; gradeSubs = savedSubs;
+
+  if(!qrows.length){
+    box.innerHTML = '<p class="sub tip">Nothing to drop yet — no round has been answered, or no answers have been set.</p>';
+    return;
+  }
+
+  const board = Object.values(tally).sort((a,z)=> z.pts - a.pts || z.speed - a.speed);
+
+  /* Which question becomes THE SPLIT — the flagship card. Not the hardest
+     one and not the first one: the one where the room was most confidently
+     wrong. That is measured as how far the most-picked option outpolled the
+     right one. A question everyone got is not a story; a question where 58%
+     went one way and the answer went the other is the whole product. */
+  let best = null, bestGap = -1;
+  qrows.forEach(r=>{
+    if(!r.a) return;
+    const top = r.opts.reduce((m,o)=> (o.pct > m.pct ? o : m), r.opts[0] || {pct:0});
+    const gap = top.pct - r.pct;
+    if(gap > bestGap){ bestGap = gap; best = r; }
+  });
+  if(!best) best = qrows[0];
+
+  /* The cards want three separate strings; the night list carries one
+     label like "Game Night #2 — Fever @ Lynx (Aug 2)". Split it rather
+     than adding a parallel set of fields that could drift out of sync
+     with the picker the host actually reads. */
+  const lab = String(cfg.label || night);
+  const parts = lab.split('—');
+  const head = (parts[0] || '').trim();
+  const rest = (parts[1] || '').replace(/·.*$/, '').trim();
+  const paren = rest.match(/\(([^)]*)\)/);
+
+  const drop = {
+    game: head.toUpperCase(),
+    matchup: rest.replace(/\s*\([^)]*\)\s*/, '').trim().toUpperCase()
+             || ((cfg.away || '') + ' @ ' + (cfg.home || '')),
+    date: paren ? paren[1].toUpperCase() : '',
+    split: {
+      tag: best.tag, q: best.q, opts: best.opts.map(o=>({label:o.label, pct:o.pct})),
+      answer: best.a, players: best.answered,
+      kicker: 'PLACEHOLDER — one line on why the room got fooled'
+    },
+    key: qrows.map(r=>({ tag:r.tag, q:r.q, a:r.a, pct:r.pct })),
+    // Deliberately unfilled. The box score is not in this database, and a
+    // card that quietly makes one up is worse than no card.
+    number: { value:'00', unit:'PLACEHOLDER UNIT', who:'PLACEHOLDER',
+              line:'PLACEHOLDER — the one sentence of context',
+              source:'OFFICIAL BOX SCORE' },
+    board: {
+      final: 'PLACEHOLDER 00 — PLACEHOLDER 00',
+      top: board.slice(0,5).map(t=>({ name:t.name, pts:t.pts })),
+      played: board.length
+    }
+  };
+
+  const blob = new Blob([JSON.stringify(drop, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `statdrop-${night}.json`;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+
+  const topOpt = best.opts.reduce((m,o)=> (o.pct > m.pct ? o : m), best.opts[0]);
+  box.innerHTML =
+    `<div class="banner ok">Downloaded <b>statdrop-${esc(night)}.json</b> — ${qrows.length} question${qrows.length===1?'':'s'}, ${board.length} player${board.length===1?'':'s'}.</div>` +
+    `<p class="sub" style="margin-top:10px"><b>The split it picked:</b> ${esc(best.tag)} — ${esc(best.q)}<br>` +
+    `${topOpt.pct}% of the room said “${esc(topOpt.label)}”. The answer was “${esc(best.a||'—')}”, which ${best.pct}% got.</p>` +
+    `<p class="sub tip">Still yours to fill in: the box-score number, the final score, and one line on why the room got fooled. Everything marked PLACEHOLDER in the file.</p>`;
 }
 
 /* ---------------- TAB 4: the room ---------------- */
