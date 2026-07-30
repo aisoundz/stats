@@ -2000,6 +2000,9 @@ let S={mode:"demo",screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,predCh
   catchChoices:{}, catchPts:null, catchesScored:false,
   predTruth:null, predTruthNum:null, lifelineAt:null, tally:null};
 let secondsLeft=0, timerDur=15;
+// Set when the 20s clock expires on a question that is still open. It kills
+// the ⚡ bank without killing the question - see answer(null).
+let pastTime=false;
 
 // mock friend league (in the real build this comes from the backend)
 const league={name:"The Barbershop",members:[
@@ -2034,6 +2037,13 @@ function checkResume(){
 function doResume(){
   if(!resumeData)return;
   S=resumeData;
+  // HR lives in memory only, so a refresh would otherwise erase the record
+  // that this phone already played a round — and the host's key, when it
+  // finally lands, skips anyone it thinks never played.
+  try{
+    if(S.heldQs) Object.keys(S.heldQs).forEach(k=>{HR.held[k]=true;HR.heldQs[k]=S.heldQs[k];});
+    if(S.subIds) Object.keys(S.subIds).forEach(k=>{HR.submitted[k]=true;});
+  }catch(e){}
   document.getElementById("resumeBar").style.display="none";
   document.getElementById("playerName").value=S.name||"";
   initColors();
@@ -2047,8 +2057,19 @@ function doResume(){
   // A live round sitting on the review screen comes back to the LOBBY, not
   // to the tap-in grid. On a real night the player is not the scorer, and
   // re-opening the grid after a refresh is how you get a round scored twice.
+  //
+  // ...and it comes back to the lobby for the NEXT round, not this one. The
+  // review screen is only ever reached after the picks are locked and sent,
+  // so re-offering the round just played is a trap: the player answers it a
+  // second time, the resend overwrites the row the host is grading, and they
+  // never reach the quarter after it. That is one of the two ways a tester
+  // got stuck short of the 4th quarter on Game Night #1.
   else if(scr==="review"){
-    if(S.mode==="live"){ renderLobby(S.qi); go('lobby'); toast('Resumed — your locked picks are safe.'); }
+    if(S.mode==="live"){
+      if(isLastRound(S.qi)){ openPredReview(); }
+      else { S.nextQ=S.qi+1; renderLobby(S.nextQ); go('lobby');
+             toast('Resumed — your locked picks are safe.'); }
+    }
     else openReview();
   }
   else if(scr==="predreview"){openPredReview();}
@@ -2372,6 +2393,9 @@ function renderLobby(qi){
   }
   // the live-catches strip only exists in sports that have one
   renderCatchStrip(qi);
+  // If a reveal landed while they were mid-question, this is the safe moment
+  // to spend it: they are off the question screen and looking at a total.
+  setTimeout(function(){try{flushPendingScore();}catch(e){}},0);
 }
 
 /* ---------------- LIVE CATCHES ----------------
@@ -2585,7 +2609,7 @@ function paintLiveStrip(){
 }
 function nq(){return rounds[S.qi].q.length;}
 function loadQuestion(){
-  S.answered=false;
+  S.answered=false; pastTime=false;
   const q=rounds[S.qi].q[S.ni];const worth=roundWorth(S.qi);
   document.getElementById('qText').textContent=q.t;
   document.getElementById('qCount').textContent=`Question ${S.ni+1} of ${nq()}`;
@@ -2679,26 +2703,39 @@ function answer(choice,btn){
   const q=rounds[S.qi].q[S.ni];const worth=roundWorth(S.qi);
   if(S.mode==="live"){
     if(choice===null){
-      // clock ran out with nothing picked - this one is done
-      S.answered=true;clearInterval(timerInt);
-      S.liveAnswers[S.qi][S.ni]={choice:null,bank:0};
-      freezeOpts();hideLockNote();
+      /* The clock ran out with nothing picked.
+
+         This used to end the question outright: blank pick, zero banked,
+         move on. On Game Night #1 that is precisely what happened to a
+         player in Q2 - he looked up at the actual game for twenty seconds
+         and the app quietly took a whole question off him, with no way to
+         answer it and nothing on screen explaining what he had lost. His
+         row in the export still reads "" / 0.
+
+         The clock exists to reward being fast, not to punish watching the
+         match. So time now costs the ⚡ and only the ⚡: the bank is gone,
+         the point is still live, and the question stays open until the
+         player locks it in themselves. Everyone plays the same rule, and
+         the fast player still beats the slow one on ⚡. */
+      clearInterval(timerInt); secondsLeft=0; pastTime=true;
       document.getElementById('revealBox').innerHTML =
-        `<div class="reveal bad"><div class="r1">⏰ TIME — no answer locked</div>
-         <div class="r2">This one can't score. Be quicker next question.</div></div>`;
-      document.getElementById('nextBtn').style.display='block';
-      document.getElementById('nextBtn').textContent = (S.ni<nq()-1)?'Next question →':'Done — wait for answers →';
+        `<div class="reveal bad"><div class="r1">⏰ TIME — ⚡ gone, points still live</div>
+         <div class="r2">The 20 seconds are up, so there's no speed bonus on this one — but the answer still counts. Pick one and lock it in.</div></div>`;
+      showNext();
       return;
     }
     // A pick, not a lock. Bank is whatever the clock says RIGHT NOW.
-    const bank=Math.max(secondsLeft,0);
+    const bank=pastTime?0:Math.max(secondsLeft,0);
     S.liveAnswers[S.qi][S.ni]={choice,bank};
     document.querySelectorAll('#qOpts .opt').forEach(b=>{
       b.classList.remove('sel');b.querySelector('.mk').textContent='';
       if(b===btn){b.classList.add('sel');b.querySelector('.mk').textContent='🔵';}
     });
     const rb=document.getElementById('revealBox');
-    rb.innerHTML=`<div class="reveal"><div class="r1" style="color:var(--teal2)">🔵 YOUR PICK — ${bank}s banked</div>
+    rb.innerHTML = pastTime
+      ? `<div class="reveal"><div class="r1" style="color:var(--teal2)">🔵 YOUR PICK — no ⚡ (clock's gone)</div>
+      <div class="r2">Changed your mind? Tap another one — nothing's final until you hit the button below. Right answer is still worth +${worth} pt${worth>1?'s':''}.</div></div>`
+      : `<div class="reveal"><div class="r1" style="color:var(--teal2)">🔵 YOUR PICK — ${bank}s banked</div>
       <div class="r2">Changed your mind? Tap another one — the clock's still running and nothing's final until you hit the button below. Right answer is worth +${worth} pt${worth>1?'s':''} and +${bank} ⚡.</div></div>`;
     showNext();
     return;
@@ -4022,11 +4059,36 @@ function submitHosted(h){
       }
     }).catch(()=>{});
   }
+  S.subIds=S.subIds||{}; S.subIds[h.id]=true; save();
   // Host revealed while they were still answering — score it now.
-  if(HR.pendingScore && HR.pendingScore.id===h.id){
-    const pr=HR.pendingScore; HR.pendingScore=null;
-    applyHostedScore(pr, idx);
+  setTimeout(function(){try{flushPendingScore();}catch(e){}},0);
+}
+
+/* A reveal that arrived mid-question, applied the moment the player is off
+   the question screen. Behind a flag because applyHostedScore changes screen
+   itself, and this is called from places that are mid-transition. */
+let flushingScore=false;
+function flushPendingScore(){
+  if(flushingScore) return;
+  const p=HR.pendingScore; if(!p || !p.r) return;
+  HR.pendingScore=null; flushingScore=true;
+  const wasQi=S.qi;
+  try{ applyHostedScore(p.r, p.idx); }catch(e){}
+  /* Scoring an OLDER round must not rewind the player. applyHostedScore sets
+     S.qi to the round it just graded — right when that is the round they have
+     just finished, wrong when they have moved on since, because the Continue
+     button would then walk them back into a quarter they already locked. The
+     points are theirs either way; only the "what's next" arrow has to be
+     re-pointed at where they actually are. */
+  if(wasQi>p.idx && S.screen==='review'){
+    S.qi=wasQi;
+    const b=document.getElementById('revNextBtn');
+    if(b) b.textContent = !isLastRound(wasQi)
+      ? `Back to the ${L.unit} — ${roundName(wasQi+1).toLowerCase()} next →`
+      : `${L.End} — score predictions →`;
+    save();
   }
+  flushingScore=false;
 }
 
 function onHostedScored(r, idx){
@@ -4036,11 +4098,16 @@ function onHostedScored(r, idx){
   // played it. holdForHost parked them without a score precisely so that
   // this key, when it finally arrives, is the thing that pays them.
   if(!HR.started[r.id] && !HR.submitted[r.id] && !HR.held[idx]) return;
-  // Mid-question when the host closed the round: let them finish the one
-  // they're staring at rather than snatching it off the screen.
-  if(S.screen==='live' && S.qi===idx){
-    HR.pendingScore=r;
-    toast('⏱ Host closed the round — finish up and it scores.');
+  // Mid-question when the host closed a round: let them finish the one they
+  // are staring at rather than snatching it off the screen. This now holds
+  // for ANY round, not only the one being revealed — a Q3 key landing while
+  // the player is three questions into Q4 is ruder than one landing in Q3,
+  // and the old single-round guard let exactly that through.
+  if(S.screen==='live'){
+    HR.pendingScore={r:r, idx:idx};
+    toast(S.qi===idx
+      ? '⏱ Host closed the round — finish up and it scores.'
+      : '\u2705 '+roundTag(idx)+' was scored — you\'ll see it at the break.');
     return;
   }
   applyHostedScore(r, idx);
@@ -4103,10 +4170,25 @@ function renderHostedReview(r, idx, revealed){
   document.getElementById('revNote').textContent = revealed
     ? 'The host revealed the answers. This is what you got.'
     : 'Your picks are locked. The second the host reveals the answers, this screen scores itself — nothing to tap.';
-  document.getElementById('revResult').innerHTML='';
+  document.getElementById('revResult').innerHTML = revealed ? '' :
+    `<div class="reveal"><div class="r1">⏳ ${roundTag(idx)}: locked, not yet scored</div>
+     <div class="r2">Running total so far: <b>${S.pts}</b> pts · <b>${S.speed}</b> ⚡ — this `
+    +`${L.period} is still to come, and it scores itself wherever you are.</div></div>`;
   document.getElementById('revBtn').style.display='none';
-  document.getElementById('revNextBtn').style.display='none';
-  document.getElementById('revTalkBtn').style.display='none';
+  /* Waiting on the host is NOT a dead end. Before this, a pushed round the
+     host had not yet revealed showed the player their locked picks and no
+     button at all — so if the host pushed a quarter and then got busy, the
+     player physically could not move on to the next one. That is the other
+     way a tester got stuck short of the 4th quarter on Game Night #1, and
+     on Sunday the host is pushing every round, so it would have been the
+     normal case rather than the edge one.
+     The reveal finds them wherever they are (see flushPendingScore), so
+     there is no reason to pin them to this screen while they wait. */
+  document.getElementById('revNextBtn').style.display = revealed?'none':'block';
+  document.getElementById('revTalkBtn').style.display = revealed?'none':'block';
+  if(!revealed) document.getElementById('revNextBtn').textContent = !isLastRound(idx)
+    ? `Back to the ${L.unit} — ${roundName(idx+1).toLowerCase()} next →`
+    : `${L.End} — score predictions →`;
   const list=document.getElementById('revList');list.innerHTML='';
   rounds[idx].q.forEach((q,i)=>{
     const my=S.liveAnswers[idx][i]||{choice:null,bank:0};
@@ -4155,7 +4237,10 @@ function holdForHost(idx){
   // different set for the same quarter, scoring answer 3 against question 3
   // of somebody else's quiz is its own flavour of the same lie, so we check.
   HR.heldQs[idx]=((rounds[idx]&&rounds[idx].q)||[]).map(q=>q.t);
+  // ...and remember it across a refresh, not just in memory.
+  S.heldQs=S.heldQs||{}; S.heldQs[idx]=HR.heldQs[idx];
   save();
+  setTimeout(function(){try{flushPendingScore();}catch(e){}},0);
   const $=id=>document.getElementById(id);
   $('revPill').textContent = roundTag(idx)+' locked';
   $('revTitle').textContent = 'Locked in — waiting on the host ⏳';
