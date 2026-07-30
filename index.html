@@ -145,6 +145,24 @@
     border:1px solid var(--line2);border-radius:13px;padding:10px 14px;margin-bottom:6px}
   .youscore b{font-size:20px}.youscore span{font-size:11.5px;color:var(--muted);font-weight:700}
 
+  .alertrow{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:rgba(255,197,77,.09);border:1px solid rgba(255,197,77,.28);
+    border-radius:12px;padding:9px 12px;margin:8px 0;font-size:12px;font-weight:700;color:var(--ink)}
+  .alertrow.on{background:rgba(46,230,166,.08);border-color:rgba(46,230,166,.28)}
+  .alertbtn{background:var(--gold);color:#141a26;border:0;border-radius:999px;
+    padding:7px 14px;font-size:11.5px;font-weight:900;cursor:pointer;white-space:nowrap}
+  .alertrow.on .alertbtn{background:transparent;color:var(--muted);border:1px solid var(--line2)}
+
+  /* the rank strip that sits under the live scorebar. It is deliberately one
+     line tall: during a quarter the player's eyes belong on the game, not on
+     us. Hidden entirely when we have nothing true to say. */
+  .livestrip{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--card2);border:1px solid var(--line);border-radius:11px;
+    padding:7px 11px;margin:0 0 6px;font-size:11.5px;font-weight:700;color:var(--muted)}
+  .livestrip .lsmain{color:var(--ink);font-weight:800}
+  .livestrip .lsmain.lead{color:var(--gold)}
+  .livestrip .lsside{white-space:nowrap;color:var(--teal2);font-weight:800}
+
   .reveal{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:10px;animation:fade .3s}
   .reveal .r1{font-size:12px;font-weight:800;letter-spacing:.4px}
   .reveal.good .r1{color:var(--green)}.reveal.bad .r1{color:var(--red)}
@@ -541,7 +559,7 @@
     <div class="card">
       <label style="display:flex;gap:10px;align-items:flex-start;margin:0;font-size:11.5px;line-height:1.5;color:var(--muted);font-weight:600;cursor:pointer">
         <input id="jConsent" type="checkbox" style="width:18px;height:18px;flex:0 0 18px;margin-top:1px;appearance:auto">
-        <span>Yes — email me about upcoming STATS game nights. If I entered a phone number, I also agree to receive recurring automated texts from STATS at that number. Consent is <b>not</b> a condition of playing, scoring, or winning anything. Message &amp; data rates may apply. Reply STOP to stop, HELP for help.</span>
+        <span>Yes — email me about upcoming STATS game nights. If I enter a phone number, I also agree to receive recurring automated texts from STATS at that number once texting starts. Consent is <b>not</b> a condition of playing, scoring, or winning anything. Message &amp; data rates may apply. Reply STOP to any text to stop, HELP for help. You can delete your email and phone yourself any time from the end-of-game screen, or email <a href="mailto:aisoundz9@gmail.com" style="color:var(--teal2)">aisoundz9@gmail.com</a>.</span>
       </label>
       <button class="btn teal" id="jBtn" style="margin-top:14px" onclick="submitJoin()">Count me in →</button>
       <p class="foot" id="jNote" style="margin-top:8px">We don't sell your info. You can ask us to delete it any time.</p>
@@ -637,7 +655,7 @@
            and 10DLC, and neither is signed off yet. -->
       <label style="display:flex;gap:9px;align-items:flex-start;margin-top:12px;font-size:12px;line-height:1.45;color:var(--dim);cursor:pointer">
         <input type="checkbox" id="gateConsent" style="margin-top:2px;flex:0 0 auto;width:17px;height:17px;accent-color:var(--teal)">
-        <span>Email me when the next STATS game night is on — one heads-up, nothing else. Not required to play, score, or win. Unsubscribe any time.</span>
+        <span>Email me when the next STATS game night is on — one heads-up, nothing else. Not required to play, score, or win. You can delete yourself from the list any time on the end-of-game screen.</span>
       </label>
       <label class="fld">Pick your color</label>
       <div class="chips" id="colorPick"></div>
@@ -679,6 +697,15 @@
       <span class="rdot" id="roomDot"></span>
       <span id="roomTxt">Connecting to tonight's room…</span>
       <span class="roomrank" id="roomRank"></span>
+    </div>
+    <!-- The single biggest note from Game Night #1 was "there needs to be more
+         touch points during the game — whether it's a text or a notification".
+         A toast is useless to a phone that is face down on the couch, which is
+         where every phone is between quarters. This is the only opt-in in the
+         app and it is asked for once, on the screen where waiting happens. -->
+    <div class="alertrow" id="alertRow" style="display:none">
+      <span id="alertTxt">🔔 Ping me when the next quarter drops</span>
+      <button class="alertbtn" id="alertBtn" onclick="alertBtnTap()">Turn on</button>
     </div>
     <!-- LIVE SCORE + LIVE STANDINGS.
          Game Night #1's flattest stretch was the wait between quarters:
@@ -728,6 +755,10 @@
       <div class="team"><span class="nm" id="teamHomeNm">🔥 IND</span><span class="sc" id="scHome">–</span></div>
       <div class="qtag" id="qLabel">Q1</div>
       <div class="team"><span class="nm" id="teamAwayNm">SEA ⛈️</span><span class="sc" id="scAway">–</span></div>
+    </div>
+    <div class="livestrip" id="liveStrip" style="display:none">
+      <span class="lsmain" id="liveStripMain"></span>
+      <span class="lsside" id="liveStripSide"></span>
     </div>
     <div class="qmeta">
       <span class="qn" id="qCount">Question 1 of 3</span>
@@ -853,10 +884,19 @@
       <input id="suPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(555) 555-5555">
       <label style="display:flex;gap:10px;align-items:flex-start;margin:14px 0 0;font-size:11.5px;line-height:1.5;color:var(--muted);font-weight:600;cursor:pointer">
         <input id="suConsent" type="checkbox" style="width:18px;height:18px;flex:0 0 18px;margin-top:1px;appearance:auto">
-        <span>Yes — email me about upcoming STATS game nights. If I entered a phone number, I also agree to receive recurring automated texts from STATS at that number. Consent is <b>not</b> a condition of playing, scoring, or winning anything. Message &amp; data rates may apply. Reply STOP to stop, HELP for help.</span>
+        <span>Yes — email me about upcoming STATS game nights. If I enter a phone number, I also agree to receive recurring automated texts from STATS at that number once texting starts. Consent is <b>not</b> a condition of playing, scoring, or winning anything. Message &amp; data rates may apply. Reply STOP to any text to stop, HELP for help. You can delete your email and phone yourself any time from the end-of-game screen, or email <a href="mailto:aisoundz9@gmail.com" style="color:var(--teal2)">aisoundz9@gmail.com</a>.</span>
       </label>
       <button class="btn teal" id="suBtn" style="margin-top:12px" onclick="submitSignup()">Count me in →</button>
       <p class="foot" id="suNote" style="margin-top:8px">We don't sell your info. We're not texting anyone yet — the number just means you're on the list when we start.</p>
+    </div>
+    <!-- The other half of the promise. Before this card the signup form simply
+         vanished once you were on the list, which meant "unsubscribe any time"
+         pointed at nothing inside the app. It deletes the row — not a flag on
+         it — because that is what the sentence on the checkbox says. -->
+    <div class="card" id="onListCard" style="display:none">
+      <b style="font-size:14px">📬 You're on the list</b>
+      <p class="sub" style="font-size:12.5px;margin:6px 0 0" id="onListNote">One email before each game night. Nothing else, ever.</p>
+      <button class="btn ghost" id="unsubBtn" style="margin-top:10px;font-size:12.5px" onclick="unsubTap()">Take me off the list</button>
     </div>
     <!-- One thing to do, then one more, then a drawer. The old stack put
          "Leagues (preview)" and "STATS+" at the same visual weight as the
@@ -1074,6 +1114,7 @@ window.STATS_FIREBASE = {
      SB.submit(id,o)-> bool     lock my picks for a pushed round
      SB.mySub(id)  -> obj|null  what I already locked for that round
      SB.joined()   -> int|null  everyone who played tonight, no time cutoff
+     SB.unsubscribe()          delete this player's contact row
      SB.signup(o)  -> {ok,why}  opt in to hear about the next game night
      SB.say(o)     -> {ok,why}  post one line into tonight's room
      SB.talk(sinceMs) -> [] |null  lines posted since that moment
@@ -1117,6 +1158,7 @@ window.STATS_FIREBASE = {
     submit: function () { return Promise.resolve(false); },
     mySub:  function () { return Promise.resolve(null); },
     signup: function () { return Promise.resolve(false); },
+    unsubscribe: function () { return Promise.resolve({ ok:false, why:'offline' }); },
     scoreboard: function () { return Promise.resolve(null); },
     say:   function () { return Promise.resolve({ ok:false, why:'offline' }); },
     talk:  function () { return Promise.resolve(null); },
@@ -1551,6 +1593,29 @@ window.STATS_FIREBASE = {
       }
     }
     return { ok:false, why:'unknown' };
+  };
+
+  /* ---- unsubscribe ----
+     The other half of "unsubscribe any time". It deletes the row rather than
+     flagging it, because a flagged row is still an address we hold, and the
+     sentence on the consent box does not say "we'll stop emailing you", it
+     says take me off. Deleting is also the only version that stays true if
+     the sending ever moves to a tool that reads the collection directly.
+
+     Requires the matching line in firestore.rules — the owner OR the person
+     whose uid the doc is named after. Without that deploy this returns
+     permission-denied, and the UI says so out loud instead of pretending. */
+  SB.unsubscribe = async function () {
+    if (!SB.enabled || !SB.me) return { ok:false, why:'offline' };
+    if (!budget()) return { ok:false, why:'budget' };
+    try {
+      await F.deleteDoc(F.doc(db, 'signups', SB.me.uid));
+      return { ok:true };
+    } catch (e) {
+      var code = (e && (e.code || e.name)) || 'unknown';
+      try { console.error('[STATS] unsubscribe failed:', code, e && e.message); } catch (_) {}
+      return { ok:false, why:code };
+    }
   };
 
   /* ---- the room -----------------------------------------------------
@@ -2002,6 +2067,7 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
   b.classList.toggle('show', BACKMAP[k]!==null && BACKMAP[k]!==undefined);
   b.dataset.to=BACKMAP[k]||'';
   syncLobbyPolling();
+  syncLivePolling();
   save();}
 let pendingBack=false;
 function goBack(){
@@ -2022,6 +2088,93 @@ function goBack(){
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');
   clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2400);}
 function hostToast(m){toast(m);}
+
+/* ---------------- ALERTS ----------------
+   Notifications are the difference between a game people play and a game
+   people forget they were playing. The rules here are deliberately narrow:
+
+     - we only ever fire for something the HOST did — a round going live, a
+       round being scored. Never a nag, never "come back!", never a timer.
+     - we only fire when the tab is actually hidden. If they are looking at
+       the screen the toast already told them, and a duplicate notification
+       on top of it is the exact thing that makes people revoke permission.
+     - permission is requested from a button the player taps, never on load.
+       A cold permission prompt on first paint is how you get a hard block
+       you can never ask again from.
+     - unsupported means invisible. iOS Safari has no Notification outside an
+       installed PWA, and a button that cannot work is worse than no button. */
+const ALERTS={
+  supported(){
+    try{ return typeof window.Notification==='function'
+      && typeof window.Notification.requestPermission==='function'; }catch(e){ return false; }
+  },
+  perm(){ return this.supported() ? window.Notification.permission : 'unsupported'; },
+  live(){ return this.perm()==='granted' && S.alerts!==false; }
+};
+
+function renderAlertRow(){
+  const row=document.getElementById('alertRow');
+  if(!row) return;
+  const txt=document.getElementById('alertTxt'), btn=document.getElementById('alertBtn');
+  const p=ALERTS.perm();
+  // Practice mode has no host and therefore nothing to be alerted about.
+  if(S.mode!=='live' || p==='unsupported'){ row.style.display='none'; return; }
+  row.style.display='flex';
+  if(p==='denied'){
+    row.className='alertrow';
+    txt.textContent='🔕 Alerts are blocked in your browser settings';
+    btn.style.display='none';
+    return;
+  }
+  btn.style.display='';
+  if(p==='granted'){
+    row.className='alertrow'+(S.alerts===false?'':' on');
+    txt.textContent = S.alerts===false
+      ? '🔕 Alerts muted for tonight'
+      : '🔔 You\'ll get a ping when the host drops a round';
+    btn.textContent = S.alerts===false ? 'Unmute' : 'Mute';
+  }else{
+    row.className='alertrow';
+    txt.textContent='🔔 Ping me when the next quarter drops';
+    btn.textContent='Turn on';
+  }
+}
+
+function alertBtnTap(){
+  const p=ALERTS.perm();
+  if(p==='granted'){ S.alerts = (S.alerts===false); save(); renderAlertRow();
+    toast(S.alerts===false?'🔕 Muted for tonight.':'🔔 Alerts back on.'); return; }
+  askAlerts();
+}
+
+function askAlerts(){
+  if(!ALERTS.supported()) return;
+  let r;
+  try{ r=window.Notification.requestPermission(); }catch(e){ return; }
+  const done=(res)=>{
+    S.alerts = (res==='granted') ? true : S.alerts;
+    save(); renderAlertRow();
+    if(res==='granted') toast('🔔 You\'re set — we\'ll ping you when a round drops.');
+    else if(res==='denied') toast('No problem — keep the tab open and you won\'t miss it.');
+  };
+  // Safari hands back a callback, everyone else a promise. Support both.
+  if(r && typeof r.then==='function') r.then(done).catch(()=>{});
+  else if(typeof r==='undefined'){ try{ window.Notification.requestPermission(done); }catch(e){} }
+  else done(r);
+}
+
+/* One alert per tag replaces the last, so a player who was away for two
+   rounds comes back to one current notification, not a stack of stale ones. */
+function notify(title, body, tag){
+  try{ warnCue(); }catch(e){}
+  if(!ALERTS.live()) return;
+  if(!document.hidden) return;             // the toast has this covered
+  try{
+    const n=new window.Notification(title,{body:body,tag:tag||'stats',renotify:true,
+      icon:'https://statsgametime.com/favicon.ico'});
+    n.onclick=function(){ try{ window.focus(); n.close(); }catch(e){} };
+  }catch(e){}
+}
 
 /* ---------------- NAME ---------------- */
 function initColors(){const w=document.getElementById('colorPick');w.innerHTML='';
@@ -2172,6 +2325,7 @@ function lockPredictions(){
   go('lobby');
 }
 function renderLobby(qi){
+  try{ renderAlertRow(); }catch(e){}
   const btn=document.getElementById('lobbyBtn');
   const foot=document.getElementById('lobbyFoot');
   const sub=document.getElementById('lobbySub');
@@ -2330,20 +2484,104 @@ function beep(freq,dur){try{
 function warnCue(){beep(880,0.15);try{navigator.vibrate&&navigator.vibrate(120);}catch(e){}}
 function timeCue(){beep(300,0.3);try{navigator.vibrate&&navigator.vibrate([80,60,80]);}catch(e){}}
 function startQuarter(qi){S.qi=qi;S.ni=0;renderScore();loadQuestion();go('live');}
+/* The live branch of this function used to print a dash for both scores and
+   then overwrite the rank slot with the speed counter, so a player in a real
+   game night saw "– –" where the score goes and no idea where they stood
+   until the quarter ended. Three separate pieces of tester feedback — no live
+   scores, no participant scores, "the user liked the competition, would like
+   more" — were all this one gap.
+
+   The first paint costs ZERO extra reads: lastScore, roomLast.rank and
+   lastStand are all already in memory, cached by the lobby the player passes
+   through on the way into every quarter. The poll below only tops them up. */
 function renderScore(){
   if(S.mode==="demo"){
     document.getElementById('scHome').textContent=rounds[S.qi].home;
     document.getElementById('scAway').textContent=rounds[S.qi].away;
     document.getElementById('youRank').textContent='#'+myRank();
+    document.getElementById('youRankLbl').textContent='rank / 1,204';
+    hideLiveStrip();
   }else{
-    document.getElementById('scHome').textContent='–';
-    document.getElementById('scAway').textContent='–';
-    document.getElementById('youRank').textContent=S.speed;
-    document.getElementById('youRankLbl').textContent='⚡ speed banked';
+    paintLiveScore();
+    paintLiveRank();
   }
-  if(S.mode==="demo")document.getElementById('youRankLbl').textContent='rank / 1,204';
   document.getElementById('qLabel').textContent=roundTag(S.qi);
   document.getElementById('youPts').textContent=S.pts;
+}
+
+/* Same rule the lobby card follows: never invent a number. A scoreboard
+   reading 0-0 in the third quarter is a lie, and a dash is not. */
+function paintLiveScore(){
+  const h=document.getElementById('scHome'), a=document.getElementById('scAway');
+  if(!h||!a) return;
+  const sc=(typeof lastScore!=='undefined') ? lastScore : null;
+  const has = sc && sc.home!=null && sc.away!=null;
+  h.textContent = has ? sc.home : '–';
+  a.textContent = has ? sc.away : '–';
+  h.style.color = has && Number(sc.home)>Number(sc.away) ? 'var(--teal2)' : '';
+  a.style.color = has && Number(sc.away)>Number(sc.home) ? 'var(--teal2)' : '';
+}
+
+function paintLiveRank(){
+  const rn=document.getElementById('youRank'), rl=document.getElementById('youRankLbl');
+  if(!rn||!rl) return;
+  const r=liveRank(), n=liveCount();
+  if(r!=null){
+    rn.textContent='#'+r;
+    // "rank / 1" is the mirror problem again — one player is not a standing.
+    rl.textContent = (n!=null && n>1) ? ('rank / '+n) : 'rank';
+  }else{
+    // No room data yet. Keep the slot honest rather than blank: speed is a real
+    // number we own locally and it is what breaks ties anyway.
+    rn.textContent='⚡'+(S.speed||0);
+    rl.textContent='speed banked';
+  }
+  paintLiveStrip();
+}
+
+function liveRank(){ return (typeof roomLast!=='undefined' && roomLast) ? roomLast.rank : null; }
+function liveCount(){ return (typeof roomLast!=='undefined' && roomLast) ? roomLast.count : null; }
+
+/* How many points to the nearest player ahead of me. Computed off the cached
+   top list, which may be a poll behind my own score — that is fine and even
+   flattering, it never overstates the gap. Returns null when the board can't
+   support the claim. */
+function gapAbove(){
+  const list=(typeof lastStand!=='undefined') ? lastStand : null;
+  if(!list || list.length<2) return null;
+  const mine=Number(S.pts)||0;
+  let best=null;
+  for(const p of list){
+    if(p && p.me) continue;
+    const v=Number(p && p.pts)||0;
+    if(v>mine && (best===null || v<best)) best=v;
+  }
+  return best===null ? null : Math.max(1, best-mine);
+}
+
+function hideLiveStrip(){
+  const el=document.getElementById('liveStrip');
+  if(el) el.style.display='none';
+}
+
+function paintLiveStrip(){
+  const el=document.getElementById('liveStrip');
+  if(!el) return;
+  const main=document.getElementById('liveStripMain');
+  const side=document.getElementById('liveStripSide');
+  if(S.mode!=='live'){ el.style.display='none'; return; }
+  const r=liveRank(), n=liveCount(), gap=gapAbove();
+  let txt='', lead=false;
+  if(r===1 && n!=null && n>1){ txt='🥇 You\'re leading the room'; lead=true; }
+  else if(gap!=null) txt=gap+' pt'+(gap===1?'':'s')+' off the spot above you';
+  else if(r!=null && n!=null && n>1) txt='#'+r+' of '+n+' playing tonight';
+  else if(n!=null && n>1) txt=n+' playing tonight';
+  const spd=Number(S.speed)||0;
+  if(!txt && !spd){ el.style.display='none'; return; }
+  el.style.display='flex';
+  main.textContent=txt;
+  main.className='lsmain'+(lead?' lead':'');
+  side.textContent = spd ? ('⚡ '+spd+' banked') : '';
 }
 function nq(){return rounds[S.qi].q.length;}
 function loadQuestion(){
@@ -3010,6 +3248,48 @@ function renderBestCall(){
 const SIGNUP_KEY='stats_signup_v1';
 function alreadySignedUp(){ try{ return localStorage.getItem(SIGNUP_KEY)==='1'; }catch(e){ return false; } }
 function markSignedUp(){ try{ localStorage.setItem(SIGNUP_KEY,'1'); }catch(e){} }
+function clearSignedUp(){ try{ localStorage.removeItem(SIGNUP_KEY); }catch(e){} }
+
+/* Two taps, because deleting a row on a single accidental tap is the other
+   way to get this wrong. No confirm() — a modal dialog on a phone mid-game
+   is exactly the friction the whole app has been stripping out. */
+let unsubArmed=false;
+async function unsubTap(){
+  const btn=document.getElementById('unsubBtn');
+  const note=document.getElementById('onListNote');
+  if(!btn) return;
+  if(!unsubArmed){
+    unsubArmed=true;
+    btn.textContent='Tap again to confirm →';
+    note.textContent='This deletes your email and phone from our list for good. You can always sign up again.';
+    setTimeout(()=>{ if(unsubArmed){ unsubArmed=false;
+      btn.textContent='Take me off the list';
+      note.textContent='One email before each game night. Nothing else, ever.'; } }, 6000);
+    return;
+  }
+  unsubArmed=false;
+  btn.disabled=true; btn.textContent='Removing…';
+  let res={ok:false,why:'threw'};
+  try{ res = (window.SB && SB.unsubscribe) ? (await SB.unsubscribe()) || res : res; }
+  catch(e){ res={ok:false, why:(e&&(e.code||e.name))||'threw'}; }
+  if(res.ok===true){
+    clearSignedUp();
+    btn.style.display='none';
+    note.innerHTML='<b style="color:var(--teal2)">Done — you\'re off the list.</b> Your email and phone are deleted.';
+    toast('✅ Removed. Nothing kept.');
+  }else{
+    // Say the true thing. A silent failure here is the worst version of this
+    // whole feature, because the player walks away believing it worked.
+    btn.disabled=false; btn.textContent='Try again';
+    const SAY={ offline:'We couldn\'t reach the server.',
+      'permission-denied':'The server turned that down.',
+      budget:'This device hit its limit for tonight.' };
+    note.innerHTML='<b style="color:var(--gold)">'+(SAY[res.why]||'That didn\'t go through.')+'</b> '+
+      'You\'re still on the list. Try again, or email '+
+      '<a href="mailto:aisoundz9@gmail.com?subject=Take%20me%20off%20the%20STATS%20list" style="color:var(--teal2)">aisoundz9@gmail.com</a>'+
+      ' and we\'ll do it by hand.';
+  }
+}
 
 function renderSignup(){
   const card=document.getElementById('signupCard');
@@ -3019,6 +3299,8 @@ function renderSignup(){
   // button that quietly fails, no "thanks!" for a row that was never written.
   const show = S.mode==='live' && !alreadySignedUp() && !!(window.SB && SB.enabled);
   card.style.display = show ? 'block' : 'none';
+  const on=document.getElementById('onListCard');
+  if(on) on.style.display = (S.mode==='live' && alreadySignedUp() && !!(window.SB && SB.enabled)) ? 'block' : 'none';
   if(show){
     const e=document.getElementById('suEmail');
     if(e && !e.value && S.name) e.placeholder = (S.name.split(' ')[0].toLowerCase()||'you')+'@email.com';
@@ -3348,6 +3630,9 @@ async function refreshRoom(){
     : Promise.resolve(null));
   const [c,j,r]=await Promise.all([ask(SB.count), ask(SB.joined), ask(SB.rank)]);
   roomLast={count:c,joined:j,rank:r};
+  // Free repaint. These reads were already paid for by the all-night room
+  // poll, so if the player happens to be mid-quarter their rank moves too.
+  if(typeof liveScreenOn==='function' && liveScreenOn()) renderScore();
   // A null count means we could not confirm it. Say so; do not guess.
   // Two numbers, two labels, never the same word for both: "here now" is
   // whoever has the app open, "joined" is everyone who showed up tonight.
@@ -3422,11 +3707,62 @@ function stopLobbyPolling(){
   if(lobbyTimer){ clearInterval(lobbyTimer); lobbyTimer=null; }
 }
 
+/* The same pattern, one screen over and deliberately slower.
+
+   The lobby can afford 45s because a player sits there doing nothing. During
+   a quarter they are answering questions, so the strip only has to move often
+   enough to feel alive — 75s does that, and standings ride on every other tick
+   so the expensive query runs about once every two and a half minutes.
+
+   Cost per player per quarter, worst case with the phone awake the whole time:
+   ~4 scoreboard reads and ~2 standings queries. There is NO forced fetch on
+   entry — the first paint comes out of the lobby's cache, so walking into a
+   quarter is free. */
+const LIVE_MS=75000;
+let liveTimer=null, liveTick=0;
+
+function liveScreenOn(){ return S.mode==='live' && S.screen==='live'; }
+
+function syncLivePolling(){ liveScreenOn() ? startLivePolling() : stopLivePolling(); }
+
+function startLivePolling(){
+  if(liveTimer) return;
+  liveTimer=setInterval(()=>{
+    if(!liveScreenOn() || document.hidden) return;
+    refreshLiveHud();
+  }, LIVE_MS);
+}
+
+function stopLivePolling(){
+  if(liveTimer){ clearInterval(liveTimer); liveTimer=null; }
+}
+
+async function refreshLiveHud(){
+  if(!liveScreenOn()) return;
+  if(!window.SB || !SB.enabled) return;
+  const ask=(fn,...a)=>(typeof fn==='function'
+    ? Promise.resolve(fn(...a)).catch(()=>null) : Promise.resolve(null));
+  const wantStand = (liveTick % 2 === 0);
+  liveTick++;
+  const [sc,rk,tp]=await Promise.all([
+    ask(SB.scoreboard),
+    ask(SB.rank),
+    wantStand ? ask(SB.top,5) : Promise.resolve(undefined)
+  ]);
+  // Only overwrite on a real answer. A failed read must not blank a number the
+  // player is already looking at — stale and true beats fresh and empty.
+  if(sc) lastScore=sc;
+  if(rk!=null && roomLast) roomLast.rank=rk;
+  if(tp!==undefined && tp && tp.length) lastStand=tp;
+  if(liveScreenOn()) renderScore();
+}
+
 /* Coming back to the app IS the moment somebody looks. Repaint then,
    rather than making them read a stale number for the rest of the tick. */
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden) return;
   if(lobbyLive()) refreshLobby(true);
+  if(typeof liveScreenOn==='function' && liveScreenOn()) refreshLiveHud();
   // Same reasoning for the room: while the phone was in a pocket we asked
   // for nothing at all, so the first thing to do on the way back is catch
   // up on what got said.
@@ -3639,6 +3975,10 @@ function openHostedRound(r, idx){
   HR.started[r.id]=true;
   HR.pending=r;
   S.nextQ=idx;
+  // The one alert that matters: the round is open and there is a clock on it.
+  notify('\ud83d\udd34 '+roundName(idx)+' is live',
+         'Questions are up on STATS — get in before the clock runs.',
+         'round-live');
   if(S.screen==='lobby'){
     renderLobby(idx);
     toast(`🔴 Host pushed ${roundName(idx).toLowerCase()} — starting…`);
@@ -3736,6 +4076,12 @@ function applyHostedScore(r, idx){
   const r2=res && res.querySelector('.r2');
   if(r2) r2.innerHTML=`Running total: <b>${S.pts}</b> pts · <b>${S.speed}</b> ⚡. Scored by the host — no group chat needed.`;
   save();
+  // Second alert: the points landed. This is the one that pulls a phone out
+  // of a pocket, because it has a number in it that changed while they were
+  // not looking.
+  notify('\u2705 '+roundName(idx)+' scored',
+         'You\'re on '+S.pts+' points. See where that puts you.',
+         'round-scored');
   // Send the new total to the room NOW, not when they get around to tapping
   // Continue. In the self-scored game those are the same moment — the player
   // presses a button and that button both scores and reports. Here the host
