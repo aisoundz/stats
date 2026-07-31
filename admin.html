@@ -505,6 +505,7 @@ let night = NIGHTS[0].id;
 let draft = {};         // nightId -> { rounds: [ {worth, qs:[{t,o:[],k:idx}]} ] }
 let liveDocs = {};      // roundId -> the pushed round document, as we last saw it
 let subCounts = {};     // roundId -> how many phones have answered
+let closingRound = null;// index of the round the one-press close is mid-way through
 let roundIdx = 0;
 let subsUnsub = null;
 
@@ -588,7 +589,23 @@ async function boot(){
     const appMod  = await import(SDK + '/firebase-app.js');
     const authMod = await import(SDK + '/firebase-auth.js');
     const fsMod   = await import(SDK + '/firebase-firestore.js');
-    const app  = appMod.initializeApp(window.STATS_FIREBASE);
+    // ---- WHY THIS APP HAS A NAME ------------------------------------
+    // Firebase Auth persists the signed-in user per (apiKey, appName) in
+    // IndexedDB, and it syncs that user across every tab on the origin.
+    // The player app and this dashboard live on the same domain, so while
+    // both used the default app name they shared ONE session slot and
+    // fought over it: the game called signInAnonymously() on load and
+    // silently signed the owner out of here, and signing in here silently
+    // replaced the player's anonymous uid in every open game tab. That
+    // second direction is what broke Game Night #1 — the game kept writing
+    // to its old uid while the server saw the new one, so every rule that
+    // says `request.auth.uid == uid` refused, and signups, picks and
+    // scores all came back permission-denied.
+    //
+    // Naming this app gives the dashboard its own storage slot. The game
+    // keeps the default name, so existing players keep the anonymous uid
+    // their data is already filed under. Neither side can touch the other.
+    const app  = appMod.initializeApp(window.STATS_FIREBASE, 'stats-admin');
     const auth = authMod.getAuth(app);
     const db   = fsMod.getFirestore(app);
     FB = { app, auth, db, F: fsMod, A: authMod };
@@ -920,9 +937,10 @@ function runNextUp(){
     const tag = cfg.tags[live.idx] || 'The round';
     // The ordering rule rides along with every live banner, because it is the
     // one mistake on this screen that costs a whole round of answers.
-    const rule = ' Reveal it before you push the next one — phones follow the newest round, so pushing over a live one loses its answers.';
+    const rule = ' If you close it by hand instead, reveal before you push the next one — phones follow the newest round, so pushing over a live one loses its answers.';
+    const closeLbl = live.idx >= cfg.tags.length - 1 ? 'End the game' : 'End of ' + tag;
     return pr.done >= pr.total && pr.total
-      ? { cls:'good', txt:`${tag} is live and all ${pr.total} answers are in. Reveal it whenever you're ready.` + rule }
+      ? { cls:'good', txt:`${tag} is live and all ${pr.total} answers are in. One press on "${closeLbl}" below closes it out.` + rule }
       : { cls:'warn', txt:`${tag} is live on every phone. Mark the answers below as the quarter plays — ${pr.done} of ${pr.total} in.` + rule };
   }
   const next = cfg.tags.findIndex((t,i)=>{
@@ -942,14 +960,17 @@ function runNextUp(){
 function syncRevealState(i){
   const card = document.querySelector(`[data-roundcard="${i}"]`); if(!card) return;
   const pr = keyProgress(i), ready = pr.total > 0 && pr.done >= pr.total;
+  const busy = closingRound === i;
   const btn = card.querySelector('[data-revealbtn]');
+  const btn2 = card.querySelector('[data-revealbtn2]');
   const cnt = card.querySelector('.keycount');
-  if(btn) btn.disabled = !ready;
+  if(btn)  btn.disabled  = !ready || busy;
+  if(btn2) btn2.disabled = !ready || busy;
   if(cnt){
     cnt.className = 'keycount' + (ready ? ' ready' : '');
     cnt.textContent = ready
       ? `All ${pr.total} answers in.`
-      : `${pr.done} of ${pr.total} answers marked — the reveal button turns on at ${pr.total}.`;
+      : `${pr.done} of ${pr.total} answers marked — the button below turns on at ${pr.total}.`;
   }
   const b = $('runBanner'), n = runNextUp();
   if(b) b.innerHTML = n.txt ? `<div class="banner ${n.cls}">${esc(n.txt)}</div>` : '';
@@ -1041,23 +1062,72 @@ function renderRun(){
         ${keyBlock(i)}`;
       a.appendChild(h);
 
-      const b = document.createElement('button');
-      b.className='btn teal'; b.setAttribute('data-revealbtn','1');
-      b.textContent = `✅ Reveal answers & score ${tag}`;
-      b.disabled = !keyReady;
-      b.onclick = ()=>revealRound(i);
-      a.appendChild(b);
+      const isLast = i >= cfg.tags.length - 1;
+      const nextTag = isLast ? null : cfg.tags[i+1];
+      const canPush = !isLast && pushIssues(i+1).length === 0;
+      const busy = closingRound === i;
+
+      /* The score for the break, typed on the card it belongs to, prefilled
+         from whatever is already posted. Between quarters the host is then
+         editing two numbers rather than filling in a form on a card two
+         screens up. Same field, same document — leave them blank and the
+         close simply skips the scoreboard, exactly as leaving the card
+         above blank always did. */
+      const sc = document.createElement('div');
+      sc.innerHTML =
+        `<h3 style="margin-top:18px">${esc(breakHeading(i))}</h3>
+         <p class="sub">Optional. Blank means no scoreboard card goes out.</p>
+         <div class="row" style="margin-top:10px;align-items:flex-end">
+           <div style="flex:1"><label>${esc(cfg.away||'Away')}</label>
+             <input data-qsa type="number" inputmode="numeric" min="0" max="300" step="1" placeholder="0" value="${esc($('scAway') ? $('scAway').value : '')}"></div>
+           <div style="flex:1"><label>${esc(cfg.home||'Home')}</label>
+             <input data-qsh type="number" inputmode="numeric" min="0" max="300" step="1" placeholder="0" value="${esc($('scHome') ? $('scHome').value : '')}"></div>
+         </div>
+         <input data-qsn maxlength="90" style="margin-top:10px" placeholder="One line for the room (optional)">`;
+      a.appendChild(sc);
 
       const cnt = document.createElement('div');
       cnt.className = 'keycount' + (keyReady?' ready':'');
       cnt.textContent = keyReady
         ? `All ${pr.total} answers in.`
-        : `${pr.done} of ${pr.total} answers marked — the reveal button turns on at ${pr.total}.`;
+        : `${pr.done} of ${pr.total} answers marked — the button below turns on at ${pr.total}.`;
       a.appendChild(cnt);
+
+      /* THE button. One press for what used to be three presses in two
+         places in an order nobody could be expected to remember at 9:47pm
+         with the game still going. */
+      const b = document.createElement('button');
+      b.className='btn teal'; b.setAttribute('data-revealbtn','1');
+      b.style.fontSize='15.5px'; b.style.padding='17px 18px'; b.style.lineHeight='1.3';
+      b.textContent = busy ? 'Working…'
+        : isLast  ? `🏁 End the game — reveal ${tag} & post the final`
+        : canPush ? `⏭ End of ${tag} — reveal, post the score, start ${nextTag}`
+                  : `✅ End of ${tag} — reveal and post the score`;
+      b.disabled = !keyReady || busy;
+      b.onclick = ()=>closeQuarter(i);
+      a.appendChild(b);
+
+      const tip = document.createElement('p'); tip.className='sub tip'; tip.style.marginTop='10px';
+      tip.textContent = isLast
+        ? 'Reveals the answers and posts the final score. Every phone gets an alert that its points landed.'
+        : canPush
+          ? `Reveals ${tag} first — that order is what keeps the answers — then posts the score, then puts ${nextTag} on every phone. Two alerts, one press.`
+          : `${nextTag} has no questions yet, so this reveals ${tag} and posts the score only. Load or write ${nextTag} and its own push button appears below.`;
+      a.appendChild(tip);
+
+      /* The old buttons stay. One press is the right default and a terrible
+         only option: sooner or later a quarter ends on a review, or the
+         next round isn't ready, or the host wants to reveal and breathe. */
+      const jr = document.createElement('button');
+      jr.className='btn ghost'; jr.setAttribute('data-revealbtn2','1');
+      jr.textContent = `Just reveal ${tag} — nothing else`;
+      jr.disabled = !keyReady || busy;
+      jr.onclick = ()=>revealRound(i);
+      a.appendChild(jr);
 
       const r = document.createElement('button');
       r.className='btn ghost'; r.textContent = 'Re-push (fix a typo in the questions)';
-      r.disabled = pIssues.length>0;
+      r.disabled = pIssues.length>0 || busy;
       r.onclick = ()=>pushRound(i, true);
       a.appendChild(r);
 
@@ -1116,21 +1186,159 @@ async function pushRound(i, silent){
         ? `\n\nYou haven't marked the answers yet — that's fine. Mark them on this screen while the room plays.`
         : ''))) return;
   try{
-    const { F, db } = FB;
-    await F.setDoc(F.doc(db,'nights',night,'rounds',roundDocId(i)), {
-      seq: Date.now(),
-      idx: i,
-      tag: cfg.tags[i],
-      name: cfg.names[i],
-      worth: r.worth,
-      state: 'live',
-      questions: r.questions,     // text and options only — never the key
-      key: F.deleteField(),       // if this is a re-push, wipe any stale key
-      openedAt: F.serverTimestamp()
-    }, { merge: true });
-    watchSubs(i);
+    await writePush(i);
     toast(`${cfg.tags[i]} is live on every phone.`);
   }catch(e){ toast('Push failed: ' + ((e&&e.message)||e)); }
+}
+
+/* ---------------- THE THREE WRITES ----------------
+   Reveal, score, push. Each one is a single setDoc and nothing else: no
+   confirm, no toast, no reading a form. That is the whole point. In the
+   old shape each of the three owned a button, a dialog and a piece of the
+   screen, which is exactly why closing a quarter took four deliberate acts
+   in a fixed order at the moment the host had the least attention to
+   spare — and why the last act in that list kept getting dropped.
+
+   Pulled apart like this the buttons behave exactly as they always did,
+   and the one-press close can run all three itself. They throw on failure
+   rather than toasting; the caller decides what a failure means, because
+   the three failures do not mean remotely the same thing. */
+async function writePush(i){
+  const cfg = nightCfg(night), r = cleanRound(i);
+  const { F, db } = FB;
+  await F.setDoc(F.doc(db,'nights',night,'rounds',roundDocId(i)), {
+    seq: Date.now(),
+    idx: i,
+    tag: cfg.tags[i],
+    name: cfg.names[i],
+    worth: r.worth,
+    state: 'live',
+    questions: r.questions,     // text and options only — never the key
+    key: F.deleteField(),       // if this is a re-push, wipe any stale key
+    openedAt: F.serverTimestamp()
+  }, { merge: true });
+  watchSubs(i);
+}
+
+async function writeReveal(i){
+  const r = cleanRound(i);
+  const { F, db } = FB;
+  await F.setDoc(F.doc(db,'nights',night,'rounds',roundDocId(i)), {
+    seq: Date.now(),
+    state: 'scored',
+    key: r.key,
+    closedAt: F.serverTimestamp()
+  }, { merge: true });
+}
+
+async function writeScore(a, h, period, note){
+  const { F, db } = FB;
+  const clean = String(note==null?'':note).trim().slice(0,90);
+  await F.setDoc(F.doc(db,'nights',night), {
+    score: {
+      away: a, home: h,
+      period: period || '',
+      note: clean,
+      at: F.serverTimestamp()
+    }
+  }, { merge: true });
+  /* Push it back into the scoreboard card too. It is the same number on the
+     same tab, and a scoreboard box still showing the first-quarter score
+     after the close posted the half-time one is a lie the host would have
+     to notice on their own. */
+  try{
+    $('scAway').value = a; $('scHome').value = h;
+    if(period) $('scPeriod').value = period;
+    $('scNote').value = clean;
+    $('scState').textContent = '● showing on phones';
+    $('scState').className = 'chip live';
+  }catch(e){}
+}
+
+/* ---------------- ONE PRESS TO CLOSE A QUARTER ----------------
+   The note from Game Night #1 was "We didnt get the alerts in between
+   quarters", and the cause was never the alert code. Closing a quarter was
+   four deliberate acts in a fixed order — reveal, scroll up, post the
+   score, scroll back, push the next round — performed in the ninety
+   seconds when the host is also watching a television and answering a
+   group chat. The alerts ride on acts one and four. Anything at the end of
+   a list like that gets dropped, every time, by anyone.
+
+   So it is one press. The order is fixed in code because the order is the
+   part that matters: reveal FIRST, always, because phones follow the
+   newest round and pushing over a live one throws its answers away. That
+   rule used to live in a warning banner and depend on the host reading it.
+
+   The three steps do not fail equally and this does not pretend they do.
+   A failed reveal stops everything, because pushing the next round on top
+   of an unrevealed one is the single mistake here that costs real answers.
+   A failed score is cosmetic — it warns and carries on. A failed push
+   names the button to press. */
+async function closeQuarter(i){
+  if(closingRound !== null) return;                 // a double-tap is not two closes
+  const cfg = nightCfg(night), last = i >= cfg.tags.length - 1;
+  const iss = roundIssues(i);
+  if(iss.length){ toast('Fix that round first: ' + iss[0]); return; }
+
+  /* Read the form BEFORE the first await. The rounds listener repaints this
+     card the instant the reveal lands, and by then these inputs no longer
+     exist. */
+  const card = document.querySelector(`[data-roundcard="${i}"]`);
+  const val = sel => { const el = card && card.querySelector(sel); return el ? String(el.value||'').trim() : ''; };
+  const rawA = val('[data-qsa]'), rawH = val('[data-qsh]'), note = val('[data-qsn]');
+  const wantScore = rawA !== '' || rawH !== '';
+  const a = parseInt(rawA,10), h = parseInt(rawH,10);
+  if(wantScore){
+    if(!isFinite(a) || !isFinite(h)){ toast('Both scores, or leave them both blank — half a score shows as a gap on every phone.'); return; }
+    if(a<0 || h<0 || a>300 || h>300){ toast('That score is out of range.'); return; }
+  }
+
+  /* The next round only goes out if it is actually pushable. A quarter that
+     ends while Q3 is still empty is a real thing that happened in Game
+     Night #1, and it must not take the reveal down with it. */
+  const canPush = !last && pushIssues(i+1).length === 0;
+  const nextTag = last ? null : cfg.tags[i+1];
+  const label = periodLabelFor(i), r = cleanRound(i);
+
+  if(!confirm(
+      `Close ${cfg.tags[i]}?\n\n` +
+      `1. Reveal these answers — every phone scores itself:\n` +
+      r.key.map((k,x)=>`    ${x+1}. ${k}`).join('\n') + `\n\n` +
+      (wantScore
+        ? `2. Post the scoreboard: ${cfg.away||'Away'} ${a} — ${cfg.home||'Home'} ${h}  (${label})\n\n`
+        : `2. No scoreboard — you left the score blank.\n\n`) +
+      (last  ? `3. Nothing left to push. That's the game.`
+     : canPush ? `3. Push ${nextTag} to every phone.\n\nPhones get an alert on step 1 and again on step 3.`
+              : `3. ${nextTag} isn't written yet, so nothing gets pushed. Write it on tab 1 and push it yourself.`))) return;
+
+  closingRound = i; renderRun();
+  const done = [];
+
+  try{
+    await writeReveal(i);
+    done.push(`${cfg.tags[i]} scored`);
+  }catch(e){
+    closingRound = null; renderRun();
+    toast('Reveal failed, so nothing else ran: ' + ((e&&e.message)||e));
+    return;
+  }
+
+  if(wantScore){
+    try{ await writeScore(a, h, label, note); done.push('score posted'); }
+    catch(e){ toast(`${cfg.tags[i]} is scored, but the scoreboard didn't post. Post it by hand above.`); }
+  }
+
+  if(canPush){
+    try{ await writePush(i+1); done.push(`${nextTag} is live`); }
+    catch(e){
+      closingRound = null; renderRun();
+      toast(`${cfg.tags[i]} is scored, but ${nextTag} did not go out. Press its own push button.`);
+      return;
+    }
+  }
+
+  closingRound = null; renderRun();
+  toast(done.join(' · ') + '.');
 }
 
 /* ---------------- THE LIVE SCOREBOARD ----------------
@@ -1142,17 +1350,32 @@ async function pushRound(i, silent){
    It is deliberately NOT wired into scoring. A typo here costs a wrong
    number on a card for one minute. A typo in anything that scores costs
    the night. */
+/* What to call the BREAK after round i. The break after the middle round is
+   not "End of Q2", it is half-time, and the one after the last round is not
+   "End of Q4", it is the final. Derived from the tag list so soccer's two
+   halves come out right too.
+
+   Split out of scoreOptions so the one-press close and the dropdown can
+   never drift apart: the dropdown is built from this function, so whatever
+   the close posts is guaranteed to be a real option in it. That matters
+   more than it looks — assigning a value a <select> does not contain
+   silently leaves the select on whatever it was showing before. */
+function periodLabelFor(i){
+  const cfg = nightCfg(night), n = cfg.tags.length;
+  if(i >= n-1)                   return 'Final';
+  if(i === Math.floor(n/2) - 1)  return 'Half-time';
+  return 'End of ' + cfg.tags[i];
+}
+/* And what to call the moment itself, in a heading, in a sentence. */
+function breakHeading(i){
+  const b = periodLabelFor(i);
+  return b === 'Final' ? 'The final score'
+       : b === 'Half-time' ? 'The score at half-time'
+       : 'The score at the end of ' + nightCfg(night).tags[i];
+}
 function scoreOptions(){
-  const cfg = nightCfg(night), n = cfg.tags.length, o = [];
-  cfg.tags.forEach((t,i)=>{
-    o.push(t + ' in progress');
-    // The break after the middle round is not "End of Q2", it is half-time,
-    // and the one after the last round is not "End of Q4", it is the final.
-    // Derived from the tag list so soccer's two halves come out right too.
-    if(i === n-1)                       o.push('Final');
-    else if(i === Math.floor(n/2) - 1)  o.push('Half-time');
-    else                                o.push('End of ' + t);
-  });
+  const o = [];
+  nightCfg(night).tags.forEach((t,i)=>{ o.push(t + ' in progress'); o.push(periodLabelFor(i)); });
   return o;
 }
 
@@ -1193,17 +1416,7 @@ async function postScore(){
   if(!isFinite(a) || !isFinite(h)){ toast('Both scores, please — a half-typed score would show as a blank on every phone.'); return; }
   if(a<0 || h<0 || a>300 || h>300){ toast('That score is out of range.'); return; }
   try{
-    const { F, db } = FB;
-    await F.setDoc(F.doc(db,'nights',night), {
-      score: {
-        away: a, home: h,
-        period: $('scPeriod').value || '',
-        note: ($('scNote').value || '').trim().slice(0,90),
-        at: F.serverTimestamp()
-      }
-    }, { merge: true });
-    $('scState').textContent = '● showing on phones';
-    $('scState').className = 'chip live';
+    await writeScore(a, h, $('scPeriod').value || '', $('scNote').value || '');
     toast('Score posted. Phones waiting between rounds will show it within a minute.');
   }catch(e){ toast('Could not post that: ' + ((e&&e.message)||e)); }
 }
@@ -1229,13 +1442,7 @@ async function revealRound(i, again){
       `\n\nEvery phone scores itself the moment you press OK.` +
       (again ? '\n\nThis re-reveals a round that was already scored. Phones that already scored it will NOT score it twice.' : ''))) return;
   try{
-    const { F, db } = FB;
-    await F.setDoc(F.doc(db,'nights',night,'rounds',roundDocId(i)), {
-      seq: Date.now(),
-      state: 'scored',
-      key: r.key,
-      closedAt: F.serverTimestamp()
-    }, { merge: true });
+    await writeReveal(i);
     toast(`${cfg.tags[i]} scored. Phones are updating.`);
   }catch(e){ toast('Reveal failed: ' + ((e&&e.message)||e)); }
 }
