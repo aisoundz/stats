@@ -607,36 +607,38 @@
 
   <!-- 1. LANDING -->
   <section class="screen active" id="s-landing" style="position:relative">
-    <!-- Original court/spotlight backdrop — drawn in SVG, no external image.
-         Sits behind the wordmark to give the hero depth and energy. -->
-    <div aria-hidden="true" style="position:absolute;left:0;right:0;top:0;height:290px;overflow:hidden;pointer-events:none;z-index:-1">
-      <svg width="100%" height="100%" viewBox="0 0 430 290" preserveAspectRatio="xMidYMid slice" style="display:block">
+    <!-- Illustrated court + arena backdrop — original SVG, no external image.
+         Hardwood, spotlights, a crowd line and court markings behind the
+         wordmark so the hero reads like a broadcast open. -->
+    <div aria-hidden="true" style="position:absolute;left:0;right:0;top:0;height:172px;overflow:hidden;pointer-events:none;z-index:-1">
+      <svg width="100%" height="100%" viewBox="0 0 430 172" preserveAspectRatio="xMidYMid slice" style="display:block">
         <defs>
-          <radialGradient id="heroGlow" cx="50%" cy="24%" r="66%">
-            <stop offset="0" stop-color="#28e0d0" stop-opacity=".40"/>
-            <stop offset="40%" stop-color="#4d86ff" stop-opacity=".22"/>
+          <radialGradient id="heroGlow" cx="50%" cy="30%" r="75%">
+            <stop offset="0" stop-color="#28e0d0" stop-opacity=".38"/>
+            <stop offset="45%" stop-color="#4d86ff" stop-opacity=".18"/>
             <stop offset="100%" stop-color="#0a0e17" stop-opacity="0"/>
           </radialGradient>
           <linearGradient id="heroSpot" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#eef2fb" stop-opacity=".10"/>
-            <stop offset="1" stop-color="#eef2fb" stop-opacity="0"/>
+            <stop offset="0" stop-color="#eef2fb" stop-opacity=".13"/><stop offset="1" stop-color="#eef2fb" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="heroWood" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#6a4726" stop-opacity=".38"/><stop offset="100%" stop-color="#3a2716" stop-opacity=".08"/>
           </linearGradient>
         </defs>
-        <rect width="430" height="290" fill="url(#heroGlow)"/>
-        <polygon points="215,-10 155,290 275,290" fill="url(#heroSpot)"/>
-        <g fill="none" stroke="#28e0d0" stroke-opacity=".24" stroke-width="1.4">
-          <path d="M25,290 A190,190 0 0 1 405,290"/>
-          <circle cx="215" cy="290" r="74"/>
-          <line x1="215" y1="216" x2="215" y2="290"/>
+        <rect width="430" height="172" fill="#0a0e17"/>
+        <path d="M0,0 H430 V14 Q390,6 350,14 T270,14 T190,14 T110,14 T30,14 T0,14 Z" fill="#1b2436" opacity=".7"/>
+        <polygon points="150,-10 80,172 160,172" fill="url(#heroSpot)"/>
+        <polygon points="280,-10 350,172 270,172" fill="url(#heroSpot)"/>
+        <polygon points="60,96 370,96 430,172 0,172" fill="url(#heroWood)"/>
+        <g stroke="#caa06a" stroke-opacity=".10" stroke-width="1">
+          <line x1="90" y1="96" x2="45" y2="172"/><line x1="160" y1="96" x2="140" y2="172"/><line x1="215" y1="96" x2="215" y2="172"/><line x1="270" y1="96" x2="290" y2="172"/><line x1="340" y1="96" x2="385" y2="172"/>
         </g>
-        <g fill="#4d86ff" fill-opacity=".16">
-          <circle cx="46" cy="60" r="3"/><circle cx="386" cy="52" r="3.4"/><circle cx="70" cy="150" r="2.4"/>
-          <circle cx="360" cy="140" r="2.6"/><circle cx="30" cy="220" r="2.2"/><circle cx="400" cy="210" r="2.4"/>
-          <circle cx="120" cy="40" r="2"/><circle cx="300" cy="34" r="2.2"/>
+        <g fill="none" stroke="#e6ecf7" stroke-opacity=".15" stroke-width="1.3">
+          <path d="M72,96 A165,120 0 0 0 358,96"/><ellipse cx="215" cy="96" rx="44" ry="12"/>
         </g>
-        <g fill="#28e0d0" fill-opacity=".14">
-          <circle cx="160" cy="70" r="2"/><circle cx="268" cy="66" r="2.2"/><circle cx="215" cy="30" r="2.4"/>
-        </g>
+        <rect width="430" height="172" fill="url(#heroGlow)"/>
+        <g fill="#4d86ff" fill-opacity=".15"><circle cx="42" cy="52" r="3"/><circle cx="392" cy="46" r="3"/><circle cx="410" cy="112" r="2.2"/><circle cx="24" cy="112" r="2"/></g>
+        <g fill="#28e0d0" fill-opacity=".14"><circle cx="150" cy="40" r="2"/><circle cx="280" cy="36" r="2.2"/></g>
       </svg>
     </div>
     <div class="card" id="resumeBar" style="display:none;border-color:var(--teal);background:rgba(25,195,214,.1);margin-bottom:6px">
@@ -2158,8 +2160,8 @@ window.STATS_FIREBASE = {
 const BB_GAME={
   nightId:"gn3-2026-08-09-ny-lv",
   espnEvent:"401857128",   // drives the auto-pulled matchup card on the home page
-  homeName:"New York Liberty", homeAbbr:"NY", homeNick:"Liberty", homeEmoji:"🗽",
-  awayName:"Las Vegas Aces", awayAbbr:"LV", awayNick:"Aces", awayEmoji:"♠️",
+  homeName:"New York Liberty", homeAbbr:"NY", homeNick:"Liberty", homeEmoji:"🗽", homeColor:"#86cebc",
+  awayName:"Las Vegas Aces", awayAbbr:"LV", awayNick:"Aces", awayEmoji:"♠️", awayColor:"#a7a8aa",
   venue:"WNBA Game of the Night", date:"Sun · August 9", short:"August 9", shareDate:"AUG 9", night:"Game Night #3",
   // Verified against the ESPN schedule: Aug 9, Aces at Liberty, 12:30 p.m. ET,
   // national window on ABC. Aces are the road team, so the Liberty are `home`
@@ -6190,6 +6192,57 @@ function movePred(id,dir){
 const PRED_MAX=preds.reduce((a,p)=>a+p.base+(p.bonus||0),0);
 const LIVE_MAX=rounds.reduce((a,r,i)=>a+r.q.length*roundWorth(i),0);
 const MAXPTS=PRED_MAX+LIVE_MAX+CATCH_PTS;
+/* ---------------- BROADCAST CHROME ----------------
+   Reusable team-crest + court/arena artwork carried across the in-game
+   screens (live question header + final buzzer card). All original SVG/CSS,
+   no external images, no logos — colors come from the live feed with a
+   config fallback. */
+function teamColor(ab){
+  var m=window.STATS_TEAMCOLORS||{};
+  if(m[ab]) return m[ab];
+  if(typeof GAME!=='undefined'){
+    if(ab===GAME.homeAbbr&&GAME.homeColor) return GAME.homeColor;
+    if(ab===GAME.awayAbbr&&GAME.awayColor) return GAME.awayColor;
+  }
+  return (typeof GAME!=='undefined'&&ab===GAME.homeAbbr)?'#28e0d0':'#a7a8aa';
+}
+const ARENA_SVG='<svg width="100%" height="100%" viewBox="0 0 300 260" preserveAspectRatio="xMidYMid slice" style="display:block">'
+ +'<defs>'
+ +'<radialGradient id="faGlow" cx="50%" cy="42%" r="62%"><stop offset="0" stop-color="#4d86ff" stop-opacity=".20"/><stop offset="70%" stop-color="#0a0e17" stop-opacity="0"/></radialGradient>'
+ +'<linearGradient id="faSpot" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef2fb" stop-opacity=".13"/><stop offset="1" stop-color="#eef2fb" stop-opacity="0"/></linearGradient>'
+ +'</defs>'
+ +'<rect width="300" height="260" fill="url(#faGlow)"/>'
+ +'<path d="M0,0 H300 V16 Q262,7 224,16 T148,16 T72,16 T0,16 Z" fill="#1b2436" opacity=".7"/>'
+ +'<polygon points="150,-20 62,260 132,260" fill="url(#faSpot)"/><polygon points="150,-20 238,260 168,260" fill="url(#faSpot)"/>'
+ +'<g fill="none" stroke="#28e0d0" stroke-opacity=".13" stroke-width="1.3"><ellipse cx="150" cy="250" rx="70" ry="20"/><path d="M18,260 A150,150 0 0 1 282,260"/></g>'
+ +'<g fill="#ffc54d" fill-opacity=".55"><circle cx="60" cy="42" r="2"/><circle cx="242" cy="32" r="2.2"/><circle cx="104" cy="22" r="1.6"/></g>'
+ +'<g fill="#28e0d0" fill-opacity=".55"><circle cx="198" cy="46" r="1.8"/><circle cx="150" cy="26" r="2"/></g>'
+ +'</svg>';
+function paintChrome(){
+  if(!document.getElementById('chromeCss')){
+    var st=document.createElement('style'); st.id='chromeCss';
+    st.textContent='.scorebar{position:relative;overflow:hidden}'
+      +'.scorebar::before{content:"";position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,rgba(199,150,90,.12),rgba(90,60,30,.03))}'
+      +'.scorebar>*{position:relative;z-index:1}'
+      +'.mini-crest{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;border:2px solid var(--tc,#28e0d0);background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.16),rgba(8,16,28,.92) 72%);box-shadow:0 0 10px -4px var(--tc,#28e0d0);font-size:13px;vertical-align:middle;flex:0 0 auto}'
+      +'.scorebar .nm{display:inline-flex;align-items:center;gap:7px}'
+      +'.fhero{position:relative;overflow:hidden}.fhero>*{position:relative;z-index:1}'
+      +'.fhero-bg{position:absolute;inset:0;z-index:0;pointer-events:none}';
+    document.head.appendChild(st);
+  }
+  try{
+    var hn=document.getElementById('teamHomeNm'), an=document.getElementById('teamAwayNm');
+    if(hn) hn.innerHTML='<span class="mini-crest" style="--tc:'+teamColor(GAME.homeAbbr)+'">'+GAME.homeEmoji+'</span>'+GAME.homeAbbr;
+    if(an) an.innerHTML=GAME.awayAbbr+'<span class="mini-crest" style="--tc:'+teamColor(GAME.awayAbbr)+'">'+GAME.awayEmoji+'</span>';
+  }catch(e){}
+  try{
+    var fh=document.querySelector('#s-final .fhero');
+    if(fh && !fh.querySelector('.fhero-bg')){
+      var d=document.createElement('div'); d.className='fhero-bg'; d.setAttribute('aria-hidden','true');
+      d.innerHTML=ARENA_SVG; fh.insertBefore(d, fh.firstChild);
+    }
+  }catch(e){}
+}
 /* ---------------- MATCHUP PREVIEW (auto-pulled from ESPN) ----------------
    The home page's "does this game stand out" block. Records, form, the win
    projection, the star duel and the season series are all read LIVE from the
@@ -6259,7 +6312,10 @@ async function mountMatchup(){
     const bright=hx=>{const h=String(hx||'').replace('#','');if(h.length<6)return 0;return parseInt(h.slice(0,2),16)+parseInt(h.slice(2,4),16)+parseInt(h.slice(4,6),16);};
     const colByAb={};
     comps.forEach(c=>{const ab=c.team&&c.team.abbreviation,col=c.team&&c.team.color;if(ab&&col){const hex='#'+String(col).replace('#','');colByAb[ab]=bright(hex)>140?hex:null;}});
-    const AC=colByAb[A]||'#a7a8aa', HC=colByAb[H]||'#28e0d0';
+    const AC=colByAb[A]||GAME.awayColor||'#a7a8aa', HC=colByAb[H]||GAME.homeColor||'#28e0d0';
+    // share the live colors so the in-game screens can crest-match too
+    window.STATS_TEAMCOLORS=Object.assign(window.STATS_TEAMCOLORS||{},{[A]:AC,[H]:HC});
+    try{ if(typeof paintChrome==='function') paintChrome(); }catch(e){}
     let date=(((s.header||{}).competitions||[])[0]||{}).date||null;
     if((!recByAb[A]||!recByAb[H])&&date){
       try{ const ymd=date.slice(0,10).replace(/-/g,'');
@@ -6396,6 +6452,7 @@ function applySport(){
   document.title=`STATS — ${GAME.homeName} v ${GAME.awayName}`;
 }
 try{applySport();}catch(e){console.error('applySport',e);}
+try{paintChrome();}catch(e){console.error('paintChrome',e);}
 try{mountMatchup();}catch(e){console.error('mountMatchup',e);}
 initColors();
 checkResume();
