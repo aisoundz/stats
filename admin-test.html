@@ -409,6 +409,11 @@ const NIGHTS = [
   // away/home are the two short names on the live scoreboard in tab 2, in
   // that order — the app draws the road team on the left, so the order here
   // is not decorative. Everything else on this list is the round structure.
+  { id:'gn3-2026-08-09-ny-lv', label:'Game Night #3 — Aces @ Liberty (Aug 9)',
+    away:'LV', home:'NY',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[1,2,3,4] },
   { id:'gn2-2026-08-02-min-ind', label:'Game Night #2 — Fever @ Lynx (Aug 2)',
     away:'IND', home:'MIN',
     tags:['Q1','Q2','Q3','Q4'],
@@ -432,6 +437,32 @@ const NIGHTS = [
 // simulated results for a fake game, not claims about the real one. The host
 // marks the real answer at the break, then pushes.
 const BANK = {
+  'gn3-2026-08-09-ny-lv': [
+    [
+      { t: 'The first bucket of the night — how did it go in?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throw'] },
+      { t: 'How many team timeouts in Q1? (media/TV timeouts don\'t count)', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In Q1, which was more — made field goals or made free throws?', o: ['Made field goals', 'Made free throws', 'Equal'] },
+      { t: 'Q1 ended on…', o: ['A made basket', 'A missed shot', 'A turnover', 'Free throws'] }
+    ],
+    [
+      { t: 'Who led at halftime?', o: ['Liberty', 'Aces', 'Tied'] },
+      { t: 'How many and-ones in Q2? (made the shot AND got the foul)', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In Q2, which team coughed it up more?', o: ['Liberty', 'Aces', 'About even'] },
+      { t: 'The last shot before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'] }
+    ],
+    [
+      { t: 'Which team scored FIRST in Q3?', o: ['Liberty', 'Aces'] },
+      { t: 'How many times did the refs go to the monitor in Q3?', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In Q3, which was more — threes made or turnovers? (both teams)', o: ['Threes made', 'Turnovers', 'Equal'] },
+      { t: 'Which team won Q3 (outscored the other)?', o: ['Liberty', 'Aces', 'Tied'] }
+    ],
+    [
+      { t: 'The final basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'] },
+      { t: '🎯 How many 24-second violations in the WHOLE game?', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In the last two minutes, which happened more?', o: ['Free throws attempted', 'Field goals attempted', 'Equal'] },
+      { t: 'Did any player foul out?', o: ['Yes', 'No'] }
+    ]
+  ],
   'gn2-2026-08-02-min-ind': [
     [
       { t: 'The first bucket of the night — how did it go in?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throw'] },
@@ -1279,6 +1310,18 @@ async function closeQuarter(i){
   const cfg = nightCfg(night), last = i >= cfg.tags.length - 1;
   const iss = roundIssues(i);
   if(iss.length){ toast('Fix that round first: ' + iss[0]); return; }
+
+  /* Never score an empty quarter. In Game #2, Q2 was closed with ZERO answers
+     in and it stuck every player on 0 for the night — the single worst bug of
+     the game. If nobody has answered yet, make the host stop and confirm. */
+  const answeredN = subCounts[roundDocId(i)] || 0;
+  if(answeredN === 0){
+    if(!confirm(
+      `⚠️ Nobody has answered ${cfg.tags[i]} yet.\n\n` +
+      `Closing now scores every player 0 for this quarter — this is exactly the ` +
+      `Game #2 bug. Give players a moment to answer, then close.\n\n` +
+      `Close anyway with 0 answers?`)) return;
+  }
 
   /* Read the form BEFORE the first await. The rounds listener repaints this
      card the instant the reveal lands, and by then these inputs no longer
@@ -2135,7 +2178,7 @@ boot();
     q2_4(s,o,T){const q=E.pIn(s,2).filter(p=>p.shootingPlay);const l=q[q.length-1];if(!l)return E.b('low',2,'No shot logged late in Q2');return E.b('low',l.scoringPlay?0:1,'Last Q2 shot ('+(l.clock?.displayValue||'')+'): '+l.text);},
     q3_1(s,o,T){const p=E.pIn(s,3).find(x=>x.scoringPlay);if(!p)return null;return E.b('high',E.teamOpt(o,p.team?.id,T),'First Q3 score: '+p.text);},
     q3_3(s,o,T){const q=E.pIn(s,3);const th=q.filter(p=>p.scoringPlay&&p.scoreValue===3).length,to=q.filter(E.isTO).length;return E.b('high',th>to?0:(to>th?1:2),'Q3 threes '+th+' vs turnovers '+to);},
-    q3_4(s,o,T){const q=E.pIn(s,3);let ch=0,prev=null;for(const p of q){if(p.homeScore==null)continue;const d=Math.sign(p.homeScore-p.awayScore);if(d!==0){if(prev!==null&&d!==prev)ch++;prev=d;}}return E.b('med',ch>0?0:1,ch+' lead change(s) in Q3');},
+    q3_4(s,o,T){const h=(T.homeLine[2]||0),a=(T.awayLine[2]||0);let i;if(h===a)i=o.findIndex(x=>/tie/i.test(x));else i=E.teamOpt(o,h>a?T.homeId:T.awayId,T);return E.b('high',i,'Q3 score: '+T.awayAbbr+' '+a+', '+T.homeAbbr+' '+h);},
     q4_1(s,o,T){const q=(s.plays||[]).filter(p=>p.period?.number>=4&&!E.NOISE.test(p.type?.text||''));const l=q[q.length-1];if(!l)return null;let i;if(l.scoringPlay)i=l.scoreValue===1?0:(l.scoreValue===2?1:2);else i=3;return E.b('med',i,'Last game action: '+l.text);},
     q4_2(s,o,T){const n=(s.plays||[]).filter(p=>/Shot Clock Turnover/i.test(p.type?.text||'')).length;return E.b('high',n>=3?3:n,n+' shot-clock (24s) turnover(s) in the game');},
     q4_3(s,o,T){const per=Math.max(...(s.plays||[]).map(p=>p.period?.number||0));const q=E.pIn(s,per).filter(p=>{const c=E.clockSec(p.clock);return c!==null&&c<=120;});const fta=q.filter(E.isFT).length,fga=q.filter(E.isShotAttempt).length;return E.b('med',fta>fga?0:(fga>fta?1:2),'Last 2:00 — FT attempts '+fta+' vs FG attempts '+fga);},
@@ -2155,7 +2198,7 @@ boot();
     {re:/last shot before the halftime/i, id:'q2_4'},
     {re:/scored first in q3/i, id:'q3_1'},
     {re:/threes made or turnovers/i, id:'q3_3'},
-    {re:/lead change in q3/i, id:'q3_4'},
+    {re:/won q3|outscored/i, id:'q3_4'},
     {re:/final basket of the game/i, id:'q4_1'},
     {re:/24-second violations|shot clock violations/i, id:'q4_2'},
     {re:/last two minutes/i, id:'q4_3'},
