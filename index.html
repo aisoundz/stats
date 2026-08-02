@@ -2102,23 +2102,23 @@ window.STATS_FIREBASE = {
    re-skins to ANY game — NBA, G-League, college, WNBA.
    In production this loads from the nightly schedule feed. */
 const BB_GAME={
-  nightId:"gn2-2026-08-02-min-ind",
-  homeName:"Minnesota Lynx", homeAbbr:"MIN", homeNick:"Lynx", homeEmoji:"🐆",
-  awayName:"Indiana Fever", awayAbbr:"IND", awayNick:"Fever", awayEmoji:"🔥",
-  venue:"WNBA Game of the Night", date:"Sun · August 2", short:"August 2", shareDate:"AUG 2", night:"Game Night #2",
-  // Verified against the published 2026 Fever schedule: Aug 2 at Minnesota,
-  // 1 p.m. ET, national window on ABC. Fever are the road team, so the Lynx
-  // are `home` here — the app renders home on the right of the VS badge.
+  nightId:"gn3-2026-08-09-ny-lv",
+  homeName:"New York Liberty", homeAbbr:"NY", homeNick:"Liberty", homeEmoji:"🗽",
+  awayName:"Las Vegas Aces", awayAbbr:"LV", awayNick:"Aces", awayEmoji:"♠️",
+  venue:"WNBA Game of the Night", date:"Sun · August 9", short:"August 9", shareDate:"AUG 9", night:"Game Night #3",
+  // Verified against the ESPN schedule: Aug 9, Aces at Liberty, 12:30 p.m. ET,
+  // national window on ABC. Aces are the road team, so the Liberty are `home`
+  // here — the app renders home on the right of the VS badge. ESPN event 401857128.
   net:"ABC",
-  tip:"Tip-off 1:00 ET · 12:00 CT · 10:00 PT · ABC"
+  tip:"Tip-off 12:30 ET · 11:30 CT · 9:30 PT · ABC"
 };
 const COLORS=["#2f6bff","#19c3d6","#ff4d5e","#ffc54d","#2ee6a6","#b57cff","#ff924d","#4dd0ff"];
 const BB_ROSTER={ // full names — used on the prediction sheet & final review
   // Six per side, taken from the published 2026 rosters. Six is a deliberate
   // cap, not laziness: a prediction sheet with fifteen names is a scroll, and
   // a scroll is the friction the host told us to cut.
-  home:["Napheesa Collier","Kayla McBride","Courtney Williams","Natasha Howard","Olivia Miles","Teaira McCowan"],
-  away:["Caitlin Clark","Kelsey Mitchell","Aliyah Boston","Sophie Cunningham","Monique Billings","Lexie Hull"]
+  home:["Breanna Stewart","Sabrina Ionescu","Jonquel Jones","Satou Sabally","Betnijah Laney-Hamilton","Leonie Fiebich"],
+  away:["A'ja Wilson","Jackie Young","Chelsea Gray","Jewell Loyd","NaLyssa Smith","Dana Evans"]
 };
 /* Prediction sheet definition (matches arena rules: 6 categories, base + bonus)
    NOTE: every `answer` below is a SIMULATED result used only by Practice mode.
@@ -2141,11 +2141,11 @@ const BB_ROSTER={ // full names — used on the prediction sheet & final review
    never watched a full WNBA game. It is the hook that gets a sheet filled. */
 const BB_PREDS=[
   {id:"winner", label:"Winning team", base:10, opts:[BB_GAME.homeName,BB_GAME.awayName], answer:BB_GAME.homeName},
-  {id:"pts", label:"Most points", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Napheesa Collier", num:27, numLabel:"How many pts?"},
-  {id:"ast", label:"Most assists", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Caitlin Clark", num:9, numLabel:"How many assists?"},
-  {id:"stl", label:"Most steals", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Courtney Williams", num:3, numLabel:"How many steals?"},
-  {id:"reb", label:"Most rebounds", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Aliyah Boston", num:12, numLabel:"How many rebounds?"},
-  {id:"blk", label:"Most blocks", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Teaira McCowan", num:4, numLabel:"How many blocks?"}
+  {id:"pts", label:"Most points", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"A'ja Wilson", num:28, numLabel:"How many pts?"},
+  {id:"ast", label:"Most assists", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Sabrina Ionescu", num:8, numLabel:"How many assists?"},
+  {id:"stl", label:"Most steals", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Jackie Young", num:3, numLabel:"How many steals?"},
+  {id:"reb", label:"Most rebounds", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Jonquel Jones", num:11, numLabel:"How many rebounds?"},
+  {id:"blk", label:"Most blocks", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"A'ja Wilson", num:3, numLabel:"How many blocks?"}
 ];
 /* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
    Every question is answerable by WATCHING the broadcast at the break — no lookups,
@@ -2204,7 +2204,7 @@ const BBALL_ROUNDS=[
   {home:23,away:19, q:[
     {t:"The first bucket of the night — how did it go in?", o:["Layup or dunk","Mid-range jumper","Three","Free throw"], a:"Layup or dunk"},
     // TALLY. Timeouts are loud, they stop the game, and you cannot miss one.
-    {t:"How many timeouts were called in Q1?", o:["None","1","2","3 or more"], a:"2"},
+    {t:"How many team timeouts in Q1? (media/TV timeouts don't count)", o:["None","1","2","3 or more"], a:"2"},
     // WHICH WAS MORE. The question the room named. You do not need the count -
     // you need a feel for whether it was a whistle quarter or a shooting one.
     {t:"In Q1, which was more — made field goals or made free throws?", o:["Made field goals","Made free throws","Equal"], a:"Made field goals"},
@@ -2228,7 +2228,7 @@ const BBALL_ROUNDS=[
     {t:"How many times did the refs go to the monitor in Q3?", o:["None","1","2","3 or more"], a:"1"},
     // WHICH WAS MORE. Two streams at once, and neither needs an exact number.
     {t:"In Q3, which was more — threes made or turnovers? (both teams)", o:["Threes made","Turnovers","Equal"], a:"Turnovers"},
-    {t:"Was there a lead change in Q3?", o:["Yes","No"], a:"Yes"}
+    {t:"Which team won Q3 (outscored the other)?", o:[BB_GAME.homeNick,BB_GAME.awayNick,"Tied"], a:BB_GAME.homeNick}
   ]},
   // --- Q4 - 4 pts each - money time. The quarter that decides the night. ---
   {home:89,away:82, q:[

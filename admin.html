@@ -409,6 +409,11 @@ const NIGHTS = [
   // away/home are the two short names on the live scoreboard in tab 2, in
   // that order — the app draws the road team on the left, so the order here
   // is not decorative. Everything else on this list is the round structure.
+  { id:'gn3-2026-08-09-ny-lv', label:'Game Night #3 — Aces @ Liberty (Aug 9)',
+    away:'LV', home:'NY',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[1,2,3,4] },
   { id:'gn2-2026-08-02-min-ind', label:'Game Night #2 — Fever @ Lynx (Aug 2)',
     away:'IND', home:'MIN',
     tags:['Q1','Q2','Q3','Q4'],
@@ -432,6 +437,32 @@ const NIGHTS = [
 // simulated results for a fake game, not claims about the real one. The host
 // marks the real answer at the break, then pushes.
 const BANK = {
+  'gn3-2026-08-09-ny-lv': [
+    [
+      { t: 'The first bucket of the night — how did it go in?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throw'] },
+      { t: 'How many team timeouts in Q1? (media/TV timeouts don\'t count)', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In Q1, which was more — made field goals or made free throws?', o: ['Made field goals', 'Made free throws', 'Equal'] },
+      { t: 'Q1 ended on…', o: ['A made basket', 'A missed shot', 'A turnover', 'Free throws'] }
+    ],
+    [
+      { t: 'Who led at halftime?', o: ['Liberty', 'Aces', 'Tied'] },
+      { t: 'How many and-ones in Q2? (made the shot AND got the foul)', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In Q2, which team coughed it up more?', o: ['Liberty', 'Aces', 'About even'] },
+      { t: 'The last shot before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'] }
+    ],
+    [
+      { t: 'Which team scored FIRST in Q3?', o: ['Liberty', 'Aces'] },
+      { t: 'How many times did the refs go to the monitor in Q3?', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In Q3, which was more — threes made or turnovers? (both teams)', o: ['Threes made', 'Turnovers', 'Equal'] },
+      { t: 'Which team won Q3 (outscored the other)?', o: ['Liberty', 'Aces', 'Tied'] }
+    ],
+    [
+      { t: 'The final basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'] },
+      { t: '🎯 How many 24-second violations in the WHOLE game?', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In the last two minutes, which happened more?', o: ['Free throws attempted', 'Field goals attempted', 'Equal'] },
+      { t: 'Did any player foul out?', o: ['Yes', 'No'] }
+    ]
+  ],
   'gn2-2026-08-02-min-ind': [
     [
       { t: 'The first bucket of the night — how did it go in?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throw'] },
@@ -2086,6 +2117,185 @@ async function restoreFromCloud(){
 }
 
 boot();
+</script>
+<!-- ============================================================
+     ESPN AUTO add-on  (STATS · Game Time)
+     Additive only. Fills the answer marks (draft q.k) for finished
+     quarters from ESPN's public feed, and keeps the live scoreboard
+     updated. Reuses the existing reveal / close / writeScore flow —
+     no new data model, no change to the player app.
+     Reads globals from the main script: night, draft, nightCfg,
+     nightDraft, saveDraft, renderRun, renderWrite, writeScore, esc, $,
+     toast, FB. Pull only touches the local draft — nothing reaches a
+     player until you press the normal Reveal / one-press close.
+     ============================================================ -->
+<script>
+(function(){
+  var ESPN = window.STATS_ESPN = {};
+  var API = 'https://site.api.espn.com/apis/site/v2/sports/basketball/wnba';
+  var liveTimer = null, eventId = null;
+
+  /* ---- ESPN derive engine (validated against IND@SEA, box-score exact) ---- */
+  var E = {};
+  E.clockSec = c => { const s=(c&&c.displayValue)||''; const m=s.match(/(\d+):(\d+)/); return m?(+m[1])*60+(+m[2]):(/^\d+(\.\d+)?$/.test(s)?Math.round(+s):null); };
+  E.teams = sum => { const c=sum.header?.competitions?.[0]?.competitors||[]; const home=c.find(x=>x.homeAway==='home')||c[0]||{}, away=c.find(x=>x.homeAway==='away')||c[1]||{}; const ls=t=>(t.linescores||[]).map(l=>+l.displayValue);
+    return {homeId:home.team?.id,awayId:away.team?.id,homeAbbr:home.team?.abbreviation,awayAbbr:away.team?.abbreviation,homeName:home.team?.displayName,awayName:away.team?.displayName,homeScore:+(home.score||0),awayScore:+(away.score||0),homeLine:ls(home),awayLine:ls(away)}; };
+  E.NOISE = /End Period|End of Game|End Game|Substitution|Timeout|Delay of Game|Jumpball|Ejection|Instant Replay|Rebound|Kicked Ball/i;
+  E.pIn = (sum,per)=>(sum.plays||[]).filter(p=>p.period?.number===per);
+  E.isTO = p=>/Turnover/i.test(p.type?.text||'');
+  E.isFT = p=>/Free Throw/i.test(p.type?.text||'');
+  E.isTimeoutTeam = p=>/Full Timeout|20 Second Timeout/i.test(p.type?.text||'');
+  E.isMadeFG = p=>p.scoringPlay&&p.scoreValue>=2;
+  E.isMadeFT = p=>p.scoringPlay&&p.scoreValue===1;
+  E.isShotAttempt = p=>p.shootingPlay&&!E.isFT(p);
+  E.b = (c,i,ev)=>({index:i,confidence:c,evidence:ev});
+  E.teamOpt = (opts,teamId,T)=>{ const isHome=teamId===T.homeId; const nm=isHome?(T.homeName+' '+T.homeAbbr):(T.awayName+' '+T.awayAbbr);
+    let idx=opts.findIndex(o=>{try{return new RegExp(o,'i').test(nm)}catch(e){return false}});
+    if(idx<0)idx=isHome?opts.findIndex(o=>/lynx|home/i.test(o)):opts.findIndex(o=>/fever|away/i.test(o));
+    if(idx<0)idx=isHome?0:1; return idx; };
+  E.periodDone = (sum,per)=>{ if(sum.header?.competitions?.[0]?.status?.type?.completed) return true;
+    const plays=sum.plays||[]; if(plays.some(p=>p.period?.number===per && /End Period|End of Game/i.test(p.type?.text||''))) return true;
+    const maxP=Math.max(0,...plays.map(p=>p.period?.number||0)); return maxP>per; };
+  E.rules = {
+    q1_1(s,o,T){const p=(s.plays||[]).find(x=>x.scoringPlay);if(!p)return null;let i;if(p.scoreValue===1)i=3;else if(p.scoreValue===3)i=2;else i=/layup|dunk|putback|tip|reverse/i.test(p.type?.text||'')?0:1;return E.b('high',i,'First score: '+p.text);},
+    q1_2(s,o,T){const tm=E.pIn(s,1).filter(E.isTimeoutTeam).length;const tv=E.pIn(s,1).filter(p=>/Official Timeout/i.test(p.type?.text||'')).length;return E.b('med',tm>=3?3:tm,tm+' team timeout(s) in Q1'+(tv?(' (+'+tv+' TV timeouts, not counted)'):''));},
+    q1_3(s,o,T){const q=E.pIn(s,1);const fg=q.filter(E.isMadeFG).length,ft=q.filter(E.isMadeFT).length;return E.b('high',fg>ft?0:(ft>fg?1:2),'Q1 made FG '+fg+' vs made FT '+ft);},
+    q1_4(s,o,T){const q=E.pIn(s,1).filter(p=>!E.NOISE.test(p.type?.text||''));const l=q[q.length-1];if(!l)return null;let i;if(E.isMadeFG(l))i=0;else if(E.isFT(l))i=3;else if(E.isTO(l))i=2;else i=1;return E.b('med',i,'Last Q1 action: '+l.text);},
+    q2_1(s,o,T){const h=(T.homeLine[0]||0)+(T.homeLine[1]||0),a=(T.awayLine[0]||0)+(T.awayLine[1]||0);let i;if(h===a)i=o.findIndex(x=>/tie/i.test(x));else i=E.teamOpt(o,h>a?T.homeId:T.awayId,T);return E.b('high',i,'Half: '+T.awayAbbr+' '+a+', '+T.homeAbbr+' '+h);},
+    q2_3(s,o,T){const q=E.pIn(s,2).filter(E.isTO);const h=q.filter(p=>p.team?.id===T.homeId).length,a=q.filter(p=>p.team?.id===T.awayId).length;let i;if(h===a)i=o.findIndex(x=>/even/i.test(x));else i=E.teamOpt(o,h>a?T.homeId:T.awayId,T);return E.b('high',i,'Q2 turnovers: '+T.awayAbbr+' '+a+', '+T.homeAbbr+' '+h);},
+    q2_4(s,o,T){const q=E.pIn(s,2).filter(p=>p.shootingPlay);const l=q[q.length-1];if(!l)return E.b('low',2,'No shot logged late in Q2');return E.b('low',l.scoringPlay?0:1,'Last Q2 shot ('+(l.clock?.displayValue||'')+'): '+l.text);},
+    q3_1(s,o,T){const p=E.pIn(s,3).find(x=>x.scoringPlay);if(!p)return null;return E.b('high',E.teamOpt(o,p.team?.id,T),'First Q3 score: '+p.text);},
+    q3_3(s,o,T){const q=E.pIn(s,3);const th=q.filter(p=>p.scoringPlay&&p.scoreValue===3).length,to=q.filter(E.isTO).length;return E.b('high',th>to?0:(to>th?1:2),'Q3 threes '+th+' vs turnovers '+to);},
+    q3_4(s,o,T){const h=(T.homeLine[2]||0),a=(T.awayLine[2]||0);let i;if(h===a)i=o.findIndex(x=>/tie/i.test(x));else i=E.teamOpt(o,h>a?T.homeId:T.awayId,T);return E.b('high',i,'Q3 score: '+T.awayAbbr+' '+a+', '+T.homeAbbr+' '+h);},
+    q4_1(s,o,T){const q=(s.plays||[]).filter(p=>p.period?.number>=4&&!E.NOISE.test(p.type?.text||''));const l=q[q.length-1];if(!l)return null;let i;if(l.scoringPlay)i=l.scoreValue===1?0:(l.scoreValue===2?1:2);else i=3;return E.b('med',i,'Last game action: '+l.text);},
+    q4_2(s,o,T){const n=(s.plays||[]).filter(p=>/Shot Clock Turnover/i.test(p.type?.text||'')).length;return E.b('high',n>=3?3:n,n+' shot-clock (24s) turnover(s) in the game');},
+    q4_3(s,o,T){const per=Math.max(...(s.plays||[]).map(p=>p.period?.number||0));const q=E.pIn(s,per).filter(p=>{const c=E.clockSec(p.clock);return c!==null&&c<=120;});const fta=q.filter(E.isFT).length,fga=q.filter(E.isShotAttempt).length;return E.b('med',fta>fga?0:(fga>fta?1:2),'Last 2:00 — FT attempts '+fta+' vs FG attempts '+fga);},
+    q4_4(s,o,T){const pls=s.boxscore?.players||[];let nm='',mx=0;for(const tm of pls){const g=tm.statistics?.[0];if(!g)continue;const fi=(g.keys||[]).indexOf('fouls');if(fi<0)continue;for(const a of (g.athletes||[])){const f=+((a.stats||[])[fi]||0);if(f>mx){mx=f;nm=a.athlete?.displayName;}}}return E.b('high',mx>=6?0:1,'Most fouls: '+nm+' '+mx+(mx>=6?' (fouled out)':''));},
+  };
+
+  /* Map a question to a rule by its wording (robust to reordering). The two
+     that no feed can answer — and-ones, ref monitor visits — have no rule and
+     stay for the host to mark. */
+  var RULES = [
+    {re:/first bucket/i, id:'q1_1'},
+    {re:/timeouts.*q1|q1[\s\S]*timeouts/i, id:'q1_2'},
+    {re:/field goals or (made )?free throws/i, id:'q1_3'},
+    {re:/q1 ended on/i, id:'q1_4'},
+    {re:/led at halftime/i, id:'q2_1'},
+    {re:/coughed it up|turned it over more/i, id:'q2_3'},
+    {re:/last shot before the halftime/i, id:'q2_4'},
+    {re:/scored first in q3/i, id:'q3_1'},
+    {re:/threes made or turnovers/i, id:'q3_3'},
+    {re:/won q3|outscored/i, id:'q3_4'},
+    {re:/final basket of the game/i, id:'q4_1'},
+    {re:/24-second violations|shot clock violations/i, id:'q4_2'},
+    {re:/last two minutes/i, id:'q4_3'},
+    {re:/foul out/i, id:'q4_4'},
+  ];
+  function ruleFor(t){ var m=RULES.find(function(r){return r.re.test(t||'');}); return m?m.id:null; }
+
+  /* ---- ESPN fetch ---- */
+  ESPN.summary = function(id){ return fetch(API+'/summary?event='+id+'&_='+Date.now()).then(function(r){return r.json();}); };
+  ESPN.resolveEvent = async function(cfg, nid){
+    var m=(nid||'').match(/(\d{4})-(\d{2})-(\d{2})/); if(!m) throw new Error('no date in night id');
+    var date=m[1]+m[2]+m[3];
+    var j=await fetch(API+'/scoreboard?dates='+date).then(function(r){return r.json();});
+    var want=[cfg.away,cfg.home].map(function(s){return String(s||'').toUpperCase();});
+    var hit=(j.events||[]).find(function(e){var nm=String(e.shortName||'').toUpperCase();return want.every(function(w){return w&&nm.indexOf(w)>=0;});});
+    return hit?hit.id:null;
+  };
+
+  /* ---- UI helpers ---- */
+  function out(html){ var el=document.getElementById('espnOut'); if(el) el.innerHTML=html; }
+  function setState(txt){ var el=document.getElementById('espnState'); if(el) el.textContent=txt; }
+  function line(tag,x,q,idx,conf,ev){
+    var col = conf==='high'?'#2ee6a6':(conf==='manual'?'#93a0bd':'#ffc54d');
+    var ans = idx==null ? (conf==='manual'?'mark by hand':'—') : esc(q.o[idx]);
+    return '<div style="margin:5px 0"><b>'+tag+'·Q'+(x+1)+'</b> &rarr; <span style="color:'+col+';font-weight:700">'+ans+
+      '</span> <span style="color:'+col+';font-size:11px;text-transform:uppercase">['+conf+']</span>'+
+      (ev?'<br><span style="color:var(--dim);font-size:11.5px">'+esc(ev)+'</span>':'')+'</div>';
+  }
+
+  /* ---- Pull: fill answer marks (draft q.k) for finished quarters ---- */
+  ESPN.pull = async function(){
+    if(typeof night==='undefined' || !night){ toast('Pick a night first.'); return; }
+    var cfg = nightCfg(night);
+    out('Finding the game on ESPN…');
+    try{ if(!eventId) eventId = await ESPN.resolveEvent(cfg, night); }
+    catch(e){ out('<span style="color:var(--red)">Could not reach ESPN: '+esc(e.message)+'</span>'); return; }
+    if(!eventId){ out('<span style="color:var(--red)">No matching ESPN game found for '+esc(cfg.away)+' vs '+esc(cfg.home)+' on this date.</span>'); return; }
+    var sum; try{ sum = await ESPN.summary(eventId); }catch(e){ out('<span style="color:var(--red)">Feed error: '+esc(e.message)+'</span>'); return; }
+    var T = E.teams(sum);
+    var nd = nightDraft(night);   // ensures rounds + seeds the questions if empty
+    var rows=[], filled=0, doneCount=0;
+    nd.rounds.forEach(function(rd,i){
+      if(!E.periodDone(sum,i+1)){ rows.push('<div style="margin:6px 0;color:var(--dim)"><b>'+esc(cfg.tags[i])+'</b> — quarter not finished yet</div>'); return; }
+      doneCount++;
+      rd.qs.forEach(function(q,x){
+        var id = ruleFor(q.t);
+        if(!id){ rows.push(line(cfg.tags[i],x,q,null,'manual','No feed signal — mark this one by hand.')); return; }
+        var res; try{ res = E.rules[id](sum,q.o,T); }catch(e){ res=null; }
+        if(!res || res.index==null){ rows.push(line(cfg.tags[i],x,q,null,(res&&res.confidence)||'manual',(res&&res.evidence)||'Nothing to derive.')); return; }
+        if(q.k==null || q.k===undefined){ q.k=res.index; filled++; }   // never clobber a mark the host set
+        rows.push(line(cfg.tags[i],x,q,q.k,res.confidence,res.evidence));
+      });
+    });
+    saveDraft();
+    try{ renderRun(); }catch(e){}
+    try{ renderWrite(); }catch(e){}
+    var head = doneCount
+      ? ('<b style="color:var(--ink)">Filled '+filled+' answer'+(filled===1?'':'s')+' across '+doneCount+' finished quarter'+(doneCount===1?'':'s')+'.</b> Review below, then close each quarter as usual. (Already-marked answers were left alone.)<br><br>')
+      : 'No quarters have finished yet — pull again the moment Q1 ends.<br><br>';
+    out(head + rows.join(''));
+  };
+
+  /* ---- Auto live score: writes nights/{night}.score from ESPN ---- */
+  ESPN.liveTick = async function(){
+    if(!FB || !FB.auth || !FB.auth.currentUser){ setState('sign in to post score'); ESPN.stopLive(); toast('Sign in first — the live score writes to the room.'); return; }
+    var cfg = nightCfg(night);
+    try{ if(!eventId) eventId = await ESPN.resolveEvent(cfg, night); }catch(e){}
+    if(!eventId){ setState('no game found'); return; }
+    var sum; try{ sum = await ESPN.summary(eventId); }catch(e){ setState('feed error'); return; }
+    var T = E.teams(sum);
+    var st = sum.header?.competitions?.[0]?.status || {};
+    var per = st.period||0, state = st.type?.state;
+    var label = state==='post' ? 'Final' : (per>=1 && cfg.tags[per-1] ? cfg.tags[per-1]+' in progress' : cfg.tags[0]+' in progress');
+    if($('scAway')) $('scAway').value = T.awayScore;
+    if($('scHome')) $('scHome').value = T.homeScore;
+    var sel=$('scPeriod'); if(sel){ var opt=Array.prototype.find.call(sel.options,function(o){return o.value===label;}); if(opt) sel.value=label; }
+    try{ await writeScore(T.awayScore, T.homeScore, label, ($('scNote')&&$('scNote').value)||''); }catch(e){}
+    setState((state==='post'?'Final':'live')+' · '+cfg.away+' '+T.awayScore+' — '+cfg.home+' '+T.homeScore+' ('+(st.type?.shortDetail||label)+')');
+    if(state==='post') ESPN.stopLive();
+  };
+  ESPN.toggleLive = function(){
+    if(liveTimer){ ESPN.stopLive(); return; }
+    var b=$('espnLive'); if(b) b.textContent='⏸ Stop auto score';
+    ESPN.liveTick(); liveTimer=setInterval(ESPN.liveTick, 20000);
+  };
+  ESPN.stopLive = function(){ if(liveTimer){ clearInterval(liveTimer); liveTimer=null; } var b=$('espnLive'); if(b) b.textContent='▶ Auto live score'; };
+
+  /* ---- Mount the panel at the top of the RUN tab ---- */
+  ESPN.mount = function(){
+    var host=document.getElementById('t-run');
+    if(!host || document.getElementById('espnCard')) return;
+    var card=document.createElement('div'); card.className='card'; card.id='espnCard';
+    card.style.borderColor='#28e0d0';
+    card.innerHTML =
+      '<h3>&#9889; ESPN auto <span class="chip" id="espnState">idle</span></h3>'+
+      '<p class="sub">Pull fills the answers for finished quarters from ESPN’s feed — you still review and close each quarter yourself, so nothing reaches a player until you do. Auto live score posts the real score to every phone on its own.</p>'+
+      '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'+
+        '<button class="btn" id="espnPull" style="flex:1 1 240px;white-space:nowrap">&#9889; Pull answers for finished quarters</button>'+
+        '<button class="btn ghost" id="espnLive" style="flex:0 0 auto;white-space:nowrap">&#9654; Auto live score</button>'+
+      '</div>'+
+      '<div id="espnOut" class="sub" style="margin-top:12px"></div>';
+    host.insertBefore(card, host.firstChild);
+    document.getElementById('espnPull').onclick=ESPN.pull;
+    document.getElementById('espnLive').onclick=ESPN.toggleLive;
+  };
+
+  var tries=0;
+  var iv=setInterval(function(){ tries++; if(document.getElementById('t-run')){ ESPN.mount(); } if(document.getElementById('espnCard')||tries>40) clearInterval(iv); }, 200);
+})();
 </script>
 </body>
 </html>
