@@ -1311,6 +1311,18 @@ async function closeQuarter(i){
   const iss = roundIssues(i);
   if(iss.length){ toast('Fix that round first: ' + iss[0]); return; }
 
+  /* Never score an empty quarter. In Game #2, Q2 was closed with ZERO answers
+     in and it stuck every player on 0 for the night — the single worst bug of
+     the game. If nobody has answered yet, make the host stop and confirm. */
+  const answeredN = subCounts[roundDocId(i)] || 0;
+  if(answeredN === 0){
+    if(!confirm(
+      `⚠️ Nobody has answered ${cfg.tags[i]} yet.\n\n` +
+      `Closing now scores every player 0 for this quarter — this is exactly the ` +
+      `Game #2 bug. Give players a moment to answer, then close.\n\n` +
+      `Close anyway with 0 answers?`)) return;
+  }
+
   /* Read the form BEFORE the first await. The rounds listener repaints this
      card the instant the reveal lands, and by then these inputs no longer
      exist. */

@@ -1605,11 +1605,28 @@ window.STATS_FIREBASE = {
       mine.color = String(o.color || '#888').slice(0, 12);
       SB.me.name = mine.name;
       meRef = F.doc(db, 'nights', nightId, 'players', uid());
-      await F.setDoc(meRef, {
-        name: mine.name, color: mine.color,
-        pts: 0, speed: 0, predPts: 0, catchPts: 0, roundsDone: 0,
-        joinedAt: F.serverTimestamp(), lastSeen: F.serverTimestamp()
-      }, { merge: true });
+      // NEVER zero an existing player. A re-join after a refresh must RESTORE
+      // the points already earned — writing pts:0 here (even with merge) was
+      // the Game #2 bug that cost a player his lead on a reload. So: read the
+      // seat first. If it exists, keep its score and only touch name/color;
+      // only a brand-new seat gets the fresh zeros.
+      var existing = null;
+      try { existing = await F.getDoc(meRef); } catch (e) {}
+      if (existing && existing.exists()) {
+        var d0 = existing.data() || {};
+        ['pts','speed','predPts','catchPts','roundsDone'].forEach(function (k) {
+          if (typeof d0[k] === 'number' && isFinite(d0[k])) mine[k] = d0[k];
+        });
+        await F.setDoc(meRef, {
+          name: mine.name, color: mine.color, lastSeen: F.serverTimestamp()
+        }, { merge: true });               // preserve pts/speed — do NOT rewrite them
+      } else {
+        await F.setDoc(meRef, {
+          name: mine.name, color: mine.color,
+          pts: 0, speed: 0, predPts: 0, catchPts: 0, roundsDone: 0,
+          joinedAt: F.serverTimestamp(), lastSeen: F.serverTimestamp()
+        }, { merge: true });
+      }
       startHeartbeat();
       return true;
     } catch (e) { setState('error', e.message || String(e)); return false; }
