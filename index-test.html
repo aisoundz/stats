@@ -6244,9 +6244,9 @@ async function mountMatchup(){
     // season series
     const ss=(s.seasonseries||[])[0]||{};
     const seriesSummary=ss.summary||null;
-    const meetings=(ss.events||[]).filter(e=>e.status&&e.status.type&&e.status.type.state==='post').map(e=>{
+    const meetings=(ss.events||[]).map(e=>{
       const cs=(e.competitors||[]).map(c=>({ab:c.team&&c.team.abbreviation,score:Number(c.score)}));
-      return {date:e.date, cs}; });
+      return {date:e.date, cs}; }).filter(m=>m.cs.length===2 && m.cs.every(c=>isFinite(c.score)&&c.score>0));
     // win projection
     const pj={};
     if(s.predictor){ const hp=s.predictor.homeTeam, ap=s.predictor.awayTeam;
