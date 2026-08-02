@@ -2252,9 +2252,9 @@ boot();
     card.innerHTML =
       '<h3>&#9889; ESPN auto <span class="chip" id="espnState">idle</span></h3>'+
       '<p class="sub">Pull fills the answers for finished quarters from ESPN’s feed — you still review and close each quarter yourself, so nothing reaches a player until you do. Auto live score posts the real score to every phone on its own.</p>'+
-      '<div class="row" style="margin-top:10px">'+
-        '<button class="btn" id="espnPull" style="flex:1">&#9889; Pull answers for finished quarters</button>'+
-        '<button class="btn ghost" id="espnLive">&#9654; Auto live score</button>'+
+      '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'+
+        '<button class="btn" id="espnPull" style="flex:1 1 240px;white-space:nowrap">&#9889; Pull answers for finished quarters</button>'+
+        '<button class="btn ghost" id="espnLive" style="flex:0 0 auto;white-space:nowrap">&#9654; Auto live score</button>'+
       '</div>'+
       '<div id="espnOut" class="sub" style="margin-top:12px"></div>';
     host.insertBefore(card, host.firstChild);
