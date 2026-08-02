@@ -633,6 +633,11 @@
       <button class="btn ghost" id="landingDemoBtn" onclick="startDemo()">🎮 Practice first (simulated game)</button>
     </div>
 
+    <!-- MATCHUP PREVIEW — auto-pulled from the live ESPN feed for this exact
+         game. Every number is real and sourced; if the feed can't be reached
+         the whole card hides rather than showing a blank or a fake stat. -->
+    <div class="card" id="matchupCard" style="display:none;padding:0"></div>
+
     <div class="card">
       <div class="step"><div class="num">1</div><div><b id="step1h">Predict before tip-off</b><p id="step1p">Fill your prediction sheet — winner, stat leaders &amp; bonus amounts. Worth up to 60 of the night's 100 pts.</p></div></div>
       <div class="step"><div class="num">2</div><div><b id="step2h">Answer at every quarter break</b><p id="step2p">4 questions about what JUST happened — and not the ones you'd expect. Points rise: Q1 = 1pt → Q4 = 4pt, so the last quarter is worth four times the first. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.</p></div></div>
@@ -2120,6 +2125,7 @@ window.STATS_FIREBASE = {
    In production this loads from the nightly schedule feed. */
 const BB_GAME={
   nightId:"gn3-2026-08-09-ny-lv",
+  espnEvent:"401857128",   // drives the auto-pulled matchup card on the home page
   homeName:"New York Liberty", homeAbbr:"NY", homeNick:"Liberty", homeEmoji:"🗽",
   awayName:"Las Vegas Aces", awayAbbr:"LV", awayNick:"Aces", awayEmoji:"♠️",
   venue:"WNBA Game of the Night", date:"Sun · August 9", short:"August 9", shareDate:"AUG 9", night:"Game Night #3",
@@ -6152,6 +6158,140 @@ function movePred(id,dir){
 const PRED_MAX=preds.reduce((a,p)=>a+p.base+(p.bonus||0),0);
 const LIVE_MAX=rounds.reduce((a,r,i)=>a+r.q.length*roundWorth(i),0);
 const MAXPTS=PRED_MAX+LIVE_MAX+CATCH_PTS;
+/* ---------------- MATCHUP PREVIEW (auto-pulled from ESPN) ----------------
+   The home page's "does this game stand out" block. Records, form, the win
+   projection, the star duel and the season series are all read LIVE from the
+   ESPN feed for GAME.espnEvent — never typed, never invented (the brand rule).
+   Only /scoreboard and /summary are CORS-open to us, so those are the only two
+   endpoints used. If the feed is down we hide the whole card; a blank matchup
+   is better than a fake one. */
+let MATCHUP_DONE=false;
+async function mountMatchup(){
+  if(MATCHUP_DONE) return;
+  const card=document.getElementById('matchupCard'); if(!card) return;
+  const ev=(typeof GAME!=='undefined')&&GAME.espnEvent; if(!ev){ card.style.display='none'; return; }
+  const API='https://site.api.espn.com/apis/site/v2/sports/basketball/wnba';
+  if(!document.getElementById('muCss')){
+    const st=document.createElement('style'); st.id='muCss';
+    st.textContent=`
+    #matchupCard{padding:0!important}
+    .mu{padding:15px 15px 16px}
+    .mu-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}
+    .mu-h b{font-size:11px;letter-spacing:.14em;color:var(--teal2,#28e0d0);font-weight:800;text-transform:uppercase}
+    .mu-src{font-size:9px;letter-spacing:.12em;color:var(--muted);font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:5px}
+    .mu-src::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green,#2ee6a6)}
+    .mu-teams{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px}
+    .mu-team{text-align:center}
+    .mu-emoji{font-size:25px;line-height:1}
+    .mu-ab{font-weight:800;font-size:15px;margin-top:3px}
+    .mu-nm{font-size:11px;color:var(--muted);font-weight:600}
+    .mu-rec{font-weight:800;font-size:19px;margin-top:4px}
+    .mu-at{font-size:12px;color:var(--muted);font-weight:800}
+    .mu-form{display:flex;gap:4px;justify-content:center}
+    .mu-dot{width:15px;height:15px;border-radius:4px;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;color:#08101c}
+    .mu-w{background:var(--green,#2ee6a6)} .mu-l{background:var(--red,#ff4d5e)}
+    .mu-lab{font-size:9.5px;letter-spacing:.11em;color:var(--muted);text-transform:uppercase;font-weight:800;text-align:center;margin:13px 0 6px}
+    .mu-bar{height:9px;border-radius:6px;background:var(--red,#ff4d5e);overflow:hidden}
+    .mu-bar>i{display:block;height:100%;background:linear-gradient(90deg,#28e0d0,#4d86ff)}
+    .mu-barrow{display:flex;justify-content:space-between;font-size:11px;font-weight:800;margin-top:5px}
+    .mu-div{height:1px;background:var(--line,#26304a);margin:14px 0}
+    .mu-duel{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center}
+    .mu-star{text-align:center}
+    .mu-swho{font-weight:800;font-size:12.5px}
+    .mu-sline{font-size:11px;color:var(--gold,#ffc54d);font-weight:800;margin-top:2px}
+    .mu-vs{font-size:10px;font-weight:800;color:var(--muted)}
+    .mu-h2h{text-align:center;font-size:12.5px}
+    .mu-h2h b{color:var(--ink)}
+    .mu-h2h .g{color:var(--muted);font-weight:600;margin-top:3px;font-size:11.5px}
+    .mu-watch{margin-top:13px;border-left:3px solid var(--gold,#ffc54d);background:rgba(255,197,77,.09);padding:9px 11px;border-radius:0 8px 8px 0;font-size:12px;line-height:1.5}
+    .mu-skel{padding:20px;text-align:center;color:var(--muted);font-size:12px}
+    `;
+    document.head.appendChild(st);
+  }
+  card.style.display='block';
+  card.innerHTML='<div class="mu-skel">Loading the matchup…</div>';
+  let s;
+  try{ s=await fetch(API+'/summary?event='+ev+'&_='+Date.now()).then(r=>r.json()); }
+  catch(e){ card.style.display='none'; return; }
+  try{
+    const A=GAME.awayAbbr, H=GAME.homeAbbr;
+    const comps=(((s.header||{}).competitions||[])[0]||{}).competitors||[];
+    // records — from the header, with a scoreboard fallback (both CORS-open)
+    const recByAb={};
+    comps.forEach(c=>{ const ab=c.team&&c.team.abbreviation;
+      const rec=(c.record&&c.record[0]&&c.record[0].summary)||(Array.isArray(c.records)&&c.records[0]&&c.records[0].summary)||null;
+      if(ab&&rec)recByAb[ab]=rec; });
+    let date=(((s.header||{}).competitions||[])[0]||{}).date||null;
+    if((!recByAb[A]||!recByAb[H])&&date){
+      try{ const ymd=date.slice(0,10).replace(/-/g,'');
+        const sb=await fetch(API+'/scoreboard?dates='+ymd+'&_='+Date.now()).then(r=>r.json());
+        (sb.events||[]).forEach(e2=>((e2.competitions||[])[0]||{}).competitors.forEach(c=>{
+          const ab=c.team&&c.team.abbreviation, r=c.records&&c.records[0]&&c.records[0].summary;
+          if(ab&&r&&!recByAb[ab])recByAb[ab]=r; }));
+      }catch(e){}
+    }
+    // season-average leaders
+    const ppg={},rpg={};
+    (s.leaders||[]).forEach(tl=>{ const ab=tl.team&&tl.team.abbreviation;
+      (tl.leaders||[]).forEach(c=>{ const top=c.leaders&&c.leaders[0]; if(!top)return;
+        const who=top.athlete&&top.athlete.displayName, val=top.displayValue;
+        if(c.name==='pointsPerGame')ppg[ab]={who,val};
+        if(c.name==='reboundsPerGame')rpg[ab]={who,val}; }); });
+    // last five
+    const form={};
+    (s.lastFiveGames||[]).forEach(t=>{ const ab=t.team&&t.team.abbreviation;
+      form[ab]=(t.events||[]).map(g=>g.gameResult).filter(Boolean).slice(0,5); });
+    // season series
+    const ss=(s.seasonseries||[])[0]||{};
+    const seriesSummary=ss.summary||null;
+    const meetings=(ss.events||[]).filter(e=>e.status&&e.status.type&&e.status.type.state==='post').map(e=>{
+      const cs=(e.competitors||[]).map(c=>({ab:c.team&&c.team.abbreviation,score:Number(c.score)}));
+      return {date:e.date, cs}; });
+    // win projection
+    const pj={};
+    if(s.predictor){ const hp=s.predictor.homeTeam, ap=s.predictor.awayTeam;
+      comps.forEach(c=>{ const ab=c.team&&c.team.abbreviation;
+        if(c.homeAway==='home'&&hp)pj[ab]=parseFloat(hp.gameProjection);
+        if(c.homeAway==='away'&&ap)pj[ab]=parseFloat(ap.gameProjection); }); }
+
+    const dots=ab=>((form[ab]||[]).map(r=>`<span class="mu-dot ${r==='W'?'mu-w':'mu-l'}">${r}</span>`).join(''))||'<span class="mu-nm">—</span>';
+    const teamCol=(ab,nm,emoji)=>`<div class="mu-team"><div class="mu-emoji">${emoji}</div><div class="mu-ab">${ab}</div><div class="mu-nm">${nm}</div><div class="mu-rec">${recByAb[ab]||'—'}</div></div>`;
+
+    let barHtml='';
+    if(pj[H]!=null&&pj[A]!=null&&isFinite(pj[H])&&isFinite(pj[A])){
+      barHtml=`<div class="mu-lab">Win probability · ESPN</div>
+        <div class="mu-bar"><i style="width:${pj[H]}%"></i></div>
+        <div class="mu-barrow"><span style="color:var(--muted)">${A} ${pj[A].toFixed(0)}%</span><span>${pj[H].toFixed(0)}% ${H}</span></div>`;
+    }
+    let duel='';
+    if(ppg[A]||ppg[H]){
+      const star=(ab,emoji)=>{ const p=ppg[ab],r=rpg[ab]; if(!p)return '<div class="mu-star mu-nm">—</div>';
+        const extra=(r&&r.who===p.who)?` · ${r.val} RPG`:''; return `<div class="mu-star"><div class="mu-swho">${emoji} ${p.who}</div><div class="mu-sline">${p.val} PPG${extra}</div></div>`; };
+      duel=`<div class="mu-div"></div><div class="mu-lab">Top scorers</div><div class="mu-duel">${star(A,GAME.awayEmoji)}<div class="mu-vs">VS</div>${star(H,GAME.homeEmoji)}</div>`;
+    }
+    let h2h='';
+    if(seriesSummary||meetings.length){
+      const lines=meetings.map(m=>{ const s2=m.cs.slice().sort((x,y)=>y.score-x.score); const d=new Date(m.date);
+        const md=d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); return `${md}: ${s2[0].ab} ${s2[0].score}–${s2[1].score}`; });
+      h2h=`<div class="mu-div"></div><div class="mu-h2h"><b>${seriesSummary||'Season series'}</b>${lines.length?`<div class="g">${lines.join('  ·  ')}</div>`:''}</div>`;
+    }
+    let watch=''; { const bits=[];
+      if(seriesSummary) bits.push(seriesSummary.replace(/^Series\s+/i,'Series '));
+      if(meetings.length){ const lm=meetings[meetings.length-1], s2=lm.cs.slice().sort((x,y)=>y.score-x.score); bits.push(`${s2[0].ab} took the last one ${s2[0].score}–${s2[1].score}`); }
+      if(ppg[A]&&ppg[H]) bits.push(`${ppg[A].who.split(' ').slice(-1)} (${ppg[A].val}) vs ${ppg[H].who.split(' ').slice(-1)} (${ppg[H].val}) decides it`);
+      if(bits.length) watch=`<div class="mu-watch">🔥 ${bits.join('. ')}.</div>`;
+    }
+
+    card.innerHTML=`<div class="mu">
+      <div class="mu-h"><b>Tale of the Tape</b><span class="mu-src">Live · ESPN</span></div>
+      <div class="mu-teams">${teamCol(A,GAME.awayNick,GAME.awayEmoji)}<div class="mu-at">@</div>${teamCol(H,GAME.homeNick,GAME.homeEmoji)}</div>
+      <div class="mu-lab">Last 5</div>
+      <div class="mu-teams"><div class="mu-form">${dots(A)}</div><div></div><div class="mu-form">${dots(H)}</div></div>
+      ${barHtml}${duel}${h2h}${watch}
+    </div>`;
+    MATCHUP_DONE=true;
+  }catch(e){ card.style.display='none'; }
+}
 function applySport(){
   const $=id=>document.getElementById(id);
   const set=(id,txt)=>{const e=$(id);if(e)e.textContent=txt;};
@@ -6217,6 +6357,7 @@ function applySport(){
   document.title=`STATS — ${GAME.homeName} v ${GAME.awayName}`;
 }
 try{applySport();}catch(e){console.error('applySport',e);}
+try{mountMatchup();}catch(e){console.error('mountMatchup',e);}
 initColors();
 checkResume();
 try{backendBadge();}catch(e){}
