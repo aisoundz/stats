@@ -1,0 +1,2270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>STATS · Control Room</title>
+<style>
+  :root{
+    --bg:#0a0e17; --bg2:#111726; --card:#161d2e; --card2:#1c2438;
+    --line:#26304a; --line2:#333f5e;
+    --ink:#eef2fb; --muted:#93a0bd; --dim:#5f6d8c;
+    --blue:#2f6bff; --blue2:#4d86ff; --teal:#19c3d6; --teal2:#28e0d0;
+    --red:#ff4d5e; --gold:#ffc54d; --green:#2ee6a6;
+    --r:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding-bottom:60px}
+  h1,h2,h3{margin:0;letter-spacing:-.02em}
+  a{color:var(--teal2)}
+  .wrap{max-width:860px;margin:0 auto;padding:0 14px}
+
+  /* ---- header ---- */
+  header{position:sticky;top:0;z-index:20;background:rgba(10,14,23,.94);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .hrow{display:flex;align-items:center;gap:10px;padding:12px 0}
+  .logo{font-weight:900;font-size:19px;letter-spacing:-.04em}
+  .logo em{font-style:normal;color:var(--red)}
+  .tag{font-size:10px;font-weight:800;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+  .spacer{flex:1}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--dim);flex:none}
+  .dot.on{background:var(--green);box-shadow:0 0 9px var(--green)}
+  .dot.err{background:var(--red)}
+  .who{font-size:11px;color:var(--muted);font-weight:700;max-width:150px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* ---- tabs ---- */
+  nav{display:flex;gap:6px;padding:0 0 10px}
+  nav button{flex:1;background:var(--card);border:1px solid var(--line);color:var(--muted);
+    font:800 12px/1 inherit;letter-spacing:.06em;text-transform:uppercase;
+    padding:11px 6px;border-radius:10px;cursor:pointer}
+  nav button.on{background:var(--blue);border-color:var(--blue2);color:#fff}
+
+  /* ---- blocks ---- */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    padding:14px;margin:0 0 12px}
+  .card.tight{padding:11px}
+  .card h3{font-size:14px;margin-bottom:4px}
+  .sub{color:var(--muted);font-size:12.5px;margin:4px 0 0}
+  .sub.tip{color:var(--dim);font-size:11.5px}
+  label{display:block;font-size:10.5px;font-weight:800;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--dim);margin:12px 0 5px}
+  input,select,textarea{width:100%;background:var(--bg2);border:1px solid var(--line2);
+    color:var(--ink);border-radius:10px;padding:11px 12px;font:600 14px/1.35 inherit}
+  input:focus,select,textarea:focus{outline:2px solid var(--blue);outline-offset:-1px}
+  textarea{resize:vertical;min-height:56px}
+  .row{display:flex;gap:8px;align-items:center}
+  .row>*{min-width:0}
+
+  button.btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;
+    font:900 14.5px/1 inherit;letter-spacing:-.01em;cursor:pointer;
+    background:var(--blue);color:#fff;margin-top:10px}
+  button.btn.red{background:var(--red)}
+  button.btn.teal{background:var(--teal);color:#06222a}
+  button.btn.gold{background:var(--gold);color:#2a1f00}
+  button.btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--muted)}
+  button.btn:disabled{opacity:.34;cursor:not-allowed}
+  button.mini{background:var(--card2);border:1px solid var(--line2);color:var(--muted);
+    border-radius:9px;padding:7px 10px;font:800 11.5px/1 inherit;cursor:pointer;flex:none}
+  button.mini.danger{color:var(--red);border-color:#4a2430}
+
+  .chip{display:inline-block;font:800 10px/1 inherit;letter-spacing:.1em;text-transform:uppercase;
+    padding:6px 9px;border-radius:99px;background:var(--card2);color:var(--dim);border:1px solid var(--line)}
+  .chip.live{background:#3a1220;color:#ff8b97;border-color:#5c1d2f}
+  .chip.done{background:#0e3327;color:var(--green);border-color:#17513c}
+  .chip.draft{background:#1a2340;color:var(--blue2);border-color:#2b3a63}
+
+  .qcard{background:var(--card2);border:1px solid var(--line);border-radius:12px;
+    padding:11px;margin-top:10px}
+  .qhead{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .qhead b{font-size:11px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
+  .opt{display:flex;gap:8px;align-items:center;margin-top:6px}
+  .opt input[type=text]{flex:1;padding:9px 11px;font-size:13.5px}
+  .keybtn{flex:none;width:38px;height:38px;border-radius:9px;border:1px solid var(--line2);
+    background:var(--bg2);color:var(--dim);font:900 15px/1 inherit;cursor:pointer}
+  .keybtn.on{background:var(--green);border-color:var(--green);color:#04241a}
+
+  /* ---- the inline answer key that lives on the RUN tab ----
+     Sized for a thumb, in a dark arena, one-handed, while the game is
+     still going. Nothing here is a 38px icon you have to aim at. */
+  .rk{margin-top:12px}
+  .rkq{border-top:1px solid var(--line);padding-top:11px;margin-top:11px}
+  .rkq:first-child{border-top:0;padding-top:0;margin-top:0}
+  .rkq .qn{font:800 10.5px/1.3 inherit;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--dim);margin-bottom:3px}
+  .rkq .qt{font:800 14px/1.35 inherit;color:var(--ink);margin-bottom:8px}
+  .rko{display:flex;flex-wrap:wrap;gap:7px}
+  .rko button{flex:1 1 44%;min-height:46px;text-align:left;padding:11px 12px;
+    border-radius:11px;border:1px solid var(--line2);background:var(--bg2);
+    color:var(--muted);font:700 13.5px/1.25 inherit;cursor:pointer}
+  .rko button.on{background:var(--green);border-color:var(--green);color:#04241a;font-weight:900}
+  .rko button.on::before{content:"\2713  "}
+  .keycount{font:800 12px/1 inherit;color:var(--dim);margin-top:12px;text-align:center}
+  .keycount.ready{color:var(--green)}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--dim);padding:6px 4px;border-bottom:1px solid var(--line)}
+  td{padding:8px 4px;border-bottom:1px solid var(--line)}
+  td.n{font-weight:900}
+  .big{font-size:34px;font-weight:900;letter-spacing:-.03em;line-height:1}
+  .statrow{display:flex;gap:10px;margin-top:10px}
+  .statrow .s{flex:1;background:var(--card2);border:1px solid var(--line);
+    border-radius:12px;padding:12px;text-align:center}
+  .statrow .s .v{font-size:26px;font-weight:900;letter-spacing:-.03em}
+  .statrow .s .k{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin-top:3px}
+
+  .banner{border-radius:12px;padding:12px 13px;font-size:13px;font-weight:700;margin:0 0 12px}
+  .banner.warn{background:#3a2a0d;color:var(--gold);border:1px solid #5b4415}
+  .banner.bad{background:#3a1220;color:#ff8b97;border:1px solid #5c1d2f}
+  .banner.good{background:#0e3327;color:var(--green);border:1px solid #17513c}
+  .banner.info{background:#141c33;color:var(--blue2);border:1px solid #2b3a63}
+
+  #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(120%);
+    background:var(--card2);border:1px solid var(--line2);border-radius:12px;
+    padding:12px 16px;font-size:13px;font-weight:700;max-width:92vw;text-align:center;
+    transition:transform .25s ease;z-index:60;box-shadow:0 14px 40px rgba(0,0,0,.6)}
+  #toast.show{transform:translateX(-50%) translateY(0)}
+  .hide{display:none !important}
+
+  /* The grid can be twelve questions wide on a laptop the host is also
+     using to watch the game. It scrolls sideways, and the name column
+     stays put — a row of ticks with no name attached is useless. */
+  .gwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -13px;padding:0 13px}
+  table.grid{min-width:100%;font-size:12.5px}
+  table.grid th,table.grid td{white-space:nowrap;padding:7px 8px}
+  table.grid th.p,table.grid td.p{position:sticky;left:0;z-index:2;background:var(--card);
+    box-shadow:1px 0 0 var(--line);max-width:132px;overflow:hidden;text-overflow:ellipsis}
+  table.grid td.p{white-space:nowrap;font-weight:800}
+  table.grid tr:nth-child(even) td{background:rgba(255,255,255,.018)}
+  table.grid tr:nth-child(even) td.p{background:var(--card2)}
+  .mkc{display:inline-block;min-width:15px;font-weight:900}
+  td.hit{color:var(--green)} td.mis{color:#ff8b97} td.non{color:var(--dim)}
+  td.tot{font-weight:900;border-left:1px solid var(--line)}
+  .pk{color:var(--muted);font-weight:700}
+  .keyrow{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .keyrow .kn{flex:none;width:22px;font:900 11px/1 inherit;color:var(--dim)}
+  .keyrow select{margin-top:0;flex:1}
+  .keyrow input{margin-top:0;flex:none;width:96px}
+  .keyq{font-size:12px;color:var(--muted);font-weight:700;margin:12px 0 0}
+
+  .gate{max-width:420px;margin:14vh auto 0;text-align:center}
+  .gate .logo{font-size:34px;display:block;margin-bottom:6px}
+</style>
+</head>
+<body>
+
+<!-- =================== SIGN-IN GATE =================== -->
+<div id="gate" class="wrap gate">
+  <span class="logo">ST<em>A</em>TS</span>
+  <div class="tag">Control room</div>
+  <p class="sub" id="gateMsg" style="margin-top:18px">Checking your sign-in…</p>
+  <button class="btn" id="signinBtn" style="display:none">Sign in with Google</button>
+  <button class="btn ghost" id="signoutBtn" style="display:none">Sign out</button>
+  <p class="sub tip" style="margin-top:20px">This dashboard is locked to one Google account. Nobody else can open it, and the security rules refuse its writes even if they somehow load this page.</p>
+</div>
+
+<!-- =================== THE DASHBOARD =================== -->
+<div id="app" class="hide">
+  <header>
+    <div class="wrap hrow">
+      <div>
+        <div class="logo">ST<em>A</em>TS</div>
+        <div class="tag">Control room</div>
+      </div>
+      <div class="spacer"></div>
+      <span class="dot" id="beDot"></span>
+      <span class="who" id="whoTxt">…</span>
+      <button class="mini" id="outBtn">Sign out</button>
+    </div>
+    <div class="wrap">
+      <nav>
+        <button data-tab="write" class="on">1 · Write</button>
+        <button data-tab="run">2 · Run</button>
+        <button data-tab="grade">3 · Grade</button>
+        <button data-tab="room">4 · Room</button>
+      </nav>
+    </div>
+  </header>
+
+  <div class="wrap">
+
+    <!-- ---------- TAB 1: WRITE ---------- -->
+    <section id="t-write">
+      <div class="card">
+        <h3>Tonight's game</h3>
+        <p class="sub">Everything below is written into this room. Players who opened a different night can't see it.</p>
+        <label for="nightSel">Night</label>
+        <select id="nightSel"></select>
+        <label for="nightId">Night ID (must match the app exactly)</label>
+        <input id="nightId" spellcheck="false" autocapitalize="off">
+        <p class="sub tip">The app sends players to this ID automatically. Only change it if you know you changed it in the app too.</p>
+      </div>
+
+      <div class="card">
+        <h3>Rounds</h3>
+        <p class="sub">Write all of them now — Monday on the couch is a better time than 9:40 on Tuesday. Drafts save to this browser as you type.</p>
+        <label>Round</label>
+        <select id="roundSel"></select>
+        <div class="row" style="margin-top:10px">
+          <div style="flex:1">
+            <label for="worthIn" style="margin-top:0">Points per question</label>
+            <input id="worthIn" type="number" min="1" max="20" value="1">
+          </div>
+          <div style="flex:1">
+            <label style="margin-top:0">Questions</label>
+            <div class="row">
+              <button class="mini" id="addQ">+ Add question</button>
+              <button class="mini" id="bankBtn" onclick="reloadBank()" title="Replace this round with the questions built into the app">↺ Load the app's questions</button>
+              <span class="chip" id="qCountChip">0</span>
+            </div>
+          </div>
+        </div>
+        <div id="qList"></div>
+        <p class="sub tip" style="margin-top:12px">The app's questions for this round are already loaded — you only need to mark the answers. Tap the ✓ next to an option to mark it the right one. The answer never leaves this browser until you press Reveal; it isn't written to the round players can read.</p>
+      </div>
+
+      <div class="card">
+        <h3>Backup</h3>
+        <p class="sub">Drafts live in this browser. If you'll run the night from a different device, back them up — they go to an owner-only corner of the database that no player can read.</p>
+        <button class="btn ghost" id="backupBtn">Back up all rounds to Firebase</button>
+        <button class="btn ghost" id="restoreBtn">Restore from Firebase</button>
+        <p class="sub tip" id="backupNote" style="margin-top:10px"></p>
+      </div>
+    </section>
+
+    <!-- ---------- TAB 2: RUN ---------- -->
+    <section id="t-run" class="hide">
+      <div id="runBanner"></div>
+
+      <!-- ---------- the live scoreboard ----------
+           This is the answer to "the app goes dark for eleven minutes".
+           Between quarters a player's phone had locked picks, a button
+           that did nothing yet, and silence. Now it has the score of the
+           game they are watching and where they stand in the room.
+
+           There is no play-by-play feed behind this and it does not
+           pretend there is. It is you, typing a number you can see on
+           your own television, and every phone in the room labels it
+           "posted by the host" with the minute you last touched it.
+           Slower than a feed, and honest, which is the trade we chose.
+
+           Leave it blank and no card appears on anybody's phone. A
+           scoreboard that says 0-0 at halftime is worse than none. -->
+      <div class="card">
+        <h3>Live score <span class="chip" id="scState">not posted</span></h3>
+        <p class="sub">Type what's on your screen and press Post. Every phone waiting between rounds picks it up within about a minute. One line of text is optional — that's the bit people come back for.</p>
+        <div class="row" style="margin-top:10px;align-items:flex-end">
+          <div style="flex:1"><label for="scAway" id="scAwayLbl">Away</label>
+            <input id="scAway" type="number" inputmode="numeric" min="0" max="300" step="1" placeholder="0"></div>
+          <div style="flex:1"><label for="scHome" id="scHomeLbl">Home</label>
+            <input id="scHome" type="number" inputmode="numeric" min="0" max="300" step="1" placeholder="0"></div>
+        </div>
+        <label for="scPeriod" style="margin-top:10px;display:block">Where the game is</label>
+        <select id="scPeriod"></select>
+        <label for="scNote" style="margin-top:10px;display:block">One line for the room (optional)</label>
+        <input id="scNote" maxlength="90" placeholder="e.g. Fever on an 8-0 run — Clark has 14.">
+        <div class="row" style="margin-top:12px">
+          <button class="btn" id="scPost" style="flex:1">Post the score</button>
+          <button class="btn ghost" id="scClear">Take it down</button>
+        </div>
+        <p class="sub tip" id="scNote2" style="margin-top:10px">Nothing here touches scoring. It is a number on a card — if you never post one, the night runs exactly as it does today.</p>
+      </div>
+
+      <div class="card">
+        <h3>Push a round to every phone</h3>
+        <p class="sub">One round at a time, and you never have to leave this tab. Push the second the quarter ends — players start answering while you check the box score. Mark what actually happened on the round's own card below, then reveal. Every phone scores itself.</p>
+      </div>
+      <div id="runList"></div>
+      <div class="card">
+        <h3 style="color:var(--muted)">If something goes wrong</h3>
+        <p class="sub tip">Nothing here can break a player's game. If you never push a round, or this laptop dies mid-night, every phone quietly falls back to the way it works today: they answer, you read the answers out, they tap them in. Say the word "group chat" and everyone knows what to do.</p>
+      </div>
+    </section>
+
+    <!-- ---------- TAB 3: GRADE ---------- -->
+    <section id="t-grade" class="hide">
+      <div class="card">
+        <h3>Who got what right</h3>
+        <p class="sub">Every phone sends its picks the moment the round ends — before anyone hears an answer. Pick the right answer for each question below and the grid marks itself. Nothing here is guessed from what a player says they scored.</p>
+        <label for="gradeSel">Round</label>
+        <select id="gradeSel"></select>
+        <div class="row" style="margin-top:10px">
+          <button class="mini" id="gradeReload">Reload</button>
+          <span class="chip" id="gradeCount">—</span>
+          <span class="chip" id="gradeSrcChip"></span>
+        </div>
+        <p class="sub tip" id="gradeNote" style="margin-top:10px"></p>
+      </div>
+
+      <div class="card" id="gradeKeyCard">
+        <h3>The answers</h3>
+        <p class="sub" id="gradeKeySub">Set what actually happened. This saves to this browser as you go, so a refresh mid-night loses nothing.</p>
+        <div id="gradeKey"></div>
+        <button class="btn ghost" id="gradeKeyClear">Clear these answers</button>
+      </div>
+
+      <div class="card" id="gradeGridCard">
+        <h3>The grid</h3>
+        <div class="gwrap"><div id="gradeGrid"></div></div>
+        <button class="btn ghost" id="gradeCopy">Copy the results for the group chat</button>
+        <button class="btn ghost" id="gradeCsv">Download as a spreadsheet</button>
+      </div>
+
+      <div class="card">
+        <h3>The whole night</h3>
+        <p class="sub">Adds up every round plus the prediction sheet, in one read. This is the list you read out at the end.</p>
+        <button class="btn gold" id="gradeTotalsBtn">Add up the whole night</button>
+        <div id="gradeTotals" style="margin-top:12px"></div>
+      </div>
+
+      <div class="card">
+        <h3>The Stat Drop</h3>
+        <p class="sub">Everything the post-game cards need, in one file: what the room guessed on every question, the real answer, the hit rate, and tonight's top five. Same single read as the roll-up above. The one thing it can't know is the box score — you fill that part in.</p>
+        <button class="btn gold" id="dropBtn">Export the Stat Drop</button>
+        <div id="dropOut" style="margin-top:12px"></div>
+      </div>
+    </section>
+
+    <!-- ---------- TAB 4: ROOM ---------- -->
+    <section id="t-room" class="hide">
+      <div class="card">
+        <h3>Who's actually playing</h3>
+        <div class="statrow">
+          <div class="s"><div class="v" id="roomCount">—</div><div class="k">In the room</div></div>
+          <div class="s"><div class="v" id="roomSubs">—</div><div class="k">Answered this round</div></div>
+        </div>
+        <button class="btn ghost" id="refreshBtn">Refresh</button>
+        <p class="sub tip" id="roomNote" style="margin-top:8px"></p>
+      </div>
+      <div class="card">
+        <h3>Leaderboard</h3>
+        <table><thead><tr><th>#</th><th>Player</th><th>Pts</th><th>⚡</th><th></th></tr></thead>
+        <tbody id="lbBody"><tr><td colspan="5" style="color:var(--dim)">Nothing yet.</td></tr></tbody></table>
+        <p class="sub tip" style="margin-top:10px">Remove is for test rows and spam. It deletes that player's score and can't be undone.</p>
+      </div>
+      <div class="card">
+        <h3>Trash talk</h3>
+        <p class="sub">Every line players posted in tonight's room, newest first. There is no free text box in the app &mdash; each line was written by the app from that player's own card &mdash; so there should be nothing here to take down. This is the panel that exists so that if there ever is, you can.</p>
+        <button class="btn ghost" id="talkBtn">Load the room</button>
+        <table style="margin-top:10px"><thead><tr><th>When</th><th>Player</th><th>Line</th><th></th></tr></thead>
+        <tbody id="talkBody"><tr><td colspan="4" style="color:var(--dim)">Not loaded.</td></tr></tbody></table>
+        <p class="sub tip" id="talkNote" style="margin-top:8px"></p>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* =====================================================================
+   STATS — Control Room
+   ---------------------------------------------------------------------
+   One page, one operator, one night. It does four things:
+
+     1. lets you write questions and mark the answers, days early
+     2. pushes a round to every phone at once
+     3. holds the answer key back until you reveal it
+     4. reveals, at which point every phone scores itself
+
+   The design constraint that governs all of it: this page is optional.
+   If it never loads, if you never open it, if the wifi at the bar is
+   hostile — the game on everyone's phone is unaffected. They answer,
+   you read the answers out, they tap them in, exactly as before. The
+   dashboard adds convenience, never dependency.
+
+   The key never touches a document a player can read until you press
+   Reveal. Before that it lives here in your browser, and (if you back
+   it up) in an owner-only subcollection the rules refuse to serve to
+   anyone but you.
+   ===================================================================== */
+
+const OWNER = 'aisoundz9@gmail.com';
+
+window.STATS_FIREBASE = {
+  apiKey:            "AIzaSyB1g4u3L85sks1Phjz_Tim98urv1-IZBps",
+  authDomain:        "stats-gametime.firebaseapp.com",
+  projectId:         "stats-gametime",
+  storageBucket:     "stats-gametime.firebasestorage.app",
+  messagingSenderId: "349900988033",
+  appId:             "1:349900988033:web:7b2f8a5e6af1b2a7b27780"
+};
+
+/* The nights the app knows about, and the round labels each one uses.
+   These mirror the app's sport configs — the IDs match GAME.nightId and
+   the worth arrays match SPORT.worth, so leaving a round on its default
+   is the same game the players already read about in the rules. If you
+   change a night ID here, change it there too: a mismatch means an empty
+   room, not an error, which is the worst kind of mistake to make one
+   minute before tip-off. */
+const NIGHTS = [
+  // First in this list is the night the Control Room opens on, so the live
+  // fixture goes at the top. Past nights stay listed — Game Night #1 is not
+  // settled yet, and the picker is the only way back to its grading screen.
+  // away/home are the two short names on the live scoreboard in tab 2, in
+  // that order — the app draws the road team on the left, so the order here
+  // is not decorative. Everything else on this list is the round structure.
+  { id:'gn2-2026-08-02-min-ind', label:'Game Night #2 — Fever @ Lynx (Aug 2)',
+    away:'IND', home:'MIN',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[1,2,3,4] },
+  { id:'gn1-2026-07-28-ind-sea', label:'Game Night #1 — Fever @ Storm (Jul 28) · played',
+    away:'IND', home:'SEA',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[1,2,3,4] },
+  { id:'sn1-2026-08-04-mia-ame', label:'Soccer Night — Miami v América (Aug 4)',
+    away:'AME', home:'MIA',
+    tags:['1H','2H'],
+    names:['First half','Second half'],
+    worth:[3,5] }
+];
+
+// The questions the app already ships with, mirrored here so the Write tab
+// is never an empty box on game night. Text and options only: the answers are
+// deliberately left unmarked, because the built-in answers in the app are
+// simulated results for a fake game, not claims about the real one. The host
+// marks the real answer at the break, then pushes.
+const BANK = {
+  'gn2-2026-08-02-min-ind': [
+    [
+      { t: 'The first bucket of the night — how did it go in?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throw'] },
+      { t: 'How many timeouts were called in Q1?', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In Q1, which was more — made field goals or made free throws?', o: ['Made field goals', 'Made free throws', 'Equal'] },
+      { t: 'Q1 ended on…', o: ['A made basket', 'A missed shot', 'A turnover', 'Free throws'] }
+    ],
+    [
+      { t: 'Who led at halftime?', o: ['Lynx', 'Fever', 'Tied'] },
+      { t: 'How many and-ones in Q2? (made the shot AND got the foul)', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In Q2, which team coughed it up more?', o: ['Lynx', 'Fever', 'About even'] },
+      { t: 'The last shot before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'] }
+    ],
+    [
+      { t: 'Which team scored FIRST in Q3?', o: ['Lynx', 'Fever'] },
+      { t: 'How many times did the refs go to the monitor in Q3?', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In Q3, which was more — threes made or turnovers? (both teams)', o: ['Threes made', 'Turnovers', 'Equal'] },
+      { t: 'Was there a lead change in Q3?', o: ['Yes', 'No'] }
+    ],
+    [
+      { t: 'The final basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'] },
+      { t: '🎯 How many 24-second violations in the WHOLE game?', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In the last two minutes, which happened more?', o: ['Free throws attempted', 'Field goals attempted', 'Equal'] },
+      { t: 'Did any player foul out?', o: ['Yes', 'No'] }
+    ]
+  ],
+  'gn1-2026-07-28-ind-sea': [
+    [
+      { t: 'The first bucket of the night — how did it go in?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throw'] },
+      { t: 'The very first whistle of the game was for…', o: ['A shooting foul', 'A non-shooting foul', 'Out of bounds / travel', 'A timeout'] },
+      { t: '🎯 The first free throw of the game…', o: ['Went in', 'Missed', 'Nobody shot one in Q1'] },
+      { t: 'Q1 ended on…', o: ['A made basket', 'A missed shot', 'A turnover', 'Free throws'] }
+    ],
+    [
+      { t: 'Free throws MISSED by both teams in Q2 — how many?', o: ['0', '1', '2', '3 or more'] },
+      { t: 'Which of these happened FIRST in Q2?', o: ['A made three', 'A turnover', 'An offensive rebound', 'A timeout'] },
+      { t: '🎲 Halftime combined score — odd or even?', o: ['Odd', 'Even'] },
+      { t: 'The last shot before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'] }
+    ],
+    [
+      { t: 'Biggest lead by EITHER team at any point in Q3?', o: ['0–4 pts', '5–9 pts', '10–14 pts', '15+ pts'] },
+      { t: 'In Q3, which happened MORE?', o: ['Made threes', 'Made free throws', 'Dead even'] },
+      { t: 'Did anyone score in the final 10 seconds of Q3?', o: ['Yes', 'No'] },
+      { t: 'Did the Storm score more in Q3 than they did in Q1?', o: ['Yes', 'No', 'Exactly the same'] }
+    ],
+    [
+      { t: 'The final basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'] },
+      { t: 'Who scored the LAST points of the game?', o: ['Clark', 'Mitchell', 'Malonga', 'Magbegor', 'Somebody else'] },
+      { t: 'Did any player foul out?', o: ['Yes', 'No'] },
+      { t: 'In the last two minutes, which happened more?', o: ['Free throws attempted', 'Field goals attempted', 'Equal'] }
+    ]
+  ],
+  'sn1-2026-08-04-mia-ame': [
+    [
+      { t: 'Who took the first shot on target?', o: ['Inter Miami', 'Club América', 'Nobody did'] },
+      { t: 'How many corners in the first half (both teams)?', o: ['0–2', '3–4', '5–6', '7+'] },
+      { t: 'How many minutes of added time at the end of the half?', o: ['1', '2', '3', '4+'] }
+    ],
+    [
+      { t: 'Who won the second half on goals?', o: ['Inter Miami', 'Club América', 'Drawn'] },
+      { t: 'How many yellow cards in the whole match?', o: ['0–1', '2–3', '4–5', '6+'] },
+      { t: 'How many minutes of added time at the end of the match?', o: ['1–2', '3–4', '5–6', '7+'] }
+    ]
+  ]
+};
+const LS = 'stats_admin_v1';
+
+let FB = null;          // {app, auth, db, F, authMod}
+let user = null;
+let night = NIGHTS[0].id;
+let draft = {};         // nightId -> { rounds: [ {worth, qs:[{t,o:[],k:idx}]} ] }
+let liveDocs = {};      // roundId -> the pushed round document, as we last saw it
+let subCounts = {};     // roundId -> how many phones have answered
+let closingRound = null;// index of the round the one-press close is mid-way through
+let roundIdx = 0;
+let subsUnsub = null;
+
+/* ---------------- tiny helpers ---------------- */
+const $ = id => document.getElementById(id);
+let toastT = null;
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'), 2800);
+}
+function nightCfg(id){ return NIGHTS.find(n=>n.id===id) || NIGHTS[0]; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function saveDraft(){ try{ localStorage.setItem(LS, JSON.stringify(draft)); }catch(e){} }
+function loadDraft(){
+  try{ draft = JSON.parse(localStorage.getItem(LS)) || {}; }catch(e){ draft = {}; }
+}
+/* The fix for "Q3 in the control room is wrong — there is nothing for me to
+   add." The app has always shipped with a full set of questions for every
+   round; the Write tab just didn't know about them, so the host opened it
+   mid-game and found an empty box with a game clock running.
+
+   Seeding rule, and it only has one: fill a round that is EMPTY. Never
+   touch a round that already has a question in it. The host's own typing
+   outranks the bank every time, and a "helpful" overwrite at the Q3 break
+   would destroy work that cannot be retyped in a two-minute timeout.
+
+   The answers are NOT seeded, on purpose. The `a` values inside the app are
+   simulated results for a practice game — they describe a fake game, not
+   the one on TV. Marking them here would push a fabricated answer key to
+   every phone in the room. So the questions arrive ready and the answer
+   arrives from the host, which is exactly the split that makes the number
+   on the leaderboard mean something. */
+function bankRound(id, i){
+  const rs = BANK[id];
+  if(!rs || !rs[i]) return [];
+  return rs[i].map(q => ({ t:String(q.t||''), o:(q.o||[]).map(String), k:null }));
+}
+function seedRound(id, i, force){
+  const nd = draft[id];
+  if(!nd || !nd.rounds[i]) return 0;
+  if(!nd.fed) nd.fed = {};
+  // Never clobber real work, and never re-fill a round the host deliberately
+  // emptied. `fed` remembers that this round has already been offered the
+  // bank once, so "delete all four and write my own" stays deleted.
+  if(!force && (nd.rounds[i].qs.length || nd.fed[i])) return 0;
+  const seeded = bankRound(id, i);
+  if(!seeded.length) return 0;
+  nd.rounds[i].qs = seeded;
+  nd.fed[i] = 1;
+  return seeded.length;
+}
+function nightDraft(id){
+  const cfg = nightCfg(id);
+  if(!draft[id]) draft[id] = { rounds: cfg.tags.map((t,i)=>({ worth: cfg.worth[i]||1, qs: [] })) };
+  // a night whose round count changed under us should not throw
+  while(draft[id].rounds.length < cfg.tags.length) draft[id].rounds.push({worth:1,qs:[]});
+  // Seed on read, not only at creation: the draft already saved in this
+  // browser has four empty rounds left over from Game Night #1, and a
+  // create-time-only seed would leave that host exactly as stuck as before.
+  // The `fed` flag above makes it a one-time offer per round even so.
+  let filled = 0;
+  for(let i=0;i<draft[id].rounds.length;i++) filled += seedRound(id, i, false) ? 1 : 0;
+  if(filled) { try{ localStorage.setItem(LS, JSON.stringify(draft)); }catch(e){} }
+  return draft[id];
+}
+// Explicit reload, for the host who cleared a round and wants it back. This
+// one IS allowed to overwrite, because the host asked for it by name.
+function reloadBank(){
+  const n = seedRound(night, roundIdx, true);
+  if(!n){ toast('No stored questions for this round.'); return; }
+  saveDraft(); renderWrite();
+  toast('Loaded ' + n + ' question' + (n>1?'s':'') + ' — mark the real answers, then push.');
+}
+const roundDocId = i => 'r' + i;
+
+/* ---------------- sign-in ---------------- */
+async function boot(){
+  loadDraft();
+  const SDK = 'https://www.gstatic.com/firebasejs/10.12.2';
+  try{
+    const appMod  = await import(SDK + '/firebase-app.js');
+    const authMod = await import(SDK + '/firebase-auth.js');
+    const fsMod   = await import(SDK + '/firebase-firestore.js');
+    // ---- WHY THIS APP HAS A NAME ------------------------------------
+    // Firebase Auth persists the signed-in user per (apiKey, appName) in
+    // IndexedDB, and it syncs that user across every tab on the origin.
+    // The player app and this dashboard live on the same domain, so while
+    // both used the default app name they shared ONE session slot and
+    // fought over it: the game called signInAnonymously() on load and
+    // silently signed the owner out of here, and signing in here silently
+    // replaced the player's anonymous uid in every open game tab. That
+    // second direction is what broke Game Night #1 — the game kept writing
+    // to its old uid while the server saw the new one, so every rule that
+    // says `request.auth.uid == uid` refused, and signups, picks and
+    // scores all came back permission-denied.
+    //
+    // Naming this app gives the dashboard its own storage slot. The game
+    // keeps the default name, so existing players keep the anonymous uid
+    // their data is already filed under. Neither side can touch the other.
+    const app  = appMod.initializeApp(window.STATS_FIREBASE, 'stats-admin');
+    const auth = authMod.getAuth(app);
+    const db   = fsMod.getFirestore(app);
+    FB = { app, auth, db, F: fsMod, A: authMod };
+
+    authMod.onAuthStateChanged(auth, u => onAuth(u));
+  }catch(e){
+    $('gateMsg').innerHTML = 'Couldn\'t load Firebase.<br><span style="color:var(--dim);font-size:12px">' +
+      esc((e&&e.message)||e) + '</span><br><br>Check your connection and reload. ' +
+      'Nothing on the players\' side depends on this page loading.';
+  }
+}
+
+function onAuth(u){
+  // An anonymous session is not a wrong account, it is no account. The
+  // player app signs everyone in anonymously on this same domain, so any
+  // phone that has played the game arrives here already "signed in" with
+  // no email at all. Showing that person a refusal wall is a lie about
+  // what went wrong — they haven't done anything, they just haven't
+  // signed in yet. Treat it as signed out and hand them the button.
+  if(u && (u.isAnonymous || !u.email)) u = null;
+  if(!u){
+    user = null;
+    $('gateMsg').textContent = 'Sign in to open the control room.';
+    $('signinBtn').style.display = 'block';
+    $('signoutBtn').style.display = 'none';
+    $('gate').classList.remove('hide');
+    $('app').classList.add('hide');
+    return;
+  }
+  if((u.email||'').toLowerCase() !== OWNER){
+    user = null;
+    $('gateMsg').innerHTML = 'Signed in as <b>' + esc(u.email||'unknown') + '</b>, which is not the owner account.' +
+      '<br><br>This dashboard only opens for <b>' + esc(OWNER) + '</b> — and the database refuses its writes ' +
+      'from any other account regardless, so there is nothing to work around here.';
+    $('signinBtn').style.display = 'none';
+    $('signoutBtn').style.display = 'block';
+    $('gate').classList.remove('hide');
+    $('app').classList.add('hide');
+    return;
+  }
+  user = u;
+  $('gate').classList.add('hide');
+  $('app').classList.remove('hide');
+  $('whoTxt').textContent = u.email;
+  $('beDot').className = 'dot on';
+  initUI();
+}
+
+$('signinBtn').onclick = async () => {
+  try{
+    const p = new FB.A.GoogleAuthProvider();
+    p.setCustomParameters({ prompt:'select_account' });
+    await FB.A.signInWithPopup(FB.auth, p);
+  }catch(e){ toast('Sign-in failed: ' + ((e&&e.code)||e)); }
+};
+const doOut = async () => { try{ await FB.A.signOut(FB.auth); }catch(e){} };
+$('signoutBtn').onclick = doOut;
+$('outBtn').onclick = doOut;
+
+/* ---------------- UI wiring ---------------- */
+let uiReady = false;
+function initUI(){
+  if(uiReady){ watchRounds(); return; }
+  uiReady = true;
+
+  const ns = $('nightSel');
+  ns.innerHTML = NIGHTS.map(n=>`<option value="${esc(n.id)}">${esc(n.label)}</option>`).join('');
+  ns.onchange = () => { night = ns.value; $('nightId').value = night; onNightChange(); };
+  $('nightId').value = night;
+  $('nightId').onchange = () => { night = $('nightId').value.trim() || night; onNightChange(); };
+
+  document.querySelectorAll('nav button').forEach(b=>{
+    b.onclick = () => {
+      document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on', x===b));
+      ['write','run','grade','room'].forEach(t=>$('t-'+t).classList.toggle('hide', t!==b.dataset.tab));
+      if(b.dataset.tab==='run'){ renderRun(); loadScore(); }
+      if(b.dataset.tab==='room') refreshRoom();
+      if(b.dataset.tab==='grade'){ fillGradeSel(); watchGradeSubs(); renderGrade(); }
+    };
+  });
+
+  $('scPost').onclick  = postScore;
+  $('scClear').onclick = clearScore;
+  fillScoreUI();
+
+  $('roundSel').onchange = () => { roundIdx = +$('roundSel').value; renderWrite(); };
+  $('worthIn').onchange = () => {
+    const v = Math.max(1, Math.min(20, +$('worthIn').value || 1));
+    $('worthIn').value = v;
+    nightDraft(night).rounds[roundIdx].worth = v; saveDraft();
+  };
+  $('addQ').onclick = () => {
+    const r = nightDraft(night).rounds[roundIdx];
+    if(r.qs.length >= 12){ toast('Twelve questions is the cap — the rules refuse more.'); return; }
+    r.qs.push({ t:'', o:['',''], k:null });
+    saveDraft(); renderWrite();
+  };
+  $('backupBtn').onclick  = backupToCloud;
+  $('restoreBtn').onclick = restoreFromCloud;
+  $('refreshBtn').onclick = refreshRoom;
+  $('talkBtn').onclick    = refreshTalk;
+
+  loadKeys();
+  $('gradeSel').onchange   = () => { gradeRid = $('gradeSel').value; watchGradeSubs(); renderGrade(); };
+  $('gradeReload').onclick = () => { watchGradeSubs(); toast('Re-reading the answers…'); };
+  $('gradeCopy').onclick   = () => {
+    const t = gradeText();
+    if(!t){ toast('Nothing to copy yet.'); return; }
+    // Clipboard access can be refused (an insecure origin, a locked-down
+    // browser). Falling back to a prompt is ugly and always works.
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(()=>toast('Copied — paste it in the chat.'),
+                                           ()=>window.prompt('Copy this:', t));
+    }else window.prompt('Copy this:', t);
+  };
+  $('gradeCsv').onclick      = gradeCsv;
+  $('gradeTotalsBtn').onclick= gradeTotals;
+  $('dropBtn').onclick       = exportDrop;
+  $('gradeKeyClear').onclick = () => {
+    if(!confirm('Clear the answers you set for this round?\n\nThe players\' picks are untouched — only your marking is cleared.')) return;
+    hostKeys[night + '|' + gradeRid] = { key:[], nums:[] };
+    saveKeys(); renderGrade(); toast('Answers cleared.');
+  };
+
+  onNightChange();
+}
+
+function onNightChange(){
+  const cfg = nightCfg(night);
+  nightDraft(night);
+  roundIdx = 0;
+  $('roundSel').innerHTML = cfg.tags.map((t,i)=>
+    `<option value="${i}">${esc(cfg.tags[i])} — ${esc(cfg.names[i])}</option>`).join('');
+  liveDocs = {}; subCounts = {};
+  // Round IDs repeat across nights, so the sub-watcher has to forget which
+  // one it was on or it will happily keep counting last night's r0.
+  if(subsUnsub){ try{subsUnsub();}catch(e){} subsUnsub=null; }
+  subsWatching = null;
+  $('roomSubs').textContent = '—';
+  // Same trap on the grading side: r0 means a different room now.
+  if(gradeUnsub){ try{gradeUnsub();}catch(e){} gradeUnsub=null; }
+  gradeSubs = []; gradeRid = cfg.tags.length ? 'r0' : 'rP';
+  fillGradeSel();
+  $('gradeTotals').innerHTML = '';
+  $('dropOut').innerHTML = '';
+  renderWrite(); renderRun(); renderGrade();
+  // A score belongs to a night. Switching the picker must not leave last
+  // night's numbers sitting in the boxes ready to be posted to this one.
+  $('scAway').value=''; $('scHome').value=''; $('scNote').value='';
+  loadScore();
+  watchRounds();
+  if(!$('t-grade').classList.contains('hide')) watchGradeSubs();
+}
+
+/* ---------------- TAB 1: writing ---------------- */
+function renderWrite(){
+  const cfg = nightCfg(night);
+  const r = nightDraft(night).rounds[roundIdx];
+  $('roundSel').value = roundIdx;
+  $('worthIn').value = r.worth;
+  $('qCountChip').textContent = r.qs.length + (r.qs.length===1?' question':' questions');
+
+  const list = $('qList'); list.innerHTML = '';
+  r.qs.forEach((q,qi)=>{
+    const d = document.createElement('div'); d.className='qcard';
+    d.innerHTML =
+      `<div class="qhead"><b>${esc(cfg.tags[roundIdx])} · Q${qi+1}</b><div class="spacer" style="flex:1"></div>
+        <button class="mini" data-up="${qi}">↑</button>
+        <button class="mini danger" data-del="${qi}">Remove</button></div>
+       <textarea data-t="${qi}" placeholder="Who led the quarter in rebounds?">${esc(q.t)}</textarea>
+       <div data-opts="${qi}"></div>
+       <button class="mini" data-addo="${qi}" style="margin-top:8px">+ Add option</button>`;
+    const ob = d.querySelector('[data-opts]');
+    q.o.forEach((o,oi)=>{
+      const row = document.createElement('div'); row.className='opt';
+      row.innerHTML =
+        `<button class="keybtn${q.k===oi?' on':''}" data-key="${qi}:${oi}" title="Mark as the correct answer">✓</button>
+         <input type="text" data-o="${qi}:${oi}" value="${esc(o)}" placeholder="Option ${oi+1}">
+         <button class="mini danger" data-delo="${qi}:${oi}">✕</button>`;
+      ob.appendChild(row);
+    });
+    list.appendChild(d);
+  });
+
+  // one delegated handler beats forty closures
+  list.oninput = e => {
+    const t = e.target;
+    if(t.dataset.t !== undefined){ r.qs[+t.dataset.t].t = t.value; saveDraft(); return; }
+    if(t.dataset.o){ const [a,b]=t.dataset.o.split(':').map(Number); r.qs[a].o[b]=t.value; saveDraft(); }
+  };
+  list.onclick = e => {
+    const t = e.target.closest('button'); if(!t) return;
+    if(t.dataset.key){ const [a,b]=t.dataset.key.split(':').map(Number);
+      r.qs[a].k = (r.qs[a].k===b) ? null : b; saveDraft(); renderWrite(); return; }
+    if(t.dataset.del !== undefined){ r.qs.splice(+t.dataset.del,1); saveDraft(); renderWrite(); return; }
+    if(t.dataset.up !== undefined){ const i=+t.dataset.up; if(i>0){
+      const x=r.qs.splice(i,1)[0]; r.qs.splice(i-1,0,x); saveDraft(); renderWrite(); } return; }
+    if(t.dataset.addo !== undefined){ const i=+t.dataset.addo;
+      if(r.qs[i].o.length<6) r.qs[i].o.push(''); saveDraft(); renderWrite(); return; }
+    if(t.dataset.delo){ const [a,b]=t.dataset.delo.split(':').map(Number);
+      if(r.qs[a].o.length<=2){ toast('A question needs at least two options.'); return; }
+      r.qs[a].o.splice(b,1);
+      if(r.qs[a].k===b) r.qs[a].k=null; else if(r.qs[a].k>b) r.qs[a].k--;
+      saveDraft(); renderWrite(); }
+  };
+}
+
+/* A round is only pushable if every question has text, at least two real
+   options, and a marked answer. Saying so up front beats a half-written
+   question landing on two hundred phones. */
+/* Two different questions, and Game Night #1 proved the hard way that they
+   are not the same question.
+
+   A round is PUSHABLE the moment its questions are readable: text, and two
+   real options to choose between. It does not need an answer, because at the
+   moment you push a quarter, the quarter has not been played yet. Nobody in
+   the building knows the answer. That is the entire point of pushing.
+
+   The old code ran one combined check and demanded a marked answer before
+   the push button would even enable. So on the night, the host opened the
+   Run tab, found every round greyed out and labelled "not ready", and had
+   nowhere on that screen to do anything about it: "Nothing for me to add in
+   the run part of the control room. It's off." He was right. The button was
+   waiting on information the game had not produced yet.
+
+   A round is REVEALABLE only when the answers are in. That is the check that
+   actually protects players, and it is exactly as strict as it always was —
+   it just fires at the right moment now. */
+function pushIssues(i){
+  const r = nightDraft(night).rounds[i], out = [];
+  if(!r.qs.length) out.push('no questions yet');
+  r.qs.forEach((q,qi)=>{
+    const opts = q.o.map(o=>String(o||'').trim()).filter(Boolean);
+    if(!String(q.t||'').trim()) out.push(`Q${qi+1} has no question text`);
+    if(opts.length < 2)         out.push(`Q${qi+1} needs at least two options`);
+    if(new Set(opts).size !== opts.length) out.push(`Q${qi+1} has duplicate options`);
+  });
+  return out;
+}
+function keyIssues(i){
+  const r = nightDraft(night).rounds[i], out = [];
+  r.qs.forEach((q,qi)=>{
+    if(q.k===null || q.k===undefined || !String(q.o[q.k]||'').trim())
+      out.push(`Q${qi+1} has no answer marked`);
+  });
+  return out;
+}
+// How many answers are in, out of how many. Drives the counter under the
+// reveal button so the host can see the finish line without counting ticks.
+function keyProgress(i){
+  const r = nightDraft(night).rounds[i];
+  const done = r.qs.filter(q=>q.k!==null && q.k!==undefined && String(q.o[q.k]||'').trim()).length;
+  return { done, total: r.qs.length };
+}
+/* Everything that grades or exports still wants "is this whole round sound",
+   so that question keeps its old name and its old answer. */
+function roundIssues(i){ return pushIssues(i).concat(keyIssues(i)); }
+function cleanRound(i){
+  const r = nightDraft(night).rounds[i];
+  const qs = r.qs.map(q=>{
+    // Resolve the marked answer to its TEXT before the blanks are stripped.
+    // Indexes do not survive the filter: an empty option sitting above the
+    // marked one shifts every index below it, and the round would ship a
+    // key that is off by one with nothing on screen to show it. The phone
+    // compares answer text to pick text anyway, so text is the honest unit.
+    const ans = String(q.o[q.k] == null ? '' : q.o[q.k]).trim();
+    return { t:String(q.t).trim(), o:q.o.map(o=>String(o).trim()).filter(Boolean), k:ans };
+  });
+  return {
+    worth: r.worth,
+    questions: qs.map(q=>({ t:q.t, o:q.o })),
+    key: qs.map(q=>q.k)
+  };
+}
+
+/* ---------------- TAB 2: running the night ---------------- */
+let roundsUnsub = null;
+function watchRounds(){
+  if(!FB || !user) return;
+  // Switching nights, or a second auth callback, must not stack listeners.
+  // Each stacked one is a second copy of every round read, all night.
+  if(roundsUnsub){ try{ roundsUnsub(); }catch(e){} roundsUnsub = null; }
+  const { F, db } = FB;
+  try{
+    roundsUnsub = F.onSnapshot(F.collection(db,'nights',night,'rounds'), snap=>{
+      liveDocs = {};
+      snap.forEach(d=>{ liveDocs[d.id] = Object.assign({id:d.id}, d.data()); });
+      // A reload mid-night lands here with a round already live. Start
+      // counting its submissions without waiting for a push that already
+      // happened.
+      const open = Object.values(liveDocs).find(d=>d.state==='live');
+      if(open && subsWatching !== roundDocId(open.idx)) watchSubs(open.idx);
+      renderRun();
+    }, ()=>{});
+  }catch(e){}
+}
+
+/* =====================================================================
+   TAB 2: RUN — the only screen that matters once the ball is up
+   ---------------------------------------------------------------------
+   Rebuilt after Game Night #1, where the host's own notes were, in order:
+   "Q3 in the control room is wrong. There is nothing for me to add",
+   "Nothing for me to add in the run part of the control room. It's off",
+   and "when I go to the control room theres nothing for me to put in.
+   Its a bad way to navigate."
+
+   All three are the same bug wearing different hats. Running a quarter took
+   three tabs: push it from tab 2, walk back to tab 1 to tick the answers
+   into a 38-pixel checkbox next to an editable text field, then return to
+   tab 2 to reveal. On a phone, in the dark, with the game still going, in
+   the eleven minutes between quarters. And until those ticks existed the
+   push button on tab 2 sat greyed out with no hint that tab 1 was the cure.
+
+   So: the answers now live on this screen, on the round they belong to, at
+   the size of a thumb, and they appear the moment the round goes live —
+   which is also the moment the host starts learning what the answers are.
+   Tab 1 is where you WRITE the night. Tab 2 is where you RUN it. Nobody
+   should have to visit the first one after tip-off.
+   ================================================================== */
+
+/* The single next thing to do, in one sentence, at the top of the screen.
+   During a live game the host is not reading a dashboard, they are looking
+   for the one button. */
+function runNextUp(){
+  const cfg = nightCfg(night);
+  const live = Object.values(liveDocs).find(d=>d.state==='live');
+  if(live){
+    const pr = keyProgress(live.idx);
+    const tag = cfg.tags[live.idx] || 'The round';
+    // The ordering rule rides along with every live banner, because it is the
+    // one mistake on this screen that costs a whole round of answers.
+    const rule = ' If you close it by hand instead, reveal before you push the next one — phones follow the newest round, so pushing over a live one loses its answers.';
+    const closeLbl = live.idx >= cfg.tags.length - 1 ? 'End the game' : 'End of ' + tag;
+    return pr.done >= pr.total && pr.total
+      ? { cls:'good', txt:`${tag} is live and all ${pr.total} answers are in. One press on "${closeLbl}" below closes it out.` + rule }
+      : { cls:'warn', txt:`${tag} is live on every phone. Mark the answers below as the quarter plays — ${pr.done} of ${pr.total} in.` + rule };
+  }
+  const next = cfg.tags.findIndex((t,i)=>{
+    const d = liveDocs[roundDocId(i)];
+    return !d || d.state === 'draft';
+  });
+  if(next < 0) return { cls:'good', txt:'Every round is scored. Tab 3 adds up the night.' };
+  const iss = pushIssues(next);
+  return iss.length
+    ? { cls:'bad',  txt:`${cfg.tags[next]} isn't written yet — ${iss[0]}. Fix it on tab 1.` }
+    : { cls:'info',  txt:`Nothing is live. Push ${cfg.tags[next]} when the quarter ends on TV.` };
+}
+
+/* Repaint just the reveal button and its counter for one round, without
+   rebuilding the list. Tapping an answer must not scroll the host back to
+   the top of the page mid-quarter. */
+function syncRevealState(i){
+  const card = document.querySelector(`[data-roundcard="${i}"]`); if(!card) return;
+  const pr = keyProgress(i), ready = pr.total > 0 && pr.done >= pr.total;
+  const busy = closingRound === i;
+  const btn = card.querySelector('[data-revealbtn]');
+  const btn2 = card.querySelector('[data-revealbtn2]');
+  const cnt = card.querySelector('.keycount');
+  if(btn)  btn.disabled  = !ready || busy;
+  if(btn2) btn2.disabled = !ready || busy;
+  if(cnt){
+    cnt.className = 'keycount' + (ready ? ' ready' : '');
+    cnt.textContent = ready
+      ? `All ${pr.total} answers in.`
+      : `${pr.done} of ${pr.total} answers marked — the button below turns on at ${pr.total}.`;
+  }
+  const b = $('runBanner'), n = runNextUp();
+  if(b) b.innerHTML = n.txt ? `<div class="banner ${n.cls}">${esc(n.txt)}</div>` : '';
+}
+
+/* The answer key for one round, rendered as tap targets rather than ticks.
+   Writes straight into the same draft field tab 1 edits, so the two screens
+   can never disagree and the grade tab keeps picking it up for free. */
+function keyBlock(i){
+  const r = nightDraft(night).rounds[i];
+  if(!r.qs.length) return '<p class="sub tip">No questions in this round yet.</p>';
+  return '<div class="rk">' + r.qs.map((q,qi)=>
+    `<div class="rkq">
+       <div class="qn">Q${qi+1}</div>
+       <div class="qt">${esc(q.t || '(no question text)')}</div>
+       <div class="rko">${
+         q.o.map((o,oi)=> String(o||'').trim()
+           ? `<button data-rkey="${i}:${qi}:${oi}" class="${q.k===oi?'on':''}">${esc(o)}</button>`
+           : '').join('')
+       }</div>
+     </div>`).join('') + '</div>';
+}
+
+function renderRun(){
+  const cfg = nightCfg(night);
+  const wrap = $('runList'); if(!wrap) return;
+  wrap.innerHTML = '';
+
+  const openLive = Object.values(liveDocs).find(d=>d.state==='live');
+  const n = runNextUp();
+  $('runBanner').innerHTML = n.txt ? `<div class="banner ${n.cls}">${esc(n.txt)}</div>` : '';
+
+  cfg.tags.forEach((tag,i)=>{
+    const doc = liveDocs[roundDocId(i)] || null;
+    const state = doc ? doc.state : 'draft';
+    const pIssues = pushIssues(i);
+    const pr = keyProgress(i);
+    const keyReady = pr.total > 0 && pr.done >= pr.total;
+    const subs = subCounts[roundDocId(i)];
+    const c = document.createElement('div'); c.className='card';
+    c.setAttribute('data-roundcard', i);
+    c.innerHTML =
+      `<div class="row"><h3 style="flex:1">${esc(tag)} — ${esc(cfg.names[i])}</h3>
+        <span class="chip ${state==='live'?'live':state==='scored'?'done':'draft'}">
+          ${state==='live'?'● LIVE':state==='scored'?'Scored':'Not pushed'}</span></div>
+       <p class="sub">${nightDraft(night).rounds[i].qs.length} question(s) · ${nightDraft(night).rounds[i].worth} pt each${
+          state!=='draft' && subs!==undefined ? ` · <b style="color:var(--teal2)">${subs} answered</b>` : ''}</p>
+       ${pIssues.length ? `<div class="banner bad" style="margin-top:10px">Can't push this yet: ${esc(pIssues.slice(0,3).join(' · '))}${pIssues.length>3?' …':''}</div>` : ''}
+       <div data-actions="${i}"></div>`;
+    const a = c.querySelector('[data-actions]');
+
+    /* "Q3 in the control room is wrong. There is nothing for me to add."
+       An empty round is the one problem this tab genuinely cannot solve on
+       its own — but the app already ships questions for it, so offer those
+       right here rather than sending the host away mid-game to find them. */
+    if(!nightDraft(night).rounds[i].qs.length){
+      const lb = document.createElement('button');
+      lb.className='btn ghost'; lb.textContent = `↺ Load the app's ${tag} questions`;
+      lb.onclick = ()=>{
+        const got = seedRound(night, i, true);
+        if(!got){ toast('No stored questions for this round — write them on tab 1.'); return; }
+        saveDraft(); renderRun(); try{ renderWrite(); }catch(err){}
+        toast(`Loaded ${got} question${got>1?'s':''} for ${tag}.`);
+      };
+      a.appendChild(lb);
+    }
+
+    if(state==='draft'){
+      const b = document.createElement('button');
+      b.className='btn red'; b.setAttribute('data-pushbtn','1');
+      b.textContent = `🔴 Push ${tag} to every phone`;
+      // The answers are deliberately NOT part of this condition any more.
+      b.disabled = pIssues.length>0 || (openLive && openLive.idx!==i);
+      b.onclick = ()=>pushRound(i);
+      a.appendChild(b);
+      const p = document.createElement('p'); p.className='sub tip'; p.style.marginTop='10px';
+      p.textContent = openLive && openLive.idx!==i
+        ? `${cfg.tags[openLive.idx]} is still live — reveal that one first, or its answers are lost.`
+        : keyReady
+          ? 'The answers are already marked, so this one is ready to reveal the second the quarter ends.'
+          : 'Push it now — you mark the answers on this same screen while the quarter plays.';
+      a.appendChild(p);
+
+    }else if(state==='live'){
+      /* The whole point of the rebuild: the answers, here, now. */
+      const h = document.createElement('div');
+      h.innerHTML = `<h3 style="margin-top:16px">What actually happened</h3>
+        <p class="sub">Tap the right answer as each one settles. Nothing leaves this phone until you press reveal — players can't see these.</p>
+        ${keyBlock(i)}`;
+      a.appendChild(h);
+
+      const isLast = i >= cfg.tags.length - 1;
+      const nextTag = isLast ? null : cfg.tags[i+1];
+      const canPush = !isLast && pushIssues(i+1).length === 0;
+      const busy = closingRound === i;
+
+      /* The score for the break, typed on the card it belongs to, prefilled
+         from whatever is already posted. Between quarters the host is then
+         editing two numbers rather than filling in a form on a card two
+         screens up. Same field, same document — leave them blank and the
+         close simply skips the scoreboard, exactly as leaving the card
+         above blank always did. */
+      const sc = document.createElement('div');
+      sc.innerHTML =
+        `<h3 style="margin-top:18px">${esc(breakHeading(i))}</h3>
+         <p class="sub">Optional. Blank means no scoreboard card goes out.</p>
+         <div class="row" style="margin-top:10px;align-items:flex-end">
+           <div style="flex:1"><label>${esc(cfg.away||'Away')}</label>
+             <input data-qsa type="number" inputmode="numeric" min="0" max="300" step="1" placeholder="0" value="${esc($('scAway') ? $('scAway').value : '')}"></div>
+           <div style="flex:1"><label>${esc(cfg.home||'Home')}</label>
+             <input data-qsh type="number" inputmode="numeric" min="0" max="300" step="1" placeholder="0" value="${esc($('scHome') ? $('scHome').value : '')}"></div>
+         </div>
+         <input data-qsn maxlength="90" style="margin-top:10px" placeholder="One line for the room (optional)">`;
+      a.appendChild(sc);
+
+      const cnt = document.createElement('div');
+      cnt.className = 'keycount' + (keyReady?' ready':'');
+      cnt.textContent = keyReady
+        ? `All ${pr.total} answers in.`
+        : `${pr.done} of ${pr.total} answers marked — the button below turns on at ${pr.total}.`;
+      a.appendChild(cnt);
+
+      /* THE button. One press for what used to be three presses in two
+         places in an order nobody could be expected to remember at 9:47pm
+         with the game still going. */
+      const b = document.createElement('button');
+      b.className='btn teal'; b.setAttribute('data-revealbtn','1');
+      b.style.fontSize='15.5px'; b.style.padding='17px 18px'; b.style.lineHeight='1.3';
+      b.textContent = busy ? 'Working…'
+        : isLast  ? `🏁 End the game — reveal ${tag} & post the final`
+        : canPush ? `⏭ End of ${tag} — reveal, post the score, start ${nextTag}`
+                  : `✅ End of ${tag} — reveal and post the score`;
+      b.disabled = !keyReady || busy;
+      b.onclick = ()=>closeQuarter(i);
+      a.appendChild(b);
+
+      const tip = document.createElement('p'); tip.className='sub tip'; tip.style.marginTop='10px';
+      tip.textContent = isLast
+        ? 'Reveals the answers and posts the final score. Every phone gets an alert that its points landed.'
+        : canPush
+          ? `Reveals ${tag} first — that order is what keeps the answers — then posts the score, then puts ${nextTag} on every phone. Two alerts, one press.`
+          : `${nextTag} has no questions yet, so this reveals ${tag} and posts the score only. Load or write ${nextTag} and its own push button appears below.`;
+      a.appendChild(tip);
+
+      /* The old buttons stay. One press is the right default and a terrible
+         only option: sooner or later a quarter ends on a review, or the
+         next round isn't ready, or the host wants to reveal and breathe. */
+      const jr = document.createElement('button');
+      jr.className='btn ghost'; jr.setAttribute('data-revealbtn2','1');
+      jr.textContent = `Just reveal ${tag} — nothing else`;
+      jr.disabled = !keyReady || busy;
+      jr.onclick = ()=>revealRound(i);
+      a.appendChild(jr);
+
+      const r = document.createElement('button');
+      r.className='btn ghost'; r.textContent = 'Re-push (fix a typo in the questions)';
+      r.disabled = pIssues.length>0 || busy;
+      r.onclick = ()=>pushRound(i, true);
+      a.appendChild(r);
+
+    }else{
+      const p = document.createElement('p'); p.className='sub tip';
+      p.textContent = 'Revealed. Every phone that answered has scored itself.';
+      a.appendChild(p);
+
+      /* A wrong answer after the fact is a real thing that happens — a stat
+         gets corrected, or you misread the box score. Fixing it should not
+         mean going back to tab 1 to hunt for the tick either. */
+      const tog = document.createElement('button');
+      tog.className='btn ghost'; tog.textContent='Change an answer';
+      const box = document.createElement('div'); box.className='hide';
+      box.innerHTML = keyBlock(i);
+      tog.onclick = ()=>{ box.classList.toggle('hide');
+        tog.textContent = box.classList.contains('hide') ? 'Change an answer' : 'Hide the answers'; };
+      a.appendChild(tog); a.appendChild(box);
+
+      const r = document.createElement('button');
+      r.className='btn ghost'; r.textContent = 'Re-reveal (if you got an answer wrong)';
+      r.disabled = roundIssues(i).length>0;
+      r.onclick = ()=>revealRound(i, true);
+      a.appendChild(r);
+    }
+    wrap.appendChild(c);
+  });
+
+  /* One delegated handler for every answer button on the tab. Updates the
+     draft in place and repaints only what changed, so the page does not
+     jump under a thumb that is already reaching for the next option. */
+  wrap.onclick = e => {
+    const b = e.target.closest('button[data-rkey]'); if(!b) return;
+    const [ri,qi,oi] = b.dataset.rkey.split(':').map(Number);
+    const rd = nightDraft(night).rounds[ri];
+    rd.qs[qi].k = (rd.qs[qi].k === oi) ? null : oi;
+    saveDraft();
+    b.parentNode.querySelectorAll('button[data-rkey]').forEach(x=>
+      x.classList.toggle('on', Number(x.dataset.rkey.split(':')[2]) === rd.qs[qi].k));
+    syncRevealState(ri);
+    // keep tab 1 honest, since it is showing the same field
+    try{ renderWrite(); }catch(err){}
+  };
+}
+
+async function pushRound(i, silent){
+  // Pushing needs readable questions, NOT answers. See pushIssues.
+  const issues = pushIssues(i);
+  if(issues.length){ toast('Fix that round first: ' + issues[0]); return; }
+  const cfg = nightCfg(night), r = cleanRound(i), pr = keyProgress(i);
+  if(!silent && !confirm(
+      `Push ${cfg.tags[i]} to every phone in the room?\n\n` +
+      `${r.questions.length} questions at ${r.worth} pt each.\n\n` +
+      `Players answer immediately. Nothing scores until you press Reveal.` +
+      (pr.done < pr.total
+        ? `\n\nYou haven't marked the answers yet — that's fine. Mark them on this screen while the room plays.`
+        : ''))) return;
+  try{
+    await writePush(i);
+    toast(`${cfg.tags[i]} is live on every phone.`);
+  }catch(e){ toast('Push failed: ' + ((e&&e.message)||e)); }
+}
+
+/* ---------------- THE THREE WRITES ----------------
+   Reveal, score, push. Each one is a single setDoc and nothing else: no
+   confirm, no toast, no reading a form. That is the whole point. In the
+   old shape each of the three owned a button, a dialog and a piece of the
+   screen, which is exactly why closing a quarter took four deliberate acts
+   in a fixed order at the moment the host had the least attention to
+   spare — and why the last act in that list kept getting dropped.
+
+   Pulled apart like this the buttons behave exactly as they always did,
+   and the one-press close can run all three itself. They throw on failure
+   rather than toasting; the caller decides what a failure means, because
+   the three failures do not mean remotely the same thing. */
+async function writePush(i){
+  const cfg = nightCfg(night), r = cleanRound(i);
+  const { F, db } = FB;
+  await F.setDoc(F.doc(db,'nights',night,'rounds',roundDocId(i)), {
+    seq: Date.now(),
+    idx: i,
+    tag: cfg.tags[i],
+    name: cfg.names[i],
+    worth: r.worth,
+    state: 'live',
+    questions: r.questions,     // text and options only — never the key
+    key: F.deleteField(),       // if this is a re-push, wipe any stale key
+    openedAt: F.serverTimestamp()
+  }, { merge: true });
+  watchSubs(i);
+}
+
+async function writeReveal(i){
+  const r = cleanRound(i);
+  const { F, db } = FB;
+  await F.setDoc(F.doc(db,'nights',night,'rounds',roundDocId(i)), {
+    seq: Date.now(),
+    state: 'scored',
+    key: r.key,
+    closedAt: F.serverTimestamp()
+  }, { merge: true });
+}
+
+async function writeScore(a, h, period, note){
+  const { F, db } = FB;
+  const clean = String(note==null?'':note).trim().slice(0,90);
+  await F.setDoc(F.doc(db,'nights',night), {
+    score: {
+      away: a, home: h,
+      period: period || '',
+      note: clean,
+      at: F.serverTimestamp()
+    }
+  }, { merge: true });
+  /* Push it back into the scoreboard card too. It is the same number on the
+     same tab, and a scoreboard box still showing the first-quarter score
+     after the close posted the half-time one is a lie the host would have
+     to notice on their own. */
+  try{
+    $('scAway').value = a; $('scHome').value = h;
+    if(period) $('scPeriod').value = period;
+    $('scNote').value = clean;
+    $('scState').textContent = '● showing on phones';
+    $('scState').className = 'chip live';
+  }catch(e){}
+}
+
+/* ---------------- ONE PRESS TO CLOSE A QUARTER ----------------
+   The note from Game Night #1 was "We didnt get the alerts in between
+   quarters", and the cause was never the alert code. Closing a quarter was
+   four deliberate acts in a fixed order — reveal, scroll up, post the
+   score, scroll back, push the next round — performed in the ninety
+   seconds when the host is also watching a television and answering a
+   group chat. The alerts ride on acts one and four. Anything at the end of
+   a list like that gets dropped, every time, by anyone.
+
+   So it is one press. The order is fixed in code because the order is the
+   part that matters: reveal FIRST, always, because phones follow the
+   newest round and pushing over a live one throws its answers away. That
+   rule used to live in a warning banner and depend on the host reading it.
+
+   The three steps do not fail equally and this does not pretend they do.
+   A failed reveal stops everything, because pushing the next round on top
+   of an unrevealed one is the single mistake here that costs real answers.
+   A failed score is cosmetic — it warns and carries on. A failed push
+   names the button to press. */
+async function closeQuarter(i){
+  if(closingRound !== null) return;                 // a double-tap is not two closes
+  const cfg = nightCfg(night), last = i >= cfg.tags.length - 1;
+  const iss = roundIssues(i);
+  if(iss.length){ toast('Fix that round first: ' + iss[0]); return; }
+
+  /* Read the form BEFORE the first await. The rounds listener repaints this
+     card the instant the reveal lands, and by then these inputs no longer
+     exist. */
+  const card = document.querySelector(`[data-roundcard="${i}"]`);
+  const val = sel => { const el = card && card.querySelector(sel); return el ? String(el.value||'').trim() : ''; };
+  const rawA = val('[data-qsa]'), rawH = val('[data-qsh]'), note = val('[data-qsn]');
+  const wantScore = rawA !== '' || rawH !== '';
+  const a = parseInt(rawA,10), h = parseInt(rawH,10);
+  if(wantScore){
+    if(!isFinite(a) || !isFinite(h)){ toast('Both scores, or leave them both blank — half a score shows as a gap on every phone.'); return; }
+    if(a<0 || h<0 || a>300 || h>300){ toast('That score is out of range.'); return; }
+  }
+
+  /* The next round only goes out if it is actually pushable. A quarter that
+     ends while Q3 is still empty is a real thing that happened in Game
+     Night #1, and it must not take the reveal down with it. */
+  const canPush = !last && pushIssues(i+1).length === 0;
+  const nextTag = last ? null : cfg.tags[i+1];
+  const label = periodLabelFor(i), r = cleanRound(i);
+
+  if(!confirm(
+      `Close ${cfg.tags[i]}?\n\n` +
+      `1. Reveal these answers — every phone scores itself:\n` +
+      r.key.map((k,x)=>`    ${x+1}. ${k}`).join('\n') + `\n\n` +
+      (wantScore
+        ? `2. Post the scoreboard: ${cfg.away||'Away'} ${a} — ${cfg.home||'Home'} ${h}  (${label})\n\n`
+        : `2. No scoreboard — you left the score blank.\n\n`) +
+      (last  ? `3. Nothing left to push. That's the game.`
+     : canPush ? `3. Push ${nextTag} to every phone.\n\nPhones get an alert on step 1 and again on step 3.`
+              : `3. ${nextTag} isn't written yet, so nothing gets pushed. Write it on tab 1 and push it yourself.`))) return;
+
+  closingRound = i; renderRun();
+  const done = [];
+
+  try{
+    await writeReveal(i);
+    done.push(`${cfg.tags[i]} scored`);
+  }catch(e){
+    closingRound = null; renderRun();
+    toast('Reveal failed, so nothing else ran: ' + ((e&&e.message)||e));
+    return;
+  }
+
+  if(wantScore){
+    try{ await writeScore(a, h, label, note); done.push('score posted'); }
+    catch(e){ toast(`${cfg.tags[i]} is scored, but the scoreboard didn't post. Post it by hand above.`); }
+  }
+
+  if(canPush){
+    try{ await writePush(i+1); done.push(`${nextTag} is live`); }
+    catch(e){
+      closingRound = null; renderRun();
+      toast(`${cfg.tags[i]} is scored, but ${nextTag} did not go out. Press its own push button.`);
+      return;
+    }
+  }
+
+  closingRound = null; renderRun();
+  toast(done.join(' · ') + '.');
+}
+
+/* ---------------- THE LIVE SCOREBOARD ----------------
+   Writes one field on the night document: nights/{night}.score. Phones
+   already read that document, the rules already say "everyone reads, only
+   you write", so this needs no rules change and no new index. One document
+   read per phone per poll, which is what made it affordable at all.
+
+   It is deliberately NOT wired into scoring. A typo here costs a wrong
+   number on a card for one minute. A typo in anything that scores costs
+   the night. */
+/* What to call the BREAK after round i. The break after the middle round is
+   not "End of Q2", it is half-time, and the one after the last round is not
+   "End of Q4", it is the final. Derived from the tag list so soccer's two
+   halves come out right too.
+
+   Split out of scoreOptions so the one-press close and the dropdown can
+   never drift apart: the dropdown is built from this function, so whatever
+   the close posts is guaranteed to be a real option in it. That matters
+   more than it looks — assigning a value a <select> does not contain
+   silently leaves the select on whatever it was showing before. */
+function periodLabelFor(i){
+  const cfg = nightCfg(night), n = cfg.tags.length;
+  if(i >= n-1)                   return 'Final';
+  if(i === Math.floor(n/2) - 1)  return 'Half-time';
+  return 'End of ' + cfg.tags[i];
+}
+/* And what to call the moment itself, in a heading, in a sentence. */
+function breakHeading(i){
+  const b = periodLabelFor(i);
+  return b === 'Final' ? 'The final score'
+       : b === 'Half-time' ? 'The score at half-time'
+       : 'The score at the end of ' + nightCfg(night).tags[i];
+}
+function scoreOptions(){
+  const o = [];
+  nightCfg(night).tags.forEach((t,i)=>{ o.push(t + ' in progress'); o.push(periodLabelFor(i)); });
+  return o;
+}
+
+function fillScoreUI(){
+  const cfg = nightCfg(night);
+  $('scAwayLbl').textContent = cfg.away || 'Away';
+  $('scHomeLbl').textContent = cfg.home || 'Home';
+  const sel = $('scPeriod'), keep = sel.value;
+  sel.innerHTML = scoreOptions().map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('');
+  if(keep) sel.value = keep;
+}
+
+/* Read back whatever is already posted, so switching nights or reloading
+   the laptop mid-game does not show an empty box over a live card. */
+async function loadScore(){
+  fillScoreUI();
+  $('scState').textContent = 'not posted';
+  $('scState').className = 'chip draft';
+  if(!FB || !night) return;
+  try{
+    const { F, db } = FB;
+    const snap = await F.getDoc(F.doc(db,'nights',night));
+    const sc = snap.exists() && (snap.data()||{}).score;
+    if(!sc) return;
+    if(sc.away!=null) $('scAway').value = sc.away;
+    if(sc.home!=null) $('scHome').value = sc.home;
+    if(sc.period) $('scPeriod').value = sc.period;
+    $('scNote').value = sc.note || '';
+    $('scState').textContent = '● showing on phones';
+    $('scState').className = 'chip live';
+  }catch(e){ /* a scoreboard that cannot be read is not worth a banner */ }
+}
+
+async function postScore(){
+  const a = parseInt($('scAway').value, 10), h = parseInt($('scHome').value, 10);
+  // Refuse a half-typed score rather than publishing "IND 41 — MIN NaN".
+  // The phones refuse it too, on the way in; this is the polite half.
+  if(!isFinite(a) || !isFinite(h)){ toast('Both scores, please — a half-typed score would show as a blank on every phone.'); return; }
+  if(a<0 || h<0 || a>300 || h>300){ toast('That score is out of range.'); return; }
+  try{
+    await writeScore(a, h, $('scPeriod').value || '', $('scNote').value || '');
+    toast('Score posted. Phones waiting between rounds will show it within a minute.');
+  }catch(e){ toast('Could not post that: ' + ((e&&e.message)||e)); }
+}
+
+async function clearScore(){
+  if(!confirm('Take the scoreboard down?\n\nThe card disappears from every phone. Nothing that has been scored is affected.')) return;
+  try{
+    const { F, db } = FB;
+    await F.setDoc(F.doc(db,'nights',night), { score: F.deleteField() }, { merge: true });
+    $('scState').textContent = 'not posted';
+    $('scState').className = 'chip draft';
+    toast('Scoreboard taken down.');
+  }catch(e){ toast('Could not take it down: ' + ((e&&e.message)||e)); }
+}
+
+async function revealRound(i, again){
+  const issues = roundIssues(i);
+  if(issues.length){ toast('Fix that round first: ' + issues[0]); return; }
+  const cfg = nightCfg(night), r = cleanRound(i);
+  if(!confirm(
+      `Reveal the answers for ${cfg.tags[i]}?\n\n` +
+      r.key.map((k,n)=>`${n+1}. ${k}`).join('\n') +
+      `\n\nEvery phone scores itself the moment you press OK.` +
+      (again ? '\n\nThis re-reveals a round that was already scored. Phones that already scored it will NOT score it twice.' : ''))) return;
+  try{
+    await writeReveal(i);
+    toast(`${cfg.tags[i]} scored. Phones are updating.`);
+  }catch(e){ toast('Reveal failed: ' + ((e&&e.message)||e)); }
+}
+
+/* How many phones have locked their picks for the round in play. One read
+   per submission, and only while you're watching a live round. */
+let subsWatching = null;
+function watchSubs(i){
+  if(subsUnsub){ try{subsUnsub();}catch(e){} subsUnsub=null; }
+  subsWatching = roundDocId(i);
+  const { F, db } = FB;
+  try{
+    subsUnsub = F.onSnapshot(F.collection(db,'nights',night,'rounds',roundDocId(i),'subs'), snap=>{
+      subCounts[roundDocId(i)] = snap.size;
+      $('roomSubs').textContent = snap.size;
+      renderRun();
+    }, ()=>{});
+  }catch(e){}
+}
+
+/* =====================================================================
+   TAB 3: GRADE — who was right, and what that's worth
+   ---------------------------------------------------------------------
+   This is the part that turns a room full of phones into a scoreboard
+   you can hand a prize from.
+
+   Every phone writes one document per round, at the moment the round
+   ends, containing the picks and nothing else — no score, no claim about
+   whether they were right. It cannot contain a claim, because when it is
+   written nobody in the building knows the answers yet. That ordering is
+   the whole reason this is trustworthy: a player who wanted to cheat
+   would have to know the future, not just edit some JavaScript.
+
+   Grading happens here, from a key you set. Where the key comes from
+   depends on how the night ran:
+
+     you pushed the round      -> your own key, already typed in tab 1
+     you didn't push anything  -> the phones report which questions they
+                                  were shown and what the build thinks
+                                  the answers are, and you correct it
+
+   In both cases the dropdowns below are the last word. If the broadcast
+   was ambiguous, if you want to void a question, if the build's idea of
+   the answer is wrong — change it here and the grid re-marks instantly.
+   Nothing is written back to the players from this tab.
+   ===================================================================== */
+
+const KEYLS = 'stats_admin_keys_v1';
+let gradeRid   = 'r0';        // which round the grid is showing
+let gradeSubs  = [];          // [{uid, ...the row the phone wrote}]
+let gradeUnsub = null;
+let hostKeys   = {};          // "night|rid" -> {key:[], nums:[]}
+
+function loadKeys(){
+  try{ hostKeys = JSON.parse(localStorage.getItem(KEYLS) || '{}') || {}; }catch(e){ hostKeys = {}; }
+}
+function saveKeys(){ try{ localStorage.setItem(KEYLS, JSON.stringify(hostKeys)); }catch(e){} }
+function keySlot(rid){
+  const k = night + '|' + rid;
+  if(!hostKeys[k]) hostKeys[k] = { key:[], nums:[] };
+  return hostKeys[k];
+}
+
+const gradeIdx = rid => rid === 'rP' ? -1 : (parseInt(rid.slice(1), 10));
+
+/* The round selector carries every round this night has, plus the
+   prediction sheet — which is fifty of the ninety points and therefore
+   not an afterthought, whatever its position on the list. */
+function fillGradeSel(){
+  const cfg = nightCfg(night), sel = $('gradeSel'); if(!sel) return;
+  sel.innerHTML = cfg.tags.map((t,i)=>
+      `<option value="r${i}">${esc(cfg.tags[i])} — ${esc(cfg.names[i])}</option>`).join('')
+    + `<option value="rP">Predictions — the pre-game sheet</option>`;
+  if(!cfg.tags.length) gradeRid = 'rP';
+  sel.value = gradeRid;
+}
+
+/* What was asked, what it's worth, and the best guess at the answers.
+   Everything here is a default the host can overrule. */
+function gradeSpec(rid){
+  const cfg = nightCfg(night), i = gradeIdx(rid);
+  const pushed = (i >= 0) ? (liveDocs[rid] || null) : null;
+  const draft  = (i >= 0 && nightDraft(night).rounds[i]) || null;
+  const first  = gradeSubs.find(s => Array.isArray(s.qs) && s.qs.length) || null;
+
+  /* Order of trust, and it is not the obvious one. Grading asks "was this
+     player right", so the only question set that can answer it is the one
+     the player actually saw. A pushed round is that by definition. Failing
+     that, the phones report what they rendered — which, for an unpushed
+     round, is the app's own built-in set, NOT whatever is sitting in the
+     Write tab. The draft comes last: since the composer now arrives
+     preloaded, a draft always exists, and grading against a round the host
+     typed but never sent would mark players against questions nobody was
+     ever asked. */
+  let qs = [], src = 'none';
+  if(pushed && Array.isArray(pushed.questions) && pushed.questions.length){
+    qs = pushed.questions.map(q => ({ t:String(q.t||''), o:(q.o||[]).map(String) }));
+    src = 'pushed';
+  }else if(first){
+    qs = first.qs.map((t,n) => ({ t:String(t||''), o:((first.opts||[])[n]||[]).map(String) }));
+    src = 'phones';
+  }else if(draft && draft.qs.length && draft.qs.some(q=>q.t)){
+    qs = draft.qs.map(q => ({ t:String(q.t||''), o:(q.o||[]).map(String) }));
+    src = 'draft';
+  }
+
+  // Points per question. A pushed round says so; otherwise the phones
+  // report what the build charged; otherwise fall back to the night's
+  // configured ladder.
+  let worth = null;
+  if(pushed && typeof pushed.worth === 'number') worth = pushed.worth;
+  else if(first && typeof first.worth === 'number') worth = first.worth;
+  else if(draft) worth = draft.worth;
+  else if(i >= 0) worth = cfg.worth[i];
+
+  // The prediction sheet prices each line separately — ten for the
+  // winner, five-plus-five for each stat leader — so it carries its own
+  // numbers rather than one flat rate. These are READ off the phone's own
+  // submission (`banks`/`bons`), never hardcoded here, which is why raising
+  // the sheet from 50 to 60 needed no change on this side.
+  const bases = (rid === 'rP' && first && Array.isArray(first.banks)) ? first.banks.map(Number) : null;
+  const bons  = (rid === 'rP' && first && Array.isArray(first.bons))  ? first.bons.map(Number)  : null;
+
+  // The answer key, in order of who is most likely to be right about it.
+  const slot = keySlot(rid);
+  const key = qs.map((q,n) => {
+    if(slot.key[n] != null && slot.key[n] !== undefined) return slot.key[n];
+    if(pushed && Array.isArray(pushed.key) && pushed.key[n] != null) return String(pushed.key[n]);
+    if(draft && draft.qs[n] && draft.qs[n].k != null && draft.qs[n].o) return String(draft.qs[n].o[draft.qs[n].k] || '');
+    if(first && Array.isArray(first.keys) && first.keys[n]) return String(first.keys[n]);
+    return '';
+  });
+
+  const label = (i >= 0) ? (cfg.tags[i] || rid) : 'Predictions';
+  return { qs, src, worth, bases, bons, key, label, idx:i };
+}
+
+/* One correct answer, one player, one question. Returns 'hit' | 'mis' |
+   'non' — 'non' being "they didn't answer", which is not the same as
+   wrong and shouldn't look the same either. */
+function markOf(pick, ans){
+  if(!ans) return 'non';                       // no key yet, or a voided question
+  if(pick === '' || pick == null) return 'non';
+  return pick === ans ? 'hit' : 'mis';
+}
+
+function scoreSub(sub, spec){
+  const picks = sub.picks || [], nums = sub.nums || [], banks = sub.banks || [];
+  const slot = keySlot(gradeRid);
+  let right = 0, pts = 0, speed = 0, answered = 0;
+  const marks = spec.qs.map((q,n) => {
+    const m = markOf(picks[n], spec.key[n]);
+    if(picks[n]) answered++;
+    if(m === 'hit'){
+      right++;
+      // On the prediction sheet each phone sends the price IT put on each
+      // line. With confidence ranking on, two players who both called the
+      // rebound leader can be paid differently — that IS the game. Fall
+      // back to the sheet's flat prices for anyone who ranked nothing.
+      const own = (spec.bases && banks[n] != null && banks[n] !== '') ? Number(banks[n]) : NaN;
+      const val = spec.bases
+        ? (isFinite(own) ? own : (Number(spec.bases[n]) || 0))
+        : (spec.worth || 0);
+      pts += val;
+      if(spec.bases){
+        // the number bonus, only when the host has entered the official one
+        const official = slot.nums[n];
+        if(official !== '' && official != null && String(nums[n]) === String(official))
+          pts += spec.bons ? (Number(spec.bons[n]) || 0) : 0;
+      }else{
+        speed += Number(banks[n]) || 0;
+      }
+    }
+    return m;
+  });
+  return { marks, right, pts, speed, answered };
+}
+
+function watchGradeSubs(){
+  if(gradeUnsub){ try{ gradeUnsub(); }catch(e){} gradeUnsub = null; }
+  gradeSubs = [];
+  if(!FB || !user) return;
+  const { F, db } = FB;
+  const rid = gradeRid;
+  try{
+    gradeUnsub = F.onSnapshot(F.collection(db,'nights',night,'rounds',rid,'subs'), snap=>{
+      if(rid !== gradeRid) return;              // a switch beat the callback home
+      gradeSubs = [];
+      snap.forEach(d => gradeSubs.push(Object.assign({ uid:d.id }, d.data())));
+      gradeSubs.sort((a,z)=>String(a.name||'').localeCompare(String(z.name||'')));
+      renderGrade();
+    }, err=>{
+      $('gradeNote').textContent = 'Could not read the answers: ' + ((err&&err.message)||err) +
+        '. That is a dashboard problem only — the players\' game is unaffected.';
+    });
+  }catch(e){}
+}
+
+function renderGrade(){
+  if(!$('gradeGrid')) return;
+  const spec = gradeSpec(gradeRid);
+  const n = gradeSubs.length;
+
+  $('gradeCount').textContent = n === 1 ? '1 phone' : n + ' phones';
+  const srcTxt = { pushed:'from your pushed round', draft:'from your draft',
+                   phones:'reported by the phones', none:'no questions yet' }[spec.src];
+  $('gradeSrcChip').textContent = srcTxt;
+
+  $('gradeNote').textContent = !n
+    ? 'Nothing has come in for this round yet. Phones send their picks the moment they finish the round — if the round hasn\'t been played, this stays empty.'
+    : spec.src === 'phones'
+      ? 'You didn\'t push this round, so the questions and a first guess at the answers came from the phones themselves. Check the answers below before you trust the ticks.'
+      : 'Graded against your key. Change any answer below and every row re-marks.';
+
+  /* ---- the key editor ---- */
+  const kw = $('gradeKey'); kw.innerHTML = '';
+  const slot = keySlot(gradeRid);
+  if(!spec.qs.length){
+    kw.innerHTML = '<p class="sub tip">No questions to score yet.</p>';
+  }else spec.qs.forEach((q,i)=>{
+    const p = document.createElement('p'); p.className='keyq';
+    p.textContent = (i+1) + '. ' + (q.t || '(no question text)');
+    kw.appendChild(p);
+    const row = document.createElement('div'); row.className='keyrow';
+    const num = document.createElement('span'); num.className='kn'; num.textContent='✓';
+    const sel = document.createElement('select');
+    sel.innerHTML = '<option value="">— nobody scores this one —</option>' +
+      q.o.map(o=>`<option value="${esc(o)}"${spec.key[i]===o?' selected':''}>${esc(o)}</option>`).join('');
+    sel.onchange = ()=>{ slot.key[i] = sel.value; saveKeys(); renderGrade(); };
+    row.appendChild(num); row.appendChild(sel);
+    // the prediction sheet's number bonuses
+    if(spec.bons && (Number(spec.bons[i])||0) > 0){
+      const inp = document.createElement('input');
+      inp.type='number'; inp.placeholder='official #';
+      inp.value = (slot.nums[i] == null ? '' : slot.nums[i]);
+      inp.onchange = ()=>{ slot.nums[i] = inp.value; saveKeys(); renderGrade(); };
+      row.appendChild(inp);
+    }
+    kw.appendChild(row);
+  });
+  $('gradeKeySub').textContent = spec.bons
+    ? 'Set the official result for each line. Where there\'s a number bonus, type the official number too — an exact match adds the bonus.'
+    : 'Set what actually happened. This saves to this browser as you go, so a refresh mid-night loses nothing.';
+
+  /* ---- the grid ---- */
+  const g = $('gradeGrid');
+  if(!n || !spec.qs.length){
+    g.innerHTML = '<p class="sub tip">The grid fills in as phones finish the round.</p>';
+    return;
+  }
+  const rows = gradeSubs.map(s => Object.assign({ s }, scoreSub(s, spec)));
+  rows.sort((a,z)=> z.pts - a.pts || z.speed - a.speed || z.right - a.right);
+
+  const head = '<tr><th class="p">Player</th>' +
+    spec.qs.map((q,i)=>`<th title="${esc(q.t)}">Q${i+1}</th>`).join('') +
+    '<th class="tot">Right</th><th class="tot">Pts</th>' +
+    (spec.bases ? '' : '<th class="tot">⚡</th>') + '</tr>';
+
+  const body = rows.map(r=>{
+    const cells = r.marks.map((m,i)=>{
+      const pick = (r.s.picks||[])[i] || '';
+      const numv = (r.s.nums||[])[i];
+      const glyph = m==='hit' ? '✓' : m==='mis' ? '✕' : '·';
+      // When the room ranked its sheet, show each player's own stake on the
+      // line — otherwise two ✓s worth 9 and 1 look identical and the totals
+      // read like a bug.
+      const rk = (r.s.ranks||[])[i];
+      const bk = (r.s.banks||[])[i];
+      const stake = (spec.bases && rk) ? ` <span class="pk">#${esc(rk)}·${esc(bk)}pt</span>` : '';
+      const shown = pick ? esc(pick) + (numv ? ` <span class="pk">(${esc(numv)})</span>` : '') + stake : '—';
+      return `<td class="${m}"><span class="mkc">${glyph}</span> ${shown}</td>`;
+    }).join('');
+    return `<tr><td class="p" title="${esc(r.s.uid)}">${esc(r.s.name||'player')}</td>${cells}` +
+      `<td class="tot">${r.right}/${spec.qs.length}</td><td class="tot">${r.pts}</td>` +
+      (spec.bases ? '' : `<td class="tot">${r.speed}</td>`) + '</tr>';
+  }).join('');
+
+  g.innerHTML = `<table class="grid"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+
+/* What the host actually reads out. Plain text, no table drawing — it
+   has to survive being pasted into a group chat. */
+function gradeText(){
+  const spec = gradeSpec(gradeRid);
+  if(!gradeSubs.length || !spec.qs.length) return '';
+  const rows = gradeSubs.map(s => Object.assign({ s }, scoreSub(s, spec)))
+                        .sort((a,z)=> z.pts - a.pts || z.speed - a.speed);
+  const lines = [`STATS — ${spec.label}`,
+    spec.key.map((k,i)=>`${i+1}. ${k||'(voided)'}`).join('  ·  '), ''];
+  rows.forEach((r,i)=>{
+    lines.push(`${i+1}. ${r.s.name||'player'} — ${r.right}/${spec.qs.length} · ${r.pts} pt${r.pts===1?'':'s'}` +
+      (spec.bases ? '' : ` · ⚡${r.speed}`));
+  });
+  return lines.join('\n');
+}
+
+function gradeCsv(){
+  const spec = gradeSpec(gradeRid);
+  const q = s => '"' + String(s==null?'':s).replace(/"/g,'""') + '"';
+  const rows = gradeSubs.map(s => Object.assign({ s }, scoreSub(s, spec)))
+                        .sort((a,z)=> z.pts - a.pts);
+  // The tail is built once and shared, because filtering empties out of a
+  // row is how a spreadsheet silently shifts every column left the moment
+  // one player skips one question.
+  const tail = ['Right','Points'].concat(spec.bases ? [] : ['Speed']);
+  const out = [['Player','Device'].concat(spec.qs.map((x,i)=>'Q'+(i+1)))
+                .concat(spec.qs.map((x,i)=>'Q'+(i+1)+' right?'))
+                .concat(tail).map(q).join(',')];
+  rows.forEach(r=>{
+    out.push([r.s.name||'player', r.s.uid]
+      .concat(spec.qs.map((x,i)=>(r.s.picks||[])[i]||''))
+      .concat(r.marks.map(m=>m==='hit'?'right':m==='mis'?'wrong':'no answer'))
+      .concat([r.right, r.pts]).concat(spec.bases ? [] : [r.speed])
+      .map(q).join(','));
+  });
+  const blob = new Blob(['﻿' + out.join('\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `stats-${night}-${gradeRid}.csv`;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+
+/* The end-of-night roll-up. One getDocs per round rather than a listener
+   per round — five reads times however many played, once, when you ask
+   for it. Leaving five live listeners open all night is how a free tier
+   turns into a dead app in the fourth quarter. */
+async function gradeTotals(){
+  if(!FB || !user) return;
+  const { F, db } = FB, cfg = nightCfg(night);
+  const rids = cfg.tags.map((t,i)=>'r'+i).concat(['rP']);
+  const box = $('gradeTotals');
+  box.innerHTML = '<p class="sub">Reading every round…</p>';
+  const tally = {};   // uid -> {name, pts, speed, right, asked, per:{}}
+  const savedRid = gradeRid, savedSubs = gradeSubs;
+  try{
+    for(const rid of rids){
+      const snap = await F.getDocs(F.collection(db,'nights',night,'rounds',rid,'subs'));
+      const subs = []; snap.forEach(d=>subs.push(Object.assign({uid:d.id}, d.data())));
+      if(!subs.length) continue;
+      // gradeSpec / scoreSub read the module's current round; borrow it.
+      gradeRid = rid; gradeSubs = subs;
+      const spec = gradeSpec(rid);
+      if(!spec.qs.length) continue;
+      subs.forEach(s=>{
+        const r = scoreSub(s, spec);
+        const t = tally[s.uid] || (tally[s.uid] = { name:s.name||'player', pts:0, speed:0, right:0, asked:0, per:{} });
+        if(s.name) t.name = s.name;
+        t.pts += r.pts; t.speed += r.speed; t.right += r.right; t.asked += spec.qs.length;
+        t.per[rid] = r.pts;
+      });
+    }
+  }catch(e){
+    box.innerHTML = `<div class="banner bad">Could not add up the night: ${esc((e&&e.message)||e)}</div>`;
+    gradeRid = savedRid; gradeSubs = savedSubs; return;
+  }
+  gradeRid = savedRid; gradeSubs = savedSubs;
+
+  const list = Object.values(tally).sort((a,z)=> z.pts - a.pts || z.speed - a.speed);
+  if(!list.length){ box.innerHTML = '<p class="sub tip">Nobody has finished a round yet.</p>'; return; }
+  const cols = rids.filter(rid => list.some(t => t.per[rid] !== undefined));
+  const hdr = cols.map(rid => rid==='rP' ? 'Pred' : (cfg.tags[gradeIdx(rid)] || rid));
+  box.innerHTML =
+    '<div class="gwrap"><table class="grid"><thead><tr><th class="p">Player</th>' +
+      hdr.map(h=>`<th>${esc(h)}</th>`).join('') +
+      '<th class="tot">Right</th><th class="tot">TOTAL</th><th class="tot">⚡</th></tr></thead><tbody>' +
+    list.map((t,i)=>`<tr><td class="p">${i+1}. ${esc(t.name)}</td>` +
+      cols.map(rid=>`<td>${t.per[rid] === undefined ? '—' : t.per[rid]}</td>`).join('') +
+      `<td class="tot">${t.right}/${t.asked}</td><td class="tot">${t.pts}</td><td class="tot">${t.speed}</td></tr>`).join('') +
+    '</tbody></table></div>' +
+    `<p class="sub tip" style="margin-top:10px">Ranked by points, ties broken by ⚡ speed — the same rule the phones use. Rounds nobody has played are left off.</p>`;
+}
+
+/* The Stat Drop export.
+
+   Box-score stats are a commodity — every account in the country has them
+   within a minute of the buzzer. The one number nobody else can post is
+   what OUR room guessed: 58% said B, the answer was C. That is the whole
+   differentiator, it is literally the brand name, and until now it lived
+   only in Firestore where nobody could see it.
+
+   This reads exactly what gradeTotals() reads — one getDocs per round —
+   and writes a JSON file shaped for make_statdrop.py. Two rules it obeys
+   without exception:
+
+     1. It never invents a fact. Every number here is counted from real
+        submissions. The box-score card is left as PLACEHOLDER text,
+        because the box score is not in this database and guessing at it
+        is exactly the failure mode worth engineering against.
+     2. No names, no emails, no uids. The top five carry the display names
+        players chose for the leaderboard and nothing else. */
+async function exportDrop(){
+  if(!FB || !user) return;
+  const { F, db } = FB, cfg = nightCfg(night);
+  const rids = cfg.tags.map((t,i)=>'r'+i).concat(['rP']);
+  const box = $('dropOut');
+  box.innerHTML = '<p class="sub">Reading every round…</p>';
+
+  const savedRid = gradeRid, savedSubs = gradeSubs;
+  const qrows = [];            // one per question asked all night
+  const tally = {};            // uid -> {name, pts, speed}
+  try{
+    for(const rid of rids){
+      const snap = await F.getDocs(F.collection(db,'nights',night,'rounds',rid,'subs'));
+      const subs = []; snap.forEach(d=>subs.push(Object.assign({uid:d.id}, d.data())));
+      if(!subs.length) continue;
+      gradeRid = rid; gradeSubs = subs;
+      const spec = gradeSpec(rid);
+      if(!spec.qs.length) continue;
+
+      subs.forEach(s=>{
+        const r = scoreSub(s, spec);
+        const t = tally[s.uid] || (tally[s.uid] = { name:s.name||'player', pts:0, speed:0 });
+        if(s.name) t.name = s.name;
+        t.pts += r.pts; t.speed += r.speed;
+      });
+
+      spec.qs.forEach((q,n)=>{
+        const ans = spec.key[n] || '';
+        // Count every option, including the ones nobody picked — a zero is
+        // a real result and dropping it makes a four-way question render
+        // as a three-way one.
+        const counts = {}; (q.o||[]).forEach(o=>{ counts[o] = 0; });
+        let answered = 0, right = 0;
+        subs.forEach(s=>{
+          const p = (s.picks||[])[n];
+          if(p == null || p === '') return;
+          answered++;
+          if(counts[p] === undefined) counts[p] = 0;
+          counts[p]++;
+          if(ans && p === ans) right++;
+        });
+        if(!answered) return;                        // nobody played it
+        qrows.push({
+          tag: spec.label,
+          q: q.t,
+          a: ans,
+          answered: answered,
+          rightN: right,
+          pct: Math.round(right * 100 / answered),
+          opts: (q.o||[]).map(o=>({
+            label: o,
+            pct: Math.round((counts[o]||0) * 100 / answered),
+            n: counts[o] || 0
+          }))
+        });
+      });
+    }
+  }catch(e){
+    gradeRid = savedRid; gradeSubs = savedSubs;
+    box.innerHTML = `<div class="banner bad">Could not build the drop: ${esc((e&&e.message)||e)}</div>`;
+    return;
+  }
+  gradeRid = savedRid; gradeSubs = savedSubs;
+
+  if(!qrows.length){
+    box.innerHTML = '<p class="sub tip">Nothing to drop yet — no round has been answered, or no answers have been set.</p>';
+    return;
+  }
+
+  const board = Object.values(tally).sort((a,z)=> z.pts - a.pts || z.speed - a.speed);
+
+  /* Which question becomes THE SPLIT — the flagship card. Not the hardest
+     one and not the first one: the one where the room was most confidently
+     wrong. That is measured as how far the most-picked option outpolled the
+     right one. A question everyone got is not a story; a question where 58%
+     went one way and the answer went the other is the whole product. */
+  let best = null, bestGap = -1;
+  qrows.forEach(r=>{
+    if(!r.a) return;
+    const top = r.opts.reduce((m,o)=> (o.pct > m.pct ? o : m), r.opts[0] || {pct:0});
+    const gap = top.pct - r.pct;
+    if(gap > bestGap){ bestGap = gap; best = r; }
+  });
+  if(!best) best = qrows[0];
+
+  /* The cards want three separate strings; the night list carries one
+     label like "Game Night #2 — Fever @ Lynx (Aug 2)". Split it rather
+     than adding a parallel set of fields that could drift out of sync
+     with the picker the host actually reads. */
+  const lab = String(cfg.label || night);
+  const parts = lab.split('—');
+  const head = (parts[0] || '').trim();
+  const rest = (parts[1] || '').replace(/·.*$/, '').trim();
+  const paren = rest.match(/\(([^)]*)\)/);
+
+  const drop = {
+    game: head.toUpperCase(),
+    matchup: rest.replace(/\s*\([^)]*\)\s*/, '').trim().toUpperCase()
+             || ((cfg.away || '') + ' @ ' + (cfg.home || '')),
+    date: paren ? paren[1].toUpperCase() : '',
+    split: {
+      tag: best.tag, q: best.q, opts: best.opts.map(o=>({label:o.label, pct:o.pct})),
+      answer: best.a, players: best.answered,
+      kicker: 'PLACEHOLDER — one line on why the room got fooled'
+    },
+    key: qrows.map(r=>({ tag:r.tag, q:r.q, a:r.a, pct:r.pct })),
+    // Deliberately unfilled. The box score is not in this database, and a
+    // card that quietly makes one up is worse than no card.
+    number: { value:'00', unit:'PLACEHOLDER UNIT', who:'PLACEHOLDER',
+              line:'PLACEHOLDER — the one sentence of context',
+              source:'OFFICIAL BOX SCORE' },
+    board: {
+      final: 'PLACEHOLDER 00 — PLACEHOLDER 00',
+      top: board.slice(0,5).map(t=>({ name:t.name, pts:t.pts })),
+      played: board.length
+    }
+  };
+
+  const blob = new Blob([JSON.stringify(drop, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `statdrop-${night}.json`;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+
+  const topOpt = best.opts.reduce((m,o)=> (o.pct > m.pct ? o : m), best.opts[0]);
+  box.innerHTML =
+    `<div class="banner ok">Downloaded <b>statdrop-${esc(night)}.json</b> — ${qrows.length} question${qrows.length===1?'':'s'}, ${board.length} player${board.length===1?'':'s'}.</div>` +
+    `<p class="sub" style="margin-top:10px"><b>The split it picked:</b> ${esc(best.tag)} — ${esc(best.q)}<br>` +
+    `${topOpt.pct}% of the room said “${esc(topOpt.label)}”. The answer was “${esc(best.a||'—')}”, which ${best.pct}% got.</p>` +
+    `<p class="sub tip">Still yours to fill in: the box-score number, the final score, and one line on why the room got fooled. Everything marked PLACEHOLDER in the file.</p>`;
+}
+
+/* ---------------- TAB 4: the room ---------------- */
+async function refreshRoom(){
+  if(!FB || !user) return;
+  const { F, db } = FB;
+  try{
+    const col = F.collection(db,'nights',night,'players');
+    const cnt = await F.getCountFromServer(col);
+    $('roomCount').textContent = cnt.data().count;
+    const q = F.query(col, F.orderBy('pts','desc'), F.limit(10));
+    const snap = await F.getDocs(q);
+    const rows = [];
+    snap.forEach(d=>rows.push(Object.assign({uid:d.id}, d.data())));
+    rows.sort((a,z)=>(z.pts||0)-(a.pts||0) || (z.speed||0)-(a.speed||0));
+    const b = $('lbBody');
+    b.innerHTML = rows.length
+      ? rows.map((p,i)=>`<tr><td class="n">${i+1}</td><td>${esc(p.name||'player')}</td>
+          <td class="n">${p.pts||0}</td><td>${p.speed||0}</td>
+          <td><button class="mini danger" data-kill="${esc(p.uid)}">Remove</button></td></tr>`).join('')
+      : '<tr><td colspan="5" style="color:var(--dim)">Nobody has joined this room yet.</td></tr>';
+    b.onclick = async e => {
+      const t = e.target.closest('button[data-kill]'); if(!t) return;
+      if(!confirm('Remove this player row for good? This cannot be undone.')) return;
+      try{ await F.deleteDoc(F.doc(db,'nights',night,'players',t.dataset.kill)); toast('Removed.'); refreshRoom(); }
+      catch(err){ toast('Could not remove: ' + ((err&&err.message)||err)); }
+    };
+    $('roomNote').textContent = 'Counted straight from the database just now.';
+  }catch(e){
+    $('roomCount').textContent = '—';
+    $('roomNote').textContent = 'Could not read the room: ' + ((e&&e.message)||e) +
+      '. That is a dashboard problem only — the players\' game is unaffected.';
+  }
+}
+
+/* ---------------- the room's trash talk ----------------
+   Loaded on demand and never on a timer. The host is the only person who
+   ever reads this panel and they read it when something goes wrong, so
+   paying fifty document reads every thirty seconds for a table nobody is
+   looking at would be the most expensive way in the whole product to
+   learn nothing.
+
+   Delete is the only write available here, and it is available only to
+   you: the rules let a player create a line and nothing else, so a line
+   cannot be edited into something different after people have read it,
+   and cannot be removed by the person who posted it either. That
+   asymmetry is what makes an append-only public log with one moderator
+   something we can reason about. */
+async function refreshTalk(){
+  if(!FB || !user) return;
+  const { F, db } = FB;
+  try{
+    const q = F.query(F.collection(db,'nights',night,'talk'), F.orderBy('at','desc'), F.limit(60));
+    const snap = await F.getDocs(q);
+    const rows = [];
+    snap.forEach(d=>rows.push(Object.assign({id:d.id}, d.data())));
+    const when = v => {
+      try{
+        const dt = v && v.toDate ? v.toDate() : null;
+        if(!dt) return 'just now';
+        return dt.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+      }catch(e){ return '—'; }
+    };
+    const b = $('talkBody');
+    b.innerHTML = rows.length
+      ? rows.map(r=>`<tr><td style="color:var(--dim);white-space:nowrap">${esc(when(r.at))}</td>
+          <td>${esc(r.name||'player')}</td><td>${esc(r.text||'')}</td>
+          <td><button class="mini danger" data-drop="${esc(r.id)}">Take down</button></td></tr>`).join('')
+      : '<tr><td colspan="4" style="color:var(--dim)">Nobody has said anything in this room yet.</td></tr>';
+    b.onclick = async e => {
+      const t = e.target.closest('button[data-drop]'); if(!t) return;
+      if(!confirm('Take this line down for everyone? This cannot be undone.')) return;
+      try{ await F.deleteDoc(F.doc(db,'nights',night,'talk',t.dataset.drop)); toast('Taken down.'); refreshTalk(); }
+      catch(err){ toast('Could not take it down: ' + ((err&&err.message)||err)); }
+    };
+    $('talkNote').textContent = rows.length
+      ? 'Showing the ' + rows.length + ' most recent line(s). Read straight from the database just now.'
+      : 'Read straight from the database just now.';
+  }catch(e){
+    $('talkNote').textContent = 'Could not read the room: ' + ((e&&e.message)||e) +
+      '. That is a dashboard problem only — the players\' game is unaffected.';
+  }
+}
+
+/* ---------------- backup / restore ---------------- */
+async function backupToCloud(){
+  if(!FB || !user) return;
+  const { F, db } = FB;
+  const d = nightDraft(night);
+  try{
+    for(let i=0;i<d.rounds.length;i++){
+      await F.setDoc(F.doc(db,'nights',night,'rounds',roundDocId(i),'key','draft'),
+        { worth:d.rounds[i].worth, qs:d.rounds[i].qs, savedAt:F.serverTimestamp() });
+    }
+    $('backupNote').textContent = 'Backed up ' + d.rounds.length + ' round(s). Only your account can read them.';
+    toast('Backed up.');
+  }catch(e){
+    $('backupNote').textContent = 'Backup failed: ' + ((e&&e.message)||e);
+  }
+}
+async function restoreFromCloud(){
+  if(!FB || !user) return;
+  if(!confirm('Replace the drafts in this browser with the backup? Anything unsaved here is lost.')) return;
+  const { F, db } = FB;
+  const cfg = nightCfg(night);
+  try{
+    const rounds = [];
+    for(let i=0;i<cfg.tags.length;i++){
+      const s = await F.getDoc(F.doc(db,'nights',night,'rounds',roundDocId(i),'key','draft'));
+      rounds.push(s.exists() ? { worth:s.data().worth||1, qs:s.data().qs||[] } : { worth:cfg.worth[i]||1, qs:[] });
+    }
+    draft[night] = { rounds };
+    saveDraft(); renderWrite(); renderRun();
+    $('backupNote').textContent = 'Restored from Firebase.';
+    toast('Restored.');
+  }catch(e){
+    $('backupNote').textContent = 'Restore failed: ' + ((e&&e.message)||e);
+  }
+}
+
+boot();
+</script>
+<!-- ============================================================
+     ESPN AUTO add-on  (STATS · Game Time)
+     Additive only. Fills the answer marks (draft q.k) for finished
+     quarters from ESPN's public feed, and keeps the live scoreboard
+     updated. Reuses the existing reveal / close / writeScore flow —
+     no new data model, no change to the player app.
+     Reads globals from the main script: night, draft, nightCfg,
+     nightDraft, saveDraft, renderRun, renderWrite, writeScore, esc, $,
+     toast, FB. Pull only touches the local draft — nothing reaches a
+     player until you press the normal Reveal / one-press close.
+     ============================================================ -->
+<script>
+(function(){
+  var ESPN = window.STATS_ESPN = {};
+  var API = 'https://site.api.espn.com/apis/site/v2/sports/basketball/wnba';
+  var liveTimer = null, eventId = null;
+
+  /* ---- ESPN derive engine (validated against IND@SEA, box-score exact) ---- */
+  var E = {};
+  E.clockSec = c => { const s=(c&&c.displayValue)||''; const m=s.match(/(\d+):(\d+)/); return m?(+m[1])*60+(+m[2]):(/^\d+(\.\d+)?$/.test(s)?Math.round(+s):null); };
+  E.teams = sum => { const c=sum.header?.competitions?.[0]?.competitors||[]; const home=c.find(x=>x.homeAway==='home')||c[0]||{}, away=c.find(x=>x.homeAway==='away')||c[1]||{}; const ls=t=>(t.linescores||[]).map(l=>+l.displayValue);
+    return {homeId:home.team?.id,awayId:away.team?.id,homeAbbr:home.team?.abbreviation,awayAbbr:away.team?.abbreviation,homeName:home.team?.displayName,awayName:away.team?.displayName,homeScore:+(home.score||0),awayScore:+(away.score||0),homeLine:ls(home),awayLine:ls(away)}; };
+  E.NOISE = /End Period|End of Game|End Game|Substitution|Timeout|Delay of Game|Jumpball|Ejection|Instant Replay|Rebound|Kicked Ball/i;
+  E.pIn = (sum,per)=>(sum.plays||[]).filter(p=>p.period?.number===per);
+  E.isTO = p=>/Turnover/i.test(p.type?.text||'');
+  E.isFT = p=>/Free Throw/i.test(p.type?.text||'');
+  E.isTimeoutTeam = p=>/Full Timeout|20 Second Timeout/i.test(p.type?.text||'');
+  E.isMadeFG = p=>p.scoringPlay&&p.scoreValue>=2;
+  E.isMadeFT = p=>p.scoringPlay&&p.scoreValue===1;
+  E.isShotAttempt = p=>p.shootingPlay&&!E.isFT(p);
+  E.b = (c,i,ev)=>({index:i,confidence:c,evidence:ev});
+  E.teamOpt = (opts,teamId,T)=>{ const isHome=teamId===T.homeId; const nm=isHome?(T.homeName+' '+T.homeAbbr):(T.awayName+' '+T.awayAbbr);
+    let idx=opts.findIndex(o=>{try{return new RegExp(o,'i').test(nm)}catch(e){return false}});
+    if(idx<0)idx=isHome?opts.findIndex(o=>/lynx|home/i.test(o)):opts.findIndex(o=>/fever|away/i.test(o));
+    if(idx<0)idx=isHome?0:1; return idx; };
+  E.periodDone = (sum,per)=>{ if(sum.header?.competitions?.[0]?.status?.type?.completed) return true;
+    const plays=sum.plays||[]; if(plays.some(p=>p.period?.number===per && /End Period|End of Game/i.test(p.type?.text||''))) return true;
+    const maxP=Math.max(0,...plays.map(p=>p.period?.number||0)); return maxP>per; };
+  E.rules = {
+    q1_1(s,o,T){const p=(s.plays||[]).find(x=>x.scoringPlay);if(!p)return null;let i;if(p.scoreValue===1)i=3;else if(p.scoreValue===3)i=2;else i=/layup|dunk|putback|tip|reverse/i.test(p.type?.text||'')?0:1;return E.b('high',i,'First score: '+p.text);},
+    q1_2(s,o,T){const tm=E.pIn(s,1).filter(E.isTimeoutTeam).length;const tv=E.pIn(s,1).filter(p=>/Official Timeout/i.test(p.type?.text||'')).length;return E.b('med',tm>=3?3:tm,tm+' team timeout(s) in Q1'+(tv?(' (+'+tv+' TV timeouts, not counted)'):''));},
+    q1_3(s,o,T){const q=E.pIn(s,1);const fg=q.filter(E.isMadeFG).length,ft=q.filter(E.isMadeFT).length;return E.b('high',fg>ft?0:(ft>fg?1:2),'Q1 made FG '+fg+' vs made FT '+ft);},
+    q1_4(s,o,T){const q=E.pIn(s,1).filter(p=>!E.NOISE.test(p.type?.text||''));const l=q[q.length-1];if(!l)return null;let i;if(E.isMadeFG(l))i=0;else if(E.isFT(l))i=3;else if(E.isTO(l))i=2;else i=1;return E.b('med',i,'Last Q1 action: '+l.text);},
+    q2_1(s,o,T){const h=(T.homeLine[0]||0)+(T.homeLine[1]||0),a=(T.awayLine[0]||0)+(T.awayLine[1]||0);let i;if(h===a)i=o.findIndex(x=>/tie/i.test(x));else i=E.teamOpt(o,h>a?T.homeId:T.awayId,T);return E.b('high',i,'Half: '+T.awayAbbr+' '+a+', '+T.homeAbbr+' '+h);},
+    q2_3(s,o,T){const q=E.pIn(s,2).filter(E.isTO);const h=q.filter(p=>p.team?.id===T.homeId).length,a=q.filter(p=>p.team?.id===T.awayId).length;let i;if(h===a)i=o.findIndex(x=>/even/i.test(x));else i=E.teamOpt(o,h>a?T.homeId:T.awayId,T);return E.b('high',i,'Q2 turnovers: '+T.awayAbbr+' '+a+', '+T.homeAbbr+' '+h);},
+    q2_4(s,o,T){const q=E.pIn(s,2).filter(p=>p.shootingPlay);const l=q[q.length-1];if(!l)return E.b('low',2,'No shot logged late in Q2');return E.b('low',l.scoringPlay?0:1,'Last Q2 shot ('+(l.clock?.displayValue||'')+'): '+l.text);},
+    q3_1(s,o,T){const p=E.pIn(s,3).find(x=>x.scoringPlay);if(!p)return null;return E.b('high',E.teamOpt(o,p.team?.id,T),'First Q3 score: '+p.text);},
+    q3_3(s,o,T){const q=E.pIn(s,3);const th=q.filter(p=>p.scoringPlay&&p.scoreValue===3).length,to=q.filter(E.isTO).length;return E.b('high',th>to?0:(to>th?1:2),'Q3 threes '+th+' vs turnovers '+to);},
+    q3_4(s,o,T){const q=E.pIn(s,3);let ch=0,prev=null;for(const p of q){if(p.homeScore==null)continue;const d=Math.sign(p.homeScore-p.awayScore);if(d!==0){if(prev!==null&&d!==prev)ch++;prev=d;}}return E.b('med',ch>0?0:1,ch+' lead change(s) in Q3');},
+    q4_1(s,o,T){const q=(s.plays||[]).filter(p=>p.period?.number>=4&&!E.NOISE.test(p.type?.text||''));const l=q[q.length-1];if(!l)return null;let i;if(l.scoringPlay)i=l.scoreValue===1?0:(l.scoreValue===2?1:2);else i=3;return E.b('med',i,'Last game action: '+l.text);},
+    q4_2(s,o,T){const n=(s.plays||[]).filter(p=>/Shot Clock Turnover/i.test(p.type?.text||'')).length;return E.b('high',n>=3?3:n,n+' shot-clock (24s) turnover(s) in the game');},
+    q4_3(s,o,T){const per=Math.max(...(s.plays||[]).map(p=>p.period?.number||0));const q=E.pIn(s,per).filter(p=>{const c=E.clockSec(p.clock);return c!==null&&c<=120;});const fta=q.filter(E.isFT).length,fga=q.filter(E.isShotAttempt).length;return E.b('med',fta>fga?0:(fga>fta?1:2),'Last 2:00 — FT attempts '+fta+' vs FG attempts '+fga);},
+    q4_4(s,o,T){const pls=s.boxscore?.players||[];let nm='',mx=0;for(const tm of pls){const g=tm.statistics?.[0];if(!g)continue;const fi=(g.keys||[]).indexOf('fouls');if(fi<0)continue;for(const a of (g.athletes||[])){const f=+((a.stats||[])[fi]||0);if(f>mx){mx=f;nm=a.athlete?.displayName;}}}return E.b('high',mx>=6?0:1,'Most fouls: '+nm+' '+mx+(mx>=6?' (fouled out)':''));},
+  };
+
+  /* Map a question to a rule by its wording (robust to reordering). The two
+     that no feed can answer — and-ones, ref monitor visits — have no rule and
+     stay for the host to mark. */
+  var RULES = [
+    {re:/first bucket/i, id:'q1_1'},
+    {re:/timeouts.*q1|q1[\s\S]*timeouts/i, id:'q1_2'},
+    {re:/field goals or (made )?free throws/i, id:'q1_3'},
+    {re:/q1 ended on/i, id:'q1_4'},
+    {re:/led at halftime/i, id:'q2_1'},
+    {re:/coughed it up|turned it over more/i, id:'q2_3'},
+    {re:/last shot before the halftime/i, id:'q2_4'},
+    {re:/scored first in q3/i, id:'q3_1'},
+    {re:/threes made or turnovers/i, id:'q3_3'},
+    {re:/lead change in q3/i, id:'q3_4'},
+    {re:/final basket of the game/i, id:'q4_1'},
+    {re:/24-second violations|shot clock violations/i, id:'q4_2'},
+    {re:/last two minutes/i, id:'q4_3'},
+    {re:/foul out/i, id:'q4_4'},
+  ];
+  function ruleFor(t){ var m=RULES.find(function(r){return r.re.test(t||'');}); return m?m.id:null; }
+
+  /* ---- ESPN fetch ---- */
+  ESPN.summary = function(id){ return fetch(API+'/summary?event='+id+'&_='+Date.now()).then(function(r){return r.json();}); };
+  ESPN.resolveEvent = async function(cfg, nid){
+    var m=(nid||'').match(/(\d{4})-(\d{2})-(\d{2})/); if(!m) throw new Error('no date in night id');
+    var date=m[1]+m[2]+m[3];
+    var j=await fetch(API+'/scoreboard?dates='+date).then(function(r){return r.json();});
+    var want=[cfg.away,cfg.home].map(function(s){return String(s||'').toUpperCase();});
+    var hit=(j.events||[]).find(function(e){var nm=String(e.shortName||'').toUpperCase();return want.every(function(w){return w&&nm.indexOf(w)>=0;});});
+    return hit?hit.id:null;
+  };
+
+  /* ---- UI helpers ---- */
+  function out(html){ var el=document.getElementById('espnOut'); if(el) el.innerHTML=html; }
+  function setState(txt){ var el=document.getElementById('espnState'); if(el) el.textContent=txt; }
+  function line(tag,x,q,idx,conf,ev){
+    var col = conf==='high'?'#2ee6a6':(conf==='manual'?'#93a0bd':'#ffc54d');
+    var ans = idx==null ? (conf==='manual'?'mark by hand':'—') : esc(q.o[idx]);
+    return '<div style="margin:5px 0"><b>'+tag+'·Q'+(x+1)+'</b> &rarr; <span style="color:'+col+';font-weight:700">'+ans+
+      '</span> <span style="color:'+col+';font-size:11px;text-transform:uppercase">['+conf+']</span>'+
+      (ev?'<br><span style="color:var(--dim);font-size:11.5px">'+esc(ev)+'</span>':'')+'</div>';
+  }
+
+  /* ---- Pull: fill answer marks (draft q.k) for finished quarters ---- */
+  ESPN.pull = async function(){
+    if(typeof night==='undefined' || !night){ toast('Pick a night first.'); return; }
+    var cfg = nightCfg(night);
+    out('Finding the game on ESPN…');
+    try{ if(!eventId) eventId = await ESPN.resolveEvent(cfg, night); }
+    catch(e){ out('<span style="color:var(--red)">Could not reach ESPN: '+esc(e.message)+'</span>'); return; }
+    if(!eventId){ out('<span style="color:var(--red)">No matching ESPN game found for '+esc(cfg.away)+' vs '+esc(cfg.home)+' on this date.</span>'); return; }
+    var sum; try{ sum = await ESPN.summary(eventId); }catch(e){ out('<span style="color:var(--red)">Feed error: '+esc(e.message)+'</span>'); return; }
+    var T = E.teams(sum);
+    var nd = nightDraft(night);   // ensures rounds + seeds the questions if empty
+    var rows=[], filled=0, doneCount=0;
+    nd.rounds.forEach(function(rd,i){
+      if(!E.periodDone(sum,i+1)){ rows.push('<div style="margin:6px 0;color:var(--dim)"><b>'+esc(cfg.tags[i])+'</b> — quarter not finished yet</div>'); return; }
+      doneCount++;
+      rd.qs.forEach(function(q,x){
+        var id = ruleFor(q.t);
+        if(!id){ rows.push(line(cfg.tags[i],x,q,null,'manual','No feed signal — mark this one by hand.')); return; }
+        var res; try{ res = E.rules[id](sum,q.o,T); }catch(e){ res=null; }
+        if(!res || res.index==null){ rows.push(line(cfg.tags[i],x,q,null,(res&&res.confidence)||'manual',(res&&res.evidence)||'Nothing to derive.')); return; }
+        if(q.k==null || q.k===undefined){ q.k=res.index; filled++; }   // never clobber a mark the host set
+        rows.push(line(cfg.tags[i],x,q,q.k,res.confidence,res.evidence));
+      });
+    });
+    saveDraft();
+    try{ renderRun(); }catch(e){}
+    try{ renderWrite(); }catch(e){}
+    var head = doneCount
+      ? ('<b style="color:var(--ink)">Filled '+filled+' answer'+(filled===1?'':'s')+' across '+doneCount+' finished quarter'+(doneCount===1?'':'s')+'.</b> Review below, then close each quarter as usual. (Already-marked answers were left alone.)<br><br>')
+      : 'No quarters have finished yet — pull again the moment Q1 ends.<br><br>';
+    out(head + rows.join(''));
+  };
+
+  /* ---- Auto live score: writes nights/{night}.score from ESPN ---- */
+  ESPN.liveTick = async function(){
+    if(!FB || !FB.auth || !FB.auth.currentUser){ setState('sign in to post score'); ESPN.stopLive(); toast('Sign in first — the live score writes to the room.'); return; }
+    var cfg = nightCfg(night);
+    try{ if(!eventId) eventId = await ESPN.resolveEvent(cfg, night); }catch(e){}
+    if(!eventId){ setState('no game found'); return; }
+    var sum; try{ sum = await ESPN.summary(eventId); }catch(e){ setState('feed error'); return; }
+    var T = E.teams(sum);
+    var st = sum.header?.competitions?.[0]?.status || {};
+    var per = st.period||0, state = st.type?.state;
+    var label = state==='post' ? 'Final' : (per>=1 && cfg.tags[per-1] ? cfg.tags[per-1]+' in progress' : cfg.tags[0]+' in progress');
+    if($('scAway')) $('scAway').value = T.awayScore;
+    if($('scHome')) $('scHome').value = T.homeScore;
+    var sel=$('scPeriod'); if(sel){ var opt=Array.prototype.find.call(sel.options,function(o){return o.value===label;}); if(opt) sel.value=label; }
+    try{ await writeScore(T.awayScore, T.homeScore, label, ($('scNote')&&$('scNote').value)||''); }catch(e){}
+    setState((state==='post'?'Final':'live')+' · '+cfg.away+' '+T.awayScore+' — '+cfg.home+' '+T.homeScore+' ('+(st.type?.shortDetail||label)+')');
+    if(state==='post') ESPN.stopLive();
+  };
+  ESPN.toggleLive = function(){
+    if(liveTimer){ ESPN.stopLive(); return; }
+    var b=$('espnLive'); if(b) b.textContent='⏸ Stop auto score';
+    ESPN.liveTick(); liveTimer=setInterval(ESPN.liveTick, 20000);
+  };
+  ESPN.stopLive = function(){ if(liveTimer){ clearInterval(liveTimer); liveTimer=null; } var b=$('espnLive'); if(b) b.textContent='▶ Auto live score'; };
+
+  /* ---- Mount the panel at the top of the RUN tab ---- */
+  ESPN.mount = function(){
+    var host=document.getElementById('t-run');
+    if(!host || document.getElementById('espnCard')) return;
+    var card=document.createElement('div'); card.className='card'; card.id='espnCard';
+    card.style.borderColor='#28e0d0';
+    card.innerHTML =
+      '<h3>&#9889; ESPN auto <span class="chip" id="espnState">idle</span></h3>'+
+      '<p class="sub">Pull fills the answers for finished quarters from ESPN’s feed — you still review and close each quarter yourself, so nothing reaches a player until you do. Auto live score posts the real score to every phone on its own.</p>'+
+      '<div class="row" style="margin-top:10px">'+
+        '<button class="btn" id="espnPull" style="flex:1">&#9889; Pull answers for finished quarters</button>'+
+        '<button class="btn ghost" id="espnLive">&#9654; Auto live score</button>'+
+      '</div>'+
+      '<div id="espnOut" class="sub" style="margin-top:12px"></div>';
+    host.insertBefore(card, host.firstChild);
+    document.getElementById('espnPull').onclick=ESPN.pull;
+    document.getElementById('espnLive').onclick=ESPN.toggleLive;
+  };
+
+  var tries=0;
+  var iv=setInterval(function(){ tries++; if(document.getElementById('t-run')){ ESPN.mount(); } if(document.getElementById('espnCard')||tries>40) clearInterval(iv); }, 200);
+})();
+</script>
+</body>
+</html>
