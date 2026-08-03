@@ -606,15 +606,16 @@
   <button class="backbtn" id="backBtn" onclick="goBack()">←</button>
 
   <!-- 1. LANDING -->
-  <section class="screen active" id="s-landing" style="position:relative">
+  <section class="screen active" id="s-landing" style="position:relative;isolation:isolate">
     <!-- Hero backdrop — free, commercially-licensed photo (Unsplash License:
-         commercial use OK, no logos/faces, no attribution required) darkened
-         behind the wordmark, with a teal brand glow over it.
-         Photo: unsplash.com/photos/FWNCU0FpOGU (rim against sky). -->
+         commercial use OK, no logos/faces, no attribution required): a hoop
+         against a dark sky, darkened behind the wordmark with a teal glow.
+         #s-landing sets isolation:isolate so this z-index:-1 layer paints
+         above the page background but behind the wordmark. -->
     <div aria-hidden="true" style="position:absolute;left:0;right:0;top:0;height:210px;overflow:hidden;pointer-events:none;z-index:-1">
-      <div style="position:absolute;inset:0;background:url('https://images.unsplash.com/photo-1503525523076-ca4aa2e47535?q=75&amp;w=1400&amp;auto=format&amp;fit=crop') center 34%/cover"></div>
-      <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,14,23,.60),rgba(10,14,23,.40) 44%,rgba(10,14,23,.96))"></div>
-      <div style="position:absolute;inset:0;background:radial-gradient(62% 72% at 50% 26%,rgba(40,224,208,.30),transparent 72%)"></div>
+      <div style="position:absolute;inset:0;background:url('https://images.unsplash.com/photo-1777223631522-d76ea5e73c91?q=75&amp;w=1400&amp;auto=format&amp;fit=crop') center 45%/cover"></div>
+      <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,14,23,.40),rgba(10,14,23,.28) 46%,rgba(10,14,23,.97))"></div>
+      <div style="position:absolute;inset:0;background:radial-gradient(58% 66% at 50% 24%,rgba(40,224,208,.24),transparent 74%)"></div>
     </div>
     <div class="card" id="resumeBar" style="display:none;border-color:var(--teal);background:rgba(25,195,214,.1);margin-bottom:6px">
       <b style="font-size:14.5px">🔴 You have a game in progress</b>
