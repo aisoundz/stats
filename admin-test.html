@@ -1262,6 +1262,83 @@ async function writeReveal(i){
   }, { merge: true });
 }
 
+/* ---------------- AUTHORITATIVE, PRESENCE-INDEPENDENT SCORING ----------
+   Game #3 fix. Scoring used to happen ONLY on the player's phone, the
+   moment the host revealed a round. A phone that was backgrounded,
+   refreshed, or on a dropped connection never ran that code — so a player
+   who HAD answered still showed 0 on the board for the rest of the night.
+   Game #3's board showed answered testers on 0 for exactly this reason.
+
+   This grades every player from the answers they actually submitted — the
+   host holds every sub and every key — and writes each score directly,
+   whether or not that player's phone is awake. It recomputes the whole
+   live total from scratch from the subs on every run, so it is safe to
+   call on every reveal and can never double-count. It writes ONLY the
+   live-round points (plus each player's own prediction/catch points, left
+   untouched) — it never invents a number the subs don't support. */
+async function gradeAllScored(){
+  const { F, db } = FB;
+
+  // 1) every scored round: its answer key (text) and per-question worth.
+  const roundsSnap = await F.getDocs(F.collection(db,'nights',night,'rounds'));
+  const scored = [];
+  roundsSnap.forEach(d=>{
+    const r = d.data() || {};
+    if(r.state==='scored' && Array.isArray(r.key) && r.key.length){
+      scored.push({ id:d.id, key:r.key, worth:(typeof r.worth==='number' && r.worth>0)?r.worth:1 });
+    }
+  });
+  if(!scored.length) return { players:0, rounds:0 };
+
+  // 2) every player — so their prediction/catch points are preserved, not clobbered.
+  const playersSnap = await F.getDocs(F.collection(db,'nights',night,'players'));
+  const tally = {};
+  playersSnap.forEach(p=>{
+    const d = p.data() || {};
+    tally[p.id] = { live:0, speed:0, rounds:0,
+      predPts:(typeof d.predPts==='number'?d.predPts:0),
+      catchPts:(typeof d.catchPts==='number'?d.catchPts:0) };
+  });
+
+  // 3) grade each scored round from its subs (pick text === key text).
+  for(const rd of scored){
+    const subsSnap = await F.getDocs(F.collection(db,'nights',night,'rounds',rd.id,'subs'));
+    subsSnap.forEach(s=>{
+      const t = tally[s.id]; if(!t) return;      // a sub with no player doc — skip
+      const sub = s.data() || {};
+      const picks = Array.isArray(sub.picks)?sub.picks:[];
+      const banks = Array.isArray(sub.banks)?sub.banks:[];
+      let correct = 0, sp = 0;
+      for(let i=0;i<rd.key.length;i++){
+        const pk = picks[i];
+        if(pk!=null && pk!=='' && String(pk)===String(rd.key[i])){ correct++; sp += Number(banks[i]||0); }
+      }
+      t.live  += correct * rd.worth;
+      t.speed += sp;
+      t.rounds += 1;                              // rounds this player actually answered
+    });
+  }
+
+  // 4) write each player's authoritative total. pts = live + their own
+  //    prediction/catch points, so nothing else on the doc is disturbed.
+  let n = 0;
+  for(const uid in tally){
+    const t = tally[uid];
+    await F.setDoc(F.doc(db,'nights',night,'players',uid), {
+      pts: t.live + t.predPts + t.catchPts,
+      speed: t.speed,
+      roundsDone: t.rounds,
+      lastScoredBy: 'host',
+      lastScoredAt: F.serverTimestamp()
+    }, { merge: true });
+    n++;
+  }
+  return { players:n, rounds:scored.length };
+}
+/* Exposed so the host can re-run grading by hand from the console if a
+   reveal's auto-grade ever needs a second pass. */
+try{ window.gradeAllScored = gradeAllScored; }catch(e){}
+
 async function writeScore(a, h, period, note){
   const { F, db } = FB;
   const clean = String(note==null?'':note).trim().slice(0,90);
@@ -1365,6 +1442,14 @@ async function closeQuarter(i){
     toast('Reveal failed, so nothing else ran: ' + ((e&&e.message)||e));
     return;
   }
+
+  /* Game #3 fix: grade everyone from their SAVED answers now — no phone
+     needs to be awake to score. Runs right after the reveal so the board
+     is right the instant the quarter closes. A grading snag is not fatal
+     to the close (the key is out; a re-run fixes the board), so it warns
+     rather than aborting the push. */
+  try{ const g = await gradeAllScored(); if(g && g.players) done.push(`${g.players} scored from saved answers`); }
+  catch(e){ toast(`${cfg.tags[i]} revealed, but auto-scoring hit a snag — run it again from GRADE or the console. ` + ((e&&e.message)||e)); }
 
   if(wantScore){
     try{ await writeScore(a, h, label, note); done.push('score posted'); }
@@ -1486,7 +1571,10 @@ async function revealRound(i, again){
       (again ? '\n\nThis re-reveals a round that was already scored. Phones that already scored it will NOT score it twice.' : ''))) return;
   try{
     await writeReveal(i);
-    toast(`${cfg.tags[i]} scored. Phones are updating.`);
+    let extra = '';
+    try{ const g = await gradeAllScored(); if(g && g.players) extra = ` · ${g.players} scored from saved answers`; }
+    catch(ge){ extra = ' · auto-scoring snag (re-run from console)'; }
+    toast(`${cfg.tags[i]} scored. Phones are updating.` + extra);
   }catch(e){ toast('Reveal failed: ' + ((e&&e.message)||e)); }
 }
 
