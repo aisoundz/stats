@@ -1399,6 +1399,9 @@ window.STATS_FIREBASE = {
     top:   function () { return Promise.resolve(null); },
     rank:  function () { return Promise.resolve(null); },
     watchRound: function () { return function () {}; },
+    watchCallIt: function () { return function () {}; },
+    callItPick: function () { return Promise.resolve(false); },
+    pushCallItBoard: function () { return Promise.resolve(false); },
     submit: function () { return Promise.resolve(false); },
     mySub:  function () { return Promise.resolve(null); },
     signup: function () { return Promise.resolve(false); },
@@ -1878,6 +1881,45 @@ window.STATS_FIREBASE = {
         cb(v);
       }, function () { cb(null); });   // an error is "no round", never a fake one
     } catch (e) { return function () {}; }
+  };
+
+  /* ---- Call It: the live in-game side-game (ISOLATED) ----------------
+     A separate code path from the scored game. Reads the host-written
+     questions, writes ONE create-only pick per question, and a self-
+     updated streak board. None of this touches pts, rounds, or the HR
+     hosted-round flow — if it all failed, the main game is untouched. */
+  SB.watchCallIt = function (cb) {
+    if (!SB.enabled || !nightId) return function () {};
+    try {
+      return F.onSnapshot(F.collection(db, 'nights', nightId, 'callit'), function (snap) {
+        var qs = [];
+        snap.forEach(function (d) { var v = d.data() || {}; v.qid = v.qid || d.id; qs.push(v); });
+        qs.sort(function (a, b) { return (a.seq || 0) - (b.seq || 0); });
+        cb(qs);
+      }, function () { cb([]); });
+    } catch (e) { return function () {}; }
+  };
+  SB.callItPick = async function (qid, pick) {
+    if (!SB.enabled || !nightId || !qid) return false;
+    try {
+      await F.setDoc(F.doc(db, 'nights', nightId, 'callit', qid, 'picks', uid()), {
+        uid: uid(), name: (SB.me && SB.me.name) || mine.name || 'player',
+        pick: String(pick), at: F.serverTimestamp()
+      });                                   // create-only; rules refuse a second pick / a late one
+      return true;
+    } catch (e) { return false; }
+  };
+  SB.pushCallItBoard = async function (r) {
+    if (!SB.enabled || !nightId) return false;
+    r = r || {};
+    try {
+      await F.setDoc(F.doc(db, 'nights', nightId, 'callitboard', uid()), {
+        uid: uid(), name: (SB.me && SB.me.name) || mine.name || 'player', color: mine.color || '',
+        called: r.called | 0, hit: r.hit | 0, streak: r.streak | 0, best: r.best | 0, heat: r.heat | 0,
+        at: F.serverTimestamp()
+      }, { merge: true });
+      return true;
+    } catch (e) { return false; }
   };
 
   /* One submission per player per round, written the moment they finish
@@ -5053,6 +5095,111 @@ function hostedFor(qi){
 function startHostedWatch(){
   if(HR.unsub || !window.SB || !SB.watchRound) return;
   try{ HR.unsub = SB.watchRound(onHostedRound) || null; }catch(e){}
+  try{ startCallItWatch(); }catch(e){}   // Call It rides alongside, isolated
+}
+
+/* ================= CALL IT — player side (isolated side-game) =========
+   A one-tap, dismissible card that shows the host's live question, locks
+   the pick fast, self-grades off the resolved answer, and tracks a streak
+   on a board that is SEPARATE from the 100-pt leaderboard. It never calls
+   SB.join / SB.push / the HR flow, and if the whole thing broke the main
+   game would not notice. */
+var PCI = { unsub:null, active:null, picked:{}, graded:{}, streak:0, best:0, called:0, hit:0, heat:0, muted:false, tick:null, hideT:null };
+
+function startCallItWatch(){
+  if(PCI.unsub || S.mode!=='live' || !window.SB || !SB.watchCallIt) return;
+  ensureCiCard();
+  try{ PCI.unsub = SB.watchCallIt(onCallItQuestions) || null; }catch(e){}
+}
+function onCallItQuestions(qs){
+  if(!qs || !qs.length) return;
+  var q = qs[qs.length-1];              // newest
+  PCI.active = q;
+  renderCiCard(q);
+}
+function ciLabel(q,v){ var o=(q.options||[]).find(function(x){return String(x.v)===String(v);}); return o?o.k:String(v); }
+
+function ensureCiCard(){
+  if(document.getElementById('ciCard')) return;
+  var css=document.createElement('style');
+  css.textContent =
+    '#ciCard{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;width:min(430px,94vw);z-index:9000;'+
+      'background:#161d2e;border:1px solid #2b3a5e;'+
+      'border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.55);padding:14px 15px;display:none;font-family:inherit}'+
+    '#ciCard .cihead{font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#28e0d0;margin-bottom:6px}'+
+    '#ciCard .ciq{font-weight:800;font-size:17px;line-height:1.25;color:#eef2fb;margin-bottom:11px}'+
+    '#ciCard .ciopts{display:flex;gap:8px;flex-wrap:wrap}'+
+    '#ciCard .ciopt{flex:1 1 45%;min-width:120px;padding:14px 10px;border-radius:12px;border:1px solid #3a4b73;'+
+      'background:#0f1626;color:#eef2fb;font-weight:800;font-size:15px;cursor:pointer}'+
+    '#ciCard .ciopt:disabled{opacity:.55;cursor:default}'+
+    '#ciCard .ciopt.cisel{background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e;border-color:transparent}'+
+    '#ciCard .cistat{margin-top:10px;font-size:12.5px;color:#93a0bd}'+
+    '#ciCard .cibody{font-size:15px;color:#eef2fb}'+
+    '#ciCard .cireveal{margin-top:6px;font-size:13px;color:#93a0bd}'+
+    '#ciCard .cimute{margin-top:10px;background:none;border:none;color:#5b6a8c;font-size:12px;cursor:pointer;text-decoration:underline}';
+  document.head.appendChild(css);
+  var d=document.createElement('div'); d.id='ciCard'; d.innerHTML='<div id="ciInner"></div>';
+  document.body.appendChild(d);
+}
+function ciShow(html){ var c=document.getElementById('ciCard'), inner=document.getElementById('ciInner'); if(!c||!inner) return; inner.innerHTML=html; c.style.display='block'; }
+function ciHideSoon(ms){ clearTimeout(PCI.hideT); PCI.hideT=setTimeout(function(){ var c=document.getElementById('ciCard'); if(c) c.style.display='none'; }, ms); }
+
+function ciGrade(q){
+  if(PCI.graded[q.qid]) return;
+  PCI.graded[q.qid]=true;
+  var pick=PCI.picked[q.qid];
+  if(pick==null) return;                 // sat it out — no effect on streak
+  PCI.called++;
+  if(String(pick)===String(q.answer)){ PCI.hit++; PCI.streak++; if(PCI.streak>PCI.best)PCI.best=PCI.streak; PCI.heat=Math.min(9,PCI.heat+1); }
+  else { PCI.streak=0; PCI.heat=Math.max(0,PCI.heat-1); }
+  try{ if(window.SB&&SB.pushCallItBoard) SB.pushCallItBoard({called:PCI.called,hit:PCI.hit,streak:PCI.streak,best:PCI.best,heat:PCI.heat}); }catch(e){}
+}
+function ciPick(q,v){
+  if(PCI.muted || PCI.picked[q.qid]!=null) return;
+  PCI.picked[q.qid]=v;
+  try{ if(window.SB&&SB.callItPick) SB.callItPick(q.qid,v); }catch(e){}
+  renderCiCard(q);
+}
+function renderCiCard(q){
+  var c=document.getElementById('ciCard'); if(!c) return;
+  if(PCI.muted){ c.style.display='none'; return; }
+  var st=q.state||'open';
+  if(st==='void'){ ciShow('<div class="cihead">🎯 Call It</div><div class="cibody">No result on that one — no harm done.</div>'); ciHideSoon(3500); return; }
+  if(st==='resolved'){
+    ciGrade(q);
+    var pk=PCI.picked[q.qid];
+    var right = pk!=null && String(pk)===String(q.answer);
+    var head = pk==null ? 'You sat this one out' : (right?'✅ Nice call!':'✕ Not this time');
+    var tail = pk==null ? '' : (right?(' · 🔥 '+PCI.streak+' in a row'):' · streak reset');
+    ciShow('<div class="cihead">🎯 Call It · resolved</div><div class="cibody"><b>'+esc(head)+'</b>'+esc(tail)+'</div>'+
+           '<div class="cireveal">'+esc(q.resolveText||'')+'</div>');
+    ciHideSoon(6000); return;
+  }
+  // open / locked
+  clearTimeout(PCI.hideT);
+  var opensMs=(q.opensAt&&q.opensAt.toMillis)?q.opensAt.toMillis():Date.now();
+  var locksMs=opensMs+(q.locksMs||6000);
+  var now=Date.now();
+  var pick=PCI.picked[q.qid];
+  var locked = now>=locksMs || pick!=null;
+  var opts=(q.options||[]).map(function(o){
+    var sel=(pick!=null&&String(pick)===String(o.v))?' cisel':'';
+    return '<button class="ciopt'+sel+'" '+(locked?'disabled':'')+' data-civ="'+esc(String(o.v))+'">'+esc(o.k)+'</button>';
+  }).join('');
+  var status = locked ? (pick!=null?('Locked: '+esc(ciLabel(q,pick))+' — waiting on the play…'):'Locked — waiting on the play…')
+                      : 'Tap fast — locks in a few seconds';
+  ciShow('<div class="cihead">🎯 Call It'+(pick!=null?' · locked':'')+'</div>'+
+         '<div class="ciq">'+esc(q.prompt)+'</div>'+
+         '<div class="ciopts">'+opts+'</div>'+
+         '<div class="cistat">'+status+(PCI.streak?(' · 🔥 '+PCI.streak):'')+'</div>'+
+         '<button class="cimute" data-cimute="1">mute Call It</button>');
+  var card=document.getElementById('ciCard');
+  Array.prototype.forEach.call(card.querySelectorAll('.ciopt'), function(b){
+    b.onclick=function(){ if(!locked) ciPick(q, b.getAttribute('data-civ')); };
+  });
+  var mb=card.querySelector('.cimute'); if(mb) mb.onclick=function(){ PCI.muted=true; card.style.display='none'; };
+  clearTimeout(PCI.tick);
+  if(!locked){ PCI.tick=setTimeout(function(){ if(PCI.active) renderCiCard(PCI.active); }, Math.max(250, locksMs-now)); }
 }
 
 function onHostedRound(r){

@@ -2363,7 +2363,9 @@ boot();
     var sel=$('scPeriod'); if(sel){ var opt=Array.prototype.find.call(sel.options,function(o){return o.value===label;}); if(opt) sel.value=label; }
     try{ await writeScore(T.awayScore, T.homeScore, label, ($('scNote')&&$('scNote').value)||''); }catch(e){}
     setState((state==='post'?'Final':'live')+' · '+cfg.away+' '+T.awayScore+' — '+cfg.home+' '+T.homeScore+' ('+(st.type?.shortDetail||label)+')');
-    if(state==='post') ESPN.stopLive();
+    /* Call It rides this same tick — isolated, never touches the score above. */
+    try{ await CI.tick(sum, T); }catch(e){}
+    if(state==='post'){ try{ if(CI.on) CI.setOn(false); }catch(e){} ESPN.stopLive(); }
   };
   ESPN.toggleLive = function(){
     if(liveTimer){ ESPN.stopLive(); return; }
@@ -2371,6 +2373,131 @@ boot();
     ESPN.liveTick(); liveTimer=setInterval(ESPN.liveTick, 20000);
   };
   ESPN.stopLive = function(){ if(liveTimer){ clearInterval(liveTimer); liveTimer=null; } var b=$('espnLive'); if(b) b.textContent='▶ Auto live score'; };
+
+  /* =====================================================================
+     CALL IT — the live, in-game predictive layer (ISOLATED)
+     ---------------------------------------------------------------------
+     Rides the SAME /summary poll as the live score above — no second
+     poller. It opens a one-tap question at a dead-ball pause, locks it in
+     ~6s, and resolves it from the next real play. It writes ONLY to its
+     own `nights/{night}/callit/*` collection and NEVER touches player
+     points, the rounds, or the 100-pt main game. Worst case if anything
+     here misbehaves: a single question voids. Off by default; the host
+     flips it on for the night, which also sets `config.callit` so phones
+     know to watch. This is piece 1 (the host loop); the player card is
+     piece 2. */
+  var CI = { on:false, seeded:false, lastSeq:0, openQid:null, lastOpenAt:0, lastPlayAt:0, countPer:{} };
+  CI.setState = function(t){ var e=$('ciState'); if(e) e.textContent=t; };
+  CI.abbr = function(id,T){ return String(id)===String(T.homeId)?T.homeAbbr:(String(id)===String(T.awayId)?T.awayAbbr:''); };
+  CI.teamName = function(id,T){ return String(id)===String(T.homeId)?T.homeName:(String(id)===String(T.awayId)?T.awayName:'They'); };
+  CI.curPeriod = function(plays){ var m=1; plays.forEach(function(p){ var n=(p.period&&p.period.number)||0; if(n>m)m=n; }); return m; };
+
+  CI.setOn = async function(on){
+    CI.on = !!on;
+    var b=$('ciBtn'); if(b){ b.textContent = CI.on?'⏸ Call It: ON':'▶ Call It: OFF'; b.className = CI.on?'btn':'btn ghost'; b.style.flex='0 0 auto'; }
+    CI.setState(CI.on?'armed — watching the feed':'off');
+    try{ await FB.F.setDoc(FB.F.doc(FB.db,'nights',night,'config'), { callit: CI.on }, {merge:true}); }catch(e){}
+    if(!CI.on && CI.openQid){ try{ await CI.voidQ(CI.openQid,'host turned Call It off'); }catch(e){} CI.openQid=null; }
+    if(CI.on){ CI.seeded=false; }   // re-seed so we don't fire on the backlog when switched on
+  };
+
+  /* Build a question from the live state. Prefers a basketball READ (a run)
+     over a coin-flip, then rotates 2-or-3 and who-next. Returns null if
+     there's nothing sensible to ask. */
+  CI.build = function(plays, T, per){
+    var scoring = plays.filter(function(p){return p.scoringPlay;});
+    var last = scoring[scoring.length-1]; if(!last) return null;
+    var runTeam=null, runLen=0;
+    for(var i=scoring.length-1;i>=0;i--){ if(runTeam==null){ runTeam=scoring[i].team&&scoring[i].team.id; runLen=1; } else if(String(scoring[i].team&&scoring[i].team.id)===String(runTeam)){ runLen++; } else break; }
+    var clutch = (per>=4 && Math.abs((T.homeScore||0)-(T.awayScore||0))<=6);
+    var seq = last.sequenceNumber || 0;
+    var qid = 'ci_'+per+'_'+(CI.countPer[per]||0)+'_'+seq;
+    if(runLen>=3){
+      return { qid:qid, kind:'runContinue', per:per, runTeam:String(runTeam),
+        prompt:'🔥 '+CI.teamName(runTeam,T)+' on a '+runLen+'-score run — do they score the NEXT bucket?',
+        options:[{k:'KEEP IT GOING',v:'Y'},{k:'RUN ENDS',v:'N'}] };
+    }
+    if((CI.countPer[per]||0) % 2 === 0){
+      return { qid:qid, kind:'twoOrThree', per:per, runTeam:null,
+        prompt:(clutch?'⏱️ CLUTCH — ':'')+'Next field goal — deuce or a three?',
+        options:[{k:'2 · deuce',v:'2'},{k:'3 · triple',v:'3'}] };
+    }
+    return { qid:qid, kind:'whoNext', per:per, runTeam:null,
+      prompt:(clutch?'⏱️ CLUTCH — ':'')+'Who scores the NEXT bucket?',
+      options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}] };
+  };
+
+  CI.write = function(q){
+    var F=FB.F, db=FB.db;
+    return F.setDoc(F.doc(db,'nights',night,'callit',q.qid), {
+      qid:q.qid, kind:q.kind, prompt:q.prompt, options:q.options,
+      period:q.per, runTeam:q.runTeam||null,
+      state:'open', answer:null, resolveText:null,
+      opensAt:F.serverTimestamp(), locksMs:6000, seq:Date.now()
+    }, {merge:true});
+  };
+  CI.voidQ = function(qid,why){
+    return FB.F.setDoc(FB.F.doc(FB.db,'nights',night,'callit',qid), { state:'void', voidReason:String(why||''), voidedAt:FB.F.serverTimestamp() }, {merge:true});
+  };
+
+  CI.maybeTrigger = async function(fresh, plays, T){
+    var madeFG = fresh.find(function(p){ return E.isMadeFG(p); });   // a made basket = a natural dead-ball pause
+    if(!madeFG) return;
+    var per = CI.curPeriod(plays);
+    if(Date.now()-CI.lastOpenAt < 80000) return;         // min spacing
+    if((CI.countPer[per]||0) >= 6) return;               // cap per quarter
+    var q = CI.build(plays, T, per); if(!q) return;
+    await CI.write(q);
+    CI.openQid=q.qid; CI.lastOpenAt=Date.now(); CI.countPer[per]=(CI.countPer[per]||0)+1;
+    CI.setState('OPEN · '+q.prompt);
+  };
+
+  CI.tryResolve = async function(qid, fresh, T){
+    var F=FB.F, db=FB.db;
+    var snap; try{ snap = await F.getDoc(F.doc(db,'nights',night,'callit',qid)); }catch(e){ return; }
+    if(!snap.exists()){ CI.openQid=null; return; }
+    var Q=snap.data(); if(Q.state!=='open'){ CI.openQid=null; return; }
+    var ans=null, text=null;
+    if(Q.kind==='whoNext' || Q.kind==='runContinue'){
+      var s = fresh.find(function(p){ return p.scoringPlay; });
+      if(!s) return;                                     // wait for the next tick
+      ans = (Q.kind==='runContinue') ? (String(s.team&&s.team.id)===String(Q.runTeam)?'Y':'N') : String(s.team&&s.team.id);
+      text = CI.abbr(s.team&&s.team.id,T)+' +'+s.scoreValue+(s.text?(' · '+s.text):'');
+    } else if(Q.kind==='twoOrThree'){
+      var fg = fresh.find(function(p){ return E.isMadeFG(p); });
+      if(!fg) return;
+      ans = String(fg.scoreValue);
+      text = CI.abbr(fg.team&&fg.team.id,T)+' · '+fg.scoreValue+'-pointer'+(fg.text?(' · '+fg.text):'');
+    }
+    if(ans==null) return;
+    await F.setDoc(F.doc(db,'nights',night,'callit',qid), { state:'resolved', answer:ans, resolveText:text, resolvedAt:F.serverTimestamp() }, {merge:true});
+    CI.openQid=null; CI.setState('resolved · '+text);
+  };
+
+  CI.voidIfStuck = async function(qid){
+    var F=FB.F, db=FB.db;
+    var snap; try{ snap = await F.getDoc(F.doc(db,'nights',night,'callit',qid)); }catch(e){ return; }
+    if(!snap.exists()){ CI.openQid=null; return; }
+    var Q=snap.data();
+    var opened = (Q.opensAt && Q.opensAt.toMillis) ? Q.opensAt.toMillis() : CI.lastOpenAt;
+    var feedStalled = (Date.now()-CI.lastPlayAt) > 45000;
+    var tooOld = (Date.now()-opened) > 120000;
+    if(feedStalled || tooOld){ await CI.voidQ(qid, feedStalled?'feed stalled':'no qualifying play in 2 min'); CI.openQid=null; CI.setState('voided ('+(feedStalled?'feed stall':'timeout')+')'); }
+  };
+
+  /* Called from liveTick with the same summary the score uses. */
+  CI.tick = async function(sum, T){
+    if(!CI.on) return;
+    var plays = sum.plays||[]; if(!plays.length) return;
+    var maxSeq=0; plays.forEach(function(p){ var s=+(p.sequenceNumber||0); if(s>maxSeq)maxSeq=s; });
+    if(!CI.seeded){ CI.lastSeq=maxSeq; CI.seeded=true; CI.lastPlayAt=Date.now(); return; }   // don't fire on the backlog
+    var fresh = plays.filter(function(p){ return (+(p.sequenceNumber||0)) > CI.lastSeq; });
+    if(fresh.length){ CI.lastSeq=maxSeq; CI.lastPlayAt=Date.now(); }
+    if(CI.openQid){ await CI.tryResolve(CI.openQid, fresh, T); }
+    if(CI.openQid){ await CI.voidIfStuck(CI.openQid); }
+    if(!CI.openQid){ await CI.maybeTrigger(fresh, plays, T); }
+  };
+  ESPN.CI = CI;   // exposed for the shadow test + manual poke
 
   /* ---- Mount the panel at the top of the RUN tab ---- */
   ESPN.mount = function(){
@@ -2385,10 +2512,16 @@ boot();
         '<button class="btn" id="espnPull" style="flex:1 1 240px;white-space:nowrap">&#9889; Pull answers for finished quarters</button>'+
         '<button class="btn ghost" id="espnLive" style="flex:0 0 auto;white-space:nowrap">&#9654; Auto live score</button>'+
       '</div>'+
+      '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--line2);padding-top:10px">'+
+        '<button class="btn ghost" id="ciBtn" style="flex:0 0 auto;white-space:nowrap">&#9654; Call It: OFF</button>'+
+        '<span class="chip" id="ciState">off</span>'+
+        '<span class="sub" style="flex:1 1 200px;min-width:160px">Live in-game questions, resolved off the play-by-play. Isolated from the main score — needs Auto live score running.</span>'+
+      '</div>'+
       '<div id="espnOut" class="sub" style="margin-top:12px"></div>';
     host.insertBefore(card, host.firstChild);
     document.getElementById('espnPull').onclick=ESPN.pull;
     document.getElementById('espnLive').onclick=ESPN.toggleLive;
+    var cib=document.getElementById('ciBtn'); if(cib) cib.onclick=function(){ CI.setOn(!CI.on); };
   };
 
   var tries=0;
