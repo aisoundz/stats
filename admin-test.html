@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>STATS · Control Room</title>
+<title>STATS GAMETIME · Control Room</title>
 <style>
   :root{
     --bg:#0a0e17; --bg2:#111726; --card:#161d2e; --card2:#1c2438;
@@ -409,7 +409,12 @@ const NIGHTS = [
   // away/home are the two short names on the live scoreboard in tab 2, in
   // that order — the app draws the road team on the left, so the order here
   // is not decorative. Everything else on this list is the round structure.
-  { id:'gn4-2026-08-09-dal-min', label:'Game Night #4 (TEST) — Dallas @ Minnesota (Aug 9, 3:30 ET)',
+  { id:'gn5-2026-08-10-tor-atl', label:'Game Night #5 — Tempo @ Dream (Mon Aug 10, 8:00 ET · Peacock)',
+    away:'TOR', home:'ATL',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[1,2,3,4] },
+  { id:'gn4-2026-08-09-dal-min', label:'Game Night #4 (TEST) — Dallas @ Minnesota (Aug 9)',
     away:'DAL', home:'MIN',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
@@ -442,6 +447,37 @@ const NIGHTS = [
 // simulated results for a fake game, not claims about the real one. The host
 // marks the real answer at the break, then pushes.
 const BANK = {
+  /* Game #5 — Tempo @ Dream. Every question here is AUTO-GRADABLE off the
+     ESPN feed: the two that never were ("and-ones", "ref went to the
+     monitor") are gone for good, replaced by Q2 threes and a Q3 lead-change
+     question that both resolve cleanly from plays[]. Timeouts appear once,
+     not twice, so the sheet stops feeling like a counting exercise. */
+  'gn5-2026-08-10-tor-atl': [
+    [
+      { t: 'The first bucket of the night — how did it go in?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throw'] },
+      { t: 'In Q1, which was more — made field goals or made free throws?', o: ['Made field goals', 'Made free throws', 'Equal'] },
+      { t: 'How many team timeouts in Q1? (media/TV timeouts don\'t count)', o: ['None', '1', '2', '3 or more'] },
+      { t: 'Q1 ended on…', o: ['A made basket', 'A missed shot', 'A turnover', 'Free throws'] }
+    ],
+    [
+      { t: 'Who led at halftime?', o: ['Dream', 'Tempo', 'Tied'] },
+      { t: 'In Q2, which team made more threes?', o: ['Dream', 'Tempo', 'Even'] },
+      { t: 'In Q2, which team coughed it up more?', o: ['Dream', 'Tempo', 'About even'] },
+      { t: 'The last shot before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'] }
+    ],
+    [
+      { t: 'Which team scored FIRST in Q3?', o: ['Dream', 'Tempo'] },
+      { t: 'Did the lead change hands in Q3?', o: ['Yes', 'No'] },
+      { t: 'In Q3, which was more — threes made or turnovers? (both teams)', o: ['Threes made', 'Turnovers', 'Equal'] },
+      { t: 'Which team won Q3 (outscored the other)?', o: ['Dream', 'Tempo', 'Tied'] }
+    ],
+    [
+      { t: 'The final basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'] },
+      { t: '🎯 How many 24-second violations in the WHOLE game?', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In the last two minutes, which happened more?', o: ['Free throws attempted', 'Field goals attempted', 'Equal'] },
+      { t: 'Did any player foul out?', o: ['Yes', 'No'] }
+    ]
+  ],
   'gn3-2026-08-09-ny-lv': [
     [
       { t: 'The first bucket of the night — how did it go in?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throw'] },
@@ -2273,6 +2309,21 @@ boot();
     q4_1(s,o,T){const q=(s.plays||[]).filter(p=>p.period?.number>=4&&!E.NOISE.test(p.type?.text||''));const l=q[q.length-1];if(!l)return null;let i;if(l.scoringPlay)i=l.scoreValue===1?0:(l.scoreValue===2?1:2);else i=3;return E.b('med',i,'Last game action: '+l.text);},
     q4_2(s,o,T){const n=(s.plays||[]).filter(p=>/Shot Clock Turnover/i.test(p.type?.text||'')).length;return E.b('high',n>=3?3:n,n+' shot-clock (24s) turnover(s) in the game');},
     q4_3(s,o,T){const per=Math.max(...(s.plays||[]).map(p=>p.period?.number||0));const q=E.pIn(s,per).filter(p=>{const c=E.clockSec(p.clock);return c!==null&&c<=120;});const fta=q.filter(E.isFT).length,fga=q.filter(E.isShotAttempt).length;return E.b('med',fta>fga?0:(fga>fta?1:2),'Last 2:00 — FT attempts '+fta+' vs FG attempts '+fga);},
+    /* Two rules added to REPLACE the only two questions the feed could never
+       answer — "and-ones" and "ref monitor visits". A live quarter question
+       that can't auto-grade leaves players hanging and the host guessing, so
+       those are gone from the bank and these took their slots. Both resolve
+       cleanly off plays[]. */
+    q2_5(s,o,T){const q=E.pIn(s,2).filter(p=>p.scoringPlay&&p.scoreValue===3);
+      const h=q.filter(p=>p.team?.id===T.homeId).length,a=q.filter(p=>p.team?.id===T.awayId).length;
+      let i;if(h===a)i=o.findIndex(x=>/even|equal|tie/i.test(x));else i=E.teamOpt(o,h>a?T.homeId:T.awayId,T);
+      return E.b('high',i,'Q2 threes: '+T.awayAbbr+' '+a+', '+T.homeAbbr+' '+h);},
+    q3_5(s,o,T){const q=E.pIn(s,3);let changes=0,prev=null;
+      q.forEach(p=>{ if(typeof p.awayScore!=='number'||typeof p.homeScore!=='number')return;
+        const d=p.homeScore-p.awayScore, sgn=d>0?1:(d<0?-1:0);
+        if(sgn!==0){ if(prev!==null&&sgn!==prev) changes++; prev=sgn; } });
+      const yes=changes>0;
+      return E.b('high',o.findIndex(x=>(yes?/^yes/i:/^no/i).test(String(x))),'Q3 lead changes: '+changes);},
     q4_4(s,o,T){const pls=s.boxscore?.players||[];let nm='',mx=0;for(const tm of pls){const g=tm.statistics?.[0];if(!g)continue;const fi=(g.keys||[]).indexOf('fouls');if(fi<0)continue;for(const a of (g.athletes||[])){const f=+((a.stats||[])[fi]||0);if(f>mx){mx=f;nm=a.athlete?.displayName;}}}return E.b('high',mx>=6?0:1,'Most fouls: '+nm+' '+mx+(mx>=6?' (fouled out)':''));},
   };
 
@@ -2285,6 +2336,8 @@ boot();
     {re:/field goals or (made )?free throws/i, id:'q1_3'},
     {re:/q1 ended on/i, id:'q1_4'},
     {re:/led at halftime/i, id:'q2_1'},
+    {re:/q2.*more threes|more threes.*q2/i, id:'q2_5'},
+    {re:/lead change hands in q3|did the lead change/i, id:'q3_5'},
     {re:/coughed it up|turned it over more/i, id:'q2_3'},
     {re:/last shot before the halftime/i, id:'q2_4'},
     {re:/scored first in q3/i, id:'q3_1'},

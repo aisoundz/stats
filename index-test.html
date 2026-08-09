@@ -2298,25 +2298,28 @@ window.STATS_FIREBASE = {
    re-skins to ANY game — NBA, G-League, college, WNBA.
    In production this loads from the nightly schedule feed. */
 const BB_GAME={
-  nightId:"gn4-2026-08-09-dal-min",
-  espnEvent:"401857130",   // drives the auto-pulled matchup card on the home page
-  homeName:"Minnesota Lynx", homeAbbr:"MIN", homeNick:"Lynx", homeEmoji:"🐾", homeColor:"#266092",
-  awayName:"Dallas Wings", awayAbbr:"DAL", awayNick:"Wings", awayEmoji:"🪽", awayColor:"#002b5c",
-  venue:"WNBA Game of the Night", date:"Sun · August 9", short:"August 9", shareDate:"AUG 9", night:"Game Night #4 (TEST)",
-  // TEST NIGHT for the Call It shadow test: Aug 9, Dallas Wings at Minnesota
-  // Lynx, 3:30 p.m. ET. Dallas are the road team, so the Lynx are `home` here.
-  // ESPN event 401857130. (Rosters/predictions below still list the prior game's
-  // players — this test exercises Call It, not the prediction sheet.)
-  net:"",
-  tip:"Tip-off 3:30 ET · 2:30 CT · 12:30 PT"
+  nightId:"gn5-2026-08-10-tor-atl",
+  espnEvent:"401857132",   // drives the auto-pulled matchup card on the home page
+  homeName:"Atlanta Dream", homeAbbr:"ATL", homeNick:"Dream", homeEmoji:"💫", homeColor:"#e31837",
+  awayName:"Toronto Tempo", awayAbbr:"TOR", awayNick:"Tempo", awayEmoji:"🍁", awayColor:"#33476d",
+  venue:"WNBA Game of the Night", date:"Mon · August 10", short:"August 10", shareDate:"AUG 10", night:"Game Night #5",
+  // Verified against the ESPN schedule: Mon Aug 10, Toronto Tempo at Atlanta
+  // Dream, 8:00 p.m. ET, on Peacock. Toronto are the road team, so the Dream
+  // are `home` here — the app draws home on the right of the VS badge.
+  // ESPN event 401857132. Colours + records come from the same feed.
+  net:"Peacock",
+  tip:"Tip-off 8:00 ET · 7:00 CT · 5:00 PT · Peacock"
 };
 const COLORS=["#2f6bff","#19c3d6","#ff4d5e","#ffc54d","#2ee6a6","#b57cff","#ff924d","#4dd0ff"];
 const BB_ROSTER={ // full names — used on the prediction sheet & final review
   // Six per side, taken from the published 2026 rosters. Six is a deliberate
   // cap, not laziness: a prediction sheet with fifteen names is a scroll, and
   // a scroll is the friction the host told us to cut.
-  home:["Breanna Stewart","Sabrina Ionescu","Jonquel Jones","Satou Sabally","Betnijah Laney-Hamilton","Leonie Fiebich"],
-  away:["A'ja Wilson","Jackie Young","Chelsea Gray","Jewell Loyd","NaLyssa Smith","Dana Evans"]
+  // Game #5 — Toronto Tempo @ Atlanta Dream. Names pulled live from the ESPN
+  // team rosters (atl / tor), not from memory. Six a side is a deliberate cap:
+  // a sheet with fourteen names is a scroll, and a scroll is friction.
+  home:["Allisha Gray","Angel Reese","Jordin Canada","Rhyne Howard","Brionna Jones","Naz Hillmon"],
+  away:["Marina Mabrey","Brittney Sykes","Julie Allemand","Nyara Sabally","Kia Nurse","Aneesah Morrow"]
 };
 /* Prediction sheet definition (matches arena rules: 6 categories, base + bonus)
    NOTE: every `answer` below is a SIMULATED result used only by Practice mode.
@@ -2339,11 +2342,14 @@ const BB_ROSTER={ // full names — used on the prediction sheet & final review
    never watched a full WNBA game. It is the hook that gets a sheet filled. */
 const BB_PREDS=[
   {id:"winner", label:"Winning team", base:10, opts:[BB_GAME.homeName,BB_GAME.awayName], answer:BB_GAME.homeName},
-  {id:"pts", label:"Most points", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"A'ja Wilson", num:28, numLabel:"How many pts?"},
-  {id:"ast", label:"Most assists", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Sabrina Ionescu", num:8, numLabel:"How many assists?"},
-  {id:"stl", label:"Most steals", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Jackie Young", num:3, numLabel:"How many steals?"},
-  {id:"reb", label:"Most rebounds", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Jonquel Jones", num:11, numLabel:"How many rebounds?"},
-  {id:"blk", label:"Most blocks", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"A'ja Wilson", num:3, numLabel:"How many blocks?"}
+  // NOTE: `answer`/`num` below are the SIMULATED results Practice mode plays
+  // against — never a claim about the real game. They must always be names
+  // that exist in the roster above, or practice grades against a ghost.
+  {id:"pts", label:"Most points", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Allisha Gray", num:21, numLabel:"How many pts?"},
+  {id:"ast", label:"Most assists", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Jordin Canada", num:8, numLabel:"How many assists?"},
+  {id:"stl", label:"Most steals", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Brittney Sykes", num:3, numLabel:"How many steals?"},
+  {id:"reb", label:"Most rebounds", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Angel Reese", num:12, numLabel:"How many rebounds?"},
+  {id:"blk", label:"Most blocks", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Brionna Jones", num:2, numLabel:"How many blocks?"}
 ];
 /* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
    Every question is answerable by WATCHING the broadcast at the break — no lookups,
@@ -2520,7 +2526,9 @@ const SPORTS={
     // Built from BB_GAME rather than typed out, so swapping the fixture can
     // never again leave last week's matchup sitting on the front door.
     // Away team first — that is how a road game reads everywhere else.
-    landing:"<b style=\"color:var(--ink)\">"+BB_GAME.awayName+" @ "+BB_GAME.homeName+"</b> — on "+BB_GAME.net+". Watch the broadcast, play from your couch. Predict before tip-off, answer at every quarter break. Right answers score. Fast right answers score more.",
+    // The network is optional — not every game has a national window, and
+    // "— on ." is the kind of small lie that makes a page look unfinished.
+    landing:"<b style=\"color:var(--ink)\">"+BB_GAME.awayName+" @ "+BB_GAME.homeName+"</b>"+(BB_GAME.net?(" — on "+BB_GAME.net):"")+". Watch the broadcast, play from your couch. Predict before tip-off, answer at every quarter break. Right answers score. Fast right answers score more.",
     step1:"Fill your prediction sheet — winner, stat leaders & bonus amounts. Worth up to 60 of the night's 100 pts.",
     step2h:"Answer at every quarter break",
     step2:"4 questions about what JUST happened — and not the ones you'd expect. Points rise: Q1 = 1pt → Q4 = 4pt, so the last quarter is worth four times the first. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.",
