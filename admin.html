@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>STATS · Control Room</title>
+<title>STATS GAMETIME · Control Room</title>
 <style>
   :root{
     --bg:#0a0e17; --bg2:#111726; --card:#161d2e; --card2:#1c2438;
@@ -409,6 +409,16 @@ const NIGHTS = [
   // away/home are the two short names on the live scoreboard in tab 2, in
   // that order — the app draws the road team on the left, so the order here
   // is not decorative. Everything else on this list is the round structure.
+  { id:'gn5-2026-08-10-tor-atl', label:'Game Night #5 — Tempo @ Dream (Mon Aug 10, 8:00 ET · Peacock)',
+    away:'TOR', home:'ATL',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[1,2,3,4] },
+  { id:'gn4-2026-08-09-dal-min', label:'Game Night #4 (TEST) — Dallas @ Minnesota (Aug 9)',
+    away:'DAL', home:'MIN',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[1,2,3,4] },
   { id:'gn3-2026-08-09-ny-lv', label:'Game Night #3 — Aces @ Liberty (Aug 9)',
     away:'LV', home:'NY',
     tags:['Q1','Q2','Q3','Q4'],
@@ -437,6 +447,37 @@ const NIGHTS = [
 // simulated results for a fake game, not claims about the real one. The host
 // marks the real answer at the break, then pushes.
 const BANK = {
+  /* Game #5 — Tempo @ Dream. Every question here is AUTO-GRADABLE off the
+     ESPN feed: the two that never were ("and-ones", "ref went to the
+     monitor") are gone for good, replaced by Q2 threes and a Q3 lead-change
+     question that both resolve cleanly from plays[]. Timeouts appear once,
+     not twice, so the sheet stops feeling like a counting exercise. */
+  'gn5-2026-08-10-tor-atl': [
+    [
+      { t: 'The first bucket of the night — how did it go in?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throw'] },
+      { t: 'In Q1, which was more — made field goals or made free throws?', o: ['Made field goals', 'Made free throws', 'Equal'] },
+      { t: 'How many team timeouts in Q1? (media/TV timeouts don\'t count)', o: ['None', '1', '2', '3 or more'] },
+      { t: 'Q1 ended on…', o: ['A made basket', 'A missed shot', 'A turnover', 'Free throws'] }
+    ],
+    [
+      { t: 'Who led at halftime?', o: ['Dream', 'Tempo', 'Tied'] },
+      { t: 'In Q2, which team made more threes?', o: ['Dream', 'Tempo', 'Even'] },
+      { t: 'In Q2, which team coughed it up more?', o: ['Dream', 'Tempo', 'About even'] },
+      { t: 'The last shot before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'] }
+    ],
+    [
+      { t: 'Which team scored FIRST in Q3?', o: ['Dream', 'Tempo'] },
+      { t: 'Did the lead change hands in Q3?', o: ['Yes', 'No'] },
+      { t: 'In Q3, which was more — threes made or turnovers? (both teams)', o: ['Threes made', 'Turnovers', 'Equal'] },
+      { t: 'Which team won Q3 (outscored the other)?', o: ['Dream', 'Tempo', 'Tied'] }
+    ],
+    [
+      { t: 'The final basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'] },
+      { t: '🎯 How many 24-second violations in the WHOLE game?', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In the last two minutes, which happened more?', o: ['Free throws attempted', 'Field goals attempted', 'Equal'] },
+      { t: 'Did any player foul out?', o: ['Yes', 'No'] }
+    ]
+  ],
   'gn3-2026-08-09-ny-lv': [
     [
       { t: 'The first bucket of the night — how did it go in?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throw'] },
@@ -1132,7 +1173,7 @@ function renderRun(){
       b.style.fontSize='15.5px'; b.style.padding='17px 18px'; b.style.lineHeight='1.3';
       b.textContent = busy ? 'Working…'
         : isLast  ? `🏁 End the game — reveal ${tag} & post the final`
-        : canPush ? `⏭ End of ${tag} — reveal, post the score, start ${nextTag}`
+        : canPush ? `✅ End of ${tag} — reveal, score & grade (you push ${nextTag} yourself)`
                   : `✅ End of ${tag} — reveal and post the score`;
       b.disabled = !keyReady || busy;
       b.onclick = ()=>closeQuarter(i);
@@ -1142,7 +1183,7 @@ function renderRun(){
       tip.textContent = isLast
         ? 'Reveals the answers and posts the final score. Every phone gets an alert that its points landed.'
         : canPush
-          ? `Reveals ${tag} first — that order is what keeps the answers — then posts the score, then puts ${nextTag} on every phone. Two alerts, one press.`
+          ? `Reveals ${tag}, posts the score, and grades everyone from their saved answers. It does NOT auto-start ${nextTag} — push that yourself with its button when the next quarter is about to begin, so you keep the timing.`
           : `${nextTag} has no questions yet, so this reveals ${tag} and posts the score only. Load or write ${nextTag} and its own push button appears below.`;
       a.appendChild(tip);
 
@@ -1262,6 +1303,83 @@ async function writeReveal(i){
   }, { merge: true });
 }
 
+/* ---------------- AUTHORITATIVE, PRESENCE-INDEPENDENT SCORING ----------
+   Game #3 fix. Scoring used to happen ONLY on the player's phone, the
+   moment the host revealed a round. A phone that was backgrounded,
+   refreshed, or on a dropped connection never ran that code — so a player
+   who HAD answered still showed 0 on the board for the rest of the night.
+   Game #3's board showed answered testers on 0 for exactly this reason.
+
+   This grades every player from the answers they actually submitted — the
+   host holds every sub and every key — and writes each score directly,
+   whether or not that player's phone is awake. It recomputes the whole
+   live total from scratch from the subs on every run, so it is safe to
+   call on every reveal and can never double-count. It writes ONLY the
+   live-round points (plus each player's own prediction/catch points, left
+   untouched) — it never invents a number the subs don't support. */
+async function gradeAllScored(){
+  const { F, db } = FB;
+
+  // 1) every scored round: its answer key (text) and per-question worth.
+  const roundsSnap = await F.getDocs(F.collection(db,'nights',night,'rounds'));
+  const scored = [];
+  roundsSnap.forEach(d=>{
+    const r = d.data() || {};
+    if(r.state==='scored' && Array.isArray(r.key) && r.key.length){
+      scored.push({ id:d.id, key:r.key, worth:(typeof r.worth==='number' && r.worth>0)?r.worth:1 });
+    }
+  });
+  if(!scored.length) return { players:0, rounds:0 };
+
+  // 2) every player — so their prediction/catch points are preserved, not clobbered.
+  const playersSnap = await F.getDocs(F.collection(db,'nights',night,'players'));
+  const tally = {};
+  playersSnap.forEach(p=>{
+    const d = p.data() || {};
+    tally[p.id] = { live:0, speed:0, rounds:0,
+      predPts:(typeof d.predPts==='number'?d.predPts:0),
+      catchPts:(typeof d.catchPts==='number'?d.catchPts:0) };
+  });
+
+  // 3) grade each scored round from its subs (pick text === key text).
+  for(const rd of scored){
+    const subsSnap = await F.getDocs(F.collection(db,'nights',night,'rounds',rd.id,'subs'));
+    subsSnap.forEach(s=>{
+      const t = tally[s.id]; if(!t) return;      // a sub with no player doc — skip
+      const sub = s.data() || {};
+      const picks = Array.isArray(sub.picks)?sub.picks:[];
+      const banks = Array.isArray(sub.banks)?sub.banks:[];
+      let correct = 0, sp = 0;
+      for(let i=0;i<rd.key.length;i++){
+        const pk = picks[i];
+        if(pk!=null && pk!=='' && String(pk)===String(rd.key[i])){ correct++; sp += Number(banks[i]||0); }
+      }
+      t.live  += correct * rd.worth;
+      t.speed += sp;
+      t.rounds += 1;                              // rounds this player actually answered
+    });
+  }
+
+  // 4) write each player's authoritative total. pts = live + their own
+  //    prediction/catch points, so nothing else on the doc is disturbed.
+  let n = 0;
+  for(const uid in tally){
+    const t = tally[uid];
+    await F.setDoc(F.doc(db,'nights',night,'players',uid), {
+      pts: t.live + t.predPts + t.catchPts,
+      speed: t.speed,
+      roundsDone: t.rounds,
+      lastScoredBy: 'host',
+      lastScoredAt: F.serverTimestamp()
+    }, { merge: true });
+    n++;
+  }
+  return { players:n, rounds:scored.length };
+}
+/* Exposed so the host can re-run grading by hand from the console if a
+   reveal's auto-grade ever needs a second pass. */
+try{ window.gradeAllScored = gradeAllScored; }catch(e){}
+
 async function writeScore(a, h, period, note){
   const { F, db } = FB;
   const clean = String(note==null?'':note).trim().slice(0,90);
@@ -1351,7 +1469,7 @@ async function closeQuarter(i){
         ? `2. Post the scoreboard: ${cfg.away||'Away'} ${a} — ${cfg.home||'Home'} ${h}  (${label})\n\n`
         : `2. No scoreboard — you left the score blank.\n\n`) +
       (last  ? `3. Nothing left to push. That's the game.`
-     : canPush ? `3. Push ${nextTag} to every phone.\n\nPhones get an alert on step 1 and again on step 3.`
+     : canPush ? `3. ${nextTag} will NOT go out automatically — it's armed, and you push it with its own button the moment the next quarter is about to start. You control the timing.`
               : `3. ${nextTag} isn't written yet, so nothing gets pushed. Write it on tab 1 and push it yourself.`))) return;
 
   closingRound = i; renderRun();
@@ -1366,19 +1484,25 @@ async function closeQuarter(i){
     return;
   }
 
+  /* Game #3 fix: grade everyone from their SAVED answers now — no phone
+     needs to be awake to score. Runs right after the reveal so the board
+     is right the instant the quarter closes. A grading snag is not fatal
+     to the close (the key is out; a re-run fixes the board), so it warns
+     rather than aborting the push. */
+  try{ const g = await gradeAllScored(); if(g && g.players) done.push(`${g.players} scored from saved answers`); }
+  catch(e){ toast(`${cfg.tags[i]} revealed, but auto-scoring hit a snag — run it again from GRADE or the console. ` + ((e&&e.message)||e)); }
+
   if(wantScore){
     try{ await writeScore(a, h, label, note); done.push('score posted'); }
     catch(e){ toast(`${cfg.tags[i]} is scored, but the scoreboard didn't post. Post it by hand above.`); }
   }
 
-  if(canPush){
-    try{ await writePush(i+1); done.push(`${nextTag} is live`); }
-    catch(e){
-      closingRound = null; renderRun();
-      toast(`${cfg.tags[i]} is scored, but ${nextTag} did not go out. Press its own push button.`);
-      return;
-    }
-  }
+  /* Game #3 fix (host pacing): do NOT auto-push the next quarter. Closing a
+     quarter reveals + scores + grades THIS one and then STOPS. The host
+     decides when the next quarter's questions go live, using that round's
+     own "Push" button — so questions go out on the broadcast's clock, not
+     the app's. This is what fixes "closing one quarter pushed them all". */
+  if(canPush) done.push(`${nextTag} is armed — press its Push button when you're ready`);
 
   closingRound = null; renderRun();
   toast(done.join(' · ') + '.');
@@ -1486,7 +1610,10 @@ async function revealRound(i, again){
       (again ? '\n\nThis re-reveals a round that was already scored. Phones that already scored it will NOT score it twice.' : ''))) return;
   try{
     await writeReveal(i);
-    toast(`${cfg.tags[i]} scored. Phones are updating.`);
+    let extra = '';
+    try{ const g = await gradeAllScored(); if(g && g.players) extra = ` · ${g.players} scored from saved answers`; }
+    catch(ge){ extra = ' · auto-scoring snag (re-run from console)'; }
+    toast(`${cfg.tags[i]} scored. Phones are updating.` + extra);
   }catch(e){ toast('Reveal failed: ' + ((e&&e.message)||e)); }
 }
 
@@ -2182,6 +2309,21 @@ boot();
     q4_1(s,o,T){const q=(s.plays||[]).filter(p=>p.period?.number>=4&&!E.NOISE.test(p.type?.text||''));const l=q[q.length-1];if(!l)return null;let i;if(l.scoringPlay)i=l.scoreValue===1?0:(l.scoreValue===2?1:2);else i=3;return E.b('med',i,'Last game action: '+l.text);},
     q4_2(s,o,T){const n=(s.plays||[]).filter(p=>/Shot Clock Turnover/i.test(p.type?.text||'')).length;return E.b('high',n>=3?3:n,n+' shot-clock (24s) turnover(s) in the game');},
     q4_3(s,o,T){const per=Math.max(...(s.plays||[]).map(p=>p.period?.number||0));const q=E.pIn(s,per).filter(p=>{const c=E.clockSec(p.clock);return c!==null&&c<=120;});const fta=q.filter(E.isFT).length,fga=q.filter(E.isShotAttempt).length;return E.b('med',fta>fga?0:(fga>fta?1:2),'Last 2:00 — FT attempts '+fta+' vs FG attempts '+fga);},
+    /* Two rules added to REPLACE the only two questions the feed could never
+       answer — "and-ones" and "ref monitor visits". A live quarter question
+       that can't auto-grade leaves players hanging and the host guessing, so
+       those are gone from the bank and these took their slots. Both resolve
+       cleanly off plays[]. */
+    q2_5(s,o,T){const q=E.pIn(s,2).filter(p=>p.scoringPlay&&p.scoreValue===3);
+      const h=q.filter(p=>p.team?.id===T.homeId).length,a=q.filter(p=>p.team?.id===T.awayId).length;
+      let i;if(h===a)i=o.findIndex(x=>/even|equal|tie/i.test(x));else i=E.teamOpt(o,h>a?T.homeId:T.awayId,T);
+      return E.b('high',i,'Q2 threes: '+T.awayAbbr+' '+a+', '+T.homeAbbr+' '+h);},
+    q3_5(s,o,T){const q=E.pIn(s,3);let changes=0,prev=null;
+      q.forEach(p=>{ if(typeof p.awayScore!=='number'||typeof p.homeScore!=='number')return;
+        const d=p.homeScore-p.awayScore, sgn=d>0?1:(d<0?-1:0);
+        if(sgn!==0){ if(prev!==null&&sgn!==prev) changes++; prev=sgn; } });
+      const yes=changes>0;
+      return E.b('high',o.findIndex(x=>(yes?/^yes/i:/^no/i).test(String(x))),'Q3 lead changes: '+changes);},
     q4_4(s,o,T){const pls=s.boxscore?.players||[];let nm='',mx=0;for(const tm of pls){const g=tm.statistics?.[0];if(!g)continue;const fi=(g.keys||[]).indexOf('fouls');if(fi<0)continue;for(const a of (g.athletes||[])){const f=+((a.stats||[])[fi]||0);if(f>mx){mx=f;nm=a.athlete?.displayName;}}}return E.b('high',mx>=6?0:1,'Most fouls: '+nm+' '+mx+(mx>=6?' (fouled out)':''));},
   };
 
@@ -2194,6 +2336,8 @@ boot();
     {re:/field goals or (made )?free throws/i, id:'q1_3'},
     {re:/q1 ended on/i, id:'q1_4'},
     {re:/led at halftime/i, id:'q2_1'},
+    {re:/q2.*more threes|more threes.*q2/i, id:'q2_5'},
+    {re:/lead change hands in q3|did the lead change/i, id:'q3_5'},
     {re:/coughed it up|turned it over more/i, id:'q2_3'},
     {re:/last shot before the halftime/i, id:'q2_4'},
     {re:/scored first in q3/i, id:'q3_1'},
@@ -2277,7 +2421,9 @@ boot();
     var sel=$('scPeriod'); if(sel){ var opt=Array.prototype.find.call(sel.options,function(o){return o.value===label;}); if(opt) sel.value=label; }
     try{ await writeScore(T.awayScore, T.homeScore, label, ($('scNote')&&$('scNote').value)||''); }catch(e){}
     setState((state==='post'?'Final':'live')+' · '+cfg.away+' '+T.awayScore+' — '+cfg.home+' '+T.homeScore+' ('+(st.type?.shortDetail||label)+')');
-    if(state==='post') ESPN.stopLive();
+    /* Call It rides this same tick — isolated, never touches the score above. */
+    try{ await CI.tick(sum, T); }catch(e){}
+    if(state==='post'){ try{ if(CI.on) CI.setOn(false); }catch(e){} ESPN.stopLive(); }
   };
   ESPN.toggleLive = function(){
     if(liveTimer){ ESPN.stopLive(); return; }
@@ -2285,6 +2431,137 @@ boot();
     ESPN.liveTick(); liveTimer=setInterval(ESPN.liveTick, 20000);
   };
   ESPN.stopLive = function(){ if(liveTimer){ clearInterval(liveTimer); liveTimer=null; } var b=$('espnLive'); if(b) b.textContent='▶ Auto live score'; };
+
+  /* =====================================================================
+     CALL IT — the live, in-game predictive layer (ISOLATED)
+     ---------------------------------------------------------------------
+     Rides the SAME /summary poll as the live score above — no second
+     poller. It opens a one-tap question at a dead-ball pause, locks it in
+     ~6s, and resolves it from the next real play. It writes ONLY to its
+     own `nights/{night}/callit/*` collection and NEVER touches player
+     points, the rounds, or the 100-pt main game. Worst case if anything
+     here misbehaves: a single question voids. Off by default; the host
+     flips it on for the night, which also sets `config.callit` so phones
+     know to watch. This is piece 1 (the host loop); the player card is
+     piece 2. */
+  var CI = { on:false, seeded:false, lastSeq:0, openQid:null, lastOpenAt:0, lastPlayAt:0, countPer:{} };
+  CI.setState = function(t){ var e=$('ciState'); if(e) e.textContent=t; };
+  CI.abbr = function(id,T){ return String(id)===String(T.homeId)?T.homeAbbr:(String(id)===String(T.awayId)?T.awayAbbr:''); };
+  CI.teamName = function(id,T){ return String(id)===String(T.homeId)?T.homeName:(String(id)===String(T.awayId)?T.awayName:'They'); };
+  CI.curPeriod = function(plays){ var m=1; plays.forEach(function(p){ var n=(p.period&&p.period.number)||0; if(n>m)m=n; }); return m; };
+
+  CI.setOn = async function(on){
+    CI.on = !!on;
+    var b=$('ciBtn'); if(b){ b.textContent = CI.on?'⏸ Call It: ON':'▶ Call It: OFF'; b.className = CI.on?'btn':'btn ghost'; b.style.flex='0 0 auto'; }
+    CI.setState(CI.on?'armed — watching the feed':'off');
+    try{ await FB.F.setDoc(FB.F.doc(FB.db,'nights',night), { callit: CI.on }, {merge:true}); }catch(e){}
+    if(!CI.on && CI.openQid){ try{ await CI.voidQ(CI.openQid,'host turned Call It off'); }catch(e){} CI.openQid=null; }
+    if(CI.on){ CI.seeded=false; }   // re-seed so we don't fire on the backlog when switched on
+  };
+
+  /* Build a question from the live state. Prefers a basketball READ (a run)
+     over a coin-flip, then rotates 2-or-3 and who-next. Returns null if
+     there's nothing sensible to ask. */
+  CI.build = function(plays, T, per){
+    var scoring = plays.filter(function(p){return p.scoringPlay;});
+    var last = scoring[scoring.length-1]; if(!last) return null;
+    var runTeam=null, runLen=0;
+    for(var i=scoring.length-1;i>=0;i--){ if(runTeam==null){ runTeam=scoring[i].team&&scoring[i].team.id; runLen=1; } else if(String(scoring[i].team&&scoring[i].team.id)===String(runTeam)){ runLen++; } else break; }
+    var clutch = (per>=4 && Math.abs((T.homeScore||0)-(T.awayScore||0))<=6);
+    var seq = last.sequenceNumber || 0;
+    var qid = 'ci_'+per+'_'+(CI.countPer[per]||0)+'_'+seq;
+    if(runLen>=3){
+      return { qid:qid, kind:'runContinue', per:per, runTeam:String(runTeam),
+        prompt:'🔥 '+CI.teamName(runTeam,T)+' on a '+runLen+'-score run — do they score the NEXT bucket?',
+        options:[{k:'KEEP IT GOING',v:'Y'},{k:'RUN ENDS',v:'N'}] };
+    }
+    if((CI.countPer[per]||0) % 2 === 0){
+      return { qid:qid, kind:'twoOrThree', per:per, runTeam:null,
+        prompt:(clutch?'⏱️ CLUTCH — ':'')+'Next field goal — deuce or a three?',
+        options:[{k:'2 · deuce',v:'2'},{k:'3 · triple',v:'3'}] };
+    }
+    return { qid:qid, kind:'whoNext', per:per, runTeam:null,
+      prompt:(clutch?'⏱️ CLUTCH — ':'')+'Who scores the NEXT bucket?',
+      options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}] };
+  };
+
+  CI.write = function(q){
+    var F=FB.F, db=FB.db;
+    return F.setDoc(F.doc(db,'nights',night,'callit',q.qid), {
+      qid:q.qid, kind:q.kind, prompt:q.prompt, options:q.options,
+      period:q.per, runTeam:q.runTeam||null,
+      state:'open', answer:null, resolveText:null,
+      opensAt:F.serverTimestamp(), locksMs:6000, seq:Date.now()
+    }, {merge:true});
+  };
+  CI.voidQ = function(qid,why){
+    return FB.F.setDoc(FB.F.doc(FB.db,'nights',night,'callit',qid), { state:'void', voidReason:String(why||''), voidedAt:FB.F.serverTimestamp() }, {merge:true});
+  };
+
+  CI.maybeTrigger = async function(fresh, plays, T){
+    var madeFG = fresh.find(function(p){ return E.isMadeFG(p); });   // a made basket = a natural dead-ball pause
+    if(!madeFG) return;
+    var per = CI.curPeriod(plays);
+    if(Date.now()-CI.lastOpenAt < 80000) return;         // min spacing
+    if((CI.countPer[per]||0) >= 6) return;               // cap per quarter
+    var q = CI.build(plays, T, per); if(!q) return;
+    await CI.write(q);
+    CI.openQid=q.qid; CI.lastOpenAt=Date.now(); CI.countPer[per]=(CI.countPer[per]||0)+1;
+    CI.setState('OPEN · '+q.prompt);
+  };
+
+  CI.tryResolve = async function(qid, fresh, T){
+    var F=FB.F, db=FB.db;
+    var snap; try{ snap = await F.getDoc(F.doc(db,'nights',night,'callit',qid)); }catch(e){ return; }
+    if(!snap.exists()){ CI.openQid=null; return; }
+    var Q=snap.data(); if(Q.state!=='open'){ CI.openQid=null; return; }
+    var ans=null, text=null;
+    if(Q.kind==='whoNext' || Q.kind==='runContinue'){
+      /* A BUCKET IS A FIELD GOAL. The shadow test against a live DAL@MIN feed
+         caught this: matching any scoringPlay resolved "who scores the NEXT
+         bucket?" on a free throw, which is a answer players would call wrong
+         — and they'd be right. Free throws are excluded; if a trip ends at
+         the line the question simply waits for the next real basket, and the
+         void guard catches the pathological case. */
+      var s = fresh.find(function(p){ return E.isMadeFG(p); });
+      if(!s) return;                                     // wait for the next tick
+      ans = (Q.kind==='runContinue') ? (String(s.team&&s.team.id)===String(Q.runTeam)?'Y':'N') : String(s.team&&s.team.id);
+      text = CI.abbr(s.team&&s.team.id,T)+' +'+s.scoreValue+(s.text?(' · '+s.text):'');
+    } else if(Q.kind==='twoOrThree'){
+      var fg = fresh.find(function(p){ return E.isMadeFG(p); });
+      if(!fg) return;
+      ans = String(fg.scoreValue);
+      text = CI.abbr(fg.team&&fg.team.id,T)+' · '+fg.scoreValue+'-pointer'+(fg.text?(' · '+fg.text):'');
+    }
+    if(ans==null) return;
+    await F.setDoc(F.doc(db,'nights',night,'callit',qid), { state:'resolved', answer:ans, resolveText:text, resolvedAt:F.serverTimestamp() }, {merge:true});
+    CI.openQid=null; CI.setState('resolved · '+text);
+  };
+
+  CI.voidIfStuck = async function(qid){
+    var F=FB.F, db=FB.db;
+    var snap; try{ snap = await F.getDoc(F.doc(db,'nights',night,'callit',qid)); }catch(e){ return; }
+    if(!snap.exists()){ CI.openQid=null; return; }
+    var Q=snap.data();
+    var opened = (Q.opensAt && Q.opensAt.toMillis) ? Q.opensAt.toMillis() : CI.lastOpenAt;
+    var feedStalled = (Date.now()-CI.lastPlayAt) > 45000;
+    var tooOld = (Date.now()-opened) > 120000;
+    if(feedStalled || tooOld){ await CI.voidQ(qid, feedStalled?'feed stalled':'no qualifying play in 2 min'); CI.openQid=null; CI.setState('voided ('+(feedStalled?'feed stall':'timeout')+')'); }
+  };
+
+  /* Called from liveTick with the same summary the score uses. */
+  CI.tick = async function(sum, T){
+    if(!CI.on) return;
+    var plays = sum.plays||[]; if(!plays.length) return;
+    var maxSeq=0; plays.forEach(function(p){ var s=+(p.sequenceNumber||0); if(s>maxSeq)maxSeq=s; });
+    if(!CI.seeded){ CI.lastSeq=maxSeq; CI.seeded=true; CI.lastPlayAt=Date.now(); return; }   // don't fire on the backlog
+    var fresh = plays.filter(function(p){ return (+(p.sequenceNumber||0)) > CI.lastSeq; });
+    if(fresh.length){ CI.lastSeq=maxSeq; CI.lastPlayAt=Date.now(); }
+    if(CI.openQid){ await CI.tryResolve(CI.openQid, fresh, T); }
+    if(CI.openQid){ await CI.voidIfStuck(CI.openQid); }
+    if(!CI.openQid){ await CI.maybeTrigger(fresh, plays, T); }
+  };
+  ESPN.CI = CI;   // exposed for the shadow test + manual poke
 
   /* ---- Mount the panel at the top of the RUN tab ---- */
   ESPN.mount = function(){
@@ -2299,10 +2576,16 @@ boot();
         '<button class="btn" id="espnPull" style="flex:1 1 240px;white-space:nowrap">&#9889; Pull answers for finished quarters</button>'+
         '<button class="btn ghost" id="espnLive" style="flex:0 0 auto;white-space:nowrap">&#9654; Auto live score</button>'+
       '</div>'+
+      '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--line2);padding-top:10px">'+
+        '<button class="btn ghost" id="ciBtn" style="flex:0 0 auto;white-space:nowrap">&#9654; Call It: OFF</button>'+
+        '<span class="chip" id="ciState">off</span>'+
+        '<span class="sub" style="flex:1 1 200px;min-width:160px">Live in-game questions, resolved off the play-by-play. Isolated from the main score — needs Auto live score running.</span>'+
+      '</div>'+
       '<div id="espnOut" class="sub" style="margin-top:12px"></div>';
     host.insertBefore(card, host.firstChild);
     document.getElementById('espnPull').onclick=ESPN.pull;
     document.getElementById('espnLive').onclick=ESPN.toggleLive;
+    var cib=document.getElementById('ciBtn'); if(cib) cib.onclick=function(){ CI.setOn(!CI.on); };
   };
 
   var tries=0;
