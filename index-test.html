@@ -257,6 +257,7 @@
   .vrow .btn{margin-top:0;font-size:12.5px;padding:11px 14px}
   .vrow.done{border-top-color:var(--green)}
   .vrow.done #verifyBtn{display:none}
+  .vrow.done #gsiBtn{display:none!important}
   .vrow.sent #verifyBtn{opacity:.55;pointer-events:none}
   .vrow .foot b{color:var(--ink)}
   .vmsg{font-size:12px;font-weight:800;margin:0 0 4px}
@@ -844,8 +845,12 @@
            a real one, and it never blocks the Continue button below — see
            VERIFY_REQUIRED in the script for why that call was made. -->
       <div id="verifyRow" class="vrow">
-        <button class="btn ghost" id="verifyBtn" onclick="sendVerify()">✉️ Verify my email</button>
-        <p class="foot" id="verifyNote" style="margin:7px 0 0">Verify to save your handle, your points and your card across phones. Takes one tap in your inbox — you can do it now or after the game.</p>
+        <button id="gsiBtn" onclick="googleVerify()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:#fff;color:#1a1a1a;border:none;border-radius:12px;padding:14px;font:800 15px/1 inherit;cursor:pointer;margin-bottom:8px">
+          <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:conic-gradient(#ea4335 0 25%,#fbbc05 0 50%,#34a853 0 75%,#4285f4 0)"></span>
+          Sign in with Google
+        </button>
+        <button class="btn ghost" id="verifyBtn" onclick="sendVerify()">✉️ Use email instead</button>
+        <p class="foot" id="verifyNote" style="margin:7px 0 0">Sign in to save your handle, your points and your card across phones. One tap with Google — or use your inbox.</p>
       </div>
       <label class="fld">Favorite sport</label>
       <div class="chips" id="sportPick"></div>
@@ -1406,6 +1411,7 @@ window.STATS_FIREBASE = {
     mySub:  function () { return Promise.resolve(null); },
     signup: function () { return Promise.resolve(false); },
     sendLink: function () { return Promise.resolve({ ok:false, why:'offline' }); },
+    googleSignIn: function () { return Promise.resolve({ ok:false, why:'offline' }); },
     unsubscribe: function () { return Promise.resolve({ ok:false, why:'offline' }); },
     scoreboard: function () { return Promise.resolve(null); },
     say:   function () { return Promise.resolve({ ok:false, why:'offline' }); },
@@ -1570,6 +1576,44 @@ window.STATS_FIREBASE = {
   };
 
   SB.verified = function () { return !!(SB.me && SB.me.verified); };
+
+  /* ---- GOOGLE ONE-TAP -----------------------------------------------
+     The email link works, but it makes a player leave the app and open
+     an inbox at the exact moment they most want to play. This is the
+     one-tap version of the same promise: a real, durable account.
+
+     Same upgrade discipline as the email link: an anonymous player is
+     LINKED (linkWithPopup) so they keep the uid — and everything the
+     uid owns: seat, picks, points. Only if that Google account already
+     exists elsewhere do we sign into it instead (their real history
+     beats tonight's empty anonymous shell). Popup, not redirect:
+     redirect breaks on Safari's storage partitioning when authDomain
+     is a different site than the page, and Safari is where our players
+     live. */
+  SB.googleSignIn = async function () {
+    if (!A || !auth) return { ok:false, why:'offline' };
+    try {
+      var prov = new A.GoogleAuthProvider();
+      prov.setCustomParameters({ prompt: 'select_account' });
+      var cred;
+      if (auth.currentUser && auth.currentUser.isAnonymous) {
+        try { cred = await A.linkWithPopup(auth.currentUser, prov); }
+        catch (e) {
+          var c = (e && e.code) || '';
+          if (c === 'auth/credential-already-in-use' || c === 'auth/email-already-in-use') {
+            cred = await A.signInWithPopup(auth, prov);   // account exists: put them in it
+          } else { throw e; }
+        }
+      } else {
+        cred = await A.signInWithPopup(auth, prov);
+      }
+      return { ok:true, email: (cred && cred.user && cred.user.email) || '' };
+    } catch (e) {
+      var code = (e && e.code) || 'unknown';
+      try { console.error('[STATS] google sign-in failed:', code, e && e.message); } catch (_) {}
+      return { ok:false, why: code };
+    }
+  };
 
   function visible() { return document.visibilityState !== 'hidden'; }
 
@@ -2923,6 +2967,41 @@ function renderVerify(){
     : 'Add your email above and we’ll send you a one-tap link, so your points follow you to any phone.';
 }
 
+/* Google one-tap: the fast door. Works with an EMPTY email field — the
+   account brings its own address, which we write back into the form. */
+async function googleVerify(){
+  const btn=document.getElementById('gsiBtn');
+  const note=document.getElementById('verifyNote');
+  if(!window.SB || !SB.enabled || !SB.googleSignIn){
+    toast('Can’t reach the server right now — you can still play.'); return;
+  }
+  if(btn){ btn.disabled=true; btn.style.opacity=.6; }
+  let r=null;
+  try{ r=await SB.googleSignIn(); }catch(e){ r=null; }
+  if(btn){ btn.disabled=false; btn.style.opacity=1; }
+  if(r && r.ok){
+    // The account's address becomes the gate's address — no typing.
+    try{
+      const e=document.getElementById('gateEmail');
+      if(e && r.email){ e.value=r.email; rememberEmail(r.email); S.email=r.email; }
+    }catch(e){}
+    renderVerify();
+    try{ checkName(); }catch(e){}
+    toast('✅ Signed in — your points follow you everywhere now.');
+    try{ saveGateEmail(true); }catch(e){}
+    return;
+  }
+  const why=(r&&r.why)||'unknown';
+  if(why==='auth/popup-closed-by-user' || why==='auth/cancelled-popup-request') return; // they changed their mind — not an error
+  const SAY={
+    'auth/popup-blocked':'Your browser blocked the sign-in window — tap the button again, or use email below.',
+    'auth/operation-not-allowed':'Google sign-in isn’t switched on yet on our end — use email below and you lose nothing.',
+    'auth/network-request-failed':'Connection dropped mid sign-in — tap again.',
+    'offline':'Can’t reach the server right now — you can still play.'
+  };
+  if(note) note.innerHTML='<span class="vmsg warn">Couldn’t sign you in.</span>'+(SAY[why]||'Tap again in a second, or use email below.');
+}
+
 async function sendVerify(){
   const em=gateEmailValue();
   if(!EMAIL_RE.test(em)){ toast('Add a real email above first.'); return; }
@@ -2957,6 +3036,13 @@ async function sendVerify(){
 
 /* The link in the inbox opens THIS page with a single-use code on it.
    The SB module spends the code during boot and fires this. */
+/* Identity changed under us (a link/upgrade finished in the SB layer):
+   repaint the gate so the buttons and the Continue lock tell the truth. */
+window.addEventListener('stats-identity', function(){
+  try{ renderVerify(); }catch(e){}
+  try{ checkName(); }catch(e){}
+});
+
 window.addEventListener('stats-verify', function(ev){
   const d=(ev && ev.detail) || null;
   if(!d) return;
