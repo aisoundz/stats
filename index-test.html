@@ -660,7 +660,11 @@
         <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:conic-gradient(#ea4335 0 25%,#fbbc05 0 50%,#34a853 0 75%,#4285f4 0)"></span>
         Sign in with Google
       </button>
-      <button class="btn ghost sm" style="margin-top:8px" onclick="startLive()">✉️ Use email instead</button>
+      <button class="btn ghost sm" style="margin-top:8px" onclick="portalEmailPath()">✉️ Use email instead</button>
+      <label style="display:flex;gap:9px;align-items:flex-start;margin-top:12px;cursor:pointer">
+        <input type="checkbox" id="portalConsent" checked style="margin-top:2px;width:17px;height:17px;flex:0 0 auto;accent-color:#28e0d0">
+        <span style="font-size:12px;line-height:1.45;color:var(--muted,#93a0bd)">Email me when the next game night is on. One message per game, unsubscribe any time.</span>
+      </label>
       <p class="foot" style="margin:10px 0 0;text-align:center">Free to play · Not gambling · Prizes are sponsor-funded</p>
     </div>
     <div class="card" id="welcomeStrip" style="display:none;margin-top:14px;padding:11px 14px;border-color:rgba(46,230,166,.35)"></div>
@@ -2611,7 +2615,33 @@ const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-lobby"
   live:"s-live",break:"s-break",final:"s-final",host:"s-host",league:"s-league",plus:"s-plus",
   rules:"s-rules",review:"s-review",predreview:"s-predreview",tally:"s-tally",
   join:"s-join"};
-function startLive(){S.mode="live";go('name');prefillGate();}
+/* THE DOOR IS THE DOOR. You cannot reach the handle screen, the pick sheet, or
+   anything that produces data until there is a real account behind it. Before
+   this, a signed-out visitor could walk all the way in and start typing, and
+   only hit the wall at "Continue to picks" — which is a wall in the wrong
+   place: they've already invested effort, and we've collected nothing durable.
+   Now the Play button IS the sign-in when you're signed out. */
+function startLive(){
+  if(!signedInNow()){ promptSignIn('live'); return; }
+  S.mode="live";go('name');prefillGate();
+}
+function signedInNow(){
+  try{ return !!(window.SB && SB.verified && SB.verified()); }catch(e){ return false; }
+}
+/* Take them to the door, make it obvious, and try the one-tap immediately. */
+function promptSignIn(after){
+  PENDING_AFTER = after || 'live';
+  const card=document.getElementById('portalCard');
+  if(card){
+    card.style.display='block';
+    try{ card.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){}
+    card.style.transition='box-shadow .3s';
+    card.style.boxShadow='0 0 0 3px rgba(40,224,208,.55)';
+    setTimeout(function(){ card.style.boxShadow='none'; }, 1800);
+  }
+  toast('Sign in first — takes one tap, and it saves everything you score.');
+}
+let PENDING_AFTER=null;
 function startDemo(){S.mode="demo";go('name');prefillGate();}
 
 /* ---------------- PERSISTENCE (Game Night only) ---------------- */
@@ -6946,6 +6976,33 @@ function renderPortal(){
     w.style.display='block';
   } else { w.style.display='none'; }
 }
+/* Write the signed-in address onto the game-night list. Consent is read from
+   the box the player can see and untick — never assumed. */
+function portalSaveSignup(email){
+  const box=document.getElementById('portalConsent');
+  if(!box || !box.checked) return;
+  const em=String(email||'').trim();
+  if(!em) return;
+  try{
+    if(window.SB && SB.enabled && SB.signup){
+      Promise.resolve(SB.signup({email:em, name:(S&&S.name)||'', consent:true, merge:true,
+                                 src:'portal', night:(typeof nightKey==='function'?nightKey():'')}))
+        .then(function(res){ if(res&&res.ok){ try{ markSignedUp(); }catch(e){} } })
+        .catch(function(){});
+    }
+  }catch(e){}
+}
+/* The email-link path from the front door: they still land on the handle
+   screen, but they get there knowing an account is required. */
+function portalEmailPath(){
+  PENDING_AFTER='live';
+  S.mode='live'; go('name'); prefillGate();
+  setTimeout(function(){
+    try{ document.getElementById('verifyRow').scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){}
+    toast('Add your email, then tap Verify — that link is your account.');
+  }, 400);
+}
+
 async function portalGoogle(){
   const b=document.getElementById('portalGsi');
   if(!window.SB || !SB.enabled || !SB.googleSignIn){ toast('Can’t reach the server right now — give it a second and tap again.'); return; }
@@ -6954,8 +7011,15 @@ async function portalGoogle(){
   if(b){ b.disabled=false; b.style.opacity=1; }
   if(r && r.ok){
     try{ if(r.email){ rememberEmail(r.email); S.email=r.email; } }catch(e){}
+    /* Put the address in OUR database, not just Firebase Auth — the game night
+       list is how anyone finds out there's a game on, and Game #3 proved that
+       a list we never write to is a list that never gets used. Only with the
+       box ticked; the rules refuse the row otherwise. */
+    try{ portalSaveSignup(r.email); }catch(e){}
     renderPortal();
     toast('✅ Signed in — your points follow you everywhere now.');
+    // They pressed Play and got sent here; finish the trip for them.
+    if(PENDING_AFTER==='live'){ PENDING_AFTER=null; setTimeout(function(){ startLive(); }, 350); }
     return;
   }
   const why=(r&&r.why)||'unknown';
@@ -7016,7 +7080,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.4';
+const STATS_BUILD='2026-08-10-g5-tor-atl.5';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   const b=document.createElement('button');
