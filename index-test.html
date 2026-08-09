@@ -1435,6 +1435,34 @@ window.STATS_FIREBASE = {
     return true;
   }
 
+  /* ---- a write that actually lands, or says why it didn't -------------
+     Game #3 lost most players' answers: SB.submit did `catch(e){return
+     false}` and the app treated a failed save as "held on this phone",
+     which a mobile reload then wiped. The two real causes are (1) identity
+     churn on an anonymous account → permission-denied (now fixed at the
+     root by requiring a real signed-in account), and (2) a transient
+     network blip → which a couple of retries clears. This helper handles
+     both: permission errors fail fast and LOUD (they won't fix on retry);
+     everything else is retried with backoff. It returns an honest boolean
+     the caller can trust, and never swallows the reason. */
+  async function writeTry(label, fn) {
+    var tries = 3, gap = 400;
+    for (var i = 0; i < tries; i++) {
+      try { await fn(); return true; }
+      catch (e) {
+        var code = (e && e.code) || '';
+        if (code === 'permission-denied' || code === 'unauthenticated') {
+          try { console.error('[STATS] ' + label + ' blocked (' + code + ') — will not retry'); } catch (_) {}
+          return false;
+        }
+        try { console.warn('[STATS] ' + label + ' save retry ' + (i + 1) + '/' + tries + ': ' + (code || (e && e.message))); } catch (_) {}
+        if (i < tries - 1) await new Promise(function (r) { setTimeout(r, gap * (i + 1)); });
+      }
+    }
+    try { console.error('[STATS] ' + label + ' save FAILED after ' + tries + ' tries'); } catch (_) {}
+    return false;
+  }
+
   var db, auth, F, nightId = null, meRef = null, hbTimer = null;
   /* The live uid. Never cache this in a variable that outlives a call:
      the signed-in user can change mid-session (email verification
@@ -1655,15 +1683,21 @@ window.STATS_FIREBASE = {
         ['pts','speed','predPts','catchPts','roundsDone'].forEach(function (k) {
           if (typeof d0[k] === 'number' && isFinite(d0[k])) mine[k] = d0[k];
         });
-        await F.setDoc(meRef, {
-          name: mine.name, color: mine.color, lastSeen: F.serverTimestamp()
-        }, { merge: true });               // preserve pts/speed — do NOT rewrite them
+        var okA = await writeTry('join-restore', function () {
+          return F.setDoc(meRef, {
+            name: mine.name, color: mine.color, lastSeen: F.serverTimestamp()
+          }, { merge: true });            // preserve pts/speed — do NOT rewrite them
+        });
+        if (!okA) return false;
       } else {
-        await F.setDoc(meRef, {
-          name: mine.name, color: mine.color,
-          pts: 0, speed: 0, predPts: 0, catchPts: 0, roundsDone: 0,
-          joinedAt: F.serverTimestamp(), lastSeen: F.serverTimestamp()
-        }, { merge: true });
+        var okB = await writeTry('join-new', function () {
+          return F.setDoc(meRef, {
+            name: mine.name, color: mine.color,
+            pts: 0, speed: 0, predPts: 0, catchPts: 0, roundsDone: 0,
+            joinedAt: F.serverTimestamp(), lastSeen: F.serverTimestamp()
+          }, { merge: true });
+        });
+        if (!okB) return false;
       }
       startHeartbeat();
       return true;
@@ -1691,12 +1725,13 @@ window.STATS_FIREBASE = {
       ['pts', 'speed', 'predPts', 'catchPts', 'roundsDone'].forEach(function (k) {
         if (typeof o[k] === 'number' && isFinite(o[k])) mine[k] = Math.max(0, Math.round(o[k]));
       });
-      await F.setDoc(meRef, {
-        pts: mine.pts, speed: mine.speed, predPts: mine.predPts,
-        catchPts: mine.catchPts, roundsDone: mine.roundsDone,
-        lastSeen: F.serverTimestamp()
-      }, { merge: true });
-      return true;
+      return await writeTry('push-score', function () {
+        return F.setDoc(meRef, {
+          pts: mine.pts, speed: mine.speed, predPts: mine.predPts,
+          catchPts: mine.catchPts, roundsDone: mine.roundsDone,
+          lastSeen: F.serverTimestamp()
+        }, { merge: true });
+      });
     } catch (e) { return false; }
   };
 
@@ -1894,10 +1929,11 @@ window.STATS_FIREBASE = {
       if (typeof o.worth === 'number' && o.worth > 0 && o.worth <= 60) row.worth = Math.round(o.worth);
       if (o.src) row.src = String(o.src).slice(0, 12);
       if (o.label) row.label = String(o.label).slice(0, 40);
-      await F.setDoc(
-        F.doc(db, 'nights', nightId, 'rounds', roundId, 'subs', uid()), row);
-      return true;
-    } catch (e) { return false; }   // already submitted, or offline. Not fatal.
+      return await writeTry('submit', function () {
+        return F.setDoc(
+          F.doc(db, 'nights', nightId, 'rounds', roundId, 'subs', uid()), row);
+      });
+    } catch (e) { return false; }   // row-build error only; the write itself retries above.
   };
 
   /* Did I already answer this round? Used on resume, so a player who
@@ -2810,7 +2846,7 @@ function initSports(){
    If the strict reading is wanted, VERIFY_REQUIRED below is the whole
    switch: flip it to true and the Continue button waits on a verified
    address. It is one constant, on purpose.                              */
-const VERIFY_REQUIRED = false;
+const VERIFY_REQUIRED = true;   /* Game #3 fix: real account required to play live, so nothing a player earns lives on a disposable anonymous session. */
 let verifySent = '';
 
 function verifiedNow(){
@@ -2838,7 +2874,9 @@ function renderVerify(){
   row.className='vrow';
   if(btn) btn.disabled=!EMAIL_RE.test(em);
   if(note) note.innerHTML = EMAIL_RE.test(em)
-    ? 'Verify to save your handle, your points and your card across phones. One tap in your inbox — now or after the game.'
+    ? (VERIFY_REQUIRED
+        ? '<b>One tap to lock you in.</b> Verify your email and your handle, points and card are saved for good — and follow you to any phone. Required to play the live game.'
+        : 'Verify to save your handle, your points and your card across phones. One tap in your inbox — now or after the game.')
     : 'Add your email above and we’ll send you a one-tap link, so your points follow you to any phone.';
 }
 
@@ -2882,6 +2920,7 @@ window.addEventListener('stats-verify', function(ev){
   if(d.ok){
     try{ verifySent=''; }catch(e){}
     renderVerify();
+    try{ checkName(); }catch(e){}   // Game #3 fix: unlock Continue the instant the account is real.
     toast('✅ Email verified — you’re saved.');
     // Re-write the contact row so the list knows this address is proven.
     try{ saveGateEmail(true); }catch(e){}
@@ -2946,7 +2985,11 @@ function checkName(){
   const em=gateEmailValue();
   S.name=v;
   const emailOk = gateNeeded() ? EMAIL_RE.test(em) : (!em || EMAIL_RE.test(em));
-  document.getElementById('nameBtn').disabled = (v.length<2) || !emailOk;
+  // Game #3 fix: when a verified account is required, Continue waits on it —
+  // this is the wire that VERIFY_REQUIRED never had, so flipping the constant
+  // now actually holds the gate instead of doing nothing.
+  const needVerify = gateNeeded() && VERIFY_REQUIRED && !verifiedNow();
+  document.getElementById('nameBtn').disabled = (v.length<2) || !emailOk || needVerify;
   const note=document.getElementById('gateNote');
   if(note && em && !EMAIL_RE.test(em)) note.innerHTML='<b style="color:var(--gold)">That address doesn\'t look right yet.</b>';
   else if(note && em && EMAIL_RE.test(em) && /doesn/.test(note.textContent||'')) note.textContent='Looks good.';
@@ -2982,6 +3025,14 @@ function saveGateEmail(force){
 
 /* ---------------- PREDICTIONS ---------------- */
 function startPredict(){
+  // Game #3 fix (defense in depth): never let a live player past the gate on a
+  // disposable anonymous session. The button is already disabled until verified,
+  // but a stray call shouldn't slip through and lose their night.
+  if(gateNeeded() && VERIFY_REQUIRED && !verifiedNow()){
+    try{ renderVerify(); }catch(e){}
+    toast('Verify your email first — one tap in your inbox, and your points are saved for good.');
+    return;
+  }
   saveGateEmail();
   if(S.mode==="live") joinNight();
   buildPred();go('predict');
