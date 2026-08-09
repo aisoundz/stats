@@ -2161,6 +2161,37 @@ window.STATS_FIREBASE = {
      when the connection was fine and the real cause was something else
      entirely. A signup that fails silently is a contact we never get and
      never find out we lost, so the reason now comes back with the answer. */
+  /* ---- THE LIST THAT ACTUALLY SENDS -------------------------------
+     Game #3's worst note wasn't a bug: "None of the people who signed up
+     for emails got a reminder that there was going to be a tip off." The
+     addresses were being collected correctly the whole time — into a
+     database with no way to mail out of. So every consented signup now
+     also goes to MailerLite, which is the thing that can actually send.
+
+     This is the PUBLIC form endpoint — the same URL MailerLite's own
+     embed code posts to. No API key touches this page, and none ever
+     should: a mailing-list key in a static file on GitHub Pages is a
+     key you have given away.
+
+     Fire-and-forget, no await on the play path, failures swallowed. The
+     Firestore row is still the record of consent; this is delivery. If
+     MailerLite is down we lose a newsletter subscription, and the
+     player's night is untouched — which is the right way round.     */
+  var ML_ACCOUNT = '2549193';
+  var ML_FORM    = '194583086735820648';   // "STATS — Join the List" → group "STATS"
+  function mlSubscribe(email, name) {
+    try {
+      var fd = new FormData();
+      fd.append('fields[email]', email);
+      if (name) fd.append('fields[name]', String(name).slice(0, 40));
+      fd.append('ml-submit', '1');
+      fd.append('anticsrf', 'true');
+      fetch('https://assets.mailerlite.com/jsonp/' + ML_ACCOUNT + '/forms/' + ML_FORM + '/subscribe',
+            { method: 'POST', body: fd, keepalive: true })
+        .catch(function () {});
+    } catch (e) {}
+  }
+
   SB.signup = async function (o) {
     // Split deliberately: "the backend never came up" and "we hit the call
     // ceiling" are different problems with different fixes, and lumping
@@ -2176,6 +2207,10 @@ window.STATS_FIREBASE = {
         email.indexOf('@') < 1 || email.indexOf('.', email.indexOf('@')) < 0)
       return { ok:false, why:'email' };
     if (o.consent !== true) return { ok:false, why:'consent' };
+    // Consent is proven at this line and nowhere earlier. Send it to the
+    // mailer here, before the Firestore write, so a database hiccup can't
+    // cost us the one thing that makes the list worth having.
+    mlSubscribe(email, o.name || mine.name || '');
     var row = {
       email:   email,
       name:    String(o.name || mine.name || '').slice(0, 24),
@@ -4874,7 +4909,12 @@ async function unsubTap(){
   if(res.ok===true){
     clearSignedUp();
     btn.style.display='none';
-    note.innerHTML='<b style="color:var(--teal2)">Done — you\'re off the list.</b> Your email and phone are deleted.';
+    // Truthful, not triumphant. This deletes our record of you. The mailer
+    // that actually sends is a separate system with its own one-tap
+    // unsubscribe in the footer of every email, and pretending otherwise
+    // is the kind of small lie that costs the whole relationship.
+    note.innerHTML='<b style="color:var(--teal2)">Done — you\'re off the list.</b> Your email and phone are deleted from our records. '+
+      'If a game-night email still reaches you, the unsubscribe link at the bottom of it stops them for good.';
     toast('✅ Removed. Nothing kept.');
   }else{
     // Say the true thing. A silent failure here is the worst version of this
@@ -7286,7 +7326,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.8';
+const STATS_BUILD='2026-08-10-g5-tor-atl.9';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   const b=document.createElement('button');
