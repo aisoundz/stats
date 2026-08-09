@@ -2517,7 +2517,13 @@ boot();
     var Q=snap.data(); if(Q.state!=='open'){ CI.openQid=null; return; }
     var ans=null, text=null;
     if(Q.kind==='whoNext' || Q.kind==='runContinue'){
-      var s = fresh.find(function(p){ return p.scoringPlay; });
+      /* A BUCKET IS A FIELD GOAL. The shadow test against a live DAL@MIN feed
+         caught this: matching any scoringPlay resolved "who scores the NEXT
+         bucket?" on a free throw, which is a answer players would call wrong
+         — and they'd be right. Free throws are excluded; if a trip ends at
+         the line the question simply waits for the next real basket, and the
+         void guard catches the pathological case. */
+      var s = fresh.find(function(p){ return E.isMadeFG(p); });
       if(!s) return;                                     // wait for the next tick
       ans = (Q.kind==='runContinue') ? (String(s.team&&s.team.id)===String(Q.runTeam)?'Y':'N') : String(s.team&&s.team.id);
       text = CI.abbr(s.team&&s.team.id,T)+' +'+s.scoreValue+(s.text?(' · '+s.text):'');
