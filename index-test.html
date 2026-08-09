@@ -3280,11 +3280,16 @@ function renderLobby(qi){
     foot.textContent = hd
       ? "The host is pushing questions straight to your phone and scoring them here. Your progress is saved."
       : "Game Night: answers score when the host announces them at each break. Your progress is saved.";
-    // honest live-mode stats (no fake crowd)
-    s1v.textContent = qi===0 ? '🔒' : S.pts;
-    s1k.textContent = qi===0 ? 'Predictions locked' : 'Your points so far';
+    /* THE RIDING METER. Predictions are 60 of the night's 100 but they don't
+       settle until the buzzer, so for the whole game a player stares at a
+       small live-only number and concludes nothing is happening. Game #3's
+       note was exactly that — "it should be more points". So the locked
+       points are shown as what they are: stakes already on the table. */
+    s1v.textContent = qi===0 ? ('🔒'+PRED_MAX) : S.pts;
+    s1k.textContent = qi===0 ? 'Riding on your picks' : 'Your points so far';
     s2v.textContent = qi===0 ? '20s' : '⚡'+S.speed;
     s2k.textContent = qi===0 ? 'Clock per question' : 'Speed banked';
+    if(qi>0) sub.textContent += ` 🔒 ${PRED_MAX} pts are still riding on your picks — they settle at the final.`;
     refreshRoom();
     // Paint from the last known values first so the cards are already there
     // when the screen appears, then go and ask for fresher ones. Re-entering
@@ -3816,19 +3821,51 @@ function openReview(){
   });
   go('review');
 }
+/* A number that moves is a number you feel. Eases from → to in ms. */
+function countTo(id,from,to,ms){
+  const el=document.getElementById(id); if(!el) return;
+  if(from===to){ el.textContent=to; return; }
+  const t0=performance.now();
+  (function step(t){
+    const p=Math.min(1,(t-t0)/ms);
+    el.textContent=Math.round(from+(to-from)*(1-Math.pow(1-p,3)));
+    if(p<1) requestAnimationFrame(step);
+  })(t0);
+}
+/* "…and here's where that puts you." Only ever prints a real, server-side
+   rank — if the room can't be reached it stays silent rather than guessing. */
+async function showRevealRank(){
+  const el=document.getElementById('revRank'); if(!el) return;
+  if(!(window.SB && SB.enabled && SB.rank)) return;
+  try{
+    const [rk,n]=await Promise.all([SB.rank(), (SB.joined?SB.joined():Promise.resolve(null))]);
+    if(rk==null) return;
+    el.innerHTML = ` You're <b style="color:var(--teal2,#28e0d0)">#${rk}</b>${(n?` of ${n}`:'')} in the room.`;
+  }catch(e){}
+}
+
 function confirmReview(){
-  const worth=roundWorth(S.qi);let got=0,sp=0;
+  const worth=roundWorth(S.qi);let got=0,sp=0,nRight=0;
+  const nQ=rounds[S.qi].q.length;
   rounds[S.qi].q.forEach((q,i)=>{
     const my=S.liveAnswers[S.qi][i]||{choice:null,bank:0};
     const correct=my.choice!==null && my.choice===revMarks[i];
     S.results[S.qi][i]=correct;
-    if(correct){got+=worth;sp+=my.bank;}
+    if(correct){got+=worth;sp+=my.bank;nRight++;}
   });
+  const before=S.pts;
   S.pts+=got;S.speed+=sp;
   document.getElementById('revBtn').style.display='none';
+  /* THE REVEAL. This is the most addictive half-second of the night — the
+     moment a player finds out. So it says the thing they actually want to
+     know, in their order: how many I got, what it paid, where I stand. The
+     running total counts UP from the old number rather than snapping, because
+     a number that moves is a number you feel. */
   document.getElementById('revResult').innerHTML=
-    `<div class="reveal ${got>0?'good':'bad'}"><div class="r1">${got>0?'✓':'✕'} ${roundTag(S.qi)}: +${got} pts · +${sp} ⚡ speed</div>
-     <div class="r2">Running total: <b>${S.pts}</b> pts · <b>${S.speed}</b> ⚡. Post it in the chat and talk your talk.</div></div>`;
+    `<div class="reveal ${got>0?'good':'bad'}"><div class="r1">${got>0?'✓':'✕'} ${roundTag(S.qi)} — <b>${nRight} of ${nQ}</b> right · +${got} pts${sp?` · +${sp} ⚡`:''}</div>
+     <div class="r2">Running total: <b id="revTally">${before}</b> pts · <b>${S.speed}</b> ⚡.<span id="revRank"></span></div></div>`;
+  try{ countTo('revTally', before, S.pts, 900); }catch(e){}
+  try{ showRevealRank(); }catch(e){}
   document.getElementById('revNextBtn').style.display='block';
   document.getElementById('revTalkBtn').style.display='block';
   document.getElementById('revNextBtn').textContent = !isLastRound(S.qi)
@@ -6842,6 +6879,38 @@ if(!document.getElementById('ribCss')){
   st.textContent='@keyframes ribPulse{0%{box-shadow:0 0 0 0 rgba(255,77,94,.5)}70%{box-shadow:0 0 0 8px rgba(255,77,94,0)}100%{box-shadow:0 0 0 0 rgba(255,77,94,0)}}';
   document.head.appendChild(st);
 }
+
+/* ============ BUILD STAMP + "NEW VERSION" NUDGE =====================
+   GitHub Pages' CDN keeps serving an old copy of this document for a while
+   after a deploy, and a player looking at last week's game while we swear
+   we fixed it is the single most confusing failure we have hit — we hit it
+   ourselves three times in one afternoon. So the page now knows its own
+   build, quietly asks the server what the current one is, and offers a
+   one-tap refresh if it is behind. It never reloads anything on its own:
+   yanking the page out from under someone mid-quarter would be worse than
+   the staleness. */
+const STATS_BUILD='2026-08-10-g5-tor-atl';
+function showUpdateBar(){
+  if(document.getElementById('updBar')) return;
+  const b=document.createElement('button');
+  b.id='updBar';
+  b.textContent='↻ New version ready — tap to refresh';
+  b.style.cssText='position:fixed;left:50%;transform:translateX(-50%);top:10px;z-index:9999;'+
+    'background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e;border:none;border-radius:999px;'+
+    'padding:11px 18px;font:800 13px/1 inherit;box-shadow:0 10px 28px rgba(0,0,0,.45);cursor:pointer';
+  b.onclick=function(){ location.replace(location.pathname+'?v='+Date.now()); };
+  document.body.appendChild(b);
+}
+async function checkForUpdate(){
+  try{
+    const r=await fetch(location.pathname+'?_b='+Date.now(),{cache:'no-store'});
+    if(!r.ok) return;
+    const t=await r.text();
+    const m=t.match(/const STATS_BUILD='([^']+)'/);
+    if(m && m[1] && m[1]!==STATS_BUILD) showUpdateBar();
+  }catch(e){}
+}
+try{ setTimeout(checkForUpdate, 4000); setInterval(checkForUpdate, 180000); }catch(e){}
 
 /* Boot the front door + ribbon. Identity arrives asynchronously, so the
    portal repaints as the SB layer settles, and again on any change. */
