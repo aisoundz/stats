@@ -694,7 +694,7 @@
     <div class="card">
       <div class="step"><div class="num">1</div><div><b id="step1h">Predict before tip-off</b><p id="step1p">Fill your prediction sheet — winner, stat leaders &amp; bonus amounts. Worth up to 60 of the night's 100 pts.</p></div></div>
       <div class="step"><div class="num">2</div><div><b id="step2h">Answer at every quarter break</b><p id="step2p">4 questions about what JUST happened — and not the ones you'd expect. Points rise: Q1 = 1pt → Q4 = 4pt, so the last quarter is worth four times the first. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.</p></div></div>
-      <div class="step"><div class="num">3</div><div><b>Score with the crew</b><p id="step3p">When the host posts the answers, tap them to score your quarter. Most points wins the night; ⚡ Speed breaks ties.</p></div></div>
+      <div class="step"><div class="num">3</div><div><b>Watch your points land</b><p id="step3p">The second the host reveals a quarter, your answers are scored for you — nothing to tap, even if your phone was in your pocket. Most points wins the night; ⚡ Speed breaks ties.</p></div></div>
     </div>
 
     <!-- The ask, on the front page. Someone who lands here between game
@@ -2532,7 +2532,7 @@ const SPORTS={
     step1:"Fill your prediction sheet — winner, stat leaders & bonus amounts. Worth up to 60 of the night's 100 pts.",
     step2h:"Answer at every quarter break",
     step2:"4 questions about what JUST happened — and not the ones you'd expect. Points rise: Q1 = 1pt → Q4 = 4pt, so the last quarter is worth four times the first. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.",
-    step3:"When the host posts the answers, tap them to score your quarter. Most points wins the night; ⚡ Speed breaks ties.",
+    step3:"The second the host reveals a quarter, your answers are scored for you — nothing to tap, even if your phone was in your pocket. Most points wins the night; ⚡ Speed breaks ties.",
     rulePred:"Lock 6 picks before tip-off: winning team (10 pts) and the leader in points, assists, steals, rebounds & blocks (5 pts each). Nail the leader's exact stat total for a +5 bonus per category — so a category you fully nail is worth 10. Predictions can't be changed after tip-off.",
     ruleLive:"At the end of each quarter, answer 4 questions about the quarter you just watched. They are not box-score trivia — they're the stuff you only catch if the game is actually on in front of you. Correct answers are worth 1 pt each in Q1, 2 in Q2, 3 in Q3, and 4 in Q4 — 40 points across the night, and the fourth quarter alone is worth 16 of them. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.",
     ruleScore:"When the host posts each quarter's answers (from the broadcast + official box score), your quarter scores itself on your phone — there is nothing for you to tap in. After the final buzzer the host settles the official stat leaders and your prediction sheet scores too."
@@ -6889,7 +6889,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl';
+const STATS_BUILD='2026-08-10-g5-tor-atl.2';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   const b=document.createElement('button');
