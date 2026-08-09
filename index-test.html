@@ -1305,6 +1305,8 @@
   <div class="modal" id="talkModal" onclick="if(event.target===this)closeTalk()">
     <div class="tt-sheet">
       <div class="tt-head"><b id="ttTitle">🔥 The room</b>
+        <button id="ttMuteBtn" onclick="ttSetMute(!ttMuted())"
+                style="margin-left:auto;margin-right:8px;background:none;border:1px solid var(--line2,#2f3a58);color:var(--muted,#93a0bd);border-radius:999px;padding:5px 11px;font:700 11.5px inherit;cursor:pointer">🔔 Pings on</button>
         <button class="tt-x" onclick="closeTalk()">✕</button></div>
       <div id="talkBody"></div>
       <div class="tt-compose" id="ttCompose">
@@ -3192,6 +3194,7 @@ function startPredict(){
   saveGateEmail();
   if(S.mode==="live") joinNight();
   buildPred();go('predict');
+  try{ if(S.mode==='live'){ loadInactives(); } }catch(e){}
 }
 function buildPred(){const c=document.getElementById('predCard');c.innerHTML='';
   // Draw order is confidence order when ranking is on, canonical order when
@@ -3237,7 +3240,61 @@ function buildPred(){const c=document.getElementById('predCard');c.innerHTML='';
   validatePred();}
 function validatePred(){const done=preds.filter(p=>S.predChoices[p.id]).length;
   document.getElementById('predBtn').disabled=done<preds.length;}
+/* ---------------- WHO'S OUT TONIGHT (Game #3 ask) -------------------
+   "In the opening questions we should have out-to-the-minute updates when
+   players are OUT cause there was no way to change my picks."
+
+   Picks are create-only once locked — that's what makes them auditable, and
+   it isn't going anywhere. So the fix is prevention, not editing: pull the
+   real injury report off the same ESPN feed, show it above the sheet, and put
+   a red OUT flag on any name in the list so nobody spends a pick on someone
+   who isn't playing. If a player already picked someone who's out, the lock
+   button asks them once before it commits. */
+let INACTIVE=new Set(), INACTIVE_NOTE='';
+async function loadInactives(){
+  const ev=(typeof GAME!=='undefined')&&GAME.espnEvent; if(!ev) return;
+  try{
+    const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/summary?event='+ev+'&_='+Date.now());
+    const j=await r.json();
+    const out=[];
+    (j.injuries||[]).forEach(function(team){
+      (team.injuries||[]).forEach(function(it){
+        const nm=(it.athlete&&it.athlete.displayName)||'';
+        const st=String(it.status||'').toLowerCase();
+        if(!nm) return;
+        if(/out|doubtful|suspend/.test(st)){ INACTIVE.add(nm); out.push(nm+' ('+(it.status||'OUT')+')'); }
+      });
+    });
+    INACTIVE_NOTE=out.join(' · ');
+    paintInactives();
+  }catch(e){}
+}
+function paintInactives(){
+  const card=document.getElementById('predCard'); if(!card) return;
+  let bar=document.getElementById('inactiveBar');
+  if(INACTIVE.size){
+    if(!bar){
+      bar=document.createElement('div'); bar.id='inactiveBar';
+      bar.style.cssText='background:rgba(255,77,94,.10);border:1px solid rgba(255,77,94,.35);border-radius:12px;padding:11px 13px;margin-bottom:12px;font-size:12.5px;line-height:1.5;color:var(--muted,#93a0bd)';
+      card.parentNode.insertBefore(bar,card);
+    }
+    bar.innerHTML='<b style="color:#ff8a94">🚑 Not playing tonight</b><br>'+esc(INACTIVE_NOTE)+
+      '<div style="margin-top:5px;color:var(--dim,#5f6d8f)">Straight from the league injury report — don\'t spend a pick on them.</div>';
+  } else if(bar){ bar.remove(); }
+  // Flag the names inside the sheet itself.
+  card.querySelectorAll('option').forEach(function(o){
+    const nm=String(o.value||'').trim();
+    if(INACTIVE.has(nm) && !/OUT/.test(o.textContent)) o.textContent=o.textContent+' — OUT';
+  });
+}
+
 function lockPredictions(){
+  // One honest check before picks become permanent.
+  if(S.mode==='live' && INACTIVE.size){
+    const bad=[];
+    preds.forEach(function(p){ const v=S.predChoices[p.id]; if(v && INACTIVE.has(String(v))) bad.push(String(v)); });
+    if(bad.length && !confirm('Heads up — '+bad.join(', ')+' is listed OUT tonight.\n\nPicks lock for good once you continue. Change it?\n\nOK = lock anyway · Cancel = go back and change')) return;
+  }
   S.pts=0; S.speed=0; S.nextQ=0;
   if(S.mode==="demo"){
     let pp=0;
@@ -5247,6 +5304,7 @@ function startHostedWatch(){
   if(HR.unsub || !window.SB || !SB.watchRound) return;
   try{ HR.unsub = SB.watchRound(onHostedRound) || null; }catch(e){}
   try{ startCallItWatch(); }catch(e){}   // Call It rides alongside, isolated
+  try{ ttBackgroundStart(); }catch(e){}  // and the room stops being silent
 }
 
 /* ================= CALL IT — player side (isolated side-game) =========
@@ -5997,6 +6055,7 @@ const TT_EMOJI=['🔥','😂','👀','💀','🎯','🐐','😭','🥶','🙌','
 function openTalk(){
   document.getElementById('ttTitle').textContent =
     S.screen==='final'?'🔥 The room · final':'🔥 The room';
+  try{ ttClearBadge(); const mb=document.getElementById('ttMuteBtn'); if(mb) mb.textContent = ttMuted()?'🔕 Muted':'🔔 Pings on'; }catch(e){}
   ttBuildEmoji();
   renderRoom();
   document.getElementById('talkModal').classList.add('open');
@@ -6123,14 +6182,81 @@ async function ttSend(){
    the difference between the room being affordable and not. */
 let ttLines=[],ttLastAt=0,ttTimer=null,ttPulling=false,ttLocalN=0,ttTick=0,ttHotUntil=0;
 const TT_FEED_MAX=60, TT_TICK_MS=4000;
+/* The background sweep. Only in a real live night, only when the chat is shut,
+   only if pings aren't muted, and at a deliberately lazy cadence (~24s) so a
+   whole game night still costs almost nothing in reads. */
+let ttBgTimer=null, ttBgLast=0;
+function ttBackgroundOK(){
+  if(ttMuted()) return false;
+  if(!window.SB||!SB.enabled||S.mode==='demo') return false;
+  if(Date.now()-ttBgLast < 24000) return false;
+  ttBgLast=Date.now(); return true;
+}
+function ttBackgroundStart(){
+  if(ttBgTimer) return;
+  ttBgTimer=setInterval(function(){
+    if(ttRoomOpen()) return;                 // the open-room poller has it
+    if(ttMuted()) return;
+    try{ ttRoomPull(false); }catch(e){}
+  }, 8000);
+}
 
 function ttRoomOpen(){
   const m=document.getElementById('talkModal');
   return !!(m&&m.classList.contains('open'));
 }
+/* ---------------- TRASH-TALK PINGS (Game #3 ask) --------------------
+   "There is no notification on when someone trash-talks. There can be a mute
+   button if one doesn't want it, but some want it, so they should get it."
+
+   Until now the room only polled while the chat was OPEN, so a closed chat was
+   a silent room and the best part of game night happened where nobody saw it.
+   Now a slow background poll runs all night; when somebody ELSE says something
+   and the chat isn't open, the Talk button wears an unread badge and (if the
+   phone is backgrounded) fires a real notification. Per-device mute, because
+   the founder is right that some people want it and some don't. */
+const TT_MUTE_KEY='stats.talkMute';
+function ttMuted(){ try{ return localStorage.getItem(TT_MUTE_KEY)==='1'; }catch(e){ return false; } }
+function ttSetMute(v){
+  try{ localStorage.setItem(TT_MUTE_KEY, v?'1':'0'); }catch(e){}
+  const b=document.getElementById('ttMuteBtn');
+  if(b) b.textContent = v ? '🔕 Muted' : '🔔 Pings on';
+  if(v) ttClearBadge();
+  toast(v?'Trash talk muted on this phone.':'Trash talk pings back on.');
+}
+let ttUnread=0;
+function ttPaintBadge(){
+  document.querySelectorAll('[data-ttbadge]').forEach(el=>el.remove());
+  if(ttUnread<1) return;
+  document.querySelectorAll('button').forEach(b=>{
+    if(!/Talk trash/i.test(b.textContent||'')) return;
+    const s=document.createElement('span');
+    s.setAttribute('data-ttbadge','1');
+    s.textContent=ttUnread>9?'9+':String(ttUnread);
+    s.style.cssText='display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;'+
+      'margin-left:7px;border-radius:999px;background:var(--red,#ff4d5e);color:#fff;font-size:11px;font-weight:900;padding:0 5px';
+    b.appendChild(s);
+  });
+}
+function ttClearBadge(){ ttUnread=0; ttPaintBadge(); }
+function ttOnNewLines(rows){
+  if(ttMuted()||ttRoomOpen()) return;
+  const fresh=(rows||[]).filter(l=>!l.me&&!l.pending);
+  if(!fresh.length) return;
+  ttUnread+=fresh.length; ttPaintBadge();
+  const last=fresh[fresh.length-1];
+  const who=String(last.name||'Someone').slice(0,20);
+  const txt=String(last.text||'').slice(0,80);
+  try{ toast('🔥 '+who+': '+txt); }catch(e){}
+  try{ notify('🔥 '+who+' is talking', txt, 'stats-talk'); }catch(e){}
+}
+
 async function ttRoomPull(force){
   if(!window.SB||!SB.enabled||S.mode==='demo') return;
-  if(!force&&(!ttRoomOpen()||document.hidden)) return;
+  // `force` and an open room behave as before. The new third case is the
+  // background sweep: the room is closed but we still want to know.
+  if(!force && !ttRoomOpen() && !ttBackgroundOK()) return;
+  if(!force && ttRoomOpen() && document.hidden) return;
   if(ttPulling) return;
   ttPulling=true;
   try{
@@ -6155,6 +6281,7 @@ async function ttRoomPull(force){
         .sort((x,y)=>(x.at||Infinity)-(y.at||Infinity))
         .slice(-TT_FEED_MAX);
       ttLines.forEach(l=>{ if(l.at>ttLastAt) ttLastAt=l.at; });
+      try{ ttOnNewLines(rows); }catch(e){}
       // Somebody is talking, so check back often; when the room goes
       // quiet the cadence drops itself back to one pull every twelve
       // seconds, which is what keeps a whole night inside the free
@@ -6889,7 +7016,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.3';
+const STATS_BUILD='2026-08-10-g5-tor-atl.4';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   const b=document.createElement('button');

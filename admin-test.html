@@ -2444,7 +2444,19 @@ boot();
      flips it on for the night, which also sets `config.callit` so phones
      know to watch. This is piece 1 (the host loop); the player card is
      piece 2. */
-  var CI = { on:false, seeded:false, lastSeq:0, openQid:null, lastOpenAt:0, lastPlayAt:0, countPer:{} };
+  var CI = { on:false, seeded:false, lastSeq:0, openQid:null, lastOpenAt:0, lastPlayAt:0, countPer:{},
+             pace:'normal', gapMs:80000, capPer:8 };
+  /* The host's frequency dial. Chill for a blowout, Hype for a game people are
+     screaming at. Timeouts always fire regardless of pace — that gap exists
+     either way. */
+  CI.PACES = { chill:{gapMs:150000, capPer:5, label:'Chill'},
+               normal:{gapMs:80000,  capPer:8, label:'Normal'},
+               hype:{gapMs:45000,   capPer:12, label:'Hype'} };
+  CI.setPace = function(k){
+    var p=CI.PACES[k]||CI.PACES.normal; CI.pace=k; CI.gapMs=p.gapMs; CI.capPer=p.capPer;
+    var b=$('ciPace'); if(b) b.textContent='⏱ '+p.label;
+    CI.setState(CI.on?('armed · '+p.label.toLowerCase()+' pace'):'off');
+  };
   CI.setState = function(t){ var e=$('ciState'); if(e) e.textContent=t; };
   CI.abbr = function(id,T){ return String(id)===String(T.homeId)?T.homeAbbr:(String(id)===String(T.awayId)?T.awayAbbr:''); };
   CI.teamName = function(id,T){ return String(id)===String(T.homeId)?T.homeName:(String(id)===String(T.awayId)?T.awayName:'They'); };
@@ -2498,16 +2510,35 @@ boot();
     return FB.F.setDoc(FB.F.doc(FB.db,'nights',night,'callit',qid), { state:'void', voidReason:String(why||''), voidedAt:FB.F.serverTimestamp() }, {merge:true});
   };
 
+  /* A MEDIA TIMEOUT IS THE PERFECT MOMENT. The broadcast has cut to ads, so
+     everyone in the room is already looking down at their phone — we fill the
+     gap the game leaves instead of competing with the game itself. That is the
+     whole "questions all night" idea: guarantee one at every timeout, keep the
+     made-basket pauses as the rhythm in between, and never let a quarter go
+     quiet for long. Timeouts bypass the 80s spacing (they ARE the pause) but
+     still respect the per-quarter cap. */
+  CI.isTimeout = function(p){ return E.isTimeoutTeam(p) || /Official Timeout/i.test((p.type&&p.type.text)||''); };
   CI.maybeTrigger = async function(fresh, plays, T){
-    var madeFG = fresh.find(function(p){ return E.isMadeFG(p); });   // a made basket = a natural dead-ball pause
-    if(!madeFG) return;
     var per = CI.curPeriod(plays);
-    if(Date.now()-CI.lastOpenAt < 80000) return;         // min spacing
-    if((CI.countPer[per]||0) >= 6) return;               // cap per quarter
+    var cap = CI.capPer || 8;
+    if((CI.countPer[per]||0) >= cap) return;             // cap per quarter
+
+    var timeout = fresh.find(CI.isTimeout);
+    var madeFG  = fresh.find(function(p){ return E.isMadeFG(p); });
+    var reason  = timeout ? 'timeout' : (madeFG ? 'basket' : null);
+    if(!reason) return;
+
+    // A timeout is itself the dead-ball pause, so it skips the spacing rule.
+    // Everything else waits out the gap so we never machine-gun the room.
+    var gap = Date.now()-CI.lastOpenAt;
+    if(reason==='basket' && gap < (CI.gapMs||80000)) return;
+    if(reason==='timeout' && gap < 25000) return;        // a short floor, so back-to-back stoppages don't double-fire
+
     var q = CI.build(plays, T, per); if(!q) return;
+    q.moment = reason;
     await CI.write(q);
     CI.openQid=q.qid; CI.lastOpenAt=Date.now(); CI.countPer[per]=(CI.countPer[per]||0)+1;
-    CI.setState('OPEN · '+q.prompt);
+    CI.setState('OPEN'+(reason==='timeout'?' ⏸timeout':'')+' · '+q.prompt);
   };
 
   CI.tryResolve = async function(qid, fresh, T){
@@ -2578,14 +2609,20 @@ boot();
       '</div>'+
       '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--line2);padding-top:10px">'+
         '<button class="btn ghost" id="ciBtn" style="flex:0 0 auto;white-space:nowrap">&#9654; Call It: OFF</button>'+
+        '<button class="btn ghost" id="ciPace" style="flex:0 0 auto;white-space:nowrap" title="How often questions fire. Timeouts always fire.">&#9201; Normal</button>'+
         '<span class="chip" id="ciState">off</span>'+
-        '<span class="sub" style="flex:1 1 200px;min-width:160px">Live in-game questions, resolved off the play-by-play. Isolated from the main score — needs Auto live score running.</span>'+
+        '<span class="sub" style="flex:1 1 200px;min-width:160px">Live in-game questions, resolved off the play-by-play — one at every media timeout, plus the moments in between. Isolated from the main score; needs Auto live score running.</span>'+
       '</div>'+
       '<div id="espnOut" class="sub" style="margin-top:12px"></div>';
     host.insertBefore(card, host.firstChild);
     document.getElementById('espnPull').onclick=ESPN.pull;
     document.getElementById('espnLive').onclick=ESPN.toggleLive;
     var cib=document.getElementById('ciBtn'); if(cib) cib.onclick=function(){ CI.setOn(!CI.on); };
+    var cip=document.getElementById('ciPace'); if(cip) cip.onclick=function(){
+      var order=['chill','normal','hype'], i=order.indexOf(CI.pace);
+      CI.setPace(order[(i+1)%order.length]);
+    };
+    try{ CI.setPace(CI.pace); }catch(e){}
   };
 
   var tries=0;
