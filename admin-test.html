@@ -409,6 +409,11 @@ const NIGHTS = [
   // away/home are the two short names on the live scoreboard in tab 2, in
   // that order — the app draws the road team on the left, so the order here
   // is not decorative. Everything else on this list is the round structure.
+  { id:'gn4-2026-08-09-dal-min', label:'Game Night #4 (TEST) — Dallas @ Minnesota (Aug 9, 3:30 ET)',
+    away:'DAL', home:'MIN',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[1,2,3,4] },
   { id:'gn3-2026-08-09-ny-lv', label:'Game Night #3 — Aces @ Liberty (Aug 9)',
     away:'LV', home:'NY',
     tags:['Q1','Q2','Q3','Q4'],
@@ -2396,7 +2401,7 @@ boot();
     CI.on = !!on;
     var b=$('ciBtn'); if(b){ b.textContent = CI.on?'⏸ Call It: ON':'▶ Call It: OFF'; b.className = CI.on?'btn':'btn ghost'; b.style.flex='0 0 auto'; }
     CI.setState(CI.on?'armed — watching the feed':'off');
-    try{ await FB.F.setDoc(FB.F.doc(FB.db,'nights',night,'config'), { callit: CI.on }, {merge:true}); }catch(e){}
+    try{ await FB.F.setDoc(FB.F.doc(FB.db,'nights',night), { callit: CI.on }, {merge:true}); }catch(e){}
     if(!CI.on && CI.openQid){ try{ await CI.voidQ(CI.openQid,'host turned Call It off'); }catch(e){} CI.openQid=null; }
     if(CI.on){ CI.seeded=false; }   // re-seed so we don't fire on the backlog when switched on
   };
