@@ -660,7 +660,11 @@
         <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:conic-gradient(#ea4335 0 25%,#fbbc05 0 50%,#34a853 0 75%,#4285f4 0)"></span>
         Sign in with Google
       </button>
-      <button class="btn ghost sm" style="margin-top:8px" onclick="portalEmailPath()">✉️ Use email instead</button>
+      <button class="btn ghost sm" id="portalEmailBtn" style="margin-top:8px" onclick="portalEmailPath()">✉️ Use email instead</button>
+      <div id="portalDown" style="display:none;margin-top:10px;background:rgba(255,197,77,.10);border:1px solid rgba(255,197,77,.35);border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.45;color:var(--ink,#eef2fb)">
+        <b>Our sign-in server isn’t answering right now.</b><br>
+        <span style="color:var(--muted,#93a0bd)">Nothing you do here would save, so we’ve switched the buttons off rather than let you lose a night’s points. Try a refresh in a minute — or tap <b>Practice</b> below, which needs no account at all.</span>
+      </div>
       <label style="display:flex;gap:9px;align-items:flex-start;margin-top:12px;cursor:pointer">
         <input type="checkbox" id="portalConsent" checked style="margin-top:2px;width:17px;height:17px;flex:0 0 auto;accent-color:#28e0d0">
         <span style="font-size:12px;line-height:1.45;color:var(--muted,#93a0bd)">Email me when the next game night is on. One message per game, unsubscribe any time.</span>
@@ -849,8 +853,21 @@
     <div class="card">
       <label class="fld">Display name</label>
       <input id="playerName" maxlength="16" placeholder="e.g. CourtsideKing" oninput="checkName()">
-      <label class="fld" for="gateEmail">Email</label>
-      <input id="gateEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" oninput="checkName()">
+      <!-- Shown INSTEAD of the email field once we already know who you are.
+           Asking a signed-in person for the address they just signed in with
+           is the app admitting it wasn't paying attention. -->
+      <div id="acctRow" style="display:none;align-items:center;gap:10px;background:rgba(46,230,166,.08);border:1px solid rgba(46,230,166,.30);border-radius:12px;padding:11px 13px;margin-bottom:4px">
+        <span style="font-size:16px">✅</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:13px">Signed in</div>
+          <div id="acctEmail" style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+        </div>
+        <button onclick="doSignOut()" style="flex:0 0 auto;background:none;border:1px solid var(--line2,#2f3a58);color:var(--muted,#93a0bd);border-radius:999px;padding:6px 11px;font:700 11.5px inherit;cursor:pointer">Sign out</button>
+      </div>
+      <div id="emailFieldWrap">
+        <label class="fld" for="gateEmail">Email</label>
+        <input id="gateEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" oninput="checkName()">
+      </div>
       <p class="foot" style="margin:6px 0 0" id="gateNote">So your card has a name on it when the host settles the night. No password, and we only ask once.</p>
       <!-- The opt-in is a real, separate, unticked box. It is not the email
            field, and it is not required to continue — the button below stays
@@ -1435,6 +1452,7 @@ window.STATS_FIREBASE = {
     submit: function () { return Promise.resolve(false); },
     mySub:  function () { return Promise.resolve(null); },
     signup: function () { return Promise.resolve(false); },
+    signOut: function () { return Promise.resolve(false); },
     sendLink: function () { return Promise.resolve({ ok:false, why:'offline' }); },
     googleSignIn: function () { return Promise.resolve({ ok:false, why:'offline' }); },
     unsubscribe: function () { return Promise.resolve({ ok:false, why:'offline' }); },
@@ -1633,6 +1651,27 @@ window.STATS_FIREBASE = {
     if (was.uid !== now.uid && nightId) meRef = F.doc(db, 'nights', nightId, 'players', now.uid);
     if (changed) { try { window.dispatchEvent(new Event('stats-identity')); } catch (_) {} }
     return changed;
+  };
+  /* Leaving is part of trusting a product. A player on a shared phone, or one
+     who signed in with the wrong Google account, needs a way out that doesn't
+     involve clearing their browser. */
+  SB.signOut = async function () {
+    if (!A || !auth) return false;
+    try {
+      await A.signOut(auth);
+      SB.me = null;
+      try { window.dispatchEvent(new Event('stats-identity')); } catch (_) {}
+      /* Straight back onto an anonymous session. Signing out must not leave
+         the app with no credential at all — the rules require one to READ
+         the board, so a signed-out player would sit in front of a broken
+         page instead of a signed-out one. */
+      try {
+        await A.signInAnonymously(auth);
+        SB.refreshMe(auth.currentUser);
+      } catch (_) {}
+      return true;
+    }
+    catch (e) { return false; }
   };
   SB.verified = function () {
     // Read the live user first — SB.me can lag a link by a tick, and a
@@ -2972,11 +3011,15 @@ function notify(title, body, tag){
 }
 
 /* ---------------- NAME ---------------- */
+/* S.color is never empty — it defaults to COLORS[0] — so "did they choose
+   one" can't be read off the value. This flag is the only honest answer,
+   and it's what stops a remembered colour from stomping a fresh pick. */
+let colorTouched=false;
 function initColors(){const w=document.getElementById('colorPick');w.innerHTML='';
   COLORS.forEach((c,i)=>{const b=document.createElement('button');b.className='chip';
     const selc=(S.color===c)||(!S.color&&i===0);
     b.style.cssText=`background:${c};width:34px;height:34px;border-radius:10px;border:2px solid ${selc?'#fff':'transparent'}`;
-    b.onclick=()=>{S.color=c;[...w.children].forEach(x=>x.style.border='2px solid transparent');b.style.border='2px solid #fff';};
+    b.onclick=()=>{S.color=c;colorTouched=true;[...w.children].forEach(x=>x.style.border='2px solid transparent');b.style.border='2px solid #fff';};
     w.appendChild(b);});}
 
 /* ---------------- FAVORITE SPORT ----------------
@@ -3035,19 +3078,85 @@ function verifiedNow(){
   try{ return !!(window.SB && SB.verified && SB.verified()); }catch(e){ return false; }
 }
 
+/* ---- THE HANDLE SCREEN, AFTER SIGN-IN ----------------------------
+   A player who just tapped "Sign in with Google" and then lands on a
+   form asking for their email address is looking at an app that wasn't
+   paying attention. Once identity is real the email field is REPLACED
+   by a plain statement of who we think they are — and a way out of it.
+   Everything below is idempotent: it is safe to call on every repaint. */
+function acctEmailNow(){
+  try{
+    if(window.SB && SB.me && SB.me.email) return SB.me.email;
+  }catch(e){}
+  return '';
+}
+function paintAccountRow(){
+  const row=document.getElementById('acctRow');
+  const wrap=document.getElementById('emailFieldWrap');
+  if(!row||!wrap) return;
+  const v=verifiedNow();
+  const em=acctEmailNow();
+  if(v){
+    row.style.display='flex';
+    wrap.style.display='none';
+    const t=document.getElementById('acctEmail');
+    if(t) t.textContent = em || 'Your account is saved';
+    // The hidden input stays truthful — checkName() and saveGateEmail()
+    // both still read it, and a blank one would re-lock the button.
+    try{
+      const e=document.getElementById('gateEmail');
+      if(e && em && (e.value||'').trim().toLowerCase()!==em.toLowerCase()){ e.value=em; }
+    }catch(_){}
+    const note=document.getElementById('gateNote');
+    let nm=''; try{ nm=((document.getElementById('playerName')||{}).value||'').trim(); }catch(_){}
+    if(note) note.innerHTML = nm.length>=2
+      ? 'Welcome back — this is how you left it. Change anything, or just tap Continue.'
+      : 'One thing left — pick the name you want on the board.';
+  } else {
+    row.style.display='none';
+    wrap.style.display='';
+  }
+  // Already on the game-night list from the front door? Don't ask twice.
+  try{
+    const box=document.getElementById('gateConsent');
+    if(box && !box.disabled && alreadySignedUp()){
+      box.checked=true; box.disabled=true;
+      const lbl=box.parentElement && box.parentElement.querySelector('span');
+      if(lbl) lbl.textContent='You’re on the list for the next game night.';
+    }
+  }catch(_){}
+}
+
+/* Leaving is part of trusting a product — and a shared phone with no way
+   out is a real problem on game night. Rare button, non-negotiable. */
+async function doSignOut(){
+  let ok=false;
+  try{ ok = !!(window.SB && SB.signOut && await SB.signOut()); }catch(e){ ok=false; }
+  if(!ok){ toast('Couldn’t sign you out just now — try again in a second.'); return; }
+  try{ const e=document.getElementById('gateEmail'); if(e) e.value=''; }catch(_){}
+  try{ S.email=''; }catch(_){}
+  try{ verifySent=''; }catch(_){}
+  try{ paintAccountRow(); renderVerify(); checkName(); }catch(_){}
+  try{ renderPortal(); }catch(_){}
+  try{ go('landing'); }catch(_){}
+  toast('Signed out. Your points are still on your account when you come back.');
+}
+
 function renderVerify(){
   const row=document.getElementById('verifyRow'); if(!row) return;
   const btn=document.getElementById('verifyBtn');
   const note=document.getElementById('verifyNote');
   const em=gateEmailValue();
+  try{ paintAccountRow(); }catch(_){}
   // Practice mode has no account to attach anything to.
   if(!gateNeeded()){ row.style.display='none'; return; }
-  row.style.display='';
   if(verifiedNow()){
-    row.className='vrow done';
-    if(note) note.innerHTML='<span class="vmsg good">✅ Email verified.</span>Your handle, your points and your card follow you to any phone you sign in on.';
+    // The account row above already says it, with the address and a way out.
+    // Two green boxes making the same claim is noise, not reassurance.
+    row.style.display='none';
     return;
   }
+  row.style.display='';
   if(verifySent && verifySent===em.toLowerCase()){
     row.className='vrow sent';
     if(note) note.innerHTML='<span class="vmsg good">✉️ Check your inbox.</span>We sent a link to <b>'+esc(em)+'</b>. Tap it whenever — it opens right back here and you keep everything you’ve scored. Look in spam if it’s hiding.';
@@ -3180,10 +3289,43 @@ function gateEmailValue(){ const e=document.getElementById('gateEmail'); return 
    that is how you lose the ones who would have signed up after. */
 function gateNeeded(){ return S.mode==='live'; }
 
+/* ---- THE RETURNING PLAYER ----------------------------------------
+   Game #3's loudest structural note was "to many touches". The worst
+   kind of touch is one a player has already made: somebody who played
+   last week, signed in, and is now being asked to invent a handle,
+   choose a sport and pick a colour for the second time. We know all
+   three. Remember them on the device and hand them back filled in —
+   the returning player's whole gate becomes one tap on Continue.
+
+   Device-local on purpose. The durable, cross-phone version of this
+   belongs in a users/{uid} doc, and that needs a rules change; this
+   is the 90% of it that ships tonight and costs nothing.            */
+const PROF_KEY='stats_profile_v1';
+function savedProfile(){
+  try{ return JSON.parse(localStorage.getItem(PROF_KEY)||'{}')||{}; }catch(e){ return {}; }
+}
+function rememberProfile(){
+  try{
+    localStorage.setItem(PROF_KEY, JSON.stringify({
+      name:  (S && S.name)  || '',
+      sport: (S && S.sport) || '',
+      color: (S && S.color) || ''
+    }));
+  }catch(e){}
+}
+
 function prefillGate(){
   const e=document.getElementById('gateEmail'); if(!e) return;
   const saved=savedEmail();
   if(saved && !e.value) e.value=saved;
+  // Hand the returning player their own answers back before anything paints.
+  try{
+    const pr=savedProfile();
+    const nEl=document.getElementById('playerName');
+    if(nEl && !((nEl.value||'').trim()) && pr.name){ nEl.value=pr.name; S.name=pr.name; }
+    if(!S.sport && pr.sport) S.sport=pr.sport;
+    if(!colorTouched && pr.color) S.color=pr.color;
+  }catch(_){}
   const note=document.getElementById('gateNote');
   if(note && saved) note.innerHTML='✅ <b>Welcome back.</b> Same address as last time — change it if you like.';
   const box=document.getElementById('gateConsent');
@@ -3200,6 +3342,7 @@ function prefillGate(){
     if(note) note.textContent='Optional in practice mode — add it and we\'ll tell you when the real night is on.';
   }
   initSports();
+  initColors();
   renderVerify();
   checkName();
 }
@@ -3258,6 +3401,7 @@ function startPredict(){
     return;
   }
   saveGateEmail();
+  try{ rememberProfile(); }catch(_){}
   if(S.mode==="live") joinNight();
   buildPred();go('predict');
   try{ if(S.mode==='live'){ loadInactives(); } }catch(e){}
@@ -7006,9 +7150,31 @@ function renderPortal(){
   let v=false, em='';
   try{ v=!!(window.SB&&SB.verified&&SB.verified()); em=(window.SB&&SB.me&&SB.me.email)||''; }catch(e){}
   p.style.display = v?'none':'block';
+  /* If the backend never came up, the sign-in buttons are decoration: they
+     can only ever toast an apology. Say so on the card itself. A player who
+     taps a dead button twice and gets nothing decides the app is broken;
+     a player who is told the server is down decides to come back. */
+  try{
+    if(!v){
+      const dead = !window.SB || SB.state==='off' || SB.state==='error';
+      const warn = document.getElementById('portalDown');
+      if(warn) warn.style.display = dead ? 'block' : 'none';
+      ['portalGsi','portalEmailBtn'].forEach(function(id){
+        const b=document.getElementById(id);
+        if(b){ b.disabled=!!dead; b.style.opacity=dead?.45:1; b.style.pointerEvents=dead?'none':''; }
+      });
+    }
+  }catch(_){}
   if(v){
-    w.innerHTML='<b style="font-size:13.5px">✅ You’re in'+(em?(' · '+esc(em)):'')+'</b>'
-      +'<p class="sub" style="font-size:11.5px;margin:3px 0 0">Your handle, card and points follow you to any phone.</p>';
+    // Who we think you are, and a way to say otherwise. An app that can be
+    // signed into but never out of is one you stop trusting with anything.
+    w.innerHTML='<div style="display:flex;align-items:center;gap:10px">'
+      +'<div style="flex:1;min-width:0">'
+      +'<b style="font-size:13.5px">✅ You’re in'+(em?(' · '+esc(em)):'')+'</b>'
+      +'<p class="sub" style="font-size:11.5px;margin:3px 0 0">Your handle, card and points follow you to any phone.</p>'
+      +'</div>'
+      +'<button onclick="doSignOut()" style="flex:0 0 auto;background:none;border:1px solid var(--line2,#2f3a58);color:var(--muted,#93a0bd);border-radius:999px;padding:6px 11px;font:700 11.5px inherit;cursor:pointer">Sign out</button>'
+      +'</div>';
     w.style.display='block';
   } else { w.style.display='none'; }
 }
@@ -7116,7 +7282,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.6';
+const STATS_BUILD='2026-08-10-g5-tor-atl.7';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   const b=document.createElement('button');
