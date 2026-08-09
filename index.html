@@ -1566,6 +1566,8 @@ window.STATS_FIREBASE = {
       } else { out = { ok:false, why:code }; }
     }
 
+    // Same reason as the Google path: an email-link upgrade keeps the uid.
+    try { SB.refreshMe(); } catch (e) {}
     try { localStorage.removeItem(LINK_KEY); } catch (e) {}
     // The code in the query string is single-use and it is the entire
     // secret. It does not stay in the address bar, in history, or in
@@ -1600,7 +1602,48 @@ window.STATS_FIREBASE = {
     }
   };
 
-  SB.verified = function () { return !!(SB.me && SB.me.verified); };
+  /* ---- ONE PLACE THAT DECIDES WHO YOU ARE -------------------------
+     This exists because of a bug that made the app look amateur: you
+     signed in, and the front door still said "sign in".
+
+     Why it happened. Upgrading an anonymous player with linkWithPopup /
+     linkWithCredential keeps the SAME uid — that is the entire point, it
+     is what stops a sign-in from orphaning the points you already have.
+     But the old listener only announced a change when the *uid* changed,
+     and for a link it never does. So the account became real while the
+     app's copy of "am I signed in" stayed false, and every screen that
+     asks kept saying no.
+
+     Now there is one function that re-reads the live user, and it fires
+     the identity event whenever ANYTHING that matters changed — uid,
+     email, or verified — not just the uid. Every sign-in path calls it. */
+  SB.refreshMe = function (u) {
+    u = u || (auth && auth.currentUser) || null;
+    if (!u) return false;
+    var was = SB.me || {};
+    var now = {
+      uid:      u.uid,
+      email:    u.email || '',
+      verified: !!u.email && u.emailVerified !== false,
+      anon:     u.isAnonymous === true,
+      name:     was.name || ''
+    };
+    var changed = was.uid !== now.uid || was.email !== now.email || was.verified !== now.verified;
+    SB.me = now;
+    if (was.uid !== now.uid && nightId) meRef = F.doc(db, 'nights', nightId, 'players', now.uid);
+    if (changed) { try { window.dispatchEvent(new Event('stats-identity')); } catch (_) {} }
+    return changed;
+  };
+  SB.verified = function () {
+    // Read the live user first — SB.me can lag a link by a tick, and a
+    // stale "no" here is the difference between a working app and one
+    // that asks you to sign in twice.
+    try {
+      var u = auth && auth.currentUser;
+      if (u) return !!u.email && u.emailVerified !== false;
+    } catch (e) {}
+    return !!(SB.me && SB.me.verified);
+  };
 
   /* ---- GOOGLE ONE-TAP -----------------------------------------------
      The email link works, but it makes a player leave the app and open
@@ -1632,7 +1675,10 @@ window.STATS_FIREBASE = {
       } else {
         cred = await A.signInWithPopup(auth, prov);
       }
-      return { ok:true, email: (cred && cred.user && cred.user.email) || '' };
+      // The link kept the uid, so the auth listener may never fire. Tell the
+      // app who it is now, explicitly, before we hand control back.
+      try { SB.refreshMe(); } catch (_) {}
+      return { ok:true, email: (cred && cred.user && cred.user.email) || (auth.currentUser && auth.currentUser.email) || '' };
     } catch (e) {
       var code = (e && e.code) || 'unknown';
       try { console.error('[STATS] google sign-in failed:', code, e && e.message); } catch (_) {}
@@ -1716,17 +1762,7 @@ window.STATS_FIREBASE = {
                 verified: !!auth.currentUser.email && auth.currentUser.emailVerified !== false,
                 anon: auth.currentUser.isAnonymous === true };
 
-      authMod.onAuthStateChanged(auth, function (u) {
-        if (!u) return;
-        var changed = !SB.me || SB.me.uid !== u.uid;
-        SB.me = SB.me || { name: '' };
-        SB.me.uid      = u.uid;
-        SB.me.email    = u.email || '';
-        SB.me.verified = !!u.email && u.emailVerified !== false;
-        SB.me.anon     = u.isAnonymous === true;
-        if (changed && nightId) meRef = F.doc(db, 'nights', nightId, 'players', u.uid);
-        if (changed) { try { window.dispatchEvent(new Event('stats-identity')); } catch (_) {} }
-      });
+      authMod.onAuthStateChanged(auth, function (u) { SB.refreshMe(u); });
 
       setState('on', 'connected');
     } catch (e) {
@@ -7080,7 +7116,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.5';
+const STATS_BUILD='2026-08-10-g5-tor-atl.6';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   const b=document.createElement('button');
