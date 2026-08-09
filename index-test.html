@@ -851,8 +851,6 @@
     <h1 class="center" style="margin-top:26px">Grab your handle</h1>
     <p class="sub center">This is how you'll show up on the leaderboard.</p>
     <div class="card">
-      <label class="fld">Display name</label>
-      <input id="playerName" maxlength="16" placeholder="e.g. CourtsideKing" oninput="checkName()">
       <!-- Shown INSTEAD of the email field once we already know who you are.
            Asking a signed-in person for the address they just signed in with
            is the app admitting it wasn't paying attention. -->
@@ -864,6 +862,8 @@
         </div>
         <button onclick="doSignOut()" style="flex:0 0 auto;background:none;border:1px solid var(--line2,#2f3a58);color:var(--muted,#93a0bd);border-radius:999px;padding:6px 11px;font:700 11.5px inherit;cursor:pointer">Sign out</button>
       </div>
+      <label class="fld">Display name</label>
+      <input id="playerName" maxlength="16" placeholder="e.g. CourtsideKing" oninput="checkName()">
       <div id="emailFieldWrap">
         <label class="fld" for="gateEmail">Email</label>
         <input id="gateEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" oninput="checkName()">
@@ -3098,9 +3098,13 @@ function paintAccountRow(){
   const em=acctEmailNow();
   if(v){
     row.style.display='flex';
-    wrap.style.display='none';
+    // Only hide the field if we actually HAVE the address. A signed-in
+    // account with no email on it (rare, but it happens) would otherwise
+    // hide the one input the Continue button is waiting on, and the player
+    // would sit in front of a dead button with nothing to fix.
+    wrap.style.display = em ? 'none' : '';
     const t=document.getElementById('acctEmail');
-    if(t) t.textContent = em || 'Your account is saved';
+    if(t) t.textContent = em || 'Add an email below so the host can settle your card';
     // The hidden input stays truthful — checkName() and saveGateEmail()
     // both still read it, and a blank one would re-lock the button.
     try{
@@ -3109,7 +3113,7 @@ function paintAccountRow(){
     }catch(_){}
     const note=document.getElementById('gateNote');
     let nm=''; try{ nm=((document.getElementById('playerName')||{}).value||'').trim(); }catch(_){}
-    if(note) note.innerHTML = nm.length>=2
+    if(note && em) note.innerHTML = nm.length>=2
       ? 'Welcome back — this is how you left it. Change anything, or just tap Continue.'
       : 'One thing left — pick the name you want on the board.';
   } else {
@@ -7282,7 +7286,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.7';
+const STATS_BUILD='2026-08-10-g5-tor-atl.8';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   const b=document.createElement('button');
