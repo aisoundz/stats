@@ -1132,7 +1132,7 @@ function renderRun(){
       b.style.fontSize='15.5px'; b.style.padding='17px 18px'; b.style.lineHeight='1.3';
       b.textContent = busy ? 'Working…'
         : isLast  ? `🏁 End the game — reveal ${tag} & post the final`
-        : canPush ? `⏭ End of ${tag} — reveal, post the score, start ${nextTag}`
+        : canPush ? `✅ End of ${tag} — reveal, score & grade (you push ${nextTag} yourself)`
                   : `✅ End of ${tag} — reveal and post the score`;
       b.disabled = !keyReady || busy;
       b.onclick = ()=>closeQuarter(i);
@@ -1142,7 +1142,7 @@ function renderRun(){
       tip.textContent = isLast
         ? 'Reveals the answers and posts the final score. Every phone gets an alert that its points landed.'
         : canPush
-          ? `Reveals ${tag} first — that order is what keeps the answers — then posts the score, then puts ${nextTag} on every phone. Two alerts, one press.`
+          ? `Reveals ${tag}, posts the score, and grades everyone from their saved answers. It does NOT auto-start ${nextTag} — push that yourself with its button when the next quarter is about to begin, so you keep the timing.`
           : `${nextTag} has no questions yet, so this reveals ${tag} and posts the score only. Load or write ${nextTag} and its own push button appears below.`;
       a.appendChild(tip);
 
@@ -1428,7 +1428,7 @@ async function closeQuarter(i){
         ? `2. Post the scoreboard: ${cfg.away||'Away'} ${a} — ${cfg.home||'Home'} ${h}  (${label})\n\n`
         : `2. No scoreboard — you left the score blank.\n\n`) +
       (last  ? `3. Nothing left to push. That's the game.`
-     : canPush ? `3. Push ${nextTag} to every phone.\n\nPhones get an alert on step 1 and again on step 3.`
+     : canPush ? `3. ${nextTag} will NOT go out automatically — it's armed, and you push it with its own button the moment the next quarter is about to start. You control the timing.`
               : `3. ${nextTag} isn't written yet, so nothing gets pushed. Write it on tab 1 and push it yourself.`))) return;
 
   closingRound = i; renderRun();
@@ -1456,14 +1456,12 @@ async function closeQuarter(i){
     catch(e){ toast(`${cfg.tags[i]} is scored, but the scoreboard didn't post. Post it by hand above.`); }
   }
 
-  if(canPush){
-    try{ await writePush(i+1); done.push(`${nextTag} is live`); }
-    catch(e){
-      closingRound = null; renderRun();
-      toast(`${cfg.tags[i]} is scored, but ${nextTag} did not go out. Press its own push button.`);
-      return;
-    }
-  }
+  /* Game #3 fix (host pacing): do NOT auto-push the next quarter. Closing a
+     quarter reveals + scores + grades THIS one and then STOPS. The host
+     decides when the next quarter's questions go live, using that round's
+     own "Push" button — so questions go out on the broadcast's clock, not
+     the app's. This is what fixes "closing one quarter pushed them all". */
+  if(canPush) done.push(`${nextTag} is armed — press its Push button when you're ready`);
 
   closingRound = null; renderRun();
   toast(done.join(' · ') + '.');
