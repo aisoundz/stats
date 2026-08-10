@@ -8068,7 +8068,14 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.31';
+const STATS_BUILD='2026-08-10-g5-tor-atl.32';
+/* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
+   there was no way to see it without opening devtools on a phone. A build
+   you cannot read is a build you cannot verify, and "did the fix land?"
+   is the first question of every incident. Three ways to read it now: the
+   line at the bottom of the Me tab, tapping that line to copy it, and
+   STATS_BUILD in a console. */
+try{ window.STATS_BUILD = STATS_BUILD; }catch(e){}
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
@@ -8217,6 +8224,24 @@ function renderMe(){
       + '<p class="sub" style="margin:8px 0 14px">Sign in and this becomes your card — season points, game nights played, and your best Call It streak.</p>'
       + '<button class="btn" onclick="go(\'landing\')">Go to sign in →</button>'
       + '</div>';
+  el.innerHTML += buildStampHTML();
+  try{
+    const bs=document.getElementById('buildStamp');
+    if(bs) bs.onclick=function(){
+      try{ navigator.clipboard.writeText(STATS_BUILD); toast('Copied '+STATS_BUILD); }
+      catch(e){ toast(STATS_BUILD); }
+    };
+  }catch(_){}
+}
+/* One writer, so the stamp can never disagree with itself in two places. */
+function buildStampHTML(){
+  var short=String(STATS_BUILD).split('.').pop();
+  return '<div class="center" style="margin-top:18px">'
+    + '<button id="buildStamp" style="background:none;border:none;cursor:pointer;'
+    + 'font:800 11.5px/1.5 inherit;color:#5b6a8c;letter-spacing:.06em">'
+    + 'Version <b style="color:#93a0bd">'+esc(short)+'</b> · '+esc(STATS_BUILD)+'</button>'
+    + '<div class="sub" style="font-size:10.5px;margin-top:3px;opacity:.7">Tap to copy. If this is behind, pull down to refresh.</div>'
+    + '</div>';
 }
 
 

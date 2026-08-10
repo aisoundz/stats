@@ -188,6 +188,9 @@
       <div class="spacer"></div>
       <span class="dot" id="beDot"></span>
       <span class="who" id="whoTxt">…</span>
+      <!-- The build, where the host can read it without devtools. Every
+           "did the fix land?" starts here. -->
+      <span class="chip" id="buildChip" title="Control Room build">…</span>
       <button class="mini" id="outBtn">Sign out</button>
     </div>
     <div class="wrap">
@@ -387,7 +390,15 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-10-admin.17';
+window.ADMIN_BUILD='2026-08-10-admin.18';
+try{ document.addEventListener('DOMContentLoaded', function(){
+  var c=document.getElementById('buildChip');
+  if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
+         c.title='Control Room '+window.ADMIN_BUILD;
+         c.style.cursor='pointer';
+         c.onclick=function(){ try{ navigator.clipboard.writeText(window.ADMIN_BUILD); }catch(e){}
+                               try{ toast('Control Room '+window.ADMIN_BUILD); }catch(e){ alert(window.ADMIN_BUILD); } }; }
+}); }catch(e){}
 
 /* =====================================================================
    STATS — Control Room
