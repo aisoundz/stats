@@ -959,6 +959,13 @@
        this screen is pulled from the live feed: nothing typed, nothing
        invented. Before tip it is a scouting sheet, during the game it is a
        box score, and it always shows how your own card is doing. -->
+  <!-- BOARD — a tab that routed to the home page was not a leaderboard, it
+       was a redirect wearing a trophy. This is the real thing. -->
+  <section class="screen" id="s-board">
+    <div class="brand" style="margin-top:30px"><span class="logo" style="letter-spacing:1.2px;font-size:21px">BOARD</span></div>
+    <div id="bdBody" style="margin-top:16px"></div>
+  </section>
+
   <section class="screen" id="s-stats">
     <div class="brand" style="margin-top:30px"><span class="logo" style="letter-spacing:1.2px;font-size:21px">STATS</span></div>
     <div id="stBody" style="margin-top:16px"></div>
@@ -2827,7 +2834,7 @@ const league={name:"The Barbershop",members:[
 ]};
 
 /* ---------------- NAV ---------------- */
-const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-lobby",me:"s-me",gametime:"s-gametime",stats:"s-stats",
+const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-lobby",me:"s-me",gametime:"s-gametime",stats:"s-stats",board:"s-board",
   live:"s-live",break:"s-break",final:"s-final",host:"s-host",league:"s-league",plus:"s-plus",
   rules:"s-rules",review:"s-review",predreview:"s-predreview",tally:"s-tally",
   join:"s-join"};
@@ -2919,7 +2926,7 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
   document.getElementById('app').scrollTop=0; window.scrollTo(0,0);
   S.screen=k; pendingBack=false;
   // where ← goes from each screen; null = no back button
-  const BACKMAP={landing:null,name:'landing',predict:'name',lobby:'landing',me:'landing',gametime:'landing',stats:'landing',
+  const BACKMAP={landing:null,name:'landing',predict:'name',lobby:'landing',me:'landing',gametime:'landing',stats:'landing',board:'landing',
     live:'lobby',break:'lobby',review:'lobby',predreview:'lobby',
     final:null,rules:'landing',league:'final',plus:'final',host:'final',tally:'final',
     join:'landing'};
@@ -4619,6 +4626,16 @@ function showFinal(){
     renderLeaderboard('finalLb',6);
   }
   renderSignup();
+  /* BANK THE NIGHT. Idempotent by night id, so a refresh on this screen
+     cannot double-count. Practice never banks — a season built out of
+     simulated nights is a season that means nothing. */
+  try{
+    if(S.mode==='live'){
+      var nid=(typeof GAME!=='undefined'&&GAME.nightId)||('night-'+new Date().toISOString().slice(0,10));
+      var rk=null; try{ rk=liveRank(); }catch(_){}
+      seasonRecord(nid, S.pts||0, rk);
+    }
+  }catch(_){}
   go('final');
 }
 
@@ -5965,10 +5982,18 @@ function ciLiveBank(){
   ].forEach(function(r){ var q=ciTeamQ(r[0],r[1],r[2],r[3]); if(q) out.push(q); });
   return out;
 }
+/* STABLE ORDER, ON PURPOSE. An earlier version shuffled here, which looked
+   harmless and was not: the lobby fires demo questions guarded by "have I
+   already fired this question id?", and a shuffled bank hands back a
+   different id every call — so the guard never matched and a new Call It
+   popped up on every single lobby repaint. Shuffling belongs to the caller
+   that actually wants variety (the practice button), never to the bank. */
 function ciBank(){
   if(!GS.ok) return [];
-  var b = gsInGame() ? ciLiveBank() : ciPreBank();
-  // Shuffle so a player running five in a row does not get the same five.
+  return gsInGame() ? ciLiveBank() : ciPreBank();
+}
+function ciBankShuffled(){
+  var b=ciBank().slice();
   for(var i=b.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=b[i]; b[i]=b[j]; b[j]=t; }
   return b;
 }
@@ -6005,11 +6030,15 @@ function demoCiSet(){
   }
   return out;
 }
+/* Fired is keyed by SLOT, not by question id. The lobby repaints often, and
+   whether slot 0 has already been used is a fact about this practice run —
+   it must not depend on which question the bank happened to hand back. */
 const demoCiFired={};
 function demoCallIt(n){
   if(S.mode!=='demo' || PCI.muted) return;
-  const q=demoCiSet()[n]; if(!q || demoCiFired[q.qid]) return;
-  demoCiFired[q.qid]=true;
+  if(demoCiFired['slot'+n]) return;
+  const bank=demoCiSet(); const q=bank[n % Math.max(1,bank.length)]; if(!q) return;
+  demoCiFired['slot'+n]=true;
   ensureCiCard();
   const opensAt=Date.now()+4000;
   setTimeout(function(){
@@ -6017,15 +6046,29 @@ function demoCallIt(n){
     // Never stomp a question already on screen and still unanswered — a
     // queued demo replacing the one the player is looking at reads as the
     // card resetting itself for no reason.
-    try{ if(PCI.active && PCI.active.state==='open' && PCI.picked[PCI.active.qid]==null){ demoCiFired[q.qid]=false; return; } }catch(_){}
-    const live={qid:q.qid,prompt:q.prompt,options:q.options,state:'open',
+    try{ if(PCI.active && PCI.active.state==='open' && PCI.picked[PCI.active.qid]==null){ demoCiFired['slot'+n]=false; return; } }catch(_){}
+    const qid='demo-ci-'+n+'-'+opensAt;
+    const live={qid:qid,prompt:q.prompt,options:q.options,state:'open',
                 locksMs:20000,opensAt:{toMillis:function(){return opensAt;}}};
     PCI.active=live; renderCiCard(live);
-    setTimeout(function(){
-      live.state='resolved'; live.answer=q.answer; live.resolveText=q.resolveText;
-      try{ renderCiCard(live); }catch(_){}
-    }, 22000);
+    ciSettleWhenAnswered(live,q,22000);
   }, 4000);
+}
+/* Practice questions resolve a beat after you answer. Waiting out a
+   twenty-second clock you have already beaten is the single most common
+   complaint about any live-quiz product, and in practice there is nobody
+   on the other end to wait for. */
+function ciSettleWhenAnswered(live,q,maxMs){
+  var settle=function(){
+    if(PCI.active!==live || live.state==='resolved') return;
+    live.state='resolved'; live.answer=q.answer; live.resolveText=q.resolveText;
+    try{ renderCiCard(live); }catch(_){}
+  };
+  var watch=setInterval(function(){
+    if(PCI.active!==live || live.state==='resolved'){ clearInterval(watch); return; }
+    if(PCI.picked[live.qid]!=null){ clearInterval(watch); setTimeout(settle,2200); }
+  },250);
+  setTimeout(function(){ clearInterval(watch); settle(); }, maxMs||22000);
 }
 function onCallItQuestions(qs){
   if(!qs || !qs.length) return;
@@ -6056,6 +6099,7 @@ function ensureCiCard(){
     '#ciCard .cistat{margin-top:10px;font-size:12.5px;color:#93a0bd}'+
     '#ciCard .cibody{font-size:15px;color:#eef2fb}'+
     '#ciCard .cireveal{margin-top:6px;font-size:13px;color:#93a0bd}'+
+    '#ciCard .cifoot{display:flex;gap:16px;align-items:center}'+
     '#ciCard .cimute{margin-top:10px;background:none;border:none;color:#5b6a8c;font-size:12px;cursor:pointer;text-decoration:underline}';
   document.head.appendChild(css);
   var d=document.createElement('div'); d.id='ciCard'; d.innerHTML='<div id="ciInner"></div>';
@@ -6167,12 +6211,20 @@ function renderCiCard(q){
          '<div class="ciq">'+esc(q.prompt)+'</div>'+
          '<div class="ciopts">'+opts+'</div>'+
          '<div class="cistat">'+status+(PCI.streak?(' · 🔥 '+PCI.streak):'')+'</div>'+
-         '<button class="cimute" data-cimute="1">mute Call It</button>');
+         '<div class="cifoot"><button class="cimute" data-cimute="1">mute Call It</button>'+
+         (pick!=null?'<button class="cimute" data-cihide="1">hide this</button>':'')+'</div>');
   var card=document.getElementById('ciCard');
   Array.prototype.forEach.call(card.querySelectorAll('.ciopt'), function(b){
     b.onclick=function(){ if(!locked) ciPick(q, b.getAttribute('data-civ')); };
   });
   var mb=card.querySelector('.cimute'); if(mb) mb.onclick=function(){ PCI.muted=true; card.style.display='none'; };
+  var hb=card.querySelector('[data-cihide]'); if(hb) hb.onclick=function(){ card.style.display='none'; try{ if(typeof renderGametime==='function') renderGametime(); }catch(_){} };
+  /* YOUR ANSWER IS IN — THE CARD GETS OUT OF THE WAY. A locked card that
+     sits on screen until a host somewhere remembers to resolve it is how a
+     Call It ends up parked over the leaderboard for a whole quarter. The
+     pick is already recorded, so hiding costs nothing; when the result
+     lands the watcher renders the resolved card and it comes back. */
+  if(pick!=null && st!=='resolved'){ ciHideSoon(9000); }
   clearTimeout(PCI.tick);
   if(!locked){ PCI.tick=setTimeout(function(){ if(PCI.active) renderCiCard(PCI.active); }, Math.max(250, locksMs-now)); }
 }
@@ -7881,7 +7933,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.26';
+const STATS_BUILD='2026-08-10-g5-tor-atl.27';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
@@ -7934,10 +7986,7 @@ function navGo(tab){
     if(tab==='home')  { go('landing'); }
     else if(tab==='gametime'){ renderGametime(); go('gametime'); }
     else if(tab==='stats'){ go('stats'); renderStats(); loadGameStats(true).then(function(){ if(S.screen==='stats') renderStats(); }); }
-    else if(tab==='board'){
-      if(S.mode==='live'){ go('lobby'); try{ refreshRoom(); }catch(_){} }
-      else { go('landing'); toast('The board fills up once a game night starts.'); }
-    }
+    else if(tab==='board'){ renderBoard(); go('board'); if(S.mode==='live'){ try{ refreshRoom(); }catch(_){} } }
     else if(tab==='crew'){ try{ openTalk(); }catch(_){ toast('The room opens on game night.'); } }
     else if(tab==='me'){ renderMe(); go('me'); }
   }catch(e){}
@@ -7960,7 +8009,7 @@ function paintNav(active){
   }catch(_){}
   try{ document.body.classList.toggle('hasnav', !hide); }catch(_){}
   if(!active){
-    active = (scr==='gametime') ? 'gametime' : (scr==='stats' ? 'stats' : (scr==='landing' ? 'home' : (scr==='me' ? 'me' : (scr==='lobby' ? 'gametime' : ''))));
+    active = (scr==='gametime') ? 'gametime' : (scr==='stats' ? 'stats' : (scr==='board' ? 'board' : (scr==='landing' ? 'home' : (scr==='me' ? 'me' : (scr==='lobby' ? 'gametime' : '')))));
   }
   try{
     bar.querySelectorAll('.navb').forEach(function(b){
@@ -7978,6 +8027,11 @@ function paintNav(active){
   }catch(e){}
 })();
 try{ setTimeout(paintNav, 600); }catch(e){}
+/* Warm the stats feed on boot. The Call It bank is generated FROM it, so a
+   cold cache is the difference between "which defense gives up fewer points
+   a night" and the canned fallback nobody wants. One request, same endpoint
+   the matchup card already hits. */
+try{ setTimeout(function(){ try{ loadGameStats(); }catch(_){} }, 1200); }catch(e){}
 
 
 /* ---- THE ME TAB ---------------------------------------------------
@@ -8129,6 +8183,73 @@ function gsBar(label,a,b,dir){
     +     '<div class="stB r"><i style="width:'+bw+'%;background:'+(bWin?C:D)+'"></i></div></div></div>'
     + '<div class="stV'+(bWin?' win':'')+'">'+esc(gsFmt(label,b))+'</div></div>';
 }
+/* ---- THE BOARD ------------------------------------------------------
+   Tonight's standings, plus the season table underneath. The season half
+   is the answer to the flattest thing about the product: every game night
+   used to begin and end in a vacuum. Points now carry, and a player in
+   fourth can see exactly how far back they are with nights still to play. */
+function seasonRead(){
+  try{ var j=JSON.parse(localStorage.getItem('stats_season_v1')||'{}'); return (j&&typeof j==='object')?j:{}; }catch(_){ return {}; }
+}
+function seasonWrite(o){ try{ localStorage.setItem('stats_season_v1', JSON.stringify(o)); }catch(_){ } }
+/* Called once when a night finishes. Idempotent by nightId, so a refresh on
+   the final screen can never double-count a night — the bug that would
+   quietly corrupt a whole season. */
+function seasonRecord(nightId, pts, rank){
+  if(!nightId) return seasonRead();
+  var s=seasonRead();
+  s.nights=s.nights||{};
+  if(s.nights[nightId]) return s;                 // already banked
+  s.nights[nightId]={pts:Number(pts)||0, rank:rank||null, at:Date.now()};
+  s.total=Object.keys(s.nights).reduce(function(a,k){ return a+(Number(s.nights[k].pts)||0); },0);
+  s.played=Object.keys(s.nights).length;
+  s.best=Math.max(Number(s.best)||0, Number(pts)||0);
+  seasonWrite(s); return s;
+}
+function seasonStats(){
+  var s=seasonRead(), n=s.nights||{};
+  var keys=Object.keys(n).sort(function(a,b){ return (n[a].at||0)-(n[b].at||0); });
+  return { total:Number(s.total)||0, played:keys.length, best:Number(s.best)||0,
+           last:keys.length?n[keys[keys.length-1]]:null, keys:keys, nights:n };
+}
+function renderBoard(){
+  var el=document.getElementById('bdBody'); if(!el) return;
+  var out='', list=null;
+  try{ list = (S.mode==='demo') ? standings().map(function(p){return {name:p.n||p.name,pts:p.pts,color:p.c||p.color,me:p.me};})
+                                : (typeof lastStand!=='undefined' && lastStand ? lastStand : null); }catch(_){}
+  if(list && list.length>1){
+    out+='<div class="card" style="padding:14px 16px"><div class="stHd">TONIGHT</div>'
+      + list.slice(0,10).map(function(p,i){
+          return '<div class="bdRow'+(p.me?' me':'')+'"><span class="bdR">'+(i+1)+'</span>'
+            + '<span class="bdDot" style="background:'+esc(p.color||'#4d86ff')+'"></span>'
+            + '<span class="bdN">'+esc(p.name||'player')+(p.me?' (you)':'')+'</span>'
+            + '<span class="bdP">'+(Number(p.pts)||0)+'</span></div>';
+        }).join('')
+      + '</div>';
+  } else {
+    out+='<div class="card center" style="padding:22px"><div style="font-size:26px">🏆</div>'
+      + '<b style="font-size:15px">The board fills up at tip-off</b>'
+      + '<p class="sub" style="font-size:12.5px;margin:8px 0 0">Every right answer moves a row. Q4 is worth four times Q1, so it keeps moving to the buzzer.</p></div>';
+  }
+  var ss=seasonStats();
+  out+='<div class="card" style="padding:14px 16px;margin-top:12px"><div class="stHd">YOUR SEASON</div>'
+    + '<div style="display:flex;text-align:center">'
+    +   '<div style="flex:1"><div class="bdBig">'+ss.total+'</div><div class="bdK">TOTAL PTS</div></div>'
+    +   '<div style="flex:1"><div class="bdBig">'+ss.played+'</div><div class="bdK">NIGHTS</div></div>'
+    +   '<div style="flex:1"><div class="bdBig" style="color:var(--gold)">'+ss.best+'</div><div class="bdK">BEST NIGHT</div></div>'
+    + '</div>'
+    + (ss.played? '' : '<div class="sub" style="font-size:12px;margin-top:10px">Play a night through to the final buzzer and it banks here. Points carry all season.</div>')
+    + '</div>';
+  if(ss.played){
+    out+='<div class="card" style="padding:14px 16px;margin-top:12px"><div class="stHd">NIGHT BY NIGHT</div>'
+      + ss.keys.slice().reverse().map(function(k){ var n=ss.nights[k];
+          return '<div class="stLead"><span class="stLeadN">'+esc(k.replace(/^gn/,'Game Night ').replace(/-.*$/,''))+'</span>'
+            + '<span class="stLeadV">'+(Number(n.pts)||0)+' pts'+(n.rank?(' · #'+n.rank):'')+'</span></div>'; }).join('')
+      + '</div>';
+  }
+  el.innerHTML=out;
+}
+
 function renderStats(){
   var el=document.getElementById('stBody'); if(!el) return;
   if(!GS.ok){
@@ -8304,24 +8425,14 @@ function ciDemoRun(){
   try{
     ensureCiCard();
     PCI.muted=false;
-    if(!ciDemoQueue.length) ciDemoQueue=demoCiSet().slice();
-    var q=ciDemoQueue.shift(); if(!q) return; ciDemoN++;
+    if(!ciDemoQueue.length) ciDemoQueue=ciBankShuffled();
+    var q=ciDemoQueue.shift(); if(!q) q=demoCiSet()[0]; if(!q) return; ciDemoN++;
     var qid='ci-try-'+ciDemoN;
     var opensAt=Date.now();
     var live={qid:qid,prompt:q.prompt,options:q.options,state:'open',
               locksMs:20000,opensAt:{toMillis:function(){return opensAt;}}};
     PCI.active=live; renderCiCard(live);
-    var settle=function(){
-      if(PCI.active!==live || live.state==='resolved') return;
-      live.state='resolved'; live.answer=q.answer; live.resolveText=q.resolveText;
-      try{ renderCiCard(live); }catch(_){}
-    };
-    // Resolve 2.5s after they answer, or at the clock if they never do.
-    var watch=setInterval(function(){
-      if(PCI.active!==live){ clearInterval(watch); return; }
-      if(PCI.picked[qid]!=null){ clearInterval(watch); setTimeout(settle,2500); }
-    }, 250);
-    setTimeout(function(){ clearInterval(watch); settle(); }, 21000);
+    ciSettleWhenAnswered(live,q,21000);
   }catch(e){ try{ toast('Could not start the test — '+e.message); }catch(_){} }
 }
 try{ setInterval(function(){ try{ if((S&&S.screen)==='gametime') renderGametime(); }catch(_){}}, 20000); }catch(e){}
@@ -8383,6 +8494,17 @@ body.hasnav{padding-bottom:74px}
 .stPickMine{grid-column:1;font-size:14px;font-weight:800;color:#eef2fb}
 .stPickMine.lead{color:#2ee6a6}
 .stPickLead{grid-column:2;grid-row:1 / span 2;align-self:center;font-size:11.5px;color:#93a0bd;text-align:right}
+
+/* ---- board ---- */
+.bdRow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #1a2337}
+.bdRow:last-child{border-bottom:none}
+.bdRow.me{background:rgba(40,224,208,.07);border-radius:10px;padding-left:8px;padding-right:8px;border-bottom-color:transparent}
+.bdR{flex:0 0 20px;font-size:12.5px;font-weight:800;color:#5b6a8c;text-align:center}
+.bdDot{flex:0 0 auto;width:9px;height:9px;border-radius:50%}
+.bdN{flex:1;min-width:0;font-size:14.5px;font-weight:800;color:#eef2fb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bdP{flex:0 0 auto;font-size:15px;font-weight:900;color:#eef2fb}
+.bdBig{font-size:23px;font-weight:900;color:#eef2fb}
+.bdK{font-size:10px;letter-spacing:.12em;color:#93a0bd;font-weight:800}
 
 /* ---- pick-slip ---- */
 #predCard{padding:14px}
