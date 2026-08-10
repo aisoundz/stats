@@ -3901,28 +3901,44 @@ function loadQuestion(){
     b.onclick=()=>answer(opt,b);o.appendChild(b);});
   startTimer(S.mode==="live"?20:15);
 }
+/* The clock is a WALL clock, not a tick counter. The old version counted
+   `t--` once per foreground second — and phones pause timers the moment
+   the app is backgrounded, so switching to a box-score app FROZE the
+   clock. The whole promise of the 20 seconds ("lookups don't pay") was
+   unenforced for exactly the person trying to beat it. Now the deadline
+   is a fixed moment in time: background the app for eight seconds and
+   you come back to find those eight seconds honestly gone — and if the
+   clock died while you were away, the question closes on your return. */
+let timerEndAt=0;
+function timerPaint(){
+  const fill=document.getElementById('timerFill');const bar=document.getElementById('timerBar');
+  const t=Math.ceil((timerEndAt-Date.now())/1000);
+  secondsLeft=Math.max(t,0);
+  if(fill) fill.style.width=(Math.max(t,0)/timerDur*100)+'%';
+  if(t<=5&&bar) bar.classList.add('low');
+  if(t<=5&&t>0&&!timerWarned){timerWarned=true;warnCue();}
+  if(t<=0){clearInterval(timerInt);timeCue();timeUp();}
+}
+let timerWarned=false;
 function startTimer(dur){
   clearInterval(timerInt);
-  timerDur=dur; let t=dur; secondsLeft=dur;
+  timerDur=dur; secondsLeft=dur; timerWarned=false;
+  timerEndAt=Date.now()+dur*1000;
   const fill=document.getElementById('timerFill');const bar=document.getElementById('timerBar');
-  fill.style.width='100%';bar.classList.remove('low');
-  timerInt=setInterval(()=>{t--;secondsLeft=t;fill.style.width=(Math.max(t,0)/timerDur*100)+'%';
-    if(t===5)warnCue();
-    if(t<=5)bar.classList.add('low');
-    if(t<=0){clearInterval(timerInt);timeCue();timeUp();}
-  },1000);
+  if(fill) fill.style.width='100%'; if(bar) bar.classList.remove('low');
+  // 250ms, not 1000: coming back from the background settles the display
+  // (or ends the question) within a quarter second instead of a full one.
+  timerInt=setInterval(timerPaint,250);
 }
 function extendTimer(extra){
   // add time onto the running clock (Game Night lifeline)
-  const fill=document.getElementById('timerFill');const bar=document.getElementById('timerBar');
+  const bar=document.getElementById('timerBar');
+  timerEndAt+=extra*1000;
+  timerDur=Math.max(timerDur,Math.ceil((timerEndAt-Date.now())/1000));
+  timerWarned=false;
+  if(bar) bar.classList.remove('low');
   clearInterval(timerInt);
-  let t=secondsLeft+extra; timerDur=Math.max(timerDur,t);
-  bar.classList.remove('low');
-  timerInt=setInterval(()=>{t--;secondsLeft=t;fill.style.width=(Math.max(t,0)/timerDur*100)+'%';
-    if(t===5)warnCue();
-    if(t<=5)bar.classList.add('low');
-    if(t<=0){clearInterval(timerInt);timeCue();timeUp();}
-  },1000);
+  timerInt=setInterval(timerPaint,250);
 }
 /* ---- Game Night picks stay changeable ---------------------------------
    A tap is a PICK, not a commitment. The clock keeps running, every option
@@ -7378,9 +7394,16 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.10';
+const STATS_BUILD='2026-08-10-g5-tor-atl.11';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
+  // Never drop a refresh button on somebody mid-question. The checker runs
+  // every three minutes; the bar can wait for a screen where a tap on it
+  // costs nothing. ESPN doesn't interrupt the play to tell you about ESPN.
+  try{
+    const scr=(document.querySelector('.screen.active')||{}).id||'';
+    if(S && S.mode==='live' && (scr==='s-live'||scr==='s-lobby'||scr==='s-predict')) return;
+  }catch(e){}
   const b=document.createElement('button');
   b.id='updBar';
   b.textContent='↻ New version ready — tap to refresh';
