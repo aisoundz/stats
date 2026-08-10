@@ -1250,11 +1250,9 @@
     <details class="fmore">
       <summary>More — host tools, roast card, season pass</summary>
       <div class="fmorein">
-        <button class="btn ghost" onclick="openTally()">🏆 Host: tally the crew &amp; crown a winner</button>
         <button class="btn ghost" onclick="openRoast()">😈 Post-game roast card</button>
         <button class="btn ghost" onclick="openLeague()">🏟️ Leagues (preview)</button>
         <button class="btn ghost" onclick="go('plus')">⭐ See STATS+ (season pass)</button>
-        <button class="btn ghost" onclick="openHost()">👀 Peek behind the curtain (Host panel)</button>
         <button class="btn ghost" onclick="restart()">Play again</button>
       </div>
     </details>
@@ -7399,7 +7397,24 @@ function openLeague(){
     : `😤 ${lead.n} leads you by ${lead.season-ssn[me].season} pts this season. Next game is your shot.`;
   go('league');
 }
-function openHost(){renderHostSegs();renderPBP();document.getElementById('engineOut').innerHTML='';go('host');}
+/* HOST-ONLY SCREENS. These were reachable from the end-of-game menu by
+   anybody who finished a night — a screen badged HOST MODE, showing a
+   simulated feed and buttons that read like live controls. Nothing on it
+   could actually change the game, but a player should never see the
+   operator's side of the product, and "it is only a demo" is not a thing
+   the person looking at it knows.
+
+   Deleting the button is not access control: openHost() is a global and
+   the screen is still in the DOM. The gate lives in the function, and
+   there is exactly one way past it — ?host=1 in the URL, which is for you
+   when you want to show somebody the pipeline. */
+function hostAllowed(){
+  try{ return /(?:^|[?&])host=1(?:&|$)/.test(location.search); }catch(e){ return false; }
+}
+function openHost(){
+  if(!hostAllowed()){ try{ toast('That panel is for the host.'); }catch(e){} return; }
+  renderHostSegs();renderPBP();document.getElementById('engineOut').innerHTML='';go('host');
+}
 function copyQs(qi){
   const worth=roundWorth(qi);
   const txt=`${SPORT.emoji} STATS ${roundName(qi)} — answer in the app NOW (${worth} pt${worth>1?'s':''} each + ⚡ speed)\n`+
@@ -7417,6 +7432,7 @@ function renderHostSegs(){
 
 /* ---------------- HOST TALLY ---------------- */
 function openTally(){
+  if(!hostAllowed()){ try{ toast('That panel is for the host.'); }catch(e){} return; }
   const wrap=document.getElementById('tallyRows');wrap.innerHTML='';
   document.getElementById('tallyResult').innerHTML='';
   // seed with the host's own result if we have one, then a couple blanks
@@ -8052,7 +8068,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.30';
+const STATS_BUILD='2026-08-10-g5-tor-atl.31';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
