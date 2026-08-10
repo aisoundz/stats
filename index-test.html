@@ -937,7 +937,7 @@
     <h1 style="margin-top:2px" id="predHead">Make your picks 📝</h1>
     <p class="sub" id="predSub">Lock these in before tip-off. Bonus points if you nail the exact number.</p>
     <div class="card" id="predCard"></div>
-    <button class="btn teal" id="predBtn" disabled onclick="lockPredictions()">Lock it in — go to tip-off 🔒</button>
+    <button class="btn teal" id="predBtn" style="display:none" disabled onclick="lockPredictions()">Lock it in — go to tip-off 🔒</button>
     <p class="foot" id="predFoot">You can't change picks once the game starts.</p>
   </section>
 
@@ -3533,7 +3533,7 @@ function startPredict(){
    it could be swapped without touching scoring.
 
    PD.i is the cursor. Everything else derives from it.                */
-const PD={i:0};
+const PD={i:0,scrolled:false};
 function predOrderList(){
   return CONF_ON ? ensurePredOrder().map(id=>preds.find(p=>p.id===id)).filter(Boolean) : preds;
 }
@@ -3598,7 +3598,16 @@ function buildPred(){
    +  '<button type="button" class="pdarrow" data-pdgo="-1"'+(PD.i===0?' disabled':'')+'>← Back</button>'
    +  '<span class="pdsofar">'+doneN+' / '+preds.length+' locked</span>'
    +  '<button type="button" class="pdarrow" data-pdgo="1"'+(PD.i===L.length-1?' disabled':'')+'>Next →</button>'
-   +'</div>';
+   +'</div>'
+   /* THE ACTION LIVES WITH THE CARD. The old Lock button sat at the bottom
+      of the page — which on a phone put it a full screen below the deck,
+      invisible, and grey for a reason you could not see. Now it is here,
+      under your own progress, and when the card isn't finished it does not
+      sulk: it says how many are left and takes you to the next blank one. */
+   +'<div class="pdsummary"><span>📋 Your card so far</span><b>'+doneN+' / '+preds.length+' locked</b></div>'
+   +'<button type="button" class="pdlock'+(doneN>=preds.length?' ready':'')+'" id="pdLock">'
+   +  (doneN>=preds.length ? 'Lock my card →' : ('Finish your card — '+(preds.length-doneN)+' left →'))
+   +'</button>';
 
   Array.prototype.forEach.call(c.querySelectorAll('.pdopt'), function(b){
     b.onclick=function(){ predPick(p.id, b.getAttribute('data-pd')); };
@@ -3609,6 +3618,21 @@ function buildPred(){
   Array.prototype.forEach.call(c.querySelectorAll('[data-pdmv]'), function(b){
     b.onclick=function(){ movePred(p.id, Number(b.getAttribute('data-pdmv'))); };
   });
+  const lk=c.querySelector('#pdLock');
+  /* The moment the sixth pick lands, bring the lock to the player rather
+     than making them hunt for it below the fold. Once only — re-scrolling
+     while somebody is editing would be its own kind of rude. */
+  if(doneN>=preds.length){
+    if(!PD.scrolled){ PD.scrolled=true;
+      setTimeout(function(){ try{ lk.scrollIntoView({behavior:'smooth',block:'center'}); }catch(_){} }, 260); }
+  } else { PD.scrolled=false; }
+  if(lk) lk.onclick=function(){
+    const miss=L.findIndex(function(x){ return !S.predChoices[x.id]; });
+    if(miss>=0){ PD.i=miss; buildPred();
+      try{ toast('One more — '+L[miss].label.toLowerCase()+'.'); }catch(_){}
+      return; }
+    lockPredictions();
+  };
   const nb=c.querySelector('.pdbonus input');
   if(nb) nb.oninput=function(){ S.predChoices[p.id+'_num']=nb.value;
     const t=c.querySelector('.pdpts'); if(t) t.textContent=predRidingPts()+' pts riding'; };
@@ -7571,7 +7595,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.16';
+const STATS_BUILD='2026-08-10-g5-tor-atl.17';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
@@ -7615,7 +7639,7 @@ try{backendBadge();}catch(e){}
    One rule governs everything here: the nav may CHANGE screens, never
    game state. No tab submits, locks, scores or signs anything. That is
    what makes a navigation rewrite safe to ship the day of a game.     */
-const NAV_HIDE_ON = ['live','review','predreview','break','final','tally'];
+const NAV_HIDE_ON = ['live','review','predreview','break','final','tally','predict'];
 function navGo(tab){
   try{
     // Leaving the Crew tab closes the room. A modal that survives a tab
@@ -7736,6 +7760,14 @@ body.hasnav{padding-bottom:74px}
 .pdarrow{background:#16233b;border:1px solid #2f3a58;color:#cfd8ea;border-radius:11px;padding:11px 15px;font:800 13px inherit;cursor:pointer}
 .pdarrow:disabled{opacity:.35;cursor:default}
 .pdsofar{font-size:12.5px;font-weight:800;color:var(--muted,#93a0bd)}
+
+.pdsummary{display:flex;align-items:center;justify-content:space-between;margin-top:14px;
+  background:#0e1626;border:1px solid #26304a;border-radius:13px;padding:14px 15px;font-size:14px;font-weight:800;color:#eef2fb}
+.pdsummary b{color:var(--gold)}
+.pdlock{width:100%;margin-top:11px;border:none;border-radius:14px;padding:18px;cursor:pointer;
+  font:900 17px/1 inherit;background:#1b2740;color:#6c7a99;transition:filter .15s}
+.pdlock.ready{background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e}
+.pdlock:active{filter:brightness(.94)}
 </style>
 </body>
 </html>
