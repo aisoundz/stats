@@ -2456,7 +2456,7 @@ boot();
      flips it on for the night, which also sets `config.callit` so phones
      know to watch. This is piece 1 (the host loop); the player card is
      piece 2. */
-  var CI = { on:false, seeded:false, lastSeq:0, openQid:null, lastOpenAt:0, lastPlayAt:0, countPer:{},
+  var CI = { on:false, seeded:false, lastSeq:0, openQid:null, lastOpenAt:0, lastPlayAt:0, countPer:{}, pending:null, relT:null,
              pace:'normal', gapMs:80000, capPer:8 };
   /* The host's frequency dial. Chill for a blowout, Hype for a game people are
      screaming at. Timeouts always fire regardless of pace — that gap exists
@@ -2479,6 +2479,7 @@ boot();
     var b=$('ciBtn'); if(b){ b.textContent = CI.on?'⏸ Call It: ON':'▶ Call It: OFF'; b.className = CI.on?'btn':'btn ghost'; b.style.flex='0 0 auto'; }
     CI.setState(CI.on?'armed — watching the feed':'off');
     try{ await FB.F.setDoc(FB.F.doc(FB.db,'nights',night), { callit: CI.on }, {merge:true}); }catch(e){}
+    if(!CI.on){ try{ clearTimeout(CI.relT); }catch(e){} CI.pending=null; }
     if(!CI.on && CI.openQid){ try{ await CI.voidQ(CI.openQid,'host turned Call It off'); }catch(e){} CI.openQid=null; }
     if(CI.on){ CI.seeded=false; }   // re-seed so we don't fire on the backlog when switched on
   };
@@ -2486,27 +2487,92 @@ boot();
   /* Build a question from the live state. Prefers a basketball READ (a run)
      over a coin-flip, then rotates 2-or-3 and who-next. Returns null if
      there's nothing sensible to ask. */
+  /* ============ RETROSPECTIVE CALL IT ==============================
+     These questions used to ask what happens NEXT — who scores the next
+     bucket, deuce or a three. Three problems with that, all of which the
+     room felt:
+
+       1. It is a guess. A coin flip does not reward watching, which is the
+          entire promise of the product.
+       2. It cannot resolve until something else happens. A question fired
+          at 4:12 of Q3 sat on every phone reading "waiting on the play…"
+          until the next made field goal — sometimes ninety seconds.
+       3. It competes with the broadcast. You are asked to look down and
+          predict at exactly the moment there is something to watch.
+
+     Retrospective questions fix all three at once. The answer is already
+     known the instant we build the question, so it resolves the moment the
+     clock locks; the only way to have it right is to have been watching;
+     and it plays in the pause after a basket rather than over the next
+     possession. Every prompt is anchored to the score it produced, so
+     "that bucket" can never be ambiguous even if the feed lags.
+
+     The answer is computed here but deliberately NOT written to the doc
+     players can read — it is held in CI.pending until the lock expires.  */
+  CI.scorerName = function(p){
+    var t=String((p&&p.text)||'');
+    var m=t.match(/^(.+?)\s+(?:makes|made)\b/i);
+    return m ? m[1].trim() : '';
+  };
   CI.build = function(plays, T, per){
     var scoring = plays.filter(function(p){return p.scoringPlay;});
-    var last = scoring[scoring.length-1]; if(!last) return null;
+    var last = null;
+    for(var k=scoring.length-1;k>=0;k--){ if(E.isMadeFG(scoring[k])){ last=scoring[k]; break; } }
+    if(!last) return null;
     var runTeam=null, runLen=0;
     for(var i=scoring.length-1;i>=0;i--){ if(runTeam==null){ runTeam=scoring[i].team&&scoring[i].team.id; runLen=1; } else if(String(scoring[i].team&&scoring[i].team.id)===String(runTeam)){ runLen++; } else break; }
-    var clutch = (per>=4 && Math.abs((T.homeScore||0)-(T.awayScore||0))<=6);
     var seq = last.sequenceNumber || 0;
     var qid = 'ci_'+per+'_'+(CI.countPer[per]||0)+'_'+seq;
+    var lid = String(last.team&&last.team.id);
+    var at  = (last.awayScore!=null && last.homeScore!=null) ? (T.awayAbbr+' '+last.awayScore+'–'+last.homeScore+' '+T.homeAbbr) : '';
+    var anchor = at ? ('the one that made it '+at) : 'that last bucket';
+    var who = CI.scorerName(last);
+    var rot = (CI.countPer[per]||0) % 3;
+
+    // 1. Two or three — the purest "were you watching" question there is.
+    if(rot===0){
+      return { qid:qid, kind:'sawTwoOrThree', per:per, runTeam:null,
+        prompt:'👀 That bucket — '+anchor+'. Two or three?',
+        options:[{k:'2 · deuce',v:'2'},{k:'3 · triple',v:'3'}],
+        ans:String(last.scoreValue),
+        atext:CI.abbr(lid,T)+' · '+last.scoreValue+' points'+(last.text?(' · '+last.text):'') };
+    }
+    // 2. Which side put it up.
+    if(rot===1){
+      return { qid:qid, kind:'sawWho', per:per, runTeam:null,
+        prompt:'👀 Who scored '+anchor+'?',
+        options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}],
+        ans:lid,
+        atext:CI.abbr(lid,T)+(last.text?(' · '+last.text):'') };
+    }
+    // 3. Which player — needs a real decoy, so it degrades to #1 if we
+    //    cannot find one rather than inventing a name.
+    if(who){
+      var pool={}; scoring.forEach(function(p){ var n=CI.scorerName(p); if(n && n!==who) pool[n]=String(p.team&&p.team.id); });
+      var names=Object.keys(pool);
+      var same=names.filter(function(n){ return pool[n]===lid; });
+      var decoy = same.length ? same[same.length-1] : (names.length ? names[names.length-1] : '');
+      if(decoy){
+        var opts = Math.random()<0.5 ? [{k:who,v:'a'},{k:decoy,v:'b'}] : [{k:decoy,v:'b'},{k:who,v:'a'}];
+        return { qid:qid, kind:'sawScorer', per:per, runTeam:null,
+          prompt:'👀 Who put up '+anchor+'?',
+          options:opts, ans:'a',
+          atext:(last.text||(who+' scored '+last.scoreValue)) };
+      }
+    }
+    // Fallback: the run that just happened, which is also retrospective.
     if(runLen>=3){
-      return { qid:qid, kind:'runContinue', per:per, runTeam:String(runTeam),
-        prompt:'🔥 '+CI.teamName(runTeam,T)+' on a '+runLen+'-score run — do they score the NEXT bucket?',
-        options:[{k:'KEEP IT GOING',v:'Y'},{k:'RUN ENDS',v:'N'}] };
+      return { qid:qid, kind:'sawRun', per:per, runTeam:String(runTeam),
+        prompt:'🔥 Somebody just scored '+runLen+' in a row — who?',
+        options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}],
+        ans:String(runTeam),
+        atext:CI.teamName(runTeam,T)+' scored the last '+runLen+' buckets.' };
     }
-    if((CI.countPer[per]||0) % 2 === 0){
-      return { qid:qid, kind:'twoOrThree', per:per, runTeam:null,
-        prompt:(clutch?'⏱️ CLUTCH — ':'')+'Next field goal — deuce or a three?',
-        options:[{k:'2 · deuce',v:'2'},{k:'3 · triple',v:'3'}] };
-    }
-    return { qid:qid, kind:'whoNext', per:per, runTeam:null,
-      prompt:(clutch?'⏱️ CLUTCH — ':'')+'Who scores the NEXT bucket?',
-      options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}] };
+    return { qid:qid, kind:'sawTwoOrThree', per:per, runTeam:null,
+      prompt:'👀 That bucket — '+anchor+'. Two or three?',
+      options:[{k:'2 · deuce',v:'2'},{k:'3 · triple',v:'3'}],
+      ans:String(last.scoreValue),
+      atext:CI.abbr(lid,T)+' · '+last.scoreValue+' points'+(last.text?(' · '+last.text):'') };
   };
 
   CI.write = function(q){
@@ -2515,8 +2581,23 @@ boot();
       qid:q.qid, kind:q.kind, prompt:q.prompt, options:q.options,
       period:q.per, runTeam:q.runTeam||null,
       state:'open', answer:null, resolveText:null,
-      opensAt:F.serverTimestamp(), locksMs:6000, seq:Date.now()
+      // Retrospective questions need a beat longer to read than "next
+      // bucket?" did — they name a score and sometimes a player.
+      opensAt:F.serverTimestamp(), locksMs:(String(q.kind||'').indexOf('saw')===0?9000:6000), seq:Date.now()
     }, {merge:true});
+  };
+  /* One writer for the held answer, used by both the timer and the tick. */
+  CI.releasePending = async function(){
+    var p=CI.pending; if(!p) return;
+    var F=FB.F, db=FB.db;
+    try{
+      var snap = await F.getDoc(F.doc(db,'nights',night,'callit',p.qid));
+      if(!snap.exists() || snap.data().state!=='open'){ CI.pending=null; CI.openQid=null; return; }
+      await F.setDoc(F.doc(db,'nights',night,'callit',p.qid),
+        { state:'resolved', answer:p.ans, resolveText:p.text, resolvedAt:F.serverTimestamp() }, {merge:true});
+      CI.setState('resolved · '+(p.text||p.ans));
+    }catch(e){ return; }            // leave pending set; the tick retries
+    CI.pending=null; CI.openQid=null;
   };
   CI.voidQ = function(qid,why){
     return FB.F.setDoc(FB.F.doc(FB.db,'nights',night,'callit',qid), { state:'void', voidReason:String(why||''), voidedAt:FB.F.serverTimestamp() }, {merge:true});
@@ -2549,7 +2630,18 @@ boot();
     var q = CI.build(plays, T, per); if(!q) return;
     q.moment = reason;
     await CI.write(q);
+    /* The answer is already known — held here, never written to the doc the
+       phones read, and released the moment the clock locks. */
+    CI.pending = (q.ans!=null) ? { qid:q.qid, ans:String(q.ans), text:q.atext||'', locks:(String(q.kind||'').indexOf('saw')===0?9000:6000) } : null;
     CI.openQid=q.qid; CI.lastOpenAt=Date.now(); CI.countPer[per]=(CI.countPer[per]||0)+1;
+    /* Fire the release on its own timer. The feed poll is every 20 seconds,
+       and hanging a known answer on it would leave the room staring at a
+       locked card for most of a possession for no reason at all. The tick
+       path stays as a backstop if this timer is ever lost to a tab sleep. */
+    if(CI.pending){
+      clearTimeout(CI.relT);
+      CI.relT = setTimeout(function(){ try{ CI.releasePending(); }catch(e){} }, (CI.pending.locks||9000)+1200);
+    }
     CI.setState('OPEN'+(reason==='timeout'?' ⏸timeout':'')+' · '+q.prompt);
   };
 
@@ -2557,8 +2649,16 @@ boot();
     var F=FB.F, db=FB.db;
     var snap; try{ snap = await F.getDoc(F.doc(db,'nights',night,'callit',qid)); }catch(e){ return; }
     if(!snap.exists()){ CI.openQid=null; return; }
-    var Q=snap.data(); if(Q.state!=='open'){ CI.openQid=null; return; }
+    var Q=snap.data(); if(Q.state!=='open'){ CI.openQid=null; CI.pending=null; return; }
     var ans=null, text=null;
+    /* RETROSPECTIVE: nothing to wait for. Release the held answer as soon
+       as the lock window has passed plus a second of slack for the slowest
+       phone in the room. This is why these never sit on "waiting on the
+       play…" — there is no play to wait for. */
+    if(CI.pending && CI.pending.qid===qid){
+      if(Date.now()-CI.lastOpenAt < (CI.pending.locks||9000)+1200) return;
+      await CI.releasePending(); return;
+    }
     if(Q.kind==='whoNext' || Q.kind==='runContinue'){
       /* A BUCKET IS A FIELD GOAL. The shadow test against a live DAL@MIN feed
          caught this: matching any scoringPlay resolved "who scores the NEXT
@@ -2589,7 +2689,7 @@ boot();
     var opened = (Q.opensAt && Q.opensAt.toMillis) ? Q.opensAt.toMillis() : CI.lastOpenAt;
     var feedStalled = (Date.now()-CI.lastPlayAt) > 45000;
     var tooOld = (Date.now()-opened) > 120000;
-    if(feedStalled || tooOld){ await CI.voidQ(qid, feedStalled?'feed stalled':'no qualifying play in 2 min'); CI.openQid=null; CI.setState('voided ('+(feedStalled?'feed stall':'timeout')+')'); }
+    if(feedStalled || tooOld){ await CI.voidQ(qid, feedStalled?'feed stalled':'no qualifying play in 2 min'); CI.openQid=null; CI.pending=null; CI.setState('voided ('+(feedStalled?'feed stall':'timeout')+')'); }
   };
 
   /* Called from liveTick with the same summary the score uses. */
