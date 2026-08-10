@@ -179,6 +179,10 @@
   .timer.low > i{background:linear-gradient(90deg,var(--red),#ff7a4d)}
 
   .scoreself{position:sticky;top:0;z-index:5}
+  /* The back button is absolutely positioned at 12/12. Any screen whose
+     very first element is a full-width strip has to leave room for it or
+     the two overlap — which is how "0 your pts" lost its first digit. */
+  body.hasback .scoreself .youscore{padding-left:56px}
   .youscore{display:flex;align-items:center;justify-content:space-between;
     background:linear-gradient(90deg,rgba(47,107,255,.18),rgba(25,195,214,.12));
     border:1px solid var(--line2);border-radius:13px;padding:10px 14px;margin-bottom:6px}
@@ -1491,6 +1495,19 @@ window.STATS_FIREBASE = {
       var r = ev && ev.reason;
       _epush('promise', (r && (r.code || r.message)) || String(r || 'unknown'), '');
     });
+    /* The recorder keeps everything; only SERIOUS things are worth a write.
+       A rejected promise from a feed poll is noise — a thrown error is not.
+       Deferred through a timeout so a failure during boot cannot recurse
+       into the very layer that is still being constructed. */
+    window.addEventListener('error', function (ev) {
+      try {
+        var m = (ev && ev.message) || '';
+        if (!m || /ResizeObserver|Script error/i.test(m)) return;
+        setTimeout(function () {
+          try { if (window.SB && SB.logError) SB.logError('window', m, (ev.filename||'')+':'+(ev.lineno||0)); } catch (e) {}
+        }, 0);
+      } catch (e) {}
+    });
   } catch (e) {}
 
   /* ---- cost control -------------------------------------------------
@@ -1535,6 +1552,8 @@ window.STATS_FIREBASE = {
     callItPick: function () { return Promise.resolve(false); },
     pushCallItBoard: function () { return Promise.resolve(false); },
     submit: function () { return Promise.resolve(false); },
+    stampQ: function () { return Promise.resolve(false); },
+    logError: function () { return false; },
     mySub:  function () { return Promise.resolve(null); },
     signup: function () { return Promise.resolve(false); },
     signOut: function () { return Promise.resolve(false); },
@@ -2190,6 +2209,80 @@ window.STATS_FIREBASE = {
      it offered, `keys` the answers the build believes are correct. The
      dashboard treats all three as a starting point it can overrule, never
      as the truth. It is the host who decides who was right. */
+  /* ---- SERVER-OWNED TIMING (the anti-cheat the prize money needs) ------
+     Speed points have always been the phone's word. `banks[n]` is however
+     many seconds the device claims were left on its own clock, and a
+     tampered client can claim a perfect twenty every round. Among friends
+     that is nothing; the first night there is a prize and a stranger, it is
+     the whole game.
+
+     The fix without a server: let Firestore be the clock. Two stamps per
+     question — one when it opens on the phone, one when the player locks —
+     both written with serverTimestamp(), which is set by Google's server
+     and not by the device. The difference between them is the true answer
+     time, and the Control Room derives speed from that instead of from
+     what the phone asserts.
+
+     Pin these in the security rules so they cannot be forged:
+
+       match /nights/{n}/rounds/{r}/times/{uid} {
+         allow read: if false;                       // host reads via admin
+         allow create, update: if request.auth != null
+           && request.auth.uid == uid
+           && request.resource.data.keys().hasOnly(existingKeys())
+           && request.time == request.resource.data[newKey];
+       }
+
+     Cost is eight small merge writes per player per round — about 32 a
+     night each. At tonight's scale that is noise. Past roughly 400
+     concurrent players it stops being noise, and that is the moment this
+     moves to a Cloud Function instead of growing. Written down here so the
+     next person does not discover the ceiling during a game.
+
+     Degradation is deliberate: if the stamp write fails for any reason the
+     round still plays and still scores. The Control Room simply marks that
+     player's speed "claimed" rather than "verified". A missing anti-cheat
+     signal must never cost somebody their night.                        */
+  SB.stampQ = function (roundId, n, kind) {
+    if (!SB.enabled || !nightId || !roundId || !budget()) return Promise.resolve(false);
+    if (n == null || n < 0 || n > 11) return Promise.resolve(false);
+    var f = {}; f[(kind === 'a' ? 'a' : 'o') + n] = F.serverTimestamp();
+    try {
+      return F.setDoc(F.doc(db, 'nights', nightId, 'rounds', String(roundId), 'times', uid()), f, { merge: true })
+        .then(function () { return true; })
+        .catch(function () { return false; });   // silent: never blocks play
+    } catch (e) { return Promise.resolve(false); }
+  };
+
+  /* ---- ERRORS THAT REACH THE HOST -------------------------------------
+     Until now a JavaScript failure on somebody else's phone died silently
+     and we diagnosed by asking the player what they saw. This writes the
+     serious ones somewhere the Control Room can read them on Monday.
+     Heavily rate-limited on purpose: an error inside a render loop must
+     not turn into a thousand writes and a bill. Six per session, one every
+     ten seconds, message truncated, no personal data beyond the handle. */
+  var errN = 0, errAt = 0, ERR_MAX = 6, ERR_GAP = 10000;
+  SB.logError = function (where, msg, extra) {
+    try {
+      if (!SB.enabled || !nightId) return false;
+      var now = Date.now();
+      if (errN >= ERR_MAX || now - errAt < ERR_GAP) return false;
+      if (!budget()) return false;
+      errN++; errAt = now;
+      F.addDoc(F.collection(db, 'nights', nightId, 'errors'), {
+        uid: uid(),
+        name: String(mine.name || '').slice(0, 24),
+        where: String(where || '').slice(0, 40),
+        msg: String(msg || '').slice(0, 300),
+        extra: String(extra == null ? '' : extra).slice(0, 200),
+        build: String(window.STATS_BUILD_ID || '').slice(0, 40),
+        ua: String(navigator.userAgent || '').slice(0, 160),
+        at: F.serverTimestamp()
+      }).catch(function () {});
+      return true;
+    } catch (e) { return false; }
+  };
+
   SB.submit = async function (roundId, o) {
     if (!SB.enabled || !nightId || !roundId || !budget()) return false;
     o = o || {};
@@ -2927,11 +3020,16 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
   S.screen=k; pendingBack=false;
   // where ← goes from each screen; null = no back button
   const BACKMAP={landing:null,name:'landing',predict:'name',lobby:'landing',me:'landing',gametime:'landing',stats:'landing',board:'landing',
-    live:'lobby',break:'lobby',review:'lobby',predreview:'lobby',
+    /* No back button during a timed question. It sat on top of the score
+       strip (covering your own points), and "back" mid-question is not a
+       thing we want to offer anyway — the clock keeps running. */
+    live:null,break:'lobby',review:'lobby',predreview:'lobby',
     final:null,rules:'landing',league:'final',plus:'final',host:'final',tally:'final',
     join:'landing'};
   const b=document.getElementById('backBtn');
-  b.classList.toggle('show', BACKMAP[k]!==null && BACKMAP[k]!==undefined);
+  const showBack = BACKMAP[k]!==null && BACKMAP[k]!==undefined;
+  b.classList.toggle('show', showBack);
+  try{ document.body.classList.toggle('hasback', showBack); }catch(_){}
   b.dataset.to=BACKMAP[k]||'';
   syncLobbyPolling();
   syncLivePolling();
@@ -3556,7 +3654,7 @@ function startPredict(){
   try{ rememberProfile(); }catch(_){}
   if(S.mode==="live") joinNight();
   buildPred();go('predict');
-  try{ if(S.mode==='live'){ loadInactives(); } }catch(e){}
+  try{ loadInactives(); }catch(e){}
 }
 /* ================= THE PICK-SLIP (v2 concept) ======================
    Six questions, one at a time, on a card you swipe. This replaced a
@@ -3756,21 +3854,19 @@ function validatePred(){const done=preds.filter(p=>S.predChoices[p.id]).length;
    button asks them once before it commits. */
 let INACTIVE=new Set(), INACTIVE_NOTE='';
 async function loadInactives(){
-  const ev=(typeof GAME!=='undefined')&&GAME.espnEvent; if(!ev) return;
+  /* One source of truth. This used to make its own copy of the same ESPN
+     request and only ran on live nights; now it reads whatever the stats
+     engine already pulled, so practice gets the injury report too and the
+     deck repaints once the names land. */
   try{
-    const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/summary?event='+ev+'&_='+Date.now());
-    const j=await r.json();
-    const out=[];
-    (j.injuries||[]).forEach(function(team){
-      (team.injuries||[]).forEach(function(it){
-        const nm=(it.athlete&&it.athlete.displayName)||'';
-        const st=String(it.status||'').toLowerCase();
-        if(!nm) return;
-        if(/out|doubtful|suspend/.test(st)){ INACTIVE.add(nm); out.push(nm+' ('+(it.status||'OUT')+')'); }
-      });
-    });
+    await loadGameStats();
+    if(!GS.ok || !GS.inj) return;
+    var out=[];
+    GS.inj.forEach(function(i){ if(i.out){ INACTIVE.add(i.name); out.push(i.name+' ('+(i.status||'OUT')+')'); } });
     INACTIVE_NOTE=out.join(' · ');
     paintInactives();
+    // The deck was drawn before the names arrived — redraw so OUT shows.
+    try{ if(S.screen==='predict' && typeof buildPred==='function') buildPred(); }catch(_){}
   }catch(e){}
 }
 function paintInactives(){
@@ -4106,6 +4202,9 @@ function loadQuestion(){
     b.innerHTML=`<span>${opt}</span><span class="mk"></span>`;
     b.onclick=()=>answer(opt,b);o.appendChild(b);});
   startTimer(S.mode==="live"?20:15);
+  /* Server clock, stamp one of two: the question is now on screen. Fire and
+     forget — the round must never wait on a write. */
+  try{ if(S.mode==='live' && window.SB && SB.stampQ){ var _r=curRoundId(); if(_r) SB.stampQ(_r, S.ni, 'o'); } }catch(_){}
 }
 /* The clock is a WALL clock, not a tick counter. The old version counted
    `t--` once per foreground second — and phones pause timers the moment
@@ -4115,6 +4214,14 @@ function loadQuestion(){
    is a fixed moment in time: background the app for eight seconds and
    you come back to find those eight seconds honestly gone — and if the
    clock died while you were away, the question closes on your return. */
+/* One name for "which round document am I writing to right now". The hosted
+   path and the built-in path used different ids and each knew its own; the
+   timing stamps have to land on the same document as the answers or the
+   host is comparing two different rounds. */
+function curRoundId(){
+  try{ var h=(typeof hostedDoc==='function') && hostedDoc(S.qi); if(h && h.id) return String(h.id); }catch(_){}
+  return 'r'+S.qi;
+}
 let timerEndAt=0;
 function timerPaint(){
   const fill=document.getElementById('timerFill');const bar=document.getElementById('timerBar');
@@ -4237,6 +4344,9 @@ function answer(choice,btn){
     return;
   }
   S.answered=true;clearInterval(timerInt);
+  /* Server clock, stamp two of two: locked. The gap between this and the
+     'o' stamp is the answer time nobody on a phone can argue with. */
+  try{ if(S.mode==='live' && window.SB && SB.stampQ){ var _r2=curRoundId(); if(_r2) SB.stampQ(_r2, S.ni, 'a'); } }catch(_){}
   const correct=choice===q.a;
   document.querySelectorAll('#qOpts .opt').forEach(b=>{
     const label=b.querySelector('span').textContent;b.style.pointerEvents='none';
@@ -6163,7 +6273,7 @@ function ciPick(q,v){
    slides up, takes its six seconds, and gets out of the way. Which is also
    when a real Call It belongs: the timeout, the free-throw walk-up, the
    moment the broadcast itself pauses.                                    */
-var CI_BLOCKED=['live','name','join','rules','final','tally'];
+var CI_BLOCKED=['live','name','join','rules','final','tally','landing'];
 function ciScreenOk(){
   var scr=''; try{ scr=(S&&S.screen)||''; }catch(_){}
   return CI_BLOCKED.indexOf(scr)<0;
@@ -7933,7 +8043,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.27';
+const STATS_BUILD='2026-08-10-g5-tor-atl.28';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
@@ -8004,7 +8114,11 @@ function paintNav(active){
   // menu "disappeared".
   try{
     const ci=document.getElementById('ciCard');
-    if(ci && ['landing','name','rules','join'].indexOf(scr)>=0) ci.style.display='none';
+    /* One rule, one place. The old hardcoded list did not include 'live',
+       so a resolved card stayed on screen through the next quarter
+       question — covering the score and looking frozen. ciScreenOk() is
+       the same test renderCiCard uses, so the two can never disagree. */
+    if(ci && (typeof ciScreenOk!=='function' || !ciScreenOk())) ci.style.display='none';
     if(typeof ciFlush==='function') setTimeout(ciFlush, 420);
   }catch(_){}
   try{ document.body.classList.toggle('hasnav', !hide); }catch(_){}
@@ -8159,6 +8273,19 @@ async function loadGameStats(force){
         return { label:c.displayName||c.name, who:(top.athlete&&top.athlete.displayName)||'', val:top.displayValue||'' };
       }).filter(function(x){return x.who;}) };
     });
+    /* WHO IS NOT PLAYING. Same fetch, and the answer belongs in three
+       places: the OUT flag on the pick deck, the red bar above it, and the
+       Stats tab. It used to be pulled by a second request that only ran in
+       live mode, so a practice run — and the Stats tab — never knew. */
+    GS.inj=[];
+    (j.injuries||[]).forEach(function(t){
+      (t.injuries||[]).forEach(function(it){
+        var nm=(it.athlete&&it.athlete.displayName)||''; if(!nm) return;
+        var st=String(it.status||'');
+        GS.inj.push({ name:nm, status:st, ab:(t.team&&t.team.abbreviation)||'',
+                      out:/out|doubtful|suspend/i.test(st) });
+      });
+    });
     GS.state=stat.state||'pre'; GS.detail=stat.shortDetail||stat.detail||'';
     GS.ok=teams.length>0; GS.at=Date.now();
     if(GS.ok){ GS.err=''; GS.fails=0; } else { GS.err='no teams in feed'; GS.fails++; }
@@ -8298,6 +8425,20 @@ function renderStats(){
       if(rows) out+='<div class="card" style="padding:14px 16px;margin-top:12px">'
         + '<div class="stHd">YOUR CARD, LIVE</div>'+rows
         + '<div class="sub" style="font-size:11.5px;margin-top:8px">Green means your pick is currently leading that category.</div></div>';
+    }
+  }catch(_){}
+
+  // ---- Who is not playing. Above the numbers on purpose: a stat line is
+  // worthless if the player it belongs to is in a suit tonight.
+  try{
+    var outs=(GS.inj||[]).filter(function(i){ return i.out; });
+    if(outs.length){
+      out+='<div class="card" style="padding:14px 16px;margin-top:12px;border-color:rgba(255,77,94,.35)">'
+        + '<div class="stHd" style="color:#ff8a94">🚑 NOT PLAYING TONIGHT</div>'
+        + outs.map(function(i){ return '<div class="stLead"><span class="stLeadN">'+esc(i.name)+' <i>'+esc(i.ab||'')+'</i></span>'
+            + '<span class="stLeadV" style="color:#ff8a94">'+esc(i.status||'OUT')+'</span></div>'; }).join('')
+        + '<div class="sub" style="font-size:11.5px;margin-top:8px">Straight from the league injury report. Don’t spend a pick on them.</div>'
+        + '</div>';
     }
   }catch(_){}
 
