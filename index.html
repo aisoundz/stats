@@ -2536,15 +2536,15 @@ const BB_ROSTER={ // full names — used on the prediction sheet & final review
    room has an opinion about before tip-off, including the person who has
    never watched a full WNBA game. It is the hook that gets a sheet filled. */
 const BB_PREDS=[
-  {id:"winner", label:"Winning team", base:100, opts:[BB_GAME.homeName,BB_GAME.awayName], answer:BB_GAME.homeName},
+  {id:"winner", label:"Winning team", q:"Who takes it tonight?", base:100, opts:[BB_GAME.homeName,BB_GAME.awayName], answer:BB_GAME.homeName},
   // NOTE: `answer`/`num` below are the SIMULATED results Practice mode plays
   // against — never a claim about the real game. They must always be names
   // that exist in the roster above, or practice grades against a ghost.
-  {id:"pts", label:"Most points", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Allisha Gray", num:21, numLabel:"How many pts?"},
-  {id:"ast", label:"Most assists", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Jordin Canada", num:8, numLabel:"How many assists?"},
-  {id:"stl", label:"Most steals", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Brittney Sykes", num:3, numLabel:"How many steals?"},
-  {id:"reb", label:"Most rebounds", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Angel Reese", num:12, numLabel:"How many rebounds?"},
-  {id:"blk", label:"Most blocks", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Brionna Jones", num:2, numLabel:"How many blocks?"}
+  {id:"pts", q:"Who scores the most points?", label:"Most points", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Allisha Gray", num:21, numLabel:"How many pts?"},
+  {id:"ast", q:"Who dishes the most assists?", label:"Most assists", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Jordin Canada", num:8, numLabel:"How many assists?"},
+  {id:"stl", q:"Who racks up the most steals?", label:"Most steals", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Brittney Sykes", num:3, numLabel:"How many steals?"},
+  {id:"reb", q:"Who grabs the most rebounds?", label:"Most rebounds", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Angel Reese", num:12, numLabel:"How many rebounds?"},
+  {id:"blk", q:"Who swats the most blocks?", label:"Most blocks", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Brionna Jones", num:2, numLabel:"How many blocks?"}
 ];
 /* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
    Every question is answerable by WATCHING the broadcast at the break — no lookups,
@@ -3524,48 +3524,109 @@ function startPredict(){
   buildPred();go('predict');
   try{ if(S.mode==='live'){ loadInactives(); } }catch(e){}
 }
-function buildPred(){const c=document.getElementById('predCard');c.innerHTML='';
-  // Draw order is confidence order when ranking is on, canonical order when
-  // it isn't. Either way the SUBMITTED order stays canonical — see lockPredPicks.
-  const order = CONF_ON ? ensurePredOrder().map(id=>preds.find(p=>p.id===id)).filter(Boolean) : preds;
-  if(CONF_ON){
-    const note=document.createElement('p');note.className='confnote';
-    note.innerHTML=`<b>Most confident at the top.</b> Use ▲▼ to reorder — your top pick is worth `
-      +`<b>${CONF_LADDER[0]} pts</b>, your bottom one <b>${CONF_LADDER[CONF_LADDER.length-1]} pt`
-      +`${CONF_LADDER[CONF_LADDER.length-1]===1?'':'s'}</b>. Same total either way, so leaving it alone is a real choice.`;
-    c.appendChild(note);
+/* ================= THE PICK-SLIP (v2 concept) ======================
+   Six questions, one at a time, on a card you swipe. This replaced a
+   scrolling wall of six dropdowns — and the reason is not decoration:
+   a dropdown asks you to browse a list, a card asks you to make a call.
+   Same data model underneath (S.predChoices, keyed by pick id), same
+   lock button, same validation. Only the surface changed, which is why
+   it could be swapped without touching scoring.
+
+   PD.i is the cursor. Everything else derives from it.                */
+const PD={i:0};
+function predOrderList(){
+  return CONF_ON ? ensurePredOrder().map(id=>preds.find(p=>p.id===id)).filter(Boolean) : preds;
+}
+function predRidingPts(){
+  let n=0;
+  preds.forEach(p=>{ if(S.predChoices[p.id]){ n+=predWorthOf(p);
+    if(p.bonus && S.predChoices[p.id+'_num']!=='' && S.predChoices[p.id+'_num']!=null) n+=p.bonus; } });
+  return n;
+}
+function predGo(d){
+  const L=predOrderList();
+  PD.i=Math.max(0,Math.min(L.length-1,PD.i+d));
+  buildPred();
+}
+function predPick(id,val){
+  S.predChoices[id]=val;
+  buildPred();
+  // Auto-advance on a plain pick — the deck should feel like it's moving
+  // with you. A pick WITH a bonus number stays put; you're not done yet.
+  const p=preds.find(x=>x.id===id);
+  if(p && !p.bonus){ setTimeout(function(){ const L=predOrderList(); if(PD.i<L.length-1) predGo(1); }, 220); }
+}
+function buildPred(){
+  const c=document.getElementById('predCard'); if(!c) return;
+  const L=predOrderList();
+  if(PD.i>=L.length) PD.i=L.length-1;
+  if(PD.i<0) PD.i=0;
+  const p=L[PD.i]; if(!p){ c.innerHTML=''; return; }
+  const worth=predWorthOf(p);
+  const picked=S.predChoices[p.id]||'';
+  const doneN=preds.filter(x=>S.predChoices[x.id]).length;
+  const pct=Math.round(((PD.i+1)/L.length)*100);
+
+  const opts=p.opts.map(function(o){
+    const on = String(picked)===String(o);
+    const out = (typeof INACTIVE!=='undefined' && INACTIVE.has(String(o)));
+    return '<button type="button" class="pdopt'+(on?' on':'')+'" data-pd="'+esc(String(o))+'">'
+      +'<span class="pdradio"></span><span class="pdname">'+esc(String(o))+(out?' <span class="pdout">OUT</span>':'')+'</span></button>';
+  }).join('');
+
+  const bonus = p.bonus ? '<div class="pdbonus"><label>'+esc(p.numLabel||'Exact number')
+      +' <span style="color:var(--gold)">+'+p.bonus+'</span></label>'
+      +'<input id="num_'+esc(p.id)+'" type="number" inputmode="numeric" placeholder="'+esc(p.numLabel||'')+'" value="'
+      +esc(String(S.predChoices[p.id+'_num']||''))+'"></div>' : '';
+
+  const rank = CONF_ON ? '<div class="pdrank"><button type="button" data-pdmv="-1"'+(PD.i===0?' disabled':'')+'>▲</button>'
+      +'<span>#'+(PD.i+1)+' confidence</span>'
+      +'<button type="button" data-pdmv="1"'+(PD.i===L.length-1?' disabled':'')+'>▼</button></div>' : '';
+
+  c.innerHTML=
+    '<div class="pdhead"><b>Your card</b><span class="pdpts">'+predRidingPts()+' pts riding</span></div>'
+   +'<div class="pdprog"><span class="pdn">'+(PD.i+1)+' / '+L.length+'</span>'
+   +  '<div class="pdbar"><i style="width:'+pct+'%"></i></div></div>'
+   +'<div class="pdcard">'
+   +  '<div class="pdcat">'+esc(p.label)+'</div>'
+   +  '<div class="pdq">'+esc(p.q||('Who takes '+p.label.toLowerCase()+'?'))+'</div>'
+   +  '<div class="pdworth">'+worth+' pts'+(p.bonus?(' &nbsp;·&nbsp; +'+p.bonus+' for the exact number'):'')+'</div>'
+   +  '<div class="pdopts">'+opts+'</div>'
+   +  bonus + rank
+   +'</div>'
+   +'<div class="pdnav">'
+   +  '<button type="button" class="pdarrow" data-pdgo="-1"'+(PD.i===0?' disabled':'')+'>← Back</button>'
+   +  '<span class="pdsofar">'+doneN+' / '+preds.length+' locked</span>'
+   +  '<button type="button" class="pdarrow" data-pdgo="1"'+(PD.i===L.length-1?' disabled':'')+'>Next →</button>'
+   +'</div>';
+
+  Array.prototype.forEach.call(c.querySelectorAll('.pdopt'), function(b){
+    b.onclick=function(){ predPick(p.id, b.getAttribute('data-pd')); };
+  });
+  Array.prototype.forEach.call(c.querySelectorAll('[data-pdgo]'), function(b){
+    b.onclick=function(){ predGo(Number(b.getAttribute('data-pdgo'))); };
+  });
+  Array.prototype.forEach.call(c.querySelectorAll('[data-pdmv]'), function(b){
+    b.onclick=function(){ movePred(p.id, Number(b.getAttribute('data-pdmv'))); };
+  });
+  const nb=c.querySelector('.pdbonus input');
+  if(nb) nb.oninput=function(){ S.predChoices[p.id+'_num']=nb.value;
+    const t=c.querySelector('.pdpts'); if(t) t.textContent=predRidingPts()+' pts riding'; };
+
+  // Swipe. Horizontal only, and only past a real threshold — a vertical
+  // scroll must never be mistaken for a decision.
+  const card=c.querySelector('.pdcard');
+  if(card){
+    let x0=null,y0=null;
+    card.ontouchstart=function(e){ const t=e.touches[0]; x0=t.clientX; y0=t.clientY; };
+    card.ontouchend=function(e){
+      if(x0==null) return; const t=e.changedTouches[0];
+      const dx=t.clientX-x0, dy=t.clientY-y0; x0=null;
+      if(Math.abs(dx)>55 && Math.abs(dx)>Math.abs(dy)*1.7) predGo(dx<0?1:-1);
+    };
   }
-  order.forEach((p,slot)=>{
-    const row=document.createElement('div');row.className='predrow';
-    const worth=predWorthOf(p);
-    const bonusTxt=p.bonus?` (+${p.bonus} bonus for exact #)`:'';
-    if(CONF_ON){
-      const top=document.createElement('div');top.className='predtop';
-      top.innerHTML=`<span class="rankbadge" title="Confidence rank ${slot+1} of ${order.length}">#${slot+1}</span>`
-        +`<div class="predlabel">${p.label} <span class="predpts">${worth}pt${worth===1?'':'s'}${bonusTxt}</span></div>`;
-      const nudge=document.createElement('div');nudge.className='ranknudge';
-      const up=document.createElement('button');up.type='button';up.textContent='▲';
-      up.setAttribute('aria-label',`Move ${p.label} up`);
-      up.disabled=slot===0; up.onclick=()=>movePred(p.id,-1);
-      const dn=document.createElement('button');dn.type='button';dn.textContent='▼';
-      dn.setAttribute('aria-label',`Move ${p.label} down`);
-      dn.disabled=slot===order.length-1; dn.onclick=()=>movePred(p.id,1);
-      nudge.appendChild(up);nudge.appendChild(dn);top.appendChild(nudge);
-      row.appendChild(top);
-    }else{
-      row.innerHTML=`<div class="predlabel">${p.label} <span class="predpts">${worth}pt${bonusTxt}</span></div>`;
-    }
-    const sel=document.createElement('select');sel.id='sel_'+p.id;
-    sel.innerHTML='<option value="">Choose…</option>'+p.opts.map(o=>`<option>${o}</option>`).join('');
-    if(S.predChoices[p.id])sel.value=S.predChoices[p.id]; // restore picks if returning
-    sel.onchange=()=>{S.predChoices[p.id]=sel.value;validatePred();};
-    row.appendChild(sel);
-    if(p.bonus){const inp=document.createElement('input');inp.type='number';inp.id='num_'+p.id;
-      inp.placeholder=p.numLabel;inp.style.marginTop='8px';
-      if(S.predChoices[p.id+'_num'])inp.value=S.predChoices[p.id+'_num'];
-      inp.oninput=()=>{S.predChoices[p.id+'_num']=inp.value;};row.appendChild(inp);}
-    c.appendChild(row);});
-  validatePred();}
+  validatePred();
+}
 function validatePred(){const done=preds.filter(p=>S.predChoices[p.id]).length;
   document.getElementById('predBtn').disabled=done<preds.length;}
 /* ---------------- WHO'S OUT TONIGHT (Game #3 ask) -------------------
@@ -7510,7 +7571,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.15';
+const STATS_BUILD='2026-08-10-g5-tor-atl.16';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
@@ -7640,6 +7701,41 @@ try{ setTimeout(paintNav, 600); }catch(e){}
 #botnav .navb.on{color:#28e0d0}
 #botnav .navb:active{transform:scale(.94)}
 body.hasnav{padding-bottom:74px}
+
+/* ---- pick-slip ---- */
+#predCard{padding:14px}
+.pdhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.pdhead b{font-size:20px;color:#28e0d0;letter-spacing:.2px}
+.pdpts{font-size:12.5px;font-weight:800;color:var(--gold)}
+.pdprog{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.pdn{font-size:12.5px;font-weight:800;color:var(--muted,#93a0bd);flex:0 0 auto}
+.pdbar{flex:1;height:6px;border-radius:99px;background:#16233b;overflow:hidden}
+.pdbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(92deg,#28e0d0,#4d86ff);transition:width .28s ease}
+.pdcard{background:#0e1626;border:1px solid #26304a;border-radius:16px;padding:17px 15px;touch-action:pan-y}
+.pdcat{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#28e0d0;font-weight:800}
+.pdq{font-size:23px;font-weight:900;line-height:1.2;color:#eef2fb;margin:7px 0 4px}
+.pdworth{font-size:13px;font-weight:800;color:var(--gold);margin-bottom:14px}
+.pdopts{display:flex;flex-direction:column;gap:9px}
+.pdopt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+  background:#111a2b;border:1px solid #2f3a58;border-radius:13px;padding:15px 14px;
+  font:800 16px/1.2 inherit;color:#eef2fb;transition:border-color .15s,background .15s}
+.pdopt:active{transform:scale(.99)}
+.pdopt.on{border-color:#28e0d0;background:rgba(40,224,208,.10)}
+.pdradio{flex:0 0 auto;width:20px;height:20px;border-radius:50%;border:2px solid #3a4b73;position:relative}
+.pdopt.on .pdradio{border-color:#28e0d0}
+.pdopt.on .pdradio:after{content:'';position:absolute;inset:3px;border-radius:50%;background:#28e0d0}
+.pdname{flex:1;min-width:0}
+.pdout{font-size:10px;font-weight:900;color:#ff6b6b;border:1px solid rgba(255,107,107,.5);border-radius:6px;padding:1px 5px;margin-left:5px}
+.pdbonus{margin-top:13px}
+.pdbonus label{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted,#93a0bd);font-weight:800;margin-bottom:6px}
+.pdbonus input{width:100%;background:#111a2b;border:1px solid #2f3a58;border-radius:12px;padding:14px;color:#eef2fb;font:800 16px inherit}
+.pdrank{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:13px;font-size:11.5px;font-weight:800;color:var(--muted,#93a0bd)}
+.pdrank button{background:#16233b;border:1px solid #2f3a58;color:#93a0bd;border-radius:9px;width:34px;height:30px;cursor:pointer;font-size:12px}
+.pdrank button:disabled{opacity:.35}
+.pdnav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:13px}
+.pdarrow{background:#16233b;border:1px solid #2f3a58;color:#cfd8ea;border-radius:11px;padding:11px 15px;font:800 13px inherit;cursor:pointer}
+.pdarrow:disabled{opacity:.35;cursor:default}
+.pdsofar{font-size:12.5px;font-weight:800;color:var(--muted,#93a0bd)}
 </style>
 </body>
 </html>
