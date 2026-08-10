@@ -700,8 +700,8 @@
     <div class="card" id="matchupCard" style="display:none;padding:0"></div>
 
     <div class="card">
-      <div class="step"><div class="num">1</div><div><b id="step1h">Predict before tip-off</b><p id="step1p">Fill your prediction sheet — winner, stat leaders &amp; bonus amounts. Worth up to 60 of the night's 100 pts.</p></div></div>
-      <div class="step"><div class="num">2</div><div><b id="step2h">Answer at every quarter break</b><p id="step2p">4 questions about what JUST happened — and not the ones you'd expect. Points rise: Q1 = 1pt → Q4 = 4pt, so the last quarter is worth four times the first. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.</p></div></div>
+      <div class="step"><div class="num">1</div><div><b id="step1h">Predict before tip-off</b><p id="step1p">Fill your prediction sheet — winner, stat leaders &amp; bonus amounts. Worth up to 600 of the night's 1,000 pts.</p></div></div>
+      <div class="step"><div class="num">2</div><div><b id="step2h">Answer at every quarter break</b><p id="step2p">4 questions about what JUST happened — and not the ones you'd expect. Points rise: Q1 = 10 pts → Q4 = 40, so the last quarter is worth four times the first. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.</p></div></div>
       <div class="step"><div class="num">3</div><div><b>Watch your points land</b><p id="step3p">The second the host reveals a quarter, your answers are scored for you — nothing to tap, even if your phone was in your pocket. Most points wins the night; ⚡ Speed breaks ties.</p></div></div>
     </div>
 
@@ -2509,15 +2509,15 @@ const BB_ROSTER={ // full names — used on the prediction sheet & final review
    room has an opinion about before tip-off, including the person who has
    never watched a full WNBA game. It is the hook that gets a sheet filled. */
 const BB_PREDS=[
-  {id:"winner", label:"Winning team", base:10, opts:[BB_GAME.homeName,BB_GAME.awayName], answer:BB_GAME.homeName},
+  {id:"winner", label:"Winning team", base:100, opts:[BB_GAME.homeName,BB_GAME.awayName], answer:BB_GAME.homeName},
   // NOTE: `answer`/`num` below are the SIMULATED results Practice mode plays
   // against — never a claim about the real game. They must always be names
   // that exist in the roster above, or practice grades against a ghost.
-  {id:"pts", label:"Most points", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Allisha Gray", num:21, numLabel:"How many pts?"},
-  {id:"ast", label:"Most assists", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Jordin Canada", num:8, numLabel:"How many assists?"},
-  {id:"stl", label:"Most steals", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Brittney Sykes", num:3, numLabel:"How many steals?"},
-  {id:"reb", label:"Most rebounds", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Angel Reese", num:12, numLabel:"How many rebounds?"},
-  {id:"blk", label:"Most blocks", base:5, bonus:5, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Brionna Jones", num:2, numLabel:"How many blocks?"}
+  {id:"pts", label:"Most points", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Allisha Gray", num:21, numLabel:"How many pts?"},
+  {id:"ast", label:"Most assists", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Jordin Canada", num:8, numLabel:"How many assists?"},
+  {id:"stl", label:"Most steals", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Brittney Sykes", num:3, numLabel:"How many steals?"},
+  {id:"reb", label:"Most rebounds", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Angel Reese", num:12, numLabel:"How many rebounds?"},
+  {id:"blk", label:"Most blocks", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Brionna Jones", num:2, numLabel:"How many blocks?"}
 ];
 /* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
    Every question is answerable by WATCHING the broadcast at the break — no lookups,
@@ -2632,16 +2632,16 @@ const SC_GAME={
 };
 // 10 picks × 5 pts = 50. Every one of them always resolves.
 const SC_PREDS=[
-  {id:"result",  label:"Result",                      base:5, opts:[SC_GAME.homeName,"Draw",SC_GAME.awayName], answer:SC_GAME.homeName},
-  {id:"goals",   label:"Total goals",                 base:5, opts:["Under 2.5","Over 2.5"], answer:"Over 2.5"},
-  {id:"first",   label:"First goal comes from",       base:5, opts:[SC_GAME.homeName,SC_GAME.awayName,"No goals"], answer:SC_GAME.awayName},
-  {id:"btts",    label:"Both teams to score?",        base:5, opts:["Yes","No"], answer:"Yes"},
-  {id:"bighalf", label:"Higher-scoring half",         base:5, opts:["1st half","2nd half","Equal"], answer:"2nd half"},
-  {id:"corner",  label:"First corner",                base:5, opts:[SC_GAME.homeName,SC_GAME.awayName], answer:SC_GAME.awayName},
-  {id:"card",    label:"First yellow card",           base:5, opts:[SC_GAME.homeName,SC_GAME.awayName], answer:SC_GAME.homeName},
-  {id:"stopgoal",label:"Goal in added time?",         base:5, opts:["Yes","No"], answer:"Yes"},
-  {id:"sot",     label:"More shots on target",        base:5, opts:[SC_GAME.homeName,SC_GAME.awayName,"Equal"], answer:SC_GAME.homeName},
-  {id:"margin",  label:"Winning margin",              base:5, opts:["Draw","By 1","By 2+"], answer:"By 1"}
+  {id:"result",  label:"Result",                      base:50, opts:[SC_GAME.homeName,"Draw",SC_GAME.awayName], answer:SC_GAME.homeName},
+  {id:"goals",   label:"Total goals",                 base:50, opts:["Under 2.5","Over 2.5"], answer:"Over 2.5"},
+  {id:"first",   label:"First goal comes from",       base:50, opts:[SC_GAME.homeName,SC_GAME.awayName,"No goals"], answer:SC_GAME.awayName},
+  {id:"btts",    label:"Both teams to score?",        base:50, opts:["Yes","No"], answer:"Yes"},
+  {id:"bighalf", label:"Higher-scoring half",         base:50, opts:["1st half","2nd half","Equal"], answer:"2nd half"},
+  {id:"corner",  label:"First corner",                base:50, opts:[SC_GAME.homeName,SC_GAME.awayName], answer:SC_GAME.awayName},
+  {id:"card",    label:"First yellow card",           base:50, opts:[SC_GAME.homeName,SC_GAME.awayName], answer:SC_GAME.homeName},
+  {id:"stopgoal",label:"Goal in added time?",         base:50, opts:["Yes","No"], answer:"Yes"},
+  {id:"sot",     label:"More shots on target",        base:50, opts:[SC_GAME.homeName,SC_GAME.awayName,"Equal"], answer:SC_GAME.homeName},
+  {id:"margin",  label:"Winning margin",              base:50, opts:["Draw","By 1","By 2+"], answer:"By 1"}
 ];
 /* LIVE CATCHES — the soccer-native mechanic, 6 × 1 pt.
    You set these before kickoff and then you do NOTHING. They flip themselves
@@ -2681,9 +2681,9 @@ const SPORTS={
   basketball:{
     key:"basketball", emoji:"🏀", word:"basketball",
     game:BB_GAME, roster:BB_ROSTER, preds:BB_PREDS, rounds:BBALL_ROUNDS, catches:[],
-    // 4 questions a quarter × these weights = 4+8+12+16 = 40 live pts.
+    // 4 questions a quarter × these weights = 40+80+120+160 = 400 live pts.
     // (The old comment here said 30. It was wrong the day it was written.)
-    worth:[1,2,3,4],                                  // Q1=1 … Q4=4  → 40 pts
+    worth:[10,20,30,40],                              // Q1=10 … Q4=40  → 400 pts
     tags:["Q1","Q2","Q3","Q4"],
     names:["Quarter 1","Quarter 2","Quarter 3","Quarter 4"],
     L:{ start:"tip-off", Start:"Tip-off", starting:"Tipping off",
@@ -2697,18 +2697,18 @@ const SPORTS={
     // The network is optional — not every game has a national window, and
     // "— on ." is the kind of small lie that makes a page look unfinished.
     landing:"<b style=\"color:var(--ink)\">"+BB_GAME.awayName+" @ "+BB_GAME.homeName+"</b>"+(BB_GAME.net?(" — on "+BB_GAME.net):"")+". Watch the broadcast, play from your couch. Predict before tip-off, answer at every quarter break. Right answers score. Fast right answers score more.",
-    step1:"Fill your prediction sheet — winner, stat leaders & bonus amounts. Worth up to 60 of the night's 100 pts.",
+    step1:"Fill your prediction sheet — winner, stat leaders & bonus amounts. Worth up to 600 of the night's 1,000 pts.",
     step2h:"Answer at every quarter break",
-    step2:"4 questions about what JUST happened — and not the ones you'd expect. Points rise: Q1 = 1pt → Q4 = 4pt, so the last quarter is worth four times the first. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.",
+    step2:"4 questions about what JUST happened — and not the ones you'd expect. Points rise: Q1 = 10 pts → Q4 = 40, so the last quarter is worth four times the first. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.",
     step3:"The second the host reveals a quarter, your answers are scored for you — nothing to tap, even if your phone was in your pocket. Most points wins the night; ⚡ Speed breaks ties.",
-    rulePred:"Lock 6 picks before tip-off: winning team (10 pts) and the leader in points, assists, steals, rebounds & blocks (5 pts each). Nail the leader's exact stat total for a +5 bonus per category — so a category you fully nail is worth 10. Predictions can't be changed after tip-off.",
-    ruleLive:"At the end of each quarter, answer 4 questions about the quarter you just watched. They are not box-score trivia — they're the stuff you only catch if the game is actually on in front of you. Correct answers are worth 1 pt each in Q1, 2 in Q2, 3 in Q3, and 4 in Q4 — 40 points across the night, and the fourth quarter alone is worth 16 of them. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.",
+    rulePred:"Lock 6 picks before tip-off: winning team (100 pts) and the leader in points, assists, steals, rebounds & blocks (50 pts each). Nail the leader's exact stat total for a +50 bonus per category — so a category you fully nail is worth 100. Predictions can't be changed after tip-off.",
+    ruleLive:"At the end of each quarter, answer 4 questions about the quarter you just watched. They are not box-score trivia — they're the stuff you only catch if the game is actually on in front of you. Correct answers are worth 10 pts each in Q1, 20 in Q2, 30 in Q3, and 40 in Q4 — 400 points across the night, and the fourth quarter alone is worth 160 of them. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.",
     ruleScore:"When the host posts each quarter's answers (from the broadcast + official box score), your quarter scores itself on your phone — there is nothing for you to tap in. After the final buzzer the host settles the official stat leaders and your prediction sheet scores too."
   },
   soccer:{
     key:"soccer", emoji:"⚽️", word:"soccer",
     game:SC_GAME, roster:null, preds:SC_PREDS, rounds:SOCCER_ROUNDS, catches:SC_CATCHES,
-    worth:[3,5],                                      // halftime=3, full-time=5 → 24 pts
+    worth:[30,50],                                    // halftime=30, full-time=50 → 240 pts
     tags:["1H","FT"],
     names:["1st half","Full time"],
     L:{ start:"kickoff", Start:"Kickoff", starting:"Kicking off",
@@ -2744,7 +2744,7 @@ function isLastRound(i){return i>=NR-1;}
 // or the 1st half vs the 2nd.
 function lifelineKey(i){return i < Math.ceil(NR/2) ? 'lifelineHalf1' : 'lifelineHalf2';}
 function emptyRounds(){return Array.from({length:NR},()=>[]);}
-const CATCH_PTS=CATCHES.length;                       // 1 pt per catch
+const CATCH_PTS=CATCHES.length*10;                    // 10 pts per catch
 
 const bots=[
   {n:"HoopsOracle",c:"#ff4d5e"},{n:"StatQueen",c:"#2ee6a6"},{n:"CourtVision",c:"#ffc54d"},
@@ -3616,6 +3616,9 @@ function lockPredictions(){
 }
 function renderLobby(qi){
   try{ renderAlertRow(); }catch(e){}
+  // Practice gets a taste of Call It in the lobbies before Q2 and Q3 —
+  // learned here, so the real one mid-game needs no explanation.
+  try{ if(S.mode==="demo"){ if(qi===1) demoCallIt(0); if(qi===2) demoCallIt(1); } }catch(e){}
   const btn=document.getElementById('lobbyBtn');
   const foot=document.getElementById('lobbyFoot');
   const sub=document.getElementById('lobbySub');
@@ -3638,7 +3641,7 @@ function renderLobby(qi){
     foot.textContent = hd
       ? "The host is pushing questions straight to your phone and scoring them here. Your progress is saved."
       : "Game Night: answers score when the host announces them at each break. Your progress is saved.";
-    /* THE RIDING METER. Predictions are 60 of the night's 100 but they don't
+    /* THE RIDING METER. Predictions are 600 of the night's 1,000 but they don't
        settle until the buzzer, so for the whole game a player stares at a
        small live-only number and concludes nothing is happening. Game #3's
        note was exactly that — "it should be more points". So the locked
@@ -4378,6 +4381,13 @@ function showFinal(){
   // the two halves of the night apart.
   const livePts = S.pts;
   S.pts += (S.predPts||0) + (S.catchPts||0);
+  // Practice only: the bots' sheets settle too. Without this the final
+  // board compared your predictions-included total against bots who never
+  // made predictions — you "won by a mile" over opponents who forgot to
+  // play half the game, and the whole night's score read tiny and fake.
+  if(S.mode==="demo" && Array.isArray(S.botScores)){
+    S.botScores.forEach(b=>{ b.pts += Math.floor(PRED_MAX*(0.25+Math.random()*0.4)); });
+  }
   S.streak++;
   const $f = id => document.getElementById(id);
   $f('finalMax').textContent = `OUT OF ${MAXPTS}`;
@@ -5642,6 +5652,42 @@ function startCallItWatch(){
   ensureCiCard();
   try{ PCI.unsub = SB.watchCallIt(onCallItQuestions) || null; }catch(e){}
 }
+
+/* ---- Call It, practice edition ------------------------------------
+   The simulator taught every part of the night except the one that
+   happens DURING play. So a first-timer's first Call It question used
+   to arrive mid-Q2 of a real game — the worst possible moment to learn
+   a new mechanic. These are canned questions fed through the exact
+   same card the live game uses: same look, same lock, same reveal,
+   same streak flame. Nothing here touches the network; the only thing
+   the guard below skips is the board write, which is live-night only. */
+const DEMO_CI=[
+  { qid:'demo-ci-1', prompt:'Next made basket — a two or a three?',
+    options:[{k:'A two',v:'2'},{k:'A three',v:'3'}],
+    answer:'3', resolveText:'Splash — corner three. That’s Call It: quick question, quick answer, keep watching.' },
+  { qid:'demo-ci-2', prompt:'Timeout — FIRST points after the break?',
+    options:[{k:'Home team',v:'home'},{k:'Away team',v:'away'}],
+    answer:'away', resolveText:'Away bucket out of the break. In the real game these pop when the moment’s hot.' }
+];
+const demoCiFired={};
+function demoCallIt(n){
+  if(S.mode!=='demo' || PCI.muted) return;
+  const q=DEMO_CI[n]; if(!q || demoCiFired[q.qid]) return;
+  demoCiFired[q.qid]=true;
+  ensureCiCard();
+  const opensAt=Date.now()+2500;
+  setTimeout(function(){
+    if(S.mode!=='demo' || PCI.muted) return;
+    const live={qid:q.qid,prompt:q.prompt,options:q.options,state:'open',
+                locksMs:9000,opensAt:{toMillis:function(){return opensAt;}}};
+    PCI.active=live; renderCiCard(live);
+    setTimeout(function(){
+      if(S.mode!=='demo') return;
+      live.state='resolved'; live.answer=q.answer; live.resolveText=q.resolveText;
+      renderCiCard(live);
+    }, 12000);
+  }, 2500);
+}
 function onCallItQuestions(qs){
   if(!qs || !qs.length) return;
   var q = qs[qs.length-1];              // newest
@@ -5750,7 +5796,7 @@ function onHostedRound(r){
     })).filter(q=>q.t && q.o.length>=2);
     if(!rounds[idx].q.length) return;      // an empty push is not a round
   }
-  if(typeof r.worth==='number' && r.worth>0 && r.worth<=20) HOSTW[idx]=r.worth;
+  if(typeof r.worth==='number' && r.worth>0 && r.worth<=200) HOSTW[idx]=r.worth;
 
   if(r.state==='live')   onHostedLive(r, idx);
   if(r.state==='scored') onHostedScored(r, idx);
@@ -7394,7 +7440,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.11';
+const STATS_BUILD='2026-08-10-g5-tor-atl.12';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs

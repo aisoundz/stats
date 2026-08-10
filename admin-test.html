@@ -212,7 +212,7 @@
         <div class="row" style="margin-top:10px">
           <div style="flex:1">
             <label for="worthIn" style="margin-top:0">Points per question</label>
-            <input id="worthIn" type="number" min="1" max="20" value="1">
+            <input id="worthIn" type="number" min="1" max="200" value="10">
           </div>
           <div style="flex:1">
             <label style="margin-top:0">Questions</label>
@@ -413,32 +413,32 @@ const NIGHTS = [
     away:'TOR', home:'ATL',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
-    worth:[1,2,3,4] },
+    worth:[10,20,30,40] },
   { id:'gn4-2026-08-09-dal-min', label:'Game Night #4 (TEST) — Dallas @ Minnesota (Aug 9)',
     away:'DAL', home:'MIN',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
-    worth:[1,2,3,4] },
+    worth:[10,20,30,40] },
   { id:'gn3-2026-08-09-ny-lv', label:'Game Night #3 — Aces @ Liberty (Aug 9)',
     away:'LV', home:'NY',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
-    worth:[1,2,3,4] },
+    worth:[10,20,30,40] },
   { id:'gn2-2026-08-02-min-ind', label:'Game Night #2 — Fever @ Lynx (Aug 2)',
     away:'IND', home:'MIN',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
-    worth:[1,2,3,4] },
+    worth:[10,20,30,40] },
   { id:'gn1-2026-07-28-ind-sea', label:'Game Night #1 — Fever @ Storm (Jul 28) · played',
     away:'IND', home:'SEA',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
-    worth:[1,2,3,4] },
+    worth:[10,20,30,40] },
   { id:'sn1-2026-08-04-mia-ame', label:'Soccer Night — Miami v América (Aug 4)',
     away:'AME', home:'MIA',
     tags:['1H','2H'],
     names:['First half','Second half'],
-    worth:[3,5] }
+    worth:[30,50] }
 ];
 
 // The questions the app already ships with, mirrored here so the Write tab
@@ -631,9 +631,21 @@ function seedRound(id, i, force){
 }
 function nightDraft(id){
   const cfg = nightCfg(id);
-  if(!draft[id]) draft[id] = { rounds: cfg.tags.map((t,i)=>({ worth: cfg.worth[i]||1, qs: [] })) };
+  if(!draft[id]) draft[id] = { rounds: cfg.tags.map((t,i)=>({ worth: cfg.worth[i]||10, qs: [] })) };
   // a night whose round count changed under us should not throw
-  while(draft[id].rounds.length < cfg.tags.length) draft[id].rounds.push({worth:1,qs:[]});
+  while(draft[id].rounds.length < cfg.tags.length) draft[id].rounds.push({worth:10,qs:[]});
+  // 8/10 points rescale (×10). Drafts saved in this browser BEFORE the
+  // rescale still carry the old 1/2/3/4 weights, and a draft is only
+  // seeded once — so without this, tonight's rounds would quietly push
+  // the tiny old points onto the new 1,000-point night. If a round's
+  // saved worth is exactly one tenth of its new default, it IS the old
+  // default: lift it. A weight the host typed by hand is left alone.
+  try{
+    draft[id].rounds.forEach((r,i)=>{
+      const nw = cfg.worth[i]||10;
+      if(r && typeof r.worth==='number' && r.worth*10===nw) r.worth=nw;
+    });
+  }catch(e){}
   // Seed on read, not only at creation: the draft already saved in this
   // browser has four empty rounds left over from Game Night #1, and a
   // create-time-only seed would leave that host exactly as stuck as before.
@@ -765,7 +777,7 @@ function initUI(){
 
   $('roundSel').onchange = () => { roundIdx = +$('roundSel').value; renderWrite(); };
   $('worthIn').onchange = () => {
-    const v = Math.max(1, Math.min(20, +$('worthIn').value || 1));
+    const v = Math.max(1, Math.min(200, +$('worthIn').value || 10));
     $('worthIn').value = v;
     nightDraft(night).rounds[roundIdx].worth = v; saveDraft();
   };
