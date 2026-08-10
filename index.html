@@ -3566,13 +3566,47 @@ function predGo(d){
   PD.i=Math.max(0,Math.min(L.length-1,PD.i+d));
   buildPred();
 }
+/* THE BUG THIS EXISTS TO KILL. You could tap Next past a card you had not
+   answered, and nothing anywhere said so. Six cards later you were staring
+   at "5 / 6 locked" with every card you could see filled in, and no way to
+   tell which one was empty. Worse: a bonus card remembers the NUMBER you
+   typed even if you never picked the name, so the card you skipped still
+   looked touched. Two answers below — jump to the next BLANK card instead
+   of merely the next card, and put a dot per pick on screen so an empty one
+   is visible from across the room. */
+function predBlankIdx(from){
+  const L=predOrderList();
+  for(let k=1;k<=L.length;k++){ const ix=(from+k)%L.length; if(!S.predChoices[L[ix].id]) return ix; }
+  return -1;
+}
+function predJump(ix){
+  const L=predOrderList();
+  PD.i=Math.max(0,Math.min(L.length-1,ix));
+  buildPred(); predFocusDeck();
+}
+/* On a laptop the action bar sits well below the deck. Jumping the cursor
+   to a blank card without bringing the card into view looks exactly like a
+   dead button — which is what it looked like. */
+function predFocusDeck(){
+  try{
+    const c=document.getElementById('predCard'); if(!c) return;
+    const r=c.getBoundingClientRect();
+    if(r.top<8 || r.top>window.innerHeight*0.4) c.scrollIntoView({behavior:'smooth',block:'start'});
+    const card=c.querySelector('.pdcard');
+    if(card){ card.classList.remove('pdflash'); void card.offsetWidth; card.classList.add('pdflash'); }
+  }catch(_){}
+}
 function predPick(id,val){
   S.predChoices[id]=val;
   buildPred();
   // Auto-advance on a plain pick — the deck should feel like it's moving
   // with you. A pick WITH a bonus number stays put; you're not done yet.
   const p=preds.find(x=>x.id===id);
-  if(p && !p.bonus){ setTimeout(function(){ const L=predOrderList(); if(PD.i<L.length-1) predGo(1); }, 220); }
+  if(p && !p.bonus){ setTimeout(function(){
+    const nb=predBlankIdx(PD.i);
+    if(nb>=0) predJump(nb);
+    else { const L=predOrderList(); if(PD.i<L.length-1) predGo(1); }
+  }, 220); }
 }
 function buildPred(){
   const c=document.getElementById('predCard'); if(!c) return;
@@ -3605,11 +3639,22 @@ function buildPred(){
     '<div class="pdhead"><b>Your card</b><span class="pdpts">'+predRidingPts()+' pts riding</span></div>'
    +'<div class="pdprog"><span class="pdn">'+(PD.i+1)+' / '+L.length+'</span>'
    +  '<div class="pdbar"><i style="width:'+pct+'%"></i></div></div>'
+   /* One dot per pick, filled when answered, hollow when not, ringed for the
+      one you're on — and every one of them is a tap. This is the whole
+      answer to "which one did I miss": you can see it. */
+   +'<div class="pddots">'+L.map(function(x,ix){
+        return '<button type="button" class="pddot'+(S.predChoices[x.id]?' fill':'')+(ix===PD.i?' cur':'')
+          +'" data-pdj="'+ix+'" aria-label="'+esc(x.label)+(S.predChoices[x.id]?' — picked':' — not picked yet')+'"></button>';
+      }).join('')+'</div>'
    +'<div class="pdcard">'
    +  '<div class="pdcat">'+esc(p.label)+'</div>'
    +  '<div class="pdq">'+esc(p.q||('Who takes '+p.label.toLowerCase()+'?'))+'</div>'
    +  '<div class="pdworth">'+worth+' pts'+(p.bonus?(' &nbsp;·&nbsp; +'+p.bonus+' for the exact number'):'')+'</div>'
-   +  '<div class="pdopts">'+opts+'</div>'
+   /* A twelve-name roster stacked one per row is the scroll wall the deck
+      was built to kill — the header, the dots and the progress bar all end
+      up off-screen above you. Two columns past six options puts a whole
+      roster on one phone screen. */
+   +  '<div class="pdopts'+(p.opts.length>6?' many':'')+'">'+opts+'</div>'
    +  bonus + rank
    +'</div>'
    +'<div class="pdnav">'
@@ -3630,10 +3675,16 @@ function buildPred(){
      the way forward is never further than a thumb. */
   const bar=document.getElementById('pdBar');
   if(bar){
+    const left=preds.length-doneN;
+    /* The unfinished state used to render grey-on-grey, which every player
+       read as "disabled" — so nobody tapped the one control that would have
+       taken them to the card they missed. It is an ACTION. It looks like one
+       now, and it names the category instead of counting. */
+    const missP = left>0 ? (function(){ const m=L.find(function(x){return !S.predChoices[x.id];}); return m?m.label.toLowerCase():''; })() : '';
     bar.innerHTML=
       '<div class="pdsummary"><span>📋 Your card so far</span><b>'+doneN+' / '+preds.length+' locked</b></div>'
-     +'<button type="button" class="pdlock'+(doneN>=preds.length?' ready':'')+'" id="pdLock">'
-     +  (doneN>=preds.length ? 'Lock my card →' : ('Finish your card — '+(preds.length-doneN)+' left →'))
+     +'<button type="button" class="pdlock'+(left<=0?' ready':' todo')+'" id="pdLock">'
+     +  (left<=0 ? 'Lock my card →' : ('Still need '+(missP||(left+' more'))+' →'))
      +'</button>';
   }
 
@@ -3646,10 +3697,13 @@ function buildPred(){
   Array.prototype.forEach.call(c.querySelectorAll('[data-pdmv]'), function(b){
     b.onclick=function(){ movePred(p.id, Number(b.getAttribute('data-pdmv'))); };
   });
+  Array.prototype.forEach.call(c.querySelectorAll('[data-pdj]'), function(b){
+    b.onclick=function(){ predJump(Number(b.getAttribute('data-pdj'))); };
+  });
   const lk=document.getElementById('pdLock');
   if(lk) lk.onclick=function(){
     const miss=L.findIndex(function(x){ return !S.predChoices[x.id]; });
-    if(miss>=0){ PD.i=miss; buildPred();
+    if(miss>=0){ predJump(miss);
       try{ toast('One more — '+L[miss].label.toLowerCase()+'.'); }catch(_){}
       return; }
     lockPredictions();
@@ -5834,6 +5888,10 @@ function demoCallIt(n){
   const opensAt=Date.now()+4000;
   setTimeout(function(){
     if(S.mode!=='demo' || PCI.muted) return;
+    // Never stomp a question already on screen and still unanswered — a
+    // queued demo replacing the one the player is looking at reads as the
+    // card resetting itself for no reason.
+    try{ if(PCI.active && PCI.active.state==='open' && PCI.picked[PCI.active.qid]==null){ demoCiFired[q.qid]=false; return; } }catch(_){}
     const live={qid:q.qid,prompt:q.prompt,options:q.options,state:'open',
                 locksMs:20000,opensAt:{toMillis:function(){return opensAt;}}};
     PCI.active=live; renderCiCard(live);
@@ -5897,7 +5955,10 @@ function ciDock(){
 function ciShow(html){ var c=document.getElementById('ciCard'), inner=document.getElementById('ciInner'); if(!c||!inner) return; ciDock(); inner.innerHTML=html; c.style.display='block';
   // The 'leave this open' placeholder and a live question are mutually
   // exclusive — showing both reads as two half-built things.
-  try{ if(ciOnGametime()){ var idle=document.getElementById('gtIdle'); if(idle) idle.innerHTML=''; } }catch(_){} }
+  // Repaint the tab around it: the 'leave this open' placeholder steps aside
+  // for a live question, but the rehearsal control has to survive — a test
+  // button that disappears the moment you use it can't be used twice.
+  try{ if(ciOnGametime() && typeof renderGametime==='function') renderGametime(); }catch(_){} }
 function ciHideSoon(ms){ clearTimeout(PCI.hideT); PCI.hideT=setTimeout(function(){ var c=document.getElementById('ciCard'); if(c) c.style.display='none'; try{ if(typeof renderGametime==='function') renderGametime(); }catch(_){} }, ms); }
 
 function ciGrade(q){
@@ -5905,6 +5966,10 @@ function ciGrade(q){
   PCI.graded[q.qid]=true;
   var pick=PCI.picked[q.qid];
   if(pick==null) return;                 // sat it out — no effect on streak
+  // A rehearsal fired from the Gametime tab shows you right/wrong but must
+  // never touch a real night's record. In practice mode there is no real
+  // record to protect, so it counts there.
+  try{ if(String(q.qid).indexOf('ci-try-')===0 && S.mode==='live') return; }catch(_){}
   PCI.called++;
   if(String(pick)===String(q.answer)){ PCI.hit++; PCI.streak++; if(PCI.streak>PCI.best)PCI.best=PCI.streak; PCI.heat=Math.min(9,PCI.heat+1); }
   else { PCI.streak=0; PCI.heat=Math.max(0,PCI.heat-1); }
@@ -7690,7 +7755,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.24';
+const STATS_BUILD='2026-08-10-g5-tor-atl.25';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
@@ -7849,12 +7914,86 @@ function renderGametime(){
     +     '<div style="font-size:32px;font-weight:900;color:#eef2fb">'+(live?esc(String(hs)):'–')+'</div></div>'
     + '</div></div>';
   const hasCard=(function(){ try{ const c=document.getElementById('ciCard'); return c&&c.style.display!=='none'&&c.parentNode&&c.parentNode.id==='ciSlot'; }catch(_){ return false; } })();
-  if(idle) idle.innerHTML = hasCard ? '' :
-    '<div class="card center" style="padding:20px">'
-    + '<div style="font-size:30px;margin-bottom:6px">🎯</div>'
-    + '<b style="font-size:15.5px">Leave this open while you watch</b>'
-    + '<p class="sub" style="font-size:12.5px;margin:8px 0 0">Call It questions land right here the moment something happens — a timeout, a run, a big shot. One tap, then straight back to the game.</p>'
-    + '</div>';
+  if(!idle) return;
+  /* An empty room is not a feature. Before a question lands this tab has to
+     be worth sitting on: what you picked, how your Call It night is going,
+     and a button that fires a real one so you — and the host, an hour before
+     tip — can prove the thing works without waiting for a game to happen. */
+  let out='';
+  if(!hasCard){
+    out+='<div class="card center" style="padding:20px">'
+      + '<div style="font-size:30px;margin-bottom:6px">🎯</div>'
+      + '<b style="font-size:15.5px">Leave this open while you watch</b>'
+      + '<p class="sub" style="font-size:12.5px;margin:8px 0 0">Call It questions land right here the moment something happens — a timeout, a run, a big shot. One tap, then straight back to the game.</p>'
+      + '</div>';
+  }
+  // Your Call It night so far — only once there is a night to report.
+  try{
+    if(PCI.called>0){
+      const pctv=Math.round((PCI.hit/PCI.called)*100);
+      out+='<div class="card" style="padding:14px 16px;margin-top:12px;display:flex;justify-content:space-between;text-align:center">'
+        + '<div style="flex:1"><div style="font-size:20px;font-weight:900;color:#eef2fb">'+PCI.hit+'/'+PCI.called+'</div><div style="font-size:10.5px;letter-spacing:.12em;color:#93a0bd;font-weight:800">CALLED</div></div>'
+        + '<div style="flex:1"><div style="font-size:20px;font-weight:900;color:#eef2fb">'+pctv+'%</div><div style="font-size:10.5px;letter-spacing:.12em;color:#93a0bd;font-weight:800">HIT RATE</div></div>'
+        + '<div style="flex:1"><div style="font-size:20px;font-weight:900;color:var(--gold)">'+(PCI.best||0)+'</div><div style="font-size:10.5px;letter-spacing:.12em;color:#93a0bd;font-weight:800">BEST RUN</div></div>'
+        + '</div>';
+    }
+  }catch(_){}
+  // Your card, so this tab answers "what did I pick again?" without leaving.
+  try{
+    const filled=preds.filter(p=>S.predChoices[p.id]);
+    if(filled.length){
+      out+='<div class="card" style="padding:14px 16px;margin-top:12px">'
+        + '<div style="font-size:11px;letter-spacing:.14em;color:#28e0d0;font-weight:800;margin-bottom:9px">YOUR CARD</div>'
+        + filled.map(function(p){
+            const n=S.predChoices[p.id+'_num'];
+            return '<div style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:13.5px">'
+              + '<span style="color:#93a0bd">'+esc(p.label)+'</span>'
+              + '<b style="color:#eef2fb;text-align:right">'+esc(String(S.predChoices[p.id]))+(n?(' <span style="color:var(--gold)">· '+esc(String(n))+'</span>'):'')+'</b></div>';
+          }).join('')
+        + (filled.length<preds.length ? '<div style="font-size:12px;color:#ffc54d;margin-top:8px;font-weight:800">'+(preds.length-filled.length)+' still to pick — Home → Play</div>' : '')
+        + '</div>';
+    }
+  }catch(_){}
+  /* The rehearsal control lives here permanently — not inside the idle
+     panel, which disappears the moment a question is on screen. An hour
+     before tip the host needs to fire one of these on demand, and a button
+     that vanishes exactly when you want to try it again is not a test. */
+  out+='<div class="center" style="margin-top:16px">'
+     + '<button type="button" id="gtTry" class="pdlock" style="max-width:320px;margin:0 auto;background:#16233b;color:#93a0bd;font-size:14px;padding:14px">🎯 Run a practice Call It</button>'
+     + '<div class="sub" style="font-size:11.5px;margin-top:7px">Practice only — doesn’t count toward your streak tonight.</div>'
+     + '</div>';
+  idle.innerHTML=out;
+  const tb=document.getElementById('gtTry');
+  if(tb) tb.onclick=function(){ ciDemoNow(); };
+}
+/* THE TEST HOOK. Fires a real Call It card, through the real renderer, into
+   the real slot — no game required. Every run gets a fresh qid so it can be
+   run again and again, and it resolves a beat after you answer instead of
+   sitting on a 22-second timer, because a test you have to wait out is a
+   test nobody runs twice. */
+var ciDemoN=0;
+function ciDemoNow(){
+  try{
+    ensureCiCard();
+    PCI.muted=false;
+    var set=demoCiSet(); var q=set[ciDemoN%set.length]; ciDemoN++;
+    var qid='ci-try-'+ciDemoN;
+    var opensAt=Date.now();
+    var live={qid:qid,prompt:q.prompt,options:q.options,state:'open',
+              locksMs:20000,opensAt:{toMillis:function(){return opensAt;}}};
+    PCI.active=live; renderCiCard(live);
+    var settle=function(){
+      if(PCI.active!==live || live.state==='resolved') return;
+      live.state='resolved'; live.answer=q.answer; live.resolveText=q.resolveText;
+      try{ renderCiCard(live); }catch(_){}
+    };
+    // Resolve 2.5s after they answer, or at the clock if they never do.
+    var watch=setInterval(function(){
+      if(PCI.active!==live){ clearInterval(watch); return; }
+      if(PCI.picked[qid]!=null){ clearInterval(watch); setTimeout(settle,2500); }
+    }, 250);
+    setTimeout(function(){ clearInterval(watch); settle(); }, 21000);
+  }catch(e){ try{ toast('Could not start the test — '+e.message); }catch(_){} }
 }
 try{ setInterval(function(){ try{ if((S&&S.screen)==='gametime') renderGametime(); }catch(_){}}, 20000); }catch(e){}
 
@@ -7896,11 +8035,24 @@ body.hasnav{padding-bottom:74px}
 .pdn{font-size:12.5px;font-weight:800;color:var(--muted,#93a0bd);flex:0 0 auto}
 .pdbar{flex:1;height:6px;border-radius:99px;background:#16233b;overflow:hidden}
 .pdbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(92deg,#28e0d0,#4d86ff);transition:width .28s ease}
+.pddots{display:flex;align-items:center;justify-content:center;gap:9px;margin:-4px 0 12px}
+.pddot{width:13px;height:13px;border-radius:50%;padding:0;cursor:pointer;
+  background:transparent;border:2px solid #3a4b73;transition:transform .15s,background .15s,border-color .15s}
+.pddot.fill{background:#28e0d0;border-color:#28e0d0}
+.pddot.cur{transform:scale(1.42);box-shadow:0 0 0 3px rgba(40,224,208,.16)}
+.pddot:not(.fill){border-color:#ffc54d}
+.pddot:not(.fill).cur{box-shadow:0 0 0 3px rgba(255,197,77,.18)}
 .pdcard{background:#0e1626;border:1px solid #26304a;border-radius:16px;padding:17px 15px;touch-action:pan-y}
+@keyframes pdFlash{0%{border-color:#ffc54d;box-shadow:0 0 0 4px rgba(255,197,77,.22)}100%{border-color:#26304a;box-shadow:none}}
+.pdcard.pdflash{animation:pdFlash .9s ease-out}
 .pdcat{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#28e0d0;font-weight:800}
 .pdq{font-size:23px;font-weight:900;line-height:1.2;color:#eef2fb;margin:7px 0 4px}
 .pdworth{font-size:13px;font-weight:800;color:var(--gold);margin-bottom:14px}
 .pdopts{display:flex;flex-direction:column;gap:9px}
+.pdopts.many{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pdopts.many .pdopt{padding:12px 10px;font-size:14px;gap:8px}
+.pdopts.many .pdradio{width:17px;height:17px}
+.pdopts.many .pdname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pdopt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
   background:#111a2b;border:1px solid #2f3a58;border-radius:13px;padding:15px 14px;
   font:800 16px/1.2 inherit;color:#eef2fb;transition:border-color .15s,background .15s}
@@ -7928,6 +8080,8 @@ body.hasnav{padding-bottom:74px}
 .pdlock{width:100%;margin-top:11px;border:none;border-radius:14px;padding:18px;cursor:pointer;
   font:900 17px/1 inherit;background:#1b2740;color:#6c7a99;transition:filter .15s}
 .pdlock.ready{background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e}
+/* Unfinished is not disabled — it is the fastest way to finish. */
+.pdlock.todo{background:rgba(255,197,77,.12);border:1px solid rgba(255,197,77,.55);color:#ffc54d;padding:17px}
 .pdlock:active{filter:brightness(.94)}
 
 #pdBar{display:none;position:fixed;left:0;right:0;bottom:72px;z-index:8600;padding:11px 14px calc(12px + env(safe-area-inset-bottom,0px));
