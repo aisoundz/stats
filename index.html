@@ -294,6 +294,15 @@
     border:1px solid rgba(255,197,77,.3);border-radius:999px;padding:7px 12px;cursor:pointer}
   .helpbtn:disabled{opacity:.4}
 
+  /* THE REFRESH FLASH. index.html ships with the landing screen already
+     marked .active so there is something on screen if JS never runs. The
+     cost is that a refresh paints the landing hero — court backdrop and
+     all — for the few hundred ms before boot works out you were mid-game
+     and moves you. Hold the paint until boot says go. The failsafe below
+     reveals unconditionally after 2s, so a crash during boot degrades to
+     the old behaviour rather than to a black screen. */
+  body:not(.booted) .screen{visibility:hidden}
+  body.booted .screen{visibility:visible}
   .backbtn{position:absolute;top:12px;left:12px;z-index:30;width:38px;height:38px;
     border-radius:12px;border:1px solid var(--line2);background:rgba(22,29,46,.85);
     color:var(--ink);font-size:18px;font-weight:800;cursor:pointer;display:none;
@@ -611,7 +620,7 @@
   <button class="backbtn" id="backBtn" onclick="goBack()">←</button>
 
   <!-- 1. LANDING -->
-  <section class="screen active" id="s-landing" style="position:relative">
+  <section class="screen active" id="s-landing" style="position:relative;isolation:isolate">
     <!-- Court + arena backdrop — original SVG, no external image. Hardwood,
          spotlights, a crowd line and court markings behind the wordmark. -->
     <div aria-hidden="true" style="position:absolute;left:0;right:0;top:0;height:172px;overflow:hidden;pointer-events:none;z-index:-1">
@@ -8043,7 +8052,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.28';
+const STATS_BUILD='2026-08-10-g5-tor-atl.29';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
@@ -8081,6 +8090,13 @@ try{ paintHeroRibbon(); setInterval(paintHeroRibbon, 30000); }catch(e){}
 window.addEventListener('stats-identity', function(){ try{ renderPortal(); }catch(e){} });
 initColors();
 checkResume();
+/* Reveal. Boot has now decided which screen you belong on, so painting it
+   is honest. The failsafe is the important half: if anything above this
+   line ever throws, the timeout still opens the app rather than leaving a
+   player staring at nothing. A safety curtain that can jam shut is worse
+   than no curtain. */
+try{ document.body.classList.add('booted'); }catch(e){}
+try{ setTimeout(function(){ try{ document.body.classList.add('booted'); }catch(_){ } }, 2000); }catch(e){}
 try{backendBadge();}catch(e){}
 
 /* ================= BOTTOM NAV — behaviour ==========================

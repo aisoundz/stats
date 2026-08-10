@@ -362,6 +362,11 @@
 <div id="toast"></div>
 
 <script>
+/* Build stamp. The QA engine flags a file with no build id, because
+   without one there is no way to tell which Control Room is actually open
+   on game night — and "is your tab the new one?" is not a diagnosis. */
+window.ADMIN_BUILD='2026-08-10-admin.13';
+
 /* =====================================================================
    STATS — Control Room
    ---------------------------------------------------------------------
@@ -1771,10 +1776,50 @@ function markOf(pick, ans){
   return pick === ans ? 'hit' : 'mis';
 }
 
+/* ====== SERVER-DERIVED SPEED ==========================================
+   `banks[n]` is what the PHONE says was left on its clock. Nice for a
+   friendly night, worthless the moment there is a prize — a tampered
+   client claims twenty every time and the leaderboard is fiction.
+
+   Each phone now writes two Firestore serverTimestamp() marks per
+   question: 'o{n}' when it appeared, 'a{n}' when it was locked. Both are
+   stamped by Google's server, not the device, so the gap between them is
+   the real answer time. Speed is derived from that gap here and the
+   phone's claim is ignored whenever the pair exists.
+
+   When it doesn't exist — an offline moment, a write that failed, a
+   player on an old build — we fall back to the claim and SAY SO in the
+   grid rather than silently pretending it was verified. A host who cannot
+   tell a measured number from an asserted one has no anti-cheat at all. */
+const GTIMES = { rid:null, byUid:{} };
+async function loadTimes(rid){
+  if(!FB || !user) return;
+  const { F, db } = FB;
+  try{
+    const snap = await F.getDocs(F.collection(db,'nights',night,'rounds',rid,'times'));
+    const m = {}; snap.forEach(d => { m[d.id] = d.data(); });
+    GTIMES.rid = rid; GTIMES.byUid = m;
+    if(rid === gradeRid) renderGrade();
+  }catch(e){ /* dashboard-only: never blocks grading */ }
+}
+function tms(v){ try{ return (v && v.toMillis) ? v.toMillis() : (typeof v==='number' ? v : null); }catch(_){ return null; } }
+/* Returns {bank, verified} for one question. Window is the answer clock the
+   phone runs (20s live). Anything outside it clamps rather than throwing —
+   a clock skew must degrade to zero speed, never to negative points. */
+function serverBank(uid, n, windowSec){
+  const t = (GTIMES.rid===gradeRid) ? GTIMES.byUid[uid] : null;
+  if(!t) return null;
+  const o = tms(t['o'+n]), a = tms(t['a'+n]);
+  if(o==null || a==null) return null;
+  const used = (a-o)/1000;
+  if(!isFinite(used) || used < 0) return null;
+  return Math.max(0, Math.min(windowSec, Math.round(windowSec - used)));
+}
+
 function scoreSub(sub, spec){
   const picks = sub.picks || [], nums = sub.nums || [], banks = sub.banks || [];
   const slot = keySlot(gradeRid);
-  let right = 0, pts = 0, speed = 0, answered = 0;
+  let right = 0, pts = 0, speed = 0, answered = 0, verified = 0, claimed = 0;
   const marks = spec.qs.map((q,n) => {
     const m = markOf(picks[n], spec.key[n]);
     if(picks[n]) answered++;
@@ -1795,12 +1840,15 @@ function scoreSub(sub, spec){
         if(official !== '' && official != null && String(nums[n]) === String(official))
           pts += spec.bons ? (Number(spec.bons[n]) || 0) : 0;
       }else{
-        speed += Number(banks[n]) || 0;
+        // Prefer the server's measurement; fall back to the phone's claim.
+        const sv = serverBank(sub.uid, n, 20);
+        if(sv!=null){ speed += sv; verified++; }
+        else { speed += Number(banks[n]) || 0; claimed++; }
       }
     }
     return m;
   });
-  return { marks, right, pts, speed, answered };
+  return { marks, right, pts, speed, answered, verified, claimed };
 }
 
 function watchGradeSubs(){
@@ -1816,6 +1864,7 @@ function watchGradeSubs(){
       snap.forEach(d => gradeSubs.push(Object.assign({ uid:d.id }, d.data())));
       gradeSubs.sort((a,z)=>String(a.name||'').localeCompare(String(z.name||'')));
       renderGrade();
+      loadTimes(rid);              // server clock, read once per snapshot
     }, err=>{
       $('gradeNote').textContent = 'Could not read the answers: ' + ((err&&err.message)||err) +
         '. That is a dashboard problem only — the players\' game is unaffected.';
