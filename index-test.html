@@ -7510,7 +7510,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.14';
+const STATS_BUILD='2026-08-10-g5-tor-atl.15';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
@@ -7549,6 +7549,97 @@ window.addEventListener('stats-identity', function(){ try{ renderPortal(); }catc
 initColors();
 checkResume();
 try{backendBadge();}catch(e){}
+
+/* ================= BOTTOM NAV — behaviour ==========================
+   One rule governs everything here: the nav may CHANGE screens, never
+   game state. No tab submits, locks, scores or signs anything. That is
+   what makes a navigation rewrite safe to ship the day of a game.     */
+const NAV_HIDE_ON = ['live','review','predreview','break','final','tally'];
+function navGo(tab){
+  try{
+    // Leaving the Crew tab closes the room. A modal that survives a tab
+    // change is the classic half-built-nav tell.
+    if(tab!=='crew'){ try{ closeTalk(); }catch(_){} }
+    if(tab==='home')  { go('landing'); }
+    else if(tab==='play'){
+      // Straight to whatever "playing" means right now: back into tonight's
+      // room if a game is under way, otherwise the front of the flow.
+      if(S.mode==='live' && S.screen && S.screen!=='landing') go('lobby');
+      else startLive();
+    }
+    else if(tab==='board'){
+      if(S.mode==='live'){ go('lobby'); try{ refreshRoom(); }catch(_){} }
+      else { go('landing'); toast('The board fills up once a game night starts.'); }
+    }
+    else if(tab==='crew'){ try{ openTalk(); }catch(_){ toast('The room opens on game night.'); } }
+    else if(tab==='me'){
+      go('landing');
+      setTimeout(function(){
+        try{
+          const w=document.getElementById('welcomeStrip');
+          const p=document.getElementById('portalCard');
+          const t=(w&&w.style.display!=='none')?w:p;
+          if(t) t.scrollIntoView({behavior:'smooth',block:'center'});
+        }catch(_){}
+      },80);
+    }
+  }catch(e){}
+  paintNav(tab);
+}
+function paintNav(active){
+  const bar=document.getElementById('botnav'); if(!bar) return;
+  let scr=''; try{ scr=S.screen||''; }catch(_){}
+  const hide = NAV_HIDE_ON.indexOf(scr)>=0;
+  bar.style.display = hide ? 'none' : 'block';
+  try{ document.body.classList.toggle('hasnav', !hide); }catch(_){}
+  if(!active){
+    active = (scr==='lobby') ? 'play' : (scr==='landing' ? 'home' : '');
+  }
+  try{
+    bar.querySelectorAll('.navb').forEach(function(b){
+      b.classList.toggle('on', b.getAttribute('data-nav')===active);
+    });
+  }catch(_){}
+}
+/* Every screen change repaints the bar. Wrapping go() rather than editing
+   it keeps the original function untouched — if this ever misbehaves the
+   whole feature can be removed by deleting this block. */
+(function(){
+  try{
+    const _go = window.go || go;
+    window.go = function(k){ const r=_go.apply(this, arguments); try{ paintNav(); }catch(_){} return r; };
+  }catch(e){}
+})();
+try{ setTimeout(paintNav, 600); }catch(e){}
+
 </script>
+
+<!-- ================= BOTTOM NAV (v2 concept) =========================
+     Five tabs, fixed to the bottom, the thing that makes a web page feel
+     like an app. It is CHROME, not plumbing: every tab calls a screen that
+     already exists, so nothing about scoring, picks or auth changes.
+     It hides itself during a live question and on the final card — a nav
+     bar under a 20-second clock is a way to lose the question by accident.
+     ================================================================== -->
+<div id="botnav" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:8500;
+     background:rgba(10,14,23,.94);backdrop-filter:blur(12px);border-top:1px solid #1e2740;
+     padding:7px 6px calc(7px + env(safe-area-inset-bottom,0px));">
+  <div style="max-width:430px;margin:0 auto;display:flex">
+    <button class="navb" data-nav="home"  onclick="navGo('home')">🏠<span>Home</span></button>
+    <button class="navb" data-nav="play"  onclick="navGo('play')">🎯<span>Play</span></button>
+    <button class="navb" data-nav="board" onclick="navGo('board')">📊<span>Board</span></button>
+    <button class="navb" data-nav="crew"  onclick="navGo('crew')">👥<span>Crew</span></button>
+    <button class="navb" data-nav="me"    onclick="navGo('me')">👤<span>Me</span></button>
+  </div>
+</div>
+<style>
+#botnav .navb{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;gap:3px;padding:6px 2px;font:700 10px/1 inherit;color:#5b6a8c;letter-spacing:.02em}
+#botnav .navb span{font-size:10px}
+#botnav .navb{font-size:18px}
+#botnav .navb.on{color:#28e0d0}
+#botnav .navb:active{transform:scale(.94)}
+body.hasnav{padding-bottom:74px}
+</style>
 </body>
 </html>
