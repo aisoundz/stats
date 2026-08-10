@@ -653,9 +653,35 @@
 
     <!-- THE FRONT DOOR — sign in before anything else. Hidden the moment the
          account is real; replaced by the welcome strip below. -->
-    <div class="card" id="portalCard" style="display:none;margin-top:18px">
-      <b style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)">Sign in to play</b>
-      <p class="sub" style="margin:6px 0 12px">One tap, and your handle, your card and your points follow you to any phone — nothing you earn can ever be lost.</p>
+    <!-- HOW IT WORKS, in three lines, ABOVE the door. From the v2 concept:
+         a stranger should understand the whole game before being asked for
+         anything. Signed-out only — a member already knows. -->
+    <div id="howBlock" style="display:none;margin-top:16px">
+      <div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:11px">
+        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:#16233b;border:1px solid #2f3a58;color:#28e0d0;font:800 12.5px/25px inherit;text-align:center">1</span>
+        <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Predict before tip.</b> <span style="color:var(--muted,#93a0bd)">Winner, stat leaders, the numbers.</span></div>
+      </div>
+      <div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:11px">
+        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:#16233b;border:1px solid #2f3a58;color:#28e0d0;font:800 12.5px/25px inherit;text-align:center">2</span>
+        <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Call it live.</b> <span style="color:var(--muted,#93a0bd)">One-tap reads during the game as it happens.</span></div>
+      </div>
+      <div style="display:flex;gap:11px;align-items:flex-start">
+        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:#16233b;border:1px solid #2f3a58;color:#28e0d0;font:800 12.5px/25px inherit;text-align:center">3</span>
+        <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Climb the board.</b> <span style="color:var(--muted,#93a0bd)">Sharpest, fastest fan wins the night.</span></div>
+      </div>
+    </div>
+
+    <div class="card" id="portalCard" style="display:none;margin-top:16px">
+      <!-- Sign in / Sign up is one action behind the scenes — Google decides
+           which. The toggle exists because the two words carry different
+           promises, and a returning player and a stranger deserve to be
+           spoken to differently on the same door. -->
+      <div style="display:flex;gap:6px;background:#0e1626;border:1px solid #26304a;border-radius:12px;padding:5px;margin-bottom:13px">
+        <button id="segIn" onclick="portalSeg('in')" style="flex:1;border:none;border-radius:9px;padding:11px 8px;font:800 13.5px/1 inherit;cursor:pointer;background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e">Sign in</button>
+        <button id="segUp" onclick="portalSeg('up')" style="flex:1;border:none;border-radius:9px;padding:11px 8px;font:800 13.5px/1 inherit;cursor:pointer;background:none;color:var(--muted,#93a0bd)">Sign up</button>
+      </div>
+      <b id="portalLbl" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)">Welcome back — sign in to build your card</b>
+      <p class="sub" id="portalSub" style="margin:6px 0 12px">One tap, and your handle, your card and your points follow you to any phone — nothing you earn can ever be lost.</p>
       <button id="portalGsi" onclick="portalGoogle()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:#fff;color:#1a1a1a;border:none;border-radius:12px;padding:14px;font:800 15px/1 inherit;cursor:pointer">
         <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:conic-gradient(#ea4335 0 25%,#fbbc05 0 50%,#34a853 0 75%,#4285f4 0)"></span>
         Sign in with Google
@@ -669,6 +695,7 @@
         <input type="checkbox" id="portalConsent" checked style="margin-top:2px;width:17px;height:17px;flex:0 0 auto;accent-color:#28e0d0">
         <span style="font-size:12px;line-height:1.45;color:var(--muted,#93a0bd)">Email me when the next game night is on. One message per game, unsubscribe any time.</span>
       </label>
+      <button class="btn ghost sm" style="margin-top:11px;font-size:12.5px" onclick="startDemo()">Just practice first (no account) →</button>
       <p class="foot" style="margin:10px 0 0;text-align:center">Free to play · Not gambling · Prizes are sponsor-funded</p>
     </div>
     <div class="card" id="welcomeStrip" style="display:none;margin-top:14px;padding:11px 14px;border-color:rgba(46,230,166,.35)"></div>
@@ -7308,6 +7335,7 @@ function renderPortal(){
   let v=false, em='';
   try{ v=!!(window.SB&&SB.verified&&SB.verified()); em=(window.SB&&SB.me&&SB.me.email)||''; }catch(e){}
   p.style.display = v?'none':'block';
+  try{ const hb=document.getElementById('howBlock'); if(hb) hb.style.display = v?'none':'block'; }catch(_){}
   /* If the backend never came up, the sign-in buttons are decoration: they
      can only ever toast an apology. Say so on the card itself. A player who
      taps a dead button twice and gets nothing decides the app is broken;
@@ -7359,6 +7387,25 @@ function renderPortal(){
     w.style.display='block';
   } else { w.style.display='none'; }
 }
+/* The door speaks differently to a stranger than to a returning player.
+   Behind the glass it is one Google call either way — Firebase creates or
+   signs in as appropriate — so this changes words, never behaviour. */
+function portalSeg(which){
+  const a=document.getElementById('segIn'), b=document.getElementById('segUp');
+  const lbl=document.getElementById('portalLbl'), sub=document.getElementById('portalSub');
+  const gsi=document.getElementById('portalGsi');
+  const on='linear-gradient(92deg,#28e0d0,#4d86ff)';
+  if(!a||!b) return;
+  const up = which==='up';
+  a.style.background = up?'none':on;  a.style.color = up?'var(--muted,#93a0bd)':'#04121e';
+  b.style.background = up?on:'none';  b.style.color = up?'#04121e':'var(--muted,#93a0bd)';
+  if(lbl) lbl.textContent = up ? 'New here — create your card' : 'Welcome back — sign in to build your card';
+  if(sub) sub.textContent = up
+    ? 'Takes one tap. Your card, your points and your streak start tonight and follow you to any phone.'
+    : 'One tap, and your handle, your card and your points follow you to any phone — nothing you earn can ever be lost.';
+  if(gsi) gsi.lastChild.textContent = up ? ' Sign up with Google ' : ' Sign in with Google ';
+}
+
 /* Write the signed-in address onto the game-night list. Consent is read from
    the box the player can see and untick — never assumed. */
 function portalSaveSignup(email){
@@ -7463,7 +7510,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.13';
+const STATS_BUILD='2026-08-10-g5-tor-atl.14';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
