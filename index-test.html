@@ -2839,7 +2839,7 @@ function promptSignIn(after){
   toast('Sign in first — takes one tap, and it saves everything you score.');
 }
 let PENDING_AFTER=null;
-function startDemo(){S.mode="demo";go('name');prefillGate();}
+function startDemo(){S.mode="demo";try{Object.keys(demoCiFired).forEach(k=>delete demoCiFired[k]);PCI.muted=false;}catch(e){}go('name');prefillGate();}
 
 /* ---------------- PERSISTENCE (Game Night only) ---------------- */
 const LS_KEY="stats_gamenight_v1_"+SPORT_KEY; // saves never cross sports
@@ -3741,7 +3741,7 @@ function renderLobby(qi){
   try{ renderAlertRow(); }catch(e){}
   // Practice gets a taste of Call It in the lobbies before Q2 and Q3 —
   // learned here, so the real one mid-game needs no explanation.
-  try{ if(S.mode==="demo"){ if(qi===1) demoCallIt(0); if(qi===2) demoCallIt(1); } }catch(e){}
+  try{ if(S.mode==="demo"){ if(qi===0||qi===1) demoCallIt(0); if(qi>=2) demoCallIt(1); } }catch(e){}
   const btn=document.getElementById('lobbyBtn');
   const foot=document.getElementById('lobbyFoot');
   const sub=document.getElementById('lobbySub');
@@ -7609,7 +7609,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.20';
+const STATS_BUILD='2026-08-10-g5-tor-atl.21';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
@@ -7824,9 +7824,17 @@ body.hasnav{padding-bottom:74px}
 
 #pdBar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:8600;padding:11px 14px calc(12px + env(safe-area-inset-bottom,0px));
   background:rgba(10,14,23,.96);backdrop-filter:blur(14px);border-top:1px solid #1e2740}
+#pdBar .pdsummary,#pdBar .pdlock{max-width:430px;margin-left:auto;margin-right:auto}
 #pdBar .pdsummary{margin-top:0}
-#pdBar .pdlock{margin-top:9px}
-#s-predict.active{padding-bottom:190px}
+#pdBar .pdlock{margin-top:9px;display:block}
+#s-predict.active{padding-bottom:172px}
+/* On a tall screen the viewport floor is nowhere near the card — pinning
+   there strands the button in empty space. Above this height it simply
+   follows the deck, which is where the eye already is. */
+@media (min-height:860px){
+  #pdBar{position:static;padding:14px 0 0;background:none;border-top:none;backdrop-filter:none}
+  #s-predict.active{padding-bottom:40px}
+}
 </style>
 </body>
 </html>
