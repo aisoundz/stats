@@ -1408,6 +1408,30 @@ window.STATS_FIREBASE = {
 (function () {
   'use strict';
 
+  /* ---- the black box recorder --------------------------------------
+     Every outage so far was diagnosed by guesswork, because when JS died
+     on a player's phone it died silently. This keeps the last 40 errors
+     in memory where a person at a laptop can read them: open the console
+     and type STATS_LOG. It costs nothing, sends nothing anywhere, and it
+     is the difference between "it's broken" and knowing which line.    */
+  try {
+    var _elog = [];
+    window.STATS_LOG = _elog;
+    var _epush = function (kind, msg, src) {
+      try {
+        _elog.push({ at: new Date().toISOString(), kind: kind, msg: String(msg).slice(0, 300), src: src || '' });
+        if (_elog.length > 40) _elog.shift();
+      } catch (e) {}
+    };
+    window.addEventListener('error', function (ev) {
+      _epush('error', (ev && ev.message) || 'unknown', (ev && ev.filename ? ev.filename + ':' + ev.lineno : ''));
+    });
+    window.addEventListener('unhandledrejection', function (ev) {
+      var r = ev && ev.reason;
+      _epush('promise', (r && (r.code || r.message)) || String(r || 'unknown'), '');
+    });
+  } catch (e) {}
+
   /* ---- cost control -------------------------------------------------
      Firestore Spark (free) tier is 50k reads / 20k writes per day.
      Budget for a 3-hour game night with 200 concurrent players:
@@ -1586,6 +1610,7 @@ window.STATS_FIREBASE = {
 
     // Same reason as the Google path: an email-link upgrade keeps the uid.
     try { SB.refreshMe(); } catch (e) {}
+    try { if (out && out.ok) markDeviceHasAccount(); } catch (e) {}
     try { localStorage.removeItem(LINK_KEY); } catch (e) {}
     // The code in the query string is single-use and it is the entire
     // secret. It does not stay in the address bar, in history, or in
@@ -1658,6 +1683,10 @@ window.STATS_FIREBASE = {
   SB.signOut = async function () {
     if (!A || !auth) return false;
     try {
+      // Whoever is signing out HAS an account — remember that, so the next
+      // sign-in on this device skips the doomed link attempt and opens one
+      // clean popup on the tap itself.
+      try { if (auth.currentUser && !auth.currentUser.isAnonymous) markDeviceHasAccount(); } catch (_) {}
       await A.signOut(auth);
       SB.me = null;
       try { window.dispatchEvent(new Event('stats-identity')); } catch (_) {}
@@ -1697,23 +1726,46 @@ window.STATS_FIREBASE = {
      redirect breaks on Safari's storage partitioning when authDomain
      is a different site than the page, and Safari is where our players
      live. */
+  /* One popup, ever. The 8/10 sign-in outage taught us the rule: a popup
+     is only allowed to open on the CLICK. The old code linked first and, if
+     the account already existed, opened a SECOND popup to sign in — but by
+     then the click was long spent, every browser blocked it, and sign-in
+     silently did nothing. Sign-out made that collision routine: it parks
+     the player on a fresh anonymous session, so the very next sign-in was
+     always link → refused → blocked popup → dead button.
+
+     So: (a) a device that has ever held a real account skips the link
+     attempt entirely — it can only fail — and goes straight to sign-in on
+     the click itself; (b) if a link IS refused, we take the credential off
+     the refusal and sign in with it directly, popup-free.               */
+  var HASACCT_KEY = 'stats_has_account_v1';
+  function deviceHasAccount(){ try { return localStorage.getItem(HASACCT_KEY) === '1'; } catch (e) { return false; } }
+  function markDeviceHasAccount(){ try { localStorage.setItem(HASACCT_KEY, '1'); } catch (e) {} }
   SB.googleSignIn = async function () {
     if (!A || !auth) return { ok:false, why:'offline' };
     try {
       var prov = new A.GoogleAuthProvider();
       prov.setCustomParameters({ prompt: 'select_account' });
       var cred;
-      if (auth.currentUser && auth.currentUser.isAnonymous) {
+      var tryLink = auth.currentUser && auth.currentUser.isAnonymous && !deviceHasAccount();
+      if (tryLink) {
         try { cred = await A.linkWithPopup(auth.currentUser, prov); }
         catch (e) {
           var c = (e && e.code) || '';
-          if (c === 'auth/credential-already-in-use' || c === 'auth/email-already-in-use') {
-            cred = await A.signInWithPopup(auth, prov);   // account exists: put them in it
+          if (c === 'auth/credential-already-in-use' || c === 'auth/email-already-in-use' ||
+              c === 'auth/account-exists-with-different-credential') {
+            markDeviceHasAccount();
+            // The refusal carries the proven credential — use it directly.
+            var oc = null;
+            try { oc = A.GoogleAuthProvider.credentialFromError(e); } catch (_) {}
+            if (oc) { cred = await A.signInWithCredential(auth, oc); }
+            else    { cred = await A.signInWithPopup(auth, prov); }  // rare; may need a second tap
           } else { throw e; }
         }
       } else {
         cred = await A.signInWithPopup(auth, prov);
       }
+      markDeviceHasAccount();
       // The link kept the uid, so the auth listener may never fire. Tell the
       // app who it is now, explicitly, before we hand control back.
       try { SB.refreshMe(); } catch (_) {}
@@ -7326,7 +7378,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.9';
+const STATS_BUILD='2026-08-10-g5-tor-atl.10';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   const b=document.createElement('button');
