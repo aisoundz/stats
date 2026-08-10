@@ -7324,15 +7324,38 @@ function renderPortal(){
     }
   }catch(_){}
   if(v){
-    // Who we think you are, and a way to say otherwise. An app that can be
-    // signed into but never out of is one you stop trusting with anything.
-    w.innerHTML='<div style="display:flex;align-items:center;gap:10px">'
-      +'<div style="flex:1;min-width:0">'
-      +'<b style="font-size:13.5px">✅ You’re in'+(em?(' · '+esc(em)):'')+'</b>'
-      +'<p class="sub" style="font-size:11.5px;margin:3px 0 0">Your handle, card and points follow you to any phone.</p>'
+    /* THE MEMBER CARD. The first version of this was a one-line strip —
+       and signing in made the page WORSE, because the strip replaced the
+       best-looking card on the screen. Backwards. A member's front door
+       should out-dress a stranger's: your color, your handle, your season
+       numbers, and the door out. Every value below is already on the
+       device; nothing here costs a network call. */
+    let nm='', clr='';
+    try{ const pr=savedProfile(); nm=pr.name||''; clr=pr.color||''; }catch(_){}
+    if(!nm) try{ nm=(S&&S.name)||''; }catch(_){}
+    if(!clr) try{ clr=(S&&S.color)||'#2f6bff'; }catch(_){}
+    let season=0, nights=0, ciBest=0;
+    try{ season=Math.max(0,Math.round((S&&S.seasonPts)||0)); nights=Math.max(0,(S&&S.streak)||0); }catch(_){}
+    try{ ciBest=Math.max(0,(typeof PCI!=='undefined'&&PCI&&PCI.best)||0); }catch(_){}
+    const initial=esc((nm||'S').slice(0,1).toUpperCase());
+    const stat=function(v2,k){ return '<div style="flex:1;background:#0e1626;border:1px solid #26304a;border-radius:12px;padding:10px 8px;text-align:center">'
+      +'<div style="font-size:19px;font-weight:900;color:#eef2fb">'+v2+'</div>'
+      +'<div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#93a0bd;margin-top:2px">'+k+'</div></div>'; };
+    w.innerHTML=
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:11px">'
+      +  '<div style="flex:0 0 auto;width:42px;height:42px;border-radius:13px;background:'+esc(clr)+';display:flex;align-items:center;justify-content:center;font-weight:900;font-size:19px;color:#04121e">'+initial+'</div>'
+      +  '<div style="flex:1;min-width:0">'
+      +    '<b style="font-size:15.5px">'+(nm?('Welcome back, '+esc(nm)):'✅ You’re in')+'</b>'
+      +    '<div style="font-size:11.5px;color:var(--muted,#93a0bd);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(em||'')+'</div>'
+      +  '</div>'
+      +  '<button onclick="doSignOut()" style="flex:0 0 auto;background:none;border:1px solid var(--line2,#2f3a58);color:var(--muted,#93a0bd);border-radius:999px;padding:6px 11px;font:700 11.5px inherit;cursor:pointer">Sign out</button>'
       +'</div>'
-      +'<button onclick="doSignOut()" style="flex:0 0 auto;background:none;border:1px solid var(--line2,#2f3a58);color:var(--muted,#93a0bd);border-radius:999px;padding:6px 11px;font:700 11.5px inherit;cursor:pointer">Sign out</button>'
-      +'</div>';
+      +'<div style="display:flex;gap:8px">'
+      +  stat(season.toLocaleString(),'Season pts')
+      +  stat(nights,'Game nights')
+      +  stat(ciBest?('🔥'+ciBest):'—','Best Call It')
+      +'</div>'
+      +'<p class="sub" style="font-size:11.5px;margin:10px 0 0">Your handle, card and points follow you to any phone.</p>';
     w.style.display='block';
   } else { w.style.display='none'; }
 }
@@ -7440,7 +7463,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.12';
+const STATS_BUILD='2026-08-10-g5-tor-atl.13';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
