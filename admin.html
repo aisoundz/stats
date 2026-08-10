@@ -249,6 +249,18 @@
     <!-- ---------- TAB 2: RUN ---------- -->
     <section id="t-run" class="hide">
       <div id="runBanner"></div>
+      <!-- RESET. A dry run writes to the same night document a real game
+           uses, so a rehearsal leaves rounds pushed and revealed and the
+           real night cannot start. There was no way to undo that except
+           by hand in the Firebase console, which is not a thing anyone
+           should be doing forty minutes before tip. -->
+      <div id="resetBox" class="card" style="border-color:#4a2430;padding:12px 14px;margin-bottom:12px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between">
+          <div><b style="font-size:13.5px">Rehearsed on this night?</b>
+            <div class="sub" style="font-size:12px;margin-top:3px">Clears every pushed round, every saved answer and every Call It for <b id="resetNight"></b>, so tonight starts clean. Players and the room stay.</div></div>
+          <button class="btn ghost" id="resetBtn" onclick="resetNight()" style="flex:0 0 auto;color:var(--red);border-color:#4a2430;white-space:nowrap">🧹 Clear the test data</button>
+        </div>
+      </div>
 
       <!-- ---------- the live scoreboard ----------
            This is the answer to "the app goes dark for eleven minutes".
@@ -375,7 +387,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-10-admin.15';
+window.ADMIN_BUILD='2026-08-10-admin.16';
 
 /* =====================================================================
    STATS — Control Room
@@ -599,6 +611,52 @@ let subsUnsub = null;
 /* ---------------- tiny helpers ---------------- */
 const $ = id => document.getElementById(id);
 let toastT = null;
+/* Delete a collection the long way. Firestore has no client-side
+   "delete everything under here", and the subcollections matter: a round
+   document with orphaned subs still has the answers a rehearsal wrote. */
+async function wipeCol(pathParts){
+  const {F, db} = FB;
+  let n=0;
+  try{
+    const snap = await F.getDocs(F.collection(db, ...pathParts));
+    for(const d of snap.docs){ await F.deleteDoc(d.ref); n++; }
+  }catch(e){}
+  return n;
+}
+async function resetNight(){
+  if(!FB || !user){ toast('Sign in first.'); return; }
+  const cfg = nightCfg(night);
+  if(!confirm(
+    `Clear the test data for ${night}?\n\n` +
+    `This deletes every pushed round, every answer players saved, every timing ` +
+    `stamp and every Call It question for this night.\n\n` +
+    `It does NOT touch players, the trash-talk room, or any other night.\n\n` +
+    `Do this only if you rehearsed on tonight's night id and want a clean start.`)) return;
+  const btn=$('resetBtn'); if(btn){ btn.disabled=true; btn.textContent='Clearing…'; }
+  try{
+    const {F, db} = FB;
+    let rounds=0, subs=0, times=0, ci=0;
+    const rs = await F.getDocs(F.collection(db,'nights',night,'rounds'));
+    for(const d of rs.docs){
+      subs  += await wipeCol(['nights',night,'rounds',d.id,'subs']);
+      times += await wipeCol(['nights',night,'rounds',d.id,'times']);
+      await F.deleteDoc(d.ref); rounds++;
+    }
+    ci = await wipeCol(['nights',night,'callit']);
+    /* The live-round pointer lives on the night doc itself. Leaving it set
+       would keep the Control Room believing a quarter is still open. */
+    try{ await F.setDoc(F.doc(db,'nights',night), { live:F.deleteField(), liveIdx:F.deleteField() }, {merge:true}); }catch(e){}
+    try{ closingRound=null; }catch(e){}
+    toast(`Cleared: ${rounds} round(s), ${subs} answer set(s), ${times} timing doc(s), ${ci} Call It.`);
+    try{ onNightChange(); }catch(e){}
+  }catch(e){
+    toast('Could not clear it all: ' + ((e&&e.message)||e) + ' — try once more.');
+  }
+  if(btn){ btn.disabled=false; btn.textContent='🧹 Clear the test data'; }
+}
+
+try{ window.resetNight = function(){ return resetNight(); }; }catch(e){}
+try{ setTimeout(function(){ try{ const rn=document.getElementById('resetNight'); if(rn && !rn.textContent) rn.textContent=night; }catch(_){ } }, 900); }catch(e){}
 function toast(msg){
   const t=$('toast'); t.textContent=msg; t.classList.add('show');
   clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'), 2800);
@@ -835,6 +893,12 @@ function initUI(){
 function onNightChange(){
   const cfg = nightCfg(night);
   nightDraft(night);
+  /* Wire the reset here rather than at boot: this runs on every night
+     switch, and the label has to name the night it will actually clear.
+     A destructive button that shows the wrong target is a trap. */
+  try{
+    const rn=$('resetNight'); if(rn) rn.textContent=night;
+  }catch(e){}
   roundIdx = 0;
   $('roundSel').innerHTML = cfg.tags.map((t,i)=>
     `<option value="${i}">${esc(cfg.tags[i])} — ${esc(cfg.names[i])}</option>`).join('');
