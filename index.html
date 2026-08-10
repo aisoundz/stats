@@ -5826,9 +5826,13 @@ function ensureCiCard(){
   if(document.getElementById('ciCard')) return;
   var css=document.createElement('style');
   css.textContent =
-    '#ciCard{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;width:min(430px,94vw);z-index:8400;'+
+    '#ciCard{position:fixed;left:50%;bottom:90px;width:min(430px,94vw);z-index:8400;'+
+    'transform:translateX(-50%) translateY(0);animation:ciUp .34s cubic-bezier(.16,1,.3,1);'+
       'background:#161d2e;border:1px solid #2b3a5e;'+
       'border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.55);padding:14px 15px;display:none;font-family:inherit}'+
+    '@keyframes ciUp{from{transform:translateX(-50%) translateY(24px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}'+
+    '#ciCard .cilockbar{height:4px;border-radius:99px;background:#22304d;overflow:hidden;margin-bottom:11px}'+
+    '#ciCard .cilockbar i{display:block;height:100%;background:linear-gradient(92deg,#28e0d0,#4d86ff);width:100%;transform-origin:left}'+
     '#ciCard .cihead{font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#28e0d0;margin-bottom:6px}'+
     '#ciCard .ciq{font-weight:800;font-size:17px;line-height:1.25;color:#eef2fb;margin-bottom:11px}'+
     '#ciCard .ciopts{display:flex;gap:8px;flex-wrap:wrap}'+
@@ -5863,9 +5867,35 @@ function ciPick(q,v){
   try{ if(window.SB&&SB.callItPick) SB.callItPick(q.qid,v); }catch(e){}
   renderCiCard(q);
 }
+/* ---- WHERE CALL IT IS ALLOWED TO EXIST -------------------------------
+   The rule, learned the hard way from a screenshot with two live questions
+   stacked on one screen: Call It NEVER shares space with a quarter
+   question. That question is the scoring task, it is on a 20-second clock,
+   and a second prompt underneath it is not a feature — it is a way to lose
+   the round you were actually being paid for.
+
+   So Call It is queued, not dropped. Arrive during a quarter question and
+   it waits; the moment the player is back in dead air — lobby, break — it
+   slides up, takes its six seconds, and gets out of the way. Which is also
+   when a real Call It belongs: the timeout, the free-throw walk-up, the
+   moment the broadcast itself pauses.                                    */
+var CI_BLOCKED=['live','predict','name','join','rules','final','tally'];
+function ciScreenOk(){
+  var scr=''; try{ scr=(S&&S.screen)||''; }catch(_){}
+  return CI_BLOCKED.indexOf(scr)<0;
+}
+function ciFlush(){
+  if(!PCI.pending) return;
+  var q=PCI.pending;
+  if(!ciScreenOk()) return;
+  PCI.pending=null;
+  try{ renderCiCard(q); }catch(_){}
+}
 function renderCiCard(q){
   var c=document.getElementById('ciCard'); if(!c) return;
   if(PCI.muted){ c.style.display='none'; return; }
+  // Not now — hold it, and let ciFlush bring it back when the coast clears.
+  if(!ciScreenOk()){ PCI.pending=q; c.style.display='none'; return; }
   var st=q.state||'open';
   if(st==='void'){ ciShow('<div class="cihead">🎯 Call It</div><div class="cibody">No result on that one — no harm done.</div>'); ciHideSoon(3500); return; }
   if(st==='resolved'){
@@ -5891,7 +5921,9 @@ function renderCiCard(q){
   }).join('');
   var status = locked ? (pick!=null?('Locked: '+esc(ciLabel(q,pick))+' — waiting on the play…'):'Locked — waiting on the play…')
                       : 'Tap fast — locks in a few seconds';
-  ciShow('<div class="cihead">🎯 Call It'+(pick!=null?' · locked':'')+'</div>'+
+  var msLeft=Math.max(0,locksMs-now), pctLeft=Math.max(0,Math.min(100,(msLeft/(q.locksMs||6000))*100));
+  ciShow((locked?'':'<div class="cilockbar"><i style="width:'+pctLeft+'%;transition:width .25s linear"></i></div>')+
+         '<div class="cihead">🎯 Call It'+(pick!=null?' · locked':'')+'</div>'+
          '<div class="ciq">'+esc(q.prompt)+'</div>'+
          '<div class="ciopts">'+opts+'</div>'+
          '<div class="cistat">'+status+(PCI.streak?(' · 🔥 '+PCI.streak):'')+'</div>'+
@@ -7609,7 +7641,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.21';
+const STATS_BUILD='2026-08-10-g5-tor-atl.22';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
@@ -7688,6 +7720,7 @@ function paintNav(active){
   try{
     const ci=document.getElementById('ciCard');
     if(ci && ['landing','name','predict','rules','join'].indexOf(scr)>=0) ci.style.display='none';
+    if(typeof ciFlush==='function') setTimeout(ciFlush, 420);
   }catch(_){}
   try{ document.body.classList.toggle('hasnav', !hide); }catch(_){}
   if(!active){
