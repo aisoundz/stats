@@ -938,6 +938,7 @@
     <p class="sub" id="predSub">Lock these in before tip-off. Bonus points if you nail the exact number.</p>
     <div class="card" id="predCard"></div>
     <button class="btn teal" id="predBtn" style="display:none" disabled onclick="lockPredictions()">Lock it in — go to tip-off 🔒</button>
+    <div id="pdBar"></div>
     <p class="foot" id="predFoot">You can't change picks once the game starts.</p>
   </section>
 
@@ -3604,10 +3605,20 @@ function buildPred(){
       invisible, and grey for a reason you could not see. Now it is here,
       under your own progress, and when the card isn't finished it does not
       sulk: it says how many are left and takes you to the next blank one. */
-   +'<div class="pdsummary"><span>📋 Your card so far</span><b>'+doneN+' / '+preds.length+' locked</b></div>'
-   +'<button type="button" class="pdlock'+(doneN>=preds.length?' ready':'')+'" id="pdLock">'
-   +  (doneN>=preds.length ? 'Lock my card →' : ('Finish your card — '+(preds.length-doneN)+' left →'))
-   +'</button>';
+   ;
+  /* THE ACTION BAR IS PINNED. It was inside the scrolling card, which put
+     it below the fold on the very screen where it matters — you could be
+     on the last question, holding a finished pick, with a dead "Next" and
+     no visible way on. It now floats above everything on this screen, so
+     the way forward is never further than a thumb. */
+  const bar=document.getElementById('pdBar');
+  if(bar){
+    bar.innerHTML=
+      '<div class="pdsummary"><span>📋 Your card so far</span><b>'+doneN+' / '+preds.length+' locked</b></div>'
+     +'<button type="button" class="pdlock'+(doneN>=preds.length?' ready':'')+'" id="pdLock">'
+     +  (doneN>=preds.length ? 'Lock my card →' : ('Finish your card — '+(preds.length-doneN)+' left →'))
+     +'</button>';
+  }
 
   Array.prototype.forEach.call(c.querySelectorAll('.pdopt'), function(b){
     b.onclick=function(){ predPick(p.id, b.getAttribute('data-pd')); };
@@ -3618,14 +3629,7 @@ function buildPred(){
   Array.prototype.forEach.call(c.querySelectorAll('[data-pdmv]'), function(b){
     b.onclick=function(){ movePred(p.id, Number(b.getAttribute('data-pdmv'))); };
   });
-  const lk=c.querySelector('#pdLock');
-  /* The moment the sixth pick lands, bring the lock to the player rather
-     than making them hunt for it below the fold. Once only — re-scrolling
-     while somebody is editing would be its own kind of rude. */
-  if(doneN>=preds.length){
-    if(!PD.scrolled){ PD.scrolled=true;
-      setTimeout(function(){ try{ lk.scrollIntoView({behavior:'smooth',block:'center'}); }catch(_){} }, 260); }
-  } else { PD.scrolled=false; }
+  const lk=document.getElementById('pdLock');
   if(lk) lk.onclick=function(){
     const miss=L.findIndex(function(x){ return !S.predChoices[x.id]; });
     if(miss>=0){ PD.i=miss; buildPred();
@@ -7595,7 +7599,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.17';
+const STATS_BUILD='2026-08-10-g5-tor-atl.18';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
@@ -7676,6 +7680,8 @@ function paintNav(active){
   let scr=''; try{ scr=S.screen||''; }catch(_){}
   const hide = NAV_HIDE_ON.indexOf(scr)>=0;
   bar.style.display = hide ? 'none' : 'block';
+  // The pick-slip's action bar belongs to exactly one screen.
+  try{ const pb=document.getElementById('pdBar'); if(pb) pb.style.display=(scr==='predict')?'block':'none'; }catch(_){}
   try{ document.body.classList.toggle('hasnav', !hide); }catch(_){}
   if(!active){
     active = (scr==='lobby') ? 'play' : (scr==='landing' ? 'home' : '');
@@ -7768,6 +7774,12 @@ body.hasnav{padding-bottom:74px}
   font:900 17px/1 inherit;background:#1b2740;color:#6c7a99;transition:filter .15s}
 .pdlock.ready{background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e}
 .pdlock:active{filter:brightness(.94)}
+
+#pdBar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:8600;padding:11px 14px calc(12px + env(safe-area-inset-bottom,0px));
+  background:rgba(10,14,23,.96);backdrop-filter:blur(14px);border-top:1px solid #1e2740}
+#pdBar .pdsummary{margin-top:0}
+#pdBar .pdlock{margin-top:9px}
+#s-predict.active{padding-bottom:190px}
 </style>
 </body>
 </html>
