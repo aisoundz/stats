@@ -955,6 +955,15 @@
     <div id="gtIdle" style="margin-top:14px"></div>
   </section>
 
+  <!-- STATS — the reason this product is not a betting app. Everything on
+       this screen is pulled from the live feed: nothing typed, nothing
+       invented. Before tip it is a scouting sheet, during the game it is a
+       box score, and it always shows how your own card is doing. -->
+  <section class="screen" id="s-stats">
+    <div class="brand" style="margin-top:30px"><span class="logo" style="letter-spacing:1.2px;font-size:21px">STATS</span></div>
+    <div id="stBody" style="margin-top:16px"></div>
+  </section>
+
   <section class="screen" id="s-me">
     <div class="brand" style="margin-top:34px"><span class="logo" style="letter-spacing:1.2px;font-size:23px">STATS GAMETIME</span></div>
     <div id="meBody" style="margin-top:22px"></div>
@@ -2818,7 +2827,7 @@ const league={name:"The Barbershop",members:[
 ]};
 
 /* ---------------- NAV ---------------- */
-const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-lobby",me:"s-me",gametime:"s-gametime",
+const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-lobby",me:"s-me",gametime:"s-gametime",stats:"s-stats",
   live:"s-live",break:"s-break",final:"s-final",host:"s-host",league:"s-league",plus:"s-plus",
   rules:"s-rules",review:"s-review",predreview:"s-predreview",tally:"s-tally",
   join:"s-join"};
@@ -2910,7 +2919,7 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
   document.getElementById('app').scrollTop=0; window.scrollTo(0,0);
   S.screen=k; pendingBack=false;
   // where ← goes from each screen; null = no back button
-  const BACKMAP={landing:null,name:'landing',predict:'name',lobby:'landing',me:'landing',gametime:'landing',
+  const BACKMAP={landing:null,name:'landing',predict:'name',lobby:'landing',me:'landing',gametime:'landing',stats:'landing',
     live:'lobby',break:'lobby',review:'lobby',predreview:'lobby',
     final:null,rules:'landing',league:'final',plus:'final',host:'final',tally:'final',
     join:'landing'};
@@ -5848,9 +5857,126 @@ function startCallItWatch(){
    same card the live game uses: same look, same lock, same reveal,
    same streak flame. Nothing here touches the network; the only thing
    the guard below skips is the board write, which is live-night only. */
+/* ============ THE CALL IT BANK, BUILT FROM THE NUMBERS ==============
+   The old practice questions were "how many quarters are in a game",
+   which teaches the button and insults the player. Every question below
+   is generated from the live league feed at the moment it is asked, so
+   the answer is a fact and the reveal can cite it.
+
+   Two moods, chosen by whether a box score exists yet:
+
+     BEFORE TIP — scouting. Real season numbers for the two teams on the
+     floor tonight. These are not filler: a player who answers five of
+     them has just done the homework their prediction card needs.
+
+     DURING THE GAME — retrospective. What has already happened, which is
+     the house rule for Call It: never ask a player to predict something
+     they cannot see, and never ask something the host can't settle in
+     three seconds.
+
+   Every generator returns null when its data is missing rather than
+   inventing a number. A bank that shrinks is fine; a bank that lies is
+   not.                                                                */
+function ciTeamQ(id,prompt,label,dir,fmt){
+  var A=GS.teams[0], B=GS.teams[1]; if(!A||!B) return null;
+  var a=gsNum(A.stat(label)), b=gsNum(B.stat(label)); if(a==null||b==null||a===b) return null;
+  var aWin = dir==='lo' ? a<b : a>b;
+  return { qid:id, prompt:prompt,
+    options:[{k:A.ab,v:'a'},{k:B.ab,v:'b'}], answer:aWin?'a':'b',
+    resolveText:(fmt||function(x,y){return A.ab+' '+x+', '+B.ab+' '+y+'.';})(gsFmt(label,A.stat(label)),gsFmt(label,B.stat(label))) };
+}
+function ciPreBank(){
+  var out=[], A=GS.teams[0], B=GS.teams[1]; if(!A||!B) return out;
+  [ ['ci-ppg','Scouting — which side scores more per game this season?','Points Per Game','hi'],
+    ['ci-pa','Which defense gives up fewer points a night?','Points Against','lo'],
+    ['ci-fg','Better shooting team from the field this season?','Field Goal %','hi'],
+    ['ci-3p','Who shoots the better three-ball?','Three Point %','hi'],
+    ['ci-reb','Who wins the glass — more rebounds a game?','Rebounds Per Game','hi'],
+    ['ci-ast','More assists a game — who moves the ball?','Assists Per Game','hi'],
+    ['ci-stl','Which side gets its hands on more steals?','Steals Per Game','hi'],
+    ['ci-to','Who takes better care of it — fewer turnovers?','Total Turnovers Per Game','lo']
+  ].forEach(function(r){ var q=ciTeamQ(r[0],r[1],r[2],r[3]); if(q) out.push(q); });
+  // Last ten is a record string, so it needs its own comparison.
+  (function(){
+    var a=String(A.stat('Last Ten Games')||''), b=String(B.stat('Last Ten Games')||'');
+    var wa=gsNum(a.split('-')[0]), wb=gsNum(b.split('-')[0]);
+    if(wa==null||wb==null||wa===wb) return;
+    out.push({ qid:'ci-l10', prompt:'Form check — who has been hotter over the last ten?',
+      options:[{k:A.ab,v:'a'},{k:B.ab,v:'b'}], answer:wa>wb?'a':'b',
+      resolveText:A.ab+' are '+a+' in their last ten, '+B.ab+' are '+b+'.' });
+  })();
+  // A threshold question on each team's actual scoring leader.
+  GS.leaders.forEach(function(l,ix){
+    var c=(l.cats||[]).find(function(x){ return /point/i.test(x.label); }); if(!c) return;
+    var v=gsNum(c.val); if(v==null) return;
+    var line=Math.round(v); if(line===v) line=v-0.5;
+    out.push({ qid:'ci-ldr'+ix, prompt:c.who+' leads '+l.ab+' in scoring. Over or under '+line+' a night?',
+      options:[{k:'Over '+line,v:'o'},{k:'Under '+line,v:'u'}], answer:v>line?'o':'u',
+      resolveText:c.who+' is averaging '+c.val+'. That is the name your points pick probably wants.' });
+  });
+  return out;
+}
+function ciLiveBank(){
+  var out=[], A=GS.teams[0], B=GS.teams[1]; if(!A||!B) return out;
+  var K=sportCfg().box;
+  var roster=Object.keys(GS.box).map(function(nm){
+    var r=GS.box[nm];
+    return {nm:nm,t:r.team,pts:gsNum(r[K.pts]),reb:gsNum(r[K.reb]),ast:gsNum(r[K.ast])};
+  }).filter(function(x){ return x.pts!=null; });
+  // Scoreboard
+  if(A.score!=null && B.score!=null && A.score!==B.score){
+    var hi=Math.max(A.score,B.score), lo=Math.min(A.score,B.score), mg=hi-lo;
+    out.push({ qid:'ci-ahead', prompt:'Scoreboard check — who is ahead right now?',
+      options:[{k:A.ab,v:'a'},{k:B.ab,v:'b'}], answer:A.score>B.score?'a':'b',
+      resolveText:(A.score>B.score?A.ab:B.ab)+' lead it '+hi+'–'+lo+'.' });
+    out.push({ qid:'ci-margin', prompt:'How close is it — is the lead under 5?',
+      options:[{k:'Under 5',v:'u'},{k:'5 or more',v:'o'}], answer:mg<5?'u':'o',
+      resolveText:'It is a '+mg+'-point game.' });
+  }
+  // Top scorer, two real candidates
+  var byP=roster.slice().sort(function(x,y){return y.pts-x.pts;});
+  if(byP.length>1 && byP[0].pts>byP[1].pts){
+    out.push({ qid:'ci-top', prompt:'Who is leading all scorers right now?',
+      options:[{k:byP[0].nm,v:'a'},{k:byP[1].nm,v:'b'}], answer:'a',
+      resolveText:byP[0].nm+' has '+byP[0].pts+'. '+byP[1].nm+' is next on '+byP[1].pts+'.' });
+    var line=Math.max(1,Math.round(byP[0].pts)-0.5);
+    out.push({ qid:'ci-topline', prompt:byP[0].nm+' — over or under '+line+' points so far?',
+      options:[{k:'Over '+line,v:'o'},{k:'Under '+line,v:'u'}], answer:byP[0].pts>line?'o':'u',
+      resolveText:byP[0].nm+' is on '+byP[0].pts+'.' });
+  }
+  var byR=roster.slice().sort(function(x,y){return (y.reb||0)-(x.reb||0);});
+  if(byR.length>1 && (byR[0].reb||0)>(byR[1].reb||0)){
+    out.push({ qid:'ci-topreb', prompt:'Who is winning the glass — most rebounds on the floor?',
+      options:[{k:byR[0].nm,v:'a'},{k:byR[1].nm,v:'b'}], answer:'a',
+      resolveText:byR[0].nm+' has '+byR[0].reb+' boards to '+byR[1].nm+'’s '+(byR[1].reb||0)+'.' });
+  }
+  var byA=roster.slice().sort(function(x,y){return (y.ast||0)-(x.ast||0);});
+  if(byA.length>1 && (byA[0].ast||0)>(byA[1].ast||0)){
+    out.push({ qid:'ci-topast', prompt:'Who has dished the most assists so far?',
+      options:[{k:byA[0].nm,v:'a'},{k:byA[1].nm,v:'b'}], answer:'a',
+      resolveText:byA[0].nm+' has '+byA[0].ast+'.' });
+  }
+  // Team-level, this game
+  [ ['ci-lfg','Which team is shooting it better from the field so far?','Field Goal %','hi'],
+    ['ci-l3p','Better from three so far — who?','Three Point %','hi'],
+    ['ci-lreb','Which side has more rebounds so far?','Rebounds','hi'],
+    ['ci-lto','Who has been looser with the ball — more turnovers?','Turnovers','hi'],
+    ['ci-last','More assists so far?','Assists','hi']
+  ].forEach(function(r){ var q=ciTeamQ(r[0],r[1],r[2],r[3]); if(q) out.push(q); });
+  return out;
+}
+function ciBank(){
+  if(!GS.ok) return [];
+  var b = gsInGame() ? ciLiveBank() : ciPreBank();
+  // Shuffle so a player running five in a row does not get the same five.
+  for(var i=b.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=b[i]; b[i]=b[j]; b[j]=t; }
+  return b;
+}
 function demoCiSet(){
   let H='Atlanta Dream', A='Toronto Tempo';
   try{ H=(GAME&&GAME.homeName)||H; A=(GAME&&GAME.awayName)||A; }catch(_){}
+  // Real questions whenever the feed has given us anything to ask about.
+  try{ var real=ciBank(); if(real.length) return real; }catch(_){}
   /* Both questions are about what HAS happened and are resolved from the
      real scoreboard the app is already reading — not invented, not a
      prediction the player can't see. A demo question you cannot verify
@@ -7755,7 +7881,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.25';
+const STATS_BUILD='2026-08-10-g5-tor-atl.26';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
@@ -7807,6 +7933,7 @@ function navGo(tab){
     if(tab!=='crew'){ try{ closeTalk(); }catch(_){} }
     if(tab==='home')  { go('landing'); }
     else if(tab==='gametime'){ renderGametime(); go('gametime'); }
+    else if(tab==='stats'){ go('stats'); renderStats(); loadGameStats(true).then(function(){ if(S.screen==='stats') renderStats(); }); }
     else if(tab==='board'){
       if(S.mode==='live'){ go('lobby'); try{ refreshRoom(); }catch(_){} }
       else { go('landing'); toast('The board fills up once a game night starts.'); }
@@ -7833,7 +7960,7 @@ function paintNav(active){
   }catch(_){}
   try{ document.body.classList.toggle('hasnav', !hide); }catch(_){}
   if(!active){
-    active = (scr==='gametime') ? 'gametime' : (scr==='landing' ? 'home' : (scr==='me' ? 'me' : (scr==='lobby' ? 'gametime' : '')));
+    active = (scr==='gametime') ? 'gametime' : (scr==='stats' ? 'stats' : (scr==='landing' ? 'home' : (scr==='me' ? 'me' : (scr==='lobby' ? 'gametime' : ''))));
   }
   try{
     bar.querySelectorAll('.navb').forEach(function(b){
@@ -7898,6 +8025,199 @@ function renderMe(){
    the top, a slot in the middle where live Call It prompts land, and an
    honest line about what happens next. Nothing here scores anything —
    it is a place to be, which is exactly what was missing.             */
+/* ==================== THE STATS ENGINE ==============================
+   This is the part that makes STATS GAMETIME a stats product and not a
+   betting product. One fetch of the ESPN summary feed, parsed into a
+   normalised shape, and then used in three places at once:
+
+     · the Stats tab            (scouting sheet before tip, box score during)
+     · your card tracked live   (your picks vs the real leaders, per category)
+     · the Call It bank         (questions built FROM the numbers, so every
+                                 one of them has a verifiable answer)
+
+   The normalised shape is the whole point. Nothing downstream knows about
+   ESPN's JSON — it reads GS.teams[i].stat('Points Per Game'). The day this
+   becomes an NFL night, only SPORT_CFG and the parser change; the Stats
+   tab, the card tracker and the question bank keep working.            */
+var SPORT_CFG={
+  wnba:{ path:'basketball/wnba', unit:'pts',
+         pre:[['Points Per Game','Points a game','hi'],['Points Against','Points allowed','lo'],
+              ['Field Goal %','Field goal %','hi'],['Three Point %','Three-point %','hi'],
+              ['Rebounds Per Game','Rebounds a game','hi'],['Assists Per Game','Assists a game','hi'],
+              ['Steals Per Game','Steals a game','hi'],['Total Turnovers Per Game','Turnovers a game','lo']],
+         live:[['Field Goal %','Field goal %','hi'],['Three Point %','Three-point %','hi'],
+               ['Rebounds','Rebounds','hi'],['Assists','Assists','hi'],
+               ['Steals','Steals','hi'],['Turnovers','Turnovers','lo']],
+         box:{pts:'PTS',reb:'REB',ast:'AST',stl:'STL',blk:'BLK'} },
+  nba:{ path:'basketball/nba', unit:'pts', pre:null, live:null, box:{pts:'PTS',reb:'REB',ast:'AST',stl:'STL',blk:'BLK'} },
+  nfl:{ path:'football/nfl', unit:'pts', pre:null, live:null, box:{} }
+};
+function sportCfg(){
+  var k='wnba'; try{ k=(GAME&&GAME.sport)||'wnba'; }catch(_){}
+  var c=SPORT_CFG[k]||SPORT_CFG.wnba;
+  if(!c.pre) c=Object.assign({},SPORT_CFG.wnba,{path:c.path,box:c.box});
+  return c;
+}
+/* `fails` and `lastTry` exist because the first version of this screen would
+   re-render on every failed fetch and immediately fetch again — a hot retry
+   loop on any device with no signal, which is the exact moment you least
+   want the radio hammered. Failures now back off and the screen offers a
+   button instead of spinning forever. */
+var GS={ok:false,at:0,loading:false,state:'pre',teams:[],leaders:[],box:{},err:'',fails:0,lastTry:0};
+function gsFmt(label,v){ if(v==null) return ''; var s=String(v); return (/%/.test(label||'') && !/%$/.test(s)) ? s+'%' : s; }
+function gsNum(v){ var n=parseFloat(String(v==null?'':v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?null:n; }
+async function loadGameStats(force){
+  if(GS.loading) return GS;
+  if(!force && GS.ok && Date.now()-GS.at<25000) return GS;
+  // Exponential-ish backoff after failures: 3s, 6s, 12s, 24s, capped at 60s.
+  if(!force && GS.fails>0 && Date.now()-GS.lastTry < Math.min(60000, 3000*Math.pow(2,GS.fails-1))) return GS;
+  var ev=null; try{ ev=(typeof GAME!=='undefined')&&GAME.espnEvent; }catch(_){}
+  if(!ev){ GS.err='no event'; GS.fails++; GS.lastTry=Date.now(); return GS; }
+  GS.loading=true; GS.lastTry=Date.now();
+  try{
+    var j=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sportCfg().path+'/summary?event='+ev+'&_='+Date.now()).then(function(r){return r.json();});
+    var bs=j.boxscore||{}, comp=(j.header&&j.header.competitions&&j.header.competitions[0])||{};
+    var stat=(comp.status&&comp.status.type)||{};
+    var teams=(bs.teams||[]).map(function(t){
+      var m={}; (t.statistics||[]).forEach(function(s){ if(m[s.label]==null) m[s.label]=s.displayValue; });
+      var c=(comp.competitors||[]).find(function(x){ return x.team&&t.team&&x.team.id===t.team.id; })||{};
+      return { id:(t.team&&t.team.id)||'', ab:(t.team&&t.team.abbreviation)||'', name:(t.team&&t.team.displayName)||'',
+               home:c.homeAway==='home', score:c.score==null?null:Number(c.score),
+               rec:((c.records||[])[0]||{}).summary||'', m:m,
+               stat:function(k){ return this.m[k]; } };
+    });
+    // Per-player rows, in-game only. Keyed by display name for the card tracker.
+    var box={};
+    (bs.players||[]).forEach(function(g){
+      var s=(g.statistics||[])[0]; if(!s) return;
+      var names=s.names||[];
+      (s.athletes||[]).forEach(function(a){
+        var nm=(a.athlete&&a.athlete.displayName)||''; if(!nm) return;
+        var row={team:(g.team&&g.team.abbreviation)||''};
+        names.forEach(function(n,ix){ row[n]=(a.stats||[])[ix]; });
+        box[nm]=row;
+      });
+    });
+    GS.teams=teams; GS.box=box;
+    GS.leaders=(j.leaders||[]).map(function(l){
+      return { ab:(l.team&&l.team.abbreviation)||'', cats:(l.leaders||[]).map(function(c){
+        var top=(c.leaders||[])[0]||{};
+        return { label:c.displayName||c.name, who:(top.athlete&&top.athlete.displayName)||'', val:top.displayValue||'' };
+      }).filter(function(x){return x.who;}) };
+    });
+    GS.state=stat.state||'pre'; GS.detail=stat.shortDetail||stat.detail||'';
+    GS.ok=teams.length>0; GS.at=Date.now();
+    if(GS.ok){ GS.err=''; GS.fails=0; } else { GS.err='no teams in feed'; GS.fails++; }
+  }catch(e){ GS.err=e.message||'feed unavailable'; GS.fails++; }
+  GS.loading=false;
+  return GS;
+}
+function gsInGame(){ return GS.ok && Object.keys(GS.box).length>0; }
+function gsRows(){ var c=sportCfg(); return (gsInGame()? c.live : c.pre)||[]; }
+/* Two bars, one row, better side lit. `dir` says whether high or low wins,
+   which is the only reason a turnover row doesn't read backwards. */
+function gsBar(label,a,b,dir){
+  var na=gsNum(a), nb=gsNum(b);
+  if(na==null||nb==null) return '';
+  var max=Math.max(na,nb)||1;
+  var aw=Math.round((na/max)*100), bw=Math.round((nb/max)*100);
+  var aWin = dir==='lo' ? na<nb : na>nb, bWin = dir==='lo' ? nb<na : nb>na;
+  var C='#28e0d0', D='#33405e';
+  return '<div class="stRow"><div class="stV'+(aWin?' win':'')+'">'+esc(gsFmt(label,a))+'</div>'
+    + '<div class="stMid"><div class="stLbl">'+esc(label)+'</div>'
+    +   '<div class="stBars"><div class="stB l"><i style="width:'+aw+'%;background:'+(aWin?C:D)+'"></i></div>'
+    +     '<div class="stB r"><i style="width:'+bw+'%;background:'+(bWin?C:D)+'"></i></div></div></div>'
+    + '<div class="stV'+(bWin?' win':'')+'">'+esc(gsFmt(label,b))+'</div></div>';
+}
+function renderStats(){
+  var el=document.getElementById('stBody'); if(!el) return;
+  if(!GS.ok){
+    var dead=GS.fails>=2;
+    el.innerHTML='<div class="card center" style="padding:24px"><div style="font-size:26px">📈</div>'
+      +'<b style="font-size:15px">'+(dead?'Can’t reach the league feed':'Pulling the numbers…')+'</b>'
+      +'<p class="sub" style="font-size:12.5px;margin:8px 0 12px">'
+      +(dead?'Nothing here is ever typed in by hand, so rather than show you a made-up number this screen waits. Everything else in the app still works.':'Live from the league feed. One moment.')+'</p>'
+      +(dead?'<button type="button" id="stRetry" class="pdlock" style="max-width:260px;margin:0 auto;background:#16233b;color:#93a0bd;font-size:14px;padding:13px">Try again</button>':'')
+      +'</div>';
+    var rb=document.getElementById('stRetry');
+    if(rb) rb.onclick=function(){ GS.fails=0; renderStats(); };
+    if(!dead && !GS.loading) loadGameStats().then(function(){ if(S.screen==='stats') renderStats(); });
+    return;
+  }
+  var A=GS.teams[0], B=GS.teams[1], live=gsInGame(), out='';
+  // Scoreline / matchup header
+  out+='<div class="card" style="padding:14px 16px"><div style="display:flex;align-items:center;justify-content:space-between">'
+    + '<div style="flex:1;text-align:center"><div class="stTeam">'+esc(A.ab)+'</div><div class="stScore">'+(A.score==null?'–':A.score)+'</div><div class="stRec">'+esc(A.rec||'')+'</div></div>'
+    + '<div style="flex:0 0 auto;padding:0 10px"><span class="pill">'+esc(GS.detail||(live?'LIVE':'Not started'))+'</span></div>'
+    + '<div style="flex:1;text-align:center"><div class="stTeam">'+esc(B.ab)+'</div><div class="stScore">'+(B.score==null?'–':B.score)+'</div><div class="stRec">'+esc(B.rec||'')+'</div></div>'
+    + '</div></div>';
+
+  // ---- YOUR CARD, LIVE. The single most STATS-GAMETIME thing on the app:
+  // your six picks racing the real box score, category by category.
+  try{
+    var mine=preds.filter(function(p){ return S.predChoices[p.id] && p.id!=='winner'; });
+    if(live && mine.length){
+      var cfg=sportCfg().box;
+      var KEY={pts:cfg.pts,reb:cfg.reb,ast:cfg.ast,stl:cfg.stl,blk:cfg.blk};
+      var rows=mine.map(function(p){
+        var k=KEY[p.id]; if(!k) return '';
+        var who=String(S.predChoices[p.id]);
+        var mineRow=GS.box[who];
+        var mineVal=mineRow?gsNum(mineRow[k]):null;
+        // Who actually leads this category right now, across everyone on the floor.
+        var bestN='', bestV=-1;
+        Object.keys(GS.box).forEach(function(nm){ var v=gsNum(GS.box[nm][k]); if(v!=null&&v>bestV){bestV=v;bestN=nm;} });
+        var ahead = mineVal!=null && bestV>=0 && mineVal>=bestV;
+        return '<div class="stPickRow">'
+          + '<div class="stPickCat">'+esc(p.label)+'</div>'
+          + '<div class="stPickMine'+(ahead?' lead':'')+'">'+esc(who)+' <b>'+(mineVal==null?'–':mineVal)+'</b></div>'
+          + '<div class="stPickLead">'+(ahead?'you’re on top':('leader '+esc(bestN)+' '+(bestV<0?'–':bestV)))+'</div>'
+          + '</div>';
+      }).join('');
+      if(rows) out+='<div class="card" style="padding:14px 16px;margin-top:12px">'
+        + '<div class="stHd">YOUR CARD, LIVE</div>'+rows
+        + '<div class="sub" style="font-size:11.5px;margin-top:8px">Green means your pick is currently leading that category.</div></div>';
+    }
+  }catch(_){}
+
+  // ---- Head to head
+  var bars=gsRows().map(function(r){ return gsBar(r[1], A.stat(r[0]), B.stat(r[0]), r[2]); }).join('');
+  if(bars) out+='<div class="card" style="padding:14px 16px;margin-top:12px">'
+    + '<div class="stHd">'+(live?'THIS GAME':'THIS SEASON')+' · '+esc(A.ab)+' vs '+esc(B.ab)+'</div>'+bars+'</div>';
+
+  // ---- Form, pre-game only: streak and last ten are scouting, not box score.
+  if(!live){
+    var form=[['Streak','Streak'],['Last Ten Games','Last 10']].map(function(r){
+      var a=A.stat(r[0]), b=B.stat(r[0]); if(a==null||b==null) return '';
+      return '<div class="stRow"><div class="stV">'+esc(String(a))+'</div><div class="stMid"><div class="stLbl">'+esc(r[1])+'</div></div><div class="stV">'+esc(String(b))+'</div></div>';
+    }).join('');
+    if(form) out+='<div class="card" style="padding:14px 16px;margin-top:12px"><div class="stHd">FORM</div>'+form+'</div>';
+  }
+
+  // ---- Leaders. Season leaders before tip (they are who you should be
+  // picking), tonight's top scorers once there is a box score.
+  if(live){
+    var all=Object.keys(GS.box).map(function(nm){ return {nm:nm,t:GS.box[nm].team,p:gsNum(GS.box[nm][sportCfg().box.pts]),r:gsNum(GS.box[nm][sportCfg().box.reb]),a:gsNum(GS.box[nm][sportCfg().box.ast])}; })
+      .filter(function(x){ return x.p!=null; }).sort(function(x,y){ return y.p-x.p; }).slice(0,6);
+    if(all.length) out+='<div class="card" style="padding:14px 16px;margin-top:12px"><div class="stHd">TOP TONIGHT</div>'
+      + all.map(function(x){ return '<div class="stLead"><span class="stLeadN">'+esc(x.nm)+' <i>'+esc(x.t||'')+'</i></span>'
+          + '<span class="stLeadV">'+x.p+' pts · '+(x.r==null?0:x.r)+' reb · '+(x.a==null?0:x.a)+' ast</span></div>'; }).join('')
+      + '</div>';
+  } else if(GS.leaders.length){
+    out+=GS.leaders.map(function(l){
+      if(!l.cats.length) return '';
+      return '<div class="card" style="padding:14px 16px;margin-top:12px"><div class="stHd">'+esc(l.ab)+' SEASON LEADERS</div>'
+        + l.cats.map(function(c){ return '<div class="stLead"><span class="stLeadN">'+esc(c.label)+'</span>'
+            + '<span class="stLeadV">'+esc(c.who)+' <b>'+esc(c.val)+'</b></span></div>'; }).join('')
+        + '</div>';
+    }).join('');
+    out+='<div class="sub center" style="font-size:12px;margin-top:12px">These are who the numbers say to pick. Your card is on the Home tab.</div>';
+  }
+  out+='<div class="sub center" style="font-size:11px;margin-top:14px;opacity:.75">Live from the league feed · updated '+Math.max(1,Math.round((Date.now()-GS.at)/1000))+'s ago</div>';
+  el.innerHTML=out;
+}
+try{ setInterval(function(){ try{ if((S&&S.screen)==='stats'){ loadGameStats().then(function(){ if(S.screen==='stats') renderStats(); }); } }catch(_){}}, 25000); }catch(e){}
+
 function renderGametime(){
   const head=document.getElementById('gtHead'), idle=document.getElementById('gtIdle');
   if(!head) return;
@@ -7973,10 +8293,19 @@ function renderGametime(){
    test nobody runs twice. */
 var ciDemoN=0;
 function ciDemoNow(){
+  // The bank is built from the feed, so make sure the feed has landed. On a
+  // cold tab this is the difference between a real scouting question and the
+  // fallback nobody wants to see.
+  try{ if(!GS.ok && !GS.loading){ loadGameStats(true).then(function(){ ciDemoRun(); }); return; } }catch(_){}
+  ciDemoRun();
+}
+var ciDemoQueue=[];
+function ciDemoRun(){
   try{
     ensureCiCard();
     PCI.muted=false;
-    var set=demoCiSet(); var q=set[ciDemoN%set.length]; ciDemoN++;
+    if(!ciDemoQueue.length) ciDemoQueue=demoCiSet().slice();
+    var q=ciDemoQueue.shift(); if(!q) return; ciDemoN++;
     var qid='ci-try-'+ciDemoN;
     var opensAt=Date.now();
     var live={qid:qid,prompt:q.prompt,options:q.options,state:'open',
@@ -8012,19 +8341,48 @@ try{ setInterval(function(){ try{ if((S&&S.screen)==='gametime') renderGametime(
   <div style="max-width:430px;margin:0 auto;display:flex">
     <button class="navb" data-nav="home"  onclick="navGo('home')">🏠<span>Home</span></button>
     <button class="navb" data-nav="gametime" onclick="navGo('gametime')">🎯<span>Gametime</span></button>
-    <button class="navb" data-nav="board" onclick="navGo('board')">📊<span>Board</span></button>
-    <button class="navb" data-nav="crew"  onclick="navGo('crew')">👥<span>Crew</span></button>
+    <button class="navb" data-nav="stats" onclick="navGo('stats')">📈<span>Stats</span></button>
+    <button class="navb" data-nav="board" onclick="navGo('board')">🏆<span>Board</span></button>
+    <button class="navb" data-nav="crew"  onclick="navGo('crew')">💬<span>Trash Talk</span></button>
     <button class="navb" data-nav="me"    onclick="navGo('me')">👤<span>Me</span></button>
   </div>
 </div>
 <style>
-#botnav .navb{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;
-  align-items:center;gap:3px;padding:6px 2px;font:700 10px/1 inherit;color:#5b6a8c;letter-spacing:.02em}
-#botnav .navb span{font-size:10px}
+#botnav .navb{flex:1;min-width:0;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;gap:3px;padding:6px 1px;font:700 10px/1 inherit;color:#5b6a8c;letter-spacing:.02em}
+/* Six tabs on a 360px phone. The label must shrink rather than wrap — a
+   two-line tab makes the whole bar jump height when you switch to it. */
+#botnav .navb span{font-size:9.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:359px){ #botnav .navb span{font-size:8.5px} #botnav .navb{font-size:16px} }
 #botnav .navb{font-size:18px}
 #botnav .navb.on{color:#28e0d0}
 #botnav .navb:active{transform:scale(.94)}
 body.hasnav{padding-bottom:74px}
+
+/* ---- stats tab ---- */
+.stTeam{font-size:11px;letter-spacing:.14em;color:#93a0bd;font-weight:800}
+.stScore{font-size:29px;font-weight:900;color:#eef2fb;line-height:1.1}
+.stRec{font-size:11px;color:#5b6a8c;font-weight:700}
+.stHd{font-size:11px;letter-spacing:.14em;color:#28e0d0;font-weight:800;margin-bottom:10px}
+.stRow{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.stV{flex:0 0 54px;text-align:center;font-size:14px;font-weight:800;color:#7e8cab}
+.stV.win{color:#eef2fb}
+.stMid{flex:1;min-width:0}
+.stLbl{font-size:11px;color:#93a0bd;font-weight:700;text-align:center;margin-bottom:5px}
+.stBars{display:flex;gap:4px}
+.stB{flex:1;height:6px;border-radius:99px;background:#141d2f;overflow:hidden}
+.stB i{display:block;height:100%;border-radius:99px;transition:width .4s ease}
+.stB.l{transform:scaleX(-1)}
+.stLead{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:13.5px}
+.stLeadN{color:#93a0bd}
+.stLeadN i{font-style:normal;font-size:10.5px;color:#5b6a8c;letter-spacing:.08em}
+.stLeadV{color:#eef2fb;font-weight:800;text-align:right}
+.stPickRow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 0;border-bottom:1px solid #1a2337}
+.stPickRow:last-of-type{border-bottom:none}
+.stPickCat{font-size:11px;letter-spacing:.1em;color:#5b6a8c;font-weight:800;text-transform:uppercase}
+.stPickMine{grid-column:1;font-size:14px;font-weight:800;color:#eef2fb}
+.stPickMine.lead{color:#2ee6a6}
+.stPickLead{grid-column:2;grid-row:1 / span 2;align-self:center;font-size:11.5px;color:#93a0bd;text-align:right}
 
 /* ---- pick-slip ---- */
 #predCard{padding:14px}
