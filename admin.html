@@ -387,7 +387,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-10-admin.16';
+window.ADMIN_BUILD='2026-08-10-admin.17';
 
 /* =====================================================================
    STATS — Control Room
@@ -655,7 +655,6 @@ async function resetNight(){
   if(btn){ btn.disabled=false; btn.textContent='🧹 Clear the test data'; }
 }
 
-try{ window.resetNight = function(){ return resetNight(); }; }catch(e){}
 try{ setTimeout(function(){ try{ const rn=document.getElementById('resetNight'); if(rn && !rn.textContent) rn.textContent=night; }catch(_){ } }, 900); }catch(e){}
 function toast(msg){
   const t=$('toast'); t.textContent=msg; t.classList.add('show');
