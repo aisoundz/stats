@@ -67,6 +67,16 @@
   button.btn.gold{background:var(--gold);color:#2a1f00}
   button.btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--muted)}
   button.btn:disabled{opacity:.34;cursor:not-allowed}
+  /* .btn.teal sets its own background, which beat the :disabled opacity
+     badly enough that a dead button looked like the brightest control on
+     the screen. The host pressed it, nothing happened, and the night
+     looked frozen. Disabled now reads as disabled at a glance. */
+  button.btn.teal:disabled{background:#1d2a3d;color:#5f6d8f;opacity:.6}
+  /* Blocked-but-actionable: the reason is fixable in two taps, so the
+     button stays alive and takes you to the fix instead of going dead. */
+  button.btn.needkey{background:rgba(255,197,77,.12);border:1px solid rgba(255,197,77,.55);color:#ffc54d}
+  @keyframes rkFlash{0%{box-shadow:0 0 0 4px rgba(255,197,77,.30)}100%{box-shadow:none}}
+  .rkflash{animation:rkFlash 1.1s ease-out;border-radius:12px}
   button.mini{background:var(--card2);border:1px solid var(--line2);color:var(--muted);
     border-radius:9px;padding:7px 10px;font:800 11.5px/1 inherit;cursor:pointer;flex:none}
   button.mini.danger{color:var(--red);border-color:#4a2430}
@@ -365,7 +375,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-10-admin.13';
+window.ADMIN_BUILD='2026-08-10-admin.14';
 
 /* =====================================================================
    STATS — Control Room
@@ -1046,6 +1056,29 @@ function runNextUp(){
 /* Repaint just the reveal button and its counter for one round, without
    rebuilding the list. Tapping an answer must not scroll the host back to
    the top of the page mid-quarter. */
+/* WHERE THE HOST HAS TO GO NEXT. A control that refuses has exactly one
+   job beyond refusing: put you in front of the thing that unblocks it.
+   Scrolls to the first unmarked question, flashes it, and says how many
+   are left — at 9:47pm with the game running, "the button turns on at 4"
+   in grey text under a bright button is not guidance. */
+function jumpToKey(i){
+  try{
+    const zone = document.querySelector(`[data-keyzone="${i}"]`);
+    if(!zone){ toast('Mark the answers on this card first.'); return; }
+    const r = nightDraft(night).rounds[i] || {qs:[]};
+    let firstBlank = -1;
+    (r.qs||[]).forEach((q,qi)=>{ if(firstBlank<0 && (q.k===null || q.k===undefined)) firstBlank=qi; });
+    const rows = zone.querySelectorAll('.rkq');
+    const target = (firstBlank>=0 && rows[firstBlank]) ? rows[firstBlank] : zone;
+    target.scrollIntoView({behavior:'smooth', block:'center'});
+    target.classList.remove('rkflash'); void target.offsetWidth; target.classList.add('rkflash');
+    const pr = keyProgress(i);
+    toast(firstBlank>=0
+      ? `Mark Q${firstBlank+1} — ${pr.total-pr.done} of ${pr.total} still to go.`
+      : 'Mark the answers, then press reveal.');
+  }catch(e){ try{ toast('Could not find the answers block — reload the Control Room.'); }catch(_){ } }
+}
+
 function syncRevealState(i){
   const card = document.querySelector(`[data-roundcard="${i}"]`); if(!card) return;
   const pr = keyProgress(i), ready = pr.total > 0 && pr.done >= pr.total;
@@ -1053,8 +1086,20 @@ function syncRevealState(i){
   const btn = card.querySelector('[data-revealbtn]');
   const btn2 = card.querySelector('[data-revealbtn2]');
   const cnt = card.querySelector('.keycount');
-  if(btn)  btn.disabled  = !ready || busy;
-  if(btn2) btn2.disabled = !ready || busy;
+  /* This repaints on every answer tap. It used to re-disable the button
+     using the old rule, silently undoing the state the renderer just set —
+     two places, two rules, one frozen Control Room. One rule now. */
+  if(btn){
+    btn.disabled = busy;
+    btn.classList.toggle('needkey', !ready && !busy);
+    if(!busy) btn.textContent = ready ? btn.getAttribute('data-readytext') || btn.textContent
+                                      : `⚠ Mark the ${pr.total} answers first — tap to jump there`;
+  }
+  if(btn2){
+    btn2.disabled = busy;
+    btn2.textContent = ready ? (btn2.getAttribute('data-readytext') || btn2.textContent)
+                             : btn2.textContent.replace(/ — .*$/,' — needs the answers too');
+  }
   if(cnt){
     cnt.className = 'keycount' + (ready ? ' ready' : '');
     cnt.textContent = ready
@@ -1146,6 +1191,7 @@ function renderRun(){
     }else if(state==='live'){
       /* The whole point of the rebuild: the answers, here, now. */
       const h = document.createElement('div');
+      h.setAttribute('data-keyzone', String(i));
       h.innerHTML = `<h3 style="margin-top:16px">What actually happened</h3>
         <p class="sub">Tap the right answer as each one settles. Nothing leaves this phone until you press reveal — players can't see these.</p>
         ${keyBlock(i)}`;
@@ -1187,13 +1233,22 @@ function renderRun(){
          with the game still going. */
       const b = document.createElement('button');
       b.className='btn teal'; b.setAttribute('data-revealbtn','1');
+      b.setAttribute('data-readytext', busy ? 'Working…'
+        : isLast  ? `🏁 End the game — reveal ${tag} & post the final`
+        : canPush ? `✅ End of ${tag} — reveal, score & grade (you push ${nextTag} yourself)`
+                  : `✅ End of ${tag} — reveal and post the score`);
       b.style.fontSize='15.5px'; b.style.padding='17px 18px'; b.style.lineHeight='1.3';
       b.textContent = busy ? 'Working…'
+        : !keyReady ? `⚠ Mark the ${pr.total} answers first — tap to jump there`
         : isLast  ? `🏁 End the game — reveal ${tag} & post the final`
         : canPush ? `✅ End of ${tag} — reveal, score & grade (you push ${nextTag} yourself)`
                   : `✅ End of ${tag} — reveal and post the score`;
-      b.disabled = !keyReady || busy;
-      b.onclick = ()=>closeQuarter(i);
+      /* ONLY 'busy' disables this. Missing answers is not a reason to go
+         dead — it is a reason to say what is missing and take the host to
+         it. Same rule the player's pick deck learned the hard way. */
+      b.disabled = busy;
+      if(!keyReady && !busy) b.classList.add('needkey');
+      b.onclick = ()=> keyReady ? closeQuarter(i) : jumpToKey(i);
       a.appendChild(b);
 
       const tip = document.createElement('p'); tip.className='sub tip'; tip.style.marginTop='10px';
@@ -1209,9 +1264,11 @@ function renderRun(){
          next round isn't ready, or the host wants to reveal and breathe. */
       const jr = document.createElement('button');
       jr.className='btn ghost'; jr.setAttribute('data-revealbtn2','1');
-      jr.textContent = `Just reveal ${tag} — nothing else`;
-      jr.disabled = !keyReady || busy;
-      jr.onclick = ()=>revealRound(i);
+      jr.setAttribute('data-readytext', `Just reveal ${tag} — nothing else`);
+      jr.textContent = keyReady ? `Just reveal ${tag} — nothing else`
+                                : `Just reveal ${tag} — needs the answers too`;
+      jr.disabled = busy;
+      jr.onclick = ()=> keyReady ? revealRound(i) : jumpToKey(i);
       a.appendChild(jr);
 
       const r = document.createElement('button');
