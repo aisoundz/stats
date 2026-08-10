@@ -690,8 +690,8 @@
            promises, and a returning player and a stranger deserve to be
            spoken to differently on the same door. -->
       <div style="display:flex;gap:6px;background:#0e1626;border:1px solid #26304a;border-radius:12px;padding:5px;margin-bottom:13px">
-        <button id="segIn" onclick="portalSeg('in')" style="flex:1;border:none;border-radius:9px;padding:11px 8px;font:800 13.5px/1 inherit;cursor:pointer;background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e">Sign in</button>
-        <button id="segUp" onclick="portalSeg('up')" style="flex:1;border:none;border-radius:9px;padding:11px 8px;font:800 13.5px/1 inherit;cursor:pointer;background:none;color:var(--muted,#93a0bd)">Sign up</button>
+        <button id="segIn" onclick="portalSeg('in')" style="flex:1;border:none;border-radius:9px;padding:14px 8px;font:800 13.5px/1 inherit;cursor:pointer;background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e">Sign in</button>
+        <button id="segUp" onclick="portalSeg('up')" style="flex:1;border:none;border-radius:9px;padding:14px 8px;font:800 13.5px/1 inherit;cursor:pointer;background:none;color:var(--muted,#93a0bd)">Sign up</button>
       </div>
       <b id="portalLbl" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)">Welcome back — sign in to build your card</b>
       <p class="sub" id="portalSub" style="margin:6px 0 12px">One tap, and your handle, your card and your points follow you to any phone — nothing you earn can ever be lost.</p>
@@ -705,7 +705,7 @@
         <span style="color:var(--muted,#93a0bd)">Nothing you do here would save, so we’ve switched the buttons off rather than let you lose a night’s points. Try a refresh in a minute — or tap <b>Practice</b> below, which needs no account at all.</span>
       </div>
       <label style="display:flex;gap:9px;align-items:flex-start;margin-top:12px;cursor:pointer">
-        <input type="checkbox" id="portalConsent" checked style="margin-top:2px;width:17px;height:17px;flex:0 0 auto;accent-color:#28e0d0">
+        <input type="checkbox" id="portalConsent" checked style="margin-top:1px;width:24px;height:24px;flex:0 0 auto;accent-color:#28e0d0">
         <span style="font-size:12px;line-height:1.45;color:var(--muted,#93a0bd)">Email me when the next game night is on. One message per game, unsubscribe any time.</span>
       </label>
       <button class="btn ghost sm" style="margin-top:11px;font-size:12.5px" onclick="startDemo()">Just practice first (no account) →</button>
@@ -918,7 +918,7 @@
            less. Phone is deliberately NOT on this screen; texting means TCPA
            and 10DLC, and neither is signed off yet. -->
       <label style="display:flex;gap:9px;align-items:flex-start;margin-top:12px;font-size:12px;line-height:1.45;color:var(--dim);cursor:pointer">
-        <input type="checkbox" id="gateConsent" style="margin-top:1px">
+        <input type="checkbox" id="gateConsent" style="margin-top:1px;width:24px;height:24px;flex:0 0 auto;accent-color:#28e0d0">
         <span>Email me when the next STATS game night is on — one heads-up, nothing else. Not required to play, score, or win. You can delete yourself from the list any time on the end-of-game screen.</span>
       </label>
       <!-- Verification. The button only wakes up once the address above is
@@ -8052,7 +8052,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.29';
+const STATS_BUILD='2026-08-10-g5-tor-atl.30';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
@@ -8690,6 +8690,11 @@ body.hasnav{padding-bottom:74px}
 .pdopts.many .pdopt{padding:12px 10px;font-size:14px;gap:8px}
 .pdopts.many .pdradio{width:17px;height:17px}
 .pdopts.many .pdname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* An iPhone SE is 375px wide. Two columns of roster names at that width
+   clipped "Angel Reese" against the card edge — a pick you cannot fully
+   read is a pick you hesitate over on a 20-second clock. Below 380 the
+   deck goes back to one column and simply scrolls. */
+@media (max-width:380px){ .pdopts.many{grid-template-columns:1fr} .pdopts.many .pdopt{font-size:15px;padding:14px 12px} }
 .pdopt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
   background:#111a2b;border:1px solid #2f3a58;border-radius:13px;padding:15px 14px;
   font:800 16px/1.2 inherit;color:#eef2fb;transition:border-color .15s,background .15s}
@@ -8732,7 +8737,10 @@ body.hasnav{padding-bottom:74px}
    follows the deck, which is where the eye already is. */
 @media (min-height:860px){
   #pdBar{position:static;padding:14px 0 0;background:none;border-top:none;backdrop-filter:none}
-  #s-predict.active{padding-bottom:40px}
+  /* 40px was enough when there was no bottom nav. There is now, it is
+     fixed, and it is ~74px tall — so on a tall phone the lock button
+     ended up underneath it. Clear the nav, then some. */
+  #s-predict.active{padding-bottom:120px}
 }
 </style>
 </body>
