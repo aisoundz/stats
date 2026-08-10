@@ -945,6 +945,16 @@
   <!-- 4. LOBBY / TIP-OFF -->
   <!-- ME — a tab needs a destination. Scrolling Home to the top was a
        placeholder pretending to be navigation. -->
+  <!-- GAMETIME — where you park while the game is on. Call It renders
+       INSIDE here rather than floating over whatever you were doing.
+       A live prompt should have an address, not ambush you. -->
+  <section class="screen" id="s-gametime">
+    <div class="brand" style="margin-top:30px"><span class="logo" style="letter-spacing:1.2px;font-size:21px">GAMETIME</span></div>
+    <div id="gtHead" style="margin-top:16px"></div>
+    <div id="ciSlot" style="margin-top:14px"></div>
+    <div id="gtIdle" style="margin-top:14px"></div>
+  </section>
+
   <section class="screen" id="s-me">
     <div class="brand" style="margin-top:34px"><span class="logo" style="letter-spacing:1.2px;font-size:23px">STATS GAMETIME</span></div>
     <div id="meBody" style="margin-top:22px"></div>
@@ -2808,7 +2818,7 @@ const league={name:"The Barbershop",members:[
 ]};
 
 /* ---------------- NAV ---------------- */
-const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-lobby",me:"s-me",
+const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-lobby",me:"s-me",gametime:"s-gametime",
   live:"s-live",break:"s-break",final:"s-final",host:"s-host",league:"s-league",plus:"s-plus",
   rules:"s-rules",review:"s-review",predreview:"s-predreview",tally:"s-tally",
   join:"s-join"};
@@ -2900,7 +2910,7 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
   document.getElementById('app').scrollTop=0; window.scrollTo(0,0);
   S.screen=k; pendingBack=false;
   // where ← goes from each screen; null = no back button
-  const BACKMAP={landing:null,name:'landing',predict:'name',lobby:'landing',me:'landing',
+  const BACKMAP={landing:null,name:'landing',predict:'name',lobby:'landing',me:'landing',gametime:'landing',
     live:'lobby',break:'lobby',review:'lobby',predreview:'lobby',
     final:null,rules:'landing',league:'final',plus:'final',host:'final',tally:'final',
     join:'landing'};
@@ -5785,16 +5795,35 @@ function startCallItWatch(){
    same streak flame. Nothing here touches the network; the only thing
    the guard below skips is the board write, which is live-night only. */
 function demoCiSet(){
-  let H='Home team', A='Away team';
+  let H='Atlanta Dream', A='Toronto Tempo';
   try{ H=(GAME&&GAME.homeName)||H; A=(GAME&&GAME.awayName)||A; }catch(_){}
-  return [
-    { qid:'demo-ci-1', prompt:'Next made basket — a two or a three?',
-      options:[{k:'A two',v:'2'},{k:'A three',v:'3'}],
-      answer:'3', resolveText:'Splash — corner three. That’s Call It: quick question, quick answer, keep watching.' },
-    { qid:'demo-ci-2', prompt:'Timeout — who scores FIRST out of the break?',
-      options:[{k:H,v:'home'},{k:A,v:'away'}],
-      answer:'away', resolveText:A+' bucket out of the break. On game night these pop the moment it gets hot.' }
-  ];
+  /* Both questions are about what HAS happened and are resolved from the
+     real scoreboard the app is already reading — not invented, not a
+     prediction the player can't see. A demo question you cannot verify
+     teaches nothing except that the app makes things up. */
+  let hs=null, as=null;
+  try{ if(typeof lastScore!=='undefined' && lastScore && lastScore.home!=null){ hs=Number(lastScore.home); as=Number(lastScore.away); } }catch(_){}
+  const haveScore = hs!=null && as!=null && !isNaN(hs) && !isNaN(as);
+  const leader = !haveScore ? null : (hs===as ? 'tie' : (hs>as ? 'home' : 'away'));
+  const margin = !haveScore ? null : Math.abs(hs-as);
+  const out=[];
+  if(haveScore && leader!=='tie'){
+    out.push({ qid:'demo-ci-1', prompt:'Scoreboard check — who is ahead right now?',
+      options:[{k:H,v:'home'},{k:A,v:'away'}], answer:leader,
+      resolveText:(leader==='home'?H:A)+' lead it '+Math.max(hs,as)+'–'+Math.min(hs,as)+'. That’s Call It: one look, one tap, back to the game.' });
+    out.push({ qid:'demo-ci-2', prompt:'How close is it — is the lead under 5?',
+      options:[{k:'Under 5',v:'u'},{k:'5 or more',v:'o'}], answer:(margin<5?'u':'o'),
+      resolveText:'It’s '+margin+' point'+(margin===1?'':'s')+'. On game night these land the moment something happens.' });
+  } else {
+    // No feed yet — ask something the player can still answer from the app.
+    out.push({ qid:'demo-ci-1', prompt:'Warm-up — how many quarters does a game night run?',
+      options:[{k:'Four',v:'4'},{k:'Two',v:'2'}], answer:'4',
+      resolveText:'Four quarters, and the last is worth four times the first. That’s Call It — one tap, straight back to the game.' });
+    out.push({ qid:'demo-ci-2', prompt:'Which quarter is worth the most points?',
+      options:[{k:'Q1',v:'1'},{k:'Q4',v:'4'}], answer:'4',
+      resolveText:'Q4 — 40 points a question. Nobody is out of it until the buzzer.' });
+  }
+  return out;
 }
 const demoCiFired={};
 function demoCallIt(n){
@@ -5802,17 +5831,17 @@ function demoCallIt(n){
   const q=demoCiSet()[n]; if(!q || demoCiFired[q.qid]) return;
   demoCiFired[q.qid]=true;
   ensureCiCard();
-  const opensAt=Date.now()+2500;
+  const opensAt=Date.now()+4000;
   setTimeout(function(){
     if(S.mode!=='demo' || PCI.muted) return;
     const live={qid:q.qid,prompt:q.prompt,options:q.options,state:'open',
-                locksMs:9000,opensAt:{toMillis:function(){return opensAt;}}};
+                locksMs:20000,opensAt:{toMillis:function(){return opensAt;}}};
     PCI.active=live; renderCiCard(live);
     setTimeout(function(){
       live.state='resolved'; live.answer=q.answer; live.resolveText=q.resolveText;
       try{ renderCiCard(live); }catch(_){}
-    }, 5200);
-  }, 2500);
+    }, 22000);
+  }, 4000);
 }
 function onCallItQuestions(qs){
   if(!qs || !qs.length) return;
@@ -5848,8 +5877,28 @@ function ensureCiCard(){
   var d=document.createElement('div'); d.id='ciCard'; d.innerHTML='<div id="ciInner"></div>';
   document.body.appendChild(d);
 }
-function ciShow(html){ var c=document.getElementById('ciCard'), inner=document.getElementById('ciInner'); if(!c||!inner) return; inner.innerHTML=html; c.style.display='block'; }
-function ciHideSoon(ms){ clearTimeout(PCI.hideT); PCI.hideT=setTimeout(function(){ var c=document.getElementById('ciCard'); if(c) c.style.display='none'; }, ms); }
+function ciOnGametime(){ try{ return (S&&S.screen)==='gametime'; }catch(_){ return false; } }
+/* One card, two homes. On the Gametime tab it lives in the page, in its
+   own slot, where the player is already looking. Anywhere else it is the
+   floating sheet. Moving the node beats maintaining two renderers. */
+function ciDock(){
+  var c=document.getElementById('ciCard'); if(!c) return;
+  var slot=document.getElementById('ciSlot');
+  if(ciOnGametime() && slot){
+    if(c.parentNode!==slot) slot.appendChild(c);
+    c.style.position='static'; c.style.transform='none'; c.style.width='100%';
+    c.style.bottom=''; c.style.left=''; c.style.animation='none';
+  }else{
+    if(c.parentNode!==document.body) document.body.appendChild(c);
+    c.style.position='fixed'; c.style.left='50%'; c.style.bottom='90px';
+    c.style.transform='translateX(-50%)'; c.style.width='min(430px,94vw)';
+  }
+}
+function ciShow(html){ var c=document.getElementById('ciCard'), inner=document.getElementById('ciInner'); if(!c||!inner) return; ciDock(); inner.innerHTML=html; c.style.display='block';
+  // The 'leave this open' placeholder and a live question are mutually
+  // exclusive — showing both reads as two half-built things.
+  try{ if(ciOnGametime()){ var idle=document.getElementById('gtIdle'); if(idle) idle.innerHTML=''; } }catch(_){} }
+function ciHideSoon(ms){ clearTimeout(PCI.hideT); PCI.hideT=setTimeout(function(){ var c=document.getElementById('ciCard'); if(c) c.style.display='none'; try{ if(typeof renderGametime==='function') renderGametime(); }catch(_){} }, ms); }
 
 function ciGrade(q){
   if(PCI.graded[q.qid]) return;
@@ -5879,7 +5928,7 @@ function ciPick(q,v){
    slides up, takes its six seconds, and gets out of the way. Which is also
    when a real Call It belongs: the timeout, the free-throw walk-up, the
    moment the broadcast itself pauses.                                    */
-var CI_BLOCKED=['live','predict','name','join','rules','final','tally'];
+var CI_BLOCKED=['live','name','join','rules','final','tally'];
 function ciScreenOk(){
   var scr=''; try{ scr=(S&&S.screen)||''; }catch(_){}
   return CI_BLOCKED.indexOf(scr)<0;
@@ -5906,7 +5955,7 @@ function renderCiCard(q){
     var tail = pk==null ? '' : (right?(' · 🔥 '+PCI.streak+' in a row'):' · streak reset');
     ciShow('<div class="cihead">🎯 Call It · resolved</div><div class="cibody"><b>'+esc(head)+'</b>'+esc(tail)+'</div>'+
            '<div class="cireveal">'+esc(q.resolveText||'')+'</div>');
-    ciHideSoon(6000); return;
+    ciHideSoon(11000); return;
   }
   // open / locked
   clearTimeout(PCI.hideT);
@@ -5920,7 +5969,7 @@ function renderCiCard(q){
     return '<button class="ciopt'+sel+'" '+(locked?'disabled':'')+' data-civ="'+esc(String(o.v))+'">'+esc(o.k)+'</button>';
   }).join('');
   var status = locked ? (pick!=null?('Locked: '+esc(ciLabel(q,pick))+' — waiting on the play…'):'Locked — waiting on the play…')
-                      : 'Tap fast — locks in a few seconds';
+                      : 'Take a look, then tap — you’ve got a few seconds';
   var msLeft=Math.max(0,locksMs-now), pctLeft=Math.max(0,Math.min(100,(msLeft/(q.locksMs||6000))*100));
   ciShow((locked?'':'<div class="cilockbar"><i style="width:'+pctLeft+'%;transition:width .25s linear"></i></div>')+
          '<div class="cihead">🎯 Call It'+(pick!=null?' · locked':'')+'</div>'+
@@ -7641,7 +7690,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.22';
+const STATS_BUILD='2026-08-10-g5-tor-atl.24';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
@@ -7685,19 +7734,14 @@ try{backendBadge();}catch(e){}
    One rule governs everything here: the nav may CHANGE screens, never
    game state. No tab submits, locks, scores or signs anything. That is
    what makes a navigation rewrite safe to ship the day of a game.     */
-const NAV_HIDE_ON = ['live','review','predreview','break','final','tally','predict'];
+const NAV_HIDE_ON = ['live','review','predreview','break','final','tally'];
 function navGo(tab){
   try{
     // Leaving the Crew tab closes the room. A modal that survives a tab
     // change is the classic half-built-nav tell.
     if(tab!=='crew'){ try{ closeTalk(); }catch(_){} }
     if(tab==='home')  { go('landing'); }
-    else if(tab==='play'){
-      // Straight to whatever "playing" means right now: back into tonight's
-      // room if a game is under way, otherwise the front of the flow.
-      if(S.mode==='live' && S.screen && S.screen!=='landing') go('lobby');
-      else startLive();
-    }
+    else if(tab==='gametime'){ renderGametime(); go('gametime'); }
     else if(tab==='board'){
       if(S.mode==='live'){ go('lobby'); try{ refreshRoom(); }catch(_){} }
       else { go('landing'); toast('The board fills up once a game night starts.'); }
@@ -7719,12 +7763,12 @@ function paintNav(active){
   // menu "disappeared".
   try{
     const ci=document.getElementById('ciCard');
-    if(ci && ['landing','name','predict','rules','join'].indexOf(scr)>=0) ci.style.display='none';
+    if(ci && ['landing','name','rules','join'].indexOf(scr)>=0) ci.style.display='none';
     if(typeof ciFlush==='function') setTimeout(ciFlush, 420);
   }catch(_){}
   try{ document.body.classList.toggle('hasnav', !hide); }catch(_){}
   if(!active){
-    active = (scr==='lobby') ? 'play' : (scr==='landing' ? 'home' : (scr==='me' ? 'me' : ''));
+    active = (scr==='gametime') ? 'gametime' : (scr==='landing' ? 'home' : (scr==='me' ? 'me' : (scr==='lobby' ? 'gametime' : '')));
   }
   try{
     bar.querySelectorAll('.navb').forEach(function(b){
@@ -7783,6 +7827,37 @@ function renderMe(){
       + '</div>';
 }
 
+
+/* ---- THE GAMETIME TAB ----------------------------------------------
+   The answer to "where do I sit while the game is on." A score strip at
+   the top, a slot in the middle where live Call It prompts land, and an
+   honest line about what happens next. Nothing here scores anything —
+   it is a place to be, which is exactly what was missing.             */
+function renderGametime(){
+  const head=document.getElementById('gtHead'), idle=document.getElementById('gtIdle');
+  if(!head) return;
+  let H='Home', A='Away', hs=null, as=null, st='';
+  try{ H=(GAME&&GAME.homeAb)||(GAME&&GAME.homeName)||H; A=(GAME&&GAME.awayAb)||(GAME&&GAME.awayName)||A; }catch(_){}
+  try{ if(typeof lastScore!=='undefined'&&lastScore&&lastScore.home!=null){ hs=lastScore.home; as=lastScore.away; st=lastScore.state||''; } }catch(_){}
+  const live = hs!=null && as!=null;
+  head.innerHTML='<div class="card" style="padding:16px">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between">'
+    +   '<div style="text-align:center;flex:1"><div style="font-size:11px;letter-spacing:.14em;color:#93a0bd;font-weight:800">'+esc(String(A))+'</div>'
+    +     '<div style="font-size:32px;font-weight:900;color:#eef2fb">'+(live?esc(String(as)):'–')+'</div></div>'
+    +   '<div style="flex:0 0 auto;padding:0 12px"><span class="pill">'+(live?esc(st||'LIVE'):'Not started')+'</span></div>'
+    +   '<div style="text-align:center;flex:1"><div style="font-size:11px;letter-spacing:.14em;color:#93a0bd;font-weight:800">'+esc(String(H))+'</div>'
+    +     '<div style="font-size:32px;font-weight:900;color:#eef2fb">'+(live?esc(String(hs)):'–')+'</div></div>'
+    + '</div></div>';
+  const hasCard=(function(){ try{ const c=document.getElementById('ciCard'); return c&&c.style.display!=='none'&&c.parentNode&&c.parentNode.id==='ciSlot'; }catch(_){ return false; } })();
+  if(idle) idle.innerHTML = hasCard ? '' :
+    '<div class="card center" style="padding:20px">'
+    + '<div style="font-size:30px;margin-bottom:6px">🎯</div>'
+    + '<b style="font-size:15.5px">Leave this open while you watch</b>'
+    + '<p class="sub" style="font-size:12.5px;margin:8px 0 0">Call It questions land right here the moment something happens — a timeout, a run, a big shot. One tap, then straight back to the game.</p>'
+    + '</div>';
+}
+try{ setInterval(function(){ try{ if((S&&S.screen)==='gametime') renderGametime(); }catch(_){}}, 20000); }catch(e){}
+
 </script>
 
 <!-- ================= BOTTOM NAV (v2 concept) =========================
@@ -7797,7 +7872,7 @@ function renderMe(){
      padding:7px 6px calc(7px + env(safe-area-inset-bottom,0px));">
   <div style="max-width:430px;margin:0 auto;display:flex">
     <button class="navb" data-nav="home"  onclick="navGo('home')">🏠<span>Home</span></button>
-    <button class="navb" data-nav="play"  onclick="navGo('play')">🎯<span>Play</span></button>
+    <button class="navb" data-nav="gametime" onclick="navGo('gametime')">🎯<span>Gametime</span></button>
     <button class="navb" data-nav="board" onclick="navGo('board')">📊<span>Board</span></button>
     <button class="navb" data-nav="crew"  onclick="navGo('crew')">👥<span>Crew</span></button>
     <button class="navb" data-nav="me"    onclick="navGo('me')">👤<span>Me</span></button>
@@ -7855,12 +7930,12 @@ body.hasnav{padding-bottom:74px}
 .pdlock.ready{background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e}
 .pdlock:active{filter:brightness(.94)}
 
-#pdBar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:8600;padding:11px 14px calc(12px + env(safe-area-inset-bottom,0px));
+#pdBar{display:none;position:fixed;left:0;right:0;bottom:72px;z-index:8600;padding:11px 14px calc(12px + env(safe-area-inset-bottom,0px));
   background:rgba(10,14,23,.96);backdrop-filter:blur(14px);border-top:1px solid #1e2740}
 #pdBar .pdsummary,#pdBar .pdlock{max-width:430px;margin-left:auto;margin-right:auto}
 #pdBar .pdsummary{margin-top:0}
 #pdBar .pdlock{margin-top:9px;display:block}
-#s-predict.active{padding-bottom:172px}
+#s-predict.active{padding-bottom:250px}
 /* On a tall screen the viewport floor is nowhere near the card — pinning
    there strands the button in empty space. Above this height it simply
    follows the deck, which is where the eye already is. */
