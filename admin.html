@@ -375,7 +375,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-10-admin.14';
+window.ADMIN_BUILD='2026-08-10-admin.15';
 
 /* =====================================================================
    STATS — Control Room
@@ -1097,8 +1097,9 @@ function syncRevealState(i){
   }
   if(btn2){
     btn2.disabled = busy;
+    const tagNow=(nightCfg(night).tags||[])[i]||'';
     btn2.textContent = ready ? (btn2.getAttribute('data-readytext') || btn2.textContent)
-                             : btn2.textContent.replace(/ — .*$/,' — needs the answers too');
+                             : `Reveal ${tagNow} now — void the ${pr.total-pr.done} unanswered`;
   }
   if(cnt){
     cnt.className = 'keycount' + (ready ? ' ready' : '');
@@ -1252,7 +1253,9 @@ function renderRun(){
       a.appendChild(b);
 
       const tip = document.createElement('p'); tip.className='sub tip'; tip.style.marginTop='10px';
-      tip.textContent = isLast
+      tip.textContent = !keyReady
+        ? `You can still close ${tag} without every answer — the button underneath reveals it now and voids the ones you could not mark. Nobody gains or loses a point on a voided question, so the night never has to stop here.`
+        : isLast
         ? 'Reveals the answers and posts the final score. Every phone gets an alert that its points landed.'
         : canPush
           ? `Reveals ${tag}, posts the score, and grades everyone from their saved answers. It does NOT auto-start ${nextTag} — push that yourself with its button when the next quarter is about to begin, so you keep the timing.`
@@ -1265,10 +1268,16 @@ function renderRun(){
       const jr = document.createElement('button');
       jr.className='btn ghost'; jr.setAttribute('data-revealbtn2','1');
       jr.setAttribute('data-readytext', `Just reveal ${tag} — nothing else`);
-      jr.textContent = keyReady ? `Just reveal ${tag} — nothing else`
-                                : `Just reveal ${tag} — needs the answers too`;
+      /* THE WAY OUT. There must always be one. A quarter that cannot be
+         closed is a night that cannot be finished, and marking every answer
+         is not always possible — a question turns out to be unanswerable,
+         the feed never settles, the host misses a play. This closes the
+         quarter with whatever is marked and voids the rest. */
+      jr.textContent = keyReady
+        ? `Just reveal ${tag} — nothing else`
+        : `Reveal ${tag} now — void the ${pr.total-pr.done} unanswered`;
       jr.disabled = busy;
-      jr.onclick = ()=> keyReady ? revealRound(i) : jumpToKey(i);
+      jr.onclick = ()=>revealRound(i);
       a.appendChild(jr);
 
       const r = document.createElement('button');
@@ -1500,8 +1509,31 @@ async function writeScore(a, h, period, note){
 async function closeQuarter(i){
   if(closingRound !== null) return;                 // a double-tap is not two closes
   const cfg = nightCfg(night), last = i >= cfg.tags.length - 1;
-  const iss = roundIssues(i);
+  /* THE DEADLOCK THIS REMOVES. This used to check roundIssues(), which
+     includes "every question has an answer marked". One question you could
+     not answer — a bad question, a play you missed, a feed that never
+     settled — and the reveal refused. And because the next quarter cannot
+     be pushed while this one is live, the whole night stopped at the end of
+     Q1. That is the bug that has ended every game night so far.
+
+     A missing answer is not a broken round. It is a VOID question, and the
+     grading layer has always handled it correctly — markOf() returns 'non'
+     for a question with no key, which pays nobody and penalises nobody.
+     The only thing standing in the way was this gate. So: structural
+     problems still block (no question text, no options — those would ship
+     nonsense to phones), missing answers now void with one confirmation. */
+  const iss = pushIssues(i);
   if(iss.length){ toast('Fix that round first: ' + iss[0]); return; }
+  const kIss = keyIssues(i);
+  if(kIss.length){
+    const pr0 = keyProgress(i);
+    if(!confirm(
+      `${cfg.tags[i]} has ${pr0.done} of ${pr0.total} answers marked.\n\n` +
+      kIss.map(s=>'• '+s).join('\n') +
+      `\n\nClosing now VOIDS those ${kIss.length} question(s): nobody gains a point and ` +
+      `nobody loses one, so no player is advantaged. The rest score normally.\n\n` +
+      `Void them and close ${cfg.tags[i]}?`)) return;
+  }
 
   /* Never score an empty quarter. In Game #2, Q2 was closed with ZERO answers
      in and it stuck every player on 0 for the night — the single worst bug of
@@ -1674,9 +1706,14 @@ async function clearScore(){
 }
 
 async function revealRound(i, again){
-  const issues = roundIssues(i);
+  const issues = pushIssues(i);
   if(issues.length){ toast('Fix that round first: ' + issues[0]); return; }
   const cfg = nightCfg(night), r = cleanRound(i);
+  const kIss2 = keyIssues(i);
+  if(kIss2.length && !confirm(
+      `${cfg.tags[i]} has ${kIss2.length} unanswered question(s).\n\n` +
+      kIss2.map(s=>'• '+s).join('\n') +
+      `\n\nThey will be voided — no points either way. Reveal anyway?`)) return;
   if(!confirm(
       `Reveal the answers for ${cfg.tags[i]}?\n\n` +
       r.key.map((k,n)=>`${n+1}. ${k}`).join('\n') +
