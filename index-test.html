@@ -943,6 +943,13 @@
   </section>
 
   <!-- 4. LOBBY / TIP-OFF -->
+  <!-- ME — a tab needs a destination. Scrolling Home to the top was a
+       placeholder pretending to be navigation. -->
+  <section class="screen" id="s-me">
+    <div class="brand" style="margin-top:34px"><span class="logo" style="letter-spacing:1.2px;font-size:23px">STATS GAMETIME</span></div>
+    <div id="meBody" style="margin-top:22px"></div>
+  </section>
+
   <section class="screen" id="s-lobby">
     <div class="brand" style="margin-top:40px"><span class="logo" style="letter-spacing:1.2px;font-size:23px">STATS GAMETIME</span></div>
     <div class="center" style="margin-top:30px">
@@ -2801,7 +2808,7 @@ const league={name:"The Barbershop",members:[
 ]};
 
 /* ---------------- NAV ---------------- */
-const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-lobby",
+const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-lobby",me:"s-me",
   live:"s-live",break:"s-break",final:"s-final",host:"s-host",league:"s-league",plus:"s-plus",
   rules:"s-rules",review:"s-review",predreview:"s-predreview",tally:"s-tally",
   join:"s-join"};
@@ -2893,7 +2900,7 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
   document.getElementById('app').scrollTop=0; window.scrollTo(0,0);
   S.screen=k; pendingBack=false;
   // where ← goes from each screen; null = no back button
-  const BACKMAP={landing:null,name:'landing',predict:'name',lobby:'landing',
+  const BACKMAP={landing:null,name:'landing',predict:'name',lobby:'landing',me:'landing',
     live:'lobby',break:'lobby',review:'lobby',predreview:'lobby',
     final:null,rules:'landing',league:'final',plus:'final',host:'final',tally:'final',
     join:'landing'};
@@ -5777,18 +5784,22 @@ function startCallItWatch(){
    same card the live game uses: same look, same lock, same reveal,
    same streak flame. Nothing here touches the network; the only thing
    the guard below skips is the board write, which is live-night only. */
-const DEMO_CI=[
-  { qid:'demo-ci-1', prompt:'Next made basket — a two or a three?',
-    options:[{k:'A two',v:'2'},{k:'A three',v:'3'}],
-    answer:'3', resolveText:'Splash — corner three. That’s Call It: quick question, quick answer, keep watching.' },
-  { qid:'demo-ci-2', prompt:'Timeout — FIRST points after the break?',
-    options:[{k:'Home team',v:'home'},{k:'Away team',v:'away'}],
-    answer:'away', resolveText:'Away bucket out of the break. In the real game these pop when the moment’s hot.' }
-];
+function demoCiSet(){
+  let H='Home team', A='Away team';
+  try{ H=(GAME&&GAME.homeName)||H; A=(GAME&&GAME.awayName)||A; }catch(_){}
+  return [
+    { qid:'demo-ci-1', prompt:'Next made basket — a two or a three?',
+      options:[{k:'A two',v:'2'},{k:'A three',v:'3'}],
+      answer:'3', resolveText:'Splash — corner three. That’s Call It: quick question, quick answer, keep watching.' },
+    { qid:'demo-ci-2', prompt:'Timeout — who scores FIRST out of the break?',
+      options:[{k:H,v:'home'},{k:A,v:'away'}],
+      answer:'away', resolveText:A+' bucket out of the break. On game night these pop the moment it gets hot.' }
+  ];
+}
 const demoCiFired={};
 function demoCallIt(n){
   if(S.mode!=='demo' || PCI.muted) return;
-  const q=DEMO_CI[n]; if(!q || demoCiFired[q.qid]) return;
+  const q=demoCiSet()[n]; if(!q || demoCiFired[q.qid]) return;
   demoCiFired[q.qid]=true;
   ensureCiCard();
   const opensAt=Date.now()+2500;
@@ -5798,10 +5809,9 @@ function demoCallIt(n){
                 locksMs:9000,opensAt:{toMillis:function(){return opensAt;}}};
     PCI.active=live; renderCiCard(live);
     setTimeout(function(){
-      if(S.mode!=='demo') return;
       live.state='resolved'; live.answer=q.answer; live.resolveText=q.resolveText;
-      renderCiCard(live);
-    }, 12000);
+      try{ renderCiCard(live); }catch(_){}
+    }, 5200);
   }, 2500);
 }
 function onCallItQuestions(qs){
@@ -5816,7 +5826,7 @@ function ensureCiCard(){
   if(document.getElementById('ciCard')) return;
   var css=document.createElement('style');
   css.textContent =
-    '#ciCard{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;width:min(430px,94vw);z-index:9000;'+
+    '#ciCard{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;width:min(430px,94vw);z-index:8400;'+
       'background:#161d2e;border:1px solid #2b3a5e;'+
       'border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.55);padding:14px 15px;display:none;font-family:inherit}'+
     '#ciCard .cihead{font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#28e0d0;margin-bottom:6px}'+
@@ -7599,7 +7609,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.18';
+const STATS_BUILD='2026-08-10-g5-tor-atl.20';
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   // Never drop a refresh button on somebody mid-question. The checker runs
@@ -7661,17 +7671,7 @@ function navGo(tab){
       else { go('landing'); toast('The board fills up once a game night starts.'); }
     }
     else if(tab==='crew'){ try{ openTalk(); }catch(_){ toast('The room opens on game night.'); } }
-    else if(tab==='me'){
-      go('landing');
-      setTimeout(function(){
-        try{
-          const w=document.getElementById('welcomeStrip');
-          const p=document.getElementById('portalCard');
-          const t=(w&&w.style.display!=='none')?w:p;
-          if(t) t.scrollIntoView({behavior:'smooth',block:'center'});
-        }catch(_){}
-      },80);
-    }
+    else if(tab==='me'){ renderMe(); go('me'); }
   }catch(e){}
   paintNav(tab);
 }
@@ -7682,9 +7682,16 @@ function paintNav(active){
   bar.style.display = hide ? 'none' : 'block';
   // The pick-slip's action bar belongs to exactly one screen.
   try{ const pb=document.getElementById('pdBar'); if(pb) pb.style.display=(scr==='predict')?'block':'none'; }catch(_){}
+  // Call It is an in-game overlay. On the landing, the handle screen or the
+  // pick sheet it is just a box covering the nav — which is exactly how the
+  // menu "disappeared".
+  try{
+    const ci=document.getElementById('ciCard');
+    if(ci && ['landing','name','predict','rules','join'].indexOf(scr)>=0) ci.style.display='none';
+  }catch(_){}
   try{ document.body.classList.toggle('hasnav', !hide); }catch(_){}
   if(!active){
-    active = (scr==='lobby') ? 'play' : (scr==='landing' ? 'home' : '');
+    active = (scr==='lobby') ? 'play' : (scr==='landing' ? 'home' : (scr==='me' ? 'me' : ''));
   }
   try{
     bar.querySelectorAll('.navb').forEach(function(b){
@@ -7702,6 +7709,46 @@ function paintNav(active){
   }catch(e){}
 })();
 try{ setTimeout(paintNav, 600); }catch(e){}
+
+
+/* ---- THE ME TAB ---------------------------------------------------
+   Your card, your season, your account — the one screen that is about
+   the player rather than the game. Reads entirely from the device, so
+   it paints instantly and works with no signal.                      */
+function renderMe(){
+  const el=document.getElementById('meBody'); if(!el) return;
+  let v=false, em='';
+  try{ v=!!(window.SB&&SB.verified&&SB.verified()); em=(window.SB&&SB.me&&SB.me.email)||''; }catch(_){}
+  let nm='', clr='#2f6bff', sport='';
+  try{ const pr=savedProfile(); nm=pr.name||''; clr=pr.color||clr; sport=pr.sport||''; }catch(_){}
+  if(!nm) try{ nm=(S&&S.name)||''; }catch(_){}
+  let season=0, nights=0, best=0;
+  try{ season=Math.max(0,Math.round((S&&S.seasonPts)||0)); nights=Math.max(0,(S&&S.streak)||0); }catch(_){}
+  try{ best=Math.max(0,(typeof PCI!=='undefined'&&PCI&&PCI.best)||0); }catch(_){}
+  const tile=function(a,k){ return '<div style="flex:1;background:#0e1626;border:1px solid #26304a;border-radius:14px;padding:15px 8px;text-align:center">'
+    +'<div style="font-size:24px;font-weight:900;color:#eef2fb">'+a+'</div>'
+    +'<div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#93a0bd;margin-top:3px">'+k+'</div></div>'; };
+  el.innerHTML= v
+    ? '<div class="card">'
+      + '<div style="display:flex;align-items:center;gap:14px">'
+      +   '<div style="flex:0 0 auto;width:60px;height:60px;border-radius:18px;background:'+esc(clr)+';display:flex;align-items:center;justify-content:center;font-weight:900;font-size:27px;color:#04121e">'+esc((nm||'S').slice(0,1).toUpperCase())+'</div>'
+      +   '<div style="flex:1;min-width:0">'
+      +     '<div style="font-size:21px;font-weight:900;color:#eef2fb">'+esc(nm||'Your card')+'</div>'
+      +     '<div style="font-size:12px;color:var(--muted,#93a0bd);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(em)+'</div>'
+      +     (sport?'<div style="font-size:11.5px;color:#28e0d0;margin-top:3px;font-weight:800">'+esc(sport)+' fan</div>':'')
+      +   '</div>'
+      + '</div>'
+      + '<div style="display:flex;gap:9px;margin-top:15px">'+tile(season.toLocaleString(),'Season pts')+tile(nights,'Game nights')+tile(best?('🔥'+best):'—','Best Call It')+'</div>'
+      + '</div>'
+      + '<button class="btn ghost" style="margin-top:12px" onclick="go(\'landing\')">← Back to tonight</button>'
+      + '<button class="btn ghost" style="margin-top:8px;font-size:12.5px" onclick="openJoin(\'me\',\'\')">Tell us what you watch →</button>'
+      + '<button class="btn ghost" style="margin-top:8px;font-size:12.5px" onclick="doSignOut()">Sign out</button>'
+    : '<div class="card center">'
+      + '<b style="font-size:16px">You’re not signed in yet</b>'
+      + '<p class="sub" style="margin:8px 0 14px">Sign in and this becomes your card — season points, game nights played, and your best Call It streak.</p>'
+      + '<button class="btn" onclick="go(\'landing\')">Go to sign in →</button>'
+      + '</div>';
+}
 
 </script>
 
