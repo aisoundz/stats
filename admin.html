@@ -62,6 +62,13 @@
   button.btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;
     font:900 14.5px/1 inherit;letter-spacing:-.01em;cursor:pointer;
     background:var(--blue);color:#fff;margin-top:10px}
+  /* A .btn is width:100% by design — it is a full-width block everywhere
+     else in this dashboard. Inside a flex .row that base width made the
+     LAST button claim the whole line and squeeze the first one down to
+     min-content, which is why "Post the score" rendered as a narrow pill
+     with the words stacked vertically on top of "Take it down". Buttons in
+     a row share the row. */
+  .row > button.btn{width:auto;flex:1 1 0;margin-top:0;white-space:nowrap}
   button.btn.red{background:var(--red)}
   button.btn.teal{background:var(--teal);color:#06222a}
   button.btn.gold{background:var(--gold);color:#2a1f00}
@@ -390,7 +397,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-10-admin.18';
+window.ADMIN_BUILD='2026-08-10-admin.19';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
