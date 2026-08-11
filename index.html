@@ -2997,8 +2997,52 @@ const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-lobby"
    place: they've already invested effort, and we've collected nothing durable.
    Now the Play button IS the sign-in when you're signed out. */
 function startLive(){
+  /* Mid-night, this is CONTINUE, not START. Same reasoning as the pick
+     sheet guard — the home page kept offering to begin a game the player
+     was already three quarters into. */
+  try{
+    if(S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0 && S.place!=='predict'){ returnToGame(); return; }
+  }catch(_){}
   if(!signedInNow()){ promptSignIn('live'); return; }
   S.mode="live";go('name');prefillGate();
+}
+/* ---- THE HOME CARD KNOWS WHERE YOU ARE ------------------------------
+   "Why every time I go back to home it shows Play Game, if I have already
+   started the game." Because the landing card was written for a stranger
+   and never learned any other state. It now reports the night back to you
+   — where the game is, what you have, and one button that continues. */
+function paintContinueCard(){
+  try{
+    const btn=document.getElementById('landingBtn');
+    const demo=document.getElementById('landingDemoBtn');
+    if(!btn) return;
+    const live = (S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0 && S.place!=='predict');
+    let note=document.getElementById('contNote');
+    if(!live){
+      if(note) note.remove();
+      if(demo) demo.style.display='';
+      btn.classList.remove('teal');
+      return;
+    }
+    // Where are they, and what have they got?
+    let where='';
+    try{
+      if(S.place==='live') where=roundTag(S.qi)+' is open';
+      else if(S.place==='lobby') where='waiting on '+roundTag(S.nextQ!=null?S.nextQ:S.qi);
+      else if(S.place==='review'||S.place==='break') where='between quarters';
+      else where='in progress';
+    }catch(_){ where='in progress'; }
+    btn.textContent='▶︎ Continue tonight’s game — '+where;
+    btn.classList.add('teal');
+    if(demo) demo.style.display='none';
+    if(!note){
+      note=document.createElement('p'); note.id='contNote'; note.className='sub';
+      note.style.cssText='font-size:12.5px;margin:10px 0 0;text-align:center';
+      btn.parentNode.insertBefore(note, btn);
+    }
+    let pts=0; try{ pts=Math.max(0,Math.round(S.pts||0)); }catch(_){}
+    note.innerHTML='You’re already in this one — <b style="color:var(--gold,#ffc54d)">'+pts+' pts</b> so far. Your picks are locked and safe.';
+  }catch(_){}
 }
 function signedInNow(){
   try{ return !!(window.SB && SB.verified && SB.verified()); }catch(e){ return false; }
@@ -8205,7 +8249,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.38';
+const STATS_BUILD='2026-08-10-g5-tor-atl.39';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -8356,6 +8400,7 @@ function paintNav(active){
   const hide = NAV_HIDE_ON.indexOf(scr)>=0;
   bar.style.display = hide ? 'none' : 'block';
   try{ paintGameBar(); }catch(_){}
+  try{ if(scr==='landing') paintContinueCard(); }catch(_){}
   // The pick-slip's action bar belongs to exactly one screen.
   try{ const pb=document.getElementById('pdBar'); if(pb) pb.style.display=(scr==='predict')?'block':'none'; }catch(_){}
   // Call It is an in-game overlay. On the landing, the handle screen or the
