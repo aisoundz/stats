@@ -4253,6 +4253,27 @@ function predRidingPts(){
     if(p.bonus && S.predChoices[p.id+'_num']!=='' && S.predChoices[p.id+'_num']!=null) n+=p.bonus; } });
   return n;
 }
+/* ================= THE DECK MOVES, NOT THE PLAYER ====================
+   The pick sheet already auto-advanced. What it never did was MOVE. Two
+   full rosters is a long list, so by the time you tap a name you are a
+   screen and a half down — and the next question then rendered above you,
+   off-screen, while you sat looking at the middle of a list you had
+   already answered. Every single pick cost a scroll up to read the
+   question and a scroll back down to answer it. Six times.
+
+   The rule now: whenever the QUESTION changes, the question comes to the
+   top of the screen. Not on every repaint — tapping a name repaints the
+   card and yanking the page then would be worse than the bug. Only when
+   the thing being asked is different from the thing that was being asked.
+   ==================================================================== */
+var PD_SHOWN=-1;
+function predFocus(){
+  try{
+    var c=document.getElementById('predCard'); if(!c) return;
+    var y=window.scrollY + c.getBoundingClientRect().top - 10;
+    window.scrollTo({ top: Math.max(0,y), behavior:'auto' });
+  }catch(_){}
+}
 function predGo(d){
   const L=predOrderList();
   PD.i=Math.max(0,Math.min(L.length-1,PD.i+d));
@@ -4294,6 +4315,21 @@ function predPick(id,val){
   // Auto-advance on a plain pick — the deck should feel like it's moving
   // with you. A pick WITH a bonus number stays put; you're not done yet.
   const p=preds.find(x=>x.id===id);
+  /* A bonus question deliberately does NOT advance — you are not finished.
+     But "stays put" used to mean the +50 field sat unmentioned below the
+     fold while the deck appeared to do nothing at all. Bring it up and
+     mark it, so the next move is obvious without hunting for it. */
+  if(p && p.bonus){ setTimeout(function(){
+    try{
+      var row=document.querySelector('#predCard .pdbonus'); if(!row) return;
+      var r=row.getBoundingClientRect();
+      if(r.bottom > window.innerHeight-110 || r.top < 60){
+        window.scrollTo({ top: Math.max(0, window.scrollY + r.top - (window.innerHeight*0.42)), behavior:'smooth' });
+      }
+      row.classList.remove('ask'); void row.offsetWidth; row.classList.add('ask');
+      setTimeout(function(){ try{ row.classList.remove('ask'); }catch(_){} }, 1800);
+    }catch(_){}
+  }, 200); }
   if(p && !p.bonus){ setTimeout(function(){
     const nb=predBlankIdx(PD.i);
     if(nb>=0) predJump(nb);
@@ -4374,7 +4410,10 @@ function buildPred(){
    +'</div>'
    +'<div class="pdnav">'
    +  '<button type="button" class="pdarrow" data-pdgo="-1"'+(PD.i===0?' disabled':'')+'>← Back</button>'
-   +  '<span class="pdsofar">'+doneN+' / '+preds.length+' locked</span>'
+   /* The count lived here AND in the bar pinned right below it, saying the
+      same thing twice within an inch of itself. The bar owns it. This slot
+      says what the CARD is, which is the thing the arrows move through. */
+   +  '<span class="pdsofar">'+(PD.i+1)+' of '+L.length+'</span>'
    +  '<button type="button" class="pdarrow" data-pdgo="1"'+(PD.i===L.length-1?' disabled':'')+'>Next</button>'
    +'</div>'
    /* THE ACTION LIVES WITH THE CARD. The old Lock button sat at the bottom
@@ -4431,6 +4470,8 @@ function buildPred(){
       return; }
     lockPredictions();
   };
+  /* A new question is a new screen: put it under the player's eyes. */
+  try{ if(PD.i!==PD_SHOWN){ PD_SHOWN=PD.i; predFocus(); } }catch(_){}
   const nb=c.querySelector('.pdbonus input');
   if(nb) nb.oninput=function(){ S.predChoices[p.id+'_num']=nb.value;
     const t=c.querySelector('.pdpts'); if(t) t.textContent=predRidingPts()+' pts riding'; };
@@ -9394,7 +9435,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.69';
+const STATS_BUILD='2026-08-11-g6-ny-ind.70';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -11842,7 +11883,13 @@ body.hasgamebar .screen.active{padding-bottom:132px}
 .pdout{flex:0 0 auto;margin-left:auto;font-size:12px;font-weight:900;line-height:1.5;letter-spacing:.06em;
   color:#ff8a94;border:1px solid rgba(255,107,107,.45);background:rgba(255,107,107,.10);
   border-radius:6px;padding:1px 6px;white-space:nowrap}
-.pdbonus{margin-top:13px}
+.pdbonus{margin-top:13px;border-radius:12px}
+.pdbonus.ask{animation:pdAsk 1.6s ease-out}
+@keyframes pdAsk{0%{box-shadow:0 0 0 0 rgba(242,184,60,.5)}
+  35%{box-shadow:0 0 0 7px rgba(242,184,60,0)}
+  70%{box-shadow:0 0 0 0 rgba(242,184,60,.35)}
+  100%{box-shadow:0 0 0 6px rgba(242,184,60,0)}}
+@media (prefers-reduced-motion:reduce){ .pdbonus.ask{animation:none} }
 .pdbonus label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted,#93a0bd);font-weight:800;margin-bottom:6px}
 .pdbonus input{width:100%;background:#111a2b;border:1px solid #2f3a58;border-radius:12px;padding:14px;color:#eef2fb;font-weight:800;font-size:15px}
 .pdrank{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:13px;font-size:12px;font-weight:800;color:var(--muted,#93a0bd)}
