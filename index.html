@@ -8916,7 +8916,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.54';
+const STATS_BUILD='2026-08-11-g6-ny-ind.55';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -9359,6 +9359,11 @@ async function loadGameStats(force){
       var m={}; (t.statistics||[]).forEach(function(s){ if(m[s.label]==null) m[s.label]=s.displayValue; });
       var c=(comp.competitors||[]).find(function(x){ return x.team&&t.team&&x.team.id===t.team.id; })||{};
       return { id:(t.team&&t.team.id)||'', ab:(t.team&&t.team.abbreviation)||'', name:(t.team&&t.team.displayName)||'',
+               /* The colour lives on the COMPETITOR in the header, not on the
+                  boxscore team — reading the wrong one silently returned
+                  nothing and every night painted identically, which is the
+                  exact bug this feature exists to end. */
+               color:'#'+String((c.team&&c.team.color)||(t.team&&t.team.color)||'').replace(/^#/,''),
                home:c.homeAway==='home', score:c.score==null?null:Number(c.score),
                rec:((c.records||[])[0]||{}).summary||'', m:m,
                stat:function(k){ return this.m[k]; } };
@@ -9417,10 +9422,66 @@ async function loadGameStats(force){
     }catch(_){ GS.plays=GS.plays||[]; }
     GS.state=stat.state||'pre'; GS.detail=stat.shortDetail||stat.detail||'';
     GS.ok=teams.length>0; GS.at=Date.now();
+    try{ paintTeamColours(); }catch(_){}
     if(GS.ok){ GS.err=''; GS.fails=0; } else { GS.err='no teams in feed'; GS.fails++; }
   }catch(e){ GS.err=e.message||'feed unavailable'; GS.fails++; }
   GS.loading=false;
   return GS;
+}
+/* ==================== TEAM COLOUR ===================================
+   The feed hands us both teams' hex on every event and we have thrown it
+   away for six game nights, painting every night identically. From here
+   the game surfaces wear the two teams and the app looks different every
+   time you open it — for free, from data we already fetch.
+
+   One rule governs where it is allowed: TEAM COLOUR IS THE GAME. The
+   teal→blue gradient is YOU and only you. Gold is a milestone. Red is
+   live. Everything else is grey, which is what makes those carry weight.
+
+   The guard is the interesting part. Indiana's real colour is #002d62 —
+   navy on near-black, invisible. Lightening toward white hits the
+   contrast target and destroys the colour on the way, so this lifts
+   LIGHTNESS in HSL with a saturation floor and then verifies by
+   measurement rather than by eye. */
+function tcLum(h){ var c=[1,3,5].map(function(i){ var v=parseInt(h.substr(i,2),16)/255;
+  return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4); });
+  return .2126*c[0]+.7152*c[1]+.0722*c[2]; }
+function tcRatio(a,b){ var l1=tcLum(a),l2=tcLum(b); return (Math.max(l1,l2)+.05)/(Math.min(l1,l2)+.05); }
+function tcHex(r,g,b){ var t=function(v){ return Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0'); };
+  return '#'+t(r)+t(g)+t(b); }
+function tcGuard(hex){
+  try{
+    hex=String(hex||'').replace(/^#?/,'#'); if(!/^#[0-9a-f]{6}$/i.test(hex)) return null;
+    var r=parseInt(hex.substr(1,2),16)/255,g=parseInt(hex.substr(3,2),16)/255,b=parseInt(hex.substr(5,2),16)/255;
+    var mx=Math.max(r,g,b),mn=Math.min(r,g,b),h=0,sa=0,l=(mx+mn)/2;
+    if(mx!==mn){ var d=mx-mn; sa=l>.5?d/(2-mx-mn):d/(mx+mn);
+      h = mx===r?(g-b)/d+(g<b?6:0) : mx===g?(b-r)/d+2 : (r-g)/d+4; h/=6; }
+    sa=Math.max(sa,0.62);
+    var to=function(H,S,L){ var q=L<.5?L*(1+S):L+S-L*S,p=2*L-q;
+      var f=function(t){ t=(t+1)%1; return t<1/6?p+(q-p)*6*t : t<1/2?q : t<2/3?p+(q-p)*(2/3-t)*6 : p; };
+      return tcHex(f(H+1/3)*255,f(H)*255,f(H-1/3)*255); };
+    var out=to(h,sa,l), n=0;
+    while(tcRatio(out,'#0d1119')<4.5 && n<70){ l=Math.min(.86,l+0.012); out=to(h,sa,l); n++; }
+    return out;
+  }catch(_){ return null; }
+}
+function paintTeamColours(){
+  try{
+    if(!GS.ok || !GS.teams || GS.teams.length!==2) return;
+    var A=GS.teams[0], B=GS.teams[1];
+    var av=tcGuard(A.color)||'#7fe3c7', hv=tcGuard(B.color)||'#4a86ff';
+    var root=document.documentElement;
+    root.style.setProperty('--away',av); root.style.setProperty('--home',hv);
+    GS.awayC=av; GS.homeC=hv;
+  }catch(_){}
+}
+function teamC(ab){
+  try{
+    if(!GS.teams||GS.teams.length!==2) return '';
+    if(GS.teams[0].ab===ab) return GS.awayC||'';
+    if(GS.teams[1].ab===ab) return GS.homeC||'';
+  }catch(_){}
+  return '';
 }
 function gsInGame(){ return GS.ok && Object.keys(GS.box).length>0; }
 function gsRows(){ var c=sportCfg(); return (gsInGame()? c.live : c.pre)||[]; }
@@ -9799,6 +9860,15 @@ function stTeamStat(t,label){ try{ return t.m[label]; }catch(_){ return null; } 
    nothing is an opinion, and none of it is available on a betting app.
    Each cut returns null when it isn't true tonight, so the list is only
    ever things that are actually happening.                            */
+/* A NAME WEARS ITS TEAM. One helper so every cut says it the same way,
+   and so the rule is in one place rather than twenty template strings. */
+function whoTag(nm){
+  try{
+    var r=GS.box[nm]; if(!r||!GS.teams||GS.teams.length!==2) return '<b>'+esc(nm)+'</b>';
+    var cls = (GS.teams[0].ab===r.team) ? 'tA' : (GS.teams[1].ab===r.team ? 'tH' : '');
+    return '<b class="'+cls+'">'+esc(nm)+'</b>';
+  }catch(_){ return '<b>'+esc(nm)+'</b>'; }
+}
 function deepCuts(){
   var cuts=[], B=stBox(), A=GS.teams[0], H=GS.teams[1];
   if(!B.length) return cuts;
@@ -9811,7 +9881,7 @@ function deepCuts(){
   if(deep[0] && deep[0].tp.m>=3){
     var d=deep[0], second=(deep[1]&&deep[1].tp.m)||0, s=seaOf(d.nm);
     var lead = d.tp.m>second ? ('nobody else tonight has more than '+second) : ('tied with '+(deep[1]?deep[1].nm:'one other'));
-    add('🎯','<b>'+esc(d.nm)+'</b> has hit '+d.tp.m+' threes — '+lead+'.',
+    add('🎯',whoTag(d.nm)+' has hit '+d.tp.m+' threes — '+lead+'.',
         d.tp.m+'-of-'+(d.tp.a||d.tp.m)+' from deep'
         + (s&&s.tpm!=null ? (' · averages '+s.tpm.toFixed(1)+' a game'+(rankIn(s,'tpm','in the league')?', '+rankIn(s,'tpm','in the league'):'')) : ''),
         90+d.tp.m, 'deep');
@@ -9823,23 +9893,23 @@ function deepCuts(){
       .filter(function(c){ return c[1]!=null && c[1]>=10; });
     var s=seaOf(x.nm);
     if(big.length>=3){
-      add('🏆','<b>'+esc(x.nm)+'</b> has a TRIPLE-DOUBLE — '+big.map(function(c){return c[1]+' '+c[2];}).join(', ')+'.',
+      add('🏆',whoTag(x.nm)+' has a TRIPLE-DOUBLE — '+big.map(function(c){return c[1]+' '+c[2];}).join(', ')+'.',
           s&&s.td!=null ? ('number '+(s.td+1)+' of her season') : '', 200, 'triple');
     } else if(big.length===2){
-      add('💪','<b>'+esc(x.nm)+'</b> is at '+big[0][1]+' '+big[0][2]+' and '+big[1][1]+' '+big[1][2]+' — that’s a double-double.',
+      add('💪',whoTag(x.nm)+' is at '+big[0][1]+' '+big[0][2]+' and '+big[1][1]+' '+big[1][2]+' — that’s a double-double.',
           s&&s.dd!=null ? ('her '+ord(s.dd+1)+' this season'+(rankIn(s,'dd','in the WNBA for double-doubles')?' · '+rankIn(s,'dd','in the WNBA for double-doubles'):'')) : '',
           120+big[0][1], 'dd');
     } else if(big.length===1){
       var near=[['pts',x.pts,'points'],['reb',x.reb,'rebounds'],['ast',x.ast,'assists']]
         .filter(function(c){ return c[1]!=null && c[1]>=7 && c[1]<10; }).sort(function(a,b){ return b[1]-a[1]; })[0];
-      if(near) add('👀','<b>'+esc(x.nm)+'</b> is '+(10-near[1])+' '+near[2].replace(/s$/,'')+(10-near[1]===1?'':'s')+' from a double-double.',
+      if(near) add('👀',whoTag(x.nm)+' is '+(10-near[1])+' '+near[2].replace(/s$/,'')+(10-near[1]===1?'':'s')+' from a double-double.',
         'has '+big[0][1]+' '+big[0][2]+' already', 70, 'ddwatch');
     }
   });
 
   /* --- who the game actually swings on ----------------------------- */
   var pm=best('pm',8);
-  if(pm) add('📈','<b>'+esc(pm.nm)+'</b> — her team is +'+pm.pm+' with her on the floor, the best mark in the game.',
+  if(pm) add('📈',whoTag(pm.nm)+' — her team is +'+pm.pm+' with her on the floor, the best mark in the game.',
       pm.min!=null?(pm.min+' minutes played'):'', 80, 'pm');
 
   /* --- shooting nobody sustains ------------------------------------ */
@@ -9847,7 +9917,7 @@ function deepCuts(){
     if(x.fg.a!=null && x.fg.a>=6 && x.fg.m!=null){
       var pct=x.fg.m/x.fg.a;
       if(pct>=0.7){ var s=seaOf(x.nm);
-        add('🔥','<b>'+esc(x.nm)+'</b> is '+x.fg.m+'-of-'+x.fg.a+' from the field — '+Math.round(pct*100)+'%.',
+        add('🔥',whoTag(x.nm)+' is '+x.fg.m+'-of-'+x.fg.a+' from the field — '+Math.round(pct*100)+'%.',
           s&&s.fgp!=null?('she shoots '+s.fgp.toFixed(1)+'% on the season'):'', 75, 'hot'); }
     }
   });
@@ -9855,7 +9925,7 @@ function deepCuts(){
   /* --- the pure point guard line ----------------------------------- */
   B.forEach(function(x){
     if(x.ast!=null && x.ast>=5 && x.to!=null && x.to<=1){
-      add('🎩','<b>'+esc(x.nm)+'</b>: '+x.ast+' assists, '+x.to+' turnover'+(x.to===1?'':'s')+'.',
+      add('🎩',whoTag(x.nm)+': '+x.ast+' assists, '+x.to+' turnover'+(x.to===1?'':'s')+'.',
         'that ratio is what separates a guard from a scorer', 65, 'ast');
     }
   });
@@ -9866,18 +9936,18 @@ function deepCuts(){
     var tm=[A,H].filter(Boolean).find(function(t){ return t && t.ab===top.team; });
     if(tm && tm.score){
       var share=Math.round((top.pts/tm.score)*100);
-      if(share>=30) add('🫡','<b>'+esc(top.nm)+'</b> has '+top.pts+' of '+esc(tm.ab)+'’s '+tm.score+' — '+share+'% of everything they’ve scored.','',85,'share');
+      if(share>=30) add('🫡',whoTag(top.nm)+' has '+top.pts+' of '+esc(tm.ab)+'’s '+tm.score+' — '+share+'% of everything they’ve scored.','',85,'share');
     }
     var s2=seaOf(top.nm);
     if(s2 && s2.pts!=null && top.pts>=s2.pts+8){
-      add('🚀','<b>'+esc(top.nm)+'</b> is at '+top.pts+' against a season average of '+s2.pts.toFixed(1)+'.',
+      add('🚀',whoTag(top.nm)+' is at '+top.pts+' against a season average of '+s2.pts.toFixed(1)+'.',
         rankIn(s2,'pts','in the league in scoring'), 95, 'career');
     }
   }
 
   /* --- foul trouble is a stat that changes what you watch ---------- */
   B.forEach(function(x){ if(x.pf!=null && x.pf>=4 && x.min!=null)
-    add('⚠️','<b>'+esc(x.nm)+'</b> has '+x.pf+' fouls in '+x.min+' minutes.','one more and she sits',60,'foul'); });
+    add('⚠️',whoTag(x.nm)+' has '+x.pf+' fouls in '+x.min+' minutes.','one more and she sits',60,'foul'); });
 
   /* --- the team-level shape of the night --------------------------- */
   try{
@@ -9909,7 +9979,7 @@ function deepCuts(){
       if(!elite) return; seen[x.nm]=1;
       var r=s['rank_'+elite[0]];
       var val=elite[0]==='dd'? String(elite[2]) : Number(elite[2]).toFixed(1);
-      add('🏅','<b>'+esc(x.nm)+'</b> is '+(r===1?'the WNBA leader':ord(r)+' in the WNBA')+' in '+elite[1]+' — '+val+'.',
+      add('🏅',whoTag(x.nm)+' is '+(r===1?'the WNBA leader':ord(r)+' in the WNBA')+' in '+elite[1]+' — '+val+'.',
         'on the floor tonight', 100-r, 'league');
     });
   }catch(_){}
@@ -10547,8 +10617,15 @@ function feedRender(force){
     /* Warm-up cards carry no reaction row. There is nothing to react to
        before the ball goes up, and four dead emoji under a countdown is
        exactly the kind of decoration that makes a screen feel padded. */
-    var quiet = (it.k==='warm' || it.k==='try');
-    return '<article class="fdc'+(it.big?' big':'')+(quiet?' quiet':'')+'" data-fd="'+esc(it.id)+'">'
+    var quiet = (it.k==='warm' || it.k==='try' || it.k==='you');
+    /* Team colour on the edge. You know who did what before you read it. */
+    var side='';
+    try{
+      if(it.k==='play' && it.__p && it.__p.ab && GS.teams && GS.teams.length===2)
+        side = (GS.teams[0].ab===it.__p.ab) ? 'a' : (GS.teams[1].ab===it.__p.ab ? 'h' : '');
+    }catch(_){}
+    return '<article class="fdc'+(it.big?' big':'')+(quiet?' quiet':'')+'"'
+      + (side?(' data-team="'+side+'"'):'') + ' data-fd="'+esc(it.id)+'">'
       + (it.tag?'<div class="fdtag">'+esc(it.tag)+'</div>':'')
       + '<div class="fdmain"><span class="fdi">'+it.icon+'</span>'
       +   '<div class="fdb"><div class="fdt">'+(it.k==='play'?esc(it.text):it.text)+'</div>'
@@ -10615,6 +10692,53 @@ try{ FEED.reacts=JSON.parse(localStorage.getItem('stats_reacts_v1')||'{}')||{}; 
 function feedShowNew(){ feedRender(true); try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(_){} }
 try{ window.feedShowNew=feedShowNew; }catch(_){}
 
+/* Three fixed slots, leading zero hidden rather than removed. Removing it
+   rebuilds the element and kills the animation on the exact score change
+   people care about most. */
+var GTLAST={};
+function gtDigits(id, n, sideId){
+  try{
+    var el=document.getElementById(id); if(!el || n==null) return;
+    var str=String(Math.max(0,Math.round(n))).padStart(3,'0').split('');
+    if(el.children.length!==3){
+      el.innerHTML=str.map(function(){ return '<div class="gtDig"><div class="gtStrip">'+
+        '0123456789'.split('').map(function(d){ return '<span>'+d+'</span>'; }).join('')+'</div></div>'; }).join('');
+    }
+    Array.prototype.forEach.call(el.children,function(d,i){
+      d.classList.toggle('hide', i===0 && n<100);
+      var st=d.querySelector('.gtStrip'); if(st) st.style.transform='translateY(-'+(Number(str[i])*52)+'px)';
+    });
+    var changed = GTLAST[id]!=null && GTLAST[id]!==n;
+    GTLAST[id]=n;
+    if(changed && sideId){ var sd=document.getElementById(sideId);
+      if(sd){ sd.classList.add('flash'); setTimeout(function(){ sd.classList.remove('flash'); },560); } }
+  }catch(_){}
+}
+/* THE RUN. Points over a real window, driving the bar and the sentence
+   from the same number. */
+function paintRun(){
+  try{
+    var bar=document.getElementById('gtRunBar'), out=document.getElementById('gtRun');
+    if(!out) return;
+    var plays=(GS.plays||[]).filter(function(p){ return p.scoring && p.value>0 && p.ab; }).slice(-14);
+    var A=GS.teams[0], B=GS.teams[1]; if(!A||!B) return;
+    var pa=0, ph=0;
+    plays.forEach(function(p){ if(p.ab===A.ab) pa+=p.value; else if(p.ab===B.ab) ph+=p.value; });
+    var tot=pa+ph;
+    var ea=document.getElementById('gtRunA'), eh=document.getElementById('gtRunH');
+    if(ea&&eh){ var w=tot?Math.round(pa/tot*100):50; ea.style.width=w+'%'; eh.style.width=(100-w)+'%'; }
+    if(plays.length<4){ out.className='gtRun quiet'; out.textContent='reading the play-by-play…'; return; }
+    out.className='gtRun';
+    if(pa===ph){ out.innerHTML='Trading baskets — <b>'+pa+'–'+ph+'</b> over the last few minutes.'; return; }
+    var aw=pa>ph, nm=aw?(A.name||A.ab):(B.name||B.ab), big=aw?pa:ph, small=aw?ph:pa;
+    var col=aw?'tA':'tH';
+    var lead=(A.score!=null&&B.score!=null)?Math.abs(A.score-B.score):0;
+    out.innerHTML = lead>=18
+      ? '<b class="'+col+'">'+esc(nm)+'</b> by '+lead+'. It is <b>'+big+'–'+small+'</b> over the last stretch.'
+      : '<b class="'+col+'">'+esc(nm)+'</b> <b>'+big+'–'+small+'</b> over the last four minutes.';
+  }catch(_){}
+}
+
 function renderGametime(){
   const head=document.getElementById('gtHead'), idle=document.getElementById('gtIdle');
   if(!head) return;
@@ -10649,14 +10773,29 @@ function renderGametime(){
       + '</div>';
     return renderGametimeRest();
   }
-  head.innerHTML='<div class="card" style="padding:16px">'
+  /* ==== THE SCOREBOARD, ARENA ====================================
+     Rolling digits on three fixed slots so 99→100 animates instead of
+     rebuilding the DOM at the most dramatic score change in basketball.
+     Team colour on the corners. A run bar weighted by POINTS — not by
+     the count of scores, which is the mistake that made the first
+     version of this say nothing — with the sentence underneath, because
+     the graphic gives you the shape and the sentence gives you the line
+     worth repeating. */
+  head.innerHTML='<div class="card gtBoard" style="padding:17px 16px 14px">'
     + '<div style="display:flex;align-items:center;justify-content:space-between">'
-    +   '<div style="text-align:center;flex:1"><div style="font-size:11px;letter-spacing:.14em;color:#93a0bd;font-weight:800">'+esc(String(A))+'</div>'
-    +     '<div style="font-size:32px;font-weight:900;color:#eef2fb">'+(live?esc(String(as)):'–')+'</div></div>'
-    +   '<div style="flex:0 0 auto;padding:0 12px"><span class="pill">'+(live?esc(st||'LIVE'):'Not started')+'</span></div>'
-    +   '<div style="text-align:center;flex:1"><div style="font-size:11px;letter-spacing:.14em;color:#93a0bd;font-weight:800">'+esc(String(H))+'</div>'
-    +     '<div style="font-size:32px;font-weight:900;color:#eef2fb">'+(live?esc(String(hs)):'–')+'</div></div>'
-    + '</div></div>';
+    +   '<div class="gtSide" id="gtSideA" style="flex:1;text-align:center">'
+    +     '<div class="gtAb a">'+esc(String(A))+'</div><div class="gtScore" id="gtScoreA"></div></div>'
+    +   '<div style="flex:0 0 auto;padding:0 10px"><span class="pill">'+esc(st||'LIVE')+'</span></div>'
+    +   '<div class="gtSide" id="gtSideH" style="flex:1;text-align:center">'
+    +     '<div class="gtAb h">'+esc(String(H))+'</div><div class="gtScore" id="gtScoreH"></div></div>'
+    + '</div>'
+    + '<div class="gtRunBar" id="gtRunBar"><i class="a" id="gtRunA" style="width:50%"></i>'
+    +   '<i class="h" id="gtRunH" style="width:50%"></i></div>'
+    + '<div class="gtRunCap"><i>'+esc(String(A))+'</i><i>RUN · POINTS IN THE LAST FEW MINUTES</i><i>'+esc(String(H))+'</i></div>'
+    + '<div class="gtRun" id="gtRun">reading the play-by-play…</div>'
+    + '</div>';
+  try{ gtDigits('gtScoreA', as, 'gtSideA'); gtDigits('gtScoreH', hs, 'gtSideH'); }catch(_){}
+  try{ paintRun(); }catch(_){}
   return renderGametimeRest();
 }
 function renderGametimeRest(){
@@ -10902,6 +11041,70 @@ body.member #s-landing .brand{margin-top:6px}
 .tkscore{font-size:12px;letter-spacing:.1em;color:#93a0bd;font-weight:800;margin-top:16px;text-transform:uppercase}
 .tktap{font-size:10.5px;letter-spacing:.14em;color:#3f4c6b;font-weight:800;margin-top:26px;text-transform:uppercase}
 .fdr.fdsh{margin-left:auto;color:#5b6a8c}
+/* ==================== ARENA ========================================
+   Team colour on the game, brand on you, gold on a milestone, red on
+   live. Everything else grey. See paintTeamColours() for where --away and
+   --home come from and why they are guarded. */
+:root{ --away:#7fe3c7; --home:#4a86ff; --mile:#ffc54d; }
+
+/* every card gets a lit top edge. one line, and it is the difference
+   between a surface and a rectangle. */
+.card{position:relative}
+.card::before{content:'';position:absolute;left:0;right:0;top:0;height:1px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.10),transparent)}
+
+/* the feed carries the team on its edge, so you know who did what without
+   reading a word */
+.fdc{padding-left:16px}
+.fdc::after{content:'';position:absolute;left:7px;top:14px;bottom:14px;width:3px;border-radius:99px;
+  background:#26304a}
+.fdc[data-team="a"]::after{background:var(--away)}
+.fdc[data-team="h"]::after{background:var(--home)}
+
+/* a stat about a player wears her team */
+.tA{color:var(--away)!important} .tH{color:var(--home)!important}
+.mile{color:var(--mile);font-weight:900}
+
+/* the scoreboard, rebuilt */
+.gtBoard{position:relative;overflow:hidden}
+.gtBoard::after{content:'';position:absolute;inset:0;opacity:.5;pointer-events:none;
+  background:
+    radial-gradient(120% 130% at 0% 0%, color-mix(in srgb,var(--away) 44%, transparent), transparent 56%),
+    radial-gradient(120% 130% at 100% 0%, color-mix(in srgb,var(--home) 44%, transparent), transparent 56%)}
+.gtBoard>*{position:relative;z-index:1}
+.gtAb{font-weight:900;font-size:12px;letter-spacing:.2em}
+.gtAb.a{color:var(--away)} .gtAb.h{color:var(--home)}
+.gtScore{display:flex;justify-content:center;height:52px;margin-top:7px}
+.gtDig{width:26px;height:52px;overflow:hidden;position:relative;transition:width .3s ease,opacity .3s ease}
+.gtDig.hide{width:0;opacity:0}
+.gtStrip{position:absolute;left:0;top:0;width:100%;transition:transform .42s cubic-bezier(.22,1,.28,1)}
+.gtStrip span{display:block;height:52px;font-weight:900;font-size:46px;line-height:52px;
+  text-align:center;letter-spacing:-.04em;color:#eef2fb}
+.gtSide.flash .gtStrip span{animation:gtPop .55s ease-out}
+@keyframes gtPop{0%{filter:brightness(2.4)}100%{filter:brightness(1)}}
+.gtRunBar{height:5px;border-radius:99px;overflow:hidden;background:#131826;display:flex;margin-top:15px}
+.gtRunBar i{display:block;height:100%;transition:width .9s cubic-bezier(.16,1,.3,1)}
+.gtRunBar i.a{background:var(--away)} .gtRunBar i.h{background:var(--home)}
+.gtRunCap{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-top:7px;
+  font-weight:800;font-size:9px;letter-spacing:.12em;color:#5b6a8c;white-space:nowrap}
+.gtRunCap i{font-style:normal}
+.gtRunCap i:first-child{text-align:left;color:var(--away)}
+.gtRunCap i:last-child{text-align:right;color:var(--home)}
+.gtRun{margin-top:10px;text-align:center;font-weight:700;font-size:13px;line-height:1.4;color:#93a0bd}
+.gtRun b{font-weight:900}
+.gtRun.quiet{color:#5b6a8c;font-weight:600;font-size:12px}
+
+/* the big numeral on a deep cut — her team's colour, unit on the baseline */
+.dcBig{display:flex;align-items:baseline;gap:10px;margin-bottom:5px}
+.dcNum{font-weight:900;font-size:40px;line-height:1;letter-spacing:-.045em;color:var(--home)}
+.dcNum.a{color:var(--away)}
+.dcUnit{font-weight:800;font-size:11px;letter-spacing:.15em;color:#93a0bd;text-transform:uppercase}
+
+/* motion is information; anyone who has asked for less gets less */
+@media(prefers-reduced-motion:reduce){
+  .gtStrip,.gtRunBar i,.stRace i,.fdc,.strip{transition:none!important}
+  .gtSide.flash .gtStrip span,.dot,#ciCard .ciwait i{animation:none!important}
+}
 .fdc.quiet{cursor:default}
 .fdc.quiet:active{transform:none}
 .fdgo{display:block;width:100%;margin-top:11px;border:none;border-radius:12px;cursor:pointer;
