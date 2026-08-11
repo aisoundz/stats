@@ -6438,6 +6438,132 @@ function ciPreBank(){
   });
   return out;
 }
+/* ==================== QUARTER-RETROSPECTIVE QUESTIONS ===============
+   "We need questions of what happened earlier in the quarter."
+
+   The old live bank asked about the CURRENT STATE — who is ahead, who is
+   top scorer, who has more rebounds. Every one of those is answerable by
+   glancing at the scoreboard, which makes them lookups, not questions. A
+   lookup is not sticky: you learn nothing, you remember nothing, and a
+   person who just walked in scores the same as somebody who watched the
+   whole quarter.
+
+   These are built from the play-by-play, scoped to the quarter in
+   progress. You can only answer them if you were watching — which is the
+   entire product. Each one computes its own answer at generation time, so
+   it is verifiable the second it is asked, and none of them need the host.
+   ================================================================== */
+function ciQtrBank(){
+  var out=[];
+  try{
+    var plays=(GS.plays||[]).filter(function(p){ return p.period!=null; });
+    if(plays.length<8) return out;
+    var per=Math.max.apply(null, plays.map(function(p){ return p.period; }));
+    var q=plays.filter(function(p){ return p.period===per; });
+    if(q.length<6) return out;
+    var A=GS.teams[0], B=GS.teams[1]; if(!A||!B) return out;
+    var scores=q.filter(function(p){ return p.scoring && p.value>0; });
+    if(scores.length<4) return out;
+    var Q='Q'+per;
+    var who=function(t){ return t===A.ab?'a':'b'; };
+    var nameOf=function(txt){ var m=String(txt).match(/^([A-Z][^ ]*(?: [A-Z][^ ]*)+?) (?:makes|misses)/); return m?m[1]:''; };
+
+    // --- who opened the quarter
+    var first=scores[0];
+    if(first && first.ab){
+      out.push({ qid:'ciq-first-'+per+'-'+first.id,
+        prompt:'Who scored FIRST in '+Q+'?',
+        options:[{k:A.ab,v:'a'},{k:B.ab,v:'b'}], answer:who(first.ab),
+        resolveText:first.text+' — that opened '+Q+'.' });
+      var fn=nameOf(first.text);
+      var other=scores.map(function(p){ return nameOf(p.text); })
+                      .filter(function(n){ return n && n!==fn; })[0];
+      if(fn && other) out.push({ qid:'ciq-firstwho-'+per+'-'+first.id,
+        prompt:'Who put up the first basket of '+Q+'?',
+        options:[{k:fn,v:'a'},{k:other,v:'b'}], answer:'a',
+        resolveText:first.text+'.' });
+    }
+
+    // --- how many threes have gone in this quarter
+    var threes=scores.filter(function(p){ return p.value===3; }).length;
+    out.push({ qid:'ciq-threes-'+per+'-'+q.length,
+      prompt:'How many threes have been made in '+Q+' so far — both teams?',
+      options:[{k:'None or one',v:'a'},{k:'Two or three',v:'b'},{k:'Four or more',v:'c'}],
+      answer: threes<=1?'a':(threes<=3?'b':'c'),
+      resolveText:threes+' three'+(threes===1?'':'s')+' so far in '+Q+'.' });
+
+    // --- who has actually outscored who since the quarter started
+    var pa=0, pb=0;
+    scores.forEach(function(p){ if(p.ab===A.ab) pa+=p.value; else if(p.ab===B.ab) pb+=p.value; });
+    if(pa!==pb) out.push({ qid:'ciq-run-'+per+'-'+(pa+pb),
+      prompt:'Since '+Q+' started, which team has scored more?',
+      options:[{k:A.ab,v:'a'},{k:B.ab,v:'b'}], answer: pa>pb?'a':'b',
+      resolveText:A.ab+' '+pa+', '+B.ab+' '+pb+' in '+Q+' so far.' });
+
+    // --- free throws, which nobody tracks and everybody can picture
+    var fts=scores.filter(function(p){ return p.value===1; }).length;
+    out.push({ qid:'ciq-ft-'+per+'-'+q.length,
+      prompt:'Free throws made in '+Q+' so far — more than two?',
+      options:[{k:'More than two',v:'o'},{k:'Two or fewer',v:'u'}],
+      answer: fts>2?'o':'u',
+      resolveText:fts+' free throw'+(fts===1?'':'s')+' made in '+Q+'.' });
+
+    // --- the last thing that happened, which rewards paying attention NOW
+    var last=scores[scores.length-1];
+    if(last){
+      out.push({ qid:'ciq-last-'+per+'-'+last.id,
+        prompt:'The last basket — how many was it worth?',
+        options:[{k:'One',v:'1'},{k:'Two',v:'2'},{k:'Three',v:'3'}], answer:String(last.value),
+        resolveText:last.text+'.' });
+      var ln=nameOf(last.text);
+      if(ln){
+        var alt=scores.slice(0,-1).map(function(p){ return nameOf(p.text); })
+                      .filter(function(n){ return n && n!==ln; }).pop();
+        if(alt) out.push({ qid:'ciq-lastwho-'+per+'-'+last.id,
+          prompt:'Who scored the last bucket?',
+          options:[{k:ln,v:'a'},{k:alt,v:'b'}], answer:'a',
+          resolveText:last.text+'.' });
+      }
+    }
+
+    // --- has a player who is having a night gone quiet this quarter?
+    try{
+      var byQ={};
+      scores.forEach(function(p){ var n=nameOf(p.text); if(n) byQ[n]=(byQ[n]||0)+p.value; });
+      var names=Object.keys(byQ);
+      names.sort(function(x,y){ return byQ[y]-byQ[x]; });
+      /* STRICTLY MORE, or do not ask. The first version compared the top two
+         and asked anyway when they were level — "who has scored the most"
+         with the answer "Jonquel Jones, 18" and the runner-up also on 18.
+         A question with two correct answers and one accepted answer is
+         worse than no question: it marks people wrong for being right. */
+      if(names.length>=2 && byQ[names[0]]>byQ[names[1]]){
+        out.push({ qid:'ciq-hot-'+per+'-'+names[0],
+          prompt:'Who has scored the most in '+Q+' alone?',
+          options:[{k:names[0],v:'a'},{k:names[1],v:'b'}], answer:'a',
+          resolveText:names[0]+' has '+byQ[names[0]]+' in '+Q+'. '+names[1]+' has '+byQ[names[1]]+'.' });
+      }
+    }catch(_){}
+
+    // --- did the lead change hands during this quarter
+    try{
+      var lead=null, changed=false;
+      q.forEach(function(p){
+        if(p.away==null||p.home==null) return;
+        var L = p.home===p.away ? null : (p.home>p.away?'h':'a');
+        if(L && lead && L!==lead) changed=true;
+        if(L) lead=L;
+      });
+      out.push({ qid:'ciq-lc-'+per+'-'+q.length,
+        prompt:'Has the lead changed hands during '+Q+'?',
+        options:[{k:'Yes',v:'y'},{k:'No',v:'n'}], answer: changed?'y':'n',
+        resolveText: changed?('It has — '+Q+' has had at least one lead change.')
+                            :('No — the same team has been in front all of '+Q+'.') });
+    }catch(_){}
+  }catch(_){}
+  return out;
+}
+
 function ciLiveBank(){
   var out=[], A=GS.teams[0], B=GS.teams[1]; if(!A||!B) return out;
   var K=sportCfg().box;
@@ -6495,7 +6621,13 @@ function ciLiveBank(){
    that actually wants variety (the practice button), never to the bank. */
 function ciBank(){
   if(!GS.ok) return [];
-  return gsInGame() ? ciLiveBank() : ciPreBank();
+  if(!gsInGame()) return ciPreBank();
+  /* Quarter-retrospective questions FIRST. The state lookups behind them
+     still exist, because early in a quarter there is not yet enough
+     play-by-play to ask anything about it — but the moment there is, the
+     questions that reward watching go to the front of the queue. */
+  var q=[]; try{ q=ciQtrBank(); }catch(_){ q=[]; }
+  return q.concat(ciLiveBank());
 }
 function ciBankShuffled(){
   var b=ciBank().slice();
@@ -6571,7 +6703,7 @@ function ciSettleWhenAnswered(live,q,maxMs){
   };
   var watch=setInterval(function(){
     if(PCI.active!==live || live.state==='resolved'){ clearInterval(watch); return; }
-    if(PCI.picked[live.qid]!=null){ clearInterval(watch); setTimeout(settle,2200); }
+    if(PCI.picked[live.qid]!=null){ clearInterval(watch); setTimeout(settle,900); }
   },250);
   setTimeout(function(){ clearInterval(watch); settle(); }, maxMs||22000);
 }
@@ -6605,7 +6737,39 @@ function ensureCiCard(){
     '#ciCard .cibody{font-size:15px;color:#eef2fb}'+
     '#ciCard .cireveal{margin-top:6px;font-size:13px;color:#93a0bd}'+
     '#ciCard .cifoot{display:flex;gap:16px;align-items:center}'+
-    '#ciCard .cimute{margin-top:10px;background:none;border:none;color:#5b6a8c;font-size:12px;cursor:pointer;text-decoration:underline}';
+    '#ciCard .cimute{margin-top:10px;background:none;border:none;color:#5b6a8c;font-size:12px;cursor:pointer;text-decoration:underline}'+
+    /* the commit, painted on the same frame as the tap */
+    '#ciCard .ciopt{transition:opacity .18s ease,transform .18s ease,background .18s ease}'+
+    '#ciCard .ciopt.cifade{opacity:.18;transform:scale(.97)}'+
+    '#ciCard.cidone .ciopt.cisel{transform:scale(1.02)}'+
+    /* the receipt */
+    '#ciCard .cilocked{display:flex;align-items:center;gap:11px;margin:2px 0 10px}'+
+    '#ciCard .cichk{flex:0 0 auto;width:30px;height:30px;border-radius:99px;display:flex;'+
+      'align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#04121e;'+
+      'background:linear-gradient(92deg,#28e0d0,#4d86ff);animation:ciPop .3s cubic-bezier(.16,1.3,.3,1)}'+
+    '@keyframes ciPop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}'+
+    '#ciCard .cilb{flex:1;min-width:0}'+
+    '#ciCard .cilv{font-size:16px;font-weight:900;color:#eef2fb;line-height:1.2}'+
+    '#ciCard .cilq{font-size:11.5px;color:#5b6a8c;margin-top:2px;overflow:hidden;'+
+      'text-overflow:ellipsis;white-space:nowrap}'+
+    '#ciCard .cistreak{flex:0 0 auto;font-size:13px;font-weight:900;color:var(--gold,#ffc54d)}'+
+    /* motion, so "waiting" looks like waiting and not like frozen */
+    '#ciCard .ciwait{height:3px;border-radius:99px;background:#22304d;overflow:hidden;margin-bottom:9px}'+
+    '#ciCard .ciwait i{display:block;height:100%;width:40%;border-radius:99px;'+
+      'background:linear-gradient(92deg,#28e0d0,#4d86ff);animation:ciSlide 1.25s ease-in-out infinite}'+
+    '@keyframes ciSlide{0%{transform:translateX(-100%)}100%{transform:translateX(320%)}}'+
+    /* the result */
+    '#ciCard .cires{display:flex;align-items:center;gap:12px;margin:2px 0 4px}'+
+    '#ciCard .ciresi{flex:0 0 auto;font-size:24px}'+
+    '#ciCard .ciresh{font-size:19px;font-weight:900;color:#eef2fb;line-height:1.15}'+
+    '#ciCard .cires.ok .ciresh{color:#2ee6a6}'+
+    '#ciCard .cires.no .ciresh{color:#ff8a94}'+
+    '#ciCard .ciresp{font-size:12px;color:#93a0bd;margin-top:2px}'+
+    '#ciCard .cirun{font-size:13.5px;color:var(--gold,#ffc54d);font-weight:800;margin:6px 0 2px}'+
+    '#ciCard .cirun.cimiss{color:#5b6a8c;font-weight:700}'+
+    '#ciCard[data-heat="1"]{border-color:rgba(255,197,77,.55)}'+
+    '#ciCard[data-heat="2"]{border-color:rgba(255,146,77,.7);box-shadow:0 18px 50px rgba(255,146,77,.18)}'+
+    '#ciCard[data-heat="3"]{border-color:rgba(255,77,94,.85);box-shadow:0 18px 60px rgba(255,77,94,.28)}';
   document.head.appendChild(css);
   var d=document.createElement('div'); d.id='ciCard'; d.innerHTML='<div id="ciInner"></div>';
   document.body.appendChild(d);
@@ -6653,8 +6817,28 @@ function ciGrade(q){
 function ciPick(q,v){
   if(PCI.muted || PCI.picked[q.qid]!=null) return;
   PCI.picked[q.qid]=v;
+  /* FEEDBACK ON THE SAME FRAME. "It feels stuck when you give the answer."
+     It was: the tap wrote to state, then the card re-rendered into a layout
+     that looked almost identical — same big question, same four buttons,
+     one of them now grey — with a dead grey line reading "waiting on the
+     play…". Nothing moved, so nothing had happened as far as your thumb
+     was concerned. Paint the commit BEFORE anything else, then let the
+     re-render catch up. */
+  try{
+    var card=document.getElementById('ciCard');
+    if(card){
+      card.classList.add('cidone');
+      Array.prototype.forEach.call(card.querySelectorAll('.ciopt'), function(b){
+        var mine=String(b.getAttribute('data-civ'))===String(v);
+        b.classList.toggle('cisel', mine);
+        b.classList.toggle('cifade', !mine);
+        b.disabled=true;
+      });
+    }
+  }catch(_){}
+  try{ if(navigator.vibrate) navigator.vibrate(12); }catch(_){}
   try{ if(window.SB&&SB.callItPick) SB.callItPick(q.qid,v); }catch(e){}
-  renderCiCard(q);
+  setTimeout(function(){ try{ renderCiCard(q); }catch(_){} }, 180);
 }
 /* ---- WHERE CALL IT IS ALLOWED TO EXIST -------------------------------
    The rule, learned the hard way from a screenshot with two live questions
@@ -6691,11 +6875,26 @@ function renderCiCard(q){
     ciGrade(q);
     var pk=PCI.picked[q.qid];
     var right = pk!=null && String(pk)===String(q.answer);
-    var head = pk==null ? 'You sat this one out' : (right?'✅ Nice call!':'✕ Not this time');
-    var tail = pk==null ? '' : (right?(' · 🔥 '+PCI.streak+' in a row'):' · streak reset');
-    ciShow('<div class="cihead">🎯 Call It · resolved</div><div class="cibody"><b>'+esc(head)+'</b>'+esc(tail)+'</div>'+
+    /* HEAT. A run should be visible before you are told about it — the
+       card itself catches fire. Three in a row is the point at which a
+       player starts protecting a streak instead of guessing, and that is
+       the whole behaviour we want. */
+    var heat = right ? Math.min(3, Math.floor(PCI.streak/3)) : 0;
+    var head = pk==null ? 'You sat this one out' : (right?'Nice call':'Not this time');
+    var icon = pk==null ? '—' : (right?'✅':'✕');
+    var run  = (pk!=null && right && PCI.streak>1)
+      ? '<div class="cirun">🔥 <b>'+PCI.streak+' in a row</b>'+(PCI.streak>=3?' — you’re on a run':'')+'</div>'
+      : (pk!=null && !right && PCI.best>1 ? '<div class="cirun cimiss">streak reset · your best is '+PCI.best+'</div>' : '');
+    ciShow('<div class="cihead">🎯 Call It · resolved</div>'+
+           '<div class="cires'+(right?' ok':(pk==null?'':' no'))+'"><span class="ciresi">'+icon+'</span>'+
+             '<div><div class="ciresh">'+esc(head)+'</div>'+
+             (pk!=null?('<div class="ciresp">You said '+esc(ciLabel(q,pk))+'</div>'):'')+'</div></div>'+
+           run+
            '<div class="cireveal">'+esc(q.resolveText||'')+'</div>');
-    ciHideSoon(11000); return;
+    try{ var cc=document.getElementById('ciCard');
+         if(cc){ cc.classList.remove('cidone'); cc.setAttribute('data-heat',String(heat)); } }catch(_){}
+    try{ if(navigator.vibrate) navigator.vibrate(right?[10,40,18]:8); }catch(_){}
+    ciHideSoon(8000); return;
   }
   // open / locked
   clearTimeout(PCI.hideT);
@@ -6704,20 +6903,37 @@ function renderCiCard(q){
   var now=Date.now();
   var pick=PCI.picked[q.qid];
   var locked = now>=locksMs || pick!=null;
-  var opts=(q.options||[]).map(function(o){
-    var sel=(pick!=null&&String(pick)===String(o.v))?' cisel':'';
-    return '<button class="ciopt'+sel+'" '+(locked?'disabled':'')+' data-civ="'+esc(String(o.v))+'">'+esc(o.k)+'</button>';
-  }).join('');
-  var status = locked ? (pick!=null?('Locked: '+esc(ciLabel(q,pick))+' — waiting on the play…'):'Locked — waiting on the play…')
-                      : 'Take a look, then tap — you’ve got a few seconds';
   var msLeft=Math.max(0,locksMs-now), pctLeft=Math.max(0,Math.min(100,(msLeft/(q.locksMs||6000))*100));
-  ciShow((locked?'':'<div class="cilockbar"><i style="width:'+pctLeft+'%;transition:width .25s linear"></i></div>')+
-         '<div class="cihead">🎯 Call It'+(pick!=null?' · locked':'')+'</div>'+
-         '<div class="ciq">'+esc(q.prompt)+'</div>'+
-         '<div class="ciopts">'+opts+'</div>'+
-         '<div class="cistat">'+status+(PCI.streak?(' · 🔥 '+PCI.streak):'')+'</div>'+
-         '<div class="cifoot"><button class="cimute" data-cimute="1">mute Call It</button>'+
-         (pick!=null?'<button class="cimute" data-cihide="1">hide this</button>':'')+'</div>');
+
+  /* ONCE YOU HAVE ANSWERED, THE CARD SHRINKS. It stops being a question —
+     it is a receipt. Keeping the full prompt and four dead buttons on
+     screen is what made this feel frozen: the thing that was demanding
+     your attention carried on demanding it after you had already dealt
+     with it. */
+  if(pick!=null && st!=='resolved'){
+    ciShow('<div class="cihead">🎯 Call It · locked in</div>'+
+           '<div class="cilocked"><span class="cichk">✓</span>'+
+             '<div class="cilb"><div class="cilv">'+esc(ciLabel(q,pick))+'</div>'+
+             '<div class="cilq">'+esc(q.prompt)+'</div></div>'+
+             (PCI.streak?('<span class="cistreak">🔥'+PCI.streak+'</span>'):'')+
+           '</div>'+
+           '<div class="ciwait"><i></i></div>'+
+           '<div class="cistat">Answer lands when the play settles. You can keep watching.</div>'+
+           '<div class="cifoot"><button class="cimute" data-cimute="1">mute Call It</button>'+
+           '<button class="cimute" data-cihide="1">hide this</button></div>');
+  } else {
+    var opts=(q.options||[]).map(function(o){
+      return '<button class="ciopt" '+(locked?'disabled':'')+' data-civ="'+esc(String(o.v))+'">'+esc(o.k)+'</button>';
+    }).join('');
+    var status = locked ? 'Time — the answer lands in a moment'
+                        : 'Tap one. You’ve got a few seconds.';
+    ciShow((locked?'':'<div class="cilockbar"><i style="width:'+pctLeft+'%;transition:width .25s linear"></i></div>')+
+           '<div class="cihead">🎯 Call It</div>'+
+           '<div class="ciq">'+esc(q.prompt)+'</div>'+
+           '<div class="ciopts">'+opts+'</div>'+
+           '<div class="cistat">'+status+(PCI.streak?(' · 🔥 '+PCI.streak+' in a row'):'')+'</div>'+
+           '<div class="cifoot"><button class="cimute" data-cimute="1">mute Call It</button></div>');
+  }
   var card=document.getElementById('ciCard');
   Array.prototype.forEach.call(card.querySelectorAll('.ciopt'), function(b){
     b.onclick=function(){ if(!locked) ciPick(q, b.getAttribute('data-civ')); };
@@ -6729,7 +6945,10 @@ function renderCiCard(q){
      Call It ends up parked over the leaderboard for a whole quarter. The
      pick is already recorded, so hiding costs nothing; when the result
      lands the watcher renders the resolved card and it comes back. */
-  if(pick!=null && st!=='resolved'){ ciHideSoon(9000); }
+  /* Four seconds, not nine. Your pick is already recorded and the resolved
+     card re-opens on its own the moment the answer lands, so every extra
+     second here is a card sitting over the game for no reason. */
+  if(pick!=null && st!=='resolved'){ ciHideSoon(4000); }
   clearTimeout(PCI.tick);
   if(!locked){ PCI.tick=setTimeout(function(){ if(PCI.active) renderCiCard(PCI.active); }, Math.max(250, locksMs-now)); }
 }
@@ -8456,7 +8675,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.48';
+const STATS_BUILD='2026-08-11-g6-ny-ind.49';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
