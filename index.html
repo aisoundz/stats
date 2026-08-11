@@ -2140,6 +2140,27 @@ window.STATS_FIREBASE = {
         });
       });
       out.sort(function (a, b) { return (b.pts - a.pts) || (b.speed - a.speed); });
+      /* orderBy('pts') silently DROPS any player document that has no `pts`
+         field at all — a Firestore rule people learn the hard way, usually
+         while staring at an empty leaderboard with players plainly in the
+         database. If the ordered read looks short, read the room plainly
+         and sort in memory instead. */
+      if (out.length < 2) {
+        try {
+          var all = await F.getDocs(F.collection(db, 'nights', nightId, 'players'));
+          var raw = [];
+          all.forEach(function (d) {
+            var v = d.data() || {};
+            raw.push({ name: v.name || 'player', color: v.color || '#888',
+                       pts: Number(v.pts) || 0, speed: Number(v.speed) || 0,
+                       me: d.id === uid() });
+          });
+          if (raw.length > out.length) {
+            raw.sort(function (a, b) { return (b.pts - a.pts) || (b.speed - a.speed); });
+            return raw.slice(0, Math.min(n || TOP_N, 25));
+          }
+        } catch (e2) {}
+      }
       return out;
     } catch (e) { return null; }
   };
@@ -8176,7 +8197,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.35';
+const STATS_BUILD='2026-08-10-g5-tor-atl.36';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -8250,7 +8271,8 @@ function navGo(tab){
     if(tab==='home')  { go('landing'); }
     else if(tab==='gametime'){ renderGametime(); go('gametime'); }
     else if(tab==='stats'){ go('stats'); renderStats(); loadGameStats(true).then(function(){ if(S.screen==='stats') renderStats(); }); }
-    else if(tab==='board'){ renderBoard(); go('board'); if(S.mode==='live'){ try{ refreshRoom(); }catch(_){} } }
+    else if(tab==='board'){ renderBoard(); go('board');
+      if(S.mode==='live'){ try{ refreshRoom(); }catch(_){} try{ boardRefresh(); }catch(_){} } }
     else if(tab==='crew'){ try{ openTalk(); }catch(_){ toast('The room opens on game night.'); } }
     else if(tab==='me'){ renderMe(); go('me'); }
   }catch(e){}
@@ -8282,7 +8304,13 @@ function gameBarState(){
     if(place==='live'){ open=true; try{ tag=roundTag(S.qi); }catch(_){} }
     if(open) return {urgent:true, text:'🔴 '+(tag||'A round')+' is open — tap to answer'};
     if(place==='predict') return {urgent:true, text:'📋 Your card isn’t locked yet — finish it'};
-    return {urgent:false, text:'← Back to the game'};
+    /* Nothing to answer? Then say nothing. The first version showed a grey
+       "← Back to the game" on every tab, which is a permanent banner
+       sitting on top of the content the tabs exist to show — it covered the
+       practice button on Gametime. A prompt that is always there is not a
+       prompt, it is furniture. The nav is the way around; this bar is only
+       for the moment something is waiting on you. */
+    return null;
   }catch(_){ return null; }
 }
 function returnToGame(){
@@ -8297,7 +8325,9 @@ function paintGameBar(){
   try{
     let el=document.getElementById('gameBar');
     const st=gameBarState();
-    if(!st){ if(el) el.style.display='none'; return; }
+    if(!st){ if(el) el.style.display='none';
+      try{ document.body.classList.remove('hasgamebar'); }catch(_){}
+      return; }
     if(!el){
       el=document.createElement('button');
       el.id='gameBar'; el.type='button';
@@ -8307,6 +8337,7 @@ function paintGameBar(){
     el.className = st.urgent ? 'urgent' : '';
     el.textContent = st.text;
     el.style.display='block';
+    try{ document.body.classList.add('hasgamebar'); }catch(_){}
   }catch(_){}
 }
 
@@ -8579,6 +8610,23 @@ function seasonStats(){
   return { total:Number(s.total)||0, played:keys.length, best:Number(s.best)||0,
            last:keys.length?n[keys[keys.length-1]]:null, keys:keys, nights:n };
 }
+/* The Board used to render whatever the LOBBY poller had last cached. Open
+   it without passing through the lobby — which the bottom nav made easy —
+   and it had nothing, so two players sitting in the database showed as an
+   empty board. It reads for itself now, and keeps reading while it is open. */
+var bdTimer=null;
+function boardRefresh(){
+  try{
+    if(S.mode!=='live' || !window.SB || !SB.top) return;
+    SB.top(10).then(function(list){
+      if(!list || !list.length) return;
+      try{ lastStand=list; }catch(_){}
+      if(S.screen==='board') renderBoard();
+    });
+  }catch(_){}
+}
+try{ setInterval(function(){ try{ if(S.screen==='board') boardRefresh(); }catch(_){} }, 15000); }catch(e){}
+
 function renderBoard(){
   var el=document.getElementById('bdBody'); if(!el) return;
   var out='', list=null;
@@ -8595,7 +8643,7 @@ function renderBoard(){
       + '</div>';
   } else {
     out+='<div class="card center" style="padding:22px"><div style="font-size:26px">🏆</div>'
-      + '<b style="font-size:15px">The board fills up at tip-off</b>'
+      + '<b style="font-size:15px">'+(S.mode==='live'?'Reading the room…':'The board fills up at tip-off')+'</b>'
       + '<p class="sub" style="font-size:12.5px;margin:8px 0 0">Every right answer moves a row. Q4 is worth four times Q1, so it keeps moving to the buzzer.</p></div>';
   }
   var ss=seasonStats();
@@ -8884,6 +8932,8 @@ body.hasnav{padding-bottom:74px}
   animation:gbPulse 1.8s ease-in-out infinite}
 @keyframes gbPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
 #gameBar:active{filter:brightness(.94)}
+/* Reserve the space instead of floating over the page. */
+body.hasgamebar .screen.active{padding-bottom:132px}
 
 /* ---- board ---- */
 .bdRow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #1a2337}
