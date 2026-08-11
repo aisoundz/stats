@@ -969,7 +969,12 @@
     <div class="brand" style="margin-top:30px"><span class="logo" style="letter-spacing:1.2px;font-size:21px">GAMETIME</span></div>
     <div id="gtHead" style="margin-top:16px"></div>
     <div id="ciSlot" style="margin-top:14px"></div>
-    <div id="gtIdle" style="margin-top:14px"></div>
+    <div id="gtIdle"></div>
+    <!-- THE FEED. Everything below the Call It slot is an endless scroll of
+         the game itself: every bucket, every run, every deep cut, and your
+         own card moving. See the FEED engine for why this exists. -->
+    <button type="button" id="feedNew" onclick="feedShowNew()" style="display:none">↑ new</button>
+    <div id="gtFeed" style="margin-top:4px"></div>
   </section>
 
   <!-- STATS — the reason this product is not a betting app. Everything on
@@ -8428,7 +8433,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.42';
+const STATS_BUILD='2026-08-11-g6-ny-ind.45';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -8587,11 +8592,100 @@ function paintGameBar(){
   }catch(_){}
 }
 
+/* One writer for the rail. It shows exactly when the nav shows, because a
+   floating score strip on the sign-in screen is clutter and a missing one
+   mid-game is the bug this fixes. */
+function paintRail(show){
+  var r=document.getElementById('rail'); if(!r) return;
+  r.style.display = show ? 'block' : 'none';
+  try{ document.body.classList.toggle('hasrail', !!show); }catch(_){}
+  if(!show) return;
+  var txt='—';
+  try{
+    if(GS.ok && GS.teams && GS.teams.length===2){
+      var A=GS.teams[0], B=GS.teams[1];
+      if(A.score!=null && B.score!=null)
+        txt=esc(A.ab)+' <b>'+A.score+'</b>  '+esc(B.ab)+' <b>'+B.score+'</b>'
+          + (GS.detail?(' <i>'+esc(GS.detail)+'</i>'):'');
+      else txt=esc(A.ab)+' v '+esc(B.ab)+' <i>'+esc(GS.detail||'Not started')+'</i>';
+    }
+  }catch(_){}
+  var el=document.getElementById('railScore'); if(el) el.innerHTML=txt;
+  var me='—';
+  try{
+    var pts=Math.max(0,Math.round((S&&S.pts)||0));
+    var rank=null; try{ if(lastStand&&lastStand.length) lastStand.forEach(function(x,i){ if(x.me) rank=i+1; }); }catch(_){}
+    me='<b>'+pts+'</b> pts' + (rank?(' · #'+rank):'');
+  }catch(_){}
+  var el2=document.getElementById('railMe'); if(el2) el2.innerHTML=me;
+}
+/* The rail must move on its own, not only when a screen repaints — that was
+   the whole complaint. Cheap: one repaint of two spans every ten seconds. */
+try{ setInterval(function(){ try{
+  var r=document.getElementById('rail');
+  if(!r || r.style.display==='none') return;
+  paintRail(true);
+}catch(_){}}, 10000); }catch(e){}
+
+/* ==================== SWIPE ==========================================
+   A tab bar you have to aim at is a website. Swipe is an app, and it is the
+   gesture every thumb already has. Two rules keep it from fighting the page:
+   it only fires when the horizontal movement clearly beats the vertical one,
+   and it never fires while a live question is on screen — losing a round to
+   a stray thumb would be a worse bug than the one this fixes. */
+var SWIPE_TABS=['gametime','stats','board'];
+(function(){
+  var x0=0,y0=0,t0=0,tracking=false;
+  function start(e){
+    try{
+      if(!e.touches || e.touches.length!==1) return;
+      if(NAV_HIDE_ON.indexOf(S.screen)>=0) return;
+      var t=e.target;
+      // Never hijack a horizontal scroller or a control.
+      while(t && t!==document.body){
+        if(t.scrollWidth>t.clientWidth+8) return;
+        var tag=(t.tagName||'').toLowerCase();
+        if(tag==='input'||tag==='textarea'||tag==='select') return;
+        t=t.parentNode;
+      }
+      x0=e.touches[0].clientX; y0=e.touches[0].clientY; t0=Date.now(); tracking=true;
+    }catch(_){ tracking=false; }
+  }
+  function end(e){
+    if(!tracking) return; tracking=false;
+    try{
+      var t=(e.changedTouches||[])[0]; if(!t) return;
+      var dx=t.clientX-x0, dy=t.clientY-y0;
+      if(Date.now()-t0>700) return;
+      if(Math.abs(dx)<60 || Math.abs(dx)<Math.abs(dy)*2) return;
+      var dir = dx<0 ? 1 : -1;
+      // Inside Stats, swipe moves through the four panes before it leaves.
+      if(S.screen==='stats'){
+        var panes=['you','leaders','teams','deep'], i=panes.indexOf(STAB)+dir;
+        if(i>=0 && i<panes.length){ stGo(panes[i]); return; }
+      }
+      var cur=SWIPE_TABS.indexOf(S.screen==='lobby'?'gametime':S.screen);
+      if(cur<0) return;
+      var nx=cur+dir; if(nx<0||nx>=SWIPE_TABS.length) return;
+      navGo(SWIPE_TABS[nx]);
+    }catch(_){}
+  }
+  try{
+    document.addEventListener('touchstart', start, {passive:true});
+    document.addEventListener('touchend', end, {passive:true});
+    /* Exposed so the suite can drive the real handlers. A synthetic
+       TouchEvent cannot carry a target on a desktop browser, and a swipe
+       test that fakes its own logic tests nothing. */
+    window.__swipeStart=start; window.__swipeEnd=end;
+  }catch(_){}
+})();
+
 function paintNav(active){
   const bar=document.getElementById('botnav'); if(!bar) return;
   let scr=''; try{ scr=S.screen||''; }catch(_){}
   const hide = NAV_HIDE_ON.indexOf(scr)>=0;
   bar.style.display = hide ? 'none' : 'block';
+  try{ paintRail(!hide && (typeof S!=='undefined') && S.mode==='live'); }catch(_){}
   try{ paintGameBar(); }catch(_){}
   try{ if(scr==='landing') paintContinueCard(); }catch(_){}
   // The pick-slip's action bar belongs to exactly one screen.
@@ -8757,7 +8851,7 @@ function sportCfg(){
    loop on any device with no signal, which is the exact moment you least
    want the radio hammered. Failures now back off and the screen offers a
    button instead of spinning forever. */
-var GS={ok:false,at:0,loading:false,state:'pre',teams:[],leaders:[],box:{},err:'',fails:0,lastTry:0};
+var GS={ok:false,at:0,loading:false,state:'pre',teams:[],leaders:[],box:{},plays:[],err:'',fails:0,lastTry:0};
 function gsFmt(label,v){ if(v==null) return ''; var s=String(v); return (/%/.test(label||'') && !/%$/.test(s)) ? s+'%' : s; }
 function gsNum(v){ var n=parseFloat(String(v==null?'':v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?null:n; }
 async function loadGameStats(force){
@@ -8787,7 +8881,7 @@ async function loadGameStats(force){
       var names=s.names||[];
       (s.athletes||[]).forEach(function(a){
         var nm=(a.athlete&&a.athlete.displayName)||''; if(!nm) return;
-        var row={team:(g.team&&g.team.abbreviation)||''};
+        var row={team:(g.team&&g.team.abbreviation)||'', aid:String((a.athlete&&a.athlete.id)||'')};
         names.forEach(function(n,ix){ row[n]=(a.stats||[])[ix]; });
         box[nm]=row;
       });
@@ -8812,6 +8906,26 @@ async function loadGameStats(force){
                       out:/out|doubtful|suspend/i.test(st) });
       });
     });
+    /* THE PLAY-BY-PLAY. Four hundred-odd entries a night, already inside the
+       response we were throwing away. This is the fuel for the Feed — the
+       reason Gametime can be an endless scroll rather than a scoreboard with
+       a question on it. Normalised here so nothing downstream reads ESPN's
+       shape, same rule as everything else in this engine. */
+    try{
+      var tById={}; teams.forEach(function(t){ tById[t.id]=t; });
+      GS.plays=(j.plays||[]).map(function(pl){
+        var tid=(pl.team&&pl.team.id)||'';
+        return { id:String(pl.id||pl.sequenceNumber||''),
+                 seq:Number(pl.sequenceNumber||0),
+                 text:String(pl.text||''),
+                 scoring:!!pl.scoringPlay, value:Number(pl.scoreValue||0),
+                 ab:(tById[tid]&&tById[tid].ab)||'', tid:tid,
+                 away:(pl.awayScore==null?null:Number(pl.awayScore)),
+                 home:(pl.homeScore==null?null:Number(pl.homeScore)),
+                 period:((pl.period&&pl.period.number)||null),
+                 clock:((pl.clock&&pl.clock.displayValue)||'') };
+      }).filter(function(x){ return x.text; });
+    }catch(_){ GS.plays=GS.plays||[]; }
     GS.state=stat.state||'pre'; GS.detail=stat.shortDetail||stat.detail||'';
     GS.ok=teams.length>0; GS.at=Date.now();
     if(GS.ok){ GS.err=''; GS.fails=0; } else { GS.err='no teams in feed'; GS.fails++; }
@@ -8981,8 +9095,49 @@ async function loadSeason(){
   SEA.loading=false;
   return SEA;
 }
+/* THE PLAYERS THE LEAGUE TABLE LEAVES OUT. The byathlete endpoint only
+   returns QUALIFIED players — 128 of them — and a starter who has missed a
+   month is not on it. Sabrina Ionescu, 21 games played on a night she is
+   the headline name for New York, is exactly that case.
+
+   The tempting fix is to rank her anyway. That would be a lie: you cannot
+   claim a league rank for somebody the league's own qualifying threshold
+   excludes. So this fetches her season AVERAGES and nothing else — enough
+   to say "28 tonight against a season average of 15.7", which is true and
+   interesting, and never enough to print a rank that isn't real. Bounded to
+   eight requests, once a night, only for players actually on the floor. */
+async function seaFillGaps(){
+  try{
+    if(!SEA.ok || SEA.filled) return;
+    var need=Object.keys(GS.box||{})
+      .filter(function(nm){ return !SEA.by[nm.toLowerCase()] && GS.box[nm].aid; })
+      .filter(function(nm){ var m=gsNum(GS.box[nm].MIN); return m==null || m>=5; })
+      .slice(0,8);
+    SEA.filled=true;
+    if(!need.length) return;
+    var path=sportCfg().path;
+    await Promise.all(need.map(async function(nm){
+      try{
+        var aid=GS.box[nm].aid;
+        var j=await fetch('https://site.web.api.espn.com/apis/common/v3/sports/'+path
+          +'/athletes/'+aid+'/stats?region=us&lang=en&contentorigin=espn').then(function(r){return r.json();});
+        var avg=(j.categories||[]).find(function(c){ return c.name==='averages'; });
+        var rows=(avg&&avg.statistics)||[]; var last=rows[rows.length-1]; if(!last) return;
+        var ix={}; ((avg&&avg.names)||[]).forEach(function(n,i){ ix[n]=i; });
+        var num=function(k){ var v=(last.stats||[])[ix[k]]; var n=parseFloat(v); return isNaN(n)?null:n; };
+        SEA.by[nm.toLowerCase()]={ name:nm, unranked:true,
+          gp:num('gamesPlayed'), pts:num('avgPoints'), reb:num('avgRebounds'),
+          ast:num('avgAssists'), stl:num('avgSteals'), blk:num('avgBlocks'),
+          fgp:num('fieldGoalPct'), ftp:num('freeThrowPct') };
+      }catch(_){}
+    }));
+  }catch(_){}
+}
 function seaOf(name){ try{ return SEA.by[String(name||'').toLowerCase()]||null; }catch(_){ return null; } }
 function ord(n){ n=Number(n); if(!n) return ''; var s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
+/* A season row for an UNQUALIFIED player has averages but no rank, on
+   purpose. Anything that reads a rank has to be able to say nothing. */
+function rankIn(s,key,tail){ try{ var r=s&&s['rank_'+key]; return r?(ord(r)+' '+tail):''; }catch(_){ return ''; } }
 
 /* ---- tonight's box, normalised ------------------------------------ */
 function stBox(){
@@ -9006,7 +9161,7 @@ function stTeamStat(t,label){ try{ return t.m[label]; }catch(_){ return null; } 
 function deepCuts(){
   var cuts=[], B=stBox(), A=GS.teams[0], H=GS.teams[1];
   if(!B.length) return cuts;
-  function add(i,t,s,w){ cuts.push({i:i,t:t,s:s||'',w:w||0}); }
+  function add(i,t,s,w,kind){ cuts.push({i:i,t:t,s:s||'',w:w||0,kind:kind||i}); }
   function best(key,min){ var f=B.filter(function(x){ return x[key]!=null && x[key]>=(min||0); })
       .sort(function(x,y){ return y[key]-x[key]; }); return f[0]||null; }
 
@@ -9017,8 +9172,8 @@ function deepCuts(){
     var lead = d.tp.m>second ? ('nobody else tonight has more than '+second) : ('tied with '+(deep[1]?deep[1].nm:'one other'));
     add('🎯','<b>'+esc(d.nm)+'</b> has hit '+d.tp.m+' threes — '+lead+'.',
         d.tp.m+'-of-'+(d.tp.a||d.tp.m)+' from deep'
-        + (s&&s.tpm!=null ? (' · averages '+s.tpm.toFixed(1)+' a game, '+ord(s['rank_tpm'])+' in the league') : ''),
-        90+d.tp.m);
+        + (s&&s.tpm!=null ? (' · averages '+s.tpm.toFixed(1)+' a game'+(rankIn(s,'tpm','in the league')?', '+rankIn(s,'tpm','in the league'):'')) : ''),
+        90+d.tp.m, 'deep');
   }
 
   /* --- double-double, done and pending, against the season count --- */
@@ -9028,23 +9183,23 @@ function deepCuts(){
     var s=seaOf(x.nm);
     if(big.length>=3){
       add('🏆','<b>'+esc(x.nm)+'</b> has a TRIPLE-DOUBLE — '+big.map(function(c){return c[1]+' '+c[2];}).join(', ')+'.',
-          s&&s.td!=null ? ('number '+(s.td+1)+' of her season') : '', 200);
+          s&&s.td!=null ? ('number '+(s.td+1)+' of her season') : '', 200, 'triple');
     } else if(big.length===2){
       add('💪','<b>'+esc(x.nm)+'</b> is at '+big[0][1]+' '+big[0][2]+' and '+big[1][1]+' '+big[1][2]+' — that’s a double-double.',
-          s&&s.dd!=null ? ('her '+ord(s.dd+1)+' this season · '+ord(s['rank_dd'])+' in the WNBA for double-doubles') : '',
-          120+big[0][1]);
+          s&&s.dd!=null ? ('her '+ord(s.dd+1)+' this season'+(rankIn(s,'dd','in the WNBA for double-doubles')?' · '+rankIn(s,'dd','in the WNBA for double-doubles'):'')) : '',
+          120+big[0][1], 'dd');
     } else if(big.length===1){
       var near=[['pts',x.pts,'points'],['reb',x.reb,'rebounds'],['ast',x.ast,'assists']]
         .filter(function(c){ return c[1]!=null && c[1]>=7 && c[1]<10; }).sort(function(a,b){ return b[1]-a[1]; })[0];
       if(near) add('👀','<b>'+esc(x.nm)+'</b> is '+(10-near[1])+' '+near[2].replace(/s$/,'')+(10-near[1]===1?'':'s')+' from a double-double.',
-        'has '+big[0][1]+' '+big[0][2]+' already', 70);
+        'has '+big[0][1]+' '+big[0][2]+' already', 70, 'ddwatch');
     }
   });
 
   /* --- who the game actually swings on ----------------------------- */
   var pm=best('pm',8);
   if(pm) add('📈','<b>'+esc(pm.nm)+'</b> — her team is +'+pm.pm+' with her on the floor, the best mark in the game.',
-      pm.min!=null?(pm.min+' minutes played'):'', 80);
+      pm.min!=null?(pm.min+' minutes played'):'', 80, 'pm');
 
   /* --- shooting nobody sustains ------------------------------------ */
   B.forEach(function(x){
@@ -9052,7 +9207,7 @@ function deepCuts(){
       var pct=x.fg.m/x.fg.a;
       if(pct>=0.7){ var s=seaOf(x.nm);
         add('🔥','<b>'+esc(x.nm)+'</b> is '+x.fg.m+'-of-'+x.fg.a+' from the field — '+Math.round(pct*100)+'%.',
-          s&&s.fgp!=null?('she shoots '+s.fgp.toFixed(1)+'% on the season'):'', 75); }
+          s&&s.fgp!=null?('she shoots '+s.fgp.toFixed(1)+'% on the season'):'', 75, 'hot'); }
     }
   });
 
@@ -9060,7 +9215,7 @@ function deepCuts(){
   B.forEach(function(x){
     if(x.ast!=null && x.ast>=5 && x.to!=null && x.to<=1){
       add('🎩','<b>'+esc(x.nm)+'</b>: '+x.ast+' assists, '+x.to+' turnover'+(x.to===1?'':'s')+'.',
-        'that ratio is what separates a guard from a scorer', 65);
+        'that ratio is what separates a guard from a scorer', 65, 'ast');
     }
   });
 
@@ -9070,34 +9225,34 @@ function deepCuts(){
     var tm=[A,H].filter(Boolean).find(function(t){ return t && t.ab===top.team; });
     if(tm && tm.score){
       var share=Math.round((top.pts/tm.score)*100);
-      if(share>=30) add('🫡','<b>'+esc(top.nm)+'</b> has '+top.pts+' of '+esc(tm.ab)+'’s '+tm.score+' — '+share+'% of everything they’ve scored.','',85);
+      if(share>=30) add('🫡','<b>'+esc(top.nm)+'</b> has '+top.pts+' of '+esc(tm.ab)+'’s '+tm.score+' — '+share+'% of everything they’ve scored.','',85,'share');
     }
     var s2=seaOf(top.nm);
     if(s2 && s2.pts!=null && top.pts>=s2.pts+8){
       add('🚀','<b>'+esc(top.nm)+'</b> is at '+top.pts+' against a season average of '+s2.pts.toFixed(1)+'.',
-        ord(s2['rank_pts'])+' in the league in scoring', 95);
+        rankIn(s2,'pts','in the league in scoring'), 95, 'career');
     }
   }
 
   /* --- foul trouble is a stat that changes what you watch ---------- */
   B.forEach(function(x){ if(x.pf!=null && x.pf>=4 && x.min!=null)
-    add('⚠️','<b>'+esc(x.nm)+'</b> has '+x.pf+' fouls in '+x.min+' minutes.','one more and she sits',60); });
+    add('⚠️','<b>'+esc(x.nm)+'</b> has '+x.pf+' fouls in '+x.min+' minutes.','one more and she sits',60,'foul'); });
 
   /* --- the team-level shape of the night --------------------------- */
   try{
     [A,H].forEach(function(t){ if(!t) return;
       var paint=gsNum(stTeamStat(t,'Points in Paint'));
-      if(paint!=null && t.score) add('🎨','<b>'+esc(t.ab)+'</b> has '+paint+' of its '+t.score+' points in the paint — '+Math.round((paint/t.score)*100)+'%.','',50);
+      if(paint!=null && t.score) add('🎨','<b>'+esc(t.ab)+'</b> has '+paint+' of its '+t.score+' points in the paint — '+Math.round((paint/t.score)*100)+'%.','',50,'paint');
       var fb=gsNum(stTeamStat(t,'Fast Break Points'));
-      if(fb!=null && fb>=10) add('🏃','<b>'+esc(t.ab)+'</b> has '+fb+' fast-break points.','that is a team running on turnovers',45);
+      if(fb!=null && fb>=10) add('🏃','<b>'+esc(t.ab)+'</b> has '+fb+' fast-break points.','that is a team running on turnovers',45,'fb');
     });
     var lc=gsNum(stTeamStat(A,'Lead Changes'));
-    if(lc!=null && lc>=6) add('🔁','<b>'+lc+' lead changes</b> in this game.','',55);
+    if(lc!=null && lc>=6) add('🔁','<b>'+lc+' lead changes</b> in this game.','',55,'lc');
     var la=gsNum(stTeamStat(A,'Largest Lead')), lb=gsNum(stTeamStat(H,'Largest Lead'));
     if(la!=null&&lb!=null){ var w=la>=lb?A:H, v=Math.max(la,lb);
-      if(v>=10) add('📊','Biggest lead of the night: <b>'+esc(w.ab)+' by '+v+'</b>.','',48); }
+      if(v>=10) add('📊','Biggest lead of the night: <b>'+esc(w.ab)+' by '+v+'</b>.','',48,'lead'); }
     var pl=stTeamStat(A,'Percent Led'), pl2=stTeamStat(H,'Percent Led');
-    if(pl&&pl2) add('⏱️','Time in front: '+esc(A.ab)+' '+esc(String(pl))+' · '+esc(H.ab)+' '+esc(String(pl2))+'.','',40);
+    if(pl&&pl2) add('⏱️','Time in front: '+esc(A.ab)+' '+esc(String(pl))+' · '+esc(H.ab)+' '+esc(String(pl2))+'.','',40,'led');
   }catch(_){}
 
   /* --- league standing for anyone on the floor tonight ------------- */
@@ -9114,12 +9269,22 @@ function deepCuts(){
       var r=s['rank_'+elite[0]];
       var val=elite[0]==='dd'? String(elite[2]) : Number(elite[2]).toFixed(1);
       add('🏅','<b>'+esc(x.nm)+'</b> is '+(r===1?'the WNBA leader':ord(r)+' in the WNBA')+' in '+elite[1]+' — '+val+'.',
-        'on the floor tonight', 100-r);
+        'on the floor tonight', 100-r, 'league');
     });
   }catch(_){}
 
+  /* VARIETY IS THE POINT. Sorting purely by weight put four double-doubles
+     in a row at the top, which reads as one fact repeated four times and is
+     the fastest way to make a stat feed feel like a spreadsheet. Two of any
+     one kind, then move on — the fifth-best fact of a different kind beats
+     the third-best of the same one. */
   cuts.sort(function(a,b){ return b.w-a.w; });
-  return cuts;
+  var per={}, first=[], rest=[];
+  cuts.forEach(function(c){
+    per[c.kind]=(per[c.kind]||0)+1;
+    (per[c.kind]<=2 ? first : rest).push(c);
+  });
+  return first.concat(rest);
 }
 
 /* ==================== THE STATS TAB =================================
@@ -9161,7 +9326,10 @@ function renderStats(){
   }
   // The season table is what makes the Deep Cuts deep. Fetch once, lazily,
   // and repaint when it lands rather than blocking the screen on it.
-  try{ if(!SEA.ok && !SEA.loading) loadSeason().then(function(){ if(S.screen==='stats') renderStats(); }); }catch(_){}
+  try{ if(!SEA.ok && !SEA.loading) loadSeason().then(function(){
+        if(S.screen==='stats') renderStats();
+        seaFillGaps().then(function(){ if(S.screen==='stats') renderStats(); });
+      }); }catch(_){}
 
   var A=GS.teams[0], B=GS.teams[1], live=gsInGame(), out='';
 
@@ -9322,6 +9490,216 @@ function renderStats(){
 }
 try{ setInterval(function(){ try{ if((S&&S.screen)==='stats'){ loadGameStats().then(function(){ if(S.screen==='stats') renderStats(); }); } }catch(_){}}, 25000); }catch(e){}
 
+/* ==================== THE FEED ======================================
+   The competition for this product is not a betting app. It is the phone
+   itself. During a timeout, a review, a free throw, a blowout third
+   quarter, the person on the couch opens a social feed — and that is the
+   ninety seconds we either own or lose. A scoreboard with one question on
+   it does not win that. An endless scroll about the game in front of them
+   might, because it is the same shape as the habit they already have.
+
+   So Gametime becomes a feed. It never runs out: a WNBA game generates
+   four hundred-odd plays and this engine computes a card off a good
+   fraction of them, then interleaves the deep cuts and the state of your
+   own card. Newest at the top, a "N new" pill when things land while you
+   are reading, and every item is about the thing on the television.
+
+   Three rules it obeys, because they are what separate this from noise:
+     1. NOTHING IS INVENTED. Every card is derived from the league feed or
+        from the room's own data. No filler, no "did you know" trivia we
+        cannot source.
+     2. IT IS BUILT, NOT STREAMED. The whole feed is derived from GS on
+        every repaint, so a reload rebuilds it identically and there is no
+        second copy of the truth to drift.
+     3. IT NEVER STEALS A TAP. Call It still owns the slot above; the feed
+        is what you scroll while you wait for one.
+   ==================================================================== */
+var FEED={ items:[], seenTop:0, pending:0, reacts:{}, at:0 };
+var FEED_EMOJI=['🔥','😮','😂','💯'];
+
+/* Plays worth a card. A missed jumper by a bench player is not news; a
+   three, a run, a lead change and a scoring play that swings the game are.
+   Filtering here rather than in the renderer keeps the "endless" honest —
+   the feed is long because the game is long, not because it is padded. */
+function feedPlayCard(p, prev){
+  if(!p.scoring) return null;
+  var icon = p.value===3?'🎯' : p.value===1?'🆓' : '🏀';
+  var swing='';
+  if(p.away!=null && p.home!=null){
+    var lead = p.home===p.away ? 'tie' : (p.home>p.away?'home':'away');
+    if(prev && prev.away!=null && prev.home!=null){
+      var was = prev.home===prev.away ? 'tie' : (prev.home>prev.away?'home':'away');
+      if(lead!=='tie' && was!=='tie' && lead!==was) swing='lead change';
+      else if(lead!=='tie' && was==='tie') swing='takes the lead';
+    }
+  }
+  return { k:'play', id:'p'+p.id, seq:p.seq, icon:icon,
+           text:p.text,
+           meta:(p.period?('Q'+p.period+(p.clock?(' · '+p.clock):'')):'')
+                + (p.ab?(' · '+p.ab):''),
+           score:(p.away!=null&&p.home!=null)?{a:p.away,h:p.home}:null,
+           tag:swing, big:(p.value===3||!!swing) };
+}
+
+/* Your own card, as news — but ONE card, not five. The first build of this
+   put a separate row in the feed for every category you picked, which meant
+   the top of the feed was five near-identical boxes saying almost the same
+   thing. That is the exact busy-ness the Stats tab was just rebuilt to kill,
+   and it would have been the first thing anybody scrolled past. One card,
+   the score of your night, and the single most useful sentence we can write:
+   what has to happen next. */
+function feedCardWatch(){
+  try{
+    if(!gsInGame()) return [];
+    var cfg=sportCfg().box, KEY={pts:cfg.pts,reb:cfg.reb,ast:cfg.ast,stl:cfg.stl,blk:cfg.blk};
+    var lead=0, total=0, behind=[];
+    preds.forEach(function(p){
+      var mine=S.predChoices[p.id]; if(!mine || p.id==='winner') return;
+      var k=KEY[p.id]; if(!k) return;
+      var row=GS.box[mine], val=row?gsNum(row[k]):null;
+      var bestN='', bestV=-1;
+      Object.keys(GS.box).forEach(function(nm){ var v=gsNum(GS.box[nm][k]); if(v!=null&&v>bestV){bestV=v;bestN=nm;} });
+      if(bestV<0) return;
+      total++;
+      if(val!=null && val>=bestV){ lead++; return; }
+      behind.push({cat:p.label.toLowerCase(), who:String(mine), val:val==null?0:val,
+                   gap:(bestV-(val||0))+1, leader:bestN});
+    });
+    if(!total) return [];
+    behind.sort(function(a,b){ return a.gap-b.gap; });
+    var body='<b>'+lead+' of '+total+'</b> of your picks are leading.';
+    if(behind.length){
+      var b0=behind[0];
+      body+=' Closest: <b>'+esc(b0.who)+'</b> needs <b>'+b0.gap+' more '+esc(b0.cat.replace(/^most /,''))
+          + '</b> to pass '+esc(b0.leader)+'.';
+    }
+    return [{ k:'you', id:'you-card', seq:1e9, icon: lead>=total?'✅':'📋',
+              text: body,
+              meta: behind.length>1 ? (behind.length+' categories still to chase') : '',
+              tag:'your card', big:true }];
+  }catch(_){ return []; }
+}
+
+/* Build the whole thing. Deep cuts are interleaved rather than stacked so
+   the scroll alternates between what just happened and what it means. */
+function feedBuild(){
+  var items=[];
+  try{
+    var plays=(GS.plays||[]).slice().sort(function(a,b){ return a.seq-b.seq; });
+    var scoring=[];
+    for(var i=0;i<plays.length;i++){
+      var c=feedPlayCard(plays[i], scoring.length?scoring[scoring.length-1].__p:null);
+      if(c){ c.__p=plays[i]; scoring.push(c); }
+    }
+    items=scoring;
+  }catch(_){}
+  // Deep cuts, dropped in every sixth scoring play from the top down, so
+  // you never read six facts in a row and never read forty plays without one.
+  var cuts=[]; try{ cuts=deepCuts(); }catch(_){ cuts=[]; }
+  var merged=[], ci=0;
+  var newestFirst=items.slice().reverse();
+  for(var n=0;n<newestFirst.length;n++){
+    merged.push(newestFirst[n]);
+    if(n>0 && n%6===5 && ci<cuts.length){
+      var cu=cuts[ci++];
+      merged.push({ k:'cut', id:'c'+ci, icon:cu.i, text:cu.t, meta:cu.s, tag:'deep cut', big:true });
+    }
+  }
+  // Anything left over goes on the end rather than being thrown away.
+  while(ci<cuts.length){ var c2=cuts[ci++];
+    merged.push({ k:'cut', id:'c'+ci, icon:c2.i, text:c2.t, meta:c2.s, tag:'deep cut', big:true }); }
+  // Your card sits at the very top — it is the reason you are here.
+  var mine=feedCardWatch();
+  FEED.items = mine.concat(merged);
+  FEED.at = Date.now();
+  return FEED.items;
+}
+
+function feedRender(force){
+  var el=document.getElementById('gtFeed'); if(!el) return;
+  var items=feedBuild();
+  if(!items.length){
+    el.innerHTML='<div class="card center" style="padding:24px 18px">'
+      + '<div style="font-size:26px">📡</div><b style="font-size:14.5px">The feed starts at tip</b>'
+      + '<p class="sub" style="font-size:12.5px;margin:7px 0 0">Every bucket, every run, every stat worth knowing — it all lands here while you watch.</p></div>';
+    return;
+  }
+  /* NEW ITEMS DO NOT YANK THE PAGE. If you are reading, you keep reading and
+     a pill tells you how many landed. That is the single piece of feed
+     etiquette everybody expects and nobody notices until it is missing. */
+  var topId=items[0].id;
+  var atTop = el.getBoundingClientRect().top > -40 || force;
+  if(!force && FEED.topId && FEED.topId!==topId && !atTop){
+    var added=0; for(var i=0;i<items.length;i++){ if(items[i].id===FEED.topId) break; added++; }
+    FEED.pending=added;
+    var pill=document.getElementById('feedNew');
+    if(pill){ pill.textContent='↑ '+added+' new'; pill.style.display='block'; }
+    return;   // hold the paint until they ask for it
+  }
+  FEED.topId=topId; FEED.pending=0;
+  var pill0=document.getElementById('feedNew'); if(pill0) pill0.style.display='none';
+
+  el.innerHTML=items.slice(0,120).map(function(it){
+    var r=FEED.reacts[it.id]||{};
+    var chips=FEED_EMOJI.map(function(e){
+      return '<button type="button" class="fdr'+(r[e]?' on':'')+'" data-fr="'+it.id+'|'+e+'">'
+        + e + (r[e]?('<i>'+r[e]+'</i>'):'') + '</button>';
+    }).join('');
+    return '<article class="fdc'+(it.big?' big':'')+'" data-fd="'+esc(it.id)+'">'
+      + (it.tag?'<div class="fdtag">'+esc(it.tag)+'</div>':'')
+      + '<div class="fdmain"><span class="fdi">'+it.icon+'</span>'
+      +   '<div class="fdb"><div class="fdt">'+(it.k==='play'?esc(it.text):it.text)+'</div>'
+      +     (it.meta?'<div class="fdm">'+esc(it.meta)+'</div>':'')
+      +   '</div>'
+      +   (it.score?'<div class="fds">'+it.score.a+'–'+it.score.h+'</div>':'')
+      + '</div>'
+      + '<div class="fdrow">'+chips+'</div>'
+      + '</article>';
+  }).join('');
+
+  Array.prototype.forEach.call(el.querySelectorAll('.fdr'), function(b){
+    b.onclick=function(ev){ ev.stopPropagation(); feedReact(b.getAttribute('data-fr')); };
+  });
+  /* Double-tap the card itself for the default reaction — the gesture every
+     thumb on earth already knows, and the cheapest social loop that exists. */
+  Array.prototype.forEach.call(el.querySelectorAll('.fdc'), function(card){
+    var last=0;
+    card.onclick=function(){
+      var t=Date.now();
+      if(t-last<400){ feedReact(card.getAttribute('data-fd')+'|🔥', card); }
+      last=t;
+    };
+  });
+}
+
+function feedReact(key, card){
+  try{
+    var parts=String(key).split('|'), id=parts[0], e=parts[1];
+    FEED.reacts[id]=FEED.reacts[id]||{};
+    FEED.reacts[id][e]=(FEED.reacts[id][e]||0)+1;
+    try{ if(navigator.vibrate) navigator.vibrate(8); }catch(_){}
+    // Repaint just the one row rather than the whole feed — a feed that
+    // jumps to the top when you tap a heart is a feed nobody taps twice.
+    var host=document.querySelector('.fdc[data-fd="'+id+'"] .fdrow');
+    if(host){
+      var r=FEED.reacts[id];
+      host.innerHTML=FEED_EMOJI.map(function(x){
+        return '<button type="button" class="fdr'+(r[x]?' on':'')+'" data-fr="'+id+'|'+x+'">'
+          + x + (r[x]?('<i>'+r[x]+'</i>'):'') + '</button>'; }).join('');
+      Array.prototype.forEach.call(host.querySelectorAll('.fdr'), function(b){
+        b.onclick=function(ev){ ev.stopPropagation(); feedReact(b.getAttribute('data-fr')); };
+      });
+      var pop=document.createElement('span'); pop.className='fdpop'; pop.textContent=e;
+      (card||host.parentNode).appendChild(pop);
+      setTimeout(function(){ try{ pop.remove(); }catch(_){} }, 700);
+    }
+    try{ localStorage.setItem('stats_reacts_v1', JSON.stringify(FEED.reacts)); }catch(_){}
+  }catch(_){}
+}
+try{ FEED.reacts=JSON.parse(localStorage.getItem('stats_reacts_v1')||'{}')||{}; }catch(_){ FEED.reacts={}; }
+function feedShowNew(){ feedRender(true); try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(_){} }
+try{ window.feedShowNew=feedShowNew; }catch(_){}
+
 function renderGametime(){
   const head=document.getElementById('gtHead'), idle=document.getElementById('gtIdle');
   if(!head) return;
@@ -9357,47 +9735,29 @@ function renderGametime(){
      be worth sitting on: what you picked, how your Call It night is going,
      and a button that fires a real one so you — and the host, an hour before
      tip — can prove the thing works without waiting for a game to happen. */
+  /* WHAT USED TO BE HERE. A "leave this open" placeholder, a Call It
+     scoreboard and a copy of your prediction card — three cards of filler
+     stacked above nothing, because before the Feed there was nothing to put
+     on this tab between questions. There is now. The card itself moved to
+     Stats, where you asked for it; the only thing that survives here is your
+     Call It night, and only once there is one to report. */
   let out='';
-  if(!hasCard){
-    out+='<div class="card center" style="padding:20px">'
-      + '<div style="font-size:30px;margin-bottom:6px">🎯</div>'
-      + '<b style="font-size:15.5px">Leave this open while you watch</b>'
-      + '<p class="sub" style="font-size:12.5px;margin:8px 0 0">Call It questions land right here the moment something happens — a timeout, a run, a big shot. One tap, then straight back to the game.</p>'
-      + '</div>';
-  }
-  // Your Call It night so far — only once there is a night to report.
   try{
     if(PCI.called>0){
       const pctv=Math.round((PCI.hit/PCI.called)*100);
-      out+='<div class="card" style="padding:14px 16px;margin-top:12px;display:flex;justify-content:space-between;text-align:center">'
-        + '<div style="flex:1"><div style="font-size:20px;font-weight:900;color:#eef2fb">'+PCI.hit+'/'+PCI.called+'</div><div style="font-size:10.5px;letter-spacing:.12em;color:#93a0bd;font-weight:800">CALLED</div></div>'
-        + '<div style="flex:1"><div style="font-size:20px;font-weight:900;color:#eef2fb">'+pctv+'%</div><div style="font-size:10.5px;letter-spacing:.12em;color:#93a0bd;font-weight:800">HIT RATE</div></div>'
-        + '<div style="flex:1"><div style="font-size:20px;font-weight:900;color:var(--gold)">'+(PCI.best||0)+'</div><div style="font-size:10.5px;letter-spacing:.12em;color:#93a0bd;font-weight:800">BEST RUN</div></div>'
+      out+='<div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;text-align:center">'
+        + '<div style="flex:1"><div style="font-size:19px;font-weight:900;color:#eef2fb">'+PCI.hit+'/'+PCI.called+'</div><div style="font-size:9.5px;letter-spacing:.12em;color:#93a0bd;font-weight:800">CALLED</div></div>'
+        + '<div style="flex:1"><div style="font-size:19px;font-weight:900;color:#eef2fb">'+pctv+'%</div><div style="font-size:9.5px;letter-spacing:.12em;color:#93a0bd;font-weight:800">HIT RATE</div></div>'
+        + '<div style="flex:1"><div style="font-size:19px;font-weight:900;color:var(--gold)">'+(PCI.best||0)+'</div><div style="font-size:9.5px;letter-spacing:.12em;color:#93a0bd;font-weight:800">BEST RUN</div></div>'
         + '</div>';
     }
   }catch(_){}
-  // Your card, so this tab answers "what did I pick again?" without leaving.
-  try{
-    const filled=preds.filter(p=>S.predChoices[p.id]);
-    if(filled.length){
-      out+='<div class="card" style="padding:14px 16px;margin-top:12px">'
-        + '<div style="font-size:11px;letter-spacing:.14em;color:#28e0d0;font-weight:800;margin-bottom:9px">YOUR CARD</div>'
-        + filled.map(function(p){
-            const n=S.predChoices[p.id+'_num'];
-            return '<div style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:13.5px">'
-              + '<span style="color:#93a0bd">'+esc(p.label)+'</span>'
-              + '<b style="color:#eef2fb;text-align:right">'+esc(String(S.predChoices[p.id]))+(n?(' <span style="color:var(--gold)">· '+esc(String(n))+'</span>'):'')+'</b></div>';
-          }).join('')
-        + (filled.length<preds.length ? '<div style="font-size:12px;color:#ffc54d;margin-top:8px;font-weight:800">'+(preds.length-filled.length)+' still to pick — Home → Play</div>' : '')
-        + '</div>';
-    }
-  }catch(_){}
-  /* The rehearsal control USED TO LIVE HERE, at the bottom of the tab you
-     are meant to sit on while a game is on. A grey "practice" button under
-     a live scoreboard is noise at best and a misfire at worst. It now
-     lives on the Me tab, where a rehearsal belongs — one place, off every
-     play surface, still one tap from the host an hour before tip. */
   idle.innerHTML=out;
+  // No empty boxes holding space open. Three stacked containers with 14px
+  // margins left a dead 42-pixel band under the score before the feed began.
+  try{ idle.style.marginTop = out ? '14px' : '0'; }catch(_){}
+  try{ var sl=document.getElementById('ciSlot'); if(sl) sl.style.marginTop = sl.children.length ? '14px' : '0'; }catch(_){}
+  try{ feedRender(); }catch(_){}
 }
 /* THE TEST HOOK. Fires a real Call It card, through the real renderer, into
    the real slot — no game required. Every run gets a fresh qid so it can be
@@ -9442,6 +9802,24 @@ try{ setInterval(function(){ try{
      It hides itself during a live question and on the final card — a nav
      bar under a 20-second clock is a way to lose the question by accident.
      ================================================================== -->
+<!-- ================= THE RAIL ================================
+     "The score does not automatically update at the current pace on
+     Gametime and throughout the site." It was true: the score lived on two
+     screens and only refreshed while you happened to be looking at one of
+     them. And separately, you could never see how you were doing without
+     navigating somewhere to find out.
+
+     One strip, pinned under the status bar, on every screen where the nav
+     is up: who is winning, and what you have. Fed by the same poller as
+     everything else, so it cannot disagree with the Stats tab.
+     ========================================================== -->
+<div id="rail" style="display:none">
+  <div class="railin">
+    <span class="railteams" id="railScore">—</span>
+    <span class="raildot"></span>
+    <span class="railme" id="railMe">—</span>
+  </div>
+</div>
 <div id="botnav" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:8500;
      background:rgba(10,14,23,.94);backdrop-filter:blur(12px);border-top:1px solid #1e2740;
      padding:7px 6px calc(7px + env(safe-area-inset-bottom,0px));">
@@ -9517,6 +9895,50 @@ body.hasnav{padding-bottom:74px}
 .stFactT{font-size:13.5px;color:#cfd8ea;font-weight:600;line-height:1.45}
 .stFactT b{color:#eef2fb;font-weight:900}
 .stFactS{font-size:11px;color:#5b6a8c;margin-top:3px;letter-spacing:.03em;line-height:1.4}
+
+/* ---- the rail ---- */
+#rail{position:fixed;left:0;right:0;top:0;z-index:8400;background:rgba(10,14,23,.93);
+  backdrop-filter:blur(12px);border-bottom:1px solid #1e2740;
+  padding:calc(6px + env(safe-area-inset-top,0px)) 12px 6px}
+.railin{max-width:430px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.railteams{font-size:11.5px;font-weight:700;color:#7e8cab;letter-spacing:.04em;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.railteams b{color:#eef2fb;font-weight:900;font-size:13px}
+.railteams i{font-style:normal;color:#28e0d0;font-weight:800;font-size:10px;letter-spacing:.08em;margin-left:4px}
+.raildot{flex:0 0 auto;width:4px;height:4px;border-radius:99px;background:#26304a}
+.railme{flex:0 0 auto;font-size:11.5px;font-weight:700;color:#7e8cab;letter-spacing:.04em;white-space:nowrap}
+.railme b{color:var(--gold,#ffc54d);font-weight:900;font-size:13px}
+body.hasrail{padding-top:38px}
+
+/* ---- the feed ---- */
+#feedNew{position:sticky;top:8px;z-index:40;display:block;margin:0 auto;border:none;
+  background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e;font:900 12px/1 inherit;
+  letter-spacing:.05em;padding:10px 16px;border-radius:99px;cursor:pointer;
+  box-shadow:0 6px 20px rgba(40,224,208,.28)}
+#feedNew:active{transform:scale(.95)}
+.fdc{position:relative;background:#0e1626;border:1px solid #1c2438;border-radius:16px;
+  padding:13px 14px 9px;margin-top:9px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.fdc.big{border-color:#28384f;background:#101a2c}
+.fdc:active{transform:scale(.995)}
+.fdtag{font-size:9.5px;letter-spacing:.14em;font-weight:900;color:#28e0d0;text-transform:uppercase;margin-bottom:6px}
+.fdmain{display:flex;gap:11px;align-items:flex-start}
+.fdi{flex:0 0 auto;font-size:17px;line-height:1.3}
+.fdb{flex:1;min-width:0}
+.fdt{font-size:13.5px;line-height:1.45;color:#cfd8ea;font-weight:600}
+.fdt b{color:#eef2fb;font-weight:900}
+.fdm{font-size:10.5px;color:#5b6a8c;margin-top:3px;letter-spacing:.05em;font-weight:700}
+.fds{flex:0 0 auto;font-size:13px;font-weight:900;color:#93a0bd;padding-left:6px;white-space:nowrap}
+.fdrow{display:flex;gap:6px;margin-top:9px;padding-top:8px;border-top:1px solid #172032}
+.fdr{border:none;background:#141d2f;color:#93a0bd;border-radius:99px;padding:5px 10px;
+  font:700 13px/1 inherit;cursor:pointer;display:flex;align-items:center;gap:4px}
+.fdr i{font-style:normal;font-size:10.5px;font-weight:900;color:#cfd8ea}
+.fdr.on{background:#1b2a44;box-shadow:inset 0 0 0 1px rgba(40,224,208,.4)}
+.fdr:active{transform:scale(.9)}
+.fdpop{position:absolute;right:18px;bottom:14px;font-size:26px;pointer-events:none;
+  animation:fdpop .7s ease-out forwards}
+@keyframes fdpop{0%{opacity:0;transform:translateY(0) scale(.6)}
+  25%{opacity:1;transform:translateY(-8px) scale(1.15)}
+  100%{opacity:0;transform:translateY(-46px) scale(1)}}
 
 /* ---- the final screen's fold ---- */
 .fdrawer{margin-top:12px;border:1px solid #1e2740;border-radius:16px;background:#0e1626;overflow:hidden}
