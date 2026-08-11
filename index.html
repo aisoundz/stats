@@ -3366,9 +3366,12 @@ function paintContinueCard(){
     if(!btn) return;
     const live = (S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0 && S.place!=='predict');
     let note=document.getElementById('contNote');
+    let esc=document.getElementById('contEsc');
     if(!live){
       if(note) note.remove();
-      if(demo) demo.style.display='';
+      if(esc) esc.remove();
+      if(demo){ demo.style.display=''; demo.onclick=startDemo;
+                try{ demo.textContent='Practice with a simulated '+(L&&L.unit||'game'); }catch(_){ demo.textContent='Practice with a simulated game'; } }
       btn.classList.remove('teal');
       return;
     }
@@ -3382,7 +3385,27 @@ function paintContinueCard(){
     }catch(_){ where='in progress'; }
     btn.textContent='Continue tonight’s game · '+where;
     btn.classList.add('teal');
-    if(demo) demo.style.display='none';
+    /* PRACTICE IS NEVER TAKEN AWAY. This used to hide itself the moment a
+       live save existed, on the theory that somebody mid-game does not want
+       a rehearsal. The cost of being wrong about that is total: a stale save
+       resumes itself, Practice is gone, and the phone is locked inside a
+       game that is not happening. An escape hatch you remove when things go
+       wrong is not an escape hatch. It stays, demoted, and it starts from a
+       genuinely clean slate rather than dragging the live card into it. */
+    if(demo){
+      demo.style.display='';
+      demo.textContent='Leave this and run a practice game';
+      demo.onclick=function(){ freshStart('demo'); };
+    }
+    if(!esc){
+      esc=document.createElement('button'); esc.id='contEsc';
+      esc.className='btn ghost sm';
+      esc.style.cssText='margin-top:8px;font-size:14px;color:var(--muted,#93a0bd)';
+      esc.textContent='This isn’t my game — start over';
+      esc.onclick=function(){ freshStart(''); };
+      if(demo && demo.parentNode) demo.parentNode.insertBefore(esc, demo.nextSibling);
+      else btn.parentNode.appendChild(esc);
+    }
     if(!note){
       note=document.createElement('p'); note.id='contNote'; note.className='sub';
       note.style.cssText='font-size:14px;margin:10px 0 0;text-align:center';
@@ -3409,6 +3432,18 @@ function promptSignIn(after){
   toast('Sign in first — takes one tap, and it saves everything you score.');
 }
 let PENDING_AFTER=null;
+/* ============ A CLEAN SLATE, GUARANTEED ==============================
+   Walking out of a live game by hand means unpicking a dozen pieces of
+   state — the card, the points, the Call It streak, the room seat, the
+   round index — and every one we forget is a ghost that turns up an hour
+   later looking like a fresh bug. A reload is the only reset we can
+   actually promise. Drop the save, note where to land, reload. */
+function freshStart(then){
+  try{ clearSave(); }catch(_){}
+  try{ resumeData=null; }catch(_){}
+  try{ sessionStorage.setItem('stats_after_reload', then||'home'); }catch(_){}
+  try{ location.reload(); }catch(_){ location.href=location.pathname; }
+}
 function startDemo(){
   /* A stale live save was auto-resuming straight over the top of a
      rehearsal — press Practice and the home card came back reading
@@ -3451,7 +3486,31 @@ function checkResume(){
   const RESUMABLE=["predict","lobby","live","review","predreview","break"];
   // `place` is the position; `screen` is the fallback for saves written by
   // builds before the split existed.
-  const where = (saved && (saved.place || saved.screen)) || '';
+  let where = (saved && (saved.place || saved.screen)) || '';
+  /* ============ A SAVE CANNOT BE AHEAD OF THE GAME ====================
+     "There is no practice and it now goes straight to Q4 ended. So i cant
+     test anything. Even with a refresh."
+
+     A save from an earlier rehearsal carried tonight's real nightId, so the
+     per-night guard above waved it through, and auto-resume dropped the
+     phone into "Q4 ended — answer now" seven hours before tip. There was no
+     way back: the resume bar hides itself on resume and the Practice button
+     hides itself whenever a live save exists. The player was locked inside
+     a game that has not been played.
+
+     The clock is the check. Before tip-off the only honest positions are
+     "I am filling in my card" and "I am waiting in the lobby". A save that
+     claims a quarter is open, or over, before the ball has gone up did not
+     come from this game — it came from a rehearsal, a stale tab, or a
+     half-finished test. Clear it and let them start clean. */
+  try{
+    var tipMs = Date.parse((typeof GAME!=='undefined' && GAME.tipISO) || '');
+    var PRETIP_OK = ['predict','lobby'];
+    if(saved && where && tipMs && Date.now() < tipMs && PRETIP_OK.indexOf(where) < 0){
+      try{ trk('save_ahead_of_game',{where:where, qi:saved.qi, mins:Math.round((tipMs-Date.now())/60000)}); }catch(_){}
+      clearSave(); saved=null; where='';
+    }
+  }catch(_){}
   if(saved && saved.mode==="live" && RESUMABLE.includes(where)){
     resumeData=saved;
     /* AUTO-RESUME. This used to only offer a bar and wait to be tapped.
@@ -3569,7 +3628,11 @@ function doResume(){
   }
   else if(scr==="predreview"){openPredReview();}
 }
-function dismissResume(){clearSave();resumeData=null;document.getElementById("resumeBar").style.display="none";}
+/* "Start a new game" has to actually be new. Clearing the save while the
+   old S is still in memory left the points, the locked card and the round
+   index sitting there, so the next tap put you straight back where you
+   were and the button looked broken. */
+function dismissResume(){ freshStart(''); }
 function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(map[k]).classList.add('active');
   document.getElementById('app').scrollTop=0; window.scrollTo(0,0);
@@ -9499,7 +9562,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.71';
+const STATS_BUILD='2026-08-11-g6-ny-ind.72';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -9564,6 +9627,13 @@ function restoreIdentity(){
 }
 try{ restoreIdentity(); }catch(_){}
 checkResume();
+/* The other half of freshStart(): the reload has happened, the save is gone,
+   and this is where we honour the "…and then take me to Practice" part. */
+try{
+  var _ar=sessionStorage.getItem('stats_after_reload');
+  if(_ar){ sessionStorage.removeItem('stats_after_reload');
+    if(_ar==='demo') setTimeout(function(){ try{ startDemo(); }catch(_){} }, 90); }
+}catch(_){}
 /* Reveal. Boot has now decided which screen you belong on, so painting it
    is honest. The failsafe is the important half: if anything above this
    line ever throws, the timeout still opens the app rather than leaving a
