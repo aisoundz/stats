@@ -1207,6 +1207,9 @@
   <section class="screen" id="s-final">
     <div class="center" style="margin-top:14px"><span class="pill" id="finalPill">Final buzzer 🚨</span></div>
     <h1 class="center" style="margin-top:12px" id="finalTitle">You finished!</h1>
+    <!-- Says why the prediction card scored nothing, on the two occasions
+         it legitimately cannot. Silence here reads as a bug. -->
+    <p class="sub center" id="finalCardNote" style="display:none;margin:6px 12px 0;font-size:14px"></p>
 
     <!-- THE AWARD. Lands last on purpose: ring, then number, then this.
          Every award is derived from data the app already holds and none
@@ -3406,7 +3409,13 @@ function promptSignIn(after){
   toast('Sign in first — takes one tap, and it saves everything you score.');
 }
 let PENDING_AFTER=null;
-function startDemo(){S.mode="demo";S.practice=true;try{Object.keys(demoCiFired).forEach(k=>delete demoCiFired[k]);PCI.muted=false;}catch(e){}go('name');prefillGate();}
+function startDemo(){
+  /* A stale live save was auto-resuming straight over the top of a
+     rehearsal — press Practice and the home card came back reading
+     "Continue tonight's game · waiting on Q4, 110 pts". Pressing Practice
+     is an explicit choice to not be in that game. */
+  try{ resumeData=null; var rb=document.getElementById('resumeBar'); if(rb) rb.style.display='none'; }catch(_){}
+  S.mode="demo";S.practice=true;try{Object.keys(demoCiFired).forEach(k=>delete demoCiFired[k]);PCI.muted=false;}catch(e){}go('name');prefillGate();}
 
 /* ---------------- PERSISTENCE (Game Night only) ---------------- */
 const LS_KEY="stats_gamenight_v1_"+SPORT_KEY; // saves never cross sports
@@ -5324,6 +5333,22 @@ function applySettlement(st){
 
 /* ---------------- GAME NIGHT: PREDICTION REVIEW ---------------- */
 function openPredReview(){
+  /* ============ A PRACTICE RUN NEVER ASKS YOU FOR A BOX SCORE ==========
+     Reported from a real phone: press Practice, play it through, and the
+     last screen was "The feed didn't settle it" with a form asking you to
+     type in the official results — the exact screen we deleted weeks ago.
+     Nobody re-added it. Practice simply fell into the LIVE fallback: the
+     card settles off tonight's final box score, tonight's game has not
+     been played, so settlement failed and the manual path caught it.
+     A rehearsal has nothing to settle against and should never pretend
+     otherwise. It goes straight to the result, and says so. */
+  try{
+    if(S.mode!=='live'){
+      S.predTruth={}; S.predTruthNum={}; S.predPts=0;
+      S.predAuto=false; S.predSkipped=true;
+      showFinal(); return;
+    }
+  }catch(_){}
   /* Pull the FINAL box score first. Everything below is a fallback. */
   try{
     var fresh = GS.ok && String(GS.state||'')==='post' && (Date.now()-GS.at)<20000;
@@ -5341,10 +5366,34 @@ function openPredReview(){
   }catch(_){}
   predReviewDecide();
 }
+var PR_TRIES=0;
 function predReviewDecide(){
   var st=null; try{ st=settleFromFeed(); }catch(_){ st=null; }
-  if(st){ applySettlement(st); return; }
-  predReviewManual();
+  if(st){ PR_TRIES=0; applySettlement(st); return; }
+  /* THE PLAYER IS NEVER THE DATA ENTRY CLERK. "We still have the page to
+     add your predictions at the end of the game. We don't need that."
+     Right — so a feed that has not caught up yet is a WAIT, not a form.
+     The box score lands within a minute or two of a real final; keep
+     asking for it, and if it truly never comes, hand back the night with
+     the quarter points (which are most of them) and say plainly that the
+     card could not be settled. Honest beats a spreadsheet. */
+  PR_TRIES++;
+  if(PR_TRIES<=6){
+    try{
+      var c=document.getElementById('prCard');
+      if(c) c.innerHTML='<div class="center" style="padding:26px 10px">'
+        + '<b style="font-size:15px">Settling your card…</b>'
+        + '<p class="sub" style="font-size:14px;margin:8px 0 0">Waiting on the official final box score. '
+        + 'It lands a minute or two after the buzzer — nothing for you to do.</p></div>';
+      var b=document.getElementById('prBtn'); if(b) b.style.display='none';
+    }catch(_){}
+    go('predreview');
+    setTimeout(function(){ try{ loadGameStats(true).then(function(){ predReviewDecide(); }); }catch(_){ predReviewDecide(); } }, 15000);
+    return;
+  }
+  S.predTruth={}; S.predTruthNum={}; S.predPts=0;
+  S.predAuto=false; S.predUnsettled=true;
+  showFinal();
 }
 function predReviewManual(){
   const c=document.getElementById('prCard');c.innerHTML='';
@@ -5446,11 +5495,26 @@ function renderLeaderboard(elId,limit){
    finished, and what was my best moment. Then the room, then one gold
    button.
    ==================================================================== */
+function finalCardNote(){
+  try{
+    var el=document.getElementById('finalCardNote'); if(!el) return;
+    if(S.predSkipped){
+      el.style.display='';
+      el.textContent='Practice run — your prediction card doesn’t score, because '
+        + 'tonight’s game hasn’t been played yet. Everything else here is real.';
+    } else if(S.predUnsettled){
+      el.style.display='';
+      el.textContent='The official box score never arrived, so the prediction card '
+        + 'couldn’t be settled. Your quarter points are all here and counted.';
+    } else el.style.display='none';
+  }catch(_){}
+}
 function showFinal(){
   try{ trkNow('night_complete',{pts:Math.round((S&&S.pts)||0), mins:Math.round((Date.now()-TRK.t0)/60000)}); }catch(_){}
   // Whatever is already on S.pts came from live rounds. Capture it before
   // the sheet and the catches land, or the breakdown below cannot tell
   // the two halves of the night apart.
+  try{ finalCardNote(); }catch(_){}
   const livePts = S.pts;
   S.pts += (S.predPts||0) + (S.catchPts||0);
   // Practice only: the bots' sheets settle too. Without this the final
@@ -9435,7 +9499,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.70';
+const STATS_BUILD='2026-08-11-g6-ny-ind.71';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
