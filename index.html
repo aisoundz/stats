@@ -3013,7 +3013,18 @@ function checkResume(){
   const where = (saved && (saved.place || saved.screen)) || '';
   if(saved && saved.mode==="live" && RESUMABLE.includes(where)){
     resumeData=saved;
+    /* AUTO-RESUME. This used to only offer a bar and wait to be tapped.
+       On a phone that is fatal: lock the screen, come back, iOS has
+       discarded the page, you land on the marketing home, tap "Play Game
+       Night", and the app cheerfully starts you at Q1 asking for picks you
+       already locked. The player did nothing wrong and lost their night.
+
+       A save for the night in progress is not an offer, it is where you
+       were. Restore it. The bar stays for one thing only — a deliberate
+       "start over" — and nothing here can clear a locked card, because
+       lockPredictions is create-only server-side. */
     document.getElementById("resumeBar").style.display="block";
+    try{ setTimeout(function(){ try{ if(resumeData) doResume(); }catch(_){} }, 60); }catch(_){}
   }
 }
 function doResume(){
@@ -3734,6 +3745,18 @@ function saveGateEmail(force){
 
 /* ---------------- PREDICTIONS ---------------- */
 function startPredict(){
+  /* "Play Game Night #5" is a START button. Pressed mid-night — which is
+     exactly what a player does after their phone wakes on the home screen —
+     it used to hand back a blank pick sheet for a card that was already
+     locked. If this night is already under way, this button means "take me
+     back", not "start again". */
+  try{
+    if(S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0 && (S.place!=='predict')){
+      returnToGame();
+      try{ toast('You’re already in tonight’s game — picking up where you left off.'); }catch(_){}
+      return;
+    }
+  }catch(_){}
   // Game #3 fix (defense in depth): never let a live player past the gate on a
   // disposable anonymous session. The button is already disabled until verified,
   // but a stray call shouldn't slip through and lose their night.
@@ -8153,7 +8176,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.34';
+const STATS_BUILD='2026-08-10-g5-tor-atl.35';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -8211,7 +8234,14 @@ try{backendBadge();}catch(e){}
    One rule governs everything here: the nav may CHANGE screens, never
    game state. No tab submits, locks, scores or signs anything. That is
    what makes a navigation rewrite safe to ship the day of a game.     */
-const NAV_HIDE_ON = ['live','review','predreview','break','final','tally'];
+/* The nav used to disappear on review / break / predreview — the WAITING
+   screens. That is backwards: those are the minutes the Gametime and Stats
+   tabs exist for. Only a question on a running clock should hold you in
+   place, and the final/tally screens are their own destination.
+
+   This is only safe because of the return bar below: let a player wander
+   with no way back and you have swapped one trap for another. */
+const NAV_HIDE_ON = ['live','final','tally'];
 function navGo(tab){
   try{
     // Leaving the Crew tab closes the room. A modal that survives a tab
@@ -8226,11 +8256,66 @@ function navGo(tab){
   }catch(e){}
   paintNav(tab);
 }
+/* ============ THE RETURN BAR ==========================================
+   "I'm waiting for the end of Q3 but I can't go to the other functionality."
+   The nav now stays up while you wait — which immediately raises the other
+   half of the problem: once you wander to Stats, how do you get back to the
+   round? Navigation without a return path is how a player misses a
+   question, and missing the first question is a note from tonight.
+
+   So: whenever you are somewhere in a live night and looking at something
+   else, a bar sits above the nav telling you where the game is and taking
+   you back in one tap. */
+function gameBarState(){
+  try{
+    if(S.mode!=='live') return null;
+    const place=S.place||'';
+    if(GAME_SCREENS.indexOf(place)<0) return null;      // not in a night
+    if(S.screen===place) return null;                    // already there
+    if(NAV_HIDE_ON.indexOf(S.screen)>=0) return null;    // mid-question
+    // Is a round open and unanswered right now?
+    let open=false, tag='';
+    try{
+      const d=(typeof hostedDoc==='function') && hostedDoc(S.qi);
+      if(d && d.state==='live' && !(HR.submitted&&HR.submitted[d.id])) { open=true; tag=roundTag(S.qi); }
+    }catch(_){}
+    if(place==='live'){ open=true; try{ tag=roundTag(S.qi); }catch(_){} }
+    if(open) return {urgent:true, text:'🔴 '+(tag||'A round')+' is open — tap to answer'};
+    if(place==='predict') return {urgent:true, text:'📋 Your card isn’t locked yet — finish it'};
+    return {urgent:false, text:'← Back to the game'};
+  }catch(_){ return null; }
+}
+function returnToGame(){
+  try{
+    const place=S.place||'lobby';
+    if(place==='predict'){ buildPred(); go('predict'); return; }
+    if(place==='lobby'){ renderLobby(S.nextQ!=null?S.nextQ:S.qi); go('lobby'); return; }
+    go(place);
+  }catch(e){ try{ go('lobby'); }catch(_){} }
+}
+function paintGameBar(){
+  try{
+    let el=document.getElementById('gameBar');
+    const st=gameBarState();
+    if(!st){ if(el) el.style.display='none'; return; }
+    if(!el){
+      el=document.createElement('button');
+      el.id='gameBar'; el.type='button';
+      el.onclick=returnToGame;
+      document.body.appendChild(el);
+    }
+    el.className = st.urgent ? 'urgent' : '';
+    el.textContent = st.text;
+    el.style.display='block';
+  }catch(_){}
+}
+
 function paintNav(active){
   const bar=document.getElementById('botnav'); if(!bar) return;
   let scr=''; try{ scr=S.screen||''; }catch(_){}
   const hide = NAV_HIDE_ON.indexOf(scr)>=0;
   bar.style.display = hide ? 'none' : 'block';
+  try{ paintGameBar(); }catch(_){}
   // The pick-slip's action bar belongs to exactly one screen.
   try{ const pb=document.getElementById('pdBar'); if(pb) pb.style.display=(scr==='predict')?'block':'none'; }catch(_){}
   // Call It is an in-game overlay. On the landing, the handle screen or the
@@ -8790,6 +8875,15 @@ body.hasnav{padding-bottom:74px}
 .stPickMine{grid-column:1;font-size:14px;font-weight:800;color:#eef2fb}
 .stPickMine.lead{color:#2ee6a6}
 .stPickLead{grid-column:2;grid-row:1 / span 2;align-self:center;font-size:11.5px;color:#93a0bd;text-align:right}
+
+/* ---- the return bar ---- */
+#gameBar{display:none;position:fixed;left:0;right:0;bottom:74px;z-index:8550;border:none;
+  width:100%;padding:13px 14px;cursor:pointer;font:800 14px/1.2 inherit;
+  background:#16233b;color:#cfd8ea;border-top:1px solid #26304a;text-align:center}
+#gameBar.urgent{background:linear-gradient(92deg,#ff4d5e,#ff7a3d);color:#fff;
+  animation:gbPulse 1.8s ease-in-out infinite}
+@keyframes gbPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+#gameBar:active{filter:brightness(.94)}
 
 /* ---- board ---- */
 .bdRow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #1a2337}
