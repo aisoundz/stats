@@ -1559,6 +1559,7 @@ window.STATS_FIREBASE = {
     callItPick: function () { return Promise.resolve(false); },
     pushCallItBoard: function () { return Promise.resolve(false); },
     submit: function () { return Promise.resolve(false); },
+    myScore: function () { return Promise.resolve(null); },
     stampQ: function () { return Promise.resolve(false); },
     logError: function () { return false; },
     mySub:  function () { return Promise.resolve(null); },
@@ -1988,6 +1989,24 @@ window.STATS_FIREBASE = {
       startHeartbeat();
       return true;
     } catch (e) { setState('error', e.message || String(e)); return false; }
+  };
+
+  /* THE SERVER IS THE TRUTH ABOUT POINTS. join() already restores the seat's
+     score into `mine` and refuses to zero it — but the PHONE never read it
+     back, so a player whose local memory was wiped saw 0 while Firestore had
+     the real number, and the board and the Control Room disagreed. This is
+     the read half of that fix. */
+  SB.myScore = async function () {
+    try {
+      if (!SB.enabled || !nightId || !meRef) return null;
+      var snap = await F.getDoc(meRef);
+      if (!snap.exists()) return null;
+      var d = snap.data() || {}, out = {};
+      ['pts','speed','predPts','catchPts','roundsDone'].forEach(function (k) {
+        if (typeof d[k] === 'number' && isFinite(d[k])) out[k] = d[k];
+      });
+      return out;
+    } catch (e) { return null; }
   };
 
   function startHeartbeat() {
@@ -2969,13 +2988,26 @@ function startDemo(){S.mode="demo";try{Object.keys(demoCiFired).forEach(k=>delet
 
 /* ---------------- PERSISTENCE (Game Night only) ---------------- */
 const LS_KEY="stats_gamenight_v1_"+SPORT_KEY; // saves never cross sports
+/* The screens that mean "you are somewhere in a game night". Everything else
+   — landing, gametime, stats, board, me — is a place to look, not a place to
+   be. Adding a new TAB must never require touching this list; adding a new
+   game PHASE must. */
+const GAME_SCREENS=["predict","lobby","live","review","predreview","break"];
 let resumeData=null;
-function save(){try{if(S.mode==="live")localStorage.setItem(LS_KEY,JSON.stringify(S));}catch(e){}}
+function save(){try{
+  if(S.mode!=="live") return;
+  // Snapshot the Call It record into the blob so a reload keeps the streak.
+  try{ if(typeof PCI==='object') S.pci={called:PCI.called,hit:PCI.hit,streak:PCI.streak,best:PCI.best,heat:PCI.heat}; }catch(_){}
+  localStorage.setItem(LS_KEY,JSON.stringify(S));
+}catch(e){}}
 function clearSave(){try{localStorage.removeItem(LS_KEY);}catch(e){}}
 function checkResume(){
   let saved=null;try{saved=JSON.parse(localStorage.getItem(LS_KEY));}catch(e){}
-  const RESUMABLE=["predict","lobby","live","review","predreview"];
-  if(saved && saved.mode==="live" && RESUMABLE.includes(saved.screen)){
+  const RESUMABLE=["predict","lobby","live","review","predreview","break"];
+  // `place` is the position; `screen` is the fallback for saves written by
+  // builds before the split existed.
+  const where = (saved && (saved.place || saved.screen)) || '';
+  if(saved && saved.mode==="live" && RESUMABLE.includes(where)){
     resumeData=saved;
     document.getElementById("resumeBar").style.display="block";
   }
@@ -2993,12 +3025,48 @@ function doResume(){
   document.getElementById("resumeBar").style.display="none";
   document.getElementById("playerName").value=S.name||"";
   initColors();
-  const scr=S.screen;
+  // Restore the Call It record too. It lived in memory only, which is the
+  // whole of "my streak is gone".
+  try{
+    if(S.pci && typeof PCI==='object'){
+      ['called','hit','streak','best','heat'].forEach(function(k){
+        if(typeof S.pci[k]==='number') PCI[k]=S.pci[k];
+      });
+    }
+  }catch(_){}
+  /* Reconcile with the server before painting anything. If Firestore has a
+     higher score than this device remembers — which is exactly the case
+     after a wipe — the server wins. Never downward: a write that has not
+     landed yet must not erase points the phone legitimately just earned. */
+  try{
+    if(S.mode==='live' && window.SB && SB.myScore){
+      SB.myScore().then(function(sv){
+        if(!sv) return;
+        var moved=false;
+        ['pts','speed','predPts','catchPts'].forEach(function(k){
+          if(typeof sv[k]==='number' && sv[k] > (Number(S[k])||0)){ S[k]=sv[k]; moved=true; }
+        });
+        if(moved){ try{ save(); }catch(_){}
+          try{ toast('Your points are back — '+(S.pts||0)+' from the scoreboard.'); }catch(_){}
+          try{ if(S.screen==='lobby') renderLobby(S.nextQ!=null?S.nextQ:S.qi); }catch(_){}
+        }
+      });
+    }
+  }catch(_){}
+  const scr=S.place||S.screen;
   if(scr==="predict"){buildPred();go("predict");}
   else if(scr==="lobby"){renderLobby(S.nextQ!=null?S.nextQ:S.qi);go("lobby");}
-  else if(scr==="live"){ // mid-round refresh: replay the current round (nothing was scored yet)
-    S.liveAnswers[S.qi]=[];renderLobby(S.qi);go("lobby");
-    toast(`Resumed — replay ${roundName(S.qi).toLowerCase()} when you're ready.`);
+  else if(scr==="live"){
+    /* Mid-round refresh. It used to wipe `liveAnswers[S.qi]` so the round
+       would be replayed from scratch — which reads as "the app lost my
+       answers", because it did. Nothing here was scored yet, so the picks
+       are safe to keep: come back to the lobby (never straight into the
+       grid, which is how a round gets scored twice) with everything the
+       player already tapped still in place. */
+    renderLobby(S.qi);go("lobby");
+    const kept=((S.liveAnswers&&S.liveAnswers[S.qi])||[]).filter(function(a){return a&&a.choice;}).length;
+    toast(kept ? `Resumed — your ${kept} answer${kept>1?'s':''} are still here.`
+               : `Resumed — ${roundName(S.qi).toLowerCase()} is ready when you are.`);
   }
   // A live round sitting on the review screen comes back to the LOBBY, not
   // to the tap-in grid. On a real night the player is not the scorer, and
@@ -3024,7 +3092,20 @@ function dismissResume(){clearSave();resumeData=null;document.getElementById("re
 function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(map[k]).classList.add('active');
   document.getElementById('app').scrollTop=0; window.scrollTo(0,0);
-  S.screen=k; pendingBack=false;
+  S.screen=k;
+  /* ============ GAME POSITION vs VIEW — the Game #5 data-loss fix =========
+     The save blob used to record only `screen`, and the resume path only
+     recognised game screens. The night I added Gametime / Stats / Board /
+     Me, tapping any of them wrote `screen:"gametime"` into the save — a
+     value resume did not recognise — so the next reload found nothing to
+     restore and started the player at zero. Points, picks and streak gone,
+     for two players, mid-game.
+
+     A tab is a VIEW. Where you are in the night is a POSITION. They are
+     different facts and they now live in different fields. Looking at the
+     leaderboard can never again cost somebody their game. */
+  try{ if(GAME_SCREENS.indexOf(k)>=0) S.place=k; }catch(_){}
+  pendingBack=false;
   // where ← goes from each screen; null = no back button
   const BACKMAP={landing:null,name:'landing',predict:'name',lobby:'landing',me:'landing',gametime:'landing',stats:'landing',board:'landing',
     /* No back button during a timed question. It sat on top of the score
@@ -8068,7 +8149,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.32';
+const STATS_BUILD='2026-08-10-g5-tor-atl.33';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
