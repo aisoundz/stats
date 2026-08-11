@@ -661,8 +661,8 @@
       <button class="btn ghost sm" style="margin-top:8px" onclick="dismissResume()">Start a new game</button>
     </div>
     <div class="brand"><span class="logo" style="letter-spacing:1.5px;font-size:27px">STATS GAMETIME</span></div>
-    <p class="tag">The game that pays to pay attention</p>
-    <div class="center" style="margin-top:8px"><span class="pill">Play from home • Free to enter</span></div>
+    <p class="tag strangers">The game that pays to pay attention</p>
+    <div class="center strangers" style="margin-top:8px"><span class="pill">Play from home • Free to enter</span></div>
 
     <!-- THE FRONT DOOR — sign in before anything else. Hidden the moment the
          account is real; replaced by the welcome strip below. -->
@@ -739,7 +739,7 @@
          the whole card hides rather than showing a blank or a fake stat. -->
     <div class="card" id="matchupCard" style="display:none;padding:0"></div>
 
-    <div class="card">
+    <div class="card strangers">
       <div class="step"><div class="num">1</div><div><b id="step1h">Predict before tip-off</b><p id="step1p">Fill your prediction sheet — winner, stat leaders &amp; bonus amounts. Worth up to 600 of the night's 1,000 pts.</p></div></div>
       <div class="step"><div class="num">2</div><div><b id="step2h">Answer at every quarter break</b><p id="step2p">4 questions about what JUST happened — and not the ones you'd expect. Points rise: Q1 = 10 pts → Q4 = 40, so the last quarter is worth four times the first. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.</p></div></div>
       <div class="step"><div class="num">3</div><div><b>Watch your points land</b><p id="step3p">The second the host reveals a quarter, your answers are scored for you — nothing to tap, even if your phone was in your pocket. Most points wins the night; ⚡ Speed breaks ties.</p></div></div>
@@ -748,14 +748,14 @@
     <!-- The ask, on the front page. Someone who lands here between game
          nights has nothing to play and no reason to come back; this is the
          only thing on the page that works when there is no game on. -->
-    <div class="card" style="border-color:rgba(46,230,166,.35)">
+    <div class="card strangers" style="border-color:rgba(46,230,166,.35)">
       <b style="font-size:15px">📬 Can't play tonight?</b>
       <p class="sub" style="font-size:12.5px;margin:6px 0 0">Get one email before each game night, and tell us what you watch — we build the next night around the answers.</p>
       <button class="btn teal" style="margin-top:12px" onclick="openJoin('landing')">Join the list →</button>
     </div>
 
     <button class="btn ghost" onclick="go('rules')">📖 Read the full rules</button>
-    <p class="foot">Free to play. No purchase necessary. Friends & family beta — see the Rules page for scoring and fair play.</p>
+    <p class="foot strangers">Free to play. No purchase necessary. Friends &amp; family beta — see the Rules page for scoring and fair play.</p>
     <!-- Version, where anybody can find it without knowing which tab to open.
          "Confirm you're on build X" is useless advice if the only place the
          build appears is a screen you have to go looking for. -->
@@ -8501,6 +8501,16 @@ function renderPortal(){
   try{ v=!!(window.SB&&SB.verified&&SB.verified()); em=(window.SB&&SB.me&&SB.me.email)||''; }catch(e){}
   p.style.display = v?'none':'block';
   try{ const hb=document.getElementById('howBlock'); if(hb) hb.style.display = v?'none':'block'; }catch(_){}
+  /* THE SIGNED-IN HOME IS NOT THE SIGNED-OUT HOME.
+     "The signed-in Home is the signed-out Home" has been on the list since
+     Game #5. A member was still being sold the product they had already
+     bought: the tagline, the free-to-enter pill, a three-step explanation
+     of how the game works, and a "can't play tonight, join the list" card
+     — under an account that is already on the list. The marketing page is
+     for strangers. A member's home should answer four things and stop:
+     what is on tonight, where do I stand, what do I do next, and how do I
+     get back into a game I have already started. */
+  try{ document.body.classList.toggle('member', !!v); }catch(_){}
   /* If the backend never came up, the sign-in buttons are decoration: they
      can only ever toast an apology. Say so on the card itself. A player who
      taps a dead button twice and gets nothing decides the app is broken;
@@ -8675,7 +8685,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.49';
+const STATS_BUILD='2026-08-11-g6-ny-ind.50';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -10476,6 +10486,10 @@ body.hasrail{padding-top:38px}
 .fdlv{font-size:12px;color:#93a0bd;text-align:right;font-weight:600}
 .fdlv b{color:#28e0d0;font-weight:900}
 .fdlr{grid-column:1 / -1;font-size:10.5px;color:#5b6a8c;letter-spacing:.04em;font-weight:700}
+/* Everything a stranger needs and a member has already read. Hidden by a
+   single class on <body> so there is one switch, not six. */
+body.member .strangers{display:none !important}
+body.member #s-landing .brand{margin-top:6px}
 .fdc.quiet{cursor:default}
 .fdc.quiet:active{transform:none}
 .fdgo{display:block;width:100%;margin-top:11px;border:none;border-radius:12px;cursor:pointer;
