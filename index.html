@@ -3122,6 +3122,31 @@ function doResume(){
       });
     }
   }catch(_){}
+  /* ============ REJOIN THE ROOM ======================================
+     THE bug behind tonight. doResume() restored the player's local state
+     and never called joinNight() — so the backend layer's `nightId` stayed
+     null and every room operation became a silent no-op. The screen looked
+     completely normal while the phone was, in fact, disconnected:
+
+       · SB.top()  -> no nightId -> board empty ("nobody has joined")
+       · SB.say()  -> no nightId -> trash talk dead
+       · SB.submit()-> no nightId -> answers never reach the host
+       · startHostedWatch() never ran -> pushed rounds never arrive,
+         which is "there are no more Gametime questions being asked"
+
+     Auto-resume made it certain, because from then on every reload took
+     the path that skips the join. A resumed player is a joined player. */
+  try{
+    if(S.mode==='live'){
+      joinNight().then(function(ok){
+        if(!ok) return;
+        try{ refreshRoom(); }catch(_){}
+        try{ boardRefresh(); }catch(_){}
+        try{ if(S.screen==='board') renderBoard(); }catch(_){}
+      });
+    }
+  }catch(_){}
+
   /* Reconcile with the server before painting anything. If Firestore has a
      higher score than this device remembers — which is exactly the case
      after a wipe — the server wins. Never downward: a write that has not
@@ -8249,7 +8274,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.39';
+const STATS_BUILD='2026-08-10-g5-tor-atl.40';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
