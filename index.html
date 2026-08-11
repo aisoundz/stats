@@ -756,6 +756,10 @@
 
     <button class="btn ghost" onclick="go('rules')">📖 Read the full rules</button>
     <p class="foot">Free to play. No purchase necessary. Friends & family beta — see the Rules page for scoring and fair play.</p>
+    <!-- Version, where anybody can find it without knowing which tab to open.
+         "Confirm you're on build X" is useless advice if the only place the
+         build appears is a screen you have to go looking for. -->
+    <div id="landStamp" class="center" style="margin-top:10px"></div>
   </section>
 
   <!-- JOIN — the front door.
@@ -8149,7 +8153,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.33';
+const STATS_BUILD='2026-08-10-g5-tor-atl.34';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -8266,6 +8270,7 @@ try{ setTimeout(paintNav, 600); }catch(e){}
    a night" and the canned fallback nobody wants. One request, same endpoint
    the matchup card already hits. */
 try{ setTimeout(function(){ try{ loadGameStats(); }catch(_){} }, 1200); }catch(e){}
+try{ setTimeout(paintLandStamp, 300); }catch(e){}
 
 
 /* ---- THE ME TAB ---------------------------------------------------
@@ -8314,11 +8319,23 @@ function renderMe(){
     };
   }catch(_){}
 }
+/* Paint the landing stamp once the app is up. */
+function paintLandStamp(){
+  try{
+    var el=document.getElementById('landStamp'); if(!el) return;
+    el.innerHTML=buildStampHTML();
+    var b=document.getElementById('buildStamp');
+    if(b) b.onclick=function(){
+      try{ navigator.clipboard.writeText(STATS_BUILD); toast('Copied '+STATS_BUILD); }
+      catch(e){ toast(STATS_BUILD); }
+    };
+  }catch(_){}
+}
 /* One writer, so the stamp can never disagree with itself in two places. */
 function buildStampHTML(){
   var short=String(STATS_BUILD).split('.').pop();
   return '<div class="center" style="margin-top:18px">'
-    + '<button id="buildStamp" style="background:none;border:none;cursor:pointer;'
+    + '<button class="buildStamp" id="buildStamp" style="background:none;border:none;cursor:pointer;'
     + 'font:800 11.5px/1.5 inherit;color:#5b6a8c;letter-spacing:.06em">'
     + 'Version <b style="color:#93a0bd">'+esc(short)+'</b> · '+esc(STATS_BUILD)+'</button>'
     + '<div class="sub" style="font-size:10.5px;margin-top:3px;opacity:.7">Tap to copy. If this is behind, pull down to refresh.</div>'
