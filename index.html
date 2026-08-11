@@ -73,7 +73,16 @@
   body{min-height:100vh;display:flex;justify-content:center;
     background:radial-gradient(1200px 700px at 50% -10%,#15213b 0%,var(--bg) 55%)}
   .phone{width:100%;max-width:440px;min-height:100vh;position:relative;
-    background:linear-gradient(180deg,#0b1120,#0a0e17 40%);overflow:hidden;
+    background:linear-gradient(180deg,#0b1120,#0a0e17 40%);
+    /* overflow:hidden here silently disabled position:sticky in EVERY
+       descendant — an ancestor with hidden overflow becomes the scroll
+       container, so a sticky child has nothing to stick to. That is why
+       the pinned scoreboard scrolled away with the page and looked like
+       the sticky rule simply had not applied. `clip` does the same
+       clipping without creating a scroll container. The hidden line stays
+       first as the fallback for anything that does not know `clip`. */
+    overflow:hidden;
+    overflow:clip;
     display:flex;flex-direction:column}
   .screen{flex:1;display:none;flex-direction:column;padding:20px 18px 96px;animation:fade .35s ease}
   .screen.active{display:flex}
@@ -1008,8 +1017,18 @@
          says which tab you are on, in a highlighted colour, permanently —
          a page title repeating it cost ninety vertical pixels on a phone
          at the top of the one screen you sit on all night. -->
-    <div id="gtHead"></div>
-    <div id="ciSlot" style="margin-top:14px"></div>
+    <!-- THE ANCHOR. Three attempts at "where does a Call It go" all failed
+         for the same reason: the question was being positioned relative to
+         the SCREEN when it should be positioned relative to the SCORE. In
+         the feed it scrolled away. Pinned to the bottom it sat in the
+         corner of your eye. Pinned to the top it shoved the score down.
+         The score is the thing you are already looking at during a game —
+         so the score never moves, and the question arrives attached to the
+         underside of it. The feed runs underneath both. -->
+    <div id="gtSticky">
+      <div id="gtHead"></div>
+      <div id="ciSlot"></div>
+    </div>
     <div id="gtIdle"></div>
     <!-- THE FEED. Everything below the Call It slot is an endless scroll of
          the game itself: every bucket, every run, every deep cut, and your
@@ -7100,6 +7119,27 @@ function ensureCiCard(){
     '@keyframes ciPulse{0%,100%{box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 0 1px rgba(40,224,208,.55),0 0 30px rgba(40,224,208,.22)}50%{box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 0 1px rgba(40,224,208,.85),0 0 46px rgba(40,224,208,.42)}}'+
     '@media (prefers-reduced-motion:reduce){#ciCard{animation:none!important}#ciCard.cilive{animation:none!important}}'+
     'body.ciopen .screen.active{padding-top:var(--cih,0px);transition:padding-top .2s ease}'+
+    /* The pinned block. A solid backdrop so the feed passing underneath
+       never bleeds through the score. */
+    '#gtSticky{position:sticky;top:0;z-index:60;background:var(--bg,#0a0e17);'+
+      'padding-top:6px;margin:0 -2px;padding-left:2px;padding-right:2px}'+
+    '#gtSticky::after{content:"";position:absolute;left:0;right:0;top:100%;height:14px;'+
+      'background:linear-gradient(180deg,var(--bg,#0a0e17),rgba(10,14,23,0));pointer-events:none}'+
+    /* Docked in the slot it is a panel, not a floating card: square off the
+       top so it reads as hanging from the scoreboard above it. */
+    '#ciSlot #ciCard{border-top-left-radius:6px;border-top-right-radius:6px;'+
+      'box-shadow:0 10px 26px rgba(0,0,0,.45)}'+
+    '#ciSlot #ciCard.cilive{animation:ciDrop .32s cubic-bezier(.16,1,.3,1),'+
+      'ciPulse 2.1s ease-in-out .32s infinite}'+
+    '@keyframes ciDrop{from{transform:translateY(-14px);opacity:0}to{transform:translateY(0);opacity:1}}'+
+    /* THE PAYOFF LANDS WHERE THE EYE ALREADY IS. You answer, the card
+       settles, and the scoreboard itself flashes — so the reward is on the
+       thing you were watching, not on a box in the corner. */
+    '.gtBoard.cihit{animation:gbHit .9s ease-out}'+
+    '.gtBoard.cimiss{animation:gbMiss .7s ease-out}'+
+    '@keyframes gbHit{0%{box-shadow:0 0 0 0 rgba(46,230,166,.55)}55%{box-shadow:0 0 0 8px rgba(46,230,166,0)}100%{box-shadow:0 0 0 0 rgba(46,230,166,0)}}'+
+    '@keyframes gbMiss{0%{box-shadow:0 0 0 0 rgba(255,107,107,.42)}70%{box-shadow:0 0 0 7px rgba(255,107,107,0)}100%{box-shadow:0 0 0 0 rgba(255,107,107,0)}}'+
+    '@media (prefers-reduced-motion:reduce){.gtBoard.cihit,.gtBoard.cimiss{animation:none}}'+
     '#ciCard .cilockbar{height:4px;border-radius:99px;background:#22304d;overflow:hidden;margin-bottom:11px}'+
     '#ciCard .cilockbar i{display:block;height:100%;background:linear-gradient(92deg,#28e0d0,#4d86ff);width:100%;transform-origin:left}'+
     '#ciCard .cihead{display:flex;align-items:center;gap:7px;font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#28e0d0;margin-bottom:6px}'+
@@ -7165,6 +7205,21 @@ function ciOnGametime(){ try{ return (S&&S.screen)==='gametime'; }catch(_){ retu
    in the same place every time, whatever you are looking at. */
 function ciDock(){
   var c=document.getElementById('ciCard'); if(!c) return;
+  /* On Gametime the score is pinned, so the question belongs inside that
+     pinned block, directly beneath it — not floating over the page. */
+  var slot=document.getElementById('ciSlot');
+  if(ciOnGametime() && slot){
+    if(c.parentNode!==slot) slot.appendChild(c);
+    c.style.position='static'; c.style.top=''; c.style.bottom='';
+    c.style.left=''; c.style.transform='none'; c.style.width='100%';
+    c.style.margin='10px 0 0'; c.style.animation='';
+    c.dataset.ciTop=0;
+    try{ document.body.classList.remove('ciopen'); }catch(_){}
+    return;
+  }
+  /* Every other tab has no score to hang from, so it pins to the top and
+     pushes the page down by its own height. */
+  c.style.margin='';
   if(c.parentNode!==document.body) document.body.appendChild(c);
   /* TOP, NOT BOTTOM. Pinning it above the nav kept it on screen but put it
      in the corner of your eye, over the feed, furthest from the score you
@@ -7313,6 +7368,17 @@ function renderCiCard(q){
              (pk!=null?('<div class="ciresp">You said '+esc(ciLabel(q,pk))+'</div>'):'')+'</div></div>'+
            run+
            '<div class="cireveal">'+esc(q.resolveText||'')+'</div>');
+    /* THE REWARD LANDS ON THE SCOREBOARD. A correct call flashes the block
+       you were already staring at, so the payoff arrives in the same place
+       your attention already is instead of in a box you have to find. */
+    try{
+      if(pk!=null){
+        var gb=document.querySelector('.gtBoard')||document.querySelector('#gtHead .card');
+        if(gb){ gb.classList.remove('cihit','cimiss'); void gb.offsetWidth;
+                gb.classList.add(right?'cihit':'cimiss');
+                setTimeout(function(){ try{ gb.classList.remove('cihit','cimiss'); }catch(_){} }, 1100); }
+      }
+    }catch(_){}
     try{ var cc=document.getElementById('ciCard');
          if(cc){ cc.classList.remove('cidone'); cc.setAttribute('data-heat',String(heat)); } }catch(_){}
     try{ if(navigator.vibrate) navigator.vibrate(right?[10,40,18]:8); }catch(_){}
@@ -9286,7 +9352,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.67';
+const STATS_BUILD='2026-08-11-g6-ny-ind.68';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
