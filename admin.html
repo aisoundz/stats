@@ -441,7 +441,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-11-admin.29';
+window.ADMIN_BUILD='2026-08-11-admin.30';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -2898,7 +2898,125 @@ boot();
       const yes=changes>0;
       return E.b('high',o.findIndex(x=>(yes?/^yes/i:/^no/i).test(String(x))),'Q3 lead changes: '+changes);},
     q4_4(s,o,T){const pls=s.boxscore?.players||[];let nm='',mx=0;for(const tm of pls){const g=tm.statistics?.[0];if(!g)continue;const fi=(g.keys||[]).indexOf('fouls');if(fi<0)continue;for(const a of (g.athletes||[])){const f=+((a.stats||[])[fi]||0);if(f>mx){mx=f;nm=a.athlete?.displayName;}}}return E.b('high',mx>=6?0:1,'Most fouls: '+nm+' '+mx+(mx>=6?' (fouled out)':''));},
+/* ================= GAME #6 RESOLVERS ==============================
+       Written against the rewritten bank, one per question, each scoped to
+       its own quarter. The previous set was matched to questions by loose
+       regex, which survived exactly as long as the wording did: rewriting
+       the bank orphaned ten of sixteen questions and — far worse — matched
+       three of them to the WRONG rule. "The team that led at halftime, did
+       they win?" (Yes/No) picked up the rule for "who led at halftime",
+       which returns a TEAM. It would have marked a Yes/No question with a
+       team index, at high confidence, and the host would have had no
+       reason to look twice.
+       Matching is now by exact question text, not by pattern. A question
+       we do not recognise falls through to the host, which is the correct
+       failure. ================================================================ */
+    g6_first_points(s,o,T){ const p=(s.plays||[]).find(x=>x.scoringPlay); if(!p) return null;
+      let i; if(p.scoreValue===1) i=3; else if(p.scoreValue===3) i=2;
+      else i=/layup|dunk|putback|tip|reverse|driving/i.test(p.text||p.type?.text||'')?0:1;
+      return E.b('high',i,'First score: '+p.text); },
+
+    g6_first_three(s,o,T){ const q=E.pIn(s,1);
+      const p=q.find(x=>x.scoringPlay&&x.scoreValue===3);
+      if(!p){ const ni=o.findIndex(x=>/neither|none/i.test(x)); return ni<0?null:E.b('high',ni,'No three made in Q1'); }
+      return E.b('high',E.teamOpt(o,p.team?.id,T),'First three: '+p.text); },
+
+    g6_q1_threes(s,o,T){ const n=E.pIn(s,1).filter(p=>p.scoringPlay&&p.scoreValue===3).length;
+      const i = n<=1?0 : (n<=3?1 : (n<=5?2:3));
+      return E.b('high',i,'Q1 threes, both teams: '+n); },
+
+    g6_first_scorer_led(s,o,T){ const q=E.pIn(s,1);
+      const p=q.find(x=>x.scoringPlay); if(!p) return null;
+      let h=T.homeLine[0], a=T.awayLine[0];
+      if(typeof h!=='number'||typeof a!=='number'){            // lines can lag; fall back to the last play
+        const last=[...q].reverse().find(x=>typeof x.homeScore==='number');
+        if(!last) return null; h=last.homeScore; a=last.awayScore; }
+      if(h===a){ const ti=o.findIndex(x=>/tied/i.test(x)); return ti<0?null:E.b('high',ti,'Q1 ended level at '+a+'–'+h); }
+      const leader = h>a ? T.homeId : T.awayId;
+      const same = leader===p.team?.id;
+      const i=o.findIndex(x=>(same?/^yes/i:/^no/i).test(String(x)));
+      return i<0?null:E.b('high',i,'First score '+(p.team?.id===T.homeId?T.homeAbbr:T.awayAbbr)
+        +'; Q1 ended '+T.awayAbbr+' '+a+'–'+h+' '+T.homeAbbr); },
+
+    g6_q2_fg_v_ft(s,o,T){ const q=E.pIn(s,2);
+      const fg=q.filter(E.isMadeFG).length, ft=q.filter(E.isMadeFT).length;
+      return E.b('high', fg>ft?0:(ft>fg?1:2), 'Q2 made FG '+fg+' vs made FT '+ft); },
+
+    g6_q2_lead_changes(s,o,T){ const q=E.pIn(s,2); let changes=0, prev=null;
+      q.forEach(p=>{ if(typeof p.awayScore!=='number'||typeof p.homeScore!=='number') return;
+        const d=p.homeScore-p.awayScore, sgn=d>0?1:(d<0?-1:0);
+        if(sgn!==0){ if(prev!==null&&sgn!==prev) changes++; prev=sgn; } });
+      const i = changes<=0?0 : (changes===1?1 : (changes===2?2:3));
+      return E.b('high',i,'Q2 lead changes: '+changes); },
+
+    g6_q2_run(s,o,T){ const q=E.pIn(s,2).filter(p=>p.scoringPlay);
+      let run=0, who=null, best=0;
+      q.forEach(p=>{ const t=p.team?.id; const v=+p.scoreValue||0;
+        if(t===who){ run+=v; } else { who=t; run=v; }
+        if(run>best) best=run; });
+      const yes=best>=10;
+      const i=o.findIndex(x=>(yes?/^yes/i:/^no/i).test(String(x)));
+      return i<0?null:E.b('high',i,'Longest unanswered run in Q2: '+best+' points'); },
+
+    g6_q2_last_shot(s,o,T){ const q=E.pIn(s,2).filter(p=>p.shootingPlay);
+      const l=q[q.length-1];
+      if(!l){ const ni=o.findIndex(x=>/nobody/i.test(x)); return ni<0?null:E.b('med',ni,'No shot attempt logged in Q2'); }
+      return E.b('med', l.scoringPlay?0:1, 'Last Q2 shot ('+(l.clock?.displayValue||'')+'): '+l.text); },
+
+    g6_q3_first_points(s,o,T){ const p=E.pIn(s,3).find(x=>x.scoringPlay); if(!p) return null;
+      return E.b('high',E.teamOpt(o,p.team?.id,T),'First score after half: '+p.text); },
+
+    g6_shotclock_q1_q3(s,o,T){ const n=(s.plays||[])
+      .filter(p=>(p.period?.number||0)<=3 && /shot clock/i.test(p.type?.text||p.text||'')).length;
+      const i = n>=3?3:n;
+      return E.b('high',i,n+' shot-clock violation(s) through Q3'); },
+
+    g6_q3_threes_v_to(s,o,T){ const q=E.pIn(s,3);
+      const th=q.filter(p=>p.scoringPlay&&p.scoreValue===3).length, to=q.filter(E.isTO).length;
+      return E.b('high', th>to?0:(to>th?1:2), 'Q3 threes '+th+' vs turnovers '+to); },
+
+    g6_double_figures(s,o,T){ const pls=s.boxscore?.players||[]; let n=0, names=[];
+      for(const tm of pls){ const g=tm.statistics?.[0]; if(!g) continue;
+        const pi=(g.keys||[]).indexOf('points'); if(pi<0) continue;
+        for(const a of (g.athletes||[])){ const v=+((a.stats||[])[pi]||0);
+          if(v>=10){ n++; names.push((a.athlete?.displayName||'?')+' '+v); } } }
+      const i = n<=1?0 : (n===2?1 : (n===3?2:3));
+      /* The box score is cumulative and live, so this is only "through three
+         quarters" if it is pulled before Q4 has plays in it. Say so rather
+         than quietly answer a different question. */
+      const q4=(s.plays||[]).some(p=>(p.period?.number||0)>=4);
+      return E.b(q4?'low':'high', i, n+' in double figures'+(names.length?(' — '+names.slice(0,6).join(', ')):'')
+        +(q4?' · WARNING: Q4 has started, this box score is no longer "through three quarters"':'')); },
+
+    g6_q4_last2_ft_v_fg(s,o,T){ const per=Math.max(...(s.plays||[]).map(p=>p.period?.number||0));
+      const q=E.pIn(s,per).filter(p=>{const c=E.clockSec(p.clock); return c!==null&&c<=120;});
+      const fta=q.filter(E.isFT).length, fga=q.filter(E.isShotAttempt).length;
+      return E.b('med', fta>fga?0:(fga>fta?1:2), 'Last 2:00 — FT attempts '+fta+' vs FG attempts '+fga); },
+
+    g6_fouled_out(s,o,T){ const pls=s.boxscore?.players||[]; let nm='', mx=0;
+      for(const tm of pls){ const g=tm.statistics?.[0]; if(!g) continue;
+        const fi=(g.keys||[]).indexOf('fouls'); if(fi<0) continue;
+        for(const a of (g.athletes||[])){ const f=+((a.stats||[])[fi]||0);
+          if(f>mx){ mx=f; nm=a.athlete?.displayName; } } }
+      const yes=mx>=6; const i=o.findIndex(x=>(yes?/^yes/i:/^no/i).test(String(x)));
+      return i<0?null:E.b('high',i,'Most fouls: '+nm+' '+mx+(yes?' (fouled out)':'')); },
+
+    g6_last_basket(s,o,T){ const q=(s.plays||[]).filter(p=>(p.period?.number||0)>=4&&!E.NOISE.test(p.type?.text||''));
+      const l=q[q.length-1]; if(!l) return null;
+      let i; if(l.scoringPlay) i = l.scoreValue===1?0:(l.scoreValue===2?1:2); else i=3;
+      return E.b('med',i,'Last action: '+l.text); },
+
+    g6_half_leader_won(s,o,T){ const h=(T.homeLine[0]||0)+(T.homeLine[1]||0), a=(T.awayLine[0]||0)+(T.awayLine[1]||0);
+      if(h===a){ const ti=o.findIndex(x=>/tied/i.test(x)); return ti<0?null:E.b('high',ti,'Level at half, '+a+'–'+h); }
+      const leader = h>a ? T.homeId : T.awayId;
+      if(T.homeScore===T.awayScore) return null;                 // not final yet
+      const winner = T.homeScore>T.awayScore ? T.homeId : T.awayId;
+      const same = leader===winner;
+      const i=o.findIndex(x=>(same?/^yes/i:/^no/i).test(String(x)));
+      return i<0?null:E.b('high',i,'Half '+T.awayAbbr+' '+a+'–'+h+' '+T.homeAbbr
+        +' · Final '+T.awayAbbr+' '+T.awayScore+'–'+T.homeScore+' '+T.homeAbbr); },
   };
+
 
   /* Map a question to a rule by its wording (robust to reordering). The two
      that no feed can answer — and-ones, ref monitor visits — have no rule and
@@ -2921,7 +3039,44 @@ boot();
     {re:/last two minutes/i, id:'q4_3'},
     {re:/foul out/i, id:'q4_4'},
   ];
-  function ruleFor(t){ var m=RULES.find(function(r){return r.re.test(t||'');}); return m?m.id:null; }
+  /* ---- EXACT MATCHING, THEN THE LEGACY PATTERNS -------------------
+     The regex table below is kept only for the older nights whose banks
+     still use that wording. Tonight's questions are matched by their exact
+     text, because pattern-matching a question to a grader is precisely how
+     "did the halftime leader win?" got wired to a rule that answers with a
+     team name. A question we do not recognise gets no rule and goes to the
+     host — which is the right failure, and the only safe one. */
+  function qnorm(t){ return String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,''); }
+  var QMAP = {};
+  [
+    ['The first points of the game — how did they come?',                                                   'g6_first_points'],
+    ['Which team made the first three-pointer of the game?',                                                 'g6_first_three'],
+    ['Threes made in Q1, both teams combined — how many?',                                                   'g6_q1_threes'],
+    ['The team that scored first — were they still ahead at the Q1 buzzer?',                                 'g6_first_scorer_led'],
+    ['In Q2, both teams combined — were there more made field goals or made free throws?',                   'g6_q2_fg_v_ft'],
+    ['How many times did the lead change hands in Q2? (a tie is not a lead change)',                         'g6_q2_lead_changes'],
+    ['Did either team score 10 or more unanswered points at any stage of Q2?',                               'g6_q2_run'],
+    ['The last shot attempt before the halftime buzzer…',                                                    'g6_q2_last_shot'],
+    ['Which team scored the first points after halftime?',                                                   'g6_q3_first_points'],
+    ['24-second shot-clock violations tonight, both teams combined, Q1 through Q3 — how many?',              'g6_shotclock_q1_q3'],
+    ['In Q3, both teams combined — were there more threes made or turnovers?',                               'g6_q3_threes_v_to'],
+    ['Through three quarters, how many players have reached double figures in points, both teams combined?', 'g6_double_figures'],
+    ['In the last two minutes, both teams combined — were there more free-throw attempts or field-goal attempts?', 'g6_q4_last2_ft_v_fg'],
+    ['Did any player on either team foul out?',                                                              'g6_fouled_out'],
+    ['The last basket of the game was worth…',                                                               'g6_last_basket'],
+    ['The team that led at halftime — did they win the game?',                                               'g6_half_leader_won']
+  ].forEach(function(r){ QMAP[qnorm(r[0])] = r[1]; });
+
+  function ruleFor(t){
+    var exact = QMAP[qnorm(t)];
+    if(exact) return exact;
+    var m=RULES.find(function(r){return r.re.test(t||'');});
+    return m?m.id:null;
+  }
+  /* Debug hooks. They let the pre-game check run every resolver against a
+     real finished game instead of a fixture, which is the only way to know
+     the graders work before they are grading a live room. */
+  try{ ESPN.__ruleFor = ruleFor; ESPN.__QMAP = QMAP; ESPN.__E = E; ESPN.__API = API; }catch(e){}
 
   /* ---- ESPN fetch ---- */
   ESPN.summary = function(id){ return fetch(API+'/summary?event='+id+'&_='+Date.now()).then(function(r){return r.json();}); };
@@ -2965,6 +3120,14 @@ boot();
         if(!id){ rows.push(line(cfg.tags[i],x,q,null,'manual','No feed signal — mark this one by hand.')); return; }
         var res; try{ res = E.rules[id](sum,q.o,T); }catch(e){ res=null; }
         if(!res || res.index==null){ rows.push(line(cfg.tags[i],x,q,null,(res&&res.confidence)||'manual',(res&&res.evidence)||'Nothing to derive.')); return; }
+        /* A findIndex that missed returns -1, and -1 written into q.k is an
+           answer key pointing at nothing — the round would grade every
+           player wrong and look marked while doing it. A rule that produces
+           an index outside this question's options is a rule that was never
+           meant for this question, so refuse it and hand it back. */
+        if(!(res.index>=0 && res.index < q.o.length)){
+          rows.push(line(cfg.tags[i],x,q,null,'manual','Rule returned an option this question does not have — mark it by hand.'));
+          return; }
         if(q.k==null || q.k===undefined){ q.k=res.index; filled++; }   // never clobber a mark the host set
         rows.push(line(cfg.tags[i],x,q,q.k,res.confidence,res.evidence));
       });

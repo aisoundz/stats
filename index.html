@@ -4265,8 +4265,18 @@ function buildPred(){
   const optBtn=function(o){
     const on = String(picked)===String(o);
     const out = (typeof INACTIVE!=='undefined' && INACTIVE.has(String(o)));
-    return '<button type="button" class="pdopt'+(on?' on':'')+(out?' isout':'')+'" data-pd="'+esc(String(o))+'">'
-      +'<span class="pdradio"></span><span class="pdname">'+esc(String(o))+(out?' <span class="pdout">OUT</span>':'')+'</span></button>';
+    /* The OUT chip used to live INSIDE .pdname, which carries
+       overflow:hidden and text-overflow:ellipsis in the two-column layout.
+       So the chip got sliced down the middle and rendered as a stray
+       orange corner floating next to a truncated name — which is the
+       "crossed out looks weird" in the report. It is a sibling now: the
+       name may be clipped, the flag never is.
+       And it is a real disabled control, because a pick you are told not
+       to spend and can still spend is just a trap. */
+    return '<button type="button" class="pdopt'+(on?' on':'')+(out?' isout':'')+'" data-pd="'+esc(String(o))+'"'
+      +(out?' aria-disabled="true" title="Ruled out tonight — this pick cannot score"':'')+'>'
+      +'<span class="pdradio"></span><span class="pdname">'+esc(String(o))+'</span>'
+      +(out?'<span class="pdout">OUT</span>':'')+'</button>';
   };
   /* GROUPED BY TEAM. Two full rosters is twenty-seven names, and twenty-seven
      names in one undivided grid is the scroll wall we spent five nights
@@ -4345,7 +4355,15 @@ function buildPred(){
   }
 
   Array.prototype.forEach.call(c.querySelectorAll('.pdopt'), function(b){
-    b.onclick=function(){ predPick(p.id, b.getAttribute('data-pd')); };
+    b.onclick=function(){
+      var nm=b.getAttribute('data-pd');
+      if(b.classList.contains('isout')){
+        try{ toast(nm.split(' ')[0]+' is ruled out tonight — she cannot score you anything.'); }catch(_){}
+        try{ b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); }catch(_){}
+        return;
+      }
+      predPick(p.id, nm);
+    };
   });
   Array.prototype.forEach.call(c.querySelectorAll('[data-pdgo]'), function(b){
     b.onclick=function(){ predGo(Number(b.getAttribute('data-pdgo'))); };
@@ -7010,7 +7028,14 @@ function ensureCiCard(){
     'transform:translateX(-50%) translateY(0);animation:ciUp .34s cubic-bezier(.16,1,.3,1);'+
       'background:#161d2e;border:1px solid #2b3a5e;'+
       'border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.55);padding:14px 15px;display:none;font-family:inherit}'+
-    '@keyframes ciUp{from{transform:translateX(-50%) translateY(24px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}'+
+    '@keyframes ciUp{from{transform:translateX(-50%) translateY(26px) scale(.97);opacity:0}to{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}'+
+    /* An open question is the loudest thing on the screen for twenty
+       seconds, and then it stops being loud. The ring is what makes it
+       impossible to miss without a modal that blocks the game you came
+       here to watch. */
+    '#ciCard.cilive{border-color:#28e0d0;box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 0 1px rgba(40,224,208,.55),0 0 34px rgba(40,224,208,.28);animation:ciUp .34s cubic-bezier(.16,1,.3,1),ciPulse 2.1s ease-in-out .34s infinite}'+
+    '@keyframes ciPulse{0%,100%{box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 0 1px rgba(40,224,208,.55),0 0 30px rgba(40,224,208,.22)}50%{box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 0 1px rgba(40,224,208,.85),0 0 46px rgba(40,224,208,.42)}}'+
+    '@media (prefers-reduced-motion:reduce){#ciCard{animation:none!important}#ciCard.cilive{animation:none!important}}'+
     '#ciCard .cilockbar{height:4px;border-radius:99px;background:#22304d;overflow:hidden;margin-bottom:11px}'+
     '#ciCard .cilockbar i{display:block;height:100%;background:linear-gradient(92deg,#28e0d0,#4d86ff);width:100%;transform-origin:left}'+
     '#ciCard .cihead{display:flex;align-items:center;gap:7px;font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#28e0d0;margin-bottom:6px}'+
@@ -7066,20 +7091,27 @@ function ciOnGametime(){ try{ return (S&&S.screen)==='gametime'; }catch(_){ retu
 /* One card, two homes. On the Gametime tab it lives in the page, in its
    own slot, where the player is already looking. Anywhere else it is the
    floating sheet. Moving the node beats maintaining two renderers. */
+/* ---- A CALL IT HAS TO ARRIVE, NOT BE FOUND ------------------------
+   It used to dock INTO the Gametime feed, as an ordinary card at whatever
+   scroll position it happened to be created at. On the one tab people
+   actually sit on during a game, a live twenty-second question was
+   therefore a thing you had to scroll to — usually downwards, past the
+   plays that had arrived since. That is why it reads as "at the bottom":
+   it literally was. A question with a clock on it belongs above the page,
+   in the same place every time, whatever you are looking at. */
 function ciDock(){
   var c=document.getElementById('ciCard'); if(!c) return;
-  var slot=document.getElementById('ciSlot');
-  if(ciOnGametime() && slot){
-    if(c.parentNode!==slot) slot.appendChild(c);
-    c.style.position='static'; c.style.transform='none'; c.style.width='100%';
-    c.style.bottom=''; c.style.left=''; c.style.animation='none';
-  }else{
-    if(c.parentNode!==document.body) document.body.appendChild(c);
-    c.style.position='fixed'; c.style.left='50%'; c.style.bottom='90px';
-    c.style.transform='translateX(-50%)'; c.style.width='min(430px,94vw)';
-  }
+  if(c.parentNode!==document.body) document.body.appendChild(c);
+  c.style.position='fixed'; c.style.left='50%'; c.style.bottom='96px';
+  c.style.transform='translateX(-50%)'; c.style.width='min(430px,94vw)';
+  c.style.animation='';
+  try{ var sl=document.getElementById('ciSlot'); if(sl){ sl.innerHTML=''; sl.style.marginTop='0'; } }catch(_){}
 }
-function ciShow(html){ var c=document.getElementById('ciCard'), inner=document.getElementById('ciInner'); if(!c||!inner) return; ciDock(); inner.innerHTML=html; c.style.display='block';
+function ciShow(html, live){ var c=document.getElementById('ciCard'), inner=document.getElementById('ciInner'); if(!c||!inner) return; ciDock(); inner.innerHTML=html; c.style.display='block';
+  /* Restart the entrance every time, so a question that replaces another
+     one still visibly ARRIVES instead of silently swapping its text. */
+  try{ c.classList.toggle('cilive', !!live); c.style.animation='none'; void c.offsetWidth; c.style.animation=''; }catch(_){}
+  try{ if(live && navigator.vibrate) navigator.vibrate(18); }catch(_){}
   // The 'leave this open' placeholder and a live question are mutually
   // exclusive — showing both reads as two half-built things.
   // Repaint the tab around it: the 'leave this open' placeholder steps aside
@@ -7221,7 +7253,7 @@ function renderCiCard(q){
            '<div class="ciq">'+esc(q.prompt)+'</div>'+
            '<div class="ciopts">'+opts+'</div>'+
            '<div class="cistat">'+status+(PCI.streak?(' · 🔥 '+PCI.streak+' in a row'):'')+'</div>'+
-           '<div class="cifoot"><button class="cimute" data-cimute="1">mute Call It</button></div>');
+           '<div class="cifoot"><button class="cimute" data-cimute="1">mute Call It</button></div>', !locked);
   }
   var card=document.getElementById('ciCard');
   Array.prototype.forEach.call(card.querySelectorAll('.ciopt'), function(b){
@@ -9143,7 +9175,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.60';
+const STATS_BUILD='2026-08-11-g6-ny-ind.61';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -10489,7 +10521,7 @@ function renderStats(){
     var hit = (PCI.called>0) ? Math.round((PCI.hit/PCI.called)*100)+'%' : '—';
     var tile=function(n,k,c){ return '<div class="stYouT"><div class="stYouN"'+(c?' style="color:'+c+'"':'')+'>'+n+'</div><div class="stYouK">'+k+'</div></div>'; };
     out+='<div class="stYou">'
-      + tile(pts.toLocaleString(),'Your points')
+      + tile(pts.toLocaleString(),'Points tonight')
       + tile(rank?('#'+rank):'—', fieldN?('of '+fieldN+' tonight'):'Your rank')
       + tile(hit,'Call It hits', PCI.called>0&&PCI.hit/PCI.called>=0.6?'#2ee6a6':'')
       + '</div>';
@@ -10510,6 +10542,30 @@ function renderStats(){
       out+=stCard('YOUR CARD', mine.map(function(p){
         return '<div class="stLead"><span class="stLeadN">'+esc(p.label)+'</span><span class="stLeadV">'+esc(String(S.predChoices[p.id]))+'</span></div>';
       }).join('') + '<div class="sub" style="font-size:12px;margin-top:8px">The moment the ball goes up, each of these becomes a live race.</div>');
+      /* A LIST OF NAMES IS NOT A STAT SCREEN. Before tip this pane was six
+         rows of "category — name" and a promise, on the tab literally
+         called Stats. Every one of those picks has a season number behind
+         it and we already have the league table in memory, so show what
+         each pick is actually bringing to the night. */
+      try{
+        var wrap=[], anyN=false;
+        mine.forEach(function(p){
+          var who=String(S.predChoices[p.id]||''); if(!who) return;
+          var sv=null; try{ sv=seaOf(who); }catch(_){}
+          if(!sv) return;
+          var cat=String(p.label||'').replace(/^most /i,'').toLowerCase();
+          var key={points:'pts',assists:'ast',rebounds:'reb',steals:'stl',blocks:'blk'}[cat];
+          var v=key?sv[key]:null;
+          if(v==null||!isFinite(v)) return;
+          anyN=true;
+          var rk=null; try{ rk=rankIn(key,who); }catch(_){}
+          wrap.push('<div class="stLead"><span class="stLeadN">'+esc(who)+'</span>'
+            +'<span class="stLeadV">'+(Math.round(v*10)/10)+' '+esc(cat)+'<span class="stLeadR">'
+            +(rk?(' '+ord(rk)+' in the WNBA'):'')+'</span></span></div>');
+        });
+        if(anyN) out+=stCard('WHAT YOUR PICKS AVERAGE', wrap.join('')
+          + '<div class="sub" style="font-size:12px;margin-top:8px">Season numbers, straight from the league table. This is the bar each of them has to clear tonight.</div>');
+      }catch(_){}
     } else {
       var cfg=sportCfg().box, KEY={pts:cfg.pts,reb:cfg.reb,ast:cfg.ast,stl:cfg.stl,blk:cfg.blk};
       var winning=0, rows=mine.map(function(p){
@@ -11516,7 +11572,13 @@ body.hasgamebar .screen.active{padding-bottom:132px}
   margin:14px 0 8px;display:flex;align-items:baseline;gap:7px}
 .pdteam:first-child{margin-top:0}
 .pdteam i{font-style:normal;font-size:12px;letter-spacing:.04em;color:#5b6a8c;font-weight:700}
-.pdopt.isout{opacity:.62}
+.pdopt.isout{opacity:.5;cursor:not-allowed;border-style:dashed;border-color:#3a2733;background:#12131c}
+.pdopt.isout .pdname{color:#7e8091;text-decoration:line-through;text-decoration-color:rgba(255,107,107,.55);text-decoration-thickness:1px}
+.pdopt.isout .pdradio{opacity:.35}
+.pdopt.isout:active{transform:none}
+.pdopt.shake{animation:pdShake .32s}
+@keyframes pdShake{10%,90%{transform:translateX(-2px)}30%,70%{transform:translateX(3px)}50%{transform:translateX(-3px)}}
+@media (prefers-reduced-motion:reduce){ .pdopt.shake{animation:none} }
 .pdopts{display:flex;flex-direction:column;gap:9px}
 /* minmax(0,1fr), not 1fr. A grid track's default min-width is auto, which
    means the widest name in the column — "Sophie Cunningham" — sets the
@@ -11553,7 +11615,10 @@ body.hasgamebar .screen.active{padding-bottom:132px}
 .pdopt.on .pdradio{border-color:#28e0d0}
 .pdopt.on .pdradio:after{content:'';position:absolute;inset:3px;border-radius:50%;background:#28e0d0}
 .pdname{flex:1;min-width:0}
-.pdout{font-size:12px;font-weight:900;color:#ff6b6b;border:1px solid rgba(255,107,107,.5);border-radius:6px;padding:1px 5px;margin-left:5px}
+.stLeadR{display:block;font-size:12px;font-weight:700;color:#5b6a8c;letter-spacing:.02em}
+.pdout{flex:0 0 auto;margin-left:auto;font-size:12px;font-weight:900;line-height:1.5;letter-spacing:.06em;
+  color:#ff8a94;border:1px solid rgba(255,107,107,.45);background:rgba(255,107,107,.10);
+  border-radius:6px;padding:1px 6px;white-space:nowrap}
 .pdbonus{margin-top:13px}
 .pdbonus label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted,#93a0bd);font-weight:800;margin-bottom:6px}
 .pdbonus input{width:100%;background:#111a2b;border:1px solid #2f3a58;border-radius:12px;padding:14px;color:#eef2fb;font-weight:800;font-size:15px}
