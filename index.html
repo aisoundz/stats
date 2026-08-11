@@ -55,14 +55,14 @@
   .logo{font-weight:900;letter-spacing:3px;font-size:30px;
     background:linear-gradient(90deg,var(--teal2),var(--blue2));
     -webkit-background-clip:text;background-clip:text;color:transparent}
-  .tag{color:var(--muted);font-size:12.5px;text-align:center;margin:2px 0 0;font-weight:500}
-  .pill{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.8px;
+  .tag{color:var(--muted);font-size:14px;text-align:center;margin:2px 0 0;font-weight:500}
+  .pill{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.8px;
     text-transform:uppercase;padding:5px 11px;border-radius:999px;
     background:rgba(25,195,214,.13);color:var(--teal2);border:1px solid rgba(25,195,214,.3)}
 
   h1{font-size:24px;margin:16px 0 6px;font-weight:850;line-height:1.15}
   h2{font-size:17px;margin:0 0 4px;font-weight:800}
-  p.sub{color:var(--muted);font-size:13.5px;line-height:1.5;margin:0 0 8px}
+  p.sub{color:var(--muted);font-size:14px;line-height:1.5;margin:0 0 8px}
   .center{text-align:center}
 
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
@@ -70,7 +70,7 @@
   .card.tight{padding:13px}
 
   .btn{display:block;width:100%;border:none;border-radius:14px;padding:16px;
-    font-size:16px;font-weight:800;color:#fff;cursor:pointer;margin-top:10px;
+    font-size:15px;font-weight:800;color:#fff;cursor:pointer;margin-top:10px;
     background:linear-gradient(90deg,var(--blue),var(--blue2));
     box-shadow:0 10px 22px rgba(47,107,255,.32);transition:transform .12s,filter .12s}
   .btn:active{transform:scale(.98)}
@@ -84,7 +84,7 @@
   .step{display:flex;gap:12px;align-items:flex-start;margin:12px 0}
   .num{flex:0 0 30px;height:30px;border-radius:9px;display:grid;place-items:center;
     font-weight:900;font-size:14px;color:#fff;background:linear-gradient(135deg,var(--blue),var(--teal))}
-  .step b{font-size:14px}.step div p{margin:2px 0 0;color:var(--muted);font-size:12.5px;line-height:1.45}
+  .step b{font-size:14px}.step div p{margin:2px 0 0;color:var(--muted);font-size:14px;line-height:1.45}
 
   label.fld{display:block;font-size:12px;color:var(--muted);font-weight:700;margin:12px 0 6px;text-transform:uppercase;letter-spacing:.5px}
   select,input{width:100%;background:var(--bg2);border:1px solid var(--line2);color:var(--ink);
@@ -110,36 +110,36 @@
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .predrow{border-top:1px solid var(--line);padding:12px 0 4px}
   .predrow:first-child{border-top:none}
-  .predlabel{font-size:13.5px;font-weight:700;margin-bottom:2px}
-  .predpts{font-size:11px;color:var(--teal2);font-weight:800}
+  .predlabel{font-size:14px;font-weight:700;margin-bottom:2px}
+  .predpts{font-size:12px;color:var(--teal2);font-weight:800}
   /* Confidence ranking. The rank badge and the two nudge arrows sit on one
      line above the picker so the thumb never has to travel far. */
   .predtop{display:flex;align-items:center;gap:8px;margin-bottom:4px}
   .predtop .predlabel{margin-bottom:0;flex:1}
   .rankbadge{flex:0 0 auto;min-width:30px;height:30px;border-radius:9px;display:flex;
-    align-items:center;justify-content:center;font-size:12.5px;font-weight:900;
+    align-items:center;justify-content:center;font-size:14px;font-weight:900;
     background:rgba(46,230,166,.13);color:var(--teal2);border:1px solid rgba(46,230,166,.3)}
   .ranknudge{display:flex;flex-direction:column;gap:2px;flex:0 0 auto}
   .ranknudge button{width:30px;height:15px;line-height:1;padding:0;border-radius:5px;
     border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink);
-    font-size:9px;cursor:pointer}
+    font-size:12px;cursor:pointer}
   .ranknudge button:disabled{opacity:.25;cursor:default}
   .ranknudge button:not(:disabled):active{background:rgba(46,230,166,.2)}
-  .confnote{font-size:11.5px;color:var(--dim);margin:0 0 10px;line-height:1.45}
+  .confnote{font-size:12px;color:var(--dim);margin:0 0 10px;line-height:1.45}
 
   /* live catches — set pre-match, resolve themselves during play */
   .catchhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:2px}
   .catchhead b{font-size:14px}
-  .catchhead .cpts{font-size:11px;font-weight:800;color:var(--teal2);white-space:nowrap}
+  .catchhead .cpts{font-size:12px;font-weight:800;color:var(--teal2);white-space:nowrap}
   .catchgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px}
   .catch{background:var(--card2);border:1.5px solid var(--line2);border-radius:13px;padding:10px 11px;
     transition:border-color .25s,background .25s,opacity .25s}
-  .catch .cico{font-size:16px;line-height:1}
-  .catch .clab{font-size:11.5px;font-weight:800;margin-top:3px;line-height:1.25}
-  .catch .cmin{font-size:10px;font-weight:700;color:var(--dim);margin-top:1px}
+  .catch .cico{font-size:15px;line-height:1}
+  .catch .clab{font-size:12px;font-weight:800;margin-top:3px;line-height:1.25}
+  .catch .cmin{font-size:12px;font-weight:700;color:var(--dim);margin-top:1px}
   .catchopts{display:flex;gap:5px;margin-top:7px}
   .catchopts button{flex:1;background:var(--bg2);border:1.5px solid var(--line2);border-radius:9px;
-    padding:7px 4px;font-size:11px;font-weight:800;color:var(--muted);cursor:pointer;transition:.15s}
+    padding:7px 4px;font-size:12px;font-weight:800;color:var(--muted);cursor:pointer;transition:.15s}
   .catchopts button.on{background:rgba(47,107,255,.16);border-color:var(--blue2);color:var(--ink)}
   .catch.locked .catchopts button{pointer-events:none;opacity:.45}
   .catch.locked .catchopts button.on{opacity:1}
@@ -147,27 +147,27 @@
   .catch.hit .cres{color:var(--green)}
   .catch.miss{border-color:var(--line2);opacity:.55}
   .catch.miss .cres{color:var(--red)}
-  .cres{font-size:10.5px;font-weight:800;margin-top:6px}
+  .cres{font-size:12px;font-weight:800;margin-top:6px}
   .catch.pending .cres{color:var(--dim)}
 
   /* option buttons */
   .opts{display:flex;flex-direction:column;gap:9px;margin-top:10px}
   .opt{background:var(--card2);border:1.5px solid var(--line2);border-radius:13px;
-    padding:14px 15px;font-size:14.5px;font-weight:650;color:var(--ink);text-align:left;
+    padding:14px 15px;font-size:15px;font-weight:650;color:var(--ink);text-align:left;
     cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:.12s}
   .opt:active{transform:scale(.99)}
   .opt.sel{border-color:var(--blue2);background:rgba(47,107,255,.14)}
   .opt.correct{border-color:var(--green);background:rgba(46,230,166,.14)}
   .opt.wrong{border-color:var(--red);background:rgba(255,77,94,.12)}
-  .opt .mk{font-size:16px}
+  .opt .mk{font-size:15px}
 
   /* live game header */
   .scorebar{display:flex;align-items:center;justify-content:space-between;
     background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:8px}
   .team{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1}
-  .team .nm{font-size:11px;color:var(--muted);font-weight:700}
+  .team .nm{font-size:12px;color:var(--muted);font-weight:700}
   .team .sc{font-size:26px;font-weight:900}
-  .qtag{font-size:11px;font-weight:800;color:var(--gold);background:rgba(255,197,77,.12);
+  .qtag{font-size:12px;font-weight:800;color:var(--gold);background:rgba(255,197,77,.12);
     padding:5px 10px;border-radius:999px;border:1px solid rgba(255,197,77,.3);white-space:nowrap}
 
   .qmeta{display:flex;justify-content:space-between;align-items:center;margin:6px 2px}
@@ -183,17 +183,22 @@
      very first element is a full-width strip has to leave room for it or
      the two overlap — which is how "0 your pts" lost its first digit. */
   body.hasback .scoreself .youscore{padding-left:56px}
+  /* Same collision, second form: on the pick sheet the first element is
+     the eyebrow row, and "PRE-GAME PREDICTION SHEET" started underneath
+     the arrow — the first four characters were unreadable. Any screen
+     that opens with a text row gets the same 56px of clearance. */
+  body.hasback .screen.active > .qmeta:first-child > .qn{padding-left:52px}
   .youscore{display:flex;align-items:center;justify-content:space-between;
     background:linear-gradient(90deg,rgba(47,107,255,.18),rgba(25,195,214,.12));
     border:1px solid var(--line2);border-radius:13px;padding:10px 14px;margin-bottom:6px}
-  .youscore b{font-size:20px}.youscore span{font-size:11.5px;color:var(--muted);font-weight:700}
+  .youscore b{font-size:20px}.youscore span{font-size:12px;color:var(--muted);font-weight:700}
 
   .alertrow{display:flex;align-items:center;justify-content:space-between;gap:10px;
     background:rgba(255,197,77,.09);border:1px solid rgba(255,197,77,.28);
     border-radius:12px;padding:9px 12px;margin:8px 0;font-size:12px;font-weight:700;color:var(--ink)}
   .alertrow.on{background:rgba(46,230,166,.08);border-color:rgba(46,230,166,.28)}
   .alertbtn{background:var(--gold);color:#141a26;border:0;border-radius:999px;
-    padding:7px 14px;font-size:11.5px;font-weight:900;cursor:pointer;white-space:nowrap}
+    padding:7px 14px;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap}
   .alertrow.on .alertbtn{background:transparent;color:var(--muted);border:1px solid var(--line2)}
 
   /* The install card. Same shape as the alert row it sits above, because it
@@ -203,24 +208,24 @@
   .a2hs{background:linear-gradient(90deg,rgba(47,107,255,.16),rgba(25,195,214,.10));
     border:1px solid rgba(77,134,255,.34);border-radius:13px;padding:11px 13px;margin:8px 0;display:none}
   .a2hs.show{display:block}
-  .a2hs .t{font-size:12.5px;font-weight:900;color:var(--ink);display:flex;align-items:center;gap:7px}
-  .a2hs .b{font-size:11.5px;color:var(--muted);font-weight:600;line-height:1.5;margin-top:5px}
+  .a2hs .t{font-size:14px;font-weight:900;color:var(--ink);display:flex;align-items:center;gap:7px}
+  .a2hs .b{font-size:12px;color:var(--muted);font-weight:600;line-height:1.5;margin-top:5px}
   .a2hs .b b{color:var(--ink)}
   .a2hs .sq{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;
-    border:1.5px solid var(--teal2);border-radius:4px;color:var(--teal2);font-size:11px;
+    border:1.5px solid var(--teal2);border-radius:4px;color:var(--teal2);font-size:12px;
     font-weight:900;vertical-align:-3px;margin:0 1px}
   .a2hs .acts{display:flex;gap:8px;margin-top:9px}
   .a2hs .go{background:var(--blue);color:#fff;border:0;border-radius:999px;padding:7px 14px;
-    font-size:11.5px;font-weight:900;cursor:pointer}
+    font-size:12px;font-weight:900;cursor:pointer}
   .a2hs .no{background:transparent;color:var(--dim);border:1px solid var(--line2);border-radius:999px;
-    padding:7px 12px;font-size:11.5px;font-weight:800;cursor:pointer}
+    padding:7px 12px;font-size:12px;font-weight:800;cursor:pointer}
 
   /* the rank strip that sits under the live scorebar. It is deliberately one
      line tall: during a quarter the player's eyes belong on the game, not on
      us. Hidden entirely when we have nothing true to say. */
   .livestrip{display:flex;align-items:center;justify-content:space-between;gap:10px;
     background:var(--card2);border:1px solid var(--line);border-radius:11px;
-    padding:7px 11px;margin:0 0 6px;font-size:11.5px;font-weight:700;color:var(--muted)}
+    padding:7px 11px;margin:0 0 6px;font-size:12px;font-weight:700;color:var(--muted)}
   .livestrip .lsmain{color:var(--ink);font-weight:800}
   .livestrip .lsmain.lead{color:var(--gold)}
   .livestrip .lsside{white-space:nowrap;color:var(--teal2);font-weight:800}
@@ -228,7 +233,7 @@
   .reveal{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:10px;animation:fade .3s}
   .reveal .r1{font-size:12px;font-weight:800;letter-spacing:.4px}
   .reveal.good .r1{color:var(--green)}.reveal.bad .r1{color:var(--red)}
-  .reveal .r2{font-size:13.5px;color:var(--muted);margin-top:4px;line-height:1.45}
+  .reveal .r2{font-size:14px;color:var(--muted);margin-top:4px;line-height:1.45}
 
   /* leaderboard */
   .lb{display:flex;align-items:center;gap:12px;padding:12px 12px;border-radius:13px;
@@ -237,28 +242,31 @@
   .rank{flex:0 0 26px;text-align:center;font-weight:900;font-size:15px;color:var(--muted)}
   .rank.g{color:var(--gold)}.rank.s{color:#cfd6e6}.rank.b{color:#e0955b}
   .av{flex:0 0 38px;height:38px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:14px;color:#0a0e17}
-  .lbname{flex:1;font-weight:750;font-size:14.5px}
-  .lbname small{display:block;color:var(--dim);font-weight:600;font-size:11px}
-  .lbpts{font-weight:900;font-size:16px}
+  .lbname{flex:1;font-weight:750;font-size:15px}
+  .lbname small{display:block;color:var(--dim);font-weight:600;font-size:12px}
+  .lbpts{font-weight:900;font-size:15px}
 
   .toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);z-index:40;
     background:#0d1424;border:1px solid var(--line2);color:var(--ink);padding:11px 16px;border-radius:12px;
-    font-size:13px;font-weight:700;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.3s;max-width:90%}
+    font-size:14px;font-weight:700;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.3s;max-width:90%}
   .toast.show{opacity:1;bottom:120px}
 
-  .foot{font-size:10.5px;color:var(--dim);text-align:center;line-height:1.5;margin-top:14px}
+  .foot{font-size:12px;color:var(--dim);text-align:center;line-height:1.5;margin-top:14px}
   a.link{color:var(--teal2);text-decoration:none}
 
   .chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
-  .chip{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:8px;padding:7px 11px}
+  .chip{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:8px;padding:7px 11px}
   /* selectable version of the same chip, used by the signup screen */
-  .chip.pick{cursor:pointer;user-select:none;font-size:11.5px;padding:7px 12px;-webkit-tap-highlight-color:transparent}
+  /* 30px tall is a chip you miss with a thumb. 40 is the smallest thing
+     anybody should have to hit while half-watching a game. */
+  .chip.pick{cursor:pointer;user-select:none;font-size:12px;padding:0 14px;min-height:40px;
+    display:inline-flex;align-items:center;-webkit-tap-highlight-color:transparent}
   .chip.pick.on{color:#04121a;background:var(--teal2,#2ee6a6);border-color:var(--teal2,#2ee6a6)}
-  .jgrp{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:14px 0 7px}
+  .jgrp{font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:14px 0 7px}
 
   /* verification row on the handle screen */
   .vrow{margin-top:14px;padding-top:13px;border-top:1px solid var(--line)}
-  .vrow .btn{margin-top:0;font-size:12.5px;padding:11px 14px}
+  .vrow .btn{margin-top:0;font-size:14px;padding:11px 14px}
   .vrow.done{border-top-color:var(--green)}
   .vrow.done #verifyBtn{display:none}
   .vrow.done #gsiBtn{display:none!important}
@@ -271,26 +279,26 @@
   /* host panel */
   .hostwrap{background:repeating-linear-gradient(45deg,#0c1220,#0c1220 12px,#0e1526 12px,#0e1526 24px)}
   .hq{border:1px solid var(--line2);border-radius:12px;padding:12px;margin:8px 0;background:var(--card)}
-  .hq b{font-size:13.5px}
+  .hq b{font-size:14px}
   .hq .ha{font-size:12px;color:var(--muted);margin-top:6px}
-  .status{display:inline-block;font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.5px}
+  .status{display:inline-block;font-size:12px;font-weight:800;padding:3px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.5px}
   .status.live{background:rgba(46,230,166,.15);color:var(--green)}
   .status.queued{background:rgba(255,197,77,.14);color:var(--gold)}
 
   .statgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:6px}
   .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
   .stat .v{font-size:22px;font-weight:900}
-  .stat .k{font-size:11px;color:var(--muted);font-weight:700;margin-top:2px}
+  .stat .k{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px}
 
   .bignum{font-size:52px;font-weight:900;line-height:1;
     background:linear-gradient(90deg,var(--teal2),var(--blue2));-webkit-background-clip:text;background-clip:text;color:transparent}
 
   .segbtns{display:flex;gap:8px;margin:4px 0 2px}
-  .seg{flex:1;text-align:center;padding:9px;border-radius:11px;font-size:12.5px;font-weight:800;
+  .seg{flex:1;text-align:center;padding:9px;border-radius:11px;font-size:14px;font-weight:800;
     background:var(--bg2);border:1px solid var(--line);color:var(--muted);cursor:pointer}
   .seg.on{background:rgba(47,107,255,.16);border-color:var(--blue2);color:var(--ink)}
 
-  .helpbtn{font-size:11.5px;color:var(--gold);font-weight:800;background:rgba(255,197,77,.1);
+  .helpbtn{font-size:12px;color:var(--gold);font-weight:800;background:rgba(255,197,77,.1);
     border:1px solid rgba(255,197,77,.3);border-radius:999px;padding:7px 12px;cursor:pointer}
   .helpbtn:disabled{opacity:.4}
 
@@ -305,7 +313,7 @@
   body.booted .screen{visibility:visible}
   .backbtn{position:absolute;top:12px;left:12px;z-index:30;width:38px;height:38px;
     border-radius:12px;border:1px solid var(--line2);background:rgba(22,29,46,.85);
-    color:var(--ink);font-size:18px;font-weight:800;cursor:pointer;display:none;
+    color:var(--ink);font-size:17px;font-weight:800;cursor:pointer;display:none;
     backdrop-filter:blur(4px);transition:.12s}
   .backbtn:active{transform:scale(.94)}
   .backbtn.show{display:block}
@@ -319,20 +327,20 @@
     border:1px solid var(--line2);box-shadow:var(--shadow);animation:fade .3s}
   .sharecard .sc-logo{font-weight:900;letter-spacing:2.5px;font-size:20px;
     background:linear-gradient(90deg,var(--teal2),var(--blue2));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .sharecard .sc-game{font-size:11px;color:var(--muted);font-weight:700;margin-top:2px}
-  .sc-pts{font-size:44px;font-weight:900;margin:10px 0 0;line-height:1}
-  .sc-sub{font-size:11.5px;color:var(--muted);font-weight:700}
+  .sharecard .sc-game{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px}
+  .sc-pts{font-size:46px;font-weight:900;margin:10px 0 0;line-height:1}
+  .sc-sub{font-size:12px;color:var(--muted);font-weight:700}
   .sc-grid{display:flex;gap:14px;margin:14px 0 4px}
   .sc-q{flex:1;text-align:center}
-  .sc-q .qk{font-size:10px;color:var(--dim);font-weight:800;margin-bottom:5px}
+  .sc-q .qk{font-size:12px;color:var(--dim);font-weight:800;margin-bottom:5px}
   .sc-q .cells{display:flex;gap:4px;justify-content:center}
   .cell{width:16px;height:16px;border-radius:5px;background:var(--line)}
   .cell.hit{background:linear-gradient(135deg,var(--green),var(--teal))}
   .cell.miss{background:rgba(255,77,94,.55)}
   .sc-foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;
     border-top:1px solid var(--line);padding-top:12px}
-  .sc-foot .streak{font-size:13px;font-weight:800;color:var(--gold)}
-  .sc-foot .cta{font-size:10.5px;color:var(--dim);font-weight:700}
+  .sc-foot .streak{font-size:14px;font-weight:800;color:var(--gold)}
+  .sc-foot .cta{font-size:12px;color:var(--dim);font-weight:700}
 
   /* trash talk */
   /* A chat sheet, not a scrolling document: fixed height, the feed takes
@@ -354,16 +362,16 @@
     background:linear-gradient(135deg,var(--blue),var(--teal));color:#fff;font-size:15px;font-weight:900}
   .tt-send:disabled{opacity:.35;cursor:default}
   .tt-under{display:flex;align-items:center;gap:8px;margin-top:8px}
-  .tt-dice{font-size:11px;font-weight:800;padding:7px 10px;border-radius:10px;border:1px solid var(--line2);
+  .tt-dice{font-size:12px;font-weight:800;padding:7px 10px;border-radius:10px;border:1px solid var(--line2);
     background:var(--card2);color:var(--muted);cursor:pointer}
   .tt-dice:hover{border-color:var(--teal);color:var(--ink)}
-  .tt-count{margin-left:auto;font-size:10.5px;color:var(--dim);font-weight:700}
+  .tt-count{margin-left:auto;font-size:12px;color:var(--dim);font-weight:700}
   .tt-count.warn{color:var(--gold)}
   .tt-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .tt-head b{font-size:15px}
-  .tt-x{background:transparent;border:none;color:var(--muted);font-size:19px;font-weight:800;cursor:pointer;padding:0 2px}
+  .tt-x{background:transparent;border:none;color:var(--muted);font-size:17px;font-weight:800;cursor:pointer;padding:0 2px}
   .tt-tabs{display:flex;gap:6px;margin-bottom:10px}
-  .tt-tab{flex:1;text-align:center;font-size:11.5px;font-weight:800;padding:9px 4px;border-radius:11px;
+  .tt-tab{flex:1;text-align:center;font-size:12px;font-weight:800;padding:9px 4px;border-radius:11px;
     border:1px solid var(--line);background:var(--card);color:var(--muted);cursor:pointer}
   .tt-tab.on{border-color:var(--teal);color:var(--ink);background:linear-gradient(160deg,rgba(25,195,214,.15),var(--card) 60%)}
   .tt-burn{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:11px 12px;margin:8px 0;
@@ -371,10 +379,10 @@
   .tt-burn:active{transform:scale(.985)}
   .tt-burn:hover{border-color:var(--teal)}
   .tt-burn .fire{font-size:15px;line-height:1.35}
-  .tt-burn .txt{font-size:13px;font-weight:700;line-height:1.45;color:var(--ink)}
-  .tt-burn .cp{font-size:9.5px;color:var(--dim);font-weight:800;letter-spacing:.5px;margin-top:5px}
+  .tt-burn .txt{font-size:14px;font-weight:700;line-height:1.45;color:var(--ink)}
+  .tt-burn .cp{font-size:12px;color:var(--dim);font-weight:800;letter-spacing:.5px;margin-top:5px}
   .tt-chips{display:flex;flex-direction:column;gap:7px;margin-top:4px}
-  .tt-chip{font-size:12.5px;font-weight:700;padding:10px 11px;border-radius:11px;border:1px solid var(--line);
+  .tt-chip{font-size:14px;font-weight:700;padding:10px 11px;border-radius:11px;border:1px solid var(--line);
     background:var(--card);color:var(--muted);cursor:pointer;line-height:1.4;text-align:left}
   .tt-chip:hover{border-color:var(--gold);color:var(--ink)}
   /* ---- the room ---------------------------------------------------
@@ -382,22 +390,22 @@
      post, or the sheet reads as one long undifferentiated list and
      nobody can tell what already happened from what might.          */
   .tt-act{display:flex;gap:7px;margin-top:7px}
-  .tt-act button{flex:1;font-size:10.5px;font-weight:900;letter-spacing:.04em;padding:8px 6px;
+  .tt-act button{flex:1;font-size:12px;font-weight:900;letter-spacing:.04em;padding:8px 6px;
     border-radius:10px;border:1px solid var(--line2);background:var(--card2);color:var(--muted);cursor:pointer}
   .tt-act button.send{border-color:rgba(25,195,214,.5);color:var(--teal2);background:rgba(25,195,214,.10)}
   .tt-act button:disabled{opacity:.45;cursor:default}
   .tt-feed{display:flex;flex-direction:column;gap:8px;margin-top:4px}
   .tt-msg{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:10px 12px}
   .tt-msg.mine{border-color:rgba(25,195,214,.45);background:linear-gradient(160deg,rgba(25,195,214,.09),var(--card) 70%)}
-  .tt-msg .who{display:flex;align-items:baseline;gap:7px;font-size:11px;font-weight:900;letter-spacing:.03em}
+  .tt-msg .who{display:flex;align-items:baseline;gap:7px;font-size:12px;font-weight:900;letter-spacing:.03em}
   .tt-msg .who .dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px;align-self:center}
-  .tt-msg .who .ago{margin-left:auto;font-size:10px;color:var(--dim);font-weight:700;letter-spacing:0}
-  .tt-msg .line{font-size:13px;font-weight:700;line-height:1.45;color:var(--ink);margin-top:5px}
+  .tt-msg .who .ago{margin-left:auto;font-size:12px;color:var(--dim);font-weight:700;letter-spacing:0}
+  .tt-msg .line{font-size:14px;font-weight:700;line-height:1.45;color:var(--ink);margin-top:5px}
   .tt-msg.pending{opacity:.55}
-  .tt-empty{text-align:center;padding:22px 12px;color:var(--dim);font-size:12.5px;font-weight:650;line-height:1.55}
+  .tt-empty{text-align:center;padding:22px 12px;color:var(--dim);font-size:14px;font-weight:650;line-height:1.55}
   /* The feed scrolls under this, so it has to carry its own backdrop —
      otherwise message text slides through the LIVE pill. */
-  .tt-live{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:900;letter-spacing:.08em;
+  .tt-live{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:900;letter-spacing:.08em;
     text-transform:uppercase;color:var(--green);margin-bottom:8px;
     position:sticky;top:0;z-index:2;padding:3px 0 5px;
     background:linear-gradient(180deg,#101829 72%,rgba(16,24,41,0))}
@@ -409,40 +417,40 @@
   .tt-crew input{margin:0}
   .tt-crew input.n{flex:1;min-width:0}
   .tt-crew input.p{flex:0 0 72px;width:72px;text-align:center}
-  .tt-crew .go{flex:0 0 auto;font-size:11px;font-weight:800;padding:10px 10px;border-radius:11px;
+  .tt-crew .go{flex:0 0 auto;font-size:12px;font-weight:800;padding:10px 10px;border-radius:11px;
     border:1px solid var(--line2);background:rgba(255,197,77,.12);color:var(--gold);cursor:pointer}
   .tt-crew .rm{flex:0 0 auto;background:transparent;border:none;color:var(--dim);font-size:15px;cursor:pointer;padding:0 2px}
   .tt-out{border:1px solid rgba(255,197,77,.32);background:rgba(255,197,77,.08);border-radius:13px;
-    padding:11px 12px;margin-top:10px;font-size:12.5px;font-weight:700;line-height:1.5;color:var(--ink);cursor:pointer}
+    padding:11px 12px;margin-top:10px;font-size:14px;font-weight:700;line-height:1.5;color:var(--ink);cursor:pointer}
   .roastcard{width:100%;max-width:350px;border-radius:20px;padding:20px 18px;
     background:linear-gradient(155deg,#2a1220 0%,#140b18 55%,#1a0f10 100%);
     border:1px solid rgba(255,77,94,.32);box-shadow:var(--shadow);animation:fade .3s}
-  .roastcard .rc-t{font-size:10.5px;font-weight:900;letter-spacing:2px;color:var(--red)}
-  .roastcard .rc-g{font-size:11px;color:var(--muted);font-weight:700;margin-top:3px}
-  .rc-line{display:flex;gap:9px;align-items:flex-start;margin:11px 0;font-size:12.5px;font-weight:700;line-height:1.45}
+  .roastcard .rc-t{font-size:12px;font-weight:900;letter-spacing:2px;color:var(--red)}
+  .roastcard .rc-g{font-size:12px;color:var(--muted);font-weight:700;margin-top:3px}
+  .rc-line{display:flex;gap:9px;align-items:flex-start;margin:11px 0;font-size:14px;font-weight:700;line-height:1.45}
   .rc-line .e{font-size:14px;line-height:1.25}
   .rc-board{border-top:1px solid rgba(255,255,255,.09);margin-top:12px;padding-top:10px}
-  .rc-row{display:flex;justify-content:space-between;font-size:11.5px;font-weight:700;color:var(--muted);padding:3px 0}
+  .rc-row{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--muted);padding:3px 0}
   .rc-row.w{color:var(--gold)}.rc-row.l{color:var(--red)}
-  .rc-cta{font-size:10px;color:var(--dim);font-weight:700;margin-top:11px;text-align:right}
+  .rc-cta{font-size:12px;color:var(--dim);font-weight:700;margin-top:11px;text-align:right}
 
   /* league */
   .lg-head{display:flex;align-items:center;gap:12px;background:linear-gradient(90deg,rgba(47,107,255,.16),rgba(25,195,214,.1));
     border:1px solid var(--line2);border-radius:16px;padding:14px;margin:10px 0 6px}
   .lg-ic{flex:0 0 46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:22px;
     background:linear-gradient(135deg,var(--blue),var(--teal))}
-  .lg-head b{font-size:16px}.lg-head small{display:block;color:var(--muted);font-weight:600;font-size:11.5px;margin-top:2px}
+  .lg-head b{font-size:15px}.lg-head small{display:block;color:var(--muted);font-weight:600;font-size:12px;margin-top:2px}
   .rivalry{background:rgba(255,197,77,.09);border:1px solid rgba(255,197,77,.28);border-radius:13px;
-    padding:11px 13px;font-size:12.5px;font-weight:700;color:var(--gold);margin:8px 0}
+    padding:11px 13px;font-size:14px;font-weight:700;color:var(--gold);margin:8px 0}
 
   /* plus / pricing */
   .tier{border-radius:var(--r);padding:16px;margin:10px 0;border:1px solid var(--line);background:var(--card)}
   .tier.hot{border-color:var(--teal);background:linear-gradient(160deg,rgba(25,195,214,.1),var(--card) 55%);position:relative}
   .tier .price{font-size:24px;font-weight:900}.tier .price small{font-size:12px;color:var(--muted);font-weight:700}
   .tier ul{margin:10px 0 0;padding:0;list-style:none}
-  .tier li{font-size:13px;color:var(--muted);font-weight:600;padding:5px 0;display:flex;gap:8px}
+  .tier li{font-size:14px;color:var(--muted);font-weight:600;padding:5px 0;display:flex;gap:8px}
   .tier li b{color:var(--ink)}
-  .bestpill{position:absolute;top:-9px;right:14px;font-size:9.5px;font-weight:900;letter-spacing:.6px;
+  .bestpill{position:absolute;top:-9px;right:14px;font-size:12px;font-weight:900;letter-spacing:.6px;
     background:linear-gradient(90deg,var(--teal),var(--blue2));color:#fff;padding:4px 10px;border-radius:999px}
   .legalbox{background:rgba(46,230,166,.07);border:1px solid rgba(46,230,166,.25);border-radius:13px;
     padding:12px 14px;font-size:12px;color:var(--muted);line-height:1.55;margin:10px 0}
@@ -452,12 +460,12 @@
 .roombar{display:flex;align-items:center;gap:8px;justify-content:center;
   margin:10px 0 2px;padding:9px 12px;border-radius:12px;
   background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);
-  font-size:12.5px;color:var(--muted);font-weight:700}
+  font-size:14px;color:var(--muted);font-weight:700}
 .rdot{width:8px;height:8px;border-radius:50%;background:#4b5563;flex:none}
 .rdot.on{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.15)}
 .rdot.err{background:#ef4444}
 .roombar b{color:var(--ink)}
-.roomrank{margin-left:auto;font-size:11.5px;color:var(--dim)}
+.roomrank{margin-left:auto;font-size:12px;color:var(--dim)}
 
 /* ---- the waiting room ----------------------------------------------
    Eleven minutes is a long time to look at a screen with nothing on it,
@@ -470,35 +478,35 @@
   background:linear-gradient(180deg,rgba(47,107,255,.10),rgba(255,255,255,.02));
   border:1px solid var(--line)}
 .sbhead{display:flex;align-items:center;justify-content:space-between;gap:8px;
-  font-size:10.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
+  font-size:12px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
 .sbhead .sblive{color:var(--red)}
 .sbrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px}
 .sbteam{display:flex;align-items:center;gap:6px;min-width:0}
 .sbemo{font-size:17px;line-height:1}
 .sbabbr{font-size:14px;font-weight:900;letter-spacing:.04em}
 .sbnums{white-space:nowrap}
-.sbnum{font-size:29px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
+.sbnum{font-size:30px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
 .sbnum.lead{color:var(--teal2)}
 .sbdash{color:var(--line2);font-weight:900;font-size:20px;padding:0 2px}
-.sbnote{font-size:11.5px;color:var(--muted);margin:9px 0 0;line-height:1.45}
-.sbstale{font-size:10.5px;color:var(--dim);margin:5px 0 0}
+.sbnote{font-size:12px;color:var(--muted);margin:9px 0 0;line-height:1.45}
+.sbstale{font-size:12px;color:var(--dim);margin:5px 0 0}
 
 .standcard{margin:10px 0 0;padding:12px 14px;border-radius:14px;
   background:rgba(255,255,255,.03);border:1px solid var(--line)}
 .standhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;
-  font-size:10.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;
+  font-size:12px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;
   color:var(--dim);margin-bottom:4px}
 .standrow{display:flex;align-items:center;gap:9px;padding:6px 0;
-  border-top:1px solid rgba(255,255,255,.05);font-size:13px}
+  border-top:1px solid rgba(255,255,255,.05);font-size:14px}
 .standrow:first-child{border-top:0}
-.standrow .sr{width:18px;text-align:right;font-size:11px;font-weight:900;color:var(--dim);flex:none}
+.standrow .sr{width:18px;text-align:right;font-size:12px;font-weight:900;color:var(--dim);flex:none}
 .standrow .sdot{width:9px;height:9px;border-radius:50%;flex:none}
 .standrow .sn{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .standrow .sp{font-weight:900;font-variant-numeric:tabular-nums}
 .standrow.me{color:var(--teal2)}
 .standrow.me .sn{font-weight:900}
 .standrow.me .sr{color:var(--teal2)}
-.standyou{font-size:11.5px;color:var(--dim);margin:8px 0 0;line-height:1.45}
+.standyou{font-size:12px;color:var(--dim);margin:8px 0 0;line-height:1.45}
 
 /* ---- the final buzzer ----------------------------------------------
    "The ending can be much cleaner and better."
@@ -520,38 +528,38 @@
 .fring .farc{stroke:url(#fgrad);transition:stroke-dashoffset 1.1s cubic-bezier(.2,.8,.25,1)}
 .fring .fin{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:2px}
 .fring .fin .bignum{font-size:46px}
-.fof{font-size:11.5px;color:var(--dim);font-weight:800;letter-spacing:.05em}
+.fof{font-size:12px;color:var(--dim);font-weight:800;letter-spacing:.05em}
 
-.fbhead{font-size:10.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;
+.fbhead{font-size:12px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;
   color:var(--dim);margin-bottom:10px}
 .fbrow{margin-top:12px}
 .fbrow:first-child{margin-top:0}
-.fbtop{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:13.5px}
+.fbtop{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:14px}
 .fbl{font-weight:750}
 .fbv{font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
-.fbv i{font-style:normal;font-weight:800;font-size:11.5px;color:var(--dim)}
+.fbv i{font-style:normal;font-weight:800;font-size:12px;color:var(--dim)}
 .fbbar{height:7px;border-radius:999px;background:var(--line);overflow:hidden;margin-top:6px}
 .fbbar > i{display:block;height:100%;border-radius:999px;
   background:linear-gradient(90deg,var(--teal),var(--blue2));width:0;
   transition:width .9s cubic-bezier(.2,.8,.25,1)}
 .fbbar.gold > i{background:linear-gradient(90deg,#ffb020,var(--gold))}
 .fbbar.flat > i{background:var(--line2)}
-.fbnote{font-size:11px;color:var(--dim);font-weight:600;margin-top:5px}
+.fbnote{font-size:12px;color:var(--dim);font-weight:600;margin-top:5px}
 .fbspeed{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
-  margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:13.5px}
+  margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:14px}
 
 /* A score that is still moving must say so. This is the same promise the
    review screen makes when it refuses to grade an un-pushed round — kept
    here so the last screen of the night cannot quietly contradict it. */
-.fpend{margin:10px 0 0;padding:12px 14px;border-radius:14px;font-size:12.5px;line-height:1.5;
+.fpend{margin:10px 0 0;padding:12px 14px;border-radius:14px;font-size:14px;line-height:1.5;
   color:var(--ink);background:rgba(255,197,77,.09);border:1px solid rgba(255,197,77,.32)}
 .fpend b{color:var(--gold)}
 
 .fcall{border-color:rgba(46,230,166,.35);
   background:linear-gradient(180deg,rgba(46,230,166,.09),rgba(255,255,255,.02))}
-.fchead{font-size:10.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--green)}
+.fchead{font-size:12px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--green)}
 .fcq{font-size:15px;font-weight:800;line-height:1.35;margin-top:7px}
-.fca{font-size:13px;font-weight:750;color:var(--muted);margin-top:7px}
+.fca{font-size:14px;font-weight:750;color:var(--muted);margin-top:7px}
 .fca b{color:var(--teal2)}
 
 /* ---- THE AWARD -----------------------------------------------------
@@ -577,19 +585,19 @@
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.17),transparent);transform:rotate(14deg)}
 .award.in .awshine{animation:awshine 1.05s .3s ease-out forwards}
 @keyframes awshine{0%{opacity:0;left:-40%}25%{opacity:1}100%{opacity:0;left:125%}}
-.awlabel{font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.awlabel{font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
 .awtrophy{font-size:40px;line-height:1.15;margin-top:6px}
 .awname{font-size:22px;font-weight:900;letter-spacing:-.01em;margin-top:1px;
   background:linear-gradient(90deg,#ffe1a0,var(--gold));-webkit-background-clip:text;
   background-clip:text;color:transparent}
-.awwhy{font-size:12.5px;font-weight:700;color:var(--muted);line-height:1.5;margin:8px auto 0;max-width:30em}
+.awwhy{font-size:14px;font-weight:700;color:var(--muted);line-height:1.5;margin:8px auto 0;max-width:30em}
 .awwhy b{color:var(--ink)}
 .awmore{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:13px}
-.awchip{font-size:11px;font-weight:800;padding:6px 10px;border-radius:999px;
+.awchip{font-size:12px;font-weight:800;padding:6px 10px;border-radius:999px;
   border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--muted)}
 .awchip b{color:var(--ink);font-weight:900}
 .awsnd{position:absolute;top:9px;right:9px;width:30px;height:30px;border-radius:9px;padding:0;
-  border:1px solid var(--line);background:rgba(0,0,0,.28);color:var(--muted);font-size:13px;
+  border:1px solid var(--line);background:rgba(0,0,0,.28);color:var(--muted);font-size:14px;
   line-height:1;cursor:pointer}
 
 /* ---- THE STAT LINE — the season record on the device ---------------- */
@@ -597,15 +605,15 @@
 .slc{text-align:center;padding:9px 3px;border-radius:12px;
   background:rgba(255,255,255,.035);border:1px solid var(--line)}
 .slc .v{font-size:17px;font-weight:900;font-variant-numeric:tabular-nums}
-.slc .k{font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+.slc .k{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
   color:var(--dim);margin-top:3px}
 .tcase{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
-.tc{font-size:11px;font-weight:800;color:var(--muted);padding:5px 9px;border-radius:999px;
+.tc{font-size:12px;font-weight:800;color:var(--muted);padding:5px 9px;border-radius:999px;
   border:1px solid var(--line);background:rgba(255,255,255,.03)}
 .tc b{color:var(--gold);font-weight:900}
 
 .fmore{margin-top:10px;border:1px solid var(--line);border-radius:14px;background:var(--card);overflow:hidden}
-.fmore > summary{list-style:none;cursor:pointer;padding:14px 16px;font-size:13.5px;font-weight:800;
+.fmore > summary{list-style:none;cursor:pointer;padding:14px 16px;font-size:14px;font-weight:800;
   color:var(--muted);display:flex;align-items:center;justify-content:space-between}
 .fmore > summary::-webkit-details-marker{display:none}
 .fmore > summary::after{content:'▾';font-size:12px;color:var(--dim)}
@@ -655,12 +663,12 @@
       </svg>
     </div>
     <div class="card" id="resumeBar" style="display:none;border-color:var(--teal);background:rgba(25,195,214,.1);margin-bottom:6px">
-      <b style="font-size:14.5px">🔴 You have a game in progress</b>
+      <b style="font-size:15px">🔴 You have a game in progress</b>
       <p class="sub" style="font-size:12px;margin:5px 0 11px" id="resumeSub">Your predictions and scored quarters are saved. Pick up where you left off.</p>
       <button class="btn teal sm" onclick="doResume()">Resume my game</button>
       <button class="btn ghost sm" style="margin-top:8px" onclick="dismissResume()">Start a new game</button>
     </div>
-    <div class="brand"><span class="logo" style="letter-spacing:1.5px;font-size:27px">STATS GAMETIME</span></div>
+    <div class="brand"><span class="logo" style="letter-spacing:1.5px;font-size:26px">STATS GAMETIME</span></div>
     <p class="tag strangers">The game that pays to pay attention</p>
     <div class="center strangers" style="margin-top:8px"><span class="pill">Play from home • Free to enter</span></div>
 
@@ -671,15 +679,15 @@
          anything. Signed-out only — a member already knows. -->
     <div id="howBlock" style="display:none;margin-top:16px">
       <div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:11px">
-        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:#16233b;border:1px solid #2f3a58;color:#28e0d0;font-weight:800;font-size:12.5px;line-height:25px;text-align:center">1</span>
+        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:#16233b;border:1px solid #2f3a58;color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">1</span>
         <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Predict before tip.</b> <span style="color:var(--muted,#93a0bd)">Winner, stat leaders, the numbers.</span></div>
       </div>
       <div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:11px">
-        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:#16233b;border:1px solid #2f3a58;color:#28e0d0;font-weight:800;font-size:12.5px;line-height:25px;text-align:center">2</span>
+        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:#16233b;border:1px solid #2f3a58;color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">2</span>
         <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Call it live.</b> <span style="color:var(--muted,#93a0bd)">One-tap reads during the game as it happens.</span></div>
       </div>
       <div style="display:flex;gap:11px;align-items:flex-start">
-        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:#16233b;border:1px solid #2f3a58;color:#28e0d0;font-weight:800;font-size:12.5px;line-height:25px;text-align:center">3</span>
+        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:#16233b;border:1px solid #2f3a58;color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">3</span>
         <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Climb the board.</b> <span style="color:var(--muted,#93a0bd)">Sharpest, fastest fan wins the night.</span></div>
       </div>
     </div>
@@ -690,25 +698,25 @@
            promises, and a returning player and a stranger deserve to be
            spoken to differently on the same door. -->
       <div style="display:flex;gap:6px;background:#0e1626;border:1px solid #26304a;border-radius:12px;padding:5px;margin-bottom:13px">
-        <button id="segIn" onclick="portalSeg('in')" style="flex:1;border:none;border-radius:9px;padding:14px 8px;font-weight:800;font-size:13.5px;line-height:1;cursor:pointer;background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e">Sign in</button>
-        <button id="segUp" onclick="portalSeg('up')" style="flex:1;border:none;border-radius:9px;padding:14px 8px;font-weight:800;font-size:13.5px;line-height:1;cursor:pointer;background:none;color:var(--muted,#93a0bd)">Sign up</button>
+        <button id="segIn" onclick="portalSeg('in')" style="flex:1;border:none;border-radius:9px;padding:14px 8px;font-weight:800;font-size:14px;line-height:1;cursor:pointer;background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e">Sign in</button>
+        <button id="segUp" onclick="portalSeg('up')" style="flex:1;border:none;border-radius:9px;padding:14px 8px;font-weight:800;font-size:14px;line-height:1;cursor:pointer;background:none;color:var(--muted,#93a0bd)">Sign up</button>
       </div>
-      <b id="portalLbl" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)">Welcome back — sign in to build your card</b>
+      <b id="portalLbl" style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)">Welcome back — sign in to build your card</b>
       <p class="sub" id="portalSub" style="margin:6px 0 12px">One tap, and your handle, your card and your points follow you to any phone — nothing you earn can ever be lost.</p>
       <button id="portalGsi" onclick="portalGoogle()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:#fff;color:#1a1a1a;border:none;border-radius:12px;padding:14px;font-weight:800;font-size:15px;line-height:1;cursor:pointer">
         <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:conic-gradient(#ea4335 0 25%,#fbbc05 0 50%,#34a853 0 75%,#4285f4 0)"></span>
         Sign in with Google
       </button>
       <button class="btn ghost sm" id="portalEmailBtn" style="margin-top:8px" onclick="portalEmailPath()">✉️ Use email instead</button>
-      <div id="portalDown" style="display:none;margin-top:10px;background:rgba(255,197,77,.10);border:1px solid rgba(255,197,77,.35);border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.45;color:var(--ink,#eef2fb)">
+      <div id="portalDown" style="display:none;margin-top:10px;background:rgba(255,197,77,.10);border:1px solid rgba(255,197,77,.35);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)">
         <b>Our sign-in server isn’t answering right now.</b><br>
         <span style="color:var(--muted,#93a0bd)">Nothing you do here would save, so we’ve switched the buttons off rather than let you lose a night’s points. Try a refresh in a minute — or tap <b>Practice</b> below, which needs no account at all.</span>
       </div>
       <label style="display:flex;gap:9px;align-items:flex-start;margin-top:12px;cursor:pointer">
-        <input type="checkbox" id="portalConsent" checked style="margin-top:1px;width:24px;height:24px;flex:0 0 auto;accent-color:#28e0d0">
+        <input type="checkbox" id="portalConsent" checked style="margin-top:1px;width:26px;height:26px;padding:6px;flex:0 0 auto;accent-color:#28e0d0">
         <span style="font-size:12px;line-height:1.45;color:var(--muted,#93a0bd)">Email me when the next game night is on. One message per game, unsubscribe any time.</span>
       </label>
-      <button class="btn ghost sm" style="margin-top:11px;font-size:12.5px" onclick="startDemo()">Practice first — no account needed</button>
+      <button class="btn ghost sm" style="margin-top:11px;font-size:14px" onclick="startDemo()">Practice first — no account needed</button>
       <p class="foot" style="margin:10px 0 0;text-align:center">Free to play · Not gambling · Prizes are sponsor-funded</p>
     </div>
     <div class="card" id="welcomeStrip" style="display:none;margin-top:14px;padding:11px 14px;border-color:rgba(46,230,166,.35)"></div>
@@ -716,14 +724,14 @@
     <!-- THE MOMENT RIBBON — what's true right now: a countdown before tip,
          the real score while live, the final after. Painted from the ESPN
          feed; hides entirely if the feed can't be reached. -->
-    <div id="heroRibbon" style="display:none;align-items:center;gap:7px;margin-top:12px;background:#0e1626;border:1px solid var(--line,#26304a);border-radius:12px;padding:11px 13px;font-size:13.5px;font-weight:700;color:var(--ink,#eef2fb)"></div>
+    <div id="heroRibbon" style="display:none;align-items:center;gap:7px;margin-top:12px;background:#0e1626;border:1px solid var(--line,#26304a);border-radius:12px;padding:11px 13px;font-size:14px;font-weight:700;color:var(--ink,#eef2fb)"></div>
 
     <div class="card" style="margin-top:18px">
       <!-- These three are overwritten from BB_GAME on load; they are here only
            so the first paint is not blank. Keep them in sync with the fixture
            anyway — a stale flash of last week's game is still a stale flash. -->
       <h2 id="landingHead">🔴 Game Night #2 · Sun · August 2</h2>
-      <p style="font-size:12.5px;font-weight:800;color:var(--gold);margin:2px 0 6px" id="landingTip">🕐 Tip-off 1:00 ET · 12:00 CT · 10:00 PT · ABC</p>
+      <p style="font-size:14px;font-weight:800;color:var(--gold);margin:2px 0 6px" id="landingTip">🕐 Tip-off 1:00 ET · 12:00 CT · 10:00 PT · ABC</p>
       <p class="sub" id="landingMatch"><b style="color:var(--ink)">Indiana Fever @ Minnesota Lynx</b> — on ABC. Watch the broadcast, play from your couch. Predict before tip-off, answer at every quarter break. Right answers score. Fast right answers score more.</p>
       <div class="chips">
         <span class="chip" id="landingChip1">WNBA</span>
@@ -750,7 +758,7 @@
          only thing on the page that works when there is no game on. -->
     <div class="card strangers" style="border-color:rgba(46,230,166,.35)">
       <b style="font-size:15px">📬 Can't play tonight?</b>
-      <p class="sub" style="font-size:12.5px;margin:6px 0 0">Get one email before each game night, and tell us what you watch — we build the next night around the answers.</p>
+      <p class="sub" style="font-size:14px;margin:6px 0 0">Get one email before each game night, and tell us what you watch — we build the next night around the answers.</p>
       <button class="btn teal" style="margin-top:12px" onclick="openJoin('landing')">Join the list</button>
     </div>
 
@@ -777,7 +785,7 @@
        about. Everything below the address is optional on purpose — a
        required question is a question people lie to. -->
   <section class="screen" id="s-join">
-    <div class="brand"><span class="logo" style="letter-spacing:1.2px;font-size:23px">STATS GAMETIME</span></div>
+    <div class="brand"><span class="logo" style="letter-spacing:1.2px;font-size:22px">STATS GAMETIME</span></div>
     <h1 class="center" style="margin-top:20px" id="joinHead">Get in the game</h1>
     <p class="sub center" id="joinSub">One email before each game night — when it's on, who's playing, what's up for grabs. Then tell us what you actually watch, so we build nights you'd show up for.</p>
 
@@ -792,8 +800,8 @@
     </div>
 
     <div class="card">
-      <b style="font-size:14.5px">🏆 What do you watch?</b>
-      <p class="sub" style="font-size:12.5px;margin:5px 0 0">Tap everything that's true. This is how we pick the next game night.</p>
+      <b style="font-size:15px">What do you watch?</b>
+      <p class="sub" style="font-size:14px;margin:5px 0 0">Tap everything that's true. This is how we pick the next game night.</p>
       <div id="jSports"></div>
       <div style="margin-top:12px">
         <label class="fld" for="jTeams">Your teams <span style="text-transform:none;letter-spacing:0;font-weight:600">— optional</span></label>
@@ -802,17 +810,17 @@
     </div>
 
     <div class="card">
-      <b style="font-size:14.5px">📺 How do you watch?</b>
-      <p class="sub" style="font-size:12.5px;margin:5px 0 0">You asked about rewinding — this is the question that tells us who can.</p>
+      <b style="font-size:15px">📺 How do you watch?</b>
+      <p class="sub" style="font-size:14px;margin:5px 0 0">You asked about rewinding — this is the question that tells us who can.</p>
       <div class="chips" id="jWatch" style="margin-top:10px"></div>
-      <b style="font-size:14.5px;display:block;margin-top:16px">📅 How often is a game actually on?</b>
+      <b style="font-size:15px;display:block;margin-top:16px">📅 How often is a game actually on?</b>
       <div class="chips" id="jFreq" style="margin-top:10px"></div>
-      <b style="font-size:14.5px;display:block;margin-top:16px">🎁 What would make you play every week?</b>
+      <b style="font-size:15px;display:block;margin-top:16px">🎁 What would make you play every week?</b>
       <div class="chips" id="jPrize" style="margin-top:10px"></div>
     </div>
 
     <div class="card">
-      <label style="display:flex;gap:10px;align-items:flex-start;margin:0;font-size:11.5px;line-height:1.5;color:var(--muted);font-weight:600;cursor:pointer">
+      <label style="display:flex;gap:10px;align-items:flex-start;margin:0;font-size:12px;line-height:1.5;color:var(--muted);font-weight:600;cursor:pointer">
         <input id="jConsent" type="checkbox" style="margin-top:1px">
         <span>Yes — email me about upcoming STATS game nights. If I enter a phone number, I also agree to receive recurring automated texts from STATS at that number once texting starts. Consent is <b>not</b> a condition of playing, scoring, or winning anything. Message &amp; data rates may apply. Reply STOP to any text to stop, HELP for help. You can delete your email and phone yourself any time from the end-of-game screen, or email <a href="mailto:aisoundz9@gmail.com" style="color:var(--teal2)">aisoundz9@gmail.com</a>.</span>
       </label>
@@ -824,53 +832,53 @@
 
   <!-- RULES -->
   <section class="screen" id="s-rules">
-    <div class="brand" style="margin-top:2px"><span class="logo" style="font-size:19px;letter-spacing:1px">STATS GAMETIME</span></div>
+    <div class="brand" style="margin-top:2px"><span class="logo" style="font-size:17px;letter-spacing:1px">STATS GAMETIME</span></div>
     <h1 style="margin-top:10px">Official Rules 📖</h1>
     <p class="sub">STATS Game Night · Friends & Family Beta · v1.0</p>
 
     <div class="card tight">
-      <h2 style="font-size:14px">🎯 The game</h2>
-      <p class="sub" style="font-size:12.5px" id="ruleGame">STATS is a free skill-and-attention game played along with a live basketball broadcast. You score by predicting the game before tip-off and by answering questions about what just happened at each quarter break. No wagers, no entry fee — ever.</p>
+      <h2 style="font-size:14px">The game</h2>
+      <p class="sub" style="font-size:14px" id="ruleGame">STATS is a free skill-and-attention game played along with a live basketball broadcast. You score by predicting the game before tip-off and by answering questions about what just happened at each quarter break. No wagers, no entry fee — ever.</p>
     </div>
 
     <div class="card tight">
       <h2 style="font-size:14px" id="rulePredH">📝 Predictions — up to 60 pts</h2>
-      <p class="sub" style="font-size:12.5px" id="rulePredP">Lock 6 picks before tip-off: winning team (10 pts) and the leader in points, assists, steals, rebounds &amp; blocks (5 pts each). Nail the leader's exact stat total for a +5 bonus per category — so a category you fully nail is worth 10. Predictions can't be changed after tip-off.</p>
+      <p class="sub" style="font-size:14px" id="rulePredP">Lock 6 picks before tip-off: winning team (10 pts) and the leader in points, assists, steals, rebounds &amp; blocks (5 pts each). Nail the leader's exact stat total for a +5 bonus per category — so a category you fully nail is worth 10. Predictions can't be changed after tip-off.</p>
     </div>
 
     <div class="card tight" id="ruleCatch" style="display:none">
       <h2 style="font-size:14px">⚡ Live catches — 1 pt each</h2>
-      <p class="sub" style="font-size:12.5px" id="ruleCatchP"></p>
+      <p class="sub" style="font-size:14px" id="ruleCatchP"></p>
     </div>
 
     <div class="card tight">
       <h2 style="font-size:14px" id="ruleLiveH">⏱️ Quarter questions — up to 30 pts</h2>
-      <p class="sub" style="font-size:12.5px" id="ruleLiveP">At the end of each quarter, answer 4 questions about the quarter you just watched. They are not box-score trivia — they're the stuff you only catch if the game is actually on in front of you. Correct answers are worth 1 pt each in Q1, 2 in Q2, 3 in Q3, and 4 in Q4. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.</p>
+      <p class="sub" style="font-size:14px" id="ruleLiveP">At the end of each quarter, answer 4 questions about the quarter you just watched. They are not box-score trivia — they're the stuff you only catch if the game is actually on in front of you. Correct answers are worth 1 pt each in Q1, 2 in Q2, 3 in Q3, and 4 in Q4. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.</p>
     </div>
 
     <div class="card tight">
       <h2 style="font-size:14px">⚡ Speed points — the tiebreaker</h2>
-      <p class="sub" style="font-size:12.5px" id="ruleSpeedP">Every correct quarter answer also banks the seconds you had left on the clock as Speed points. Example: answer correctly with 14 seconds left → +14 ⚡. Ties in total points are broken by Speed. Speed never beats accuracy — it only settles ties.</p>
+      <p class="sub" style="font-size:14px" id="ruleSpeedP">Every correct quarter answer also banks the seconds you had left on the clock as Speed points. Example: answer correctly with 14 seconds left → +14 ⚡. Ties in total points are broken by Speed. Speed never beats accuracy — it only settles ties.</p>
     </div>
 
     <div class="card tight">
       <h2 style="font-size:14px">✨ Lifeline — one per half</h2>
-      <p class="sub" style="font-size:12.5px" id="ruleLifeP">Once per half you can fire your Lifeline: in Practice mode it removes wrong options; on Game Night it adds +15 seconds to the clock (time to ask the room — just like the arena timeout).</p>
+      <p class="sub" style="font-size:14px" id="ruleLifeP">Once per half you can fire your Lifeline: in Practice mode it removes wrong options; on Game Night it adds +15 seconds to the clock (time to ask the room — just like the arena timeout).</p>
     </div>
 
     <div class="card tight">
       <h2 style="font-size:14px">🏁 Scoring the night</h2>
-      <p class="sub" style="font-size:12.5px" id="ruleScoreP">When the host posts each quarter's answers (from the broadcast + official box score), your quarter scores itself — there is nothing to tap. After the final buzzer the host enters the official stat leaders and your prediction sheet scores too. Max score: 100. Post your result card to the group chat — highest score wins the night, Speed breaks ties.</p>
+      <p class="sub" style="font-size:14px" id="ruleScoreP">When the host posts each quarter's answers (from the broadcast + official box score), your quarter scores itself — there is nothing to tap. After the final buzzer the host enters the official stat leaders and your prediction sheet scores too. Max score: 100. Post your result card to the group chat — highest score wins the night, Speed breaks ties.</p>
     </div>
 
     <div class="card tight">
       <h2 style="font-size:14px">🤝 Fair play</h2>
-      <p class="sub" style="font-size:12.5px">Answer from what you watched — not from a box score mid-question. The 20-second clock exists so lookups don't pay. Host's announced answers are final (official box score settles disputes). Be cool: it's game night, not the SEC.</p>
+      <p class="sub" style="font-size:14px">Answer from what you watched — not from a box score mid-question. The 20-second clock exists so lookups don't pay. Host's announced answers are final (official box score settles disputes). Be cool: it's game night, not the SEC.</p>
     </div>
 
     <div class="card tight">
       <h2 style="font-size:14px">⚖️ The fine print</h2>
-      <p class="sub" style="font-size:12.5px" id="ruleFineP">Free to play; no purchase or payment ever required to play or win. 18+. This beta is for entertainment among friends; any prizes are provided by the host/sponsor and awarded on final verified stats. STATS is not affiliated with any league, club or broadcaster — we're a game about watching the game. Full sweepstakes rules will govern public seasons.</p>
+      <p class="sub" style="font-size:14px" id="ruleFineP">Free to play; no purchase or payment ever required to play or win. 18+. This beta is for entertainment among friends; any prizes are provided by the host/sponsor and awarded on final verified stats. STATS is not affiliated with any league, club or broadcaster — we're a game about watching the game. Full sweepstakes rules will govern public seasons.</p>
     </div>
     <button class="btn" onclick="go('landing')">← Back</button>
   </section>
@@ -891,7 +899,7 @@
        missed is a bad afternoon; a player locked out of a live game
        because a database was down is the end of the night. -->
   <section class="screen" id="s-name">
-    <div class="brand"><span class="logo" style="letter-spacing:1.2px;font-size:23px">STATS GAMETIME</span></div>
+    <div class="brand"><span class="logo" style="letter-spacing:1.2px;font-size:22px">STATS GAMETIME</span></div>
     <h1 class="center" style="margin-top:26px">Grab your handle</h1>
     <p class="sub center">This is how you'll show up on the leaderboard.</p>
     <div class="card">
@@ -899,12 +907,12 @@
            Asking a signed-in person for the address they just signed in with
            is the app admitting it wasn't paying attention. -->
       <div id="acctRow" style="display:none;align-items:center;gap:10px;background:rgba(46,230,166,.08);border:1px solid rgba(46,230,166,.30);border-radius:12px;padding:11px 13px;margin-bottom:4px">
-        <span style="font-size:16px">✅</span>
+        <span style="font-size:15px">✅</span>
         <div style="flex:1;min-width:0">
-          <div style="font-weight:800;font-size:13px">Signed in</div>
+          <div style="font-weight:800;font-size:14px">Signed in</div>
           <div id="acctEmail" style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
         </div>
-        <button onclick="doSignOut()" style="flex:0 0 auto;background:none;border:1px solid var(--line2,#2f3a58);color:var(--muted,#93a0bd);border-radius:999px;padding:6px 11px;font-weight:700;font-size:11.5px;cursor:pointer">Sign out</button>
+        <button onclick="doSignOut()" style="flex:0 0 auto;background:none;border:1px solid var(--line2,#2f3a58);color:var(--muted,#93a0bd);border-radius:999px;padding:6px 11px;font-weight:700;font-size:12px;cursor:pointer">Sign out</button>
       </div>
       <label class="fld">Display name</label>
       <input id="playerName" maxlength="16" placeholder="e.g. CourtsideKing" oninput="checkName()">
@@ -922,7 +930,7 @@
            less. Phone is deliberately NOT on this screen; texting means TCPA
            and 10DLC, and neither is signed off yet. -->
       <label style="display:flex;gap:9px;align-items:flex-start;margin-top:12px;font-size:12px;line-height:1.45;color:var(--dim);cursor:pointer">
-        <input type="checkbox" id="gateConsent" style="margin-top:1px;width:24px;height:24px;flex:0 0 auto;accent-color:#28e0d0">
+        <input type="checkbox" id="gateConsent" style="margin-top:1px;width:26px;height:26px;padding:6px;flex:0 0 auto;accent-color:#28e0d0">
         <span>Email me when the next STATS game night is on — one heads-up, nothing else. Not required to play, score, or win. You can delete yourself from the list any time on the end-of-game screen.</span>
       </label>
       <!-- Verification. The button only wakes up once the address above is
@@ -941,7 +949,7 @@
       <label class="fld">Pick your color</label>
       <div class="chips" id="colorPick"></div>
       <button class="btn" id="nameBtn" disabled onclick="startPredict()">Continue to my picks</button>
-      <button class="btn ghost" style="margin-top:8px;font-size:12.5px" onclick="openJoin('name',gateEmailValue())">Tell us what you watch</button>
+      <button class="btn ghost" style="margin-top:8px;font-size:14px" onclick="openJoin('name',gateEmailValue())">Tell us what you watch</button>
     </div>
     <p class="foot">Free to enter • No purchase necessary • 18+ • We don't sell your address.</p>
   </section>
@@ -951,10 +959,10 @@
     <div class="qmeta" style="margin-top:4px">
       <span class="qn" id="predMeta">PRE-GAME PREDICTION SHEET</span><span class="worth" id="predWorth">Up to 60 pts</span>
     </div>
-    <h1 style="margin-top:2px" id="predHead">Make your picks 📝</h1>
+    <h1 style="margin-top:2px" id="predHead">Make your picks</h1>
     <p class="sub" id="predSub">Lock these in before tip-off. Bonus points if you nail the exact number.</p>
     <div class="card" id="predCard"></div>
-    <button class="btn teal" id="predBtn" style="display:none" disabled onclick="lockPredictions()">Lock it in — go to tip-off 🔒</button>
+    <button class="btn teal" id="predBtn" style="display:none" disabled onclick="lockPredictions()">Lock it in — go to tip-off</button>
     <div id="pdBar"></div>
     <p class="foot" id="predFoot">You can't change picks once the game starts.</p>
   </section>
@@ -987,25 +995,25 @@
   <!-- BOARD — a tab that routed to the home page was not a leaderboard, it
        was a redirect wearing a trophy. This is the real thing. -->
   <section class="screen" id="s-board">
-    <div class="brand" style="margin-top:30px"><span class="logo" style="letter-spacing:1.2px;font-size:21px">BOARD</span></div>
+    <div class="brand" style="margin-top:30px"><span class="logo" style="letter-spacing:1.2px;font-size:20px">BOARD</span></div>
     <div id="bdBody" style="margin-top:16px"></div>
   </section>
 
   <section class="screen" id="s-stats">
-    <div class="brand" style="margin-top:30px"><span class="logo" style="letter-spacing:1.2px;font-size:21px">STATS</span></div>
+    <div class="brand" style="margin-top:30px"><span class="logo" style="letter-spacing:1.2px;font-size:20px">STATS</span></div>
     <div id="stBody" style="margin-top:16px"></div>
   </section>
 
   <section class="screen" id="s-me">
-    <div class="brand" style="margin-top:34px"><span class="logo" style="letter-spacing:1.2px;font-size:23px">STATS GAMETIME</span></div>
+    <div class="brand" style="margin-top:34px"><span class="logo" style="letter-spacing:1.2px;font-size:22px">STATS GAMETIME</span></div>
     <div id="meBody" style="margin-top:22px"></div>
   </section>
 
   <section class="screen" id="s-lobby">
-    <div class="brand" style="margin-top:40px"><span class="logo" style="letter-spacing:1.2px;font-size:23px">STATS GAMETIME</span></div>
+    <div class="brand" style="margin-top:40px"><span class="logo" style="letter-spacing:1.2px;font-size:22px">STATS GAMETIME</span></div>
     <div class="center" style="margin-top:30px">
       <span class="pill" id="lobbyPill">Tipping off</span>
-      <h1 style="margin-top:16px">You're in. 🎯</h1>
+      <h1 style="margin-top:16px">You're in.</h1>
       <p class="sub center" id="lobbySub">Predictions locked. When each quarter ends, questions drop here — be fast, points are live.</p>
     </div>
     <div class="statgrid" style="margin-top:10px">
@@ -1101,13 +1109,13 @@
       <div class="opts" id="qOpts"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
         <button class="helpbtn" id="helpBtn" onclick="useLifeline()">✨ Lifeline (1/half)</button>
-        <span style="font-size:11px;color:var(--dim)" id="helpNote"></span>
+        <span style="font-size:12px;color:var(--dim)" id="helpNote"></span>
       </div>
       <div id="revealBox"></div>
     </div>
     <div style="flex:1"></div>
     <button class="btn" id="nextBtn" style="display:none" onclick="nextQuestion()">Next</button>
-    <div class="center" id="lockNote" style="display:none;font-size:11.5px;color:var(--dim);margin-top:8px">⚠️ Once you lock it in, you can't change it.</div>
+    <div class="center" id="lockNote" style="display:none;font-size:12px;color:var(--dim);margin-top:8px">⚠️ Once you lock it in, you can't change it.</div>
   </section>
 
   <!-- 6. QUARTER BREAK / LEADERBOARD -->
@@ -1212,7 +1220,7 @@
 
     <!-- THE ONE TO SCREENSHOT. -->
     <div class="card fcall" id="fCall" style="display:none">
-      <div class="fchead" id="fCallHead">🎯 Best call of the night</div>
+      <div class="fchead" id="fCallHead">Best call of the night</div>
       <div class="fcq" id="fCallQ"></div>
       <div class="fca" id="fCallA"></div>
     </div>
@@ -1223,7 +1231,7 @@
          by recordStatLine() and deduped by night id, so a refresh cannot
          inflate it. Practice never touches it. -->
     <div class="card" id="fStatLine">
-      <div class="fbhead">📈 Your stat line · Season 1</div>
+      <div class="fbhead">Your stat line · Season 1</div>
       <div class="slgrid">
         <div class="slc"><div class="v" id="slGames">1</div><div class="k">Games</div></div>
         <div class="slc"><div class="v" id="slPts">0</div><div class="k">Points</div></div>
@@ -1241,12 +1249,12 @@
          into a game. Ask anywhere earlier and it reads as a gate. -->
     <div class="card" id="signupCard" style="display:none;border-color:rgba(46,230,166,.35)">
       <b style="font-size:15px">📬 Get the next Game Night</b>
-      <p class="sub" style="font-size:12.5px;margin:6px 0 0">One email before each game — when it's on, who's playing, what's up for grabs. That's it.</p>
+      <p class="sub" style="font-size:14px;margin:6px 0 0">One email before each game — when it's on, who's playing, what's up for grabs. That's it.</p>
       <label class="fld" for="suEmail">Email</label>
       <input id="suEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com">
       <label class="fld" for="suPhone">Phone <span style="text-transform:none;letter-spacing:0;font-weight:600">— optional</span></label>
       <input id="suPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(555) 555-5555">
-      <label style="display:flex;gap:10px;align-items:flex-start;margin:14px 0 0;font-size:11.5px;line-height:1.5;color:var(--muted);font-weight:600;cursor:pointer">
+      <label style="display:flex;gap:10px;align-items:flex-start;margin:14px 0 0;font-size:12px;line-height:1.5;color:var(--muted);font-weight:600;cursor:pointer">
         <input id="suConsent" type="checkbox" style="margin-top:1px">
         <span>Yes — email me about upcoming STATS game nights. If I enter a phone number, I also agree to receive recurring automated texts from STATS at that number once texting starts. Consent is <b>not</b> a condition of playing, scoring, or winning anything. Message &amp; data rates may apply. Reply STOP to any text to stop, HELP for help. You can delete your email and phone yourself any time from the end-of-game screen, or email <a href="mailto:aisoundz9@gmail.com" style="color:var(--teal2)">aisoundz9@gmail.com</a>.</span>
       </label>
@@ -1259,8 +1267,8 @@
          it — because that is what the sentence on the checkbox says. -->
     <div class="card" id="onListCard" style="display:none">
       <b style="font-size:14px">📬 You're on the list</b>
-      <p class="sub" style="font-size:12.5px;margin:6px 0 0" id="onListNote">One email before each game night. Nothing else, ever.</p>
-      <button class="btn ghost" id="unsubBtn" style="margin-top:10px;font-size:12.5px" onclick="unsubTap()">Take me off the list</button>
+      <p class="sub" style="font-size:14px;margin:6px 0 0" id="onListNote">One email before each game night. Nothing else, ever.</p>
+      <button class="btn ghost" id="unsubBtn" style="margin-top:10px;font-size:14px" onclick="unsubTap()">Take me off the list</button>
     </div>
     <!-- One thing to do, then one more, then a drawer. The old stack put
          "Leagues (preview)" and "STATS+" at the same visual weight as the
@@ -1275,7 +1283,7 @@
          never brought back, so the end of a game was a dead end inside the
          product. It returns the moment the reveal has landed, and this
          button says so out loud for anyone who does not look down. -->
-    <button class="btn ghost" style="margin-top:10px" onclick="goHomeFromFinal()">🏠 Back to home</button>
+    <button class="btn ghost" style="margin-top:10px" onclick="goHomeFromFinal()">Back to home</button>
     <details class="fmore">
       <summary>More — host tools, roast card, season pass</summary>
       <div class="fmorein">
@@ -1290,7 +1298,7 @@
 
   <!-- 9. LEAGUE -->
   <section class="screen" id="s-league">
-    <div class="brand" style="margin-top:2px"><span class="logo" style="font-size:19px;letter-spacing:1px">STATS GAMETIME</span></div>
+    <div class="brand" style="margin-top:2px"><span class="logo" style="font-size:17px;letter-spacing:1px">STATS GAMETIME</span></div>
     <div class="legalbox" style="background:rgba(255,197,77,.08);border-color:rgba(255,197,77,.3)"><b style="color:var(--gold)">Preview —</b> this is a sample of how Leagues will look. The members below are a demo; real friend leagues go live after the beta.</div>
     <div class="lg-head">
       <div class="lg-ic">💈</div>
@@ -1348,13 +1356,13 @@
       <h2 style="font-size:14px" id="hostToolTitle">🔴 Game Night toolkit — August 2</h2>
       <p class="sub" style="font-size:12px" id="hostToolSub">You're the host. At each quarter break: (1) tell the crew to answer in the app, (2) check the broadcast + box score, (3) post the answers in the group chat. ~60 seconds of work per quarter.</p>
       <div class="segbtns" id="hostSegs"></div>
-      <p class="sub" style="font-size:11px;margin-top:8px;color:var(--dim)" id="hostToolFoot">Tap a quarter to copy its questions for the group chat. Answers come from watching + the live box score.</p>
+      <p class="sub" style="font-size:12px;margin-top:8px;color:var(--dim)" id="hostToolFoot">Tap a quarter to copy its questions for the group chat. Answers come from watching + the live box score.</p>
     </div>
 
     <div class="card tight" id="pbpCard">
       <h2 style="font-size:14px">1 · Live data feed (play-by-play)</h2>
       <p class="sub" style="font-size:12px">Every quarter, the stats feed streams in events like these. This is the raw material — no human watching required.</p>
-      <div id="pbpFeed" style="font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.9;color:var(--muted);background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:11px;max-height:150px;overflow:auto"></div>
+      <div id="pbpFeed" style="font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.9;color:var(--muted);background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:11px;max-height:150px;overflow:auto"></div>
     </div>
 
     <div class="card tight" id="engineCard">
@@ -1375,7 +1383,7 @@
     </div>
 
     <div class="card tight">
-      <h2 style="font-size:14px">🏆 Crown the winner</h2>
+      <h2 style="font-size:14px">Crown the winner</h2>
       <p class="sub" style="font-size:12px" id="tallySub">After the final buzzer, collect everyone's scores from the group chat and enter them here to rank the crew and name the winner.</p>
       <button class="btn sm teal" onclick="openTally()">Open the tally board</button>
     </div>
@@ -1385,11 +1393,11 @@
   <!-- HOST TALLY -->
   <section class="screen" id="s-tally">
     <div class="brand" style="margin-top:2px"><span class="logo" style="font-size:17px;letter-spacing:.8px">STATS GAMETIME</span><span class="pill" style="align-self:center">Host tally</span></div>
-    <h1 style="margin-top:10px">Crown the winner 🏆</h1>
+    <h1 style="margin-top:10px">Crown the winner</h1>
     <p class="sub">Enter each player's final score from their result card. Highest points wins — ⚡ Speed breaks ties automatically.</p>
     <div id="tallyRows"></div>
     <button class="btn ghost sm" onclick="addTallyRow()">+ Add another player</button>
-    <button class="btn teal" onclick="crownWinner()">🏆 Crown the winner</button>
+    <button class="btn teal" onclick="crownWinner()">Crown the winner</button>
     <div id="tallyResult"></div>
     <button class="btn ghost" onclick="go('final')">← Back</button>
   </section>
@@ -1428,7 +1436,7 @@
     <div class="tt-sheet">
       <div class="tt-head"><b id="ttTitle">🔥 The room</b>
         <button id="ttMuteBtn" onclick="ttSetMute(!ttMuted())"
-                style="margin-left:auto;margin-right:8px;background:none;border:1px solid var(--line2,#2f3a58);color:var(--muted,#93a0bd);border-radius:999px;padding:5px 11px;font-weight:700;font-size:11.5px;cursor:pointer">🔔 Pings on</button>
+                style="margin-left:auto;margin-right:8px;background:none;border:1px solid var(--line2,#2f3a58);color:var(--muted,#93a0bd);border-radius:999px;padding:5px 11px;font-weight:700;font-size:12px;cursor:pointer">🔔 Pings on</button>
         <button class="tt-x" onclick="closeTalk()">✕</button></div>
       <div id="talkBody"></div>
       <div class="tt-compose" id="ttCompose">
@@ -3304,7 +3312,7 @@ function paintContinueCard(){
     if(demo) demo.style.display='none';
     if(!note){
       note=document.createElement('p'); note.id='contNote'; note.className='sub';
-      note.style.cssText='font-size:12.5px;margin:10px 0 0;text-align:center';
+      note.style.cssText='font-size:14px;margin:10px 0 0;text-align:center';
       btn.parentNode.insertBefore(note, btn);
     }
     let pts=0; try{ pts=Math.max(0,Math.round(S.pts||0)); }catch(_){}
@@ -4309,7 +4317,7 @@ function buildPred(){
        now, and it names the category instead of counting. */
     const missP = left>0 ? (function(){ const m=L.find(function(x){return !S.predChoices[x.id];}); return m?m.label.toLowerCase():''; })() : '';
     bar.innerHTML=
-      '<div class="pdsummary"><span>📋 Your card so far</span><b>'+doneN+' / '+preds.length+' locked</b></div>'
+      '<div class="pdsummary"><span>Your card so far</span><b>'+doneN+' / '+preds.length+' locked</b></div>'
      +'<button type="button" class="pdlock'+(left<=0?' ready':' todo')+'" id="pdLock">'
      +  (left<=0 ? 'Lock my card →' : ('Still need '+(missP||(left+' more'))+' →'))
      +'</button>';
@@ -4388,10 +4396,10 @@ function paintInactives(){
   if(INACTIVE.size){
     if(!bar){
       bar=document.createElement('div'); bar.id='inactiveBar';
-      bar.style.cssText='background:rgba(255,77,94,.10);border:1px solid rgba(255,77,94,.35);border-radius:12px;padding:11px 13px;margin-bottom:12px;font-size:12.5px;line-height:1.5;color:var(--muted,#93a0bd)';
+      bar.style.cssText='background:rgba(255,77,94,.10);border:1px solid rgba(255,77,94,.35);border-radius:12px;padding:11px 13px;margin-bottom:12px;font-size:14px;line-height:1.5;color:var(--muted,#93a0bd)';
       card.parentNode.insertBefore(bar,card);
     }
-    bar.innerHTML='<b style="color:#ff8a94">🚑 Not playing tonight</b><br>'+esc(INACTIVE_NOTE)+
+    bar.innerHTML='<b style="color:#ff8a94">Not playing tonight</b><br>'+esc(INACTIVE_NOTE)+
       '<div style="margin-top:5px;color:var(--dim,#5f6d8f)">Straight from the league injury report — don\'t spend a pick on them.</div>';
   } else if(bar){ bar.remove(); }
   // Flag the names inside the sheet itself.
@@ -5017,8 +5025,8 @@ function openReview(){
   rounds[S.qi].q.forEach((q,i)=>{
     const my=S.liveAnswers[S.qi][i]||{choice:null,bank:0};
     const c=document.createElement('div');c.className='card tight';
-    c.innerHTML=`<div style="font-size:13px;font-weight:800;margin-bottom:4px">${i+1}. ${q.t}</div>
-      <div style="font-size:11px;color:var(--dim);font-weight:700;margin-bottom:8px">Your pick: ${my.choice?`🔵 ${my.choice} (${my.bank}s banked)`:'⏰ none'}</div>
+    c.innerHTML=`<div style="font-size:14px;font-weight:800;margin-bottom:4px">${i+1}. ${q.t}</div>
+      <div style="font-size:12px;color:var(--dim);font-weight:700;margin-bottom:8px">Your pick: ${my.choice?`🔵 ${my.choice} (${my.bank}s banked)`:'⏰ none'}</div>
       <div class="opts" id="rev_${i}"></div>`;
     list.appendChild(c);
     const box=c.querySelector('#rev_'+i);
@@ -5195,7 +5203,7 @@ function openPredReview(){
       if(c0) c0.innerHTML='<div class="center" style="padding:26px 10px">'
         + '<div style="font-size:26px">🧮</div>'
         + '<b style="font-size:15px">Settling your card…</b>'
-        + '<p class="sub" style="font-size:12.5px;margin:8px 0 0">Reading the final box score. You don’t have to enter anything.</p></div>';
+        + '<p class="sub" style="font-size:14px;margin:8px 0 0">Reading the final box score. You don’t have to enter anything.</p></div>';
       try{ document.getElementById('prBtn').style.display='none'; }catch(_){}
       go('predreview');
       loadGameStats(true).then(function(){ predReviewDecide(); });
@@ -5347,7 +5355,7 @@ function showFinal(){
     setStat(2,'⚡'+S.speed,'Speed points (tiebreaker)');
     $f('finalTitle').textContent=`${L.End.replace(/[^A-Za-z]+$/,'')}, ${S.name||'player'}!`;
     $f('finalLb').innerHTML=
-      `<div class="card tight"><p class="sub" style="font-size:12.5px;margin:0">📲 Post your result card in the group chat. Highest points wins the night — ⚡ Speed breaks ties. Rematch at the next Game of the Night.</p></div>`;
+      `<div class="card tight"><p class="sub" style="font-size:14px;margin:0">📲 Post your result card in the group chat. Highest points wins the night — ⚡ Speed breaks ties. Rematch at the next Game of the Night.</p></div>`;
     finishLive();
   }else{
     const s=standings();const rank=s.findIndex(x=>x.me)+1;
@@ -6015,7 +6023,7 @@ async function submitSignup(){
     // thirty seconds and is worth more to us than the address alone.
     document.getElementById('signupCard').innerHTML=
       '<b style="font-size:15px;color:var(--teal2)">✅ You\'re on the list.</b>'+
-      '<p class="sub" style="font-size:12.5px;margin:6px 0 0">We\'ll email you before the next Game Night. '+
+      '<p class="sub" style="font-size:14px;margin:6px 0 0">We\'ll email you before the next Game Night. '+
       'Change your mind any time — every email has an unsubscribe link.</p>'+
       '<button class="btn ghost sm" style="margin-top:11px" '+
       'onclick="openJoin(\'final\',' + JSON.stringify(email) + ')">'+
@@ -6052,7 +6060,7 @@ async function submitSignup(){
     // The code is small and grey, not an error dump — but it is on screen,
     // so a screenshot from any player is now a real bug report.
     note.innerHTML='<b style="color:var(--gold)">'+said[0]+'</b> '+said[1]+
-      '<span style="display:block;margin-top:5px;font-size:11px;color:var(--dim)">code: '+
+      '<span style="display:block;margin-top:5px;font-size:12px;color:var(--dim)">code: '+
       String(res.why||'unknown')+'</span>';
     try{ console.error('[STATS] signup card failure:', res.why, res.detail||''); }catch(_){}
   }
@@ -6213,7 +6221,7 @@ async function submitJoin(){
     const said=SAY[res.why]||['That didn\'t save.','Nothing was recorded. Tap again in a second.'];
     btn.disabled=false; btn.textContent='Try again →';
     note.innerHTML='<b style="color:var(--gold)">'+said[0]+'</b> '+said[1]+
-      '<span style="display:block;margin-top:5px;font-size:11px;color:var(--dim)">code: '+String(res.why||'unknown')+'</span>';
+      '<span style="display:block;margin-top:5px;font-size:12px;color:var(--dim)">code: '+String(res.why||'unknown')+'</span>';
     try{ console.error('[STATS] join failure:', res.why, res.detail||''); }catch(_){}
   }
 }
@@ -6965,16 +6973,17 @@ function ensureCiCard(){
     '@keyframes ciUp{from{transform:translateX(-50%) translateY(24px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}'+
     '#ciCard .cilockbar{height:4px;border-radius:99px;background:#22304d;overflow:hidden;margin-bottom:11px}'+
     '#ciCard .cilockbar i{display:block;height:100%;background:linear-gradient(92deg,#28e0d0,#4d86ff);width:100%;transform-origin:left}'+
-    '#ciCard .cihead{font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#28e0d0;margin-bottom:6px}'+
+    '#ciCard .cihead{display:flex;align-items:center;gap:7px;font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#28e0d0;margin-bottom:6px}'+
+    '#ciCard .cihead .ico{width:16px;height:16px}'+
     '#ciCard .ciq{font-weight:800;font-size:17px;line-height:1.25;color:#eef2fb;margin-bottom:11px}'+
     '#ciCard .ciopts{display:flex;gap:8px;flex-wrap:wrap}'+
     '#ciCard .ciopt{flex:1 1 45%;min-width:120px;padding:14px 10px;border-radius:12px;border:1px solid #3a4b73;'+
       'background:#0f1626;color:#eef2fb;font-weight:800;font-size:15px;cursor:pointer}'+
     '#ciCard .ciopt:disabled{opacity:.55;cursor:default}'+
     '#ciCard .ciopt.cisel{background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e;border-color:transparent}'+
-    '#ciCard .cistat{margin-top:10px;font-size:12.5px;color:#93a0bd}'+
+    '#ciCard .cistat{margin-top:10px;font-size:14px;color:#93a0bd}'+
     '#ciCard .cibody{font-size:15px;color:#eef2fb}'+
-    '#ciCard .cireveal{margin-top:6px;font-size:13px;color:#93a0bd}'+
+    '#ciCard .cireveal{margin-top:6px;font-size:14px;color:#93a0bd}'+
     '#ciCard .cifoot{display:flex;gap:16px;align-items:center}'+
     '#ciCard .cimute{margin-top:10px;background:none;border:none;color:#5b6a8c;font-size:12px;cursor:pointer;text-decoration:underline}'+
     /* the commit, painted on the same frame as the tap */
@@ -6988,10 +6997,10 @@ function ensureCiCard(){
       'background:linear-gradient(92deg,#28e0d0,#4d86ff);animation:ciPop .3s cubic-bezier(.16,1.3,.3,1)}'+
     '@keyframes ciPop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}'+
     '#ciCard .cilb{flex:1;min-width:0}'+
-    '#ciCard .cilv{font-size:16px;font-weight:900;color:#eef2fb;line-height:1.2}'+
-    '#ciCard .cilq{font-size:11.5px;color:#5b6a8c;margin-top:2px;overflow:hidden;'+
+    '#ciCard .cilv{font-size:15px;font-weight:900;color:#eef2fb;line-height:1.2}'+
+    '#ciCard .cilq{font-size:12px;color:#5b6a8c;margin-top:2px;overflow:hidden;'+
       'text-overflow:ellipsis;white-space:nowrap}'+
-    '#ciCard .cistreak{flex:0 0 auto;font-size:13px;font-weight:900;color:var(--gold,#ffc54d)}'+
+    '#ciCard .cistreak{flex:0 0 auto;font-size:14px;font-weight:900;color:var(--gold,#ffc54d)}'+
     /* motion, so "waiting" looks like waiting and not like frozen */
     '#ciCard .ciwait{height:3px;border-radius:99px;background:#22304d;overflow:hidden;margin-bottom:9px}'+
     '#ciCard .ciwait i{display:block;height:100%;width:40%;border-radius:99px;'+
@@ -7000,11 +7009,11 @@ function ensureCiCard(){
     /* the result */
     '#ciCard .cires{display:flex;align-items:center;gap:12px;margin:2px 0 4px}'+
     '#ciCard .ciresi{flex:0 0 auto;font-size:24px}'+
-    '#ciCard .ciresh{font-size:19px;font-weight:900;color:#eef2fb;line-height:1.15}'+
+    '#ciCard .ciresh{font-size:17px;font-weight:900;color:#eef2fb;line-height:1.15}'+
     '#ciCard .cires.ok .ciresh{color:#2ee6a6}'+
     '#ciCard .cires.no .ciresh{color:#ff8a94}'+
     '#ciCard .ciresp{font-size:12px;color:#93a0bd;margin-top:2px}'+
-    '#ciCard .cirun{font-size:13.5px;color:var(--gold,#ffc54d);font-weight:800;margin:6px 0 2px}'+
+    '#ciCard .cirun{font-size:14px;color:var(--gold,#ffc54d);font-weight:800;margin:6px 0 2px}'+
     '#ciCard .cirun.cimiss{color:#5b6a8c;font-weight:700}'+
     '#ciCard[data-heat="1"]{border-color:rgba(255,197,77,.55)}'+
     '#ciCard[data-heat="2"]{border-color:rgba(255,146,77,.7);box-shadow:0 18px 50px rgba(255,146,77,.18)}'+
@@ -7110,7 +7119,7 @@ function renderCiCard(q){
   // Not now — hold it, and let ciFlush bring it back when the coast clears.
   if(!ciScreenOk()){ PCI.pending=q; c.style.display='none'; return; }
   var st=q.state||'open';
-  if(st==='void'){ ciShow('<div class="cihead">🎯 Call It</div><div class="cibody">No result on that one — no harm done.</div>'); ciHideSoon(3500); return; }
+  if(st==='void'){ ciShow('<div class="cihead">'+ico('live')+' Call It</div><div class="cibody">No result on that one — no harm done.</div>'); ciHideSoon(3500); return; }
   if(st==='resolved'){
     ciGrade(q);
     var pk=PCI.picked[q.qid];
@@ -7125,7 +7134,7 @@ function renderCiCard(q){
     var run  = (pk!=null && right && PCI.streak>1)
       ? '<div class="cirun">🔥 <b>'+PCI.streak+' in a row</b>'+(PCI.streak>=3?' — you’re on a run':'')+'</div>'
       : (pk!=null && !right && PCI.best>1 ? '<div class="cirun cimiss">streak reset · your best is '+PCI.best+'</div>' : '');
-    ciShow('<div class="cihead">🎯 Call It · resolved</div>'+
+    ciShow('<div class="cihead">'+ico('live')+' Call It · resolved</div>'+
            '<div class="cires'+(right?' ok':(pk==null?'':' no'))+'"><span class="ciresi">'+icon+'</span>'+
              '<div><div class="ciresh">'+esc(head)+'</div>'+
              (pk!=null?('<div class="ciresp">You said '+esc(ciLabel(q,pk))+'</div>'):'')+'</div></div>'+
@@ -7151,7 +7160,7 @@ function renderCiCard(q){
      your attention carried on demanding it after you had already dealt
      with it. */
   if(pick!=null && st!=='resolved'){
-    ciShow('<div class="cihead">🎯 Call It · locked in</div>'+
+    ciShow('<div class="cihead">'+ico('live')+' Call It · locked in</div>'+
            '<div class="cilocked"><span class="cichk">✓</span>'+
              '<div class="cilb"><div class="cilv">'+esc(ciLabel(q,pick))+'</div>'+
              '<div class="cilq">'+esc(q.prompt)+'</div></div>'+
@@ -7168,7 +7177,7 @@ function renderCiCard(q){
     var status = locked ? 'Time — the answer lands in a moment'
                         : 'Tap one. You’ve got a few seconds.';
     ciShow((locked?'':'<div class="cilockbar"><i style="width:'+pctLeft+'%;transition:width .25s linear"></i></div>')+
-           '<div class="cihead">🎯 Call It</div>'+
+           '<div class="cihead">'+ico('live')+' Call It</div>'+
            '<div class="ciq">'+esc(q.prompt)+'</div>'+
            '<div class="ciopts">'+opts+'</div>'+
            '<div class="cistat">'+status+(PCI.streak?(' · 🔥 '+PCI.streak+' in a row'):'')+'</div>'+
@@ -7436,9 +7445,9 @@ function renderHostedReview(r, idx, revealed){
     const k=revealed?revMarks[i]:null;
     const hit=revealed && my.choice!==null && my.choice===k;
     const c=document.createElement('div');c.className='card tight';
-    c.innerHTML=`<div style="font-size:13px;font-weight:800;margin-bottom:4px">${i+1}. ${q.t}</div>
-      <div style="font-size:11px;color:var(--dim);font-weight:700">Your pick: ${my.choice?`🔵 ${my.choice} (${my.bank}s banked)`:'⏰ none'}</div>
-      ${revealed?`<div style="font-size:11px;font-weight:800;margin-top:6px;color:${hit?'var(--teal2)':'var(--dim)'}">${hit?'✓ correct':'✕ answer: '+(k||'—')}</div>`:''}`;
+    c.innerHTML=`<div style="font-size:14px;font-weight:800;margin-bottom:4px">${i+1}. ${q.t}</div>
+      <div style="font-size:12px;color:var(--dim);font-weight:700">Your pick: ${my.choice?`🔵 ${my.choice} (${my.bank}s banked)`:'⏰ none'}</div>
+      ${revealed?`<div style="font-size:12px;font-weight:800;margin-top:6px;color:${hit?'var(--teal2)':'var(--dim)'}">${hit?'✓ correct':'✕ answer: '+(k||'—')}</div>`:''}`;
     list.appendChild(c);
   });
 }
@@ -7497,8 +7506,8 @@ function holdForHost(idx){
     // No tick, no cross, no answer. We do not know any of those yet, and
     // guessing at them is the entire bug this function exists to kill.
     c.innerHTML=
-      `<div style="font-size:13px;font-weight:800;margin-bottom:4px">${i+1}. ${q.t}</div>
-       <div style="font-size:11px;color:var(--dim);font-weight:700">Your pick: ${
+      `<div style="font-size:14px;font-weight:800;margin-bottom:4px">${i+1}. ${q.t}</div>
+       <div style="font-size:12px;color:var(--dim);font-weight:700">Your pick: ${
          my.choice?`🔵 ${my.choice}${my.bank?` (${my.bank}s banked)`:''}`:'⏰ none'}</div>`;
     list.appendChild(c);
   });
@@ -8041,7 +8050,7 @@ function ttPaintBadge(){
     s.setAttribute('data-ttbadge','1');
     s.textContent=ttUnread>9?'9+':String(ttUnread);
     s.style.cssText='display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;'+
-      'margin-left:7px;border-radius:999px;background:var(--red,#ff4d5e);color:#fff;font-size:11px;font-weight:900;padding:0 5px';
+      'margin-left:7px;border-radius:999px;background:var(--red,#ff4d5e);color:#fff;font-size:12px;font-weight:900;padding:0 5px';
     b.appendChild(s);
   });
 }
@@ -8407,13 +8416,13 @@ function crownWinner(){
   const tieOnPts = players.length>1 && players[0].pts===players[1].pts;
   const el=document.getElementById('tallyResult');
   el.innerHTML=`<div class="card tight" style="margin-top:12px">
-    <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:8px">🏆 ${players[0].n} wins the night!${tieOnPts?' <span style="color:var(--teal2);font-weight:700">(⚡ Speed broke the tie)</span>':''}</div>
+    <div style="font-size:14px;font-weight:800;color:var(--gold);margin-bottom:8px">🏆 ${players[0].n} wins the night!${tieOnPts?' <span style="color:var(--teal2);font-weight:700">(⚡ Speed broke the tie)</span>':''}</div>
     ${players.map((p,i)=>`<div class="lb${i===0?' me':''}" style="margin:6px 0">
       <div class="rank ${i==0?'g':i==1?'s':i==2?'b':''}">${i+1}</div>
       <div class="av" style="background:${COLORS[i%COLORS.length]}">${p.n[0].toUpperCase()}</div>
       <div class="lbname">${p.n}${i===0?' 👑':''}<small>⚡ ${p.spd} speed</small></div>
       <div class="lbpts">${p.pts}</div></div>`).join('')}
-    <p class="sub" style="font-size:11px;margin:8px 0 0;color:var(--dim)">Screenshot this and drop it in the group chat.</p>
+    <p class="sub" style="font-size:12px;margin:8px 0 0;color:var(--dim)">Screenshot this and drop it in the group chat.</p>
   </div>
   <button class="btn ghost sm" style="margin-top:10px" onclick="openRoast()">😈 Roast card — name the loser</button>`;
   el.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -8470,7 +8479,7 @@ function runEngine(){
   out.innerHTML=picks.map((p,i)=>
     `<div class="hq" style="animation:fade .4s ${i*0.15}s both"><b>Q3 · "${p.q}"</b>
       <div class="ha">✅ Answer auto-locked from feed: <b style="color:var(--green)">${p.a}</b> · <span class="status live">Generated</span></div></div>`).join('')
-    +`<div class="ha" style="margin-top:8px;font-size:11.5px;color:var(--dim)">3 questions written, answers locked, 1,204 players scored — zero human input. A 4th template (timeouts) sits in reserve if a question gets voided.</div>`;
+    +`<div class="ha" style="margin-top:8px;font-size:12px;color:var(--dim)">3 questions written, answers locked, 1,204 players scored — zero human input. A 4th template (timeouts) sits in reserve if a question gets voided.</div>`;
   toast('⚙️ Engine ran: 3 questions generated from 14 feed events.');
 }
 function restart(){
@@ -8595,7 +8604,7 @@ function paintChrome(){
     st.textContent='.scorebar{position:relative;overflow:hidden}'
       +'.scorebar::before{content:"";position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,rgba(199,150,90,.12),rgba(90,60,30,.03))}'
       +'.scorebar>*{position:relative;z-index:1}'
-      +'.mini-crest{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;border:2px solid var(--tc,#28e0d0);background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.16),rgba(8,16,28,.92) 72%);box-shadow:0 0 10px -4px var(--tc,#28e0d0);font-size:13px;vertical-align:middle;flex:0 0 auto}'
+      +'.mini-crest{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;border:2px solid var(--tc,#28e0d0);background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.16),rgba(8,16,28,.92) 72%);box-shadow:0 0 10px -4px var(--tc,#28e0d0);font-size:14px;vertical-align:middle;flex:0 0 auto}'
       +'.scorebar .nm{display:inline-flex;align-items:center;gap:7px}'
       +'.fhero{position:relative;overflow:hidden}.fhero>*{position:relative;z-index:1}'
       +'.fhero-bg{position:absolute;inset:0;z-index:0;pointer-events:none}';
@@ -8633,33 +8642,33 @@ async function mountMatchup(){
     #matchupCard{padding:0!important}
     .mu{padding:15px 15px 16px}
     .mu-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}
-    .mu-h b{font-size:11px;letter-spacing:.14em;color:var(--teal2,#28e0d0);font-weight:800;text-transform:uppercase}
-    .mu-src{font-size:9px;letter-spacing:.12em;color:var(--muted);font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:5px}
+    .mu-h b{font-size:12px;letter-spacing:.14em;color:var(--teal2,#28e0d0);font-weight:800;text-transform:uppercase}
+    .mu-src{font-size:12px;letter-spacing:.12em;color:var(--muted);font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:5px}
     .mu-src::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green,#2ee6a6)}
     .mu-teams{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px}
     .mu-team{text-align:center}
     .mu-crest{position:relative;width:54px;height:54px;margin:0 auto 7px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 36%,rgba(255,255,255,.14),rgba(8,16,28,.92) 72%);border:2px solid var(--tc);box-shadow:0 6px 18px -7px var(--tc),inset 0 0 12px -6px var(--tc)}
-    .mu-cab{font-weight:900;font-size:18px;color:#fff;letter-spacing:.02em}
-    .mu-cem{position:absolute;bottom:-4px;right:-4px;font-size:13px;filter:drop-shadow(0 1px 2px #000)}
-    .mu-nm{font-size:11px;color:var(--muted);font-weight:600}
-    .mu-rec{font-weight:800;font-size:19px;margin-top:4px}
-    .mu-at{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#08101c;background:linear-gradient(135deg,var(--gold,#ffc54d),#ffb020);box-shadow:0 5px 14px -5px rgba(255,197,77,.7)}
+    .mu-cab{font-weight:900;font-size:17px;color:#fff;letter-spacing:.02em}
+    .mu-cem{position:absolute;bottom:-4px;right:-4px;font-size:14px;filter:drop-shadow(0 1px 2px #000)}
+    .mu-nm{font-size:12px;color:var(--muted);font-weight:600}
+    .mu-rec{font-weight:800;font-size:17px;margin-top:4px}
+    .mu-at{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#08101c;background:linear-gradient(135deg,var(--gold,#ffc54d),#ffb020);box-shadow:0 5px 14px -5px rgba(255,197,77,.7)}
     .mu-form{display:flex;gap:4px;justify-content:center}
-    .mu-dot{width:15px;height:15px;border-radius:4px;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;color:#08101c}
+    .mu-dot{width:15px;height:15px;border-radius:4px;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;color:#08101c}
     .mu-w{background:var(--green,#2ee6a6)} .mu-l{background:var(--red,#ff4d5e)}
-    .mu-lab{font-size:9.5px;letter-spacing:.11em;color:var(--muted);text-transform:uppercase;font-weight:800;text-align:center;margin:13px 0 6px}
+    .mu-lab{font-size:12px;letter-spacing:.11em;color:var(--muted);text-transform:uppercase;font-weight:800;text-align:center;margin:13px 0 6px}
     .mu-bar{height:9px;border-radius:6px;background:var(--red,#ff4d5e);overflow:hidden}
     .mu-bar>i{display:block;height:100%;background:linear-gradient(90deg,#28e0d0,#4d86ff)}
-    .mu-barrow{display:flex;justify-content:space-between;font-size:11px;font-weight:800;margin-top:5px}
+    .mu-barrow{display:flex;justify-content:space-between;font-size:12px;font-weight:800;margin-top:5px}
     .mu-div{height:1px;background:var(--line,#26304a);margin:14px 0}
     .mu-duel{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center}
     .mu-star{text-align:center}
-    .mu-swho{font-weight:800;font-size:12.5px}
-    .mu-sline{font-size:11px;color:var(--gold,#ffc54d);font-weight:800;margin-top:2px}
-    .mu-vs{font-size:10px;font-weight:800;color:var(--muted)}
-    .mu-h2h{text-align:center;font-size:12.5px}
+    .mu-swho{font-weight:800;font-size:14px}
+    .mu-sline{font-size:12px;color:var(--gold,#ffc54d);font-weight:800;margin-top:2px}
+    .mu-vs{font-size:12px;font-weight:800;color:var(--muted)}
+    .mu-h2h{text-align:center;font-size:14px}
     .mu-h2h b{color:var(--ink)}
-    .mu-h2h .g{color:var(--muted);font-weight:600;margin-top:3px;font-size:11.5px}
+    .mu-h2h .g{color:var(--muted);font-weight:600;margin-top:3px;font-size:12px}
     .mu-watch{margin-top:13px;border-left:3px solid var(--gold,#ffc54d);background:rgba(255,197,77,.09);padding:9px 11px;border-radius:0 8px 8px 0;font-size:12px;line-height:1.5}
     .mu-skel{padding:20px;text-align:center;color:var(--muted);font-size:12px}
     `;
@@ -8779,10 +8788,10 @@ function applySport(){
   set('teamAwayNm',`${GAME.awayAbbr} ${GAME.awayEmoji}`);
   set('qLabel',roundTag(0));
   // predictions screen
-  set('predHead',`Make your picks 📝`);
+  set('predHead',`Make your picks`);
   set('predSub',`Lock these in before ${L.start}. ${preds.some(p=>p.bonus)?'Bonus points if you nail the exact number.':'All '+preds.length+' always resolve — no dead picks.'}`
     +(CONF_ON?' Then rank them — the ones you back hardest pay the most.':''));
-  set('predBtn',`Lock it in — go to ${L.start} 🔒`);
+  set('predBtn',`Lock it in — go to ${L.start}`);
   set('predMeta',`PRE-${L.Unit.toUpperCase()} PREDICTION SHEET`);
   set('predWorth',`Up to ${PRED_MAX} pts`);
   set('finalMax',`OUT OF ${MAXPTS}`);
@@ -8880,23 +8889,23 @@ function renderPortal(){
     try{ ciBest=Math.max(0,(typeof PCI!=='undefined'&&PCI&&PCI.best)||0); }catch(_){}
     const initial=esc((nm||'S').slice(0,1).toUpperCase());
     const stat=function(v2,k){ return '<div style="flex:1;background:#0e1626;border:1px solid #26304a;border-radius:12px;padding:10px 8px;text-align:center">'
-      +'<div style="font-size:19px;font-weight:900;color:#eef2fb">'+v2+'</div>'
-      +'<div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#93a0bd;margin-top:2px">'+k+'</div></div>'; };
+      +'<div style="font-size:17px;font-weight:900;color:#eef2fb">'+v2+'</div>'
+      +'<div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#93a0bd;margin-top:2px">'+k+'</div></div>'; };
     w.innerHTML=
       '<div style="display:flex;align-items:center;gap:12px;margin-bottom:11px">'
-      +  '<div style="flex:0 0 auto;width:42px;height:42px;border-radius:13px;background:'+esc(clr)+';display:flex;align-items:center;justify-content:center;font-weight:900;font-size:19px;color:#04121e">'+initial+'</div>'
+      +  '<div style="flex:0 0 auto;width:42px;height:42px;border-radius:13px;background:'+esc(clr)+';display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17px;color:#04121e">'+initial+'</div>'
       +  '<div style="flex:1;min-width:0">'
-      +    '<b style="font-size:15.5px">'+(nm?('Welcome back, '+esc(nm)):'✅ You’re in')+'</b>'
-      +    '<div style="font-size:11.5px;color:var(--muted,#93a0bd);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(em||'')+'</div>'
+      +    '<b style="font-size:15px">'+(nm?('Welcome back, '+esc(nm)):'✅ You’re in')+'</b>'
+      +    '<div style="font-size:12px;color:var(--muted,#93a0bd);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(em||'')+'</div>'
       +  '</div>'
-      +  '<button onclick="doSignOut()" style="flex:0 0 auto;background:none;border:1px solid var(--line2,#2f3a58);color:var(--muted,#93a0bd);border-radius:999px;padding:6px 11px;font-weight:700;font-size:11.5px;cursor:pointer">Sign out</button>'
+      +  '<button onclick="doSignOut()" style="flex:0 0 auto;background:none;border:1px solid var(--line2,#2f3a58);color:var(--muted,#93a0bd);border-radius:999px;padding:6px 11px;font-weight:700;font-size:12px;cursor:pointer">Sign out</button>'
       +'</div>'
       +'<div style="display:flex;gap:8px">'
       +  stat(season.toLocaleString(),'Season pts')
       +  stat(nights,'Game nights')
       +  stat(ciBest?('🔥'+ciBest):'—','Best Call It')
       +'</div>'
-      +'<p class="sub" style="font-size:11.5px;margin:10px 0 0">Your handle, card and points follow you to any phone.</p>';
+      +'<p class="sub" style="font-size:12px;margin:10px 0 0">Your handle, card and points follow you to any phone.</p>';
     w.style.display='block';
   } else { w.style.display='none'; }
 }
@@ -9023,7 +9032,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.56';
+const STATS_BUILD='2026-08-11-g6-ny-ind.57';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -9045,7 +9054,7 @@ function showUpdateBar(){
   b.textContent='↻ New version ready — tap to refresh';
   b.style.cssText='position:fixed;left:50%;transform:translateX(-50%);top:10px;z-index:9999;'+
     'background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e;border:none;border-radius:999px;'+
-    'padding:11px 18px;font-weight:800;font-size:13px;line-height:1;box-shadow:0 10px 28px rgba(0,0,0,.45);cursor:pointer';
+    'padding:11px 18px;font-weight:800;font-size:14px;line-height:1;box-shadow:0 10px 28px rgba(0,0,0,.45);cursor:pointer';
   b.onclick=function(){ location.replace(location.pathname+'?v='+Date.now()); };
   document.body.appendChild(b);
 }
@@ -9342,15 +9351,15 @@ function renderMe(){
   try{ best=Math.max(0,(typeof PCI!=='undefined'&&PCI&&PCI.best)||0); }catch(_){}
   const tile=function(a,k){ return '<div style="flex:1;background:#0e1626;border:1px solid #26304a;border-radius:14px;padding:15px 8px;text-align:center">'
     +'<div style="font-size:24px;font-weight:900;color:#eef2fb">'+a+'</div>'
-    +'<div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#93a0bd;margin-top:3px">'+k+'</div></div>'; };
+    +'<div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#93a0bd;margin-top:3px">'+k+'</div></div>'; };
   el.innerHTML= v
     ? '<div class="card">'
       + '<div style="display:flex;align-items:center;gap:14px">'
-      +   '<div style="flex:0 0 auto;width:60px;height:60px;border-radius:18px;background:'+esc(clr)+';display:flex;align-items:center;justify-content:center;font-weight:900;font-size:27px;color:#04121e">'+esc((nm||'S').slice(0,1).toUpperCase())+'</div>'
+      +   '<div style="flex:0 0 auto;width:60px;height:60px;border-radius:18px;background:'+esc(clr)+';display:flex;align-items:center;justify-content:center;font-weight:900;font-size:26px;color:#04121e">'+esc((nm||'S').slice(0,1).toUpperCase())+'</div>'
       +   '<div style="flex:1;min-width:0">'
-      +     '<div style="font-size:21px;font-weight:900;color:#eef2fb">'+esc(nm||'Your card')+'</div>'
+      +     '<div style="font-size:20px;font-weight:900;color:#eef2fb">'+esc(nm||'Your card')+'</div>'
       +     '<div style="font-size:12px;color:var(--muted,#93a0bd);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(em)+'</div>'
-      +     (sport?'<div style="font-size:11.5px;color:#28e0d0;margin-top:3px;font-weight:800">'+esc(sport)+' fan</div>':'')
+      +     (sport?'<div style="font-size:12px;color:#28e0d0;margin-top:3px;font-weight:800">'+esc(sport)+' fan</div>':'')
       +   '</div>'
       + '</div>'
       + '<div style="display:flex;gap:9px;margin-top:15px">'+tile(season.toLocaleString(),'Season pts')+tile(nights,'Game nights')+tile(best?('🔥'+best):'—','Best Call It')+'</div>'
@@ -9360,13 +9369,13 @@ function renderMe(){
          place to watch a game, not a place to find a grey test button. */
       + '<div class="card" style="margin-top:12px;padding:14px 16px">'
       +   '<div class="stHd">TRY IT OUT</div>'
-      +   '<button type="button" id="meTry" class="pdlock" style="background:#16233b;color:#cfd8ea;font-size:14px;padding:13px">🎯 Run a practice Call It</button>'
-      +   '<div class="sub" style="font-size:11.5px;margin-top:7px">Fires a real question built from tonight’s numbers. Practice only — it doesn’t count toward your streak or your points.</div>'
+      +   '<button type="button" id="meTry" class="pdlock" style="background:#16233b;color:#cfd8ea;font-size:14px;padding:13px">Run a practice Call It</button>'
+      +   '<div class="sub" style="font-size:12px;margin-top:7px">Fires a real question built from tonight’s numbers. Practice only — it doesn’t count toward your streak or your points.</div>'
       + '</div>'
-      + '<button class="btn ghost" style="margin-top:12px;font-size:12.5px" onclick="openJoin(\'me\',\'\')">Tell us what you watch</button>'
-      + '<button class="btn ghost" style="margin-top:8px;font-size:12.5px" onclick="doSignOut()">Sign out</button>'
+      + '<button class="btn ghost" style="margin-top:12px;font-size:14px" onclick="openJoin(\'me\',\'\')">Tell us what you watch</button>'
+      + '<button class="btn ghost" style="margin-top:8px;font-size:14px" onclick="doSignOut()">Sign out</button>'
     : '<div class="card center">'
-      + '<b style="font-size:16px">You’re not signed in yet</b>'
+      + '<b style="font-size:15px">You’re not signed in yet</b>'
       + '<p class="sub" style="margin:8px 0 14px">Sign in and this becomes your card — season points, game nights played, and your best Call It streak.</p>'
       + '<button class="btn" onclick="go(\'landing\')">Go to sign in</button>'
       + '</div>';
@@ -9397,9 +9406,9 @@ function buildStampHTML(){
   var short=String(STATS_BUILD).split('.').pop();
   return '<div class="center" style="margin-top:18px">'
     + '<button class="buildStamp" id="buildStamp" style="background:none;border:none;cursor:pointer;'
-    + 'font-weight:800;font-size:11.5px;line-height:1.5;color:#5b6a8c;letter-spacing:.06em">'
+    + 'font-weight:800;font-size:12px;line-height:1.5;color:#5b6a8c;letter-spacing:.06em">'
     + 'Version <b style="color:#93a0bd">'+esc(short)+'</b> · '+esc(STATS_BUILD)+'</button>'
-    + '<div class="sub" style="font-size:10.5px;margin-top:3px;opacity:.7">Tap to copy. If this is behind, pull down to refresh.</div>'
+    + '<div class="sub" style="font-size:12px;margin-top:3px;opacity:.7">Tap to copy. If this is behind, pull down to refresh.</div>'
     + '</div>';
 }
 
@@ -9702,8 +9711,8 @@ function renderBoard(){
     }catch(_){}
     out+='<div class="card center" style="padding:22px"><div style="font-size:26px">🏆</div>'
       + '<b style="font-size:15px">'+(S.mode==='live'?'No players on the board yet':'The board fills up at tip-off')+'</b>'
-      + (why?'<p class="sub" style="font-size:12.5px;margin:8px 0 0;color:#ffc54d">'+esc(why)+'</p>':'')
-      + '<p class="sub" style="font-size:12.5px;margin:8px 0 0">Every right answer moves a row. Q4 is worth four times Q1, so it keeps moving to the buzzer.</p></div>';
+      + (why?'<p class="sub" style="font-size:14px;margin:8px 0 0;color:#ffc54d">'+esc(why)+'</p>':'')
+      + '<p class="sub" style="font-size:14px;margin:8px 0 0">Every right answer moves a row. Q4 is worth four times Q1, so it keeps moving to the buzzer.</p></div>';
   }
   var ss=seasonStats();
   out+='<div class="card" style="padding:14px 16px;margin-top:12px"><div class="stHd">YOUR SEASON</div>'
@@ -10302,8 +10311,8 @@ function stCard(title,inner,extra){
 }
 function stEmpty(icon,head,sub){
   return '<div class="card center" style="padding:26px 18px;margin-top:12px"><div style="font-size:26px">'+icon+'</div>'
-    + '<b style="font-size:14.5px">'+head+'</b>'
-    + '<p class="sub" style="font-size:12.5px;margin:7px 0 0">'+sub+'</p></div>';
+    + '<b style="font-size:15px">'+head+'</b>'
+    + '<p class="sub" style="font-size:14px;margin:7px 0 0">'+sub+'</p></div>';
 }
 
 function renderStats(){
@@ -10312,7 +10321,7 @@ function renderStats(){
     var dead=GS.fails>=2;
     el.innerHTML='<div class="card center" style="padding:24px"><div style="font-size:26px">📈</div>'
       +'<b style="font-size:15px">'+(dead?'Can’t reach the league feed':'Pulling the numbers…')+'</b>'
-      +'<p class="sub" style="font-size:12.5px;margin:8px 0 12px">'
+      +'<p class="sub" style="font-size:14px;margin:8px 0 12px">'
       +(dead?'Nothing here is ever typed in by hand, so rather than show you a made-up number this screen waits. Everything else in the app still works.':'Live from the league feed. One moment.')+'</p>'
       +(dead?'<button type="button" id="stRetry" class="pdlock" style="max-width:260px;margin:0 auto;background:#16233b;color:#93a0bd;font-size:14px;padding:13px">Try again</button>':'')
       +'</div>';
@@ -10335,7 +10344,7 @@ function renderStats(){
      Gametime tab is where you go to watch it move. ------------------ */
   out+='<div class="card" style="padding:11px 14px;display:flex;align-items:center;justify-content:space-between">'
     + '<div style="flex:1;text-align:center"><div class="stTeam">'+esc(A.ab)+'</div><div style="font-size:22px;font-weight:900;color:#eef2fb;line-height:1.15">'+(A.score==null?'–':A.score)+'</div></div>'
-    + '<div style="flex:0 0 auto;padding:0 10px"><span class="pill" style="font-size:10.5px">'+esc(GS.detail||(live?'LIVE':'Not started'))+'</span></div>'
+    + '<div style="flex:0 0 auto;padding:0 10px"><span class="pill" style="font-size:12px">'+esc(GS.detail||(live?'LIVE':'Not started'))+'</span></div>'
     + '<div style="flex:1;text-align:center"><div class="stTeam">'+esc(B.ab)+'</div><div style="font-size:22px;font-weight:900;color:#eef2fb;line-height:1.15">'+(B.score==null?'–':B.score)+'</div></div>'
     + '</div>';
 
@@ -10369,7 +10378,7 @@ function renderStats(){
     } else if(!live){
       out+=stCard('YOUR CARD', mine.map(function(p){
         return '<div class="stLead"><span class="stLeadN">'+esc(p.label)+'</span><span class="stLeadV">'+esc(String(S.predChoices[p.id]))+'</span></div>';
-      }).join('') + '<div class="sub" style="font-size:11.5px;margin-top:8px">The moment the ball goes up, each of these becomes a live race.</div>');
+      }).join('') + '<div class="sub" style="font-size:12px;margin-top:8px">The moment the ball goes up, each of these becomes a live race.</div>');
     } else {
       var cfg=sportCfg().box, KEY={pts:cfg.pts,reb:cfg.reb,ast:cfg.ast,stl:cfg.stl,blk:cfg.blk};
       var winning=0, rows=mine.map(function(p){
@@ -10397,9 +10406,9 @@ function renderStats(){
       // Your picks who aren't playing — the only injury news that matters to you.
       try{
         var hurt=(GS.inj||[]).filter(function(i){ return i.out && mine.some(function(p){ return String(S.predChoices[p.id])===i.name; }); });
-        if(hurt.length) out+=stCard('', '<div style="font-size:13px;color:#ff8a94;font-weight:800">🚑 '
+        if(hurt.length) out+=stCard('', '<div style="font-size:14px;color:#ff8a94;font-weight:800">🚑 '
           + hurt.map(function(i){ return esc(i.name)+' is '+esc(i.status||'OUT'); }).join(' · ')
-          + '</div><div class="sub" style="font-size:11.5px;margin-top:5px">You have a pick on someone who isn’t playing.</div>', ';border-color:rgba(255,77,94,.35)');
+          + '</div><div class="sub" style="font-size:12px;margin-top:5px">You have a pick on someone who isn’t playing.</div>', ';border-color:rgba(255,77,94,.35)');
       }catch(_){}
     }
   }
@@ -10474,11 +10483,11 @@ function renderStats(){
             + (c.s?'<div class="stFactS">'+esc(c.s)+'</div>':'')
             + '</div></div>';
         }).join(''));
-      out+='<div class="sub center" style="font-size:11.5px;margin-top:10px">Every line is computed from the league feed and the full season table. Nothing here is typed in.</div>';
+      out+='<div class="sub center" style="font-size:12px;margin-top:10px">Every line is computed from the league feed and the full season table. Nothing here is typed in.</div>';
     }
   }
 
-  out+='<div class="sub center" style="font-size:11px;margin-top:14px;opacity:.75">Live from the league feed · updated '+Math.max(1,Math.round((Date.now()-GS.at)/1000))+'s ago</div>';
+  out+='<div class="sub center" style="font-size:12px;margin-top:14px;opacity:.75">Live from the league feed · updated '+Math.max(1,Math.round((Date.now()-GS.at)/1000))+'s ago</div>';
   el.innerHTML=out;
   try{
     Array.prototype.forEach.call(el.querySelectorAll('#stSeg button'), function(b){
@@ -10512,6 +10521,24 @@ try{ setInterval(function(){ try{ if((S&&S.screen)==='stats'){ loadGameStats().t
      3. IT NEVER STEALS A TAP. Call It still owns the slot above; the feed
         is what you scroll while you wait for one.
    ==================================================================== */
+/* One place for the interface's own glyphs. Emoji were doing this job and
+   doing it badly: three illustration styles, platform-dependent shapes,
+   and a full-colour picture sitting next to grey type. These are stroked
+   on one grid and take the colour of whatever they sit in. */
+function ico(n){
+  var d = {
+    card:'<path d="M8 4h8v3H8z"/><path d="M16 5.5h2.4V20H5.6V5.5H8"/><path d="M9 12h6"/><path d="M9 16h4"/>',
+    tick:'<path d="M5 12.6 9.6 17 19 6.8"/>',
+    eye: '<path d="M2.6 12S6 6.4 12 6.4 21.4 12 21.4 12 18 17.6 12 17.6 2.6 12 2.6 12z"/><circle cx="12" cy="12" r="2.6"/>',
+    star:'<path d="m12 3.8 2.5 5.1 5.6.8-4.05 3.95.96 5.58L12 16.6l-5.01 2.63.96-5.58L3.9 9.7l5.6-.8z"/>',
+    med: '<circle cx="12" cy="12" r="8.6"/><path d="M12 8.2v7.6"/><path d="M8.2 12h7.6"/>',
+    ask: '<circle cx="12" cy="12" r="8.6"/><path d="M9.7 9.4a2.4 2.4 0 1 1 3.2 2.3c-.6.2-.9.8-.9 1.4v.5"/><path d="M12 16.8h.01"/>',
+    live:'<circle cx="12" cy="12" r="2.8" fill="currentColor" stroke="none"/><path d="M7.5 7.5a6.4 6.4 0 0 0 0 9"/><path d="M16.5 16.5a6.4 6.4 0 0 0 0-9"/>',
+    home:'<path d="M3.2 10.6 12 3.4l8.8 7.2"/><path d="M5.6 9.6V20h12.8V9.6"/>'
+  }[n] || '';
+  return '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" '
+       + 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+}
 var FEED={ items:[], seenTop:0, pending:0, reacts:{}, at:0 };
 var FEED_EMOJI=['🔥','😮','😂','💯'];
 
@@ -10521,7 +10548,12 @@ var FEED_EMOJI=['🔥','😮','😂','💯'];
    the feed is long because the game is long, not because it is padded. */
 function feedPlayCard(p, prev){
   if(!p.scoring) return null;
-  var icon = p.value===3?'🎯' : p.value===1?'🆓' : '🏀';
+  /* The bucket's value, not a picture of a ball. A dartboard, a free-throw
+     symbol and a basketball told you nothing you could not read in the
+     sentence next to them, in three different illustration styles. The
+     number tells you how much the play was worth at a glance, which is
+     the one thing the sentence makes you read to the end to find out. */
+  var icon = p.value===3?'3' : p.value===1?'1' : '2';
   var swing='';
   if(p.away!=null && p.home!=null){
     var lead = p.home===p.away ? 'tie' : (p.home>p.away?'home':'away');
@@ -10571,7 +10603,7 @@ function feedCardWatch(){
       body+=' Closest: <b>'+esc(b0.who)+'</b> needs <b>'+b0.gap+' more '+esc(b0.cat.replace(/^most /,''))
           + '</b> to pass '+esc(b0.leader)+'.';
     }
-    return [{ k:'you', id:'you-card', seq:1e9, icon: lead>=total?'✅':'📋',
+    return [{ k:'you', id:'you-card', seq:1e9, icon: lead>=total?ico('tick'):ico('card'),
               text: body,
               meta: behind.length>1 ? (behind.length+' categories still to chase') : '',
               tag:'your card', big:true }];
@@ -10613,11 +10645,11 @@ function feedWarmUp(){
     try{
       var filled=preds.filter(function(p){ return S.predChoices[p.id]; }).length;
       if(filled>=preds.length)
-        out.push({k:'warm',id:'w-card',seq:1e9-1,icon:'✅',
+        out.push({k:'warm',id:'w-card',seq:1e9-1,icon:ico('tick'),
           text:'<b>Your card is locked</b> — all '+preds.length+' picks in. Nothing else to do but watch.',
           meta:'', tag:'your card', big:false});
       else
-        out.push({k:'warm',id:'w-card',seq:1e9-1,icon:'📋',
+        out.push({k:'warm',id:'w-card',seq:1e9-1,icon:ico('card'),
           text:'<b>'+filled+' of '+preds.length+'</b> picks made. Finish your card before tip or you play for the quarter questions only.',
           meta:'tap Home → Play to finish it', tag:'your card', big:true});
     }catch(_){}
@@ -10643,7 +10675,7 @@ function feedWarmUp(){
             + (rk?('<span class="fdlr">'+esc(rk)+'</span>'):'') + '</div>');
         });
       });
-      if(rows.length) out.push({k:'warm',id:'w-watch',seq:1e8,icon:'⭐',
+      if(rows.length) out.push({k:'warm',id:'w-watch',seq:1e8,icon:ico('star'),
         text:'<b>Who the season says to watch.</b>', list:rows.join(''),
         meta:'', tag:'who to watch', big:true});
     }catch(_){}
@@ -10651,17 +10683,17 @@ function feedWarmUp(){
     // 4. who is not playing — the pick you should not spend
     try{
       var outs=(GS.inj||[]).filter(function(i){ return i.out; });
-      if(outs.length) out.push({k:'warm',id:'w-inj',seq:1e7,icon:'🚑',
+      if(outs.length) out.push({k:'warm',id:'w-inj',seq:1e7,icon:ico('med'),
         text:'<b>Ruled out tonight:</b> '+outs.map(function(i){ return esc(i.name)+' <i>('+esc(i.ab||'')+')</i>'; }).join(', ')+'.',
         meta:'straight from the league injury report — don’t spend a pick on them', tag:'not playing', big:true});
       var dtd=(GS.inj||[]).filter(function(i){ return !i.out; });
-      if(dtd.length) out.push({k:'warm',id:'w-dtd',seq:1e7-1,icon:'❓',
+      if(dtd.length) out.push({k:'warm',id:'w-dtd',seq:1e7-1,icon:ico('ask'),
         text:'<b>Game-time decision:</b> '+dtd.map(function(i){ return esc(i.name); }).join(', ')+'.',
         meta:'reload the app just before tip — this list updates itself', tag:'watch this', big:false});
     }catch(_){}
 
     // 5. something to actually press
-    out.push({k:'try',id:'w-try',seq:1,icon:'🎯',
+    out.push({k:'try',id:'w-try',seq:1,icon:ico('live'),
       text:'<b>Try a Call It now.</b> A real question, built from tonight’s numbers. It doesn’t count for anything.',
       meta:'', tag:'rehearsal', big:true});
   }catch(_){}
@@ -10716,8 +10748,8 @@ function feedRender(force){
   var items=feedBuild();
   if(!items.length){
     el.innerHTML='<div class="card center" style="padding:24px 18px">'
-      + '<div style="font-size:26px">📡</div><b style="font-size:14.5px">Waiting on the league feed</b>'
-      + '<p class="sub" style="font-size:12.5px;margin:7px 0 0">Every bucket, every run, every stat worth knowing lands here. Nothing is typed in by hand, so this waits rather than inventing something.</p></div>';
+      + '<div style="font-size:26px">📡</div><b style="font-size:15px">Waiting on the league feed</b>'
+      + '<p class="sub" style="font-size:14px;margin:7px 0 0">Every bucket, every run, every stat worth knowing lands here. Nothing is typed in by hand, so this waits rather than inventing something.</p></div>';
     return;
   }
   /* NEW ITEMS DO NOT YANK THE PAGE. If you are reading, you keep reading and
@@ -10756,6 +10788,7 @@ function feedRender(force){
         side = (GS.teams[0].ab===it.__p.ab) ? 'a' : (GS.teams[1].ab===it.__p.ab ? 'h' : '');
     }catch(_){}
     return '<article class="fdc'+(it.big?' big':'')+(quiet?' quiet':'')+'"'
+      + ' data-k="'+esc(it.k||'')+'"'
       + (side?(' data-team="'+side+'"'):'') + ' data-fd="'+esc(it.id)+'">'
       + (it.tag?'<div class="fdtag">'+esc(it.tag)+'</div>':'')
       + '<div class="fdmain"><span class="fdi">'+it.icon+'</span>'
@@ -10766,7 +10799,7 @@ function feedRender(force){
       +   (it.score?'<div class="fds">'+it.score.a+'–'+it.score.h+'</div>':'')
       + '</div>'
       + (it.k==='try'
-          ? '<button type="button" class="fdgo" id="warmTry">🎯 Fire a practice question</button>'
+          ? '<button type="button" class="fdgo" id="warmTry">Fire a practice question</button>'
           : (quiet ? '' : '<div class="fdrow">'+chips+'</div>'))
       + '</article>';
   }).join('');
@@ -10922,7 +10955,7 @@ function renderGametime(){
     + '</div>'
     + '<div class="gtRunBar" id="gtRunBar"><i class="a" id="gtRunA" style="width:50%"></i>'
     +   '<i class="h" id="gtRunH" style="width:50%"></i></div>'
-    + '<div class="gtRunCap"><i>'+esc(String(A))+'</i><i>RUN · POINTS IN THE LAST FEW MINUTES</i><i>'+esc(String(H))+'</i></div>'
+    + '<div class="gtRunCap"><i>'+esc(String(A))+'</i><i>RUN · LAST FEW MINUTES</i><i>'+esc(String(H))+'</i></div>'
     + '<div class="gtRun" id="gtRun">reading the play-by-play…</div>'
     + '</div>';
   try{ gtDigits('gtScoreA', as, 'gtSideA'); gtDigits('gtScoreH', hs, 'gtSideH'); }catch(_){}
@@ -10947,9 +10980,9 @@ function renderGametimeRest(){
     if(PCI.called>0){
       const pctv=Math.round((PCI.hit/PCI.called)*100);
       out+='<div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;text-align:center">'
-        + '<div style="flex:1"><div style="font-size:19px;font-weight:900;color:#eef2fb">'+PCI.hit+'/'+PCI.called+'</div><div style="font-size:9.5px;letter-spacing:.12em;color:#93a0bd;font-weight:800">CALLED</div></div>'
-        + '<div style="flex:1"><div style="font-size:19px;font-weight:900;color:#eef2fb">'+pctv+'%</div><div style="font-size:9.5px;letter-spacing:.12em;color:#93a0bd;font-weight:800">HIT RATE</div></div>'
-        + '<div style="flex:1"><div style="font-size:19px;font-weight:900;color:var(--gold)">'+(PCI.best||0)+'</div><div style="font-size:9.5px;letter-spacing:.12em;color:#93a0bd;font-weight:800">BEST RUN</div></div>'
+        + '<div style="flex:1"><div style="font-size:17px;font-weight:900;color:#eef2fb">'+PCI.hit+'/'+PCI.called+'</div><div style="font-size:12px;letter-spacing:.12em;color:#93a0bd;font-weight:800">CALLED</div></div>'
+        + '<div style="flex:1"><div style="font-size:17px;font-weight:900;color:#eef2fb">'+pctv+'%</div><div style="font-size:12px;letter-spacing:.12em;color:#93a0bd;font-weight:800">HIT RATE</div></div>'
+        + '<div style="flex:1"><div style="font-size:17px;font-weight:900;color:var(--gold)">'+(PCI.best||0)+'</div><div style="font-size:12px;letter-spacing:.12em;color:#93a0bd;font-weight:800">BEST RUN</div></div>'
         + '</div>';
     }
   }catch(_){}
@@ -11035,90 +11068,105 @@ try{ setInterval(function(){ try{ takeoverTick(); }catch(_){} }, 15000); }catch(
      background:rgba(10,14,23,.94);backdrop-filter:blur(12px);border-top:1px solid #1e2740;
      padding:7px 6px calc(7px + env(safe-area-inset-bottom,0px));">
   <div style="max-width:430px;margin:0 auto;display:flex">
-    <button class="navb" data-nav="home"  onclick="navGo('home')">🏠<span>Home</span></button>
-    <button class="navb" data-nav="gametime" onclick="navGo('gametime')">🎯<span>Gametime</span></button>
-    <button class="navb" data-nav="stats" onclick="navGo('stats')">📈<span>Stats</span></button>
-    <button class="navb" data-nav="board" onclick="navGo('board')">🏆<span>Board</span></button>
-    <button class="navb" data-nav="crew"  onclick="navGo('crew')">💬<span>Trash Talk</span></button>
-    <button class="navb" data-nav="me"    onclick="navGo('me')">👤<span>Me</span></button>
+    <button class="navb" data-nav="home"  onclick="navGo('home')" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 10.6 12 3.4l8.8 7.2"/><path d="M5.6 9.6V20h12.8V9.6"/></svg><span>Home</span></button>
+    <button class="navb" data-nav="gametime" onclick="navGo('gametime')" aria-label="Gametime"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.6"/><path d="M10.2 8.4 16 12l-5.8 3.6z" fill="currentColor" stroke="none"/></svg><span>Gametime</span></button>
+    <button class="navb" data-nav="stats" onclick="navGo('stats')" aria-label="Stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20v-7.4"/><path d="M12 20V4.6"/><path d="M19 20V9.4"/></svg><span>Stats</span></button>
+    <button class="navb" data-nav="board" onclick="navGo('board')" aria-label="Board"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.4 4h9.2v4.6a4.6 4.6 0 0 1-9.2 0z"/><path d="M7.4 5.8H5A2.4 2.4 0 0 0 7.4 9.6"/><path d="M16.6 5.8H19a2.4 2.4 0 0 1-2.4 3.8"/><path d="M12 13.2v3.4"/><path d="M8.4 20h7.2"/></svg><span>Board</span></button>
+    <button class="navb" data-nav="crew"  onclick="navGo('crew')" aria-label="Trash Talk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12.2c0 3.7-3.6 6.8-8 6.8-.9 0-1.9-.2-2.7-.4L4.6 20.4l1.5-3.5A6.4 6.4 0 0 1 4 12.2C4 8.5 7.6 5.4 12 5.4s8 3.1 8 6.8z"/></svg><span>Talk</span></button>
+    <button class="navb" data-nav="me"    onclick="navGo('me')" aria-label="Me"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 19.6a7 7 0 0 1 14 0"/></svg><span>Me</span></button>
   </div>
 </div>
 <style>
-#botnav .navb{flex:1;min-width:0;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;
-  align-items:center;gap:3px;padding:6px 1px;font-weight:700;font-size:10px;line-height:1;color:#5b6a8c;letter-spacing:.02em}
+/* Six emoji were the first thing anybody saw and the last thing that
+   said "weekend project": a house, a dartboard and a party trophy in
+   three different illustration styles, at whatever size the platform
+   felt like, in colours nothing else in the app uses. These are one
+   stroke weight, one grid, and they take the tab's colour — so the
+   active tab lights icon and label together instead of leaving a
+   full-colour picture sitting above a grey word.
+   "Trash Talk" is "Talk" here because six labels on a 360px phone left
+   it rendering as "Trash T…". */
+#botnav .navb{position:relative;flex:1;min-width:0;background:none;border:none;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 1px 5px;
+  font-weight:700;font-size:12px;line-height:1;color:#66759a;letter-spacing:.02em;
+  transition:color .16s}
+#botnav .navb svg{width:22px;height:22px;display:block;flex:none}
 /* Six tabs on a 360px phone. The label must shrink rather than wrap — a
    two-line tab makes the whole bar jump height when you switch to it. */
-#botnav .navb span{font-size:9.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media (max-width:359px){ #botnav .navb span{font-size:8.5px} #botnav .navb{font-size:16px} }
-#botnav .navb{font-size:18px}
+#botnav .navb span{font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:359px){ #botnav .navb svg{width:20px;height:20px} }
 #botnav .navb.on{color:#28e0d0}
+/* A lit edge over the live tab, the same language as the card edges. */
+#botnav .navb.on::before{content:'';position:absolute;top:-7px;left:50%;transform:translateX(-50%);
+  width:26px;height:2px;border-radius:0 0 3px 3px;background:#28e0d0;box-shadow:0 0 10px rgba(40,224,208,.7)}
 #botnav .navb:active{transform:scale(.94)}
+@media (prefers-reduced-motion:reduce){ #botnav .navb{transition:none} }
 body.hasnav{padding-bottom:74px}
 
 /* ---- stats tab ---- */
-.stTeam{font-size:11px;letter-spacing:.14em;color:#93a0bd;font-weight:800}
-.stScore{font-size:29px;font-weight:900;color:#eef2fb;line-height:1.1}
-.stRec{font-size:11px;color:#5b6a8c;font-weight:700}
-.stHd{font-size:11px;letter-spacing:.14em;color:#28e0d0;font-weight:800;margin-bottom:10px}
+.stTeam{font-size:12px;letter-spacing:.14em;color:#93a0bd;font-weight:800}
+.stScore{font-size:30px;font-weight:900;color:#eef2fb;line-height:1.1}
+.stRec{font-size:12px;color:#5b6a8c;font-weight:700}
+.stHd{font-size:12px;letter-spacing:.14em;color:#28e0d0;font-weight:800;margin-bottom:10px}
 .stRow{display:flex;align-items:center;gap:10px;margin-bottom:11px}
 .stV{flex:0 0 54px;text-align:center;font-size:14px;font-weight:800;color:#7e8cab}
 .stV.win{color:#eef2fb}
 .stMid{flex:1;min-width:0}
-.stLbl{font-size:11px;color:#93a0bd;font-weight:700;text-align:center;margin-bottom:5px}
+.stLbl{font-size:12px;color:#93a0bd;font-weight:700;text-align:center;margin-bottom:5px}
 .stBars{display:flex;gap:4px}
 .stB{flex:1;height:6px;border-radius:99px;background:#141d2f;overflow:hidden}
 .stB i{display:block;height:100%;border-radius:99px;transition:width .4s ease}
 .stB.l{transform:scaleX(-1)}
-.stLead{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:13.5px}
+.stLead{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:14px}
 .stLeadN{color:#93a0bd}
-.stLeadN i{font-style:normal;font-size:10.5px;color:#5b6a8c;letter-spacing:.08em}
+.stLeadN i{font-style:normal;font-size:12px;color:#5b6a8c;letter-spacing:.08em}
 .stLeadV{color:#eef2fb;font-weight:800;text-align:right}
 .stPickRow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 0;border-bottom:1px solid #1a2337}
 .stPickRow:last-of-type{border-bottom:none}
-.stPickCat{font-size:11px;letter-spacing:.1em;color:#5b6a8c;font-weight:800;text-transform:uppercase}
+.stPickCat{font-size:12px;letter-spacing:.1em;color:#5b6a8c;font-weight:800;text-transform:uppercase}
 .stPickMine{grid-column:1;font-size:14px;font-weight:800;color:#eef2fb}
 .stPickMine.lead{color:#2ee6a6}
-.stPickLead{grid-column:2;grid-row:1 / span 2;align-self:center;font-size:11.5px;color:#93a0bd;text-align:right}
+.stPickLead{grid-column:2;grid-row:1 / span 2;align-self:center;font-size:12px;color:#93a0bd;text-align:right}
 
 /* ---- stats tab v2: one thing at a time ---- */
 .stSeg{display:flex;gap:5px;background:#0e1626;border:1px solid #1e2740;border-radius:14px;
   padding:4px;margin-top:12px;position:sticky;top:6px;z-index:30;backdrop-filter:blur(10px)}
-.stSeg button{flex:1;border:none;background:none;color:#7e8cab;font-weight:800;font-size:11px;line-height:1;
+.stSeg button{flex:1;border:none;background:none;color:#7e8cab;font-weight:800;font-size:12px;line-height:1;
   letter-spacing:.07em;padding:11px 3px;border-radius:10px;cursor:pointer;text-transform:uppercase;
   transition:background .15s ease,color .15s ease;white-space:nowrap}
 .stSeg button.on{background:#1b2a44;color:#eef2fb;box-shadow:0 1px 0 rgba(255,255,255,.05) inset}
 .stSeg button:active{transform:scale(.96)}
 .stYou{display:flex;gap:8px;margin-top:12px}
 .stYouT{flex:1;background:#0e1626;border:1px solid #26304a;border-radius:14px;padding:13px 5px;text-align:center;min-width:0}
-.stYouN{font-size:21px;font-weight:900;color:#eef2fb;line-height:1.15}
-.stYouK{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:#93a0bd;margin-top:4px;font-weight:800}
+.stYouN{font-size:20px;font-weight:900;color:#eef2fb;line-height:1.15}
+.stYouK{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:#93a0bd;margin-top:4px;font-weight:800}
 .stPickRow2{padding:11px 0;border-bottom:1px solid #1a2337}
 .stPickRow2:last-child{border-bottom:none}
 .stPickTop{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:3px 0 7px}
-.stPickLead2{font-size:11.5px;color:#93a0bd;text-align:right;flex:0 0 auto}
+.stPickLead2{font-size:12px;color:#93a0bd;text-align:right;flex:0 0 auto}
 .stRace{height:5px;border-radius:99px;background:#141d2f;overflow:hidden}
 .stRace i{display:block;height:100%;border-radius:99px;transition:width .5s ease}
-.stNeed{font-size:11.5px;color:#ffc54d;margin-top:6px;font-weight:700}
+.stNeed{font-size:12px;color:#ffc54d;margin-top:6px;font-weight:700}
 .stFact{display:flex;gap:11px;padding:12px 0;border-bottom:1px solid #1a2337;align-items:flex-start}
 .stFact:last-child{border-bottom:none}
-.stFactI{flex:0 0 auto;font-size:16px;line-height:1.35}
+.stFactI{flex:0 0 auto;font-size:15px;line-height:1.35}
 .stFactB{flex:1;min-width:0}
-.stFactT{font-size:13.5px;color:#cfd8ea;font-weight:600;line-height:1.45}
+.stFactT{font-size:14px;color:#cfd8ea;font-weight:600;line-height:1.45}
 .stFactT b{color:#eef2fb;font-weight:900}
-.stFactS{font-size:11px;color:#5b6a8c;margin-top:3px;letter-spacing:.03em;line-height:1.4}
+.stFactS{font-size:12px;color:#5b6a8c;margin-top:3px;letter-spacing:.03em;line-height:1.4}
 
 /* ---- the rail ---- */
 #rail{position:fixed;left:0;right:0;top:0;z-index:8400;background:rgba(10,14,23,.93);
   backdrop-filter:blur(12px);border-bottom:1px solid #1e2740;
   padding:calc(6px + env(safe-area-inset-top,0px)) 12px 6px}
 .railin{max-width:430px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px}
-.railteams{font-size:11.5px;font-weight:700;color:#7e8cab;letter-spacing:.04em;white-space:nowrap;
+.railteams{font-size:12px;font-weight:700;color:#7e8cab;letter-spacing:.04em;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
-.railteams b{color:#eef2fb;font-weight:900;font-size:13px}
-.railteams i{font-style:normal;color:#28e0d0;font-weight:800;font-size:10px;letter-spacing:.08em;margin-left:4px}
+.railteams b{color:#eef2fb;font-weight:900;font-size:14px}
+.railteams i{font-style:normal;color:#28e0d0;font-weight:800;font-size:12px;letter-spacing:.08em;margin-left:4px}
 .raildot{flex:0 0 auto;width:4px;height:4px;border-radius:99px;background:#26304a}
-.railme{flex:0 0 auto;font-size:11.5px;font-weight:700;color:#7e8cab;letter-spacing:.04em;white-space:nowrap}
-.railme b{color:var(--gold,#ffc54d);font-weight:900;font-size:13px}
+.railme{flex:0 0 auto;font-size:12px;font-weight:700;color:#7e8cab;letter-spacing:.04em;white-space:nowrap}
+.railme b{color:var(--gold,#ffc54d);font-weight:900;font-size:14px}
 body.hasrail{padding-top:38px}
 
 /* ---- the feed ---- */
@@ -11131,28 +11179,44 @@ body.hasrail{padding-top:38px}
   padding:13px 14px 9px;margin-top:9px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .fdc.big{border-color:#28384f;background:#101a2c}
 .fdc:active{transform:scale(.995)}
-.fdtag{font-size:9.5px;letter-spacing:.14em;font-weight:900;color:#28e0d0;text-transform:uppercase;margin-bottom:6px}
+.fdtag{font-size:12px;letter-spacing:.14em;font-weight:900;color:#28e0d0;text-transform:uppercase;margin-bottom:6px}
 .fdmain{display:flex;gap:11px;align-items:flex-start}
-.fdi{flex:0 0 auto;font-size:17px;line-height:1.3}
+.fdi{flex:0 0 auto;display:grid;place-items:center;width:26px;height:26px;border-radius:9px;
+  font-size:14px;font-weight:900;line-height:1;letter-spacing:0;
+  background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);color:#c3cee6}
+.fdc[data-team="h"] .fdi{color:var(--home);border-color:color-mix(in srgb,var(--home) 40%,transparent);
+  background:color-mix(in srgb,var(--home) 13%,transparent)}
+.fdc[data-team="a"] .fdi{color:var(--away);border-color:color-mix(in srgb,var(--away) 40%,transparent);
+  background:color-mix(in srgb,var(--away) 13%,transparent)}
+/* Non-play cards still carry a glyph rather than a number, so they must
+   not be squeezed into the numeral box. */
+.fdi:not(:only-child){}
+.fdc[data-k="you"] .fdi,.fdc[data-k="warm"] .fdi,.fdc[data-k="cut"] .fdi,.fdc[data-k="stat"] .fdi,.fdc[data-k="try"] .fdi{
+  background:none;border:none;width:auto;height:auto;font-size:17px}
+.ico{width:20px;height:20px;display:block;flex:none}
+.fdc[data-k="you"] .fdi{color:var(--teal2,#28e0d0)}
+.fdc[data-k="warm"] .fdi{color:#f2b83c}
+.fdc[data-k="try"] .fdi{color:var(--teal2,#28e0d0)}
+.fdc[data-k="warm"] .fdi .ico{width:21px;height:21px}
 .fdb{flex:1;min-width:0}
-.fdt{font-size:13.5px;line-height:1.45;color:#cfd8ea;font-weight:600}
+.fdt{font-size:14px;line-height:1.45;color:#cfd8ea;font-weight:600}
 .fdt b{color:#eef2fb;font-weight:900}
-.fdm{font-size:10.5px;color:#5b6a8c;margin-top:3px;letter-spacing:.05em;font-weight:700}
-.fds{flex:0 0 auto;font-size:13px;font-weight:900;color:#93a0bd;padding-left:6px;white-space:nowrap}
+.fdm{font-size:12px;color:#5b6a8c;margin-top:3px;letter-spacing:.05em;font-weight:700}
+.fds{flex:0 0 auto;font-size:14px;font-weight:900;color:#93a0bd;padding-left:6px;white-space:nowrap}
 .fdrow{display:flex;gap:6px;margin-top:9px;padding-top:8px;border-top:1px solid #172032}
 .fdr{border:none;background:#141d2f;color:#93a0bd;border-radius:99px;padding:5px 10px;
-  font-weight:700;font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;gap:4px}
-.fdr i{font-style:normal;font-size:10.5px;font-weight:900;color:#cfd8ea}
+  font-weight:700;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;gap:4px}
+.fdr i{font-style:normal;font-size:12px;font-weight:900;color:#cfd8ea}
 .fdr.on{background:#1b2a44;box-shadow:inset 0 0 0 1px rgba(40,224,208,.4)}
 .fdr:active{transform:scale(.9)}
 .fdlist{margin-top:9px}
 .fdli{display:grid;grid-template-columns:1fr auto;gap:1px 10px;padding:7px 0;border-bottom:1px solid #172032}
 .fdli:last-child{border-bottom:none}
-.fdln{font-size:13px;font-weight:800;color:#eef2fb}
-.fdln i{font-style:normal;font-size:10px;letter-spacing:.1em;color:#5b6a8c;margin-left:4px}
+.fdln{font-size:14px;font-weight:800;color:#eef2fb}
+.fdln i{font-style:normal;font-size:12px;letter-spacing:.1em;color:#5b6a8c;margin-left:4px}
 .fdlv{font-size:12px;color:#93a0bd;text-align:right;font-weight:600}
 .fdlv b{color:#28e0d0;font-weight:900}
-.fdlr{grid-column:1 / -1;font-size:10.5px;color:#5b6a8c;letter-spacing:.04em;font-weight:700}
+.fdlr{grid-column:1 / -1;font-size:12px;color:#5b6a8c;letter-spacing:.04em;font-weight:700}
 /* Everything a stranger needs and a member has already read. Hidden by a
    single class on <body> so there is one switch, not six. */
 body.member .strangers{display:none !important}
@@ -11164,13 +11228,13 @@ body.member #s-landing .brand{margin-top:6px}
 #takeover.on{display:flex;animation:tkIn .32s cubic-bezier(.16,1,.3,1)}
 @keyframes tkIn{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:scale(1)}}
 .tkin{max-width:430px;text-align:center}
-.tkmark{font-weight:900;font-size:10px;line-height:1;letter-spacing:.28em;color:#5b6a8c;margin-bottom:20px}
-.tkicon{font-size:44px;line-height:1;margin-bottom:10px}
+.tkmark{font-weight:900;font-size:12px;line-height:1;letter-spacing:.28em;color:#5b6a8c;margin-bottom:20px}
+.tkicon{font-size:46px;line-height:1;margin-bottom:10px}
 .tkhead{font-weight:900;font-size:30px;line-height:1.05;letter-spacing:.02em;margin-bottom:12px;
   background:linear-gradient(92deg,#28e0d0,#4d86ff);-webkit-background-clip:text;background-clip:text;color:transparent}
-.tkbody{font-size:16.5px;line-height:1.45;color:#eef2fb;font-weight:700}
+.tkbody{font-size:17px;line-height:1.45;color:#eef2fb;font-weight:700}
 .tkscore{font-size:12px;letter-spacing:.1em;color:#93a0bd;font-weight:800;margin-top:16px;text-transform:uppercase}
-.tktap{font-size:10.5px;letter-spacing:.14em;color:#3f4c6b;font-weight:800;margin-top:26px;text-transform:uppercase}
+.tktap{font-size:12px;letter-spacing:.14em;color:#3f4c6b;font-weight:800;margin-top:26px;text-transform:uppercase}
 .fdr.fdsh{margin-left:auto;color:#5b6a8c}
 /* ==================== ARENA ========================================
    Team colour on the game, brand on you, gold on a milestone, red on
@@ -11216,12 +11280,15 @@ body.member #s-landing .brand{margin-top:6px}
 .gtRunBar{height:5px;border-radius:99px;overflow:hidden;background:#131826;display:flex;margin-top:15px}
 .gtRunBar i{display:block;height:100%;transition:width .9s cubic-bezier(.16,1,.3,1)}
 .gtRunBar i.a{background:var(--away)} .gtRunBar i.h{background:var(--home)}
-.gtRunCap{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-top:7px;
-  font-weight:800;font-size:9px;letter-spacing:.12em;color:#5b6a8c;white-space:nowrap}
+/* The team codes sat flush against the caption — "NYRUN · POINTS IN THE
+   LAST FEW MINUTESIND" — once the caption came up to the 12px floor and
+   filled the row. Give the three cells air and say it in fewer words. */
+.gtRunCap{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-top:7px;gap:12px;
+  font-weight:800;font-size:12px;letter-spacing:.12em;color:#5b6a8c;white-space:nowrap}
 .gtRunCap i{font-style:normal}
 .gtRunCap i:first-child{text-align:left;color:var(--away)}
 .gtRunCap i:last-child{text-align:right;color:var(--home)}
-.gtRun{margin-top:10px;text-align:center;font-weight:700;font-size:13px;line-height:1.4;color:#93a0bd}
+.gtRun{margin-top:10px;text-align:center;font-weight:700;font-size:14px;line-height:1.4;color:#93a0bd}
 .gtRun b{font-weight:900}
 .gtRun.quiet{color:#5b6a8c;font-weight:600;font-size:12px}
 
@@ -11229,7 +11296,7 @@ body.member #s-landing .brand{margin-top:6px}
 .dcBig{display:flex;align-items:baseline;gap:10px;margin-bottom:5px}
 .dcNum{font-weight:900;font-size:40px;line-height:1;letter-spacing:-.045em;color:var(--home)}
 .dcNum.a{color:var(--away)}
-.dcUnit{font-weight:800;font-size:11px;letter-spacing:.15em;color:#93a0bd;text-transform:uppercase}
+.dcUnit{font-weight:800;font-size:12px;letter-spacing:.15em;color:#93a0bd;text-transform:uppercase}
 
 /* motion is information; anyone who has asked for less gets less */
 @media(prefers-reduced-motion:reduce){
@@ -11239,7 +11306,7 @@ body.member #s-landing .brand{margin-top:6px}
 .fdc.quiet{cursor:default}
 .fdc.quiet:active{transform:none}
 .fdgo{display:block;width:100%;margin-top:11px;border:none;border-radius:12px;cursor:pointer;
-  padding:13px 12px;font-weight:900;font-size:13.5px;line-height:1;color:#04121e;
+  padding:13px 12px;font-weight:900;font-size:14px;line-height:1;color:#04121e;
   background:linear-gradient(92deg,#28e0d0,#4d86ff)}
 .fdgo:active{transform:scale(.98)}
 .gtvs{font-size:12px;letter-spacing:.12em;font-weight:800;color:#93a0bd;text-transform:uppercase}
@@ -11247,7 +11314,7 @@ body.member #s-landing .brand{margin-top:6px}
 .gtcount{font-size:34px;font-weight:900;line-height:1.15;margin-top:6px;
   background:linear-gradient(92deg,#28e0d0,#4d86ff);-webkit-background-clip:text;
   background-clip:text;color:transparent}
-.gtwhen{font-size:11px;letter-spacing:.1em;font-weight:800;color:#5b6a8c;text-transform:uppercase;margin-top:3px}
+.gtwhen{font-size:12px;letter-spacing:.1em;font-weight:800;color:#5b6a8c;text-transform:uppercase;margin-top:3px}
 .fdpop{position:absolute;right:18px;bottom:14px;font-size:26px;pointer-events:none;
   animation:fdpop .7s ease-out forwards}
 @keyframes fdpop{0%{opacity:0;transform:translateY(0) scale(.6)}
@@ -11256,10 +11323,10 @@ body.member #s-landing .brand{margin-top:6px}
 
 /* ---- the final screen's fold ---- */
 .fdrawer{margin-top:12px;border:1px solid #1e2740;border-radius:16px;background:#0e1626;overflow:hidden}
-.fdrawer>summary{list-style:none;cursor:pointer;padding:15px 16px;font-weight:800;font-size:13px;line-height:1;
+.fdrawer>summary{list-style:none;cursor:pointer;padding:15px 16px;font-weight:800;font-size:14px;line-height:1;
   color:#93a0bd;display:flex;align-items:center;justify-content:space-between}
 .fdrawer>summary::-webkit-details-marker{display:none}
-.fdrawer>summary::after{content:'▾';color:#5b6a8c;font-size:13px;transition:transform .2s ease}
+.fdrawer>summary::after{content:'▾';color:#5b6a8c;font-size:14px;transition:transform .2s ease}
 .fdrawer[open]>summary::after{transform:rotate(180deg)}
 .fdrawer[open]>summary{color:#eef2fb;border-bottom:1px solid #1a2337}
 .fdrawerin{padding:4px 12px 14px}
@@ -11280,25 +11347,30 @@ body.hasgamebar .screen.active{padding-bottom:132px}
 .bdRow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #1a2337}
 .bdRow:last-child{border-bottom:none}
 .bdRow.me{background:rgba(40,224,208,.07);border-radius:10px;padding-left:8px;padding-right:8px;border-bottom-color:transparent}
-.bdR{flex:0 0 20px;font-size:12.5px;font-weight:800;color:#5b6a8c;text-align:center}
+.bdR{flex:0 0 20px;font-size:14px;font-weight:800;color:#5b6a8c;text-align:center}
 .bdDot{flex:0 0 auto;width:9px;height:9px;border-radius:50%}
-.bdN{flex:1;min-width:0;font-size:14.5px;font-weight:800;color:#eef2fb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bdN{flex:1;min-width:0;font-size:15px;font-weight:800;color:#eef2fb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bdP{flex:0 0 auto;font-size:15px;font-weight:900;color:#eef2fb}
-.bdBig{font-size:23px;font-weight:900;color:#eef2fb}
-.bdK{font-size:10px;letter-spacing:.12em;color:#93a0bd;font-weight:800}
+.bdBig{font-size:22px;font-weight:900;color:#eef2fb}
+.bdK{font-size:12px;letter-spacing:.12em;color:#93a0bd;font-weight:800}
 
 /* ---- pick-slip ---- */
 #predCard{padding:14px}
 .pdhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .pdhead b{font-size:20px;color:#28e0d0;letter-spacing:.2px}
-.pdpts{font-size:12.5px;font-weight:800;color:var(--gold)}
+.pdpts{font-size:14px;font-weight:800;color:var(--gold)}
 .pdprog{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.pdn{font-size:12.5px;font-weight:800;color:var(--muted,#93a0bd);flex:0 0 auto}
+.pdn{font-size:14px;font-weight:800;color:var(--muted,#93a0bd);flex:0 0 auto}
 .pdbar{flex:1;height:6px;border-radius:99px;background:#16233b;overflow:hidden}
 .pdbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(92deg,#28e0d0,#4d86ff);transition:width .28s ease}
 .pddots{display:flex;align-items:center;justify-content:center;gap:9px;margin:-4px 0 12px}
-.pddot{width:13px;height:13px;border-radius:50%;padding:0;cursor:pointer;
+/* The dot you see is 13px because six of them in a row should be quiet.
+   The dot you TAP is 40px, because a 13px target on a phone is a miss
+   waiting to happen — and missing here jumps you to the wrong pick. */
+.pddot{position:relative;width:13px;height:13px;border-radius:50%;padding:0;cursor:pointer;
   background:transparent;border:2px solid #3a4b73;transition:transform .15s,background .15s,border-color .15s}
+.pddot::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:40px;height:40px;border-radius:50%}
 .pddot.fill{background:#28e0d0;border-color:#28e0d0}
 .pddot.cur{transform:scale(1.42);box-shadow:0 0 0 3px rgba(40,224,208,.16)}
 .pddot:not(.fill){border-color:#ffc54d}
@@ -11306,44 +11378,61 @@ body.hasgamebar .screen.active{padding-bottom:132px}
 .pdcard{background:#0e1626;border:1px solid #26304a;border-radius:16px;padding:17px 15px;touch-action:pan-y}
 @keyframes pdFlash{0%{border-color:#ffc54d;box-shadow:0 0 0 4px rgba(255,197,77,.22)}100%{border-color:#26304a;box-shadow:none}}
 .pdcard.pdflash{animation:pdFlash .9s ease-out}
-.pdcat{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#28e0d0;font-weight:800}
-.pdq{font-size:23px;font-weight:900;line-height:1.2;color:#eef2fb;margin:7px 0 4px}
-.pdworth{font-size:13px;font-weight:800;color:var(--gold);margin-bottom:14px}
-.pdteam{font-size:10.5px;letter-spacing:.14em;font-weight:900;color:#28e0d0;
+.pdcat{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#28e0d0;font-weight:800}
+.pdq{font-size:22px;font-weight:900;line-height:1.2;color:#eef2fb;margin:7px 0 4px}
+.pdworth{font-size:14px;font-weight:800;color:var(--gold);margin-bottom:14px}
+.pdteam{font-size:12px;letter-spacing:.14em;font-weight:900;color:#28e0d0;
   margin:14px 0 8px;display:flex;align-items:baseline;gap:7px}
 .pdteam:first-child{margin-top:0}
-.pdteam i{font-style:normal;font-size:10.5px;letter-spacing:.04em;color:#5b6a8c;font-weight:700}
+.pdteam i{font-style:normal;font-size:12px;letter-spacing:.04em;color:#5b6a8c;font-weight:700}
 .pdopt.isout{opacity:.62}
 .pdopts{display:flex;flex-direction:column;gap:9px}
-.pdopts.many{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.pdopts.many .pdopt{padding:12px 10px;font-size:14px;gap:8px}
+/* minmax(0,1fr), not 1fr. A grid track's default min-width is auto, which
+   means the widest name in the column — "Sophie Cunningham" — sets the
+   track and pushes the whole card past the edge of the phone. It went
+   unseen because the one-column fallback fires at 380px and an iPhone 15
+   is 393. Two players' names were physically off-screen on the most
+   common handset we have. */
+.pdopts.many{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.pdopts.many .pdopt{padding:12px 10px;font-size:14px;gap:8px;min-width:0}
 .pdopts.many .pdradio{width:17px;height:17px}
 .pdopts.many .pdname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* An iPhone SE is 375px wide. Two columns of roster names at that width
    clipped "Angel Reese" against the card edge — a pick you cannot fully
    read is a pick you hesitate over on a 20-second clock. Below 380 the
    deck goes back to one column and simply scrolls. */
-@media (max-width:380px){ .pdopts.many{grid-template-columns:1fr} .pdopts.many .pdopt{font-size:15px;padding:14px 12px} }
+/* One column on every phone, not just the small ones. At two columns and
+   a readable 14px, "Kelsey Mitchell" renders as "Kelsey Mitc…" and the
+   (OUT) flag on an injured player is clipped off entirely — you are being
+   asked to choose between people whose names you cannot read, and to
+   avoid a player whose unavailability is hidden. A taller list you scroll
+   is strictly better than a shorter one you squint at. Two columns come
+   back on a laptop, where they fit. */
+@media (max-width:520px){
+  .pdopts.many{grid-template-columns:1fr;gap:9px}
+  .pdopts.many .pdopt{font-size:15px;padding:14px 12px}
+  .pdopts.many .pdname{overflow:visible;text-overflow:clip;white-space:normal}
+}
 .pdopt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
   background:#111a2b;border:1px solid #2f3a58;border-radius:13px;padding:15px 14px;
-  font-weight:800;font-size:16px;line-height:1.2;color:#eef2fb;transition:border-color .15s,background .15s}
+  font-weight:800;font-size:15px;line-height:1.2;color:#eef2fb;transition:border-color .15s,background .15s}
 .pdopt:active{transform:scale(.99)}
 .pdopt.on{border-color:#28e0d0;background:rgba(40,224,208,.10)}
 .pdradio{flex:0 0 auto;width:20px;height:20px;border-radius:50%;border:2px solid #3a4b73;position:relative}
 .pdopt.on .pdradio{border-color:#28e0d0}
 .pdopt.on .pdradio:after{content:'';position:absolute;inset:3px;border-radius:50%;background:#28e0d0}
 .pdname{flex:1;min-width:0}
-.pdout{font-size:10px;font-weight:900;color:#ff6b6b;border:1px solid rgba(255,107,107,.5);border-radius:6px;padding:1px 5px;margin-left:5px}
+.pdout{font-size:12px;font-weight:900;color:#ff6b6b;border:1px solid rgba(255,107,107,.5);border-radius:6px;padding:1px 5px;margin-left:5px}
 .pdbonus{margin-top:13px}
-.pdbonus label{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted,#93a0bd);font-weight:800;margin-bottom:6px}
-.pdbonus input{width:100%;background:#111a2b;border:1px solid #2f3a58;border-radius:12px;padding:14px;color:#eef2fb;font-weight:800;font-size:16px}
-.pdrank{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:13px;font-size:11.5px;font-weight:800;color:var(--muted,#93a0bd)}
+.pdbonus label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted,#93a0bd);font-weight:800;margin-bottom:6px}
+.pdbonus input{width:100%;background:#111a2b;border:1px solid #2f3a58;border-radius:12px;padding:14px;color:#eef2fb;font-weight:800;font-size:15px}
+.pdrank{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:13px;font-size:12px;font-weight:800;color:var(--muted,#93a0bd)}
 .pdrank button{background:#16233b;border:1px solid #2f3a58;color:#93a0bd;border-radius:9px;width:34px;height:30px;cursor:pointer;font-size:12px}
 .pdrank button:disabled{opacity:.35}
 .pdnav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:13px}
-.pdarrow{background:#16233b;border:1px solid #2f3a58;color:#cfd8ea;border-radius:11px;padding:11px 15px;font-weight:800;font-size:13px;cursor:pointer}
+.pdarrow{background:#16233b;border:1px solid #2f3a58;color:#cfd8ea;border-radius:11px;padding:11px 15px;font-weight:800;font-size:14px;cursor:pointer}
 .pdarrow:disabled{opacity:.35;cursor:default}
-.pdsofar{font-size:12.5px;font-weight:800;color:var(--muted,#93a0bd)}
+.pdsofar{font-size:14px;font-weight:800;color:var(--muted,#93a0bd)}
 
 .pdsummary{display:flex;align-items:center;justify-content:space-between;margin-top:14px;
   background:#0e1626;border:1px solid #26304a;border-radius:13px;padding:14px 15px;font-size:14px;font-weight:800;color:#eef2fb}
