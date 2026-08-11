@@ -7107,7 +7107,13 @@ function ciDock(){
   c.style.animation='';
   try{ var sl=document.getElementById('ciSlot'); if(sl){ sl.innerHTML=''; sl.style.marginTop='0'; } }catch(_){}
 }
-function ciShow(html, live){ var c=document.getElementById('ciCard'), inner=document.getElementById('ciInner'); if(!c||!inner) return; ciDock(); inner.innerHTML=html; c.style.display='block';
+function ciShow(html, live){
+  /* ciShow used to no-op if the card had never been mounted. Every real
+     path happened to mount first, so it never bit — but "silently does
+     nothing" is the exact failure shape behind the rejoin bug, the empty
+     Board and Trash Talk. Mount on demand and stop relying on luck. */
+  try{ ensureCiCard(); }catch(_){}
+  var c=document.getElementById('ciCard'), inner=document.getElementById('ciInner'); if(!c||!inner) return; ciDock(); inner.innerHTML=html; c.style.display='block';
   /* Restart the entrance every time, so a question that replaces another
      one still visibly ARRIVES instead of silently swapping its text. */
   try{ c.classList.toggle('cilive', !!live); c.style.animation='none'; void c.offsetWidth; c.style.animation=''; }catch(_){}
@@ -9175,7 +9181,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.61';
+const STATS_BUILD='2026-08-11-g6-ny-ind.62';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -11589,7 +11595,11 @@ body.hasgamebar .screen.active{padding-bottom:132px}
 .pdopts.many{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 .pdopts.many .pdopt{padding:12px 10px;font-size:14px;gap:8px;min-width:0}
 .pdopts.many .pdradio{width:17px;height:17px}
-.pdopts.many .pdname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Wrap, do not truncate. "Myisha Hines-A…" is not a name you can pick with
+   any confidence, and this same ellipsis is what sliced the OUT flag in
+   half. A two-line button is cheaper than a name you cannot read. */
+.pdopts.many .pdname{overflow:visible;text-overflow:clip;white-space:normal;line-height:1.16}
+.pdopts.many .pdopt{align-items:center;min-height:52px}
 /* An iPhone SE is 375px wide. Two columns of roster names at that width
    clipped "Angel Reese" against the card edge — a pick you cannot fully
    read is a pick you hesitate over on a 20-second clock. Below 380 the

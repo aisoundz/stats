@@ -441,7 +441,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-11-admin.30';
+window.ADMIN_BUILD='2026-08-11-admin.31';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -2863,7 +2863,12 @@ boot();
   E.b = (c,i,ev)=>({index:i,confidence:c,evidence:ev});
   E.teamOpt = (opts,teamId,T)=>{ const isHome=teamId===T.homeId; const nm=isHome?(T.homeName+' '+T.homeAbbr):(T.awayName+' '+T.awayAbbr);
     let idx=opts.findIndex(o=>{try{return new RegExp(o,'i').test(nm)}catch(e){return false}});
-    if(idx<0)idx=isHome?opts.findIndex(o=>/lynx|home/i.test(o)):opts.findIndex(o=>/fever|away/i.test(o));
+    /* The old fallback hardcoded 'lynx'->home and 'fever'->away from a
+       fixture two games ago. Tonight the Fever ARE home, so a miss on the
+       exact match would have graded with the wrong team. */
+    if(idx<0){ const ab=(isHome?T.homeAbbr:T.awayAbbr)||'';
+      if(ab) idx=opts.findIndex(o=>new RegExp('\\b'+ab+'\\b','i').test(o)); }
+    if(idx<0)idx=opts.findIndex(o=>(isHome?/\bhome\b/i:/\baway\b/i).test(o));
     if(idx<0)idx=isHome?0:1; return idx; };
   E.periodDone = (sum,per)=>{ if(sum.header?.competitions?.[0]?.status?.type?.completed) return true;
     const plays=sum.plays||[]; if(plays.some(p=>p.period?.number===per && /End Period|End of Game/i.test(p.type?.text||''))) return true;
