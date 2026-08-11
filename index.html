@@ -8197,7 +8197,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.36';
+const STATS_BUILD='2026-08-10-g5-tor-atl.37';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -8269,7 +8269,8 @@ function navGo(tab){
     // change is the classic half-built-nav tell.
     if(tab!=='crew'){ try{ closeTalk(); }catch(_){} }
     if(tab==='home')  { go('landing'); }
-    else if(tab==='gametime'){ renderGametime(); go('gametime'); }
+    else if(tab==='gametime'){ renderGametime(); go('gametime');
+      try{ loadGameStats(true).then(function(){ if(S.screen==='gametime') renderGametime(); }); }catch(_){} }
     else if(tab==='stats'){ go('stats'); renderStats(); loadGameStats(true).then(function(){ if(S.screen==='stats') renderStats(); }); }
     else if(tab==='board'){ renderBoard(); go('board');
       if(S.mode==='live'){ try{ refreshRoom(); }catch(_){} try{ boardRefresh(); }catch(_){} } }
@@ -8773,7 +8774,21 @@ function renderGametime(){
   if(!head) return;
   let H='Home', A='Away', hs=null, as=null, st='';
   try{ H=(GAME&&GAME.homeAb)||(GAME&&GAME.homeName)||H; A=(GAME&&GAME.awayAb)||(GAME&&GAME.awayName)||A; }catch(_){}
-  try{ if(typeof lastScore!=='undefined'&&lastScore&&lastScore.home!=null){ hs=lastScore.home; as=lastScore.away; st=lastScore.state||''; } }catch(_){}
+  /* THE LIVE FEED FIRST. This used to read `lastScore` — the number the HOST
+     types into the Control Room — so the Gametime tab sat on "Not started"
+     through three quarters of a game the app was already streaming into the
+     Stats tab. The feed is the truth; the host's post is an override. */
+  try{
+    if(GS && GS.ok && GS.teams && GS.teams.length===2){
+      var tA=GS.teams.find(function(t){return !t.home;})||GS.teams[0];
+      var tH=GS.teams.find(function(t){return t.home;})||GS.teams[1];
+      if(tA&&tH){
+        if(tA.ab) A=tA.ab; if(tH.ab) H=tH.ab;
+        if(tA.score!=null && tH.score!=null){ as=tA.score; hs=tH.score; st=GS.detail||'LIVE'; }
+      }
+    }
+  }catch(_){}
+  try{ if(hs==null && typeof lastScore!=='undefined'&&lastScore&&lastScore.home!=null){ hs=lastScore.home; as=lastScore.away; st=lastScore.state||''; } }catch(_){}
   const live = hs!=null && as!=null;
   head.innerHTML='<div class="card" style="padding:16px">'
     + '<div style="display:flex;align-items:center;justify-content:space-between">'
@@ -8864,7 +8879,11 @@ function ciDemoRun(){
     ciSettleWhenAnswered(live,q,21000);
   }catch(e){ try{ toast('Could not start the test — '+e.message); }catch(_){} }
 }
-try{ setInterval(function(){ try{ if((S&&S.screen)==='gametime') renderGametime(); }catch(_){}}, 20000); }catch(e){}
+/* Repainting stale numbers is not a live score. Pull, then paint. */
+try{ setInterval(function(){ try{
+  if((S&&S.screen)!=='gametime') return;
+  loadGameStats().then(function(){ try{ if(S.screen==='gametime') renderGametime(); }catch(_){} });
+}catch(_){}}, 20000); }catch(e){}
 
 </script>
 
