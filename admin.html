@@ -441,7 +441,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-11-admin.28';
+window.ADMIN_BUILD='2026-08-11-admin.29';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -554,56 +554,64 @@ const BANK = {
        half the room wrong for being right — with no way for them to argue
        it, because the question was never clear in the first place.
 
-       So every question that counts or compares now states its scope out
+       So every question that counts or compares states its scope out
        loud: "both teams combined". It is four extra words and it is the
-       difference between a question and an argument. The only exemption is
-       an event that is inherently game-level — a lead change belongs to
-       the game, not to a team, so it needs no scope. */
+       difference between a question and an argument. The only exemption
+       is an event that is inherently game-level — a lead change belongs
+       to the game, not to a team, so it needs no scope.
+
+       NO EMOJI. The interface is one stroked icon set now, and a row of
+       full-colour pictograms in front of the only words that actually
+       carry the game read as leftovers from a different product. The
+       question is the thing. Let it be the thing. */
 
     /* ---- Q1 · 10 pts · DID YOU SEE THE START? ----------------------
-       Everybody is in, nobody has settled, and the memory load has to be
-       near zero — every one of these resolves in the first few minutes or
-       at the buzzer, and you only need to have been looking up. */
+       Nobody has settled and the memory load has to be near zero. Each of
+       these resolves in the opening minutes or at the buzzer, and all you
+       had to do was look up. The fourth one quietly ties the start of the
+       quarter to the end of it, so it costs two glances instead of one. */
     [
-      { t: '🏀 The first points of the game — how did they come?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throws'] },
-      { t: '🙋 Which team committed the first foul of the game?', o: ['Fever', 'Liberty'] },
-      { t: '🎯 Threes made in Q1, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'] },
-      { t: '🔚 Who was ahead when the Q1 buzzer went?', o: ['Fever', 'Liberty', 'Tied'] }
+      { t: 'The first points of the game — how did they come?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throws'] },
+      { t: 'Which team made the first three-pointer of the game?', o: ['Fever', 'Liberty', 'Neither made one in Q1'] },
+      { t: 'Threes made in Q1, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'] },
+      { t: 'The team that scored first — were they still ahead at the Q1 buzzer?', o: ['Yes', 'No', 'It was tied'] }
     ],
-    /* ---- Q2 · 20 pts · WERE YOU TRACKING TWO THINGS AT ONCE? -------
-       Comparisons, not counts. You do not need an exact number for any of
-       these — you need a rough sense of two streams at the same time,
-       which is a harder and more interesting kind of watching. */
+    /* ---- Q2 · 20 pts · TWO THINGS AT ONCE --------------------------
+       Comparisons rather than counts. None of these need an exact number
+       — they need a rough feel for two streams running at the same time,
+       which is a harder and more interesting kind of watching than
+       tallying one. */
     [
-      { t: '⚖️ In Q2, both teams combined — were there more made field goals or made free throws?', o: ['Made field goals', 'Made free throws', 'Equal'] },
-      { t: '🔁 How many times did the lead change hands in Q2? (a tie is not a lead change)', o: ['None', 'Once', 'Twice', 'Three or more'] },
-      { t: '🔥 Did either team score 10 or more unanswered points at any point in Q2?', o: ['Yes', 'No'] },
-      { t: '🕐 The last shot attempt before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'] }
+      { t: 'In Q2, both teams combined — were there more made field goals or made free throws?', o: ['Made field goals', 'Made free throws', 'Equal'] },
+      { t: 'How many times did the lead change hands in Q2? (a tie is not a lead change)', o: ['None', 'Once', 'Twice', 'Three or more'] },
+      { t: 'Did either team score 10 or more unanswered points at any stage of Q2?', o: ['Yes', 'No'] },
+      { t: 'The last shot attempt before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'] }
     ],
     /* ---- Q3 · 30 pts · THE QUARTER NOBODY WATCHES -------------------
-       Attention sags after the interval and a blowout kills it entirely,
-       so Q3 gets the question that has out-performed everything else we
-       have ever asked: the shot-clock violation count. Nobody watches the
-       shot clock. Ask about it once and everybody watches it all night —
-       and because it is cumulative, it rewards the people who never
-       looked away. */
+       Attention sags after the interval and a blowout kills it outright,
+       so Q3 gets the two cumulative questions. The shot-clock count has
+       out-performed everything else we have ever asked — nobody watches
+       the shot clock, so ask once and everybody watches it all night —
+       and the double-figures count works the same way on the box score.
+       Both reward the people who never looked away, which is the only
+       thing this game is actually for. */
     [
-      { t: '🥇 Which team scored the first points after halftime?', o: ['Fever', 'Liberty'] },
-      { t: '⏱️ 24-second shot-clock violations tonight, both teams combined, Q1 through Q3 — how many?', o: ['None', '1', '2', '3 or more'] },
-      { t: '🎯 In Q3, both teams combined — were there more threes made or turnovers?', o: ['Threes made', 'Turnovers', 'Equal'] },
-      { t: '📊 Which team outscored the other in Q3 alone?', o: ['Fever', 'Liberty', 'Tied'] }
+      { t: 'Which team scored the first points after halftime?', o: ['Fever', 'Liberty'] },
+      { t: '24-second shot-clock violations tonight, both teams combined, Q1 through Q3 — how many?', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In Q3, both teams combined — were there more threes made or turnovers?', o: ['Threes made', 'Turnovers', 'Equal'] },
+      { t: 'Through three quarters, how many players have reached double figures in points, both teams combined?', o: ['None or one', 'Two', 'Three', 'Four or more'] }
     ],
     /* ---- Q4 · 40 pts · THE CLOSING STRETCH -------------------------
-       Worth four times Q1, so it is allowed to ask the most of you. Three
-       of these resolve inside the last two minutes, which is exactly when
-       a phone usually comes out. The last one is the closer on purpose: it
-       can only be answered by somebody who was there at half AND at the
-       buzzer, and it hands the whole night a shape. */
+       Worth four times Q1, so it is allowed to ask the most of you. The
+       first three resolve inside the closing minutes, which is exactly
+       when a phone comes out. The last one is the closer on purpose: only
+       somebody who was there at half AND at the buzzer can answer it, and
+       it hands the whole night a shape. */
     [
-      { t: '🏁 The last basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'] },
-      { t: '😰 In the last two minutes, both teams combined — were there more free-throw attempts or field-goal attempts?', o: ['Free-throw attempts', 'Field-goal attempts', 'Equal'] },
-      { t: '🚫 Did any player on either team foul out?', o: ['Yes', 'No'] },
-      { t: '👑 The team that led at halftime — did they win the game?', o: ['Yes', 'No', 'It was tied at half'] }
+      { t: 'In the last two minutes, both teams combined — were there more free-throw attempts or field-goal attempts?', o: ['Free-throw attempts', 'Field-goal attempts', 'Equal'] },
+      { t: 'Did any player on either team foul out?', o: ['Yes', 'No'] },
+      { t: 'The last basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'] },
+      { t: 'The team that led at halftime — did they win the game?', o: ['Yes', 'No', 'It was tied at half'] }
     ]
   ],
   /* Game #5 — Tempo @ Dream. Every question here is AUTO-GRADABLE off the
