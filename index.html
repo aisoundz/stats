@@ -8268,9 +8268,13 @@ function renderRoom(){
   const foot=document.getElementById('ttFoot');
   if(inp){
     inp.disabled=!live;
-    inp.placeholder = live ? 'Say something…'
-      : (S.practice ? 'The room opens on game night'
-        : (!signedInNow() ? 'Sign in to talk' : 'Reconnecting to the room…'));
+    /* Say what is actually needed. "Say something…" over a box that will
+       bounce you to the handle screen is a small lie, and small lies are
+       what "it doesn't work" is made of. */
+    inp.placeholder = !live
+      ? (S.practice ? 'The room opens on game night'
+         : (!signedInNow() ? 'Sign in to talk' : 'Reconnecting to the room…'))
+      : (ttCanPost() ? 'Say something…' : 'Pick a handle to talk');
   }
 
   /* Three different reasons a room can be shut, and they need three
@@ -9110,7 +9114,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.58';
+const STATS_BUILD='2026-08-11-g6-ny-ind.59';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
