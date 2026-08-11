@@ -3109,6 +3109,11 @@ const GAME_SCREENS=["predict","lobby","live","review","predreview","break"];
 let resumeData=null;
 function save(){try{
   if(S.mode!=="live") return;
+  /* STAMP THE NIGHT. The save key is per-SPORT, which was fine when there
+     was one game a week and fatal the moment there are two in two days: a
+     card locked last night would be restored tonight, complete with last
+     night's points and six players who are not in the building. */
+  try{ S.nid=(typeof GAME!=='undefined'&&GAME.nightId)||''; }catch(_){}
   // Snapshot the Call It record into the blob so a reload keeps the streak.
   try{ if(typeof PCI==='object') S.pci={called:PCI.called,hit:PCI.hit,streak:PCI.streak,best:PCI.best,heat:PCI.heat}; }catch(_){}
   localStorage.setItem(LS_KEY,JSON.stringify(S));
@@ -3116,6 +3121,15 @@ function save(){try{
 function clearSave(){try{localStorage.removeItem(LS_KEY);}catch(e){}}
 function checkResume(){
   let saved=null;try{saved=JSON.parse(localStorage.getItem(LS_KEY));}catch(e){}
+  /* A SAVE BELONGS TO ONE NIGHT. Without this, tonight's players get last
+     night's game handed back to them — locked card, stale score, a roster
+     of people who are not playing — and the resume is automatic, so they
+     never even see it happen. An unstamped save predates the fix and is by
+     definition from an earlier night. Both get cleared, not resumed. */
+  try{
+    var here=(typeof GAME!=='undefined'&&GAME.nightId)||'';
+    if(saved && here && saved.nid!==here){ clearSave(); saved=null; }
+  }catch(_){}
   const RESUMABLE=["predict","lobby","live","review","predreview","break"];
   // `place` is the position; `screen` is the fallback for saves written by
   // builds before the split existed.
@@ -8433,7 +8447,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.45';
+const STATS_BUILD='2026-08-11-g6-ny-ind.46';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
