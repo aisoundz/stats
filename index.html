@@ -250,7 +250,7 @@
   a.link{color:var(--teal2);text-decoration:none}
 
   .chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
-  .chip{font-size:11px;font-weight:700;color:var(--muted);background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:6px 11px}
+  .chip{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:8px;padding:7px 11px}
   /* selectable version of the same chip, used by the signup screen */
   .chip.pick{cursor:pointer;user-select:none;font-size:11.5px;padding:7px 12px;-webkit-tap-highlight-color:transparent}
   .chip.pick.on{color:#04121a;background:var(--teal2,#2ee6a6);border-color:var(--teal2,#2ee6a6)}
@@ -657,7 +657,7 @@
     <div class="card" id="resumeBar" style="display:none;border-color:var(--teal);background:rgba(25,195,214,.1);margin-bottom:6px">
       <b style="font-size:14.5px">🔴 You have a game in progress</b>
       <p class="sub" style="font-size:12px;margin:5px 0 11px" id="resumeSub">Your predictions and scored quarters are saved. Pick up where you left off.</p>
-      <button class="btn teal sm" onclick="doResume()">Resume my game →</button>
+      <button class="btn teal sm" onclick="doResume()">Resume my game</button>
       <button class="btn ghost sm" style="margin-top:8px" onclick="dismissResume()">Start a new game</button>
     </div>
     <div class="brand"><span class="logo" style="letter-spacing:1.5px;font-size:27px">STATS GAMETIME</span></div>
@@ -708,7 +708,7 @@
         <input type="checkbox" id="portalConsent" checked style="margin-top:1px;width:24px;height:24px;flex:0 0 auto;accent-color:#28e0d0">
         <span style="font-size:12px;line-height:1.45;color:var(--muted,#93a0bd)">Email me when the next game night is on. One message per game, unsubscribe any time.</span>
       </label>
-      <button class="btn ghost sm" style="margin-top:11px;font-size:12.5px" onclick="startDemo()">Just practice first (no account) →</button>
+      <button class="btn ghost sm" style="margin-top:11px;font-size:12.5px" onclick="startDemo()">Practice first — no account needed</button>
       <p class="foot" style="margin:10px 0 0;text-align:center">Free to play · Not gambling · Prizes are sponsor-funded</p>
     </div>
     <div class="card" id="welcomeStrip" style="display:none;margin-top:14px;padding:11px 14px;border-color:rgba(46,230,166,.35)"></div>
@@ -726,12 +726,12 @@
       <p style="font-size:12.5px;font-weight:800;color:var(--gold);margin:2px 0 6px" id="landingTip">🕐 Tip-off 1:00 ET · 12:00 CT · 10:00 PT · ABC</p>
       <p class="sub" id="landingMatch"><b style="color:var(--ink)">Indiana Fever @ Minnesota Lynx</b> — on ABC. Watch the broadcast, play from your couch. Predict before tip-off, answer at every quarter break. Right answers score. Fast right answers score more.</p>
       <div class="chips">
-        <span class="chip" id="landingChip1">🏀 WNBA Game of the Night</span>
-        <span class="chip">⚡ Speed counts</span>
-        <span class="chip" id="landingChip3">⏱️ 4 quarters</span>
+        <span class="chip" id="landingChip1">WNBA</span>
+        <span class="chip">1,000 points</span>
+        <span class="chip" id="landingChip3">4 quarters</span>
       </div>
-      <button class="btn" id="landingBtn" onclick="startLive()">🔴 Play Game Night — August 2 →</button>
-      <button class="btn ghost" id="landingDemoBtn" onclick="startDemo()">🎮 Practice first (simulated game)</button>
+      <button class="btn" id="landingBtn" onclick="startLive()">Play Game Night</button>
+      <button class="btn ghost" id="landingDemoBtn" onclick="startDemo()">Practice with a simulated game</button>
     </div>
 
     <!-- MATCHUP PREVIEW — auto-pulled from the live ESPN feed for this exact
@@ -751,7 +751,7 @@
     <div class="card strangers" style="border-color:rgba(46,230,166,.35)">
       <b style="font-size:15px">📬 Can't play tonight?</b>
       <p class="sub" style="font-size:12.5px;margin:6px 0 0">Get one email before each game night, and tell us what you watch — we build the next night around the answers.</p>
-      <button class="btn teal" style="margin-top:12px" onclick="openJoin('landing')">Join the list →</button>
+      <button class="btn teal" style="margin-top:12px" onclick="openJoin('landing')">Join the list</button>
     </div>
 
     <button class="btn ghost" onclick="go('rules')">📖 Read the full rules</button>
@@ -816,7 +816,7 @@
         <input id="jConsent" type="checkbox" style="margin-top:1px">
         <span>Yes — email me about upcoming STATS game nights. If I enter a phone number, I also agree to receive recurring automated texts from STATS at that number once texting starts. Consent is <b>not</b> a condition of playing, scoring, or winning anything. Message &amp; data rates may apply. Reply STOP to any text to stop, HELP for help. You can delete your email and phone yourself any time from the end-of-game screen, or email <a href="mailto:aisoundz9@gmail.com" style="color:var(--teal2)">aisoundz9@gmail.com</a>.</span>
       </label>
-      <button class="btn teal" id="jBtn" style="margin-top:14px" onclick="submitJoin()">Count me in →</button>
+      <button class="btn teal" id="jBtn" style="margin-top:14px" onclick="submitJoin()">Count me in</button>
       <p class="foot" id="jNote" style="margin-top:8px">We don't sell your info. You can ask us to delete it any time.</p>
     </div>
     <button class="btn ghost" id="jSkip" onclick="joinBack()">Not right now</button>
@@ -940,8 +940,8 @@
       <div class="chips" id="sportPick"></div>
       <label class="fld">Pick your color</label>
       <div class="chips" id="colorPick"></div>
-      <button class="btn" id="nameBtn" disabled onclick="startPredict()">Continue to picks →</button>
-      <button class="btn ghost" style="margin-top:8px;font-size:12.5px" onclick="openJoin('name',gateEmailValue())">Tell us what you watch →</button>
+      <button class="btn" id="nameBtn" disabled onclick="startPredict()">Continue to my picks</button>
+      <button class="btn ghost" style="margin-top:8px;font-size:12.5px" onclick="openJoin('name',gateEmailValue())">Tell us what you watch</button>
     </div>
     <p class="foot">Free to enter • No purchase necessary • 18+ • We don't sell your address.</p>
   </section>
@@ -1106,7 +1106,7 @@
       <div id="revealBox"></div>
     </div>
     <div style="flex:1"></div>
-    <button class="btn" id="nextBtn" style="display:none" onclick="nextQuestion()">Next →</button>
+    <button class="btn" id="nextBtn" style="display:none" onclick="nextQuestion()">Next</button>
     <div class="center" id="lockNote" style="display:none;font-size:11.5px;color:var(--dim);margin-top:8px">⚠️ Once you lock it in, you can't change it.</div>
   </section>
 
@@ -1128,7 +1128,7 @@
     <div id="revList"></div>
     <button class="btn teal" id="revBtn" disabled onclick="confirmReview()">Confirm &amp; score quarter</button>
     <div id="revResult"></div>
-    <button class="btn" id="revNextBtn" style="display:none" onclick="afterReview()">Continue →</button>
+    <button class="btn" id="revNextBtn" style="display:none" onclick="afterReview()">Continue</button>
     <button class="btn ghost" id="revTalkBtn" style="display:none" onclick="openTalk()">🔥 Talk trash</button>
   </section>
 
@@ -1250,7 +1250,7 @@
         <input id="suConsent" type="checkbox" style="margin-top:1px">
         <span>Yes — email me about upcoming STATS game nights. If I enter a phone number, I also agree to receive recurring automated texts from STATS at that number once texting starts. Consent is <b>not</b> a condition of playing, scoring, or winning anything. Message &amp; data rates may apply. Reply STOP to any text to stop, HELP for help. You can delete your email and phone yourself any time from the end-of-game screen, or email <a href="mailto:aisoundz9@gmail.com" style="color:var(--teal2)">aisoundz9@gmail.com</a>.</span>
       </label>
-      <button class="btn teal" id="suBtn" style="margin-top:12px" onclick="submitSignup()">Count me in →</button>
+      <button class="btn teal" id="suBtn" style="margin-top:12px" onclick="submitSignup()">Count me in</button>
       <p class="foot" id="suNote" style="margin-top:8px">We don't sell your info. We're not texting anyone yet — the number just means you're on the list when we start.</p>
     </div>
     <!-- The other half of the promise. Before this card the signup form simply
@@ -2060,6 +2060,132 @@ window.STATS_FIREBASE = {
     });
   }
 
+  /* ==================== TELEMETRY =====================================
+     Six game nights, fifty-three builds, and not one number. Every product
+     decision in this company has come from one person's notes taken on his
+     own two devices — which was workable at two players and is worthless at
+     twenty. You cannot see where people drop out of a room you are standing
+     in.
+
+     Three constraints shaped this:
+
+       1. IT MUST NOT COST THE ROOM. Firestore's free tier is 20k writes a
+          day and the live room already polls hard enough to worry me. So
+          events buffer in memory, survive a reload in localStorage, and
+          flush as ONE document per player per night — a dozen writes across
+          three hours, not two hundred.
+
+       2. IT MUST NEVER BREAK A GAME. Every call is wrapped, the buffer is
+          capped, and a dead backend simply means the events stay on the
+          device. Nothing here is allowed to throw into a scoring path.
+
+       3. IT MUST BE READABLE TONIGHT. `STATS_TRK()` in any console prints
+          the funnel for that device, and the Control Room reads the room's
+          docs. Data nobody looks at is the same as no data.
+     =================================================================== */
+  var TRK = { buf: [], t0: Date.now(), dirty: false, flushT: null, sent: 0 };
+  var TRK_KEY = 'stats_trk_v1';
+  var TRK_MAX = 400;          // a hard cap; a runaway loop cannot fill a doc
+
+  function trkLoad(){
+    try{
+      var raw = JSON.parse(localStorage.getItem(TRK_KEY) || 'null');
+      if (raw && raw.night === trkNight() && Array.isArray(raw.buf)) TRK.buf = raw.buf.slice(-TRK_MAX);
+    }catch(_){}
+  }
+  function trkNight(){ try{ return (typeof GAME!=='undefined' && GAME.nightId) || 'no-night'; }catch(_){ return 'no-night'; } }
+  function trkSave(){
+    try{ localStorage.setItem(TRK_KEY, JSON.stringify({ night: trkNight(), buf: TRK.buf.slice(-TRK_MAX) })); }catch(_){}
+  }
+
+  /* The only function the rest of the app calls. Deliberately tiny, and
+     deliberately impossible to make fail. */
+  function trk(name, props){
+    try{
+      if (!name) return;
+      var e = { n: String(name).slice(0, 32), t: Date.now() - TRK.t0 };
+      if (props && typeof props === 'object'){
+        var p = {};
+        Object.keys(props).slice(0, 8).forEach(function(k){
+          var v = props[k];
+          if (typeof v === 'number' && isFinite(v)) p[k] = Math.round(v * 100) / 100;
+          else if (typeof v === 'boolean') p[k] = v;
+          else if (v != null) p[k] = String(v).slice(0, 40);
+        });
+        if (Object.keys(p).length) e.p = p;
+      }
+      TRK.buf.push(e);
+      if (TRK.buf.length > TRK_MAX) TRK.buf.splice(0, TRK.buf.length - TRK_MAX);
+      TRK.dirty = true;
+      trkSave();
+      trkSchedule();
+    }catch(_){}
+  }
+  /* Debounced, and never more than once a minute. A flush is one write. */
+  function trkSchedule(){
+    try{
+      if (TRK.flushT) return;
+      TRK.flushT = setTimeout(function(){ TRK.flushT = null; trkFlush(); }, 45000);
+    }catch(_){}
+  }
+  async function trkFlush(force){
+    try{
+      if (!TRK.dirty && !force) return false;
+      if (!window.SB || !SB.enabled || !SB.trkWrite) return false;
+      var ok = await SB.trkWrite({
+        build: (typeof STATS_BUILD !== 'undefined') ? STATS_BUILD : '',
+        night: trkNight(),
+        name: (function(){ try{ return S.name || ''; }catch(_){ return ''; } })(),
+        started: TRK.t0,
+        mins: Math.round((Date.now() - TRK.t0) / 60000),
+        screen: (function(){ try{ return (window.screen && screen.width) ? (screen.width + 'x' + screen.height) : ''; }catch(_){ return ''; } })(),
+        events: TRK.buf.slice(-TRK_MAX)
+      });
+      if (ok){ TRK.dirty = false; TRK.sent++; }
+      return ok;
+    }catch(_){ return false; }
+  }
+  /* The moments worth spending a write on immediately, because they are
+     the funnel steps we most need and the ones a closing tab would eat. */
+  function trkNow(name, props){ trk(name, props); try{ trkFlush(true); }catch(_){} }
+
+  /* A tab that closes mid-night still reports. `visibilitychange` fires on
+     iOS where `beforeunload` does not. */
+  try{
+    document.addEventListener('visibilitychange', function(){
+      if (document.hidden){ trk('hide', { mins: Math.round((Date.now() - TRK.t0) / 60000) }); trkFlush(true); }
+      else trk('show');
+    });
+    window.addEventListener('pagehide', function(){ try{ trkFlush(true); }catch(_){} });
+  }catch(_){}
+
+  /* READ IT WITHOUT A DASHBOARD. Type STATS_TRK() in any console. */
+  function trkReport(){
+    var counts = {};
+    TRK.buf.forEach(function(e){ counts[e.n] = (counts[e.n] || 0) + 1; });
+    var out = {
+      night: trkNight(), minutes: Math.round((Date.now() - TRK.t0) / 60000),
+      events: TRK.buf.length, flushes: TRK.sent, counts: counts,
+      funnel: ['app_open','sign_in','night_join','card_start','card_lock',
+               'round_open','round_answer','night_complete']
+              .map(function(k){ return k + ': ' + (counts[k] || 0); }).join('  ·  '),
+      last: TRK.buf.slice(-12)
+    };
+    try{ console.table(out.counts); }catch(_){}
+    return out;
+  }
+  /* EXPOSED ON PURPOSE. The tracker lives inside the backend module, but
+     the events that matter most fire from OUTSIDE it — lockPredictions,
+     showFinal, navGo. Those read TRK.t0 for elapsed time, and without this
+     line every one of them was a silent ReferenceError swallowed by its own
+     try/catch: the calls looked fine and collected nothing. The gate caught
+     it; a game night would not have. */
+  try{
+    window.TRK = TRK; window.trkLoad = trkLoad;
+    window.STATS_TRK = trkReport; window.trk = trk; window.trkNow = trkNow; window.trkFlush = trkFlush;
+  }catch(_){}
+  try{ trkLoad(); }catch(_){}
+
   /* ---- push my score ------------------------------------------------ */
   SB.push = async function (o) {
     if (!SB.enabled || !meRef || !budget()) return false;
@@ -2072,6 +2198,28 @@ window.STATS_FIREBASE = {
           pts: mine.pts, speed: mine.speed, predPts: mine.predPts,
           catchPts: mine.catchPts, roundsDone: mine.roundsDone,
           lastSeen: F.serverTimestamp()
+        }, { merge: true });
+      });
+    } catch (e) { return false; }
+  };
+
+  /* ---- telemetry: ONE doc per player per night ----------------------
+     Not one per event. The whole point of buffering on the device is that
+     three hours of a player's night costs a dozen writes instead of two
+     hundred, which is the difference between measuring the room and
+     breaking it. */
+  SB.trkWrite = async function (o) {
+    if (!SB.enabled || !nightId || !uid() || !budget()) return false;
+    try {
+      return await writeTry('telemetry', function () {
+        return F.setDoc(F.doc(db, 'nights', nightId, 'telemetry', uid()), {
+          uid: uid(), name: String(o.name || '').slice(0, 24),
+          build: String(o.build || '').slice(0, 40),
+          screen: String(o.screen || '').slice(0, 16),
+          mins: Number(o.mins) || 0,
+          n: (o.events || []).length,
+          events: (o.events || []).slice(-400),
+          at: F.serverTimestamp()
         }, { merge: true });
       });
     } catch (e) { return false; }
@@ -2668,7 +2816,14 @@ window.STATS_FIREBASE = {
      stamped comes back with at:0 — it is real, it is just a moment early,
      and it must not be treated as 1970.                                */
   SB.talk = async function (sinceMs) {
-    if (!SB.enabled || !nightId || !budget()) return null;
+    /* SAY WHY. This returned a bare null for every failure — no room, no
+       night, permission refused, missing index — and the caller swallowed
+       it. The Board had the identical bug and it cost us a whole game
+       night of "the leaderboard is empty" with nothing to go on. */
+    SB.lastTalkError = '';
+    if (!SB.enabled)  { SB.lastTalkError = 'backend-off';  return null; }
+    if (!nightId)     { SB.lastTalkError = 'not-in-room';  return null; }
+    if (!budget())    { SB.lastTalkError = 'budget';       return null; }
     try {
       var col = F.collection(db, 'nights', nightId, 'talk');
       var q = sinceMs
@@ -2691,8 +2846,15 @@ window.STATS_FIREBASE = {
         });
       });
       return out;
-    } catch (e) { return null; }
+    } catch (e) {
+      SB.lastTalkError = (e && (e.code || e.name)) || 'unknown';
+      try { console.error('[STATS] talk failed:', SB.lastTalkError, e && e.message); } catch (_) {}
+      return null;
+    }
   };
+  /* Is this device actually in a room? The single question behind every
+     "it doesn't work" report we have had. */
+  SB.inRoom = function(){ return !!(SB.enabled && nightId); };
 
   SB.pollMs = COUNT_MS;
 })();
@@ -2942,7 +3104,7 @@ const SPORTS={
     L:{ start:"tip-off", Start:"Tip-off", starting:"Tipping off",
         end:"final buzzer", End:"Final buzzer 🚨",
         unit:"game", Unit:"Game", period:"quarter", Period:"Quarter",
-        league:"🏀 WNBA Game of the Night", cadence:"⏱️ 4 quarters" },
+        league:"WNBA", cadence:"4 quarters" },
     startLbl:"Start {n} ▶", lifelineNote:"just like the arena timeout",
     // Built from BB_GAME rather than typed out, so swapping the fixture can
     // never again leave last week's matchup sitting on the front door.
@@ -2967,7 +3129,7 @@ const SPORTS={
     L:{ start:"kickoff", Start:"Kickoff", starting:"Kicking off",
         end:"final whistle", End:"Final whistle 📣",
         unit:"match", Unit:"Match", period:"half", Period:"Half",
-        league:"⚽️ Leagues Cup · MLS v LIGA MX", cadence:"⏱️ 2 halves" },
+        league:"Leagues Cup", cadence:"2 halves" },
     startLbl:"{n} questions ▶", lifelineNote:"the break is long enough",
     landing:"<b style=\"color:var(--ink)\">MLS v LIGA MX</b> — a month of it, Aug 4 to Sep 6. Set your card before kickoff, then put the phone down: your live catches score themselves while you watch. Two rounds of questions, halftime and full time. That's it.",
     step1:"Ten picks before kickoff — result, goals, first corner, first card, added time. All of them always resolve. Worth up to 50 pts.",
@@ -3072,7 +3234,7 @@ function paintContinueCard(){
       else if(S.place==='review'||S.place==='break') where='between quarters';
       else where='in progress';
     }catch(_){ where='in progress'; }
-    btn.textContent='▶︎ Continue tonight’s game — '+where;
+    btn.textContent='Continue tonight’s game · '+where;
     btn.classList.add('teal');
     if(demo) demo.style.display='none';
     if(!note){
@@ -3902,6 +4064,7 @@ function saveGateEmail(force){
 
 /* ---------------- PREDICTIONS ---------------- */
 function startPredict(){
+  try{ trk('card_start'); }catch(_){}
   /* "Play Game Night #5" is a START button. Pressed mid-night — which is
      exactly what a player does after their phone wakes on the home screen —
      it used to hand back a blank pick sheet for a card that was already
@@ -4059,7 +4222,7 @@ function buildPred(){
    +'<div class="pdnav">'
    +  '<button type="button" class="pdarrow" data-pdgo="-1"'+(PD.i===0?' disabled':'')+'>← Back</button>'
    +  '<span class="pdsofar">'+doneN+' / '+preds.length+' locked</span>'
-   +  '<button type="button" class="pdarrow" data-pdgo="1"'+(PD.i===L.length-1?' disabled':'')+'>Next →</button>'
+   +  '<button type="button" class="pdarrow" data-pdgo="1"'+(PD.i===L.length-1?' disabled':'')+'>Next</button>'
    +'</div>'
    /* THE ACTION LIVES WITH THE CARD. The old Lock button sat at the bottom
       of the page — which on a phone put it a full screen below the deck,
@@ -4174,6 +4337,10 @@ function paintInactives(){
 }
 
 function lockPredictions(){
+  try{
+    var made=preds.filter(function(p){return S.predChoices[p.id];}).length;
+    trkNow('card_lock',{picks:made, of:preds.length, secs:Math.round((Date.now()-TRK.t0)/1000)});
+  }catch(_){}
   // One honest check before picks become permanent.
   if(S.mode==='live' && INACTIVE.size){
     const bad=[];
@@ -4614,6 +4781,11 @@ function answer(choice,btn){
     }
     // A pick, not a lock. Bank is whatever the clock says RIGHT NOW.
     const bank=pastTime?0:Math.max(secondsLeft,0);
+    /* THE MOST IMPORTANT NUMBER WE COLLECT. Seconds left when the answer
+       landed tells us whether people are present when it counts, or
+       scrambling back after the clock died — which is the whole question
+       behind "did we lose them to a sleeping phone". */
+    try{ if(S.liveAnswers[S.qi][S.ni]==null) trk('round_answer',{q:S.qi+1, n:S.ni+1, left:bank}); }catch(_){}
     S.liveAnswers[S.qi][S.ni]={choice,bank};
     document.querySelectorAll('#qOpts .opt').forEach(b=>{
       b.classList.remove('sel');b.querySelector('.mk').textContent='';
@@ -5073,6 +5245,7 @@ function renderLeaderboard(elId,limit){
    button.
    ==================================================================== */
 function showFinal(){
+  try{ trkNow('night_complete',{pts:Math.round((S&&S.pts)||0), mins:Math.round((Date.now()-TRK.t0)/60000)}); }catch(_){}
   // Whatever is already on S.pts came from live rounds. Capture it before
   // the sheet and the catches land, or the breakdown below cannot tell
   // the two halves of the night apart.
@@ -5993,6 +6166,7 @@ let roomTimer=null, roomLast={count:null,joined:null,rank:null};
 function nightKey(){ return GAME.nightId || (SPORT.key+'-unscheduled'); }
 
 async function joinNight(){
+  try{ trkNow('night_join'); }catch(_){}
   // Subscribe first, unconditionally. `enabled` is false while the backend
   // is still booting and stays false if the boot fails — so hooking after
   // the guard means the one case that most needs a repaint (dead network)
@@ -6816,6 +6990,7 @@ function ciGrade(q){
 }
 function ciPick(q,v){
   if(PCI.muted || PCI.picked[q.qid]!=null) return;
+  try{ trk('callit_answer',{kind:String(q.qid||'').split('-')[0]}); }catch(_){}
   PCI.picked[q.qid]=v;
   /* FEEDBACK ON THE SAME FRAME. "It feels stuck when you give the answer."
      It was: the tap wrote to state, then the card re-rendered into a layout
@@ -6978,6 +7153,7 @@ function onHostedRound(r){
 }
 
 function onHostedLive(r, idx){
+  try{ trkNow('round_open',{q:idx+1}); }catch(_){}
   if(HR.started[r.id] || HR.submitted[r.id] || HR.scored[r.id]) return;
   // A reload mid-round must not hand the same questions out twice. Ask the
   // server what we already locked before serving anything.
@@ -7595,6 +7771,17 @@ function ttNode(cls,txt){const d=document.createElement('div');d.className=cls;i
 const TT_EMOJI=['🔥','😂','👀','💀','🎯','🐐','😭','🥶','🙌','😤','📈','📉','🤡','⚡'];
 
 function openTalk(){
+  /* JOINING IS PART OF OPENING. Trash Talk is reachable from the nav at
+     any moment, including before the player has ever pressed Play — and
+     until they join, the backend has no nightId, so every read returns
+     nothing and every send is refused with a reason nobody sees. This is
+     the same root cause that emptied the Board in Game #5, surfacing in
+     the one place I did not check. Open the room, be in the room. */
+  try{
+    if(S.mode==='live' && window.SB && SB.enabled && SB.inRoom && !SB.inRoom()){
+      joinNight().then(function(ok){ if(ok){ try{ ttLastAt=0; ttRoomPull(true); }catch(_){} } });
+    }
+  }catch(_){}
   document.getElementById('ttTitle').textContent =
     S.screen==='final'?'🔥 The room · final':'🔥 The room';
   try{ ttClearBadge(); const mb=document.getElementById('ttMuteBtn'); if(mb) mb.textContent = ttMuted()?'🔕 Muted':'🔔 Pings on'; }catch(e){}
@@ -7710,6 +7897,19 @@ async function ttSend(){
     if(why==='slow')                    toast('Easy. One line every couple of seconds.');
     else if(why==='limit')              toast('That\u2019s your lot for tonight. Save something for the fourth.');
     else if(why==='permission-denied')  toast('Your session went stale. Reload the page and it\u2019ll send.');
+    else if(why==='offline'){
+      /* Not "tap again" — tapping again can never work while this device
+         is not in the room. Put it in the room and resend. */
+      toast('Joining the room…');
+      joinNight().then(function(ok){
+        if(!ok){ toast('Couldn\u2019t join the room. Reload and try once more.'); return; }
+        SB.say({text:text,kind:'chat',name:S.name||'player',color:S.color||'#888'})
+          .then(function(r2){
+            if(r2&&r2.ok){ i.value=''; ttTyped(); ttLastAt=0; ttRoomPull(true); }
+            else toast('Still couldn\u2019t send. Reload the page.');
+          });
+      });
+    }
     else                                toast('That didn\u2019t send \u2014 tap again.');
   }
   ttTyped();
@@ -7803,6 +8003,7 @@ async function ttRoomPull(force){
   ttPulling=true;
   try{
     const rows=await SB.talk(ttLastAt);
+    try{ ttWhy = (rows===null) ? ((window.SB&&SB.lastTalkError)||'unknown') : ''; }catch(_){}
     if(rows&&rows.length){
       // A line already on the phone gets OVERWRITTEN by the copy that
       // comes back, not skipped: a line posted a second ago returns with
@@ -7831,9 +8032,11 @@ async function ttRoomPull(force){
       ttHotUntil=Date.now()+90000;
       if(ttRoomOpen()) renderRoom();
     }
-  }catch(e){}
+    if(rows===null && ttRoomOpen()) renderRoom();
+  }catch(e){ try{ ttWhy=(e&&e.message)||'threw'; }catch(_){} }
   ttPulling=false;
 }
+var ttWhy='', ttJoining=false;
 function ttRoomStart(){
   ttRoomStop(); ttTick=0; ttRoomPull(true);
   ttTimer=setInterval(function(){
@@ -7900,6 +8103,32 @@ function renderRoom(){
   if(foot) foot.textContent='Everyone playing tonight sees this. Keep it about the game — links and phone numbers don’t post.';
 
   if(!ttLines.length){
+    /* AN HONEST EMPTY ROOM. "Nothing said yet" is only true if we actually
+       managed to read the room. If the read failed we say so, and we name
+       the reason — the Board taught us that a cheerful empty state over a
+       silent failure costs a whole game night of guessing. */
+    var why=''; try{ why=ttWhy||''; }catch(_){}
+    if(why==='not-in-room'){
+      body.appendChild(ttNode('tt-empty','You’re not in tonight’s room yet — joining you now. If this doesn’t clear in a few seconds, reload the page.'));
+      /* ONCE. The first version of this called joinNight() from inside the
+         renderer, and the join re-pulled, and the pull re-rendered, and the
+         renderer joined again — an infinite request loop that hung the test
+         suite for ten minutes. A renderer that can trigger the thing that
+         calls it needs a latch, every time. */
+      try{
+        if(S.mode==='live' && !ttJoining){
+          ttJoining=true;
+          joinNight().then(function(ok){
+            if(ok){ ttLastAt=0; ttWhy=''; ttRoomPull(true); }
+            setTimeout(function(){ ttJoining=false; }, 4000);
+          });
+        }
+      }catch(_){ ttJoining=false; }
+    } else if(why==='permission-denied'){
+      body.appendChild(ttNode('tt-empty','Your session went stale, so the room won’t open. A reload fixes it — nothing you’ve scored is affected.'));
+    } else if(why){
+      body.appendChild(ttNode('tt-empty','Couldn’t read the room (' + esc(why) + '). It retries on its own — leave this open.'));
+    } else
     body.appendChild(ttNode('tt-empty','Nothing said yet. Be first in — or tap 🎲 and let the app write you one.'));
     return;
   }
@@ -8426,13 +8655,13 @@ function applySport(){
   const $=id=>document.getElementById(id);
   const set=(id,txt)=>{const e=$(id);if(e)e.textContent=txt;};
   const html=(id,h)=>{const e=$(id);if(e)e.innerHTML=h;};
-  set('landingTip','🕐 '+GAME.tip);
+  set('landingTip',GAME.tip);
   html('landingMatch',SPORT.landing);
-  set('landingHead',`🔴 ${GAME.night} · ${GAME.date}`.replace(' · ·',' ·'));
+  set('landingHead',`${GAME.night} · ${GAME.date}`.replace(' · ·',' ·'));
   set('landingChip1',SPORT.L.league);
   set('landingChip3',SPORT.L.cadence);
-  set('landingBtn',`🔴 Play ${GAME.night} — ${GAME.short} →`);
-  set('landingDemoBtn',`🎮 Practice first (simulated ${L.unit})`);
+  set('landingBtn',`Play ${GAME.night}`);
+  set('landingDemoBtn',`Practice with a simulated ${L.unit}`);
   set('step1h',`Predict before ${L.start}`);
   set('step1p',SPORT.step1);
   set('step2h',SPORT.step2h);
@@ -8488,6 +8717,7 @@ function applySport(){
 }
 try{applySport();}catch(e){console.error('applySport',e);}
 try{paintChrome();}catch(e){console.error('paintChrome',e);}
+try{ trk('app_open',{build:(typeof STATS_BUILD!=='undefined')?STATS_BUILD:'', w:(window.innerWidth||0)}); }catch(_){}
 try{mountMatchup();}catch(e){console.error('mountMatchup',e);}
 
 /* ================= FRONT DOOR (sprint 2) =============================
@@ -8527,6 +8757,7 @@ function renderPortal(){
     }
   }catch(_){}
   if(v){
+    try{ if(!TRK.signedLogged){ TRK.signedLogged=1; trk('sign_in'); } }catch(_){}
     /* THE MEMBER CARD. The first version of this was a one-line strip —
        and signing in made the page WORSE, because the strip replaced the
        best-looking card on the screen. Backwards. A member's front door
@@ -8685,7 +8916,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.53';
+const STATS_BUILD='2026-08-11-g6-ny-ind.54';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -8766,6 +8997,7 @@ function goHomeFromFinal(){
 }
 try{ window.goHomeFromFinal=goHomeFromFinal; }catch(_){}
 function navGo(tab){
+  try{ trk('tab_view',{tab:tab}); }catch(_){}
   try{
     // Leaving the Crew tab closes the room. A modal that survives a tab
     // change is the classic half-built-nav tell.
@@ -9024,12 +9256,12 @@ function renderMe(){
       +   '<button type="button" id="meTry" class="pdlock" style="background:#16233b;color:#cfd8ea;font-size:14px;padding:13px">🎯 Run a practice Call It</button>'
       +   '<div class="sub" style="font-size:11.5px;margin-top:7px">Fires a real question built from tonight’s numbers. Practice only — it doesn’t count toward your streak or your points.</div>'
       + '</div>'
-      + '<button class="btn ghost" style="margin-top:12px;font-size:12.5px" onclick="openJoin(\'me\',\'\')">Tell us what you watch →</button>'
+      + '<button class="btn ghost" style="margin-top:12px;font-size:12.5px" onclick="openJoin(\'me\',\'\')">Tell us what you watch</button>'
       + '<button class="btn ghost" style="margin-top:8px;font-size:12.5px" onclick="doSignOut()">Sign out</button>'
     : '<div class="card center">'
       + '<b style="font-size:16px">You’re not signed in yet</b>'
       + '<p class="sub" style="margin:8px 0 14px">Sign in and this becomes your card — season points, game nights played, and your best Call It streak.</p>'
-      + '<button class="btn" onclick="go(\'landing\')">Go to sign in →</button>'
+      + '<button class="btn" onclick="go(\'landing\')">Go to sign in</button>'
       + '</div>';
   el.innerHTML += buildStampHTML();
   try{ const mt=document.getElementById('meTry'); if(mt) mt.onclick=function(){ ciDemoNow(); }; }catch(_){}
@@ -9839,6 +10071,7 @@ function shareCardText(id){
     .filter(function(x){ return x!==undefined && x!==null && String(x).length; }).join('\n');
 }
 function shareCard(id){
+  try{ trk('share'); }catch(_){}
   var txt=shareCardText(id);
   try{
     if(navigator.share){ navigator.share({text:txt}).catch(function(){}); return; }
@@ -10351,6 +10584,7 @@ function feedRender(force){
 }
 
 function feedReact(key, card){
+  try{ trk('feed_react'); }catch(_){}
   try{
     var parts=String(key).split('|'), id=parts[0], e=parts[1];
     FEED.reacts[id]=FEED.reacts[id]||{};

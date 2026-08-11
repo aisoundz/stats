@@ -93,6 +93,26 @@
   .chip.live{background:#3a1220;color:#ff8b97;border-color:#5c1d2f}
   .chip.done{background:#0e3327;color:var(--green);border-color:#17513c}
   .chip.draft{background:#1a2340;color:var(--blue2);border-color:#2b3a63}
+/* ---- guided host mode ---- */
+.guide{border:1px solid #2b3a63;border-radius:16px;background:linear-gradient(180deg,#121a2c,#0e1420);
+  padding:16px 17px;margin-bottom:14px}
+.gsteps{display:flex;gap:6px;margin-bottom:14px}
+.gstep{flex:1;text-align:center;font-weight:800;font-size:9.5px;letter-spacing:.12em;
+  color:#4e5a75;text-transform:uppercase}
+.gstep i{display:block;height:4px;border-radius:99px;background:#222c44;margin-bottom:6px}
+.gstep.done{color:#6f7d99} .gstep.done i{background:#2ee6a6}
+.gstep.now{color:#eef2fb} .gstep.now i{background:linear-gradient(92deg,#28e0d0,#4d86ff)}
+.gnow{font-weight:900;font-size:10px;letter-spacing:.2em;color:#28e0d0;text-transform:uppercase;margin-bottom:7px}
+.ghead{font-weight:900;font-size:19px;line-height:1.25;color:#eef2fb;margin-bottom:6px}
+.gwhy{font-size:13px;line-height:1.5;color:#93a0bd;margin-bottom:13px}
+.gbtn{width:100%;border:none;border-radius:13px;padding:16px 16px;cursor:pointer;
+  font-weight:900;font-size:15.5px;line-height:1.25;
+  background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e}
+.gbtn:active{transform:scale(.99)}
+.gbtn.wait{background:#1a2233;color:#8d99b3;cursor:default}
+.gbtn.warn{background:linear-gradient(92deg,#ffc54d,#ff924d);color:#2a1c00}
+.gskip{display:block;width:100%;margin-top:9px;background:none;border:none;color:#5b6a8c;
+  font-weight:700;font-size:12px;cursor:pointer;text-decoration:underline}
 
   .qcard{background:var(--card2);border:1px solid var(--line);border-radius:12px;
     padding:11px;margin-top:10px}
@@ -268,7 +288,20 @@
 
     <!-- ---------- TAB 2: RUN ---------- -->
     <section id="t-run" class="hide">
-      <div id="runBanner"></div>
+      <!-- ================= GUIDED HOST MODE ==========================
+         The Control Room works, but only if you already know the order:
+         push when the quarter ENDS, mark while the next one plays, reveal,
+         then push the following one yourself. That is tribal knowledge in
+         one person's head, and it is the reason a night cannot be handed
+         to anybody else — which is the reason this product has a ceiling
+         of one room.
+
+         This is the same controls, sequenced. One step lit at a time, one
+         button, and a plain sentence saying why. Everything below it stays
+         exactly where it was for the host who already knows the dance.
+         ============================================================= -->
+    <div id="guide" class="guide"></div>
+    <div id="runBanner"></div>
       <!-- RESET. A dry run writes to the same night document a real game
            uses, so a rehearsal leaves rounds pushed and revealed and the
            real night cannot start. There was no way to undo that except
@@ -407,7 +440,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-11-admin.25';
+window.ADMIN_BUILD='2026-08-11-admin.26';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -1362,10 +1395,101 @@ function keyBlock(i){
      </div>`).join('') + '</div>';
 }
 
+/* ==================== GUIDED HOST MODE ==============================
+   One question, answered on screen: WHAT DO I DO RIGHT NOW.
+
+   The Control Room has always contained the answer — it was just spread
+   across four cards, a banner and a rule you had to have been taught. This
+   reads the same state everything else reads and turns it into one lit
+   button. It adds no new powers; a host who already knows the dance can
+   ignore it entirely and use the cards below exactly as before.
+   =================================================================== */
+function guideState(){
+  const cfg = nightCfg(night), tags = cfg.tags || [];
+  const liveIdx = tags.findIndex((t,i)=>{ const d=liveDocs[roundDocId(i)]; return d && d.state==='live'; });
+  const steps = tags.map((t,i)=>{
+    const d = liveDocs[roundDocId(i)];
+    return { tag:t, state: !d ? 'draft' : d.state };
+  });
+
+  if(liveIdx >= 0){
+    const pr = keyProgress(liveIdx), tag = tags[liveIdx];
+    const subs = subCounts[roundDocId(liveIdx)];
+    if(pr.total > 0 && pr.done >= pr.total){
+      return { steps, now:liveIdx,
+        kicker:'Step '+(liveIdx+1)+' of '+tags.length,
+        head:'Reveal '+tag,
+        why:'All '+pr.total+' answers are marked'+(subs!==undefined?(' and '+subs+' '+(subs===1?'player has':'players have')+' answered'):'')
+            +'. One press reveals, posts the score and grades everyone from what they saved.',
+        label:'✅ Reveal '+tag+' — score and grade the room',
+        run:function(){ closeQuarter(liveIdx); } };
+    }
+    return { steps, now:liveIdx,
+      kicker:'Step '+(liveIdx+1)+' of '+tags.length,
+      head:'Mark the answers for '+tag,
+      why:tag+' is live on every phone. Mark each answer as it settles — '+pr.done+' of '+pr.total
+          +' in. You do this while the NEXT quarter plays; there is no rush and the room is not waiting on you.',
+      label:'✍️ Take me to the '+(pr.total-pr.done)+' unmarked answer'+((pr.total-pr.done)===1?'':'s'),
+      run:function(){ jumpToKey(liveIdx); },
+      skip:{ label:'A question can’t be answered — reveal '+tag+' and void the rest',
+             run:function(){ closeQuarter(liveIdx); } } };
+  }
+
+  const next = tags.findIndex((t,i)=>{ const d=liveDocs[roundDocId(i)]; return !d || d.state==='draft'; });
+  if(next < 0){
+    return { steps, now:tags.length,
+      kicker:'Done', head:'Every round is scored',
+      why:'The night is complete. Tab 3 adds it up and the season points have banked themselves.',
+      label:'Nothing left to do', wait:true };
+  }
+  const iss = pushIssues(next);
+  if(iss.length){
+    return { steps, now:next,
+      kicker:'Step '+(next+1)+' of '+tags.length,
+      head:tags[next]+' isn’t ready',
+      why:iss[0]+'. Fix it on the Write tab and this turns into a push button.',
+      /* There is no showTab() in this app — clicking the real nav button
+         is both correct and the only thing that keeps the tab bar's own
+         highlight in sync. The gate caught this one before it shipped as
+         a dead button on the busiest screen of the night. */
+      label:'⚠ Fix it on the Write tab', warn:true,
+      run:function(){ try{ document.querySelector('nav button[data-tab="write"]').click(); }catch(_){ } } };
+  }
+  const first = next===0;
+  return { steps, now:next,
+    kicker:'Step '+(next+1)+' of '+tags.length,
+    head:'Push '+tags[next]+' when the quarter ends',
+    why:first
+      ? 'Wait for the first quarter to actually END on TV. '+tags[next]+'’s questions are about what happened IN '
+        +tags[next]+', so pushing early gives the room questions it cannot answer yet.'
+      : 'The moment '+tags[next]+' ends on the broadcast, press this. Every phone lights up and the 20-second clock starts.',
+    label:'🔴 Push '+tags[next]+' to every phone',
+    run:function(){ pushRound(next); } };
+}
+
+function renderGuide(){
+  const el = $('guide'); if(!el) return;
+  let g; try{ g = guideState(); }catch(e){ el.innerHTML=''; return; }
+  el.innerHTML =
+    '<div class="gsteps">' + g.steps.map(function(st,i){
+        const cls = st.state==='scored' ? 'done' : (i===g.now ? 'now' : '');
+        return '<div class="gstep '+cls+'"><i></i>'+esc(st.tag)+'</div>';
+      }).join('') + '</div>'
+    + '<div class="gnow">'+esc(g.kicker)+'</div>'
+    + '<div class="ghead">'+esc(g.head)+'</div>'
+    + '<div class="gwhy">'+esc(g.why)+'</div>'
+    + '<button class="gbtn'+(g.wait?' wait':'')+(g.warn?' warn':'')+'" id="gGo"'+(g.wait?' disabled':'')+'>'
+      +esc(g.label)+'</button>'
+    + (g.skip ? '<button class="gskip" id="gSkip">'+esc(g.skip.label)+'</button>' : '');
+  const b = $('gGo'); if(b && g.run) b.onclick = g.run;
+  const sk = $('gSkip'); if(sk && g.skip) sk.onclick = g.skip.run;
+}
+
 function renderRun(){
   const cfg = nightCfg(night);
   const wrap = $('runList'); if(!wrap) return;
   wrap.innerHTML = '';
+  try{ renderGuide(); }catch(e){}
 
   const openLive = Object.values(liveDocs).find(d=>d.state==='live');
   const n = runNextUp();
