@@ -8447,7 +8447,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.46';
+const STATS_BUILD='2026-08-11-g6-ny-ind.47';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -9153,6 +9153,158 @@ function ord(n){ n=Number(n); if(!n) return ''; var s=['th','st','nd','rd'], v=n
    purpose. Anything that reads a rank has to be able to say nothing. */
 function rankIn(s,key,tail){ try{ var r=s&&s['rank_'+key]; return r?(ord(r)+' '+tail):''; }catch(_){ return ''; } }
 
+/* ==================== THE GAME LOG =================================
+   "Angel Reese set a franchise record and Rhyne Howard is the fastest
+   player to 100." That is the texture you want, and the honest version of
+   it is here: every game a player has played this season, with the full
+   line. From that you can compute things nobody else on the couch knows
+   and every one of them is checkable —
+
+     · her season high, and whether tonight is chasing it
+     · a run of games: "20+ in five straight"
+     · what she has done against THIS opponent this season
+
+   Franchise and all-time records are not in any feed we can reach, so we
+   do not claim them. What we do claim, we can show our working for.
+
+   Cost control: one request per player, only for players actually on the
+   floor, capped at eight, fetched once a night, after the season table so
+   it never delays the first paint.
+   ================================================================== */
+var LOG={ by:{}, loading:false, done:false, at:0 };
+
+function logParse(j){
+  var names=(j.names||[]).map(String);
+  var ix={}; names.forEach(function(n,i){ ix[n]=i; });
+  var byId={};
+  Object.keys(j.events||{}).forEach(function(k){ byId[k]=j.events[k]; });
+  var rows=[];
+  (j.seasonTypes||[]).forEach(function(st){
+    // Regular season only. A preseason 30-point night is not a season high.
+    if(!/regular/i.test(String(st.displayName||''))) return;
+    (st.categories||[]).forEach(function(c){
+      (c.events||[]).forEach(function(e){
+        var v=e.stats||[], meta=byId[e.eventId]||{};
+        function n(k){ var x=parseFloat(v[ix[k]]); return isNaN(x)?null:x; }
+        function made(k){ var p=String(v[ix[k]]||'').split('-'); var m=parseFloat(p[0]); return isNaN(m)?null:m; }
+        rows.push({ id:String(e.eventId), date:String(meta.gameDate||''),
+                    opp:((meta.opponent&&meta.opponent.abbreviation)||''),
+                    min:n('minutes'), pts:n('points'), reb:n('totalRebounds'),
+                    ast:n('assists'), stl:n('steals'), blk:n('blocks'),
+                    tpm:made('threePointFieldGoalsMade-threePointFieldGoalsAttempted') });
+      });
+    });
+  });
+  // Oldest first, so "the last five games" is the tail.
+  rows.sort(function(a,b){ return String(a.date).localeCompare(String(b.date)); });
+  return rows;
+}
+
+async function loadLogs(){
+  if(LOG.loading || LOG.done) return LOG;
+  LOG.loading=true;
+  try{
+    var who=Object.keys(GS.box||{})
+      .map(function(nm){ return {nm:nm, aid:GS.box[nm].aid, min:gsNum(GS.box[nm].MIN)||0}; })
+      .filter(function(x){ return x.aid; })
+      .sort(function(a,b){ return b.min-a.min; })
+      .slice(0,8);
+    LOG.done=true;
+    if(!who.length){ LOG.done=false; LOG.loading=false; return LOG; }
+    var path=sportCfg().path;
+    await Promise.all(who.map(async function(x){
+      try{
+        var j=await fetch('https://site.web.api.espn.com/apis/common/v3/sports/'+path
+          +'/athletes/'+x.aid+'/gamelog?region=us&lang=en&contentorigin=espn')
+          .then(function(r){ return r.json(); });
+        var rows=logParse(j);
+        if(rows.length) LOG.by[x.nm]=rows;
+      }catch(_){}
+    }));
+    LOG.at=Date.now();
+  }catch(_){}
+  LOG.loading=false;
+  return LOG;
+}
+
+/* Facts from the log, for one player, given what she has done tonight.
+   Each returns null unless it is genuinely true and genuinely interesting,
+   because a "deep cut" that fires every night for everybody is wallpaper. */
+function logCuts(nm, tonight){
+  var out=[], rows=LOG.by[nm];
+  if(!rows || rows.length<4 || !tonight) return out;
+  // Tonight's game may already be in the log; never count it against itself.
+  var prior=rows.filter(function(r){ return String(r.id)!==String(GAME.espnEvent); });
+  if(prior.length<4) return out;
+
+  function high(k){ return prior.reduce(function(m,r){ return (r[k]!=null&&r[k]>m)?r[k]:m; }, -1); }
+
+  // --- chasing a season high
+  var hp=high('pts');
+  if(tonight.pts!=null && hp>0){
+    if(tonight.pts>hp)
+      out.push({i:'🚨', t:'<b>'+esc(nm)+'</b> is at '+tonight.pts+' — that is a new season high. Her best before tonight was '+hp+'.',
+                s:'across '+prior.length+' games this season', w:170, kind:'high'});
+    else if(hp-tonight.pts<=4 && tonight.pts>=12)
+      out.push({i:'📈', t:'<b>'+esc(nm)+'</b> is '+(hp-tonight.pts+1)+' points from her season high of '+hp+'.',
+                s:'she has '+tonight.pts+' right now', w:110, kind:'highwatch'});
+  }
+  var hr=high('reb');
+  if(tonight.reb!=null && hr>0 && tonight.reb>hr)
+    out.push({i:'🚨', t:'<b>'+esc(nm)+'</b> has '+tonight.reb+' rebounds — a new season high, past '+hr+'.',
+              s:'', w:165, kind:'high'});
+
+  // --- a run of games
+  function streak(k,thresh){
+    var n=0; for(var i=prior.length-1;i>=0;i--){ if(prior[i][k]!=null && prior[i][k]>=thresh) n++; else break; }
+    return n;
+  }
+  var runs=[['pts',20,'20 or more points'],['pts',15,'15 or more points'],
+            ['reb',10,'double-figure rebounds'],['ast',5,'five or more assists'],
+            ['tpm',3,'three or more threes']];
+  for(var i=0;i<runs.length;i++){
+    var st=streak(runs[i][0],runs[i][1]);
+    if(st>=4){
+      out.push({i:'🔗', t:'<b>'+esc(nm)+'</b> has had '+runs[i][2]+' in <b>'+st+' straight games</b>.',
+                s:'tonight would make it '+(st+1), w:130+st, kind:'streak'});
+      break;   // one run per player; the longest one we find first is enough
+    }
+  }
+
+  // --- against this opponent
+  try{
+    var opp=null, mine=(GS.box[nm]||{}).team;
+    (GS.teams||[]).forEach(function(t){ if(t.ab && t.ab!==mine) opp=t.ab; });
+    if(opp){
+      var vs=prior.filter(function(r){ return r.opp===opp && r.pts!=null; });
+      if(vs.length>=2){
+        var avg=vs.reduce(function(a,r){ return a+r.pts; },0)/vs.length;
+        var all=prior.filter(function(r){ return r.pts!=null; });
+        var season=all.reduce(function(a,r){ return a+r.pts; },0)/(all.length||1);
+        if(Math.abs(avg-season)>=4)
+          out.push({i:'😈', t:'<b>'+esc(nm)+'</b> averages '+avg.toFixed(1)+' against '+esc(opp)
+                      +' this season — '+(avg>season?'well above':'well below')+' her '+season.toFixed(1)+' overall.',
+                    s:vs.length+' meetings', w:105, kind:'h2h'});
+      }
+    }
+  }catch(_){}
+  return out;
+}
+
+/* Everything the log knows about everybody on the floor. */
+function logAllCuts(){
+  var out=[];
+  try{
+    Object.keys(LOG.by).forEach(function(nm){
+      var r=GS.box[nm]; if(!r) return;
+      var t={ pts:gsNum(r[sportCfg().box.pts]), reb:gsNum(r[sportCfg().box.reb]),
+              ast:gsNum(r[sportCfg().box.ast]) };
+      out=out.concat(logCuts(nm,t));
+    });
+  }catch(_){}
+  return out;
+}
+
 /* ---- tonight's box, normalised ------------------------------------ */
 function stBox(){
   return Object.keys(GS.box).map(function(nm){
@@ -9292,6 +9444,11 @@ function deepCuts(){
      the fastest way to make a stat feed feel like a spreadsheet. Two of any
      one kind, then move on — the fifth-best fact of a different kind beats
      the third-best of the same one. */
+  /* Everything the season-long game log knows. Folded in here rather than
+     kept separate so the variety cap applies to it too — a screen of five
+     streak facts is the same failure as a screen of five double-doubles. */
+  try{ logAllCuts().forEach(function(c){ cuts.push(c); }); }catch(_){}
+
   cuts.sort(function(a,b){ return b.w-a.w; });
   var per={}, first=[], rest=[];
   cuts.forEach(function(c){
@@ -9343,6 +9500,7 @@ function renderStats(){
   try{ if(!SEA.ok && !SEA.loading) loadSeason().then(function(){
         if(S.screen==='stats') renderStats();
         seaFillGaps().then(function(){ if(S.screen==='stats') renderStats(); });
+        loadLogs().then(function(){ if(S.screen==='stats') renderStats(); });
       }); }catch(_){}
 
   var A=GS.teams[0], B=GS.teams[1], live=gsInGame(), out='';
@@ -9631,6 +9789,12 @@ function feedBuild(){
 
 function feedRender(force){
   var el=document.getElementById('gtFeed'); if(!el) return;
+  /* The Feed shows deep cuts too, so it needs the same two background
+     tables the Stats tab does. Kicked off from here as well, or a player
+     who never opens Stats gets a feed with no history in it. */
+  try{ if(!SEA.ok && !SEA.loading) loadSeason().then(function(){
+        seaFillGaps(); loadLogs().then(function(){ try{ feedRender(true); }catch(_){} });
+      }); }catch(_){}
   var items=feedBuild();
   if(!items.length){
     el.innerHTML='<div class="card center" style="padding:24px 18px">'
