@@ -2010,7 +2010,15 @@ window.STATS_FIREBASE = {
         if (typeof d[k] === 'number' && isFinite(d[k])) out[k] = d[k];
       });
       return out;
-    } catch (e) { return null; }
+    } catch (e) {
+      /* A silent null told us nothing. A permission-denied on the players
+         collection, a missing index, and an empty room are three completely
+         different problems and they all rendered as the same blank board. */
+      var code = (e && (e.code || e.name)) || 'unknown';
+      try { console.error('[STATS] top() failed:', code, e && e.message); } catch (_) {}
+      SB.lastTopError = code;
+      return null;
+    }
   };
 
   function startHeartbeat() {
@@ -8197,7 +8205,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.37';
+const STATS_BUILD='2026-08-10-g5-tor-atl.38';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -8633,7 +8641,7 @@ function renderBoard(){
   var out='', list=null;
   try{ list = (S.mode==='demo') ? standings().map(function(p){return {name:p.n||p.name,pts:p.pts,color:p.c||p.color,me:p.me};})
                                 : (typeof lastStand!=='undefined' && lastStand ? lastStand : null); }catch(_){}
-  if(list && list.length>1){
+  if(list && list.length>=1){
     out+='<div class="card" style="padding:14px 16px"><div class="stHd">TONIGHT</div>'
       + list.slice(0,10).map(function(p,i){
           return '<div class="bdRow'+(p.me?' me':'')+'"><span class="bdR">'+(i+1)+'</span>'
@@ -8643,8 +8651,17 @@ function renderBoard(){
         }).join('')
       + '</div>';
   } else {
+    var why='';
+    try{
+      if(S.mode!=='live') why='';
+      else if(!window.SB || !SB.enabled) why='Not connected to the room — sign in and rejoin.';
+      else if(SB.lastTopError==='permission-denied') why='The database is refusing to list players. That is a Firestore rules fix, not a phone problem.';
+      else if(SB.lastTopError) why='Could not read the room ('+SB.lastTopError+').';
+      else why='Nobody has joined this night yet.';
+    }catch(_){}
     out+='<div class="card center" style="padding:22px"><div style="font-size:26px">🏆</div>'
-      + '<b style="font-size:15px">'+(S.mode==='live'?'Reading the room…':'The board fills up at tip-off')+'</b>'
+      + '<b style="font-size:15px">'+(S.mode==='live'?'No players on the board yet':'The board fills up at tip-off')+'</b>'
+      + (why?'<p class="sub" style="font-size:12.5px;margin:8px 0 0;color:#ffc54d">'+esc(why)+'</p>':'')
       + '<p class="sub" style="font-size:12.5px;margin:8px 0 0">Every right answer moves a row. Q4 is worth four times Q1, so it keeps moving to the buzzer.</p></div>';
   }
   var ss=seasonStats();
