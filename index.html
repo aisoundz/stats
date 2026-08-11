@@ -2856,6 +2856,71 @@ window.STATS_FIREBASE = {
      "it doesn't work" report we have had. */
   SB.inRoom = function(){ return !!(SB.enabled && nightId); };
 
+  /* ==================== LISTENERS, NOT POLLERS =======================
+     THE CEILING NOBODY HAS HIT. The room polls: every 90s for the field,
+     every 15s for the board, every 4s for Trash Talk while it is open.
+     Against a 50,000-read-a-day free tier and a 4,000-call circuit breaker
+     per device, twenty players on a three-hour night do not make the room
+     expensive — they make devices trip the breaker one by one and switch
+     themselves off mid-game. Silent degradation, the worst failure there
+     is, and invisible today because the room has never held more than two.
+
+     A snapshot listener costs a read when something CHANGES rather than
+     every N seconds. A quiet room costs nothing. A loud one costs what it
+     is worth. Both fall back to the existing poller if the listener cannot
+     attach, so the worst case is exactly today's behaviour.
+     ================================================================== */
+  SB.watchBoard = function (cb, n) {
+    if (!SB.enabled || !nightId) return null;
+    try {
+      var q = F.query(F.collection(db, 'nights', nightId, 'players'),
+                      F.orderBy('pts', 'desc'), F.limit(Math.min(n || TOP_N, 25)));
+      return F.onSnapshot(q, function (snap) {
+        var out = [];
+        snap.forEach(function (d) {
+          var v = d.data() || {};
+          out.push({ uid: d.id, name: String(v.name || 'player').slice(0, 24),
+                     color: String(v.color || '#888').slice(0, 12),
+                     pts: Number(v.pts) || 0, speed: Number(v.speed) || 0,
+                     me: d.id === uid() });
+        });
+        /* orderBy silently drops documents missing the field, which once
+           emptied a whole leaderboard. Sort here too and trust nothing. */
+        out.sort(function (a, b) { return (b.pts - a.pts) || (b.speed - a.speed); });
+        try { cb(out); } catch (e) {}
+      }, function (e) {
+        SB.lastTopError = (e && (e.code || e.message)) || 'listen-failed';
+        try { cb(null); } catch (_) {}
+      });
+    } catch (e) { return null; }
+  };
+
+  SB.watchTalk = function (cb) {
+    if (!SB.enabled || !nightId) return null;
+    try {
+      var q = F.query(F.collection(db, 'nights', nightId, 'talk'),
+                      F.orderBy('at', 'desc'), F.limit(TALK_N));
+      return F.onSnapshot(q, function (snap) {
+        var out = [];
+        snap.forEach(function (d) {
+          var v = d.data() || {};
+          out.push({ id: d.id,
+                     name: String(v.name || 'player').slice(0, 24),
+                     color: String(v.color || '#888').slice(0, 12),
+                     kind: String(v.kind || 'burn').slice(0, 12),
+                     text: String(v.text || '').slice(0, 140),
+                     at: v.at && v.at.toMillis ? v.at.toMillis() : 0,
+                     me: !!(v.uid && v.uid === uid()) });
+        });
+        SB.lastTalkError = '';
+        try { cb(out.reverse()); } catch (e) {}
+      }, function (e) {
+        SB.lastTalkError = (e && (e.code || e.message)) || 'listen-failed';
+        try { cb(null); } catch (_) {}
+      });
+    } catch (e) { return null; }
+  };
+
   SB.pollMs = COUNT_MS;
 })();
 
@@ -7995,6 +8060,7 @@ function ttOnNewLines(rows){
 
 async function ttRoomPull(force){
   if(!window.SB||!SB.enabled||S.mode==='demo') return;
+  if(ttLive) return;                 // a listener already has this covered
   // `force` and an open room behave as before. The new third case is the
   // background sweep: the room is closed but we still want to know.
   if(!force && !ttRoomOpen() && !ttBackgroundOK()) return;
@@ -8004,6 +8070,18 @@ async function ttRoomPull(force){
   try{
     const rows=await SB.talk(ttLastAt);
     try{ ttWhy = (rows===null) ? ((window.SB&&SB.lastTalkError)||'unknown') : ''; }catch(_){}
+    ttMerge(rows);
+  }catch(e){ try{ ttWhy=(e&&e.message)||'threw'; }catch(_){} }
+  ttPulling=false;
+}
+
+/* One merge, two sources. The poller hands over a delta and the listener
+   hands over the whole tail; both are folded in by id, so the same code
+   is correct for either. Factoring this out is the only reason it is safe
+   to run a listener at all — a second copy of this logic would have gone
+   out of step the first time one of them changed. */
+function ttMerge(rows){
+  try{
     if(rows&&rows.length){
       // A line already on the phone gets OVERWRITTEN by the copy that
       // comes back, not skipped: a line posted a second ago returns with
@@ -8033,18 +8111,47 @@ async function ttRoomPull(force){
       if(ttRoomOpen()) renderRoom();
     }
     if(rows===null && ttRoomOpen()) renderRoom();
-  }catch(e){ try{ ttWhy=(e&&e.message)||'threw'; }catch(_){} }
-  ttPulling=false;
+  }catch(_){}
 }
 var ttWhy='', ttJoining=false;
+
+/* ---- LIVE ROOM: listener first, poller as the safety net ----------
+   The 4-second poll was one read per player per four seconds for three
+   hours whether or not anybody said anything: about 2,700 reads a night
+   each, which is a hard ceiling somewhere near a dozen players. A
+   snapshot costs a read when a line is ACTUALLY posted. A quiet room is
+   free. If the listener will not attach — rules, offline, anything — we
+   are back to exactly the behaviour we shipped last night. */
+var ttUnsub=null, ttLive=false;
 function ttRoomStart(){
-  ttRoomStop(); ttTick=0; ttRoomPull(true);
+  ttRoomStop(); ttTick=0;
+  try{
+    if(window.SB && SB.watchTalk && S.mode!=='demo'){
+      ttUnsub = SB.watchTalk(function(rows){
+        if(rows===null){ ttLive=false;                            // degrade, don't die
+          try{ trk('listen_fail',{what:'talk',why:(window.SB&&SB.lastTalkError)||''}); }catch(_){}
+          ttPollStart(); return; }
+        if(!ttLive){ try{ trk('listen_on',{what:'talk'}); }catch(_){} }
+        ttLive=true; ttWhy='';
+        ttMerge(rows);
+      });
+    }
+  }catch(_){ ttUnsub=null; }
+  if(ttUnsub) return;          // listener owns the room
+  ttPollStart();
+}
+function ttPollStart(){
+  if(ttTimer) return;
+  ttRoomPull(true);
   ttTimer=setInterval(function(){
     ttTick++;
     if(Date.now()<ttHotUntil || ttTick%3===0) ttRoomPull(false);
   },TT_TICK_MS);
 }
-function ttRoomStop(){ if(ttTimer){clearInterval(ttTimer);ttTimer=null;} }
+function ttRoomStop(){
+  if(ttTimer){clearInterval(ttTimer);ttTimer=null;}
+  if(ttUnsub){ try{ ttUnsub(); }catch(_){} ttUnsub=null; ttLive=false; }
+}
 
 function ttAgo(ms){
   if(!ms) return 'just now';
@@ -8916,7 +9023,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.55';
+const STATS_BUILD='2026-08-11-g6-ny-ind.56';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -9533,18 +9640,42 @@ function seasonStats(){
    it without passing through the lobby — which the bottom nav made easy —
    and it had nothing, so two players sitting in the database showed as an
    empty board. It reads for itself now, and keeps reading while it is open. */
-var bdTimer=null;
+var bdTimer=null, bdUnsub=null, bdLive=false;
+function boardTake(list){
+  if(!list || !list.length) return;
+  try{ lastStand=list; }catch(_){}
+  if(S.screen==='board') renderBoard();
+  try{ if(typeof paintRail==='function') paintRail(); }catch(_){}
+}
 function boardRefresh(){
   try{
-    if(S.mode!=='live' || !window.SB || !SB.top) return;
-    SB.top(10).then(function(list){
-      if(!list || !list.length) return;
-      try{ lastStand=list; }catch(_){}
-      if(S.screen==='board') renderBoard();
-    });
+    if(S.mode!=='live' || !window.SB) return;
+    /* Attach once. A leaderboard that updates the instant somebody scores
+       is a different product from one that updates within fifteen
+       seconds — and it costs a read per change instead of a read per
+       tick per player. */
+    if(!bdUnsub && SB.watchBoard){
+      try{
+        bdUnsub = SB.watchBoard(function(list){
+          if(list===null){ bdLive=false;             // error: pollers carry on
+            try{ trk('listen_fail',{what:'board',why:(window.SB&&SB.lastTopError)||''}); }catch(_){}
+            return; }
+          if(!bdLive){ try{ trk('listen_on',{what:'board'}); }catch(_){} }
+          bdLive=true;
+          boardTake(list);
+        }, 10);
+      }catch(_){ bdUnsub=null; }
+    }
+    if(bdLive) return;
+    if(!SB.top) return;
+    /* A poll fired a moment before the first snapshot lands resolves a
+       moment after it, and would hand the Board an older set of points
+       than the one already on screen. Last writer wins is wrong here;
+       the listener wins. */
+    SB.top(10).then(function(l){ if(bdLive) return; boardTake(l); });
   }catch(_){}
 }
-try{ setInterval(function(){ try{ if(S.screen==='board') boardRefresh(); }catch(_){} }, 15000); }catch(e){}
+try{ setInterval(function(){ try{ if(S.screen==='board' && !bdLive) boardRefresh(); }catch(_){} }, 15000); }catch(e){}
 
 function renderBoard(){
   var el=document.getElementById('bdBody'); if(!el) return;
