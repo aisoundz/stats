@@ -1180,14 +1180,21 @@
       </div>
     </div>
 
-    <!-- WHERE THE POINTS CAME FROM. Two players finishing on 54 did not
-         play the same night — one read the game, one read the box score.
-         The split is the interesting part and it was nowhere on this
-         screen. -->
-    <div class="card" id="fBreak" style="display:none">
-      <div class="fbhead">Where the points came from</div>
-      <div id="fBreakRows"></div>
-    </div>
+    <!-- FOLDED AWAY. This screen was nine cards deep — an award, a ring, two
+         tiles, a four-bar breakdown, a best call, a stat line, badges, a
+         season rating and a mailing-list box — at the moment a player has
+         the least attention they will have all night. "Too bulky" was the
+         note and it was right. The night now answers three questions on
+         sight: what did you score, where did you finish, what was your best
+         moment. Everything else is one tap away, in here, for the people who
+         actually want it. -->
+    <details class="fdrawer" id="fDrawer">
+      <summary>See the full breakdown</summary>
+      <div class="fdrawerin">
+        <div class="card" id="fBreak" style="display:none">
+          <div class="fbhead">Where the points came from</div>
+          <div id="fBreakRows"></div>
+        </div>
 
     <!-- ANYTHING STILL WITH THE HOST. A live round the host never posted
          answers for is held, not scored — so the final number is not
@@ -1217,7 +1224,9 @@
       </div>
       <div class="tcase" id="slCase"></div>
       <p class="fbnote" style="margin-top:10px">Season rating <b id="seasonRating" style="color:var(--teal2)">1,000</b> · Play the next game to keep the streak alive.</p>
-    </div>
+        </div>
+      </div>
+    </details>
     <!-- THE LIST — shown only on Game Night, only once, and never in practice.
          Placed here on purpose: this is the happiest thirty seconds a player
          has all night, and it is the only moment they will ever type an email
@@ -1251,6 +1260,14 @@
          their night was a menu of things that are not built yet. -->
     <button class="btn gold" onclick="openShare()">📲 Share my result card</button>
     <button class="btn teal" onclick="openTalk()">🔥 Talk trash</button>
+    <!-- THE WAY HOME. "There is no place for me to go back home to my main
+         page for my platform. It just says do you want to play again." The
+         bottom nav hides itself on this screen on purpose — a nav bar under
+         a live reveal is a way to tap out of your own ending — but it was
+         never brought back, so the end of a game was a dead end inside the
+         product. It returns the moment the reveal has landed, and this
+         button says so out loud for anyone who does not look down. -->
+    <button class="btn ghost" style="margin-top:10px" onclick="goHomeFromFinal()">🏠 Back to home</button>
     <details class="fmore">
       <summary>More — host tools, roast card, season pass</summary>
       <div class="fmorein">
@@ -2679,29 +2696,43 @@ window.STATS_FIREBASE = {
    re-skins to ANY game — NBA, G-League, college, WNBA.
    In production this loads from the nightly schedule feed. */
 const BB_GAME={
-  nightId:"gn5-2026-08-10-tor-atl",
-  espnEvent:"401857132",   // drives the auto-pulled matchup card on the home page
-  homeName:"Atlanta Dream", homeAbbr:"ATL", homeNick:"Dream", homeEmoji:"💫", homeColor:"#e31837",
-  awayName:"Toronto Tempo", awayAbbr:"TOR", awayNick:"Tempo", awayEmoji:"🍁", awayColor:"#33476d",
-  venue:"WNBA Game of the Night", date:"Mon · August 10", short:"August 10", shareDate:"AUG 10", night:"Game Night #5",
-  // Verified against the ESPN schedule: Mon Aug 10, Toronto Tempo at Atlanta
-  // Dream, 8:00 p.m. ET, on Peacock. Toronto are the road team, so the Dream
-  // are `home` here — the app draws home on the right of the VS badge.
-  // ESPN event 401857132. Colours + records come from the same feed.
-  net:"Peacock",
-  tip:"Tip-off 8:00 ET · 7:00 CT · 5:00 PT · Peacock"
+  nightId:"gn6-2026-08-11-ny-ind",
+  espnEvent:"401857134",   // drives the auto-pulled matchup card on the home page
+  homeName:"Indiana Fever",     homeAbbr:"IND", homeNick:"Fever",   homeEmoji:"🔥", homeColor:"#002d62",
+  awayName:"New York Liberty",  awayAbbr:"NY",  awayNick:"Liberty", awayEmoji:"🗽", awayColor:"#86cebc",
+  venue:"Gainbridge Fieldhouse", date:"Tue · August 11", short:"August 11", shareDate:"AUG 11", night:"Game Night #6",
+  // Verified against the ESPN schedule and the event feed: Tue Aug 11, New
+  // York Liberty at Indiana Fever, 7:30 p.m. ET, on ESPN, at Gainbridge
+  // Fieldhouse. New York are the road team so Indiana are `home` here — the
+  // app draws home on the right of the VS badge. ESPN event 401857134.
+  // THIRTY MINUTES EARLIER than the last five nights. Colours and records
+  // come from the same feed.
+  net:"ESPN",
+  tip:"Tip-off 7:30 ET · 6:30 CT · 4:30 PT · ESPN"
 };
 const COLORS=["#2f6bff","#19c3d6","#ff4d5e","#ffc54d","#2ee6a6","#b57cff","#ff924d","#4dd0ff"];
+/* THE WHOLE BENCH. Six a side was a deliberate cap for five game nights and
+   it was the wrong call: "if I think a rookie might do good I can't vote for
+   her." A hunch on somebody nobody else would take is the single most fun
+   thing you can do with a pick sheet, and we were deleting it to save a
+   scroll. Both full rosters are here now — pulled live from the ESPN team
+   roster endpoints (teams/5 and teams/9), not from memory — ordered by who
+   is most likely to be on the floor, and the deck groups them by team so
+   twenty-seven names still reads as two short lists rather than one long
+   one. Anyone ruled out keeps their OUT flag; they stay pickable-adjacent
+   so you can see for yourself who isn't available. */
 const BB_ROSTER={ // full names — used on the prediction sheet & final review
-  // Six per side, taken from the published 2026 rosters. Six is a deliberate
-  // cap, not laziness: a prediction sheet with fifteen names is a scroll, and
-  // a scroll is the friction the host told us to cut.
-  // Game #5 — Toronto Tempo @ Atlanta Dream. Names pulled live from the ESPN
-  // team rosters (atl / tor), not from memory. Six a side is a deliberate cap:
-  // a sheet with fourteen names is a scroll, and a scroll is friction.
-  home:["Allisha Gray","Angel Reese","Jordin Canada","Rhyne Howard","Brionna Jones","Naz Hillmon"],
-  away:["Marina Mabrey","Brittney Sykes","Julie Allemand","Nyara Sabally","Kia Nurse","Aneesah Morrow"]
+  home:["Kelsey Mitchell","Aliyah Boston","Caitlin Clark","Sophie Cunningham","Lexie Hull",
+        "Myisha Hines-Allen","Monique Billings","Tyasha Harris","Makayla Timpson","Bree Hall",
+        "Raven Johnson","Grace VanSlooten","Michelle Onyiah","Damiris Dantas"],
+  away:["Breanna Stewart","Sabrina Ionescu","Jonquel Jones","Marine Johannes","Rebecca Allen",
+        "Rebekah Gardner","Marine Fauthoux","Pauline Astier","Raquel Carrera","Anneli Maley",
+        "Han Xu","Leonie Fiebich","Satou Sabally"]
 };
+/* Two short lists beat one long one. The deck reads this when it renders a
+   player pick, so the roster order above is the only place names live. */
+const BB_GROUPS=[{ab:BB_GAME.homeAbbr,name:BB_GAME.homeName,names:BB_ROSTER.home},
+                 {ab:BB_GAME.awayAbbr,name:BB_GAME.awayName,names:BB_ROSTER.away}];
 /* Prediction sheet definition (matches arena rules: 6 categories, base + bonus)
    NOTE: every `answer` below is a SIMULATED result used only by Practice mode.
    It is not a prediction, and it is not a claim about anything that happened.
@@ -2726,11 +2757,11 @@ const BB_PREDS=[
   // NOTE: `answer`/`num` below are the SIMULATED results Practice mode plays
   // against — never a claim about the real game. They must always be names
   // that exist in the roster above, or practice grades against a ghost.
-  {id:"pts", q:"Who scores the most points?", label:"Most points", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Allisha Gray", num:21, numLabel:"How many pts?"},
-  {id:"ast", q:"Who dishes the most assists?", label:"Most assists", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Jordin Canada", num:8, numLabel:"How many assists?"},
-  {id:"stl", q:"Who racks up the most steals?", label:"Most steals", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Brittney Sykes", num:3, numLabel:"How many steals?"},
-  {id:"reb", q:"Who grabs the most rebounds?", label:"Most rebounds", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Angel Reese", num:12, numLabel:"How many rebounds?"},
-  {id:"blk", q:"Who swats the most blocks?", label:"Most blocks", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), answer:"Brionna Jones", num:2, numLabel:"How many blocks?"}
+  {id:"pts", q:"Who scores the most points?", label:"Most points", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Kelsey Mitchell", num:21, numLabel:"How many pts?"},
+  {id:"ast", q:"Who dishes the most assists?", label:"Most assists", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Sabrina Ionescu", num:8, numLabel:"How many assists?"},
+  {id:"stl", q:"Who racks up the most steals?", label:"Most steals", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Lexie Hull", num:3, numLabel:"How many steals?"},
+  {id:"reb", q:"Who grabs the most rebounds?", label:"Most rebounds", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Aliyah Boston", num:12, numLabel:"How many rebounds?"},
+  {id:"blk", q:"Who swats the most blocks?", label:"Most blocks", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Jonquel Jones", num:2, numLabel:"How many blocks?"}
 ];
 /* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
    Every question is answerable by WATCHING the broadcast at the break — no lookups,
@@ -3946,12 +3977,24 @@ function buildPred(){
   const doneN=preds.filter(x=>S.predChoices[x.id]).length;
   const pct=Math.round(((PD.i+1)/L.length)*100);
 
-  const opts=p.opts.map(function(o){
+  const optBtn=function(o){
     const on = String(picked)===String(o);
     const out = (typeof INACTIVE!=='undefined' && INACTIVE.has(String(o)));
-    return '<button type="button" class="pdopt'+(on?' on':'')+'" data-pd="'+esc(String(o))+'">'
+    return '<button type="button" class="pdopt'+(on?' on':'')+(out?' isout':'')+'" data-pd="'+esc(String(o))+'">'
       +'<span class="pdradio"></span><span class="pdname">'+esc(String(o))+(out?' <span class="pdout">OUT</span>':'')+'</span></button>';
-  }).join('');
+  };
+  /* GROUPED BY TEAM. Two full rosters is twenty-seven names, and twenty-seven
+     names in one undivided grid is the scroll wall we spent five nights
+     avoiding by deleting the bench. Splitting it by team fixes both: every
+     player is pickable, and you still only ever read a list of thirteen. */
+  const opts = (p.groups && p.groups.length)
+    ? p.groups.map(function(g){
+        const inG=g.names.filter(function(n){ return p.opts.indexOf(n)>=0; });
+        if(!inG.length) return '';
+        return '<div class="pdteam">'+esc(g.ab)+' <i>'+esc(g.name)+'</i></div>'
+          + '<div class="pdopts'+(inG.length>6?' many':'')+'">'+inG.map(optBtn).join('')+'</div>';
+      }).join('')
+    : '<div class="pdopts'+(p.opts.length>6?' many':'')+'">'+p.opts.map(optBtn).join('')+'</div>';
 
   const bonus = p.bonus ? '<div class="pdbonus"><label>'+esc(p.numLabel||'Exact number')
       +' <span style="color:var(--gold)">+'+p.bonus+'</span></label>'
@@ -3980,8 +4023,9 @@ function buildPred(){
    /* A twelve-name roster stacked one per row is the scroll wall the deck
       was built to kill — the header, the dots and the progress bar all end
       up off-screen above you. Two columns past six options puts a whole
-      roster on one phone screen. */
-   +  '<div class="pdopts'+(p.opts.length>6?' many':'')+'">'+opts+'</div>'
+      roster on one phone screen, and `opts` arrives already grouped by team
+      when the question is a player pick. */
+   +  opts
    +  bonus + rank
    +'</div>'
    +'<div class="pdnav">'
@@ -4806,9 +4850,108 @@ function afterReview(){
   else{openPredReview();}
 }
 
+/* ==================== AUTO-SETTLEMENT ===============================
+   "We still have the page to add your predictions at the end of the game.
+   We don't need that. It doesn't make sense and nobody wants to fill it in."
+
+   Correct, and it was worse than pointless: the app has been reading the
+   real box score all night to power the Stats tab, so at the final buzzer
+   it already knows who led every category. Asking a human to retype it —
+   at the exact moment their attention is gone — is asking them to do a job
+   the machine has already done, and every mistyped number silently changed
+   somebody's score. That is where "the scores didn't all add up" came from.
+
+   This settles the card off the final box score. The manual form survives
+   only as a fallback for a dead feed, and it now says so.
+
+   Ties are graded on VALUE, not on name. If two players finish level on
+   blocks, everyone who picked either of them is right — which is the only
+   defensible answer, and the old name-matching version got it wrong. */
+function settleFromFeed(){
+  try{
+    if(!GS.ok || !GS.teams || GS.teams.length!==2) return null;
+    var box=GS.box||{}; if(!Object.keys(box).length) return null;
+    var A=GS.teams[0], B=GS.teams[1];
+    if(A.score==null || B.score==null) return null;
+    if(String(GS.state||'')!=='post') return null;   // never settle a game still being played
+    if(Number(A.score)===Number(B.score)) return null;
+    var win=(Number(A.score)>Number(B.score))?A:B;
+    var truth={}, num={}, tied={};
+    truth.winner = (win.ab===GAME.homeAbbr)?GAME.homeName:GAME.awayName;
+    var cfg=sportCfg().box, KEY={pts:cfg.pts,reb:cfg.reb,ast:cfg.ast,stl:cfg.stl,blk:cfg.blk};
+    var okAll=true;
+    Object.keys(KEY).forEach(function(id){
+      var k=KEY[id], bv=-1, who=[];
+      Object.keys(box).forEach(function(nm){ var v=gsNum(box[nm][k]);
+        if(v==null) return;
+        if(v>bv){ bv=v; who=[nm]; } else if(v===bv){ who.push(nm); } });
+      if(!who.length || bv<0){ okAll=false; return; }
+      truth[id]=who[0]; tied[id]=who; num[id]=bv;
+    });
+    if(!okAll) return null;
+    return {truth:truth, num:num, tied:tied,
+            final:{home:(A.home?A:B), away:(A.home?B:A)}};
+  }catch(_){ return null; }
+}
+/* Grade the card against a settlement and go straight to the result. */
+function applySettlement(st){
+  var pp=0;
+  S.predTruth={}; S.predTruthNum={}; S.predAuto=true; S.predTied=st.tied||{};
+  preds.forEach(function(p){
+    var mine=S.predChoices[p.id];
+    S.predTruth[p.id]=st.truth[p.id]||'';
+    if(p.bonus) S.predTruthNum[p.id]=(st.num[p.id]==null?null:st.num[p.id]);
+    if(!mine) return;
+    var hit=false;
+    if(p.id==='winner'){ hit = String(mine)===String(st.truth.winner); }
+    else { hit = (st.tied[p.id]||[]).indexOf(String(mine))>=0; }
+    if(hit){
+      pp+=predWorthOf(p);
+      if(p.bonus){
+        var mn=Number(S.predChoices[p.id+'_num']);
+        if(mn && st.num[p.id]!=null && mn===Number(st.num[p.id])) pp+=p.bonus;
+      }
+    }
+  });
+  S.predPts=pp;
+  S.catchesScored=true;
+  try{ save(); }catch(_){}
+  try{ pushScore(); }catch(_){}
+  showFinal();
+}
+
 /* ---------------- GAME NIGHT: PREDICTION REVIEW ---------------- */
 function openPredReview(){
+  /* Pull the FINAL box score first. Everything below is a fallback. */
+  try{
+    var fresh = GS.ok && String(GS.state||'')==='post' && (Date.now()-GS.at)<20000;
+    if(!fresh){
+      var c0=document.getElementById('prCard');
+      if(c0) c0.innerHTML='<div class="center" style="padding:26px 10px">'
+        + '<div style="font-size:26px">🧮</div>'
+        + '<b style="font-size:15px">Settling your card…</b>'
+        + '<p class="sub" style="font-size:12.5px;margin:8px 0 0">Reading the final box score. You don’t have to enter anything.</p></div>';
+      try{ document.getElementById('prBtn').style.display='none'; }catch(_){}
+      go('predreview');
+      loadGameStats(true).then(function(){ predReviewDecide(); });
+      return;
+    }
+  }catch(_){}
+  predReviewDecide();
+}
+function predReviewDecide(){
+  var st=null; try{ st=settleFromFeed(); }catch(_){ st=null; }
+  if(st){ applySettlement(st); return; }
+  predReviewManual();
+}
+function predReviewManual(){
   const c=document.getElementById('prCard');c.innerHTML='';
+  try{ document.getElementById('prBtn').style.display=''; }catch(_){}
+  try{
+    var h=document.querySelector('#s-predreview h1'); if(h) h.textContent='The feed didn’t settle it 📝';
+    var s=document.querySelector('#s-predreview p.sub');
+    if(s) s.textContent='This normally settles itself off the final box score. It couldn’t this time, so the host will read out the official results.';
+  }catch(_){}
   preds.forEach(p=>{
     const row=document.createElement('div');row.className='predrow';
     const myPick=S.predChoices[p.id]||'—';
@@ -5287,15 +5430,26 @@ const AWARDS=[
   /* The floor. Still true, still specific to this player, never a
      participation lie — it names the streak or it names the fact that a
      season record now exists that did not exist an hour ago. */
-  { id:'record', emoji:'🎬', name:'ON THE RECORD',
+  /* This used to be "🎬 ON THE RECORD". The clapper board rendered as a
+     black slate on iOS and the pun landed on nobody — "a slate emoji for
+     record, that doesn't make any sense" was exactly right. A badge has one
+     job: say what you did, in words a person would use. */
+  { id:'record', emoji:c=>c.streak>1?'🔥':'✅',
+    name:()=>'',
     test:()=>true,
     why:c=>c.streak>1
-      ? `<b>${c.streak} game nights in a row.</b> The streak is the record — keep it alive.`
-      : `Game 1 of your season is <b>on the record</b>. Everything from here is a personal best.`,
+      ? `<b>${c.streak} game nights in a row.</b> Keep it alive and it keeps counting.`
+      : `Game 1 of your season is done. Everything from here is a personal best.`,
     short:c=>c.streak>1?`${c.streak}-night streak`:'season opened' }
 ];
 
-function awardName(a){ return typeof a.name==='function' ? a.name() : a.name; }
+function awardName(a,ctx){
+  var n = (typeof a.name==='function') ? a.name(ctx) : a.name;
+  if(n) return n;
+  // The floor badge names itself from the context rather than from a pun.
+  try{ return (ctx && ctx.streak>1) ? 'STREAK ALIVE' : 'SEASON OPENED'; }catch(_){ return 'SEASON OPENED'; }
+}
+function awardEmoji(a,ctx){ try{ return (typeof a.emoji==='function') ? a.emoji(ctx) : a.emoji; }catch(_){ return '🏅'; } }
 
 /* Returns { ctx, list (headline first, max 3), all }. A test that throws
    loses its own award and nothing else — one bad line must never be able
@@ -5324,12 +5478,12 @@ function renderAwards(rank){
   const prev = AW_LAST && AW_LAST.list[0] ? AW_LAST.list[0].id : null;
   AW_LAST=got;
   const set=(id,v,html)=>{ const e=document.getElementById(id); if(e){ if(html) e.innerHTML=v; else e.textContent=v; } };
-  set('fAwardEmoji', head.emoji);
-  set('fAwardName', awardName(head));
+  set('fAwardEmoji', awardEmoji(head, got.ctx));
+  set('fAwardName', awardName(head, got.ctx));
   set('fAwardWhy', head.why(got.ctx), true);
   const rest=got.list.slice(1);
   set('fAwardMore', rest.map(a=>
-    `<span class="awchip">${a.emoji} <b>${esc(awardName(a))}</b> · ${esc(a.short(got.ctx))}</span>`).join(''), true);
+    `<span class="awchip">${awardEmoji(a,got.ctx)} <b>${esc(awardName(a,got.ctx))}</b> · ${esc(a.short(got.ctx))}</span>`).join(''), true);
   const snd=document.getElementById('awSnd'); if(snd) snd.textContent = awardSoundOn()?'🔊':'🔇';
   card.style.display='block';
 
@@ -5472,7 +5626,7 @@ function renderStatLine(line){
   const ids=Object.keys(t.trophies).sort((a,b)=>t.trophies[b]-t.trophies[a]);
   cs.innerHTML = ids.length
     ? ids.map(id=>{ const a=AWARDS.find(x=>x.id===id); if(!a) return '';
-        return `<span class="tc">${a.emoji} ${esc(awardName(a))}`
+        return `<span class="tc">${awardEmoji(a)} ${esc(awardName(a))}`
              + (t.trophies[id]>1?` <b>×${t.trophies[id]}</b>`:'') + `</span>`; }).join('')
     : `<span class="tc" style="color:var(--dim)">Your trophy case fills up as you play</span>`;
 }
@@ -6990,7 +7144,7 @@ function copyShareText(){
     : `STATS ${SPORT.emoji} ${S.pts} pts · Rank #${myRank()}`;
   // The award is the line people actually screenshot, so it goes above the grid.
   const aw = AW_LAST && AW_LAST.list && AW_LAST.list[0];
-  const awLine = aw ? `\n${aw.emoji} ${awardName(aw)}` : '';
+  const awLine = aw ? `\n${awardEmoji(aw)} ${awardName(aw)}` : '';
   const txt=`${head}${awLine}\n${shareEmoji()}\n🔥 ${S.streak}-game streak\nPlay free → statsgametime.com`;
   try{navigator.clipboard&&navigator.clipboard.writeText(txt);}catch(e){}
   toast('📋 Result card copied — paste it in the group chat.');
@@ -8274,7 +8428,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-10-g5-tor-atl.40';
+const STATS_BUILD='2026-08-11-g6-ny-ind.42';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -8339,7 +8493,21 @@ try{backendBadge();}catch(e){}
 
    This is only safe because of the return bar below: let a player wander
    with no way back and you have swapped one trap for another. */
-const NAV_HIDE_ON = ['live','final','tally'];
+/* `final` used to be in this list. It should not have been: the reason to
+   hide the nav is a LIVE question with a clock on it, and the final screen
+   is the opposite of that — it is the end, and the end of a game must not
+   be the end of the product. The nav comes back at the buzzer. */
+const NAV_HIDE_ON = ['live','tally'];
+/* The explicit door, for anyone who does not look at the bottom of the
+   screen. Clears the night's local state first so Home paints as Home and
+   not as "continue tonight's game" for a game that is over. */
+function goHomeFromFinal(){
+  try{ S.place=''; }catch(_){}
+  try{ clearSave(); }catch(_){}
+  try{ paintContinueCard(); }catch(_){}
+  try{ navGo('home'); }catch(_){ go('landing'); }
+}
+try{ window.goHomeFromFinal=goHomeFromFinal; }catch(_){}
 function navGo(tab){
   try{
     // Leaving the Crew tab closes the room. A modal that survives a tab
@@ -8498,7 +8666,14 @@ function renderMe(){
       + '<div style="display:flex;gap:9px;margin-top:15px">'+tile(season.toLocaleString(),'Season pts')+tile(nights,'Game nights')+tile(best?('🔥'+best):'—','Best Call It')+'</div>'
       + '</div>'
       + '<button class="btn ghost" style="margin-top:12px" onclick="go(\'landing\')">← Back to tonight</button>'
-      + '<button class="btn ghost" style="margin-top:8px;font-size:12.5px" onclick="openJoin(\'me\',\'\')">Tell us what you watch →</button>'
+      /* The rehearsal lives here now — off the Gametime tab, which is a
+         place to watch a game, not a place to find a grey test button. */
+      + '<div class="card" style="margin-top:12px;padding:14px 16px">'
+      +   '<div class="stHd">TRY IT OUT</div>'
+      +   '<button type="button" id="meTry" class="pdlock" style="background:#16233b;color:#cfd8ea;font-size:14px;padding:13px">🎯 Run a practice Call It</button>'
+      +   '<div class="sub" style="font-size:11.5px;margin-top:7px">Fires a real question built from tonight’s numbers. Practice only — it doesn’t count toward your streak or your points.</div>'
+      + '</div>'
+      + '<button class="btn ghost" style="margin-top:12px;font-size:12.5px" onclick="openJoin(\'me\',\'\')">Tell us what you watch →</button>'
       + '<button class="btn ghost" style="margin-top:8px;font-size:12.5px" onclick="doSignOut()">Sign out</button>'
     : '<div class="card center">'
       + '<b style="font-size:16px">You’re not signed in yet</b>'
@@ -8506,6 +8681,7 @@ function renderMe(){
       + '<button class="btn" onclick="go(\'landing\')">Go to sign in →</button>'
       + '</div>';
   el.innerHTML += buildStampHTML();
+  try{ const mt=document.getElementById('meTry'); if(mt) mt.onclick=function(){ ciDemoNow(); }; }catch(_){}
   try{
     const bs=document.getElementById('buildStamp');
     if(bs) bs.onclick=function(){
@@ -8753,6 +8929,221 @@ function renderBoard(){
   el.innerHTML=out;
 }
 
+/* ==================== THE SEASON INDEX ==============================
+   One request gets every qualified player in the league with their full
+   season line — and because the list is the whole league, we can compute
+   TRUE league ranks locally. This is the difference between "Angel Reese
+   has 22 double-doubles" and "Angel Reese leads the WNBA with 22 double-
+   doubles." The second one is why somebody watches with this open.
+
+   Indexed by lowercased display name so it joins straight onto the box
+   score. Cached for the night — season averages do not move mid-game. */
+var SEA={ok:false,at:0,loading:false,by:{},n:0,err:''};
+var SEA_CATS=[
+  ['general',0,'gp','Games'],
+  ['general',2,'dd','Double-doubles'],
+  ['general',3,'td','Triple-doubles'],
+  ['general',4,'per','Player efficiency'],
+  ['general',5,'reb','Rebounds a game'],
+  ['offensive',1,'pts','Points a game'],
+  ['offensive',4,'fgp','Field goal %'],
+  ['offensive',5,'tpm','Threes a game'],
+  ['offensive',7,'tpp','Three-point %'],
+  ['offensive',10,'ftp','Free throw %'],
+  ['offensive',11,'ast','Assists a game'],
+  ['defensive',0,'stl','Steals a game'],
+  ['defensive',1,'blk','Blocks a game']
+];
+async function loadSeason(){
+  if(SEA.loading || SEA.ok) return SEA;
+  SEA.loading=true;
+  try{
+    var path=sportCfg().path;
+    var url='https://site.web.api.espn.com/apis/common/v3/sports/'+path
+      + '/statistics/byathlete?region=us&lang=en&contentorigin=espn&limit=250&sort=offensive.avgPoints%3Adesc';
+    var j=await fetch(url).then(function(r){ return r.json(); });
+    var rows=(j.athletes||[]).map(function(a){
+      var o={ name:(a.athlete&&a.athlete.displayName)||'', team:(a.athlete&&(a.athlete.teamShortName||((a.athlete.team||{}).abbreviation)))||'' };
+      var byCat={}; (a.categories||[]).forEach(function(c){ byCat[c.name]=c.values||[]; });
+      SEA_CATS.forEach(function(c){ var v=(byCat[c[0]]||[])[c[1]]; o[c[2]]=(v==null?null:Number(v)); });
+      return o;
+    }).filter(function(x){ return x.name; });
+    // League ranks, computed here rather than trusted from anywhere else.
+    SEA_CATS.forEach(function(c){
+      var k=c[2];
+      var sorted=rows.filter(function(r){ return r[k]!=null; }).sort(function(x,y){ return y[k]-x[k]; });
+      sorted.forEach(function(r,ix){ r['rank_'+k]= ix+1; });
+    });
+    var by={}; rows.forEach(function(r){ by[r.name.toLowerCase()]=r; });
+    SEA.by=by; SEA.n=rows.length; SEA.ok=rows.length>0; SEA.at=Date.now();
+    if(!SEA.ok) SEA.err='no season rows';
+  }catch(e){ SEA.err=e.message||'season feed unavailable'; }
+  SEA.loading=false;
+  return SEA;
+}
+function seaOf(name){ try{ return SEA.by[String(name||'').toLowerCase()]||null; }catch(_){ return null; } }
+function ord(n){ n=Number(n); if(!n) return ''; var s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
+
+/* ---- tonight's box, normalised ------------------------------------ */
+function stBox(){
+  return Object.keys(GS.box).map(function(nm){
+    var r=GS.box[nm];
+    function n(k){ return gsNum(r[k]); }
+    function sp(k){ var p=String(r[k]||'').split('-'); return {m:gsNum(p[0]), a:gsNum(p[1])}; }
+    return { nm:nm, team:r.team, min:n('MIN'), pts:n('PTS'), reb:n('REB'), ast:n('AST'),
+             stl:n('STL'), blk:n('BLK'), to:n('TO'), pf:n('PF'), pm:n('+/-'),
+             fg:sp('FG'), tp:sp('3PT'), ft:sp('FT') };
+  }).filter(function(x){ return x.min!=null || x.pts!=null; });
+}
+function stTeamStat(t,label){ try{ return t.m[label]; }catch(_){ return null; } }
+
+/* ==================== DEEP CUTS =====================================
+   The reason this app exists. Every line below is computed from the
+   league feed and the league-wide season table — nothing is typed in,
+   nothing is an opinion, and none of it is available on a betting app.
+   Each cut returns null when it isn't true tonight, so the list is only
+   ever things that are actually happening.                            */
+function deepCuts(){
+  var cuts=[], B=stBox(), A=GS.teams[0], H=GS.teams[1];
+  if(!B.length) return cuts;
+  function add(i,t,s,w){ cuts.push({i:i,t:t,s:s||'',w:w||0}); }
+  function best(key,min){ var f=B.filter(function(x){ return x[key]!=null && x[key]>=(min||0); })
+      .sort(function(x,y){ return y[key]-x[key]; }); return f[0]||null; }
+
+  /* --- the hot hand from deep, with league context ----------------- */
+  var deep=B.filter(function(x){ return x.tp.m!=null; }).sort(function(x,y){ return y.tp.m-x.tp.m; });
+  if(deep[0] && deep[0].tp.m>=3){
+    var d=deep[0], second=(deep[1]&&deep[1].tp.m)||0, s=seaOf(d.nm);
+    var lead = d.tp.m>second ? ('nobody else tonight has more than '+second) : ('tied with '+(deep[1]?deep[1].nm:'one other'));
+    add('🎯','<b>'+esc(d.nm)+'</b> has hit '+d.tp.m+' threes — '+lead+'.',
+        d.tp.m+'-of-'+(d.tp.a||d.tp.m)+' from deep'
+        + (s&&s.tpm!=null ? (' · averages '+s.tpm.toFixed(1)+' a game, '+ord(s['rank_tpm'])+' in the league') : ''),
+        90+d.tp.m);
+  }
+
+  /* --- double-double, done and pending, against the season count --- */
+  B.forEach(function(x){
+    var big=[['pts',x.pts,'points'],['reb',x.reb,'rebounds'],['ast',x.ast,'assists'],['stl',x.stl,'steals'],['blk',x.blk,'blocks']]
+      .filter(function(c){ return c[1]!=null && c[1]>=10; });
+    var s=seaOf(x.nm);
+    if(big.length>=3){
+      add('🏆','<b>'+esc(x.nm)+'</b> has a TRIPLE-DOUBLE — '+big.map(function(c){return c[1]+' '+c[2];}).join(', ')+'.',
+          s&&s.td!=null ? ('number '+(s.td+1)+' of her season') : '', 200);
+    } else if(big.length===2){
+      add('💪','<b>'+esc(x.nm)+'</b> is at '+big[0][1]+' '+big[0][2]+' and '+big[1][1]+' '+big[1][2]+' — that’s a double-double.',
+          s&&s.dd!=null ? ('her '+ord(s.dd+1)+' this season · '+ord(s['rank_dd'])+' in the WNBA for double-doubles') : '',
+          120+big[0][1]);
+    } else if(big.length===1){
+      var near=[['pts',x.pts,'points'],['reb',x.reb,'rebounds'],['ast',x.ast,'assists']]
+        .filter(function(c){ return c[1]!=null && c[1]>=7 && c[1]<10; }).sort(function(a,b){ return b[1]-a[1]; })[0];
+      if(near) add('👀','<b>'+esc(x.nm)+'</b> is '+(10-near[1])+' '+near[2].replace(/s$/,'')+(10-near[1]===1?'':'s')+' from a double-double.',
+        'has '+big[0][1]+' '+big[0][2]+' already', 70);
+    }
+  });
+
+  /* --- who the game actually swings on ----------------------------- */
+  var pm=best('pm',8);
+  if(pm) add('📈','<b>'+esc(pm.nm)+'</b> — her team is +'+pm.pm+' with her on the floor, the best mark in the game.',
+      pm.min!=null?(pm.min+' minutes played'):'', 80);
+
+  /* --- shooting nobody sustains ------------------------------------ */
+  B.forEach(function(x){
+    if(x.fg.a!=null && x.fg.a>=6 && x.fg.m!=null){
+      var pct=x.fg.m/x.fg.a;
+      if(pct>=0.7){ var s=seaOf(x.nm);
+        add('🔥','<b>'+esc(x.nm)+'</b> is '+x.fg.m+'-of-'+x.fg.a+' from the field — '+Math.round(pct*100)+'%.',
+          s&&s.fgp!=null?('she shoots '+s.fgp.toFixed(1)+'% on the season'):'', 75); }
+    }
+  });
+
+  /* --- the pure point guard line ----------------------------------- */
+  B.forEach(function(x){
+    if(x.ast!=null && x.ast>=5 && x.to!=null && x.to<=1){
+      add('🎩','<b>'+esc(x.nm)+'</b>: '+x.ast+' assists, '+x.to+' turnover'+(x.to===1?'':'s')+'.',
+        'that ratio is what separates a guard from a scorer', 65);
+    }
+  });
+
+  /* --- carrying the whole team ------------------------------------- */
+  var top=best('pts',12);
+  if(top){
+    var tm=[A,H].filter(Boolean).find(function(t){ return t && t.ab===top.team; });
+    if(tm && tm.score){
+      var share=Math.round((top.pts/tm.score)*100);
+      if(share>=30) add('🫡','<b>'+esc(top.nm)+'</b> has '+top.pts+' of '+esc(tm.ab)+'’s '+tm.score+' — '+share+'% of everything they’ve scored.','',85);
+    }
+    var s2=seaOf(top.nm);
+    if(s2 && s2.pts!=null && top.pts>=s2.pts+8){
+      add('🚀','<b>'+esc(top.nm)+'</b> is at '+top.pts+' against a season average of '+s2.pts.toFixed(1)+'.',
+        ord(s2['rank_pts'])+' in the league in scoring', 95);
+    }
+  }
+
+  /* --- foul trouble is a stat that changes what you watch ---------- */
+  B.forEach(function(x){ if(x.pf!=null && x.pf>=4 && x.min!=null)
+    add('⚠️','<b>'+esc(x.nm)+'</b> has '+x.pf+' fouls in '+x.min+' minutes.','one more and she sits',60); });
+
+  /* --- the team-level shape of the night --------------------------- */
+  try{
+    [A,H].forEach(function(t){ if(!t) return;
+      var paint=gsNum(stTeamStat(t,'Points in Paint'));
+      if(paint!=null && t.score) add('🎨','<b>'+esc(t.ab)+'</b> has '+paint+' of its '+t.score+' points in the paint — '+Math.round((paint/t.score)*100)+'%.','',50);
+      var fb=gsNum(stTeamStat(t,'Fast Break Points'));
+      if(fb!=null && fb>=10) add('🏃','<b>'+esc(t.ab)+'</b> has '+fb+' fast-break points.','that is a team running on turnovers',45);
+    });
+    var lc=gsNum(stTeamStat(A,'Lead Changes'));
+    if(lc!=null && lc>=6) add('🔁','<b>'+lc+' lead changes</b> in this game.','',55);
+    var la=gsNum(stTeamStat(A,'Largest Lead')), lb=gsNum(stTeamStat(H,'Largest Lead'));
+    if(la!=null&&lb!=null){ var w=la>=lb?A:H, v=Math.max(la,lb);
+      if(v>=10) add('📊','Biggest lead of the night: <b>'+esc(w.ab)+' by '+v+'</b>.','',48); }
+    var pl=stTeamStat(A,'Percent Led'), pl2=stTeamStat(H,'Percent Led');
+    if(pl&&pl2) add('⏱️','Time in front: '+esc(A.ab)+' '+esc(String(pl))+' · '+esc(H.ab)+' '+esc(String(pl2))+'.','',40);
+  }catch(_){}
+
+  /* --- league standing for anyone on the floor tonight ------------- */
+  try{
+    var seen={};
+    B.filter(function(x){ return x.min!=null && x.min>=5; }).forEach(function(x){
+      var s=seaOf(x.nm); if(!s||seen[x.nm]) return;
+      var elite=[['dd','double-doubles',s.dd],['reb','rebounds a game',s.reb],['pts','points a game',s.pts],
+                 ['ast','assists a game',s.ast],['blk','blocks a game',s.blk],['stl','steals a game',s.stl],
+                 ['tpm','threes a game',s.tpm]]
+        .filter(function(c){ return s['rank_'+c[0]] && s['rank_'+c[0]]<=5 && c[2]!=null; })
+        .sort(function(a,b){ return s['rank_'+a[0]]-s['rank_'+b[0]]; })[0];
+      if(!elite) return; seen[x.nm]=1;
+      var r=s['rank_'+elite[0]];
+      var val=elite[0]==='dd'? String(elite[2]) : Number(elite[2]).toFixed(1);
+      add('🏅','<b>'+esc(x.nm)+'</b> is '+(r===1?'the WNBA leader':ord(r)+' in the WNBA')+' in '+elite[1]+' — '+val+'.',
+        'on the floor tonight', 100-r);
+    });
+  }catch(_){}
+
+  cuts.sort(function(a,b){ return b.w-a.w; });
+  return cuts;
+}
+
+/* ==================== THE STATS TAB =================================
+   Rebuilt as ONE THING AT A TIME. The old screen stacked five cards and
+   made you scroll past your own card, the injury list, a bar chart and a
+   leaderboard to reach anything — busy, and busy is the enemy of a
+   screen you are meant to glance at while a game is on. Now: a compact
+   score line, your own number, and a segmented control with four panes.
+   You choose what you are looking at; nothing is stacked on anything. */
+var STAB='you';
+function stGo(t){
+  STAB=t; renderStats();
+  try{ var seg=document.getElementById('stSeg'); if(seg) seg.scrollIntoView({block:'start',behavior:'smooth'}); }catch(_){}
+}
+function stCard(title,inner,extra){
+  return '<div class="card" style="padding:14px 16px;margin-top:12px'+(extra||'')+'">'
+    + (title?'<div class="stHd">'+title+'</div>':'') + inner + '</div>';
+}
+function stEmpty(icon,head,sub){
+  return '<div class="card center" style="padding:26px 18px;margin-top:12px"><div style="font-size:26px">'+icon+'</div>'
+    + '<b style="font-size:14.5px">'+head+'</b>'
+    + '<p class="sub" style="font-size:12.5px;margin:7px 0 0">'+sub+'</p></div>';
+}
+
 function renderStats(){
   var el=document.getElementById('stBody'); if(!el) return;
   if(!GS.ok){
@@ -8768,91 +9159,166 @@ function renderStats(){
     if(!dead && !GS.loading) loadGameStats().then(function(){ if(S.screen==='stats') renderStats(); });
     return;
   }
-  var A=GS.teams[0], B=GS.teams[1], live=gsInGame(), out='';
-  // Scoreline / matchup header
-  out+='<div class="card" style="padding:14px 16px"><div style="display:flex;align-items:center;justify-content:space-between">'
-    + '<div style="flex:1;text-align:center"><div class="stTeam">'+esc(A.ab)+'</div><div class="stScore">'+(A.score==null?'–':A.score)+'</div><div class="stRec">'+esc(A.rec||'')+'</div></div>'
-    + '<div style="flex:0 0 auto;padding:0 10px"><span class="pill">'+esc(GS.detail||(live?'LIVE':'Not started'))+'</span></div>'
-    + '<div style="flex:1;text-align:center"><div class="stTeam">'+esc(B.ab)+'</div><div class="stScore">'+(B.score==null?'–':B.score)+'</div><div class="stRec">'+esc(B.rec||'')+'</div></div>'
-    + '</div></div>';
+  // The season table is what makes the Deep Cuts deep. Fetch once, lazily,
+  // and repaint when it lands rather than blocking the screen on it.
+  try{ if(!SEA.ok && !SEA.loading) loadSeason().then(function(){ if(S.screen==='stats') renderStats(); }); }catch(_){}
 
-  // ---- YOUR CARD, LIVE. The single most STATS-GAMETIME thing on the app:
-  // your six picks racing the real box score, category by category.
+  var A=GS.teams[0], B=GS.teams[1], live=gsInGame(), out='';
+
+  /* ---- the score, small. It is context here, not the headline; the
+     Gametime tab is where you go to watch it move. ------------------ */
+  out+='<div class="card" style="padding:11px 14px;display:flex;align-items:center;justify-content:space-between">'
+    + '<div style="flex:1;text-align:center"><div class="stTeam">'+esc(A.ab)+'</div><div style="font-size:22px;font-weight:900;color:#eef2fb;line-height:1.15">'+(A.score==null?'–':A.score)+'</div></div>'
+    + '<div style="flex:0 0 auto;padding:0 10px"><span class="pill" style="font-size:10.5px">'+esc(GS.detail||(live?'LIVE':'Not started'))+'</span></div>'
+    + '<div style="flex:1;text-align:center"><div class="stTeam">'+esc(B.ab)+'</div><div style="font-size:22px;font-weight:900;color:#eef2fb;line-height:1.15">'+(B.score==null?'–':B.score)+'</div></div>'
+    + '</div>';
+
+  /* ---- YOUR NUMBER. The engagement hook: whatever else is on this
+     screen, the first thing you see is how you are doing tonight. --- */
   try{
-    var mine=preds.filter(function(p){ return S.predChoices[p.id] && p.id!=='winner'; });
-    if(live && mine.length){
-      var cfg=sportCfg().box;
-      var KEY={pts:cfg.pts,reb:cfg.reb,ast:cfg.ast,stl:cfg.stl,blk:cfg.blk};
-      var rows=mine.map(function(p){
+    var pts=Math.max(0,Math.round((S&&S.pts)||0));
+    var rank=null, fieldN=null;
+    try{ if(lastStand&&lastStand.length){ fieldN=lastStand.length;
+      lastStand.forEach(function(r,ix){ if(r.me) rank=ix+1; }); } }catch(_){}
+    var hit = (PCI.called>0) ? Math.round((PCI.hit/PCI.called)*100)+'%' : '—';
+    var tile=function(n,k,c){ return '<div class="stYouT"><div class="stYouN"'+(c?' style="color:'+c+'"':'')+'>'+n+'</div><div class="stYouK">'+k+'</div></div>'; };
+    out+='<div class="stYou">'
+      + tile(pts.toLocaleString(),'Your points')
+      + tile(rank?('#'+rank):'—', fieldN?('of '+fieldN+' tonight'):'Your rank')
+      + tile(hit,'Call It hits', PCI.called>0&&PCI.hit/PCI.called>=0.6?'#2ee6a6':'')
+      + '</div>';
+  }catch(_){}
+
+  /* ---- the segmented control -------------------------------------- */
+  var TABS=[['you','You'],['leaders','Leaders'],['teams','Teams'],['deep','Deep cuts']];
+  out+='<div class="stSeg" id="stSeg">'+TABS.map(function(t){
+    return '<button type="button" data-stab="'+t[0]+'" class="'+(STAB===t[0]?'on':'')+'">'+t[1]+'</button>';
+  }).join('')+'</div>';
+
+  /* ================= PANE: YOU ====================================== */
+  if(STAB==='you'){
+    var mine=[]; try{ mine=preds.filter(function(p){ return S.predChoices[p.id] && p.id!=='winner'; }); }catch(_){}
+    if(!mine.length){
+      out+=stEmpty('📋','Your card isn’t filled in yet','Once you lock a card, this is where you watch it race the real box score, category by category.');
+    } else if(!live){
+      out+=stCard('YOUR CARD', mine.map(function(p){
+        return '<div class="stLead"><span class="stLeadN">'+esc(p.label)+'</span><span class="stLeadV">'+esc(String(S.predChoices[p.id]))+'</span></div>';
+      }).join('') + '<div class="sub" style="font-size:11.5px;margin-top:8px">The moment the ball goes up, each of these becomes a live race.</div>');
+    } else {
+      var cfg=sportCfg().box, KEY={pts:cfg.pts,reb:cfg.reb,ast:cfg.ast,stl:cfg.stl,blk:cfg.blk};
+      var winning=0, rows=mine.map(function(p){
         var k=KEY[p.id]; if(!k) return '';
         var who=String(S.predChoices[p.id]);
-        var mineRow=GS.box[who];
-        var mineVal=mineRow?gsNum(mineRow[k]):null;
-        // Who actually leads this category right now, across everyone on the floor.
+        var row=GS.box[who], val=row?gsNum(row[k]):null;
         var bestN='', bestV=-1;
         Object.keys(GS.box).forEach(function(nm){ var v=gsNum(GS.box[nm][k]); if(v!=null&&v>bestV){bestV=v;bestN=nm;} });
-        var ahead = mineVal!=null && bestV>=0 && mineVal>=bestV;
-        return '<div class="stPickRow">'
+        var ahead = val!=null && bestV>=0 && val>=bestV;
+        if(ahead) winning++;
+        var pctw = (bestV>0 && val!=null) ? Math.max(4,Math.min(100,Math.round((val/bestV)*100))) : 4;
+        /* "What needs to happen" — the single most useful sentence we can
+           put on this screen, because it tells you exactly what to watch. */
+        var need = ahead ? '' : (val==null
+          ? '<div class="stNeed">'+esc(who)+' hasn’t recorded one yet.</div>'
+          : '<div class="stNeed">Needs '+((bestV-val)+1)+' more to take the lead from '+esc(bestN)+'.</div>');
+        return '<div class="stPickRow2">'
           + '<div class="stPickCat">'+esc(p.label)+'</div>'
-          + '<div class="stPickMine'+(ahead?' lead':'')+'">'+esc(who)+' <b>'+(mineVal==null?'–':mineVal)+'</b></div>'
-          + '<div class="stPickLead">'+(ahead?'you’re on top':('leader '+esc(bestN)+' '+(bestV<0?'–':bestV)))+'</div>'
-          + '</div>';
+          + '<div class="stPickTop"><span class="stPickMine'+(ahead?' lead':'')+'">'+esc(who)+' <b>'+(val==null?'–':val)+'</b></span>'
+          +   '<span class="stPickLead2">'+(ahead?'<b style="color:#2ee6a6">leading</b>':('leader '+esc(bestN)+' '+(bestV<0?'–':bestV)))+'</span></div>'
+          + '<div class="stRace"><i style="width:'+pctw+'%;background:'+(ahead?'#2ee6a6':'#28e0d0')+'"></i></div>'
+          + need + '</div>';
       }).join('');
-      if(rows) out+='<div class="card" style="padding:14px 16px;margin-top:12px">'
-        + '<div class="stHd">YOUR CARD, LIVE</div>'+rows
-        + '<div class="sub" style="font-size:11.5px;margin-top:8px">Green means your pick is currently leading that category.</div></div>';
+      out+=stCard('YOUR CARD, LIVE · '+winning+' of '+mine.length+' leading', rows);
+      // Your picks who aren't playing — the only injury news that matters to you.
+      try{
+        var hurt=(GS.inj||[]).filter(function(i){ return i.out && mine.some(function(p){ return String(S.predChoices[p.id])===i.name; }); });
+        if(hurt.length) out+=stCard('', '<div style="font-size:13px;color:#ff8a94;font-weight:800">🚑 '
+          + hurt.map(function(i){ return esc(i.name)+' is '+esc(i.status||'OUT'); }).join(' · ')
+          + '</div><div class="sub" style="font-size:11.5px;margin-top:5px">You have a pick on someone who isn’t playing.</div>', ';border-color:rgba(255,77,94,.35)');
+      }catch(_){}
     }
-  }catch(_){}
-
-  // ---- Who is not playing. Above the numbers on purpose: a stat line is
-  // worthless if the player it belongs to is in a suit tonight.
-  try{
-    var outs=(GS.inj||[]).filter(function(i){ return i.out; });
-    if(outs.length){
-      out+='<div class="card" style="padding:14px 16px;margin-top:12px;border-color:rgba(255,77,94,.35)">'
-        + '<div class="stHd" style="color:#ff8a94">🚑 NOT PLAYING TONIGHT</div>'
-        + outs.map(function(i){ return '<div class="stLead"><span class="stLeadN">'+esc(i.name)+' <i>'+esc(i.ab||'')+'</i></span>'
-            + '<span class="stLeadV" style="color:#ff8a94">'+esc(i.status||'OUT')+'</span></div>'; }).join('')
-        + '<div class="sub" style="font-size:11.5px;margin-top:8px">Straight from the league injury report. Don’t spend a pick on them.</div>'
-        + '</div>';
-    }
-  }catch(_){}
-
-  // ---- Head to head
-  var bars=gsRows().map(function(r){ return gsBar(r[1], A.stat(r[0]), B.stat(r[0]), r[2]); }).join('');
-  if(bars) out+='<div class="card" style="padding:14px 16px;margin-top:12px">'
-    + '<div class="stHd">'+(live?'THIS GAME':'THIS SEASON')+' · '+esc(A.ab)+' vs '+esc(B.ab)+'</div>'+bars+'</div>';
-
-  // ---- Form, pre-game only: streak and last ten are scouting, not box score.
-  if(!live){
-    var form=[['Streak','Streak'],['Last Ten Games','Last 10']].map(function(r){
-      var a=A.stat(r[0]), b=B.stat(r[0]); if(a==null||b==null) return '';
-      return '<div class="stRow"><div class="stV">'+esc(String(a))+'</div><div class="stMid"><div class="stLbl">'+esc(r[1])+'</div></div><div class="stV">'+esc(String(b))+'</div></div>';
-    }).join('');
-    if(form) out+='<div class="card" style="padding:14px 16px;margin-top:12px"><div class="stHd">FORM</div>'+form+'</div>';
   }
 
-  // ---- Leaders. Season leaders before tip (they are who you should be
-  // picking), tonight's top scorers once there is a box score.
-  if(live){
-    var all=Object.keys(GS.box).map(function(nm){ return {nm:nm,t:GS.box[nm].team,p:gsNum(GS.box[nm][sportCfg().box.pts]),r:gsNum(GS.box[nm][sportCfg().box.reb]),a:gsNum(GS.box[nm][sportCfg().box.ast])}; })
-      .filter(function(x){ return x.p!=null; }).sort(function(x,y){ return y.p-x.p; }).slice(0,6);
-    if(all.length) out+='<div class="card" style="padding:14px 16px;margin-top:12px"><div class="stHd">TOP TONIGHT</div>'
-      + all.map(function(x){ return '<div class="stLead"><span class="stLeadN">'+esc(x.nm)+' <i>'+esc(x.t||'')+'</i></span>'
-          + '<span class="stLeadV">'+x.p+' pts · '+(x.r==null?0:x.r)+' reb · '+(x.a==null?0:x.a)+' ast</span></div>'; }).join('')
-      + '</div>';
-  } else if(GS.leaders.length){
-    out+=GS.leaders.map(function(l){
-      if(!l.cats.length) return '';
-      return '<div class="card" style="padding:14px 16px;margin-top:12px"><div class="stHd">'+esc(l.ab)+' SEASON LEADERS</div>'
-        + l.cats.map(function(c){ return '<div class="stLead"><span class="stLeadN">'+esc(c.label)+'</span>'
-            + '<span class="stLeadV">'+esc(c.who)+' <b>'+esc(c.val)+'</b></span></div>'; }).join('')
-        + '</div>';
-    }).join('');
-    out+='<div class="sub center" style="font-size:12px;margin-top:12px">These are who the numbers say to pick. Your card is on the Home tab.</div>';
+  /* ================= PANE: LEADERS ================================== */
+  if(STAB==='leaders'){
+    if(live){
+      var Bx=stBox();
+      var CATS=[['pts','Points'],['reb','Rebounds'],['ast','Assists'],['stl','Steals'],['blk','Blocks']];
+      var chips=CATS.map(function(c){
+        var f=Bx.filter(function(x){ return x[c[0]]!=null; }).sort(function(x,y){ return y[c[0]]-x[c[0]]; })[0];
+        if(!f||!f[c[0]]) return '';
+        return '<div class="stLead"><span class="stLeadN">'+c[1]+'</span><span class="stLeadV">'+esc(f.nm)+' <b style="color:#28e0d0">'+f[c[0]]+'</b></span></div>';
+      }).join('');
+      var three=stBox().filter(function(x){ return x.tp.m; }).sort(function(x,y){ return y.tp.m-x.tp.m; })[0];
+      if(three) chips+='<div class="stLead"><span class="stLeadN">Threes made</span><span class="stLeadV">'+esc(three.nm)+' <b style="color:#28e0d0">'+three.tp.m+'</b></span></div>';
+      out+=stCard('LEADING EACH CATEGORY, RIGHT NOW', chips||'<div class="sub">Nothing recorded yet.</div>');
+      var all=stBox().filter(function(x){ return x.pts!=null; }).sort(function(x,y){ return y.pts-x.pts; }).slice(0,8);
+      if(all.length) out+=stCard('TOP SCORERS TONIGHT', all.map(function(x){
+        return '<div class="stLead"><span class="stLeadN">'+esc(x.nm)+' <i>'+esc(x.team||'')+'</i></span>'
+          + '<span class="stLeadV">'+x.pts+' pts · '+(x.reb==null?0:x.reb)+' reb · '+(x.ast==null?0:x.ast)+' ast</span></div>';
+      }).join(''));
+    } else if(GS.leaders.length){
+      out+=GS.leaders.map(function(l){
+        if(!l.cats.length) return '';
+        return stCard(esc(l.ab)+' SEASON LEADERS', l.cats.map(function(c){
+          return '<div class="stLead"><span class="stLeadN">'+esc(c.label)+'</span><span class="stLeadV">'+esc(c.who)+' <b>'+esc(c.val)+'</b></span></div>';
+        }).join(''));
+      }).join('');
+      out+='<div class="sub center" style="font-size:12px;margin-top:12px">These are who the numbers say to pick.</div>';
+    } else out+=stEmpty('🏅','Leaders land at tip','Once the ball is up this shows who leads every category, live.');
   }
+
+  /* ================= PANE: TEAMS ==================================== */
+  if(STAB==='teams'){
+    var bars=gsRows().map(function(r){ return gsBar(r[1], A.stat(r[0]), B.stat(r[0]), r[2]); }).join('');
+    if(bars) out+=stCard((live?'THIS GAME':'THIS SEASON')+' · '+esc(A.ab)+' vs '+esc(B.ab), bars);
+    if(live){
+      var extra=[['Points in Paint','Points in the paint','hi'],['Fast Break Points','Fast break points','hi'],
+                 ['Offensive Rebounds','Offensive rebounds','hi'],['Blocks','Blocks','hi'],
+                 ['Fouls','Fouls','lo'],['Largest Lead','Largest lead','hi']]
+        .map(function(r){ return gsBar(r[1], stTeamStat(A,r[0]), stTeamStat(B,r[0]), r[2]); }).join('');
+      if(extra) out+=stCard('HOW THEY’RE GETTING IT', extra);
+    } else {
+      var form=[['Streak','Streak'],['Last Ten Games','Last 10']].map(function(r){
+        var a=A.stat(r[0]), b=B.stat(r[0]); if(a==null||b==null) return '';
+        return '<div class="stRow"><div class="stV">'+esc(String(a))+'</div><div class="stMid"><div class="stLbl">'+esc(r[1])+'</div></div><div class="stV">'+esc(String(b))+'</div></div>';
+      }).join('');
+      if(form) out+=stCard('FORM', form);
+    }
+    try{
+      var outs=(GS.inj||[]).filter(function(i){ return i.out; });
+      if(outs.length) out+=stCard('🚑 NOT PLAYING TONIGHT', outs.map(function(i){
+          return '<div class="stLead"><span class="stLeadN">'+esc(i.name)+' <i>'+esc(i.ab||'')+'</i></span>'
+            + '<span class="stLeadV" style="color:#ff8a94">'+esc(i.status||'OUT')+'</span></div>'; }).join(''),
+        ';border-color:rgba(255,77,94,.35)');
+    }catch(_){}
+  }
+
+  /* ================= PANE: DEEP CUTS ================================ */
+  if(STAB==='deep'){
+    var cuts=[]; try{ cuts=deepCuts(); }catch(e){ cuts=[]; }
+    if(!live){
+      out+=stEmpty('💎','Deep cuts start at tip','Once there is a box score this fills with things no scoreboard shows you — hot hands, double-double watch, who the game swings on, and where tonight’s players rank in the league.');
+    } else if(!cuts.length){
+      out+=stEmpty('💎','Nothing worth telling you yet','Give it a few minutes of basketball. This only ever shows things that are actually true right now.');
+    } else {
+      out+=stCard('DEEP CUTS'+(SEA.ok?'':' · loading the season table…'),
+        cuts.slice(0,14).map(function(c){
+          return '<div class="stFact"><div class="stFactI">'+c.i+'</div><div class="stFactB">'
+            + '<div class="stFactT">'+c.t+'</div>'
+            + (c.s?'<div class="stFactS">'+esc(c.s)+'</div>':'')
+            + '</div></div>';
+        }).join(''));
+      out+='<div class="sub center" style="font-size:11.5px;margin-top:10px">Every line is computed from the league feed and the full season table. Nothing here is typed in.</div>';
+    }
+  }
+
   out+='<div class="sub center" style="font-size:11px;margin-top:14px;opacity:.75">Live from the league feed · updated '+Math.max(1,Math.round((Date.now()-GS.at)/1000))+'s ago</div>';
   el.innerHTML=out;
+  try{
+    Array.prototype.forEach.call(el.querySelectorAll('#stSeg button'), function(b){
+      b.onclick=function(){ stGo(b.getAttribute('data-stab')); };
+    });
+  }catch(_){}
 }
 try{ setInterval(function(){ try{ if((S&&S.screen)==='stats'){ loadGameStats().then(function(){ if(S.screen==='stats') renderStats(); }); } }catch(_){}}, 25000); }catch(e){}
 
@@ -8926,17 +9392,12 @@ function renderGametime(){
         + '</div>';
     }
   }catch(_){}
-  /* The rehearsal control lives here permanently — not inside the idle
-     panel, which disappears the moment a question is on screen. An hour
-     before tip the host needs to fire one of these on demand, and a button
-     that vanishes exactly when you want to try it again is not a test. */
-  out+='<div class="center" style="margin-top:16px">'
-     + '<button type="button" id="gtTry" class="pdlock" style="max-width:320px;margin:0 auto;background:#16233b;color:#93a0bd;font-size:14px;padding:14px">🎯 Run a practice Call It</button>'
-     + '<div class="sub" style="font-size:11.5px;margin-top:7px">Practice only — doesn’t count toward your streak tonight.</div>'
-     + '</div>';
+  /* The rehearsal control USED TO LIVE HERE, at the bottom of the tab you
+     are meant to sit on while a game is on. A grey "practice" button under
+     a live scoreboard is noise at best and a misfire at worst. It now
+     lives on the Me tab, where a rehearsal belongs — one place, off every
+     play surface, still one tap from the host an hour before tip. */
   idle.innerHTML=out;
-  const tb=document.getElementById('gtTry');
-  if(tb) tb.onclick=function(){ ciDemoNow(); };
 }
 /* THE TEST HOOK. Fires a real Call It card, through the real renderer, into
    the real slot — no game required. Every run gets a fresh qid so it can be
@@ -9030,6 +9491,44 @@ body.hasnav{padding-bottom:74px}
 .stPickMine.lead{color:#2ee6a6}
 .stPickLead{grid-column:2;grid-row:1 / span 2;align-self:center;font-size:11.5px;color:#93a0bd;text-align:right}
 
+/* ---- stats tab v2: one thing at a time ---- */
+.stSeg{display:flex;gap:5px;background:#0e1626;border:1px solid #1e2740;border-radius:14px;
+  padding:4px;margin-top:12px;position:sticky;top:6px;z-index:30;backdrop-filter:blur(10px)}
+.stSeg button{flex:1;border:none;background:none;color:#7e8cab;font:800 11px/1 inherit;
+  letter-spacing:.07em;padding:11px 3px;border-radius:10px;cursor:pointer;text-transform:uppercase;
+  transition:background .15s ease,color .15s ease;white-space:nowrap}
+.stSeg button.on{background:#1b2a44;color:#eef2fb;box-shadow:0 1px 0 rgba(255,255,255,.05) inset}
+.stSeg button:active{transform:scale(.96)}
+.stYou{display:flex;gap:8px;margin-top:12px}
+.stYouT{flex:1;background:#0e1626;border:1px solid #26304a;border-radius:14px;padding:13px 5px;text-align:center;min-width:0}
+.stYouN{font-size:21px;font-weight:900;color:#eef2fb;line-height:1.15}
+.stYouK{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:#93a0bd;margin-top:4px;font-weight:800}
+.stPickRow2{padding:11px 0;border-bottom:1px solid #1a2337}
+.stPickRow2:last-child{border-bottom:none}
+.stPickTop{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:3px 0 7px}
+.stPickLead2{font-size:11.5px;color:#93a0bd;text-align:right;flex:0 0 auto}
+.stRace{height:5px;border-radius:99px;background:#141d2f;overflow:hidden}
+.stRace i{display:block;height:100%;border-radius:99px;transition:width .5s ease}
+.stNeed{font-size:11.5px;color:#ffc54d;margin-top:6px;font-weight:700}
+.stFact{display:flex;gap:11px;padding:12px 0;border-bottom:1px solid #1a2337;align-items:flex-start}
+.stFact:last-child{border-bottom:none}
+.stFactI{flex:0 0 auto;font-size:16px;line-height:1.35}
+.stFactB{flex:1;min-width:0}
+.stFactT{font-size:13.5px;color:#cfd8ea;font-weight:600;line-height:1.45}
+.stFactT b{color:#eef2fb;font-weight:900}
+.stFactS{font-size:11px;color:#5b6a8c;margin-top:3px;letter-spacing:.03em;line-height:1.4}
+
+/* ---- the final screen's fold ---- */
+.fdrawer{margin-top:12px;border:1px solid #1e2740;border-radius:16px;background:#0e1626;overflow:hidden}
+.fdrawer>summary{list-style:none;cursor:pointer;padding:15px 16px;font:800 13px/1 inherit;
+  color:#93a0bd;display:flex;align-items:center;justify-content:space-between}
+.fdrawer>summary::-webkit-details-marker{display:none}
+.fdrawer>summary::after{content:'▾';color:#5b6a8c;font-size:13px;transition:transform .2s ease}
+.fdrawer[open]>summary::after{transform:rotate(180deg)}
+.fdrawer[open]>summary{color:#eef2fb;border-bottom:1px solid #1a2337}
+.fdrawerin{padding:4px 12px 14px}
+.fdrawerin .card{margin-top:10px}
+
 /* ---- the return bar ---- */
 #gameBar{display:none;position:fixed;left:0;right:0;bottom:74px;z-index:8550;border:none;
   width:100%;padding:13px 14px;cursor:pointer;font:800 14px/1.2 inherit;
@@ -9074,6 +9573,11 @@ body.hasgamebar .screen.active{padding-bottom:132px}
 .pdcat{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#28e0d0;font-weight:800}
 .pdq{font-size:23px;font-weight:900;line-height:1.2;color:#eef2fb;margin:7px 0 4px}
 .pdworth{font-size:13px;font-weight:800;color:var(--gold);margin-bottom:14px}
+.pdteam{font-size:10.5px;letter-spacing:.14em;font-weight:900;color:#28e0d0;
+  margin:14px 0 8px;display:flex;align-items:baseline;gap:7px}
+.pdteam:first-child{margin-top:0}
+.pdteam i{font-style:normal;font-size:10.5px;letter-spacing:.04em;color:#5b6a8c;font-weight:700}
+.pdopt.isout{opacity:.62}
 .pdopts{display:flex;flex-direction:column;gap:9px}
 .pdopts.many{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .pdopts.many .pdopt{padding:12px 10px;font-size:14px;gap:8px}
