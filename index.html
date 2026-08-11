@@ -5658,7 +5658,7 @@ function awardCtx(rank){
     rank:(rank===undefined?null:rank),
     pts:S.pts||0, speed:S.speed||0, streak:S.streak||1, mode:S.mode,
     graded:countGraded(), preds:predHits(),
-    roundClean:[], roundGraded:[],
+    roundClean:[], roundGraded:[], roundHits:[],
     bestBank:0, answered:0, answeredAll:false, exactNum:false,
     catchHits:S.catchPts||0, catchTotal:CATCHES.length, catchAll:false
   };
@@ -5676,6 +5676,7 @@ function awardCtx(rank){
       if(v===true && my && (Number(my.bank)||0)>c.bestBank) c.bestBank=Number(my.bank)||0;
     });
     c.roundGraded[i]=g;
+    c.roundHits[i]=h;
     c.roundClean[i]=(g>=2 && h===g);
   });
   c.answeredAll = asked>0 && c.answered===asked;
@@ -5765,7 +5766,26 @@ const AWARDS=[
     why:c=>`You answered <b>every single question</b> put in front of you — all ${c.answered}. Most people drop one.`,
     short:()=>'answered everything' },
 
-  { id:'board', emoji:'📌', name:'ON THE BOARD',
+  /* THE GAP THAT PRODUCED A THUMBTACK. Seven of sixteen right, 290 points,
+     scored in all four quarters — and the best the table could offer was
+     "ON THE BOARD" with a drawing pin on it. That is a participation
+     sticker for a genuinely good night. The two awards below fill the space
+     between perfection and nothing, and the first of them rewards exactly
+     the behaviour this whole product exists to create: you were still
+     watching in the fourth. */
+  { id:'everyq', emoji:'🧠', name:'NEVER LOOKED AWAY',
+    hides:['board'],
+    test:c=>Array.isArray(c.roundHits) && c.roundHits.length>=NR && c.roundHits.every(n=>n>=1),
+    why:c=>`You scored in <b>all ${NR} ${L.periods||'quarters'}</b> — first to last. Most people fade after half; you did not.`,
+    short:()=>`scored in every ${L.period||'quarter'}` },
+
+  { id:'sharp', emoji:'🏅', name:'SHARP NIGHT',
+    hides:['board'],
+    test:c=>c.graded.total>=8 && (c.graded.hits/c.graded.total)>=0.5,
+    why:c=>`<b>${c.graded.hits} of ${c.graded.total}</b> — right more often than not, on questions built to be hard.`,
+    short:c=>`${c.graded.hits}/${c.graded.total} right` },
+
+  { id:'board', emoji:'⭐', name:'ON THE BOARD',
     test:c=>c.graded.hits>=1,
     why:c=>`<b>${c.graded.hits}</b> right${c.pts?` and ${c.pts} points`:''} on the board. Every season starts with one.`,
     short:c=>`${c.graded.hits} correct` },
@@ -5813,6 +5833,13 @@ function earnedAwards(rank){
    finishLive(). It only replays the animation when the HEADLINE actually
    changed — being told twice that you won is worse than being told once. */
 let AW_LAST=null, AW_TIMER=null;
+/* How many graded questions this player actually got right — the same
+   number the award engine uses, so the share card and the badge can never
+   disagree with each other. */
+function gradedHits(){
+  try{ var n=0; (S.results||[]).forEach(function(qr){ (qr||[]).forEach(function(v){ if(v===true) n++; }); }); return n; }
+  catch(_){ return 0; }
+}
 function renderAwards(rank){
   const card=document.getElementById('fAward'); if(!card) return null;
   const got=earnedAwards(rank);
@@ -5825,8 +5852,14 @@ function renderAwards(rank){
   set('fAwardName', awardName(head, got.ctx));
   set('fAwardWhy', head.why(got.ctx), true);
   const rest=got.list.slice(1);
-  set('fAwardMore', rest.map(a=>
-    `<span class="awchip">${awardEmoji(a,got.ctx)} <b>${esc(awardName(a,got.ctx))}</b> · ${esc(a.short(got.ctx))}</span>`).join(''), true);
+  /* The floor badge takes its NAME from its own short text, so printing
+     both gave "SEASON OPENED · season opened". If they say the same thing,
+     say it once. */
+  set('fAwardMore', rest.map(a=>{
+    const nm=awardName(a,got.ctx), sh=String(a.short(got.ctx)||'');
+    const same=nm.replace(/[^a-z0-9]/gi,'').toLowerCase()===sh.replace(/[^a-z0-9]/gi,'').toLowerCase();
+    return `<span class="awchip">${awardEmoji(a,got.ctx)} <b>${esc(nm)}</b>${same?'':' · '+esc(sh)}</span>`;
+  }).join(''), true);
   const snd=document.getElementById('awSnd'); if(snd) snd.textContent = awardSoundOn()?'🔊':'🔇';
   card.style.display='block';
 
@@ -7058,7 +7091,7 @@ function ensureCiCard(){
     'transform:translateX(-50%) translateY(0);animation:ciUp .34s cubic-bezier(.16,1,.3,1);'+
       'background:#161d2e;border:1px solid #2b3a5e;'+
       'border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.55);padding:14px 15px;display:none;font-family:inherit}'+
-    '@keyframes ciUp{from{transform:translateX(-50%) translateY(26px) scale(.97);opacity:0}to{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}'+
+    '@keyframes ciUp{from{transform:translateX(-50%) translateY(-22px) scale(.97);opacity:0}to{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}'+
     /* An open question is the loudest thing on the screen for twenty
        seconds, and then it stops being loud. The ring is what makes it
        impossible to miss without a modal that blocks the game you came
@@ -7066,6 +7099,7 @@ function ensureCiCard(){
     '#ciCard.cilive{border-color:#28e0d0;box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 0 1px rgba(40,224,208,.55),0 0 34px rgba(40,224,208,.28);animation:ciUp .34s cubic-bezier(.16,1,.3,1),ciPulse 2.1s ease-in-out .34s infinite}'+
     '@keyframes ciPulse{0%,100%{box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 0 1px rgba(40,224,208,.55),0 0 30px rgba(40,224,208,.22)}50%{box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 0 1px rgba(40,224,208,.85),0 0 46px rgba(40,224,208,.42)}}'+
     '@media (prefers-reduced-motion:reduce){#ciCard{animation:none!important}#ciCard.cilive{animation:none!important}}'+
+    'body.ciopen .screen.active{padding-top:var(--cih,0px);transition:padding-top .2s ease}'+
     '#ciCard .cilockbar{height:4px;border-radius:99px;background:#22304d;overflow:hidden;margin-bottom:11px}'+
     '#ciCard .cilockbar i{display:block;height:100%;background:linear-gradient(92deg,#28e0d0,#4d86ff);width:100%;transform-origin:left}'+
     '#ciCard .cihead{display:flex;align-items:center;gap:7px;font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#28e0d0;margin-bottom:6px}'+
@@ -7132,9 +7166,27 @@ function ciOnGametime(){ try{ return (S&&S.screen)==='gametime'; }catch(_){ retu
 function ciDock(){
   var c=document.getElementById('ciCard'); if(!c) return;
   if(c.parentNode!==document.body) document.body.appendChild(c);
-  c.style.position='fixed'; c.style.left='50%'; c.style.bottom='96px';
+  /* TOP, NOT BOTTOM. Pinning it above the nav kept it on screen but put it
+     in the corner of your eye, over the feed, furthest from the score you
+     are actually looking at. A live question belongs directly under the
+     clock — the place your eye already is during a game. */
+  var top=10;
+  try{
+    var strip=document.querySelector('.scoreself');
+    if(strip && getComputedStyle(strip).display!=='none'){
+      var r=strip.getBoundingClientRect();
+      if(r.height>0 && r.top<80) top=Math.round(r.bottom)+8;
+    }
+  }catch(_){}
+  /* 'auto', not ''. The stylesheet still carries bottom:90px, so clearing
+     only the inline value left the card anchored top AND bottom — it
+     stretched the whole height of the phone with the question stranded at
+     the top of an empty box. */
+  c.style.position='fixed'; c.style.left='50%'; c.style.bottom='auto';
+  c.style.top=top+'px';
   c.style.transform='translateX(-50%)'; c.style.width='min(430px,94vw)';
   c.style.animation='';
+  c.dataset.ciTop=top;
   try{ var sl=document.getElementById('ciSlot'); if(sl){ sl.innerHTML=''; sl.style.marginTop='0'; } }catch(_){}
 }
 function ciShow(html, live){
@@ -7147,6 +7199,10 @@ function ciShow(html, live){
   /* Restart the entrance every time, so a question that replaces another
      one still visibly ARRIVES instead of silently swapping its text. */
   try{ c.classList.toggle('cilive', !!live); c.style.animation='none'; void c.offsetWidth; c.style.animation=''; }catch(_){}
+  /* AFTER the card is visible and filled — measured before it was, and the
+     height was always zero. The page moves down by exactly the card's
+     height so the score stays visible directly beneath it. */
+  try{ ciFit(); }catch(_){}
   try{ if(live && navigator.vibrate) navigator.vibrate(18); }catch(_){}
   // The 'leave this open' placeholder and a live question are mutually
   // exclusive — showing both reads as two half-built things.
@@ -7154,7 +7210,16 @@ function ciShow(html, live){
   // for a live question, but the rehearsal control has to survive — a test
   // button that disappears the moment you use it can't be used twice.
   try{ if(ciOnGametime() && typeof renderGametime==='function') renderGametime(); }catch(_){} }
-function ciHideSoon(ms){ clearTimeout(PCI.hideT); PCI.hideT=setTimeout(function(){ var c=document.getElementById('ciCard'); if(c) c.style.display='none'; try{ if(typeof renderGametime==='function') renderGametime(); }catch(_){} }, ms); }
+function ciFit(){
+  var c=document.getElementById('ciCard'); if(!c) return;
+  var up = c.style.display!=='none';
+  var top = Number(c.dataset.ciTop||10);
+  var h = up ? (c.offsetHeight||0) : 0;
+  document.documentElement.style.setProperty('--cih', h? (h+top+10)+'px' : '0px');
+  document.body.classList.toggle('ciopen', up && h>0);
+}
+function ciHideSoon(ms){ clearTimeout(PCI.hideT); PCI.hideT=setTimeout(function(){ var c=document.getElementById('ciCard'); if(c) c.style.display='none';
+    try{ document.body.classList.remove('ciopen'); }catch(_){} try{ if(typeof renderGametime==='function') renderGametime(); }catch(_){} }, ms); }
 
 function ciGrade(q){
   if(PCI.graded[q.qid]) return;
@@ -7295,7 +7360,7 @@ function renderCiCard(q){
   Array.prototype.forEach.call(card.querySelectorAll('.ciopt'), function(b){
     b.onclick=function(){ if(!locked) ciPick(q, b.getAttribute('data-civ')); };
   });
-  var mb=card.querySelector('.cimute'); if(mb) mb.onclick=function(){ PCI.muted=true; card.style.display='none'; };
+  var mb=card.querySelector('.cimute'); if(mb) mb.onclick=function(){ PCI.muted=true; card.style.display='none'; try{ document.body.classList.remove('ciopen'); }catch(_){} };
   var hb=card.querySelector('[data-cihide]'); if(hb) hb.onclick=function(){ card.style.display='none'; try{ if(typeof renderGametime==='function') renderGametime(); }catch(_){} };
   /* YOUR ANSWER IS IN — THE CARD GETS OUT OF THE WAY. A locked card that
      sits on screen until a host somewhere remembers to resolve it is how a
@@ -7714,7 +7779,12 @@ function openShare(){
   const bonus=S.predPts+(S.catchPts||0);
   document.getElementById('scRankLine').textContent = S.mode==="live"
     ? `${S.predPts} from predictions${CATCHES.length?` · ⚡${S.catchPts||0} catches`:''} · ${S.pts-bonus} live · ⚡${S.speed} speed`
-    : `Rank #${myRank()} of ${S.totalPlayers.toLocaleString()}`;
+    /* A PRACTICE RUN HAS NO ROOM, SO IT MUST NOT CLAIM ONE. This printed
+       "Rank #9 of 1,204" off a hardcoded bot field — a number invented in
+       2026 and never removed. On a card built to be screenshotted into a
+       group chat, a fabricated leaderboard is the one thing that can make
+       every true number on it look invented too. Say what it was. */
+    : `Practice run · ${S.pts} points, ${gradedHits()} right`;
   document.getElementById('scStreak').textContent=`🔥 ${S.streak}-game streak`;
   const g=document.getElementById('scGrid');g.innerHTML='';
   S.results.forEach((qr,i)=>{
@@ -9216,7 +9286,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.65';
+const STATS_BUILD='2026-08-11-g6-ny-ind.67';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
