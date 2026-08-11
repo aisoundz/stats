@@ -2863,6 +2863,17 @@ window.STATS_FIREBASE = {
   /* Is this device actually in a room? The single question behind every
      "it doesn't work" report we have had. */
   SB.inRoom = function(){ return !!(SB.enabled && nightId); };
+  SB.seated = function(){ return !!(SB.enabled && nightId && meRef); };
+  /* READ WITHOUT TAKING A SEAT. Joining writes a player document, which
+     puts you on the leaderboard. Somebody who opens the room before they
+     have picked a handle should be able to READ it without appearing on
+     tonight's board as "player". This sets the night for reads and writes
+     nothing. */
+  SB.observe = function (nid) {
+    if (!SB.enabled || !nid) return false;
+    if (!nightId) nightId = nid;
+    return true;
+  };
 
   /* ==================== LISTENERS, NOT POLLERS =======================
      THE CEILING NOBODY HAS HIT. The room polls: every 90s for the field,
@@ -3241,7 +3252,7 @@ const bots=[
 ];
 
 /* ---------------- STATE ---------------- */
-let S={mode:"demo",screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},predOrder:[],qi:0,ni:0,nextQ:0,answered:false,
+let S={mode:"demo",practice:false,screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},predOrder:[],qi:0,ni:0,nextQ:0,answered:false,
   lifelineHalf1:true,lifelineHalf2:true,botScores:[],totalPlayers:1204,
   results:emptyRounds(), liveAnswers:emptyRounds(), streak:0, seasonPts:0,
   catchChoices:{}, catchPts:null, catchesScored:false,
@@ -3279,7 +3290,7 @@ function startLive(){
     if(S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0 && S.place!=='predict'){ returnToGame(); return; }
   }catch(_){}
   if(!signedInNow()){ promptSignIn('live'); return; }
-  S.mode="live";go('name');prefillGate();
+  S.mode="live";S.practice=false;go('name');prefillGate();
 }
 /* ---- THE HOME CARD KNOWS WHERE YOU ARE ------------------------------
    "Why every time I go back to home it shows Play Game, if I have already
@@ -3336,7 +3347,7 @@ function promptSignIn(after){
   toast('Sign in first — takes one tap, and it saves everything you score.');
 }
 let PENDING_AFTER=null;
-function startDemo(){S.mode="demo";try{Object.keys(demoCiFired).forEach(k=>delete demoCiFired[k]);PCI.muted=false;}catch(e){}go('name');prefillGate();}
+function startDemo(){S.mode="demo";S.practice=true;try{Object.keys(demoCiFired).forEach(k=>delete demoCiFired[k]);PCI.muted=false;}catch(e){}go('name');prefillGate();}
 
 /* ---------------- PERSISTENCE (Game Night only) ---------------- */
 const LS_KEY="stats_gamenight_v1_"+SPORT_KEY; // saves never cross sports
@@ -7852,8 +7863,13 @@ function openTalk(){
      the same root cause that emptied the Board in Game #5, surfacing in
      the one place I did not check. Open the room, be in the room. */
   try{
-    if(S.mode==='live' && window.SB && SB.enabled && SB.inRoom && !SB.inRoom()){
-      joinNight().then(function(ok){ if(ok){ try{ ttLastAt=0; ttRoomPull(true); }catch(_){} } });
+    if(ttHasRoom() && SB.inRoom && !SB.inRoom()){
+      ttAttach().then(function(ok){
+        if(!ok) return;
+        try{ ttLastAt=0; }catch(_){}
+        try{ ttRoomStop(); ttRoomStart(); }catch(_){}   // re-arm now the night exists
+        try{ renderRoom(); }catch(_){}
+      });
     }
   }catch(_){}
   document.getElementById('ttTitle').textContent =
@@ -7942,8 +7958,18 @@ async function ttSend(){
     if(raw.trim()) toast('Links and phone numbers don\u2019t post here.');
     i.value='';ttTyped();return;
   }
-  if(S.mode==='demo'){ toast('Practice run \u2014 the room opens on game night.'); return; }
+  if(S.practice){ toast('Practice run \u2014 the room opens on game night.'); return; }
   if(!window.SB||!SB.enabled){ toast('Can\u2019t reach the room right now. Give it a second.'); return; }
+  if(!signedInNow()){ toast('Sign in on the home screen and you\u2019re in the room.'); return; }
+  /* A handle, not a card. You do not have to play to talk — but you do have
+     to be somebody, because a room of six people called "player" is not a
+     conversation. */
+  if(!(S.name||'').trim()){
+    toast('Pick a handle first \u2014 taking you there.');
+    try{ closeTalk(); }catch(_){}
+    try{ go('name'); }catch(_){}
+    return;
+  }
   if(b) b.disabled=true;
 
   // Optimistic echo. Your own line appears the instant you send it,
@@ -7955,6 +7981,10 @@ async function ttSend(){
   ttLines.push(tmp);
   i.value='';ttTyped();renderRoom();
   ttHotUntil=Date.now()+90000;
+
+  /* If we only OBSERVED the room — attached for reads without taking a
+     seat — the first thing you say is also the moment you join it. */
+  try{ if(SB.seated && !SB.seated()) await joinNight(); }catch(_){}
 
   let r=null;
   try{ r=await SB.say({text:text,kind:'chat',name:S.name||'player',color:S.color||'#888'}); }
@@ -7998,13 +8028,51 @@ async function ttSend(){
    the difference between the room being affordable and not. */
 let ttLines=[],ttLastAt=0,ttTimer=null,ttPulling=false,ttLocalN=0,ttTick=0,ttHotUntil=0;
 const TT_FEED_MAX=60, TT_TICK_MS=4000;
+
+/* ---- IS THERE A ROOM, AND CAN I BE IN IT? --------------------------------
+   THE BUG THIS EXISTS TO KILL. Trash Talk was gated on `S.mode !== 'demo'`,
+   and S.mode is "demo" on every fresh page load — it only becomes "live"
+   once you press Play and walk through the handle screen. So a signed-in
+   player who landed on the site and tapped Talk (the single most natural
+   thing to do before tip-off, when there is nothing else to do yet) was
+   told "The room · offline — this is the practice run". On game night.
+   With a real room open and other people already in it.
+
+   That is the third time this exact shape has bitten us: a feature deciding
+   it is unavailable for a reason that has nothing to do with whether it can
+   actually work, and then saying so in a way that sounds like the app is
+   broken. Whether the room is live is now its own question, and it asks the
+   only three things that matter. */
+function ttHasRoom(){
+  try{
+    if(S.practice) return false;                       // an explicit rehearsal
+    if(!window.SB || !SB.enabled) return false;         // backend down
+    /* signedInNow(), not SB.uid(). Two different answers to "is this person
+       signed in" is how the header ended up saying LIVE TONIGHT directly
+       above a paragraph telling you to sign in. One predicate. */
+    if(!signedInNow()) return false;
+    return !!nightKey();
+  }catch(_){ return false; }
+}
+/* You may READ the room signed in with no handle. You may not POST without
+   one, because six people called "player" is not a conversation. */
+function ttCanPost(){ return ttHasRoom() && !!(S.name||'').trim(); }
+
+/* Attach to tonight's night for reads. Takes a seat only if we know who you
+   are; otherwise it observes, which writes nothing. */
+function ttAttach(){
+  if(!ttHasRoom()) return Promise.resolve(false);
+  if(SB.inRoom && SB.inRoom()) return Promise.resolve(true);
+  if((S.name||'').trim()) return joinNight().catch(function(){ return false; });
+  try{ return Promise.resolve(!!SB.observe(nightKey())); }catch(_){ return Promise.resolve(false); }
+}
 /* The background sweep. Only in a real live night, only when the chat is shut,
    only if pings aren't muted, and at a deliberately lazy cadence (~24s) so a
    whole game night still costs almost nothing in reads. */
 let ttBgTimer=null, ttBgLast=0;
 function ttBackgroundOK(){
   if(ttMuted()) return false;
-  if(!window.SB||!SB.enabled||S.mode==='demo') return false;
+  if(!ttHasRoom()) return false;
   if(Date.now()-ttBgLast < 24000) return false;
   ttBgLast=Date.now(); return true;
 }
@@ -8068,7 +8136,7 @@ function ttOnNewLines(rows){
 }
 
 async function ttRoomPull(force){
-  if(!window.SB||!SB.enabled||S.mode==='demo') return;
+  if(!ttHasRoom()) return;
   if(ttLive) return;                 // a listener already has this covered
   // `force` and an open room behave as before. The new third case is the
   // background sweep: the room is closed but we still want to know.
@@ -8135,7 +8203,7 @@ var ttUnsub=null, ttLive=false;
 function ttRoomStart(){
   ttRoomStop(); ttTick=0;
   try{
-    if(window.SB && SB.watchTalk && S.mode!=='demo'){
+    if(window.SB && SB.watchTalk && ttHasRoom()){
       ttUnsub = SB.watchTalk(function(rows){
         if(rows===null){ ttLive=false;                            // degrade, don't die
           try{ trk('listen_fail',{what:'talk',why:(window.SB&&SB.lastTalkError)||''}); }catch(_){}
@@ -8185,7 +8253,7 @@ function renderRoom(){
   // the view out from under them.
   const stick = body.scrollHeight - body.scrollTop - body.clientHeight < 70;
   body.innerHTML='';
-  const live=!!(window.SB&&SB.enabled&&S.mode!=='demo');
+  const live=ttHasRoom();
   const head=ttNode('tt-live'+(live?'':' off'));
   head.appendChild(document.createElement('i'));
   head.appendChild(document.createTextNode(live?'The room · live tonight':'The room · offline'));
@@ -8201,12 +8269,22 @@ function renderRoom(){
   if(inp){
     inp.disabled=!live;
     inp.placeholder = live ? 'Say something…'
-      : (S.mode==='demo' ? 'The room opens on game night' : 'Reconnecting to the room…');
+      : (S.practice ? 'The room opens on game night'
+        : (!signedInNow() ? 'Sign in to talk' : 'Reconnecting to the room…'));
   }
 
-  if(S.mode==='demo'){
+  /* Three different reasons a room can be shut, and they need three
+     different sentences. Collapsing them into "practice run" is what made
+     a working room look broken. */
+  if(S.practice){
     body.appendChild(ttNode('tt-empty','This is the practice run, so there’s nobody else in here. On game night this is one room and everyone playing is in it — same box, same feed.'));
     if(foot) foot.textContent='The room opens on game night.';
+    ttTyped();
+    return;
+  }
+  if(!signedInNow()){
+    body.appendChild(ttNode('tt-empty','Sign in and you’re in tonight’s room — everyone playing is in this one box. It takes one tap and nothing you say here needs a card.'));
+    if(foot) foot.textContent='Sign in on the home screen to talk.';
     ttTyped();
     return;
   }
@@ -8484,7 +8562,7 @@ function runEngine(){
 }
 function restart(){
   clearSave();
-  S={mode:"demo",screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},predOrder:[],qi:0,ni:0,nextQ:0,answered:false,
+  S={mode:"demo",practice:false,screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},predOrder:[],qi:0,ni:0,nextQ:0,answered:false,
     lifelineHalf1:true,lifelineHalf2:true,botScores:[],totalPlayers:1204,
     results:emptyRounds(),liveAnswers:emptyRounds(),streak:S.streak,seasonPts:S.seasonPts+S.pts,
     catchChoices:{},catchResults:{},catchPts:null,catchesScored:false,
@@ -8948,7 +9026,7 @@ function portalSaveSignup(email){
    screen, but they get there knowing an account is required. */
 function portalEmailPath(){
   PENDING_AFTER='live';
-  S.mode='live'; go('name'); prefillGate();
+  S.mode='live'; S.practice=false; go('name'); prefillGate();
   setTimeout(function(){
     try{ document.getElementById('verifyRow').scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){}
     toast('Add your email, then tap Verify — that link is your account.');
@@ -9032,7 +9110,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.57';
+const STATS_BUILD='2026-08-11-g6-ny-ind.58';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
