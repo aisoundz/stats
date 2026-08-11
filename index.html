@@ -3505,9 +3505,32 @@ function checkResume(){
      half-finished test. Clear it and let them start clean. */
   try{
     var tipMs = Date.parse((typeof GAME!=='undefined' && GAME.tipISO) || '');
+    /* POSITION IS NOT ENOUGH — ASK WHETHER ANYTHING HAS HAPPENED.
+       The first cut of this guard whitelisted 'lobby' as a legitimate
+       pre-tip position, on the reasoning that "waiting in the lobby" is
+       what you do before a game. It is. But the lobby is ALSO where you
+       wait BETWEEN QUARTERS, so a save sitting in the lobby holding 110
+       points and three scored quarters walked straight through and put a
+       phone back on "Q4 ended — answer now" two hours before tip. The
+       gate missed it because the test I wrote used place:'live' — it
+       covered the case I had thought of, which is the only kind of case
+       a test ever covers.
+
+       Progress is the honest signal, not position. Before the ball goes
+       up nobody has points and nobody has finished a round, so a save
+       claiming either did not come from this game. */
     var PRETIP_OK = ['predict','lobby'];
-    if(saved && where && tipMs && Date.now() < tipMs && PRETIP_OK.indexOf(where) < 0){
-      try{ trk('save_ahead_of_game',{where:where, qi:saved.qi, mins:Math.round((tipMs-Date.now())/60000)}); }catch(_){}
+    var progressed = false;
+    try{
+      progressed = (+saved.qi > 0) || (+saved.pts > 0) || (+saved.speed > 0) ||
+                   (saved.roundHits && saved.roundHits.some(function(n){ return n>0; })) ||
+                   !!(saved.heldQs && Object.keys(saved.heldQs).length) ||
+                   !!(saved.subIds && Object.keys(saved.subIds).length);
+    }catch(_){ progressed = false; }
+    if(saved && where && tipMs && Date.now() < tipMs &&
+       (PRETIP_OK.indexOf(where) < 0 || progressed)){
+      try{ trk('save_ahead_of_game',{where:where, qi:saved.qi, pts:saved.pts,
+            progressed:progressed, mins:Math.round((tipMs-Date.now())/60000)}); }catch(_){}
       clearSave(); saved=null; where='';
     }
   }catch(_){}
@@ -9562,7 +9585,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.72';
+const STATS_BUILD='2026-08-11-g6-ny-ind.73';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
