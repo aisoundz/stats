@@ -9008,7 +9008,12 @@ function applySport(){
   if(SPORT.key!=='basketball'){
     ['pbpCard','engineCard'].forEach(id=>{const e=$(id);if(e)e.style.display='none';});
   }
-  document.title=`STATS — ${GAME.homeName} v ${GAME.awayName}`;
+  /* BRAND FIRST, BECAUSE THIS IS WHERE IT GETS TRUNCATED. Safari's
+     Suggestions tile and every browser tab clip the title, and
+     "STATS — Indiana Fever v New York Liberty" clipped to "STATS — Indiana
+     F…" — which reads as an Indiana site, not as us. Full name first, short
+     nicknames after, so the cut always lands after the brand. */
+  document.title=`STATS GAMETIME · ${GAME.homeNick||GAME.homeAbbr} v ${GAME.awayNick||GAME.awayAbbr}`;
 }
 try{applySport();}catch(e){console.error('applySport',e);}
 try{paintChrome();}catch(e){console.error('paintChrome',e);}
@@ -9211,7 +9216,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.64';
+const STATS_BUILD='2026-08-11-g6-ny-ind.65';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
