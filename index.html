@@ -26,11 +26,21 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="STATS">
-<link rel="icon" href="/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="manifest" href="/site.webmanifest">
+<link rel="icon" href="/favicon.ico?v=2" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png?v=2">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=2">
+<!-- Safari probes conventional ROOT PATHS for a touch icon before it reads
+     any of these tags, and it caches whatever it finds — including a 404 —
+     for a long time. Every path it is known to try now exists, and the tags
+     are versioned so a browser that does read them refetches. -->
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2">
+<link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167x167.png?v=2">
+<link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png?v=2">
+<link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png?v=2">
+<link rel="apple-touch-icon-precomposed" href="/apple-touch-icon-precomposed.png?v=2">
+<meta name="msapplication-TileColor" content="#0d1119">
+<meta name="msapplication-TileImage" content="/icon-192.png?v=2">
+<link rel="manifest" href="/site.webmanifest?v=2">
 <!-- Link previews. Paste statsgametime.com into a group chat and it should
      look like something, because that is how a game night actually spreads. -->
 <meta property="og:type" content="website">
@@ -9201,7 +9211,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.63';
+const STATS_BUILD='2026-08-11-g6-ny-ind.64';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
