@@ -8685,7 +8685,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.50';
+const STATS_BUILD='2026-08-11-g6-ny-ind.51';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -9701,6 +9701,155 @@ function deepCuts(){
   return first.concat(rest);
 }
 
+/* ==================== TAKEOVER MOMENTS ==============================
+   Some things that happen in a basketball game are worth stopping for. A
+   new season high. A triple-double. A twelve-nothing run. If the app
+   treats those the same as every other card in the feed, it is a ticker —
+   and a ticker is a thing you scroll past.
+
+   The whole value here is RARITY, so this engine is mostly restraint:
+
+     · at most one takeover every four minutes, whatever happens
+     · never while a scoring question is on screen — a full-bleed card
+       over a 20-second clock would cost somebody the round, which is a
+       far worse crime than missing a moment
+     · never the same moment twice, keyed and remembered
+     · three seconds, then it leaves on its own; tap to leave sooner
+
+   It is also the most screenshot-able thing in the product, which is why
+   it carries the wordmark and the score.
+   ================================================================== */
+var TAKE={ last:0, seen:{}, showing:false, MIN_GAP:240000 };
+
+/* What qualifies. Each returns a stable key so the same event can never
+   fire twice, and the copy is written to be read in about a second. */
+function takeoverCandidates(){
+  var out=[];
+  try{
+    if(!gsInGame()) return out;
+    var cuts=[]; try{ cuts=deepCuts(); }catch(_){ cuts=[]; }
+    cuts.forEach(function(c){
+      var txt=String(c.t).replace(/<[^>]+>/g,'');
+      if(c.kind==='triple')
+        out.push({ key:'triple:'+txt, icon:'🏆', head:'TRIPLE-DOUBLE', body:txt, w:300 });
+      else if(c.kind==='high')
+        out.push({ key:'high:'+txt, icon:'🚨', head:'SEASON HIGH', body:txt, w:220 });
+    });
+    // A run is not in the box score — it only exists in the play-by-play.
+    var r=takeoverRun();
+    if(r) out.push(r);
+  }catch(_){}
+  return out.sort(function(a,b){ return b.w-a.w; });
+}
+
+/* The biggest UNANSWERED run still standing at the end of the feed. Ten
+   straight is the threshold because it is the number a commentator says
+   out loud, which makes it the number a room already recognises. */
+function takeoverRun(){
+  try{
+    var plays=(GS.plays||[]).filter(function(p){ return p.scoring && p.value>0 && p.ab; });
+    if(plays.length<4) return null;
+    var team=null, pts=0, from=null;
+    for(var i=plays.length-1;i>=0;i--){
+      var p=plays[i];
+      if(team==null){ team=p.ab; pts=p.value; from=p; continue; }
+      if(p.ab===team){ pts+=p.value; from=p; } else break;
+    }
+    if(pts<10 || !team) return null;
+    var nm=team; try{ (GS.teams||[]).forEach(function(t){ if(t.ab===team) nm=t.name||t.ab; }); }catch(_){}
+    return { key:'run:'+team+':'+pts+':'+((from&&from.id)||''), icon:'🔥',
+             head:pts+'–0 RUN', body:esc(nm)+' have scored the last '+pts+' points.', w:260 };
+  }catch(_){ return null; }
+}
+
+function takeoverTick(){
+  try{
+    if(TAKE.showing) return;
+    if(Date.now()-TAKE.last < TAKE.MIN_GAP) return;
+    // Never over a scoring question. Same rule as Call It, same reason.
+    if(typeof ciScreenOk==='function' && !ciScreenOk()) return;
+    if(typeof S==='undefined' || S.mode!=='live') return;
+    var c=takeoverCandidates().filter(function(x){ return !TAKE.seen[x.key]; })[0];
+    if(!c) return;
+    TAKE.seen[c.key]=1;
+    showTakeover(c);
+  }catch(_){}
+}
+
+function showTakeover(c){
+  try{
+    var el=document.getElementById('takeover');
+    if(!el){
+      el=document.createElement('div'); el.id='takeover';
+      el.onclick=function(){ hideTakeover(); };
+      document.body.appendChild(el);
+    }
+    var A=null,B=null; try{ A=GS.teams[0]; B=GS.teams[1]; }catch(_){}
+    var score=(A&&B&&A.score!=null&&B.score!=null)
+      ? (esc(A.ab)+' '+A.score+' · '+esc(B.ab)+' '+B.score+(GS.detail?('  ·  '+esc(GS.detail)):''))
+      : '';
+    el.innerHTML='<div class="tkin">'
+      + '<div class="tkmark">STATS GAMETIME</div>'
+      + '<div class="tkicon">'+c.icon+'</div>'
+      + '<div class="tkhead">'+esc(c.head)+'</div>'
+      + '<div class="tkbody">'+esc(c.body)+'</div>'
+      + (score?('<div class="tkscore">'+score+'</div>'):'')
+      + '<div class="tktap">tap to dismiss</div>'
+      + '</div>';
+    el.classList.add('on');
+    TAKE.showing=true; TAKE.last=Date.now();
+    try{ if(navigator.vibrate) navigator.vibrate([14,50,22]); }catch(_){}
+    clearTimeout(TAKE.t); TAKE.t=setTimeout(hideTakeover, 3400);
+  }catch(_){}
+}
+function hideTakeover(){
+  try{
+    clearTimeout(TAKE.t);
+    var el=document.getElementById('takeover'); if(el) el.classList.remove('on');
+    TAKE.showing=false;
+  }catch(_){}
+}
+try{ window.hideTakeover=hideTakeover; }catch(_){}
+
+/* ==================== SHARE ANY MOMENT ==============================
+   The end-of-game result card is the only thing you could ever share, which
+   means the app could only be spread by somebody who had already played a
+   whole night. Every card in the feed is now shareable in one tap: the
+   stat, the score, where you stand, and the address. A share is the only
+   marketing this product has ever had. */
+function shareCardText(id){
+  var it=null;
+  try{ it=(FEED.items||[]).filter(function(x){ return x.id===id; })[0]; }catch(_){}
+  var line=it ? String(it.t||'').replace(/<[^>]+>/g,'') : '';
+  var sub=it && it.meta ? String(it.meta) : '';
+  var head='', score='';
+  try{
+    head='STATS '+(SPORT.emoji||'🏀')+' '+GAME.night+' · '+GAME.awayAbbr+' @ '+GAME.homeAbbr;
+    var A=GS.teams[0], B=GS.teams[1];
+    if(A&&B&&A.score!=null&&B.score!=null)
+      score=A.ab+' '+A.score+'–'+B.score+' '+B.ab+(GS.detail?(' · '+GS.detail):'');
+  }catch(_){}
+  var me='';
+  try{
+    var pts=Math.max(0,Math.round((S&&S.pts)||0));
+    var rank=null; try{ if(lastStand&&lastStand.length) lastStand.forEach(function(x,i){ if(x.me) rank=i+1; }); }catch(_){}
+    if(S&&S.mode==='live') me='Me: '+pts+' pts'+(rank?(' · #'+rank):'');
+  }catch(_){}
+  return [head, score, '', line, sub, '', me, 'statsgametime.com']
+    .filter(function(x){ return x!==undefined && x!==null && String(x).length; }).join('\n');
+}
+function shareCard(id){
+  var txt=shareCardText(id);
+  try{
+    if(navigator.share){ navigator.share({text:txt}).catch(function(){}); return; }
+  }catch(_){}
+  try{
+    navigator.clipboard.writeText(txt);
+    toast('Copied — paste it in the group chat');
+  }catch(e){ try{ toast('Could not copy on this device'); }catch(_){} }
+}
+try{ window.shareCard=shareCard; }catch(_){}
+
 /* ==================== THE STATS TAB =================================
    Rebuilt as ONE THING AT A TIME. The old screen stacked five cards and
    made you scroll past your own card, the injury list, a bar chart and a
@@ -10157,7 +10306,11 @@ function feedRender(force){
     var chips=FEED_EMOJI.map(function(e){
       return '<button type="button" class="fdr'+(r[e]?' on':'')+'" data-fr="'+it.id+'|'+e+'">'
         + e + (r[e]?('<i>'+r[e]+'</i>'):'') + '</button>';
-    }).join('');
+    }).join('')
+    /* SHARE ANY MOMENT. The result card at the buzzer used to be the only
+       shareable thing in the product — which meant the app could only be
+       spread by somebody who had already played a whole night. */
+    + '<button type="button" class="fdr fdsh" data-fs="'+it.id+'" aria-label="Share this">⤴</button>';
     /* Warm-up cards carry no reaction row. There is nothing to react to
        before the ball goes up, and four dead emoji under a countdown is
        exactly the kind of decoration that makes a screen feel padded. */
@@ -10179,6 +10332,9 @@ function feedRender(force){
 
   Array.prototype.forEach.call(el.querySelectorAll('.fdr'), function(b){
     b.onclick=function(ev){ ev.stopPropagation(); feedReact(b.getAttribute('data-fr')); };
+  });
+  Array.prototype.forEach.call(el.querySelectorAll('.fdsh'), function(b){
+    b.onclick=function(ev){ ev.stopPropagation(); shareCard(b.getAttribute('data-fs')); };
   });
   try{ var wt=document.getElementById('warmTry');
        if(wt) wt.onclick=function(ev){ ev.stopPropagation(); ciDemoNow(); }; }catch(_){}
@@ -10207,9 +10363,12 @@ function feedReact(key, card){
       var r=FEED.reacts[id];
       host.innerHTML=FEED_EMOJI.map(function(x){
         return '<button type="button" class="fdr'+(r[x]?' on':'')+'" data-fr="'+id+'|'+x+'">'
-          + x + (r[x]?('<i>'+r[x]+'</i>'):'') + '</button>'; }).join('');
+          + x + (r[x]?('<i>'+r[x]+'</i>'):'') + '</button>'; }).join('')
+        + '<button type="button" class="fdr fdsh" data-fs="'+id+'" aria-label="Share this">⤴</button>';
       Array.prototype.forEach.call(host.querySelectorAll('.fdr'), function(b){
-        b.onclick=function(ev){ ev.stopPropagation(); feedReact(b.getAttribute('data-fr')); };
+        var sh=b.getAttribute('data-fs');
+        b.onclick=function(ev){ ev.stopPropagation();
+          if(sh) shareCard(sh); else feedReact(b.getAttribute('data-fr')); };
       });
       var pop=document.createElement('span'); pop.className='fdpop'; pop.textContent=e;
       (card||host.parentNode).appendChild(pop);
@@ -10336,6 +10495,10 @@ try{ setInterval(function(){ try{
   if((S&&S.screen)!=='gametime') return;
   loadGameStats().then(function(){ try{ if(S.screen==='gametime') renderGametime(); }catch(_){} });
 }catch(_){}}, 20000); }catch(e){}
+/* The takeover watcher runs wherever you are, not only on Gametime — a
+   twelve-nothing run is worth knowing about from the Board too. It polices
+   its own rarity; see TAKE.MIN_GAP. */
+try{ setInterval(function(){ try{ takeoverTick(); }catch(_){} }, 15000); }catch(e){}
 
 </script>
 
@@ -10490,6 +10653,21 @@ body.hasrail{padding-top:38px}
    single class on <body> so there is one switch, not six. */
 body.member .strangers{display:none !important}
 body.member #s-landing .brand{margin-top:6px}
+/* ---- takeover ---- */
+#takeover{position:fixed;inset:0;z-index:9200;display:none;align-items:center;justify-content:center;
+  padding:28px;background:radial-gradient(120% 90% at 50% 25%,rgba(40,224,208,.20),rgba(10,14,23,.97) 62%);
+  backdrop-filter:blur(6px);cursor:pointer}
+#takeover.on{display:flex;animation:tkIn .32s cubic-bezier(.16,1,.3,1)}
+@keyframes tkIn{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:scale(1)}}
+.tkin{max-width:430px;text-align:center}
+.tkmark{font:900 10px/1 inherit;letter-spacing:.28em;color:#5b6a8c;margin-bottom:20px}
+.tkicon{font-size:44px;line-height:1;margin-bottom:10px}
+.tkhead{font:900 30px/1.05 inherit;letter-spacing:.02em;margin-bottom:12px;
+  background:linear-gradient(92deg,#28e0d0,#4d86ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tkbody{font-size:16.5px;line-height:1.45;color:#eef2fb;font-weight:700}
+.tkscore{font-size:12px;letter-spacing:.1em;color:#93a0bd;font-weight:800;margin-top:16px;text-transform:uppercase}
+.tktap{font-size:10.5px;letter-spacing:.14em;color:#3f4c6b;font-weight:800;margin-top:26px;text-transform:uppercase}
+.fdr.fdsh{margin-left:auto;color:#5b6a8c}
 .fdc.quiet{cursor:default}
 .fdc.quiet:active{transform:none}
 .fdgo{display:block;width:100%;margin-top:11px;border:none;border-radius:12px;cursor:pointer;
