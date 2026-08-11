@@ -6472,14 +6472,14 @@ function ciQtrBank(){
     var first=scores[0];
     if(first && first.ab){
       out.push({ qid:'ciq-first-'+per+'-'+first.id,
-        prompt:'Who scored FIRST in '+Q+'?',
+        prompt:'Which team scored the first points of '+Q+'?',
         options:[{k:A.ab,v:'a'},{k:B.ab,v:'b'}], answer:who(first.ab),
         resolveText:first.text+' — that opened '+Q+'.' });
       var fn=nameOf(first.text);
       var other=scores.map(function(p){ return nameOf(p.text); })
                       .filter(function(n){ return n && n!==fn; })[0];
       if(fn && other) out.push({ qid:'ciq-firstwho-'+per+'-'+first.id,
-        prompt:'Who put up the first basket of '+Q+'?',
+        prompt:'Which player scored the first basket of '+Q+'?',
         options:[{k:fn,v:'a'},{k:other,v:'b'}], answer:'a',
         resolveText:first.text+'.' });
     }
@@ -6487,7 +6487,7 @@ function ciQtrBank(){
     // --- how many threes have gone in this quarter
     var threes=scores.filter(function(p){ return p.value===3; }).length;
     out.push({ qid:'ciq-threes-'+per+'-'+q.length,
-      prompt:'How many threes have been made in '+Q+' so far — both teams?',
+      prompt:'Threes made in '+Q+' so far, both teams combined — how many?',
       options:[{k:'None or one',v:'a'},{k:'Two or three',v:'b'},{k:'Four or more',v:'c'}],
       answer: threes<=1?'a':(threes<=3?'b':'c'),
       resolveText:threes+' three'+(threes===1?'':'s')+' so far in '+Q+'.' });
@@ -6503,7 +6503,7 @@ function ciQtrBank(){
     // --- free throws, which nobody tracks and everybody can picture
     var fts=scores.filter(function(p){ return p.value===1; }).length;
     out.push({ qid:'ciq-ft-'+per+'-'+q.length,
-      prompt:'Free throws made in '+Q+' so far — more than two?',
+      prompt:'Free throws made in '+Q+' so far, both teams combined — more than two?',
       options:[{k:'More than two',v:'o'},{k:'Two or fewer',v:'u'}],
       answer: fts>2?'o':'u',
       resolveText:fts+' free throw'+(fts===1?'':'s')+' made in '+Q+'.' });
@@ -6512,7 +6512,7 @@ function ciQtrBank(){
     var last=scores[scores.length-1];
     if(last){
       out.push({ qid:'ciq-last-'+per+'-'+last.id,
-        prompt:'The last basket — how many was it worth?',
+        prompt:'The last basket that went in — how many was it worth?',
         options:[{k:'One',v:'1'},{k:'Two',v:'2'},{k:'Three',v:'3'}], answer:String(last.value),
         resolveText:last.text+'.' });
       var ln=nameOf(last.text);
@@ -6520,7 +6520,7 @@ function ciQtrBank(){
         var alt=scores.slice(0,-1).map(function(p){ return nameOf(p.text); })
                       .filter(function(n){ return n && n!==ln; }).pop();
         if(alt) out.push({ qid:'ciq-lastwho-'+per+'-'+last.id,
-          prompt:'Who scored the last bucket?',
+          prompt:'Which player scored the last basket?',
           options:[{k:ln,v:'a'},{k:alt,v:'b'}], answer:'a',
           resolveText:last.text+'.' });
       }
@@ -6539,7 +6539,7 @@ function ciQtrBank(){
          worse than no question: it marks people wrong for being right. */
       if(names.length>=2 && byQ[names[0]]>byQ[names[1]]){
         out.push({ qid:'ciq-hot-'+per+'-'+names[0],
-          prompt:'Who has scored the most in '+Q+' alone?',
+          prompt:'Which player has scored the most in '+Q+' alone?',
           options:[{k:names[0],v:'a'},{k:names[1],v:'b'}], answer:'a',
           resolveText:names[0]+' has '+byQ[names[0]]+' in '+Q+'. '+names[1]+' has '+byQ[names[1]]+'.' });
       }
@@ -8685,7 +8685,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.51';
+const STATS_BUILD='2026-08-11-g6-ny-ind.52';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
