@@ -1991,6 +1991,7 @@ window.STATS_FIREBASE = {
     if (!SB.enabled || !budget()) return false;
     try {
       nightId = o.nightId;
+      SB.joinedAs = null;                 // stale from a previous call is a lie
       mine.name  = String(o.name || 'player').slice(0, 24);
       mine.color = String(o.color || '#888').slice(0, 12);
       SB.me.name = mine.name;
@@ -2007,6 +2008,15 @@ window.STATS_FIREBASE = {
         ['pts','speed','predPts','catchPts','roundsDone'].forEach(function (k) {
           if (typeof d0[k] === 'number' && isFinite(d0[k])) mine[k] = d0[k];
         });
+        /* NEVER DOWNGRADE A NAME. Same reasoning as never zeroing the points
+           directly below: a re-join from a device that has forgotten who you
+           are must not overwrite the seat with the 'player' fallback. Keep
+           what the seat already knows and hand it back, so the second device
+           can recognise you instead of renaming you. */
+        var had = String(d0.name || '').trim();
+        if (had && (!o.name || o.name === 'player')) { mine.name = had; SB.me.name = had; }
+        if (had && String(d0.color||'').trim() && (!o.color || o.color === '#888')) mine.color = d0.color;
+        SB.joinedAs = { name: mine.name, color: mine.color };
         var okA = await writeTry('join-restore', function () {
           return F.setDoc(meRef, {
             name: mine.name, color: mine.color, lastSeen: F.serverTimestamp()
@@ -6257,11 +6267,30 @@ async function joinNight(){
   // never gets one, and the bar sits on "Connecting…" all night.
   hookRoomState();
   if(!window.SB || !SB.enabled) return false;
+  /* If this device does not know who you are, it must not assert a colour
+     either. S.color is never empty — it defaults to the first swatch — so
+     passing it blind would repaint your dot for everyone else in the room
+     the moment you opened a second device. Send nothing and let the seat
+     keep what it has. */
+  const known = !!(S.name||'').trim();
   const ok = await SB.join({
     nightId: nightKey(),
-    name: S.name || 'player',
-    color: S.color || '#888'
+    name: known ? S.name : '',
+    color: known ? (S.color || '#888') : ''
   });
+  /* If the seat knew a name this device did not, that is who you are. This
+     is the cross-device half of remembering a handle: play on the phone,
+     open the laptop, and the room still calls you by your name. */
+  try{
+    var ja = SB.joinedAs;
+    if(ok && ja && ja.name && ja.name!=='player' && !(S.name||'').trim()){
+      S.name = ja.name;
+      if(ja.color) S.color = ja.color;
+      try{ rememberProfile(); }catch(_){}
+      try{ if(typeof renderRoom==='function' && ttRoomOpen && ttRoomOpen()) renderRoom(); }catch(_){}
+      try{ if(typeof paintRail==='function') paintRail(); }catch(_){}
+    }
+  }catch(_){}
   if(ok){ startRoomPolling(); startHostedWatch(); }
   return ok;
 }
@@ -9114,7 +9143,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.59';
+const STATS_BUILD='2026-08-11-g6-ny-ind.60';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -9158,6 +9187,26 @@ try{ paintHeroRibbon(); setInterval(paintHeroRibbon, 30000); }catch(e){}
 (function(){ let n=0; const t=setInterval(function(){ n++; try{ renderPortal(); }catch(e){} if(n>24) clearInterval(t); }, 500); })();
 window.addEventListener('stats-identity', function(){ try{ renderPortal(); }catch(e){} });
 initColors();
+/* WHO YOU ARE IS NOT PART OF A GAME SAVE. The handle was written to a
+   profile the moment you picked it — and then only ever read back inside
+   prefillGate(), which runs on the handle screen and nowhere else. So a
+   returning player was anonymous everywhere except the one screen where
+   they were about to type it again: the room did not know them, the nav
+   did not know them, and the app had to ask a question it already had the
+   answer to. The game save could not cover this either, by design — it is
+   stamped to one night and cleared when that night ends.
+   Restore identity at boot, before anything paints. */
+function restoreIdentity(){
+  try{
+    var pr0=savedProfile();
+    if(!pr0) return false;
+    if(!(S.name||'').trim() && pr0.name)  S.name  = String(pr0.name).slice(0,24);
+    if(!S.sport && pr0.sport)             S.sport = pr0.sport;
+    if(!colorTouched && pr0.color)        S.color = pr0.color;
+    return !!(S.name||'').trim();
+  }catch(_){ return false; }
+}
+try{ restoreIdentity(); }catch(_){}
 checkResume();
 /* Reveal. Boot has now decided which screen you belong on, so painting it
    is honest. The failsafe is the important half: if anything above this
