@@ -966,8 +966,11 @@
        INSIDE here rather than floating over whatever you were doing.
        A live prompt should have an address, not ambush you. -->
   <section class="screen" id="s-gametime">
-    <div class="brand" style="margin-top:30px"><span class="logo" style="letter-spacing:1.2px;font-size:21px">GAMETIME</span></div>
-    <div id="gtHead" style="margin-top:16px"></div>
+    <!-- No 21px "GAMETIME" wordmark here any more. The bottom nav already
+         says which tab you are on, in a highlighted colour, permanently —
+         a page title repeating it cost ninety vertical pixels on a phone
+         at the top of the one screen you sit on all night. -->
+    <div id="gtHead"></div>
     <div id="ciSlot" style="margin-top:14px"></div>
     <div id="gtIdle"></div>
     <!-- THE FEED. Everything below the Call It slot is an endless scroll of
@@ -2703,6 +2706,7 @@ window.STATS_FIREBASE = {
 const BB_GAME={
   nightId:"gn6-2026-08-11-ny-ind",
   espnEvent:"401857134",   // drives the auto-pulled matchup card on the home page
+  tipISO:"2026-08-11T23:30:00Z",   // 7:30 pm ET. Used by the countdown; never parsed from a display string.
   homeName:"Indiana Fever",     homeAbbr:"IND", homeNick:"Fever",   homeEmoji:"🔥", homeColor:"#002d62",
   awayName:"New York Liberty",  awayAbbr:"NY",  awayNick:"Liberty", awayEmoji:"🗽", awayColor:"#86cebc",
   venue:"Gainbridge Fieldhouse", date:"Tue · August 11", short:"August 11", shareDate:"AUG 11", night:"Game Night #6",
@@ -3270,7 +3274,12 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
   try{ if(GAME_SCREENS.indexOf(k)>=0) S.place=k; }catch(_){}
   pendingBack=false;
   // where ← goes from each screen; null = no back button
-  const BACKMAP={landing:null,name:'landing',predict:'name',lobby:'landing',me:'landing',gametime:'landing',stats:'landing',board:'landing',
+  /* THE FIVE NAV TABS HAVE NO BACK ARROW. A ← on a tab is a question with
+     no answer — you did not navigate into it from anywhere, the nav bar is
+     both how you arrived and how you leave. It was also sitting in the top
+     corner of every screen doing nothing but taking a tap target and 60px
+     of vertical space on a phone. */
+  const BACKMAP={landing:null,name:'landing',predict:'name',lobby:'landing',me:null,gametime:null,stats:null,board:null,
     /* No back button during a timed question. It sat on top of the score
        strip (covering your own points), and "back" mid-question is not a
        thing we want to offer anyway — the clock keeps running. */
@@ -8447,7 +8456,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.47';
+const STATS_BUILD='2026-08-11-g6-ny-ind.48';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -8699,7 +8708,12 @@ function paintNav(active){
   let scr=''; try{ scr=S.screen||''; }catch(_){}
   const hide = NAV_HIDE_ON.indexOf(scr)>=0;
   bar.style.display = hide ? 'none' : 'block';
-  try{ paintRail(!hide && (typeof S!=='undefined') && S.mode==='live'); }catch(_){}
+  /* NOT ON GAMETIME. The rail is a compact score for screens that do not
+     show one. Gametime shows the score big, at the top, with the clock —
+     so the rail sat directly above it printing the same two numbers in
+     smaller type. Two scoreboards stacked is not redundancy, it is a bug
+     you can see. */
+  try{ paintRail(!hide && scr!=='gametime' && (typeof S!=='undefined') && S.mode==='live'); }catch(_){}
   try{ paintGameBar(); }catch(_){}
   try{ if(scr==='landing') paintContinueCard(); }catch(_){}
   // The pick-slip's action bar belongs to exactly one screen.
@@ -9752,10 +9766,102 @@ function feedCardWatch(){
   }catch(_){ return []; }
 }
 
+/* ==================== THE WARM-UP ===================================
+   "On Gametime there's nothing in there we can test."
+
+   Correct, and it was my doing: I stripped the placeholder filler off this
+   tab when the Feed landed, and the Feed has nothing to show until a ball
+   goes up. So for the hours before tip — which is exactly when the host is
+   trying to prove the thing works, and when the earliest players arrive —
+   the most important screen in the app was an empty state and a thousand
+   pixels of nothing.
+
+   The warm-up is the same feed, built from what we DO know before tip:
+   the clock, the state of your card, who the season says to watch (with
+   real league ranks), who is ruled out, and a Call It you can fire right
+   now. Every card is real. None of it is filler.
+   ================================================================== */
+function tipMs(){
+  try{ var t=Date.parse((typeof GAME!=='undefined'&&GAME.tipISO)||''); return isNaN(t)?null:t; }catch(_){ return null; }
+}
+function untilTip(){
+  var t=tipMs(); if(t==null) return null;
+  var d=t-Date.now(); if(d<=0) return null;
+  var h=Math.floor(d/3600000), m=Math.floor((d%3600000)/60000);
+  return h>0 ? (h+'h '+m+'m') : (m>0 ? (m+' min') : 'any minute');
+}
+function feedWarmUp(){
+  var out=[];
+  try{
+    /* No countdown card. The hero directly above already says "19h 24m" in
+       34-point type; a card underneath saying "tips off in 19h 24m" is the
+       same sentence twice, which is how a screen starts to feel padded. */
+
+    // 2. your card, and the one thing to do about it
+    try{
+      var filled=preds.filter(function(p){ return S.predChoices[p.id]; }).length;
+      if(filled>=preds.length)
+        out.push({k:'warm',id:'w-card',seq:1e9-1,icon:'✅',
+          text:'<b>Your card is locked</b> — all '+preds.length+' picks in. Nothing else to do but watch.',
+          meta:'', tag:'your card', big:false});
+      else
+        out.push({k:'warm',id:'w-card',seq:1e9-1,icon:'📋',
+          text:'<b>'+filled+' of '+preds.length+'</b> picks made. Finish your card before tip or you play for the quarter questions only.',
+          meta:'tap Home → Play to finish it', tag:'your card', big:true});
+    }catch(_){}
+
+    /* 3. WHO TO WATCH — one card, not one per player. The first build put a
+       separate box round every leader, which turned the top of the warm-up
+       into four boxes with the same heading. A list is a list. */
+    try{
+      var seen={}, rows=[];
+      (GS.leaders||[]).forEach(function(l){
+        (l.cats||[]).slice(0,2).forEach(function(c){
+          if(!c.who || seen[c.who]) return; seen[c.who]=1;
+          var sea=seaOf(c.who), rk='';
+          if(sea){
+            var best=[['pts','points a game'],['reb','rebounds a game'],['ast','assists a game'],
+                      ['tpm','threes a game'],['blk','blocks a game'],['dd','double-doubles']]
+              .filter(function(k){ return sea['rank_'+k[0]] && sea['rank_'+k[0]]<=15; })
+              .sort(function(a,b){ return sea['rank_'+a[0]]-sea['rank_'+b[0]]; })[0];
+            if(best) rk=ord(sea['rank_'+best[0]])+' in the WNBA in '+best[1];
+          }
+          rows.push('<div class="fdli"><span class="fdln">'+esc(c.who)+' <i>'+esc(l.ab)+'</i></span>'
+            + '<span class="fdlv">'+esc(String(c.label).toLowerCase())+' <b>'+esc(c.val)+'</b></span>'
+            + (rk?('<span class="fdlr">'+esc(rk)+'</span>'):'') + '</div>');
+        });
+      });
+      if(rows.length) out.push({k:'warm',id:'w-watch',seq:1e8,icon:'⭐',
+        text:'<b>Who the season says to watch.</b>', list:rows.join(''),
+        meta:'', tag:'who to watch', big:true});
+    }catch(_){}
+
+    // 4. who is not playing — the pick you should not spend
+    try{
+      var outs=(GS.inj||[]).filter(function(i){ return i.out; });
+      if(outs.length) out.push({k:'warm',id:'w-inj',seq:1e7,icon:'🚑',
+        text:'<b>Ruled out tonight:</b> '+outs.map(function(i){ return esc(i.name)+' <i>('+esc(i.ab||'')+')</i>'; }).join(', ')+'.',
+        meta:'straight from the league injury report — don’t spend a pick on them', tag:'not playing', big:true});
+      var dtd=(GS.inj||[]).filter(function(i){ return !i.out; });
+      if(dtd.length) out.push({k:'warm',id:'w-dtd',seq:1e7-1,icon:'❓',
+        text:'<b>Game-time decision:</b> '+dtd.map(function(i){ return esc(i.name); }).join(', ')+'.',
+        meta:'reload the app just before tip — this list updates itself', tag:'watch this', big:false});
+    }catch(_){}
+
+    // 5. something to actually press
+    out.push({k:'try',id:'w-try',seq:1,icon:'🎯',
+      text:'<b>Try a Call It now.</b> A real question, built from tonight’s numbers. It doesn’t count for anything.',
+      meta:'', tag:'rehearsal', big:true});
+  }catch(_){}
+  return out;
+}
+
 /* Build the whole thing. Deep cuts are interleaved rather than stacked so
    the scroll alternates between what just happened and what it means. */
 function feedBuild(){
   var items=[];
+  // Before a ball goes up there are no plays, so the feed is the warm-up.
+  if(!gsInGame()){ FEED.items=feedWarmUp(); FEED.at=Date.now(); return FEED.items; }
   try{
     var plays=(GS.plays||[]).slice().sort(function(a,b){ return a.seq-b.seq; });
     var scoring=[];
@@ -9798,8 +9904,8 @@ function feedRender(force){
   var items=feedBuild();
   if(!items.length){
     el.innerHTML='<div class="card center" style="padding:24px 18px">'
-      + '<div style="font-size:26px">📡</div><b style="font-size:14.5px">The feed starts at tip</b>'
-      + '<p class="sub" style="font-size:12.5px;margin:7px 0 0">Every bucket, every run, every stat worth knowing — it all lands here while you watch.</p></div>';
+      + '<div style="font-size:26px">📡</div><b style="font-size:14.5px">Waiting on the league feed</b>'
+      + '<p class="sub" style="font-size:12.5px;margin:7px 0 0">Every bucket, every run, every stat worth knowing lands here. Nothing is typed in by hand, so this waits rather than inventing something.</p></div>';
     return;
   }
   /* NEW ITEMS DO NOT YANK THE PAGE. If you are reading, you keep reading and
@@ -9823,21 +9929,30 @@ function feedRender(force){
       return '<button type="button" class="fdr'+(r[e]?' on':'')+'" data-fr="'+it.id+'|'+e+'">'
         + e + (r[e]?('<i>'+r[e]+'</i>'):'') + '</button>';
     }).join('');
-    return '<article class="fdc'+(it.big?' big':'')+'" data-fd="'+esc(it.id)+'">'
+    /* Warm-up cards carry no reaction row. There is nothing to react to
+       before the ball goes up, and four dead emoji under a countdown is
+       exactly the kind of decoration that makes a screen feel padded. */
+    var quiet = (it.k==='warm' || it.k==='try');
+    return '<article class="fdc'+(it.big?' big':'')+(quiet?' quiet':'')+'" data-fd="'+esc(it.id)+'">'
       + (it.tag?'<div class="fdtag">'+esc(it.tag)+'</div>':'')
       + '<div class="fdmain"><span class="fdi">'+it.icon+'</span>'
       +   '<div class="fdb"><div class="fdt">'+(it.k==='play'?esc(it.text):it.text)+'</div>'
+      +     (it.list?('<div class="fdlist">'+it.list+'</div>'):'')
       +     (it.meta?'<div class="fdm">'+esc(it.meta)+'</div>':'')
       +   '</div>'
       +   (it.score?'<div class="fds">'+it.score.a+'–'+it.score.h+'</div>':'')
       + '</div>'
-      + '<div class="fdrow">'+chips+'</div>'
+      + (it.k==='try'
+          ? '<button type="button" class="fdgo" id="warmTry">🎯 Fire a practice question</button>'
+          : (quiet ? '' : '<div class="fdrow">'+chips+'</div>'))
       + '</article>';
   }).join('');
 
   Array.prototype.forEach.call(el.querySelectorAll('.fdr'), function(b){
     b.onclick=function(ev){ ev.stopPropagation(); feedReact(b.getAttribute('data-fr')); };
   });
+  try{ var wt=document.getElementById('warmTry');
+       if(wt) wt.onclick=function(ev){ ev.stopPropagation(); ciDemoNow(); }; }catch(_){}
   /* Double-tap the card itself for the default reaction — the gesture every
      thumb on earth already knows, and the cheapest social loop that exists. */
   Array.prototype.forEach.call(el.querySelectorAll('.fdc'), function(card){
@@ -9899,6 +10014,19 @@ function renderGametime(){
   }catch(_){}
   try{ if(hs==null && typeof lastScore!=='undefined'&&lastScore&&lastScore.home!=null){ hs=lastScore.home; as=lastScore.away; st=lastScore.state||''; } }catch(_){}
   const live = hs!=null && as!=null;
+  /* BEFORE TIP, TWO DASHES AND THE WORD "NOT STARTED" IS NOT A SCOREBOARD.
+     It is a placeholder telling you to come back later, at the top of the
+     screen we most want you sitting on. A countdown is the same information
+     doing an actual job. */
+  if(!live){
+    var u=null; try{ u=untilTip(); }catch(_){}
+    head.innerHTML='<div class="card center" style="padding:18px 16px">'
+      + '<div class="gtvs">'+esc(String(A))+' <i>at</i> '+esc(String(H))+'</div>'
+      + '<div class="gtcount">'+(u?esc(u):'Any minute now')+'</div>'
+      + '<div class="gtwhen">'+(u?'until tip':'')+(GAME.net?((u?' · ':'')+esc(GAME.net)):'')+'</div>'
+      + '</div>';
+    return renderGametimeRest();
+  }
   head.innerHTML='<div class="card" style="padding:16px">'
     + '<div style="display:flex;align-items:center;justify-content:space-between">'
     +   '<div style="text-align:center;flex:1"><div style="font-size:11px;letter-spacing:.14em;color:#93a0bd;font-weight:800">'+esc(String(A))+'</div>'
@@ -9907,7 +10035,10 @@ function renderGametime(){
     +   '<div style="text-align:center;flex:1"><div style="font-size:11px;letter-spacing:.14em;color:#93a0bd;font-weight:800">'+esc(String(H))+'</div>'
     +     '<div style="font-size:32px;font-weight:900;color:#eef2fb">'+(live?esc(String(hs)):'–')+'</div></div>'
     + '</div></div>';
-  const hasCard=(function(){ try{ const c=document.getElementById('ciCard'); return c&&c.style.display!=='none'&&c.parentNode&&c.parentNode.id==='ciSlot'; }catch(_){ return false; } })();
+  return renderGametimeRest();
+}
+function renderGametimeRest(){
+  const idle=document.getElementById('gtIdle');
   if(!idle) return;
   /* An empty room is not a feature. Before a question lands this tab has to
      be worth sitting on: what you picked, how your Call It night is going,
@@ -9966,6 +10097,12 @@ function ciDemoRun(){
   }catch(e){ try{ toast('Could not start the test — '+e.message); }catch(_){} }
 }
 /* Repainting stale numbers is not a live score. Pull, then paint. */
+/* One minute, so "3h 12m" is never a lie you can catch by watching it. */
+try{ setInterval(function(){ try{
+  if((S&&S.screen)!=='gametime') return;
+  if(typeof gsInGame==='function' && gsInGame()) return;
+  renderGametime();
+}catch(_){}}, 60000); }catch(e){}
 try{ setInterval(function(){ try{
   if((S&&S.screen)!=='gametime') return;
   loadGameStats().then(function(){ try{ if(S.screen==='gametime') renderGametime(); }catch(_){} });
@@ -10112,6 +10249,26 @@ body.hasrail{padding-top:38px}
 .fdr i{font-style:normal;font-size:10.5px;font-weight:900;color:#cfd8ea}
 .fdr.on{background:#1b2a44;box-shadow:inset 0 0 0 1px rgba(40,224,208,.4)}
 .fdr:active{transform:scale(.9)}
+.fdlist{margin-top:9px}
+.fdli{display:grid;grid-template-columns:1fr auto;gap:1px 10px;padding:7px 0;border-bottom:1px solid #172032}
+.fdli:last-child{border-bottom:none}
+.fdln{font-size:13px;font-weight:800;color:#eef2fb}
+.fdln i{font-style:normal;font-size:10px;letter-spacing:.1em;color:#5b6a8c;margin-left:4px}
+.fdlv{font-size:12px;color:#93a0bd;text-align:right;font-weight:600}
+.fdlv b{color:#28e0d0;font-weight:900}
+.fdlr{grid-column:1 / -1;font-size:10.5px;color:#5b6a8c;letter-spacing:.04em;font-weight:700}
+.fdc.quiet{cursor:default}
+.fdc.quiet:active{transform:none}
+.fdgo{display:block;width:100%;margin-top:11px;border:none;border-radius:12px;cursor:pointer;
+  padding:13px 12px;font:900 13.5px/1 inherit;color:#04121e;
+  background:linear-gradient(92deg,#28e0d0,#4d86ff)}
+.fdgo:active{transform:scale(.98)}
+.gtvs{font-size:12px;letter-spacing:.12em;font-weight:800;color:#93a0bd;text-transform:uppercase}
+.gtvs i{font-style:normal;color:#5b6a8c;font-weight:700;letter-spacing:.06em}
+.gtcount{font-size:34px;font-weight:900;line-height:1.15;margin-top:6px;
+  background:linear-gradient(92deg,#28e0d0,#4d86ff);-webkit-background-clip:text;
+  background-clip:text;color:transparent}
+.gtwhen{font-size:11px;letter-spacing:.1em;font-weight:800;color:#5b6a8c;text-transform:uppercase;margin-top:3px}
 .fdpop{position:absolute;right:18px;bottom:14px;font-size:26px;pointer-events:none;
   animation:fdpop .7s ease-out forwards}
 @keyframes fdpop{0%{opacity:0;transform:translateY(0) scale(.6)}
