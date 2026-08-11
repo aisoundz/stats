@@ -269,9 +269,10 @@
              button that does it on request. -->
         <div id="bankDriftBar" style="display:none;margin:12px 0 0;background:rgba(255,197,77,.10);
              border:1px solid rgba(255,197,77,.4);border-radius:12px;padding:12px 13px">
-          <b style="font-size:14px;color:var(--gold)">A newer question set shipped for this night</b>
+          <b style="font-size:14px;color:var(--gold)" id="bankDriftHd">A newer question set shipped for this night</b>
           <p class="sub" id="bankDriftTxt" style="font-size:14px;margin:5px 0 10px"></p>
-          <button class="mini" onclick="reloadAllBank()">↺ Load the latest set</button>
+          <button class="mini" id="bankDriftGo" onclick="reloadAllBank()">↺ Load the latest set</button>
+          <button class="mini" id="bankDriftUndo" style="display:none" onclick="undoBankLoad()">↩ Undo</button>
         </div>
         <div id="qList"></div>
         <p class="sub tip" style="margin-top:12px">The app's questions for this round are already loaded — you only need to mark the answers. Tap the ✓ next to an option to mark it the right one. The answer never leaves this browser until you press Reveal; it isn't written to the round players can read.</p>
@@ -440,7 +441,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-11-admin.27';
+window.ADMIN_BUILD='2026-08-11-admin.28';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -854,7 +855,7 @@ function seedRound(id, i, force){
    nothing of theirs to lose. If they HAVE edited it, we never touch it;
    we say so, and offer the swap as a button they press. */
 function bankDrift(id){
-  const nd=draft[id]; const out={fresh:[], edited:[]};
+  const nd=draft[id]; const out={fresh:[], edited:[], legacy:[]};
   if(!nd) return out;
   for(var i=0;i<nd.rounds.length;i++){
     var bank=bankRound(id,i); if(!bank.length) continue;
@@ -862,21 +863,57 @@ function bankDrift(id){
     if(now===bs) continue;                       // already current
     var seeded=(nd.sig&&nd.sig[i])||null;
     if(!nd.rounds[i].qs.length) continue;        // deliberately emptied — leave it
-    if(seeded!==null && now===seeded) out.fresh.push(i);
+    if(seeded!==null && now===seeded){ out.fresh.push(i); continue; }
+    /* NO SIGNATURE IS NOT EVIDENCE OF AN EDIT. Signatures only started
+       being recorded in admin .26 — so every draft seeded before that has
+       an empty sig map, and the first version of this treated all of them
+       as hand-edited. On the morning of Game #6 that produced the exact
+       failure this whole mechanism was built to prevent: four rounds of
+       old questions, held back, under a banner telling the host they had
+       edited rounds they had never touched.
+       An unrecorded round is assumed UNEDITED, because a draft seeded by
+       an older build is overwhelmingly the common case — and the replaced
+       text is stashed, so being wrong costs one press of Undo instead of
+       somebody's writing. */
+    if(seeded===null) out.legacy.push(i);
     else out.edited.push(i);
   }
   return out;
 }
+/* Everything the last load replaced, so it can be put back. */
+function undoBankDrift(id){
+  var nd=draft[id||night]; if(!nd || !nd.undo) return 0;
+  var n=0;
+  Object.keys(nd.undo).forEach(function(k){
+    var i=Number(k); if(!nd.rounds[i]) return;
+    nd.rounds[i].qs = nd.undo[k].qs;
+    if(!nd.sig) nd.sig={}; nd.sig[i]=nd.undo[k].sig;
+    n++;
+  });
+  nd.undo=null; if(n) saveDraft();
+  return n;
+}
 function applyBankDrift(id, includeEdited){
   var nd=draft[id]; if(!nd) return 0;
-  var d=bankDrift(id), list=d.fresh.concat(includeEdited?d.edited:[]), n=0;
+  var d=bankDrift(id);
+  /* Legacy rounds ride with the automatic pass. Rounds we can PROVE were
+     edited still wait to be asked for. */
+  var list=d.fresh.concat(d.legacy).concat(includeEdited?d.edited:[]), n=0;
+  var undo={};
   list.forEach(function(i){
     var bank=bankRound(id,i); if(!bank.length) return;
+    undo[i]={ qs: nd.rounds[i].qs, sig: (nd.sig&&nd.sig[i])||null };
     nd.rounds[i].qs=bank; nd.fed[i]=1;
     if(!nd.sig) nd.sig={}; nd.sig[i]=qsig(bank); n++;
   });
-  if(n) saveDraft();
+  if(n){ nd.undo=undo; saveDraft(); }
   return n;
+}
+function undoBankLoad(){
+  var n=undoBankDrift(night);
+  if(!n){ toast('Nothing to put back.'); return; }
+  renderWrite();
+  toast('Put back the previous questions in '+n+' round'+(n>1?'s':'')+'.');
 }
 function reloadAllBank(){
   var d=bankDrift(night);
@@ -1119,13 +1156,29 @@ function renderWrite(){
      suggested there was anything to know. */
   try{
     const d=bankDrift(night), bar=$('bankDriftBar');
+    const nd0=draft[night], undo=nd0&&nd0.undo?Object.keys(nd0.undo):[];
     if(bar){
       if(d.edited.length){
         bar.style.display='block';
+        $('bankDriftHd').textContent='A newer question set shipped for this night';
+        $('bankDriftGo').style.display='';
+        $('bankDriftUndo').style.display = undo.length?'':'none';
         $('bankDriftTxt').textContent =
           'These rounds still have the older questions and were left alone because they have been edited in this browser: '
           + d.edited.map(function(i){ return cfg.tags[i]; }).join(', ')
           + '. Loading the latest set replaces them.';
+      } else if(undo.length){
+        /* Say what was done TO their draft, not just what is available.
+           A silent rewrite of the host's rounds is the other half of the
+           same trust problem. */
+        bar.style.display='block';
+        $('bankDriftHd').textContent='Updated to the latest question set';
+        $('bankDriftGo').style.display='none';
+        $('bankDriftUndo').style.display='';
+        $('bankDriftTxt').textContent =
+          undo.map(function(i){ return cfg.tags[Number(i)]; }).join(', ')
+          + (undo.length>1?' were':' was')
+          + ' still on an older set and have been brought up to date. Mark the answers before you push.';
       } else bar.style.display='none';
     }
   }catch(e){}
