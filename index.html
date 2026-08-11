@@ -5725,7 +5725,7 @@ function awardCtx(rank){
    beside a stronger one that already contains it — "perfect night" sitting
    above "perfect quarter" reads as padding, not as two achievements. */
 const AWARDS=[
-  { id:'gameball', emoji:'🏆',
+  { id:'gameball', emoji:'👑',
     name:()=> SPORT_KEY==='soccer' ? 'PLAYER OF THE MATCH' : 'THE GAME BALL',
     hides:['podium'],
     test:c=>c.rank===1,
@@ -5792,7 +5792,7 @@ const AWARDS=[
      between perfection and nothing, and the first of them rewards exactly
      the behaviour this whole product exists to create: you were still
      watching in the fourth. */
-  { id:'everyq', emoji:'🧠', name:'NEVER LOOKED AWAY',
+  { id:'everyq', emoji:'🏆', name:'NEVER LOOKED AWAY',
     hides:['board'],
     test:c=>Array.isArray(c.roundHits) && c.roundHits.length>=NR && c.roundHits.every(n=>n>=1),
     why:c=>`You scored in <b>all ${NR} ${L.periods||'quarters'}</b> — first to last. Most people fade after half; you did not.`,
@@ -7129,6 +7129,15 @@ function ensureCiCard(){
        top so it reads as hanging from the scoreboard above it. */
     '#ciSlot #ciCard{border-top-left-radius:6px;border-top-right-radius:6px;'+
       'box-shadow:0 10px 26px rgba(0,0,0,.45)}'+
+    /* THE CARD FLYING OFF TO THE LEFT AND SNAPPING BACK. The base rule is
+       written for the FLOATING card, which is centred with
+       transform:translateX(-50%) — so its entrance keyframes carry that
+       -50% too. Docked in the slot the card is a normal block, but the
+       moment it re-rendered in a non-live state (you answered, so the
+       ring came off) it fell through to that base animation and threw
+       itself half its own width to the left before snapping back when the
+       animation ended. Every docked state gets a docked animation. */
+    '#ciSlot #ciCard{animation:ciDrop .3s cubic-bezier(.16,1,.3,1)}'+
     '#ciSlot #ciCard.cilive{animation:ciDrop .32s cubic-bezier(.16,1,.3,1),'+
       'ciPulse 2.1s ease-in-out .32s infinite}'+
     '@keyframes ciDrop{from{transform:translateY(-14px);opacity:0}to{transform:translateY(0);opacity:1}}'+
@@ -7155,6 +7164,14 @@ function ensureCiCard(){
     '#ciCard .cireveal{margin-top:6px;font-size:14px;color:#93a0bd}'+
     '#ciCard .cifoot{display:flex;gap:16px;align-items:center}'+
     '#ciCard .cimute{margin-top:10px;background:none;border:none;color:#5b6a8c;font-size:12px;cursor:pointer;text-decoration:underline}'+
+    /* "The x you can't click and close it" — because there was no x. The
+       only dismissal was a link that muted Call It for the whole night,
+       which is not the same offer at all. This closes THIS card. */
+    '#ciCard .cix{position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:10px;'+
+      'display:grid;place-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);'+
+      'color:#93a0bd;font-size:17px;font-weight:800;line-height:1;cursor:pointer;padding:0;z-index:3}'+
+    '#ciCard .cix:hover{color:#eef2fb;background:rgba(255,255,255,.12)}'+
+    '#ciCard{position:relative}'+
     /* the commit, painted on the same frame as the tap */
     '#ciCard .ciopt{transition:opacity .18s ease,transform .18s ease,background .18s ease}'+
     '#ciCard .ciopt.cifade{opacity:.18;transform:scale(.97)}'+
@@ -7210,8 +7227,19 @@ function ciDock(){
   var slot=document.getElementById('ciSlot');
   if(ciOnGametime() && slot){
     if(c.parentNode!==slot) slot.appendChild(c);
-    c.style.position='static'; c.style.top=''; c.style.bottom='';
-    c.style.left=''; c.style.transform='none'; c.style.width='100%';
+    /* 'relative', not 'static'. An inline static beats the stylesheet, so
+       the card stopped being a containing block and the absolutely
+       positioned close button anchored to the nearest positioned ancestor
+       instead — which is the sticky wrapper. The ✕ rendered on the
+       SCOREBOARD. Relative sits in flow identically and keeps the card as
+       the anchor for its own controls. */
+    /* Every offset the floating rule sets has to be neutralised by NAME.
+       Clearing the inline value only falls back to the stylesheet, and
+       under position:relative the stylesheet's left:50% stops being a
+       centring trick and becomes a 50%-of-the-width shove to the right. */
+    c.style.position='relative';
+    c.style.top='auto'; c.style.bottom='auto'; c.style.left='0'; c.style.right='auto';
+    c.style.transform='none'; c.style.width='100%';
     c.style.margin='10px 0 0'; c.style.animation='';
     c.dataset.ciTop=0;
     try{ document.body.classList.remove('ciopen'); }catch(_){}
@@ -7244,13 +7272,27 @@ function ciDock(){
   c.dataset.ciTop=top;
   try{ var sl=document.getElementById('ciSlot'); if(sl){ sl.innerHTML=''; sl.style.marginTop='0'; } }catch(_){}
 }
+/* One close control, added to whatever the card is showing. */
+function ciCloseBtn(){ return '<button type="button" class="cix" data-cix="1" aria-label="Close">\u2715</button>'; }
+function ciClose(){
+  var c=document.getElementById('ciCard'); if(!c) return;
+  c.style.display='none'; c.classList.remove('cilive');
+  try{ clearTimeout(PCI.hideT); }catch(_){}
+  try{ document.body.classList.remove('ciopen'); }catch(_){}
+  try{ if(typeof renderGametime==='function') renderGametime(); }catch(_){}
+}
 function ciShow(html, live){
   /* ciShow used to no-op if the card had never been mounted. Every real
      path happened to mount first, so it never bit — but "silently does
      nothing" is the exact failure shape behind the rejoin bug, the empty
      Board and Trash Talk. Mount on demand and stop relying on luck. */
   try{ ensureCiCard(); }catch(_){}
-  var c=document.getElementById('ciCard'), inner=document.getElementById('ciInner'); if(!c||!inner) return; ciDock(); inner.innerHTML=html; c.style.display='block';
+  var c=document.getElementById('ciCard'), inner=document.getElementById('ciInner'); if(!c||!inner) return; ciDock();
+  inner.innerHTML=html + ciCloseBtn(); c.style.display='block';
+  try{
+    var xb=inner.querySelector('[data-cix]');
+    if(xb) xb.onclick=function(ev){ ev.stopPropagation(); ciClose(); };
+  }catch(_){}
   /* Restart the entrance every time, so a question that replaces another
      one still visibly ARRIVES instead of silently swapping its text. */
   try{ c.classList.toggle('cilive', !!live); c.style.animation='none'; void c.offsetWidth; c.style.animation=''; }catch(_){}
@@ -9352,7 +9394,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.68';
+const STATS_BUILD='2026-08-11-g6-ny-ind.69';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
