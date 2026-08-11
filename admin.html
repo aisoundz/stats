@@ -397,7 +397,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-11-admin.20';
+window.ADMIN_BUILD='2026-08-11-admin.21';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -2787,10 +2787,63 @@ boot();
     var at  = (last.awayScore!=null && last.homeScore!=null) ? (T.awayAbbr+' '+last.awayScore+'–'+last.homeScore+' '+T.homeAbbr) : '';
     var anchor = at ? ('the one that made it '+at) : 'that last bucket';
     var who = CI.scorerName(last);
-    var rot = (CI.countPer[per]||0) % 3;
+    var rot = (CI.countPer[per]||0) % 6;
+
+    /* ==== QUARTER-RETROSPECTIVE, rotations 3–5 =======================
+       "We need questions of what happened EARLIER in the quarter."
+
+       Rotations 0–2 below ask about the bucket that just went in. They
+       work, they have graded four nights correctly, and they are not
+       going anywhere. But they only ever reward the last ten seconds of
+       attention — look up at the right moment and you score.
+
+       These three reward the whole quarter. Every answer is computed
+       here, at build time, from the plays inside THIS period only, so
+       the host never has to know it and the room cannot disagree about
+       it. Each one returns null rather than guessing when the quarter is
+       too young to have an answer, and rotation falls through to the
+       bucket questions when it does. */
+    var qp = plays.filter(function(p){ return p.period && Number(p.period.number)===Number(per); });
+    var qs = qp.filter(function(p){ return p.scoringPlay && Number(p.scoreValue)>0; });
+
+    if(rot>=3 && qs.length>=5){
+      // 3. who opened the quarter
+      if(rot===3){
+        var f=qs[0], fid=String(f.team&&f.team.id);
+        return { qid:qid, kind:'qtrFirst', per:per, runTeam:null,
+          prompt:'⏪ Think back — who scored FIRST in this quarter?',
+          options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}],
+          ans:fid,
+          atext:(f.text||CI.teamName(fid,T)+' opened the quarter')+'.' };
+      }
+      // 4. how many threes have gone in since the quarter started
+      if(rot===4){
+        var n3=qs.filter(function(p){ return Number(p.scoreValue)===3; }).length;
+        return { qid:qid, kind:'qtrThrees', per:per, runTeam:null,
+          prompt:'⏪ How many threes have been made this quarter — both teams?',
+          options:[{k:'None or one',v:'a'},{k:'Two or three',v:'b'},{k:'Four or more',v:'c'}],
+          ans: n3<=1?'a':(n3<=3?'b':'c'),
+          atext:n3+' three'+(n3===1?'':'s')+' made in this quarter so far.' };
+      }
+      // 5. who has actually won the quarter to this point
+      if(rot===5){
+        var ph=0, pa=0;
+        qs.forEach(function(p){
+          var id=String(p.team&&p.team.id);
+          if(id===String(T.homeId)) ph+=Number(p.scoreValue);
+          else if(id===String(T.awayId)) pa+=Number(p.scoreValue);
+        });
+        if(ph!==pa) return { qid:qid, kind:'qtrMore', per:per, runTeam:null,
+          prompt:'⏪ Since this quarter started, which team has scored more?',
+          options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}],
+          ans: ph>pa?String(T.homeId):String(T.awayId),
+          atext:T.awayAbbr+' '+pa+', '+T.homeAbbr+' '+ph+' in this quarter.' };
+        // level on points is not a question with one right answer — fall through
+      }
+    }
 
     // 1. Two or three — the purest "were you watching" question there is.
-    if(rot===0){
+    if(rot===0 || rot===4){
       return { qid:qid, kind:'sawTwoOrThree', per:per, runTeam:null,
         prompt:'👀 That bucket — '+anchor+'. Two or three?',
         options:[{k:'2 · deuce',v:'2'},{k:'3 · triple',v:'3'}],
@@ -2798,7 +2851,7 @@ boot();
         atext:CI.abbr(lid,T)+' · '+last.scoreValue+' points'+(last.text?(' · '+last.text):'') };
     }
     // 2. Which side put it up.
-    if(rot===1){
+    if(rot===1 || rot===3 || rot===5){
       return { qid:qid, kind:'sawWho', per:per, runTeam:null,
         prompt:'👀 Who scored '+anchor+'?',
         options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}],
@@ -2843,7 +2896,7 @@ boot();
       state:'open', answer:null, resolveText:null,
       // Retrospective questions need a beat longer to read than "next
       // bucket?" did — they name a score and sometimes a player.
-      opensAt:F.serverTimestamp(), locksMs:(String(q.kind||'').indexOf('saw')===0?9000:6000), seq:Date.now()
+      opensAt:F.serverTimestamp(), locksMs:(/^(saw|qtr)/.test(String(q.kind||''))?9000:6000), seq:Date.now()
     }, {merge:true});
   };
   /* One writer for the held answer, used by both the timer and the tick. */
