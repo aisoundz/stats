@@ -819,7 +819,12 @@
     <!-- HOW IT WORKS, in three lines, ABOVE the door. From the v2 concept:
          a stranger should understand the whole game before being asked for
          anything. Signed-out only — a member already knows. -->
-    <div id="howBlock" style="display:none;margin-top:16px">
+    <!-- THE ONLY PITCH ON THE PAGE. It used to be here AND in a three-step
+         card further down AND in a "can't play tonight" card below that —
+         a stranger read the rules of the game three times before reaching
+         anything they could do. Marked `strangers` so a signed-in member
+         never sees it: they already bought this. -->
+    <div id="howBlock" class="strangers" style="display:none;margin-top:16px">
       <div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:11px">
         <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:var(--card2);border:1px solid var(--line2);color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">1</span>
         <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Predict before tip.</b> <span style="color:var(--muted,#93a0bd)">Winner, stat leaders, the numbers.</span></div>
@@ -888,23 +893,16 @@
          game. Every number is real and sourced; if the feed can't be reached
          the whole card hides rather than showing a blank or a fake stat. -->
     <div class="card" id="matchupCard" style="display:none;padding:0"></div>
-
-    <div class="card strangers">
-      <div class="step"><div class="num">1</div><div><b id="step1h">Predict before tip-off</b><p id="step1p">Fill your prediction sheet — winner, stat leaders &amp; bonus amounts. Worth up to 600 of the night's 1,000 pts.</p></div></div>
-      <div class="step"><div class="num">2</div><div><b id="step2h">Answer at every quarter break</b><p id="step2p">4 questions about what JUST happened — and not the ones you'd expect. Points rise: Q1 = 10 pts → Q4 = 40, so the last quarter is worth four times the first. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.</p></div></div>
-      <div class="step"><div class="num">3</div><div><b>Watch your points land</b><p id="step3p">The second the host reveals a quarter, your answers are scored for you — nothing to tap, even if your phone was in your pocket. Most points wins the night; ⚡ Speed breaks ties.</p></div></div>
-    </div>
-
-    <!-- The ask, on the front page. Someone who lands here between game
-         nights has nothing to play and no reason to come back; this is the
-         only thing on the page that works when there is no game on. -->
-    <div class="card strangers" style="border-color:rgba(46,230,166,.35)">
-      <b style="font-size:15px">📬 Can't play tonight?</b>
-      <p class="sub" style="font-size:14px;margin:6px 0 0">Get one email before each game night, and tell us what you watch — we build the next night around the answers.</p>
-      <button class="btn teal" style="margin-top:12px" onclick="openJoin('landing')">Join the list</button>
-    </div>
-
-    <button class="btn ghost" onclick="go('rules')">📖 Read the full rules</button>
+    <!-- The three-step card is gone. It said exactly what #howBlock above
+         already says, in more words, further down the page — so a stranger
+         read the rules of the game twice before reaching anything they
+         could do. One explanation, above the door. -->
+    <!-- "Can't play tonight? Join the list" came out. The sign-in card two
+         inches above it already carries the email opt-in, checked by
+         default — this was the same ask a second time, at the bottom of a
+         page somebody has to scroll to reach. -->
+<!-- The rules live in the menu now, with everything else that is not
+         "play tonight". -->
     <p class="foot strangers">Free to play. No purchase necessary. Friends &amp; family beta — see the Rules page for scoring and fair play.</p>
     <!-- Version, where anybody can find it without knowing which tab to open.
          "Confirm you're on build X" is useless advice if the only place the
@@ -1150,7 +1148,13 @@
           <h2 id="qText" style="line-height:1.3">—</h2>
           <div class="opts" id="qOpts"></div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
-            <button class="helpbtn" id="helpBtn" onclick="useLifeline()">✨ Lifeline (1/half)</button>
+            <!-- THE LIFELINE IS OUT. "Nobody uses it." Six game nights and it
+                 has been fired a handful of times, while occupying a permanent
+                 control under every single question and needing its own rule
+                 in the rules screen. The state (S.lifelineHalf1/2), the
+                 function and the trash-talk lines all survive untouched, so
+                 turning it back on is putting this button back. -->
+            <span id="helpBtn" style="display:none"></span>
             <span style="font-size:12px;color:var(--dim)" id="helpNote"></span>
           </div>
           <div id="revealBox"></div>
@@ -1472,16 +1476,9 @@
          product. It returns the moment the reveal has landed, and this
          button says so out loud for anyone who does not look down. -->
     <button class="btn ghost" style="margin-top:10px" onclick="goHomeFromFinal()">Back to home</button>
-    <details class="fmore">
-      <summary>More — host tools, roast card, season pass</summary>
-      <div class="fmorein">
-        <button class="btn ghost" onclick="openRoast()">😈 Post-game roast card</button>
-        <button class="btn ghost" onclick="openLeague()">🏟️ Leagues (preview)</button>
-        <button class="btn ghost" onclick="go('plus')">⭐ See STATS+ (season pass)</button>
-        <button class="btn ghost" onclick="restart()">Play again</button>
-      </div>
-    </details>
-    <p class="foot">Prizes awarded to the sponsor's verified top scorers after the final box score is confirmed. Winning never requires payment.</p>
+    <!-- The "More" drawer moved into the menu. The last screen of the night
+         gets to be about the night. -->
+<p class="foot">Prizes awarded to the sponsor's verified top scorers after the final box score is confirmed. Winning never requires payment.</p>
   </section>
 
   <!-- 9. LEAGUE -->
@@ -3500,7 +3497,10 @@ const BBALL_ROUNDS=[
     // TALLY, and the best question anyone gave us. It runs the WHOLE game,
     // it is asked at the end, and to answer it you have to watch the shot
     // clock for 48 minutes - a thing literally nobody does for fun.
-    {t:"🎯 How many 24-second violations in the WHOLE game?", o:["None","1","2","3 or more"], a:"1"},
+    /* No emoji in question text. It was there to flag the best question on
+       the sheet to ME, and it shipped to the player as a red dart floating
+       in the middle of a sentence. */
+    {t:"How many 24-second violations in the WHOLE game?", o:["None","1","2","3 or more"], a:"1"},
     {t:"In the last two minutes, which happened more?", o:["Free throws attempted","Field goals attempted","Equal"], a:"Free throws attempted"},
     {t:"Did any player foul out?", o:["Yes","No"], a:"No"}
   ]}
@@ -4185,6 +4185,7 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
     if(q)  q.style.display  = (k==='live')   ? '' : 'none';
     if(rv) rv.style.display = (k==='review') ? '' : 'none';
     try{ document.body.classList.toggle('qopen', k==='live' || k==='review'); }catch(_){}
+    if(k==='live'){ try{ ciStash(); }catch(_){} }
     if(k==='live' || k==='review'){
       try{ if(typeof renderGametime==='function') renderGametime(); }catch(_){}
       /* And the question has to be the thing you are looking at — without
@@ -5359,7 +5360,7 @@ function beep(freq,dur){try{
 }catch(e){}}
 function warnCue(){beep(880,0.15);try{navigator.vibrate&&navigator.vibrate(120);}catch(e){}}
 function timeCue(){beep(300,0.3);try{navigator.vibrate&&navigator.vibrate([80,60,80]);}catch(e){}}
-function startQuarter(qi){S.qi=qi;S.ni=0;renderScore();loadQuestion();go('live');}
+function startQuarter(qi){ try{ ciStash(); }catch(_){} S.qi=qi;S.ni=0;renderScore();loadQuestion();go('live');}
 /* The live branch of this function used to print a dash for both scores and
    then overwrite the rank slot with the speed counter, so a player in a real
    game night saw "– –" where the score goes and no idea where they stood
@@ -5471,8 +5472,9 @@ function loadQuestion(){
   hideLockNote();
   document.getElementById('helpNote').textContent='';
   const half=lifelineKey(S.qi);
-  document.getElementById('helpBtn').disabled=!S[half];
-  document.getElementById('helpBtn').textContent = S.mode==="live" ? '✨ Lifeline: +15s (1/half)' : '✨ Lifeline (1/half)';
+  try{ var _hb=document.getElementById('helpBtn');
+       if(_hb && _hb.tagName==='BUTTON'){ _hb.disabled=!S[half];
+         _hb.textContent = S.mode==="live" ? '✨ Lifeline: +15s (1/half)' : '✨ Lifeline (1/half)'; } }catch(_){}
   const o=document.getElementById('qOpts');o.innerHTML='';
   q.o.forEach(opt=>{const b=document.createElement('button');b.className='opt';
     b.innerHTML=`<span>${opt}</span><span class="mk"></span>`;
@@ -5654,7 +5656,7 @@ function useLifeline(){
   const half=lifelineKey(S.qi);
   if(!S[half]||S.answered)return;S[half]=false;
   if(!S.lifelineAt)S.lifelineAt=roundTag(S.qi);   // roast material
-  document.getElementById('helpBtn').disabled=true;
+  try{ var _hb2=document.getElementById('helpBtn'); if(_hb2&&_hb2.tagName==='BUTTON') _hb2.disabled=true; }catch(_){}
   if(S.mode==="live"){
     extendTimer(15);
     document.getElementById('helpNote').textContent='Lifeline: +15 seconds — ask the room!';
@@ -8337,6 +8339,30 @@ function ciScreenOk(){
   try{ if(scr==='live' && !S.answered) return false; }catch(_){}
   return true;
 }
+/* ============ A QUARTER QUESTION CLEARS THE DECK ====================
+   "As I'm answering test questions a Caught It question pops up on top
+   of it."
+
+   `ciScreenOk()` stops a NEW card appearing during a question. It does
+   nothing about one that is ALREADY on screen when the question opens —
+   and the card is a fixed-position element pinned above the page, so it
+   lands directly on top of the thing you are being timed on.
+
+   Anything that opens a quarter question calls this first. The card is
+   not thrown away: an unanswered one goes back in the queue and ciFlush
+   brings it out the moment the answer is locked. */
+function ciStash(){
+  try{
+    var c=document.getElementById('ciCard'); if(!c) return;
+    if(c.style.display==='none') return;
+    var live=PCI.active;
+    var unanswered = live && PCI.picked[live.qid]==null;
+    if(unanswered) PCI.pending=live;      // owed, not lost
+    c.style.display='none';
+    try{ document.body.classList.remove('ciopen'); }catch(_){}
+    try{ document.documentElement.style.setProperty('--cih','0px'); }catch(_){}
+  }catch(_){}
+}
 function ciFlush(){
   if(!PCI.pending) return;
   var q=PCI.pending;
@@ -10355,7 +10381,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-12-cleaner.81';
+const STATS_BUILD='2026-08-12-menu.82';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -10635,11 +10661,70 @@ var SWIPE_TABS=['gametime','stats','board'];
   }catch(_){}
 })();
 
+/* ============ THE MENU ==============================================
+   Everything that is not "play tonight". Built fresh each time it opens so
+   it can say true things — whether there is a game to restart, whether you
+   are signed in — instead of showing four buttons that may or may not do
+   anything.
+
+   Hidden during a live question for the same reason the rail is: a menu
+   button in the corner of a twenty-second clock is a way to lose a round.  */
+function menuRows(){
+  var R=[];
+  var row=function(icon,label,fn,note){
+    R.push('<button type="button" class="mrow" data-m="'+fn+'"><i>'+icon+'</i>'+label
+      + (note?('<s>'+note+'</s>'):'')+'</button>');
+  };
+  R.push('<div class="mgrp">The game</div>');
+  row('📖','How to play &amp; full rules','rules');
+  try{ if(S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0) row('▶','Back to my game','resume'); }catch(_){}
+  try{ if(S.screen==='final' || (S.mode==='demo' && S.pts>0)) row('🔁','Play again','restart'); }catch(_){}
+  try{ if(S.screen==='final'){ row('😈','Post-game roast card','roast'); } }catch(_){}
+  R.push('<div class="mgrp">Coming soon</div>');
+  row('🏟️','Leagues','league','preview');
+  row('⭐','STATS+ season pass','plus','preview');
+  R.push('<div class="mgrp">Yours</div>');
+  row('👤','Me &amp; my season','me');
+  row('📬','Email me about game nights','join');
+  try{ if(signedInNow()) row('🚪','Sign out','signout'); }catch(_){}
+  return R.join('');
+}
+var MENU_GO={
+  rules:function(){ go('rules'); },
+  resume:function(){ try{ returnToGame(); }catch(_){ go('gametime'); } },
+  restart:function(){ try{ restart(); }catch(_){} },
+  roast:function(){ try{ openRoast(); }catch(_){} },
+  league:function(){ try{ openLeague(); }catch(_){ go('league'); } },
+  plus:function(){ go('plus'); },
+  me:function(){ try{ navGo('me'); }catch(_){ go('me'); } },
+  join:function(){ try{ openJoin('menu'); }catch(_){} },
+  signout:function(){ try{ doSignOut(); }catch(_){} }
+};
+function openMenu(){
+  try{ trk('menu_open'); }catch(_){}
+  var sh=document.getElementById('menuSheet'); if(!sh) return;
+  var body=document.getElementById('menuBody'); if(body) body.innerHTML=menuRows();
+  try{ var st=document.getElementById('menuStamp'); if(st && typeof buildStampHTML==='function') st.innerHTML=buildStampHTML(); }catch(_){}
+  Array.prototype.forEach.call(sh.querySelectorAll('[data-m]'), function(b){
+    b.onclick=function(){ var k=b.getAttribute('data-m'); closeMenu();
+      setTimeout(function(){ try{ (MENU_GO[k]||function(){})(); }catch(_){} }, 60); };
+  });
+  sh.classList.add('open');
+}
+function closeMenu(){ try{ document.getElementById('menuSheet').classList.remove('open'); }catch(_){} }
+try{ window.openMenu=openMenu; window.closeMenu=closeMenu; }catch(_){}
+try{ document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeMenu(); }); }catch(_){}
+
 function paintNav(active){
   const bar=document.getElementById('botnav'); if(!bar) return;
   let scr=''; try{ scr=S.screen||''; }catch(_){}
   const hide = NAV_HIDE_ON.indexOf(scr)>=0;
   bar.style.display = hide ? 'none' : 'block';
+  /* The menu button lives wherever the nav does, and disappears for the
+     same reason: nothing in the corner of a running clock. */
+  try{ var mb=document.getElementById('menuBtn');
+       if(mb) mb.classList.toggle('show', !hide && scr!=='live'); }catch(_){}
+  try{ if(hide || scr==='live') closeMenu(); }catch(_){}
   /* NOT ON GAMETIME. The rail is a compact score for screens that do not
      show one. Gametime shows the score big, at the top, with the clock —
      so the rail sat directly above it printing the same two numbers in
@@ -13310,6 +13395,29 @@ try{ setInterval(function(){ try{ takeoverTick(); }catch(_){} }, 15000); }catch(
     <span class="railme" id="railMe">—</span>
   </div>
 </div>
+<!-- ============ THE MENU =============================================
+     "We should have a hamburger function that can take all the other
+     things at the end at the bottom. It's clunky."
+
+     Right. Roast card, Leagues preview, STATS+, host tools, Play again,
+     the rules, the version — seven things, none of which anybody needs
+     during a game, all of them stacked at the bottom of the two screens
+     where attention is scarcest. They are one tap away now instead of one
+     scroll, from everywhere, and the screens they came off get to be
+     about the one thing they are for.
+
+     Deliberately NOT in the bottom nav: the nav is five destinations you
+     use constantly. This is the drawer for everything else. -->
+<button id="menuBtn" onclick="openMenu()" aria-label="Menu" title="Menu">
+  <span></span><span></span><span></span>
+</button>
+<div id="menuSheet" onclick="if(event.target===this)closeMenu()">
+  <div class="menuin" role="dialog" aria-label="Menu">
+    <div class="menuhead"><b>Menu</b><button onclick="closeMenu()" aria-label="Close">✕</button></div>
+    <div id="menuBody"></div>
+    <div id="menuStamp" class="center" style="margin-top:12px"></div>
+  </div>
+</div>
 <div id="botnav" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:8500;
      background:rgba(10,14,23,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line2);
      transform:translateZ(0);
@@ -13722,6 +13830,35 @@ body.qopen #gtQuestion{scroll-margin-top:8px}
    looking like an arrow. */
 .pdarrow.ready{background:linear-gradient(92deg,var(--teal),var(--blue2));color:#04121e;
   border-color:transparent;font-weight:900}
+
+/* ============ THE MENU ============================================= */
+#menuBtn{position:fixed;top:calc(9px + env(safe-area-inset-top,0px));right:10px;z-index:8700;
+  width:40px;height:40px;border-radius:12px;display:none;flex-direction:column;gap:4px;
+  align-items:center;justify-content:center;cursor:pointer;
+  background:var(--chrome);border:1px solid var(--line);backdrop-filter:blur(12px);padding:0}
+body.hasrail #menuBtn{top:calc(6px + env(safe-area-inset-top,0px))}
+#menuBtn span{display:block;width:16px;height:2px;border-radius:2px;background:var(--body)}
+#menuBtn:active{transform:scale(.94)}
+#menuBtn.show{display:flex}
+#menuSheet{position:fixed;inset:0;z-index:8800;display:none;background:rgba(3,6,12,.62);
+  backdrop-filter:blur(3px);align-items:flex-start;justify-content:center;padding:0 12px}
+#menuSheet.open{display:flex}
+#menuSheet .menuin{width:100%;max-width:430px;margin-top:calc(58px + env(safe-area-inset-top,0px));
+  background:var(--card);border:1px solid var(--line2);border-radius:var(--r);
+  box-shadow:0 24px 70px rgba(0,0,0,.6);padding:14px 14px 16px;max-height:76dvh;overflow:auto}
+#menuSheet .menuhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+#menuSheet .menuhead b{font-size:12px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
+#menuSheet .menuhead button{background:var(--glass);border:1px solid var(--line);color:var(--body);
+  width:32px;height:32px;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;padding:0}
+#menuSheet .mrow{display:flex;align-items:center;gap:11px;width:100%;text-align:left;cursor:pointer;
+  background:none;border:0;border-bottom:1px solid var(--line);padding:14px 2px;
+  font-size:15px;font-weight:700;color:var(--body);font-family:var(--f)}
+#menuSheet .mrow:last-child{border-bottom:0}
+#menuSheet .mrow:hover{color:var(--ink)}
+#menuSheet .mrow i{font-style:normal;font-size:17px;width:22px;text-align:center;flex:0 0 auto}
+#menuSheet .mrow s{text-decoration:none;margin-left:auto;font-size:12px;color:var(--dim);font-weight:700}
+#menuSheet .mgrp{font-size:12px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;
+  color:var(--dim);margin:14px 0 2px}
 .gtvs{font-size:12px;letter-spacing:.12em;font-weight:800;color:var(--muted);text-transform:uppercase}
 .gtvs i{font-style:normal;color:var(--dim);font-weight:700;letter-spacing:.06em}
 .gtcount{font-size:34px;font-weight:900;line-height:1.15;margin-top:6px;
