@@ -10138,7 +10138,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-12-arena.75';
+const STATS_BUILD='2026-08-12-arena.76';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -12343,7 +12343,7 @@ function gtWinProb(A,H,AC,HC){
    frame to draw. */
 function gtSpark(wp,AC,HC){
   try{
-    var W=320,Hh=76,N=Math.min(110,wp.length);
+    var W=320,Hh=54,N=Math.min(110,wp.length);
     var step=wp.length/N, pts=[];
     for(var i=0;i<N;i++){
       var v=wp[Math.min(wp.length-1,Math.floor(i*step))];
@@ -12450,45 +12450,50 @@ function renderGametime(){
     + '</div>';
   return renderGametimeRest();
 }
-/* ---- THE SHOT CHART -------------------------------------------------
-   277 of last night's 378 plays carried a real coordinate and we drew none
-   of them. ESPN's space is x 0–50 across the baseline and y feet out from
-   it, basket around x25 y4 — so this is a half court with the hoop at the
-   bottom. Made shots are solid in team colour, misses are hollow grey, and
-   nothing is labelled, because a shot chart that needs a legend to be read
-   at a glance has failed at the one thing it is for.                     */
-function gtShotChart(){
+/* ---- SHOT ZONES -----------------------------------------------------
+   THE SHOT CHART IS DELETED, AND THAT IS THE RIGHT CALL.
+
+   It was 286 pixels — the largest block on the screen — and it answered no
+   question a player has. A hundred and forty dots on a 375-pixel-wide court
+   is a smudge, not information. It existed because the coordinates existed,
+   which is exactly the reason I keep telling myself not to put things on a
+   screen.
+
+   The same data, doing an actual job, is three numbers per team: at the rim,
+   from mid-range, from three. That is readable in half a second, it is worth
+   saying out loud, and unlike a scatter plot it can be turned into a
+   question — which is the only test that matters here.
+
+   Zones from the shot distance in the play text, which is more reliable
+   than the coordinate: ESPN writes "makes 25-foot three point jumper".   */
+function gtShotZones(){
   try{
     var T=gtTeams(); if(!T) return '';
-    var sh=(GS.plays||[]).filter(function(p){ return p.shot && p.x!=null && p.y!=null; });
-    if(sh.length<12) return '';
-    var W=240,Hh=150, PAD=8;
-    // x 0..50 -> PAD..W-PAD ; y 0..32 -> Hh-PAD (baseline) up to PAD
-    var fx=function(x){ return PAD + (Math.max(0,Math.min(50,x))/50)*(W-2*PAD); };
-    var fy=function(y){ return (Hh-PAD) - (Math.max(0,Math.min(32,y))/32)*(Hh-2*PAD); };
-    var dots='';
-    sh.slice(-140).forEach(function(p){
-      var col = p.ab===T.h.ab ? 'var(--home)' : 'var(--away)';
-      if(p.scoring) dots += '<circle cx="'+fx(p.x).toFixed(1)+'" cy="'+fy(p.y).toFixed(1)+'" r="3.1" fill="'+col+'" opacity=".95"/>';
-      else          dots += '<circle cx="'+fx(p.x).toFixed(1)+'" cy="'+fy(p.y).toFixed(1)+'" r="2.6" fill="none" stroke="#3b4a6b" stroke-width="1.2"/>';
+    var Z={}; [T.a.ab,T.h.ab].forEach(function(ab){ Z[ab]={rim:[0,0],mid:[0,0],three:[0,0]}; });
+    var n=0;
+    (GS.plays||[]).forEach(function(p){
+      if(!p.shot || !p.ab || !Z[p.ab]) return;
+      var t=p.text||'';
+      if(/free throw/i.test(t)) return;
+      var made=!!p.scoring;
+      var k = /three/i.test(t) ? 'three'
+            : (/layup|dunk|tip shot|hook/i.test(t) || (/(\d+)-foot/.test(t) && Number(RegExp.$1)<=6)) ? 'rim'
+            : 'mid';
+      Z[p.ab][k][made?0:1] += 0; Z[p.ab][k][1] += 1; if(made) Z[p.ab][k][0] += 1;
+      n++;
     });
-    var made=sh.filter(function(p){return p.scoring;}).length;
-    var court='<g fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1">'
-      + '<rect x="'+PAD+'" y="'+PAD+'" width="'+(W-2*PAD)+'" height="'+(Hh-2*PAD)+'" rx="4"/>'
-      + '<rect x="'+(W/2-26)+'" y="'+(Hh-PAD-38)+'" width="52" height="38"/>'
-      + '<circle cx="'+(W/2)+'" cy="'+(Hh-PAD-38)+'" r="14"/>'
-      + '<path d="M'+(PAD+10)+','+(Hh-PAD)+' L'+(PAD+10)+','+(Hh-PAD-34)+' A '+(W/2-PAD-10)+' '+(W/2-PAD-10)+' 0 0 0 '+(W-PAD-10)+','+(Hh-PAD-34)+' L'+(W-PAD-10)+','+(Hh-PAD)+'"/>'
-      + '</g>'
-      + '<circle cx="'+(W/2)+'" cy="'+(Hh-PAD-11)+'" r="3" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.4"/>';
-    return '<div class="ablk">'
-      + '<div class="alab"><span>Shot chart</span><em>'+made+' of '+sh.length+'</em></div>'
-      + '<div class="apane" style="padding:10px">'
-      +   '<svg viewBox="0 0 '+W+' '+Hh+'" width="100%" aria-hidden="true">'+court+dots+'</svg>'
-      +   '<div style="display:flex;gap:14px;justify-content:center;margin-top:9px;font-size:12px;font-weight:700;color:var(--muted)">'
-      +     '<span style="display:flex;align-items:center;gap:5px"><b style="width:8px;height:8px;border-radius:50%;display:block;background:var(--home)"></b>'+esc(T.h.ab)+' made</span>'
-      +     '<span style="display:flex;align-items:center;gap:5px"><b style="width:8px;height:8px;border-radius:50%;display:block;background:var(--away)"></b>'+esc(T.a.ab)+' made</span>'
-      +     '<span style="display:flex;align-items:center;gap:5px"><b style="width:8px;height:8px;border-radius:50%;display:block;border:1.2px solid #3b4a6b"></b>missed</span>'
-      +   '</div></div></div>';
+    if(n<15) return '';
+    var row=function(ab,col){
+      var z=Z[ab];
+      var cell=function(v){ var pc=v[1]?Math.round(v[0]/v[1]*100):null;
+        return '<td>'+v[0]+'<span style="color:var(--dim)">–'+v[1]+'</span>'
+             + (pc==null?'':' <b style="color:'+(pc>=50?'var(--green)':'var(--muted)')+'">'+pc+'%</b>')+'</td>'; };
+      return '<tr><td style="color:'+col+'">'+esc(ab)+'</td>'+cell(z.rim)+cell(z.mid)+cell(z.three)+'</tr>';
+    };
+    return '<div class="ablk"><div class="alab"><span>Where the points come from</span></div>'
+      + '<table class="atab"><tr><th>Team</th><th>At the rim</th><th>Mid</th><th>From three</th></tr>'
+      + row(T.a.ab,'var(--away)') + row(T.h.ab,'var(--home)')
+      + '</table></div>';
   }catch(_){ return ''; }
 }
 
@@ -12619,6 +12624,57 @@ function gtLine(){
   }catch(_){ return ''; }
 }
 
+/* ====================================================================
+   YOUR NIGHT — the block that should have been here from the first day
+
+   Measured on the build before this one: the team scores rendered at 52px,
+   the player's own points at 22px in the lobby, 12px in the rail, and on
+   the Gametime tab — the screen somebody sits on for two and a half hours
+   — their number did not appear at all.
+
+   The product is called the game that pays to pay attention. Rendering
+   ESPN's number four times larger than the player's, on the screen they
+   live on, is the hierarchy exactly backwards, and no amount of dark blue
+   fixes it.
+
+   So this sits directly under the scoreboard, at the same visual weight as
+   the scoreboard, and it is the second thing on the screen. Your points,
+   your rank in the room, your speed, and what is still riding on the card
+   — which is the number that keeps somebody watching a game that is
+   already decided.
+   ==================================================================== */
+function gtYourNight(){
+  try{
+    if(!S) return '';
+    var pts=Math.max(0, Math.round(Number(S.pts)||0));
+    var spd=Math.max(0, Math.round(Number(S.speed)||0));
+    var rank=null; try{ rank=liveRank(); }catch(_){}
+    var of=null;  try{ of=(typeof roomLast!=='undefined'&&roomLast)?roomLast.joined:null; }catch(_){}
+    // What has not settled yet. Before the buzzer the card is the biggest
+    // number on the board and nobody can see it anywhere in the app.
+    var riding=0;
+    try{
+      var locked=!!(S.predChoices && Object.keys(S.predChoices).length);
+      if(locked && !S.predSettled && S.mode==='live') riding=PRED_MAX;
+    }catch(_){}
+    var tiles='';
+    tiles += '<div><b>'+spd+'</b><span>Speed ⚡</span></div>';
+    if(rank!=null) tiles += '<div><b>#'+rank+'</b><span>'+(of?('of '+of):'In the room')+'</span></div>';
+    if(riding)     tiles += '<div><b style="color:var(--gold)">'+riding+'</b><span>Still riding</span></div>';
+    return '<div class="card" style="padding:15px 16px 14px;margin-top:11px">'
+      + '<div class="alab" style="margin-bottom:6px"><span>Your night</span>'
+      +   (S.name?'<em>'+esc(S.name)+'</em>':'')+'</div>'
+      + '<div style="display:flex;align-items:baseline;gap:10px">'
+      +   '<div class="abig" style="font-size:52px;letter-spacing:-2.6px;'
+      +        'background:linear-gradient(90deg,var(--teal),var(--blue2));'
+      +        '-webkit-background-clip:text;background-clip:text;color:transparent">'+pts+'</div>'
+      +   '<div class="acap" style="margin:0;color:var(--muted)">points</div>'
+      + '</div>'
+      + (tiles?'<div class="atiles">'+tiles+'</div>':'')
+      + '</div>';
+  }catch(_){ return ''; }
+}
+
 /* ---- YOUR CALL IT NIGHT --------------------------------------------- */
 function gtCallItRecord(){
   try{
@@ -12636,20 +12692,40 @@ function gtCallItRecord(){
 function renderGametimeRest(){
   const idle=document.getElementById('gtIdle');
   if(!idle) return;
-  /* THE ORDER IS THE ARGUMENT. Your own night first, because it is the
-     only block on the screen that is about you. Then the deep cut, which
-     is the thing you can say out loud that nobody else in the room knows.
-     Then the game itself. The feed runs underneath all of it. */
+  /* ============ THE ORDER IS THE ARGUMENT ==========================
+     Before this the screen was: board, deep cut, shot chart, assists,
+     +/−, the building, the line — six blocks and 1,746 pixels of scroll
+     before the feed, which is the endless-scroll part that was supposed
+     to be the reason to stay on the tab. Nobody scrolls two full phone
+     screens between quarters.
+
+     What survives above the fold has to earn it against one question:
+     WOULD A PLAYER LOOK UP FROM THE TELEVISION FOR THIS?
+
+       your night   yes — it is the only number that is theirs
+       deep cut     yes — the one thing they can say out loud that
+                    nobody else in the room knows
+
+     Everything else is real and worth having and does not clear that
+     bar, so it goes behind one line of type that opens on a tap. Not
+     deleted — a drawer somebody opens twice a night is a better home
+     than a block everybody scrolls past forty times.                  */
   let out='';
-  try{ out += gtCallItRecord(); }catch(_){}
+  try{ out += gtYourNight(); }catch(_){}
   try{ out += gtDeepCutBlock(); }catch(_){}
-  try{ out += gtShotChart(); }catch(_){}
-  try{ out += gtAssists(); }catch(_){}
-  try{ out += gtPlusMinus(); }catch(_){}
-  try{ out += gtBuilding(); }catch(_){}
-  try{ out += gtLine(); }catch(_){}
+
+  let more='';
+  try{ more += gtShotZones(); }catch(_){}
+  try{ more += gtAssists(); }catch(_){}
+  try{ more += gtPlusMinus(); }catch(_){}
+  try{ more += gtBuilding(); }catch(_){}
+  try{ more += gtLine(); }catch(_){}
+  try{ more += gtCallItRecord(); }catch(_){}
+  if(more){
+    out += '<details class="adraw"><summary>The game, in numbers</summary>'
+        +  '<div class="adrawin">'+more+'</div></details>';
+  }
   idle.innerHTML=out;
-  // No empty boxes holding space open.
   try{ idle.style.marginTop = out ? '4px' : '0'; }catch(_){}
   try{ var sl=document.getElementById('ciSlot'); if(sl) sl.style.marginTop = sl.children.length ? '14px' : '0'; }catch(_){}
   try{ feedRender(); }catch(_){}
@@ -13054,6 +13130,20 @@ body.member #s-landing .brand{margin-top:6px}
 .abars i{flex:1;background:var(--home);border-radius:2px;opacity:.8;min-height:2px}
 .abars i.hi{background:var(--ink);opacity:1}
 .abars i.lo{background:#243450}
+
+/* THE DRAWER. One line of type that opens on a tap, holding the four
+   blocks that are real and worth having but would not survive the
+   "would you look up from the television for this?" test. Styled as a
+   row, not a card — it has to read as a door, not as content. */
+.adraw{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:18px}
+.adraw>summary{list-style:none;cursor:pointer;padding:15px 2px;display:flex;align-items:center;
+  gap:8px;font-size:12px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}
+.adraw>summary::-webkit-details-marker{display:none}
+.adraw>summary::after{content:'▾';margin-left:auto;font-size:12px;color:var(--dim);transition:transform .2s}
+.adraw[open]>summary::after{transform:rotate(180deg)}
+.adraw>summary:hover{color:var(--body)}
+.adrawin{padding:0 0 14px}
+.adrawin .ablk:first-child{margin-top:4px}
 
 /* Duplicated on purpose: paintTeamColours overwrites --away/--home at
    runtime, and this keeps a sane default if the feed never lands. */
