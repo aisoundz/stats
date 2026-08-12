@@ -1091,7 +1091,12 @@
       <label class="fld">Pick your color</label>
       <div class="chips" id="colorPick"></div>
       <button class="btn" id="nameBtn" disabled onclick="startPredict()">Continue to my picks</button>
-      <button class="btn ghost" style="margin-top:8px;font-size:14px" onclick="openJoin('name',gateEmailValue())">Tell us what you watch</button>
+      <!-- "Tell us what you watch" used to sit here, one tap below the
+           button that starts the game. It asked a stranger for their
+           viewing habits before they had played a single question, on the
+           screen whose only job is to get them to their picks. It is off
+           the sign-up path until the sign-up path is right; the same sheet
+           is still reachable from the Me tab for anyone who wants it. -->
     </div>
     <p class="foot">Free to enter • No purchase necessary • 18+ • We don't sell your address.</p>
   </section>
@@ -5015,7 +5020,16 @@ function buildPred(){
       same thing twice within an inch of itself. The bar owns it. This slot
       says what the CARD is, which is the thing the arrows move through. */
    +  '<span class="pdsofar">'+(PD.i+1)+' of '+L.length+'</span>'
-   +  '<button type="button" class="pdarrow" data-pdgo="1"'+(PD.i===L.length-1?' disabled':'')+'>Next</button>'
+   /* ON THE LAST CARD, NEXT IS THE LOCK. Reported from a real phone: you
+      finish the sixth pick and the only live control is a greyed-out
+      "Next" — the button your thumb is already on — while the actual way
+      forward is a separate button further down that you have to go find.
+      A disabled control at the end of a completed form reads as "you are
+      not finished", which is the opposite of true. */
+   +  (PD.i===L.length-1
+        ? ('<button type="button" class="pdarrow'+(doneN>=preds.length?' ready':'')+'" data-pdlock="1"'
+           + (doneN>=preds.length?'':' disabled')+'>'+(doneN>=preds.length?'Lock ✓':'Next')+'</button>')
+        : '<button type="button" class="pdarrow" data-pdgo="1">Next</button>')
    +'</div>'
    /* THE ACTION LIVES WITH THE CARD. The old Lock button sat at the bottom
       of the page — which on a phone put it a full screen below the deck,
@@ -5056,6 +5070,9 @@ function buildPred(){
   });
   Array.prototype.forEach.call(c.querySelectorAll('[data-pdgo]'), function(b){
     b.onclick=function(){ predGo(Number(b.getAttribute('data-pdgo'))); };
+  });
+  Array.prototype.forEach.call(c.querySelectorAll('[data-pdlock]'), function(b){
+    b.onclick=function(){ try{ var L2=document.getElementById('pdLock'); if(L2) L2.click(); }catch(_){} };
   });
   Array.prototype.forEach.call(c.querySelectorAll('[data-pdmv]'), function(b){
     b.onclick=function(){ movePred(p.id, Number(b.getAttribute('data-pdmv'))); };
@@ -8005,6 +8022,25 @@ function ensureCiCard(){
        impossible to miss without a modal that blocks the game you came
        here to watch. */
     '#ciCard.cilive{border-color:#28e0d0;box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 0 1px rgba(40,224,208,.55),0 0 34px rgba(40,224,208,.28);animation:ciUp .34s cubic-bezier(.16,1,.3,1),ciPulse 2.1s ease-in-out .34s infinite}'+
+    /* ============ DOCKED, IT IS A CARD — NOT AN OVERLAY ==============
+       "When I play, the questions are just over everything. It should be
+       cleaner."
+
+       The pulsing teal ring and the drop shadow exist for the FLOATING
+       version, where the card arrives over a game you are watching and has
+       to be impossible to miss. In the slot on Gametime none of that is
+       true: it is sitting in the page, under the scoreboard, in a column
+       of other cards. The glow made it read as something stuck on top of
+       the app rather than part of it.
+
+       Docked it wears the same clothes as every other Arena card — a
+       hairline, a soft drop, no animation — and the only teal left is on
+       the label, which is where the accent belongs. */
+    '#ciSlot #ciCard, #gtSticky #ciCard{box-shadow:0 10px 30px rgba(0,0,0,.34)!important;'+
+      'border:1px solid var(--line)!important;animation:none!important;background:var(--card)}'+
+    '#ciSlot #ciCard.cilive, #gtSticky #ciCard.cilive{border-color:rgba(40,224,208,.34)!important;'+
+      'box-shadow:0 10px 30px rgba(0,0,0,.34)!important;animation:none!important}'+
+    '#ciSlot #ciCard .cilab, #gtSticky #ciCard .cilab{color:var(--teal)}'+
     '@keyframes ciPulse{0%,100%{box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 0 1px rgba(40,224,208,.55),0 0 30px rgba(40,224,208,.22)}50%{box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 0 1px rgba(40,224,208,.85),0 0 46px rgba(40,224,208,.42)}}'+
     '@media (prefers-reduced-motion:reduce){#ciCard{animation:none!important}#ciCard.cilive{animation:none!important}}'+
     'body.ciopen .screen.active{padding-top:var(--cih,0px);transition:padding-top .2s ease}'+
@@ -10319,7 +10355,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-12-caughtit.80';
+const STATS_BUILD='2026-08-12-cleaner.81';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -12033,11 +12069,28 @@ function renderStats(){
         var who=String(S.predChoices[p.id]||''); if(!who) return '';
         var sv=null; try{ sv=seaOf(who); }catch(_){}
         var val=(sv && isFinite(sv[key])) ? Math.round(sv[key]*10)/10 : null;
+        /* ============ THE FIELD IS THE TWO ROSTERS, NOT THE LEAGUE =====
+           "It shows the league leader. It should be who is the leader in
+           the game."
+
+           Right, and it was worse than a mismatch — it was demoralising
+           and it was not even the contest. Picking Teonni Key for blocks
+           and being told she is 1.6 a game behind A'ja Wilson is true and
+           completely useless: A'ja Wilson is not playing tonight. The
+           question on the card is "who leads this category IN THIS GAME",
+           so the bar has to be the best of the twenty-eight people who
+           will actually be on the floor.
+
+           Ruled-out players are excluded, because they cannot lead
+           anything tonight either. */
         var bestN='', bestV=-1;
         try{
-          Object.keys(SEA.by||{}).forEach(function(k){
-            var r=SEA.by[k], v=r?r[key]:null;
-            if(v!=null && isFinite(v) && v>bestV){ bestV=v; bestN=r.name; }
+          var field=[].concat(BB_ROSTER.home||[], BB_ROSTER.away||[]);
+          field.forEach(function(nm){
+            try{ if(INACTIVE && INACTIVE.has && INACTIVE.has(nm)) return; }catch(_){}
+            var r=null; try{ r=seaOf(nm); }catch(_){}
+            var v=r?r[key]:null;
+            if(v!=null && isFinite(v) && v>bestV){ bestV=v; bestN=nm; }
           });
         }catch(_){}
         var cat=String(p.label||'').replace(/^most /i,'').toLowerCase();
@@ -12051,19 +12104,19 @@ function renderStats(){
         var pctw=(bestV>0 && val!=null)?Math.max(4,Math.min(100,Math.round((val/bestV)*100))):4;
         var gap=(val!=null && bestV>0 && !lead)?Math.round((bestV-val)*10)/10:0;
         var need = lead
-          ? '<div class="stNeed">Your pick leads the league in '+esc(cat)+'.</div>'
+          ? '<div class="stNeed">On season form, your pick is the best '+esc(cat.replace(/s$/,''))+' player in this game.</div>'
           : (val==null
-             ? '<div class="stNeed">'+esc(who)+' has no qualifying league average for '+esc(cat)+' yet.</div>'
-             : '<div class="stNeed">'+gap+' '+esc(cat)+' a game behind '+esc(bestN)+' — but tonight is one game, so the gap is smaller than it looks.</div>');
+             ? '<div class="stNeed">'+esc(who)+' has no qualifying season average for '+esc(cat)+' yet — one good night and that does not matter.</div>'
+             : '<div class="stNeed">'+gap+' '+esc(cat)+' a game behind '+esc(bestN)+' on season form. Tonight is one game.</div>');
         return '<div class="stPickRow2">'
           + '<div class="stPickCat">'+esc(p.label)+'</div>'
           + '<div class="stPickTop"><span class="stPickMine'+(lead?' lead':'')+'">'+esc(who)+' <b>'+(val==null?'–':val)+'</b></span>'
-          +   '<span class="stPickLead2">'+(bestV<0?'—':('league '+esc(bestN)+' '+(Math.round(bestV*10)/10)))+'</span></div>'
+          +   '<span class="stPickLead2">'+(bestV<0?'—':('best tonight: '+esc(bestN)+' '+(Math.round(bestV*10)/10)))+'</span></div>'
           + '<div class="stRace"><i style="width:'+pctw+'%;background:'+(lead?'#2ee6a6':'#28e0d0')+'"></i></div>'
           + need + '</div>';
       }).join('');
-      out+=stCard('YOUR CARD · SEASON FORM'+(SEA.ok?'':' · league table still loading'), rows0
-        + '<div class="sub" style="font-size:12px;margin-top:8px">Season averages against the league leader in each category. '
+      out+=stCard('YOUR CARD · WHO YOU HAVE TO BEAT'+(SEA.ok?'':' · season table still loading'), rows0
+        + '<div class="sub" style="font-size:12px;margin-top:8px">Season form against the best in <b>this game</b> — not the league. '
         + 'The moment the ball goes up these become tonight’s numbers and it is a live race.</div>');
       out+=seaRetryHTML();
     } else {
@@ -13064,6 +13117,29 @@ function gtYourNight(){
   }catch(_){ return ''; }
 }
 
+/* The one control the lobby owned that this page needed. Shows only when
+   there is genuinely a round to open, and says which one. */
+function gtStartRow(){
+  try{
+    if(!S || S.mode!=='live') return '';
+    if(S.screen==='live' || S.screen==='review') return '';
+    var qi = (S.nextQ!=null ? S.nextQ : S.qi) || 0;
+    if(qi>=NR) return '';
+    /* Already answered and waiting on the host? Then there is nothing to
+       open and a button would be a lie. */
+    try{ if(HR && HR.submitted && HR.submitted[curRoundId&&curRoundId()]) return ''; }catch(_){}
+    var hd=null; try{ hd=hostedDoc(qi); }catch(_){}
+    var hLive = hd && hd.state==='live';
+    var held=false; try{ held=!!(HR&&HR.held&&HR.held['r'+qi]); }catch(_){}
+    var label = hLive ? ('🔴 '+roundName(qi)+' is LIVE — answer now')
+              : held  ? (roundName(qi)+' — locked, waiting on the host')
+              : (roundTag(qi)+' ended? Answer now');
+    var dead = held;
+    return '<button class="btn'+(hLive?'':' ghost')+'" style="margin-top:11px"'
+      + (dead?' disabled':' onclick="startQuarter('+qi+')"')+'>'+esc(label)+'</button>';
+  }catch(_){ return ''; }
+}
+
 /* ---- YOUR CAUGHT IT NIGHT --------------------------------------------- */
 function gtCallItRecord(){
   try{
@@ -13099,7 +13175,22 @@ function renderGametimeRest(){
      bar, so it goes behind one line of type that opens on a tap. Not
      deleted — a drawer somebody opens twice a night is a better home
      than a block everybody scrolls past forty times.                  */
+  /* ============ YOU START THE QUARTER FROM HERE ====================
+     "I still want a seamless page which should be the Gametime tab where
+     people put in the questions for the quarters and Caught It."
+
+     The question and the review already live on this page. The last thing
+     that did not was the button that OPENS them — that was in the lobby,
+     which meant the loop was still Gametime → lobby → answer → Gametime.
+
+     This is deliberately not a second lobby. It is one button, painted
+     from the same state the lobby button reads, calling the same
+     function. The lobby section is untouched: an earlier attempt to move
+     it wholesale broke resume, the layout and the swipe handler on the
+     morning of a game night, and one button is worth more than the other
+     nine tenths of that screen put together. */
   let out='';
+  try{ out += gtStartRow(); }catch(_){}
   try{ out += gtYourNight(); }catch(_){}
   try{ out += gtDeepCutBlock(); }catch(_){}
 
@@ -13627,6 +13718,10 @@ body.qopen #gtQuestion{scroll-margin-top:8px}
   padding:13px 12px;font-weight:900;font-size:14px;line-height:1;color:#04121e;
   background:linear-gradient(92deg,var(--teal),var(--blue2))}
 .fdgo:active{transform:scale(.98)}
+/* The Next arrow becomes the lock on the last card, so it has to stop
+   looking like an arrow. */
+.pdarrow.ready{background:linear-gradient(92deg,var(--teal),var(--blue2));color:#04121e;
+  border-color:transparent;font-weight:900}
 .gtvs{font-size:12px;letter-spacing:.12em;font-weight:800;color:var(--muted);text-transform:uppercase}
 .gtvs i{font-style:normal;color:var(--dim);font-weight:700;letter-spacing:.06em}
 .gtcount{font-size:34px;font-weight:900;line-height:1.15;margin-top:6px;
