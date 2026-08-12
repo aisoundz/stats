@@ -7618,16 +7618,84 @@ function ciTeamQ(id,prompt,label,dir,fmt){
     options:[{k:A.ab,v:'a'},{k:B.ab,v:'b'}], answer:aWin?'a':'b',
     resolveText:(fmt||function(x,y){return A.ab+' '+x+', '+B.ab+' '+y+'.';})(gsFmt(label,A.stat(label)),gsFmt(label,B.stat(label))) };
 }
+/* ==================== BEFORE TIP, ASK ABOUT A GAME =================
+   "The Call It questions aren't good. They should be what happened
+   during the game or some form of stats."
+
+   Correct, and the pre-tip bank was the worst of it: "which defense gives
+   up fewer points a night?" is a season average, which is trivia — you
+   either happen to know it or you guess, and either way you learned
+   nothing and watched nothing.
+
+   The house rule for Call It has always been ASK ABOUT SOMETHING THAT
+   HAPPENED. Before tip there is no tonight to ask about — but there are
+   two games these teams have already played against each other, and five
+   recent games each, all of it sitting in the same response we already
+   fetch and all of it thrown away until now.
+
+   So the pre-tip bank leads with real results. "Last time these two met,
+   who won" is a question about a game. It is checkable, it is worth
+   saying out loud, and it is exactly the homework the prediction card
+   needs. The season averages stay, at the BACK of the queue, reworded so
+   they read as scouting rather than as a quiz. */
+function ciPastBank(){
+  var out=[], A=GS.teams[0], B=GS.teams[1]; if(!A||!B) return out;
+  var mm=(GS.series||[]).filter(function(m){ return m.cs.some(function(c){return c.ab===A.ab;}) && m.cs.some(function(c){return c.ab===B.ab;}); });
+  var dfmt=function(iso){ try{ return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric'}); }catch(_){ return ''; } };
+  if(mm.length){
+    var last=mm[mm.length-1];
+    var w=last.cs.slice().sort(function(x,y){ return y.score-x.score; })[0];
+    var l=last.cs.slice().sort(function(x,y){ return y.score-x.score; })[1];
+    out.push({ qid:'cip-last-'+last.date,
+      prompt:'These two met on '+dfmt(last.date)+'. Who won that one?',
+      options:[{k:A.ab,v:'a'},{k:B.ab,v:'b'}], answer:(w.ab===A.ab?'a':'b'),
+      resolveText:w.ab+' took it '+w.score+'–'+l.score+'. Tonight is the rematch.' });
+    var tot=last.cs[0].score+last.cs[1].score;
+    var lineT=Math.round(tot/10)*10 + (tot%10>=5?0:-5);
+    out.push({ qid:'cip-tot-'+last.date,
+      prompt:'Their last meeting — did the two teams combine for more than '+lineT+' points?',
+      options:[{k:'More',v:'o'},{k:'Fewer',v:'u'}], answer:(tot>lineT?'o':'u'),
+      resolveText:'They combined for '+tot+'. Tonight\u2019s total is set at '
+        + (((GS.line||{}).ou!=null) ? GS.line.ou : 'around the same') + '.' });
+    var mar=Math.abs(last.cs[0].score-last.cs[1].score);
+    out.push({ qid:'cip-mar-'+last.date,
+      prompt:'How close was the last one — was it decided by 10 or more?',
+      options:[{k:'10 or more',v:'o'},{k:'Under 10',v:'u'}], answer:(mar>=10?'o':'u'),
+      resolveText:'It was '+mar+' point'+(mar===1?'':'s')+'.' });
+  }
+  if(mm.length>=2){
+    var wins={}; mm.forEach(function(m){ var t=m.cs.slice().sort(function(x,y){return y.score-x.score;})[0]; wins[t.ab]=(wins[t.ab]||0)+1; });
+    var aw=wins[A.ab]||0, bw=wins[B.ab]||0;
+    if(aw!==bw) out.push({ qid:'cip-series',
+      prompt:'They have played '+mm.length+' times this season. Who leads the series?',
+      options:[{k:A.ab,v:'a'},{k:B.ab,v:'b'}], answer:(aw>bw?'a':'b'),
+      resolveText:(GS.seriesSummary||((aw>bw?A.ab:B.ab)+' lead it '+Math.max(aw,bw)+'\u2013'+Math.min(aw,bw)))+'.' });
+  }
+  /* Each side's last game — a real result, from this week. */
+  (GS.form||[]).forEach(function(t,ix){
+    var g=t.games[t.games.length-1]; if(!g) return;
+    out.push({ qid:'cip-form-'+t.ab,
+      prompt:t.ab+' played '+g.opp+' on '+dfmt(g.date)+'. Did they win?',
+      options:[{k:'Won',v:'w'},{k:'Lost',v:'l'}], answer:(g.res==='W'?'w':'l'),
+      resolveText:t.ab+' '+(g.res==='W'?'won':'lost')+' '+g.score+' against '+g.opp+'.' });
+  });
+  return out;
+}
 function ciPreBank(){
   var out=[], A=GS.teams[0], B=GS.teams[1]; if(!A||!B) return out;
-  [ ['ci-ppg','Scouting — which side scores more per game this season?','Points Per Game','hi'],
-    ['ci-pa','Which defense gives up fewer points a night?','Points Against','lo'],
-    ['ci-fg','Better shooting team from the field this season?','Field Goal %','hi'],
-    ['ci-3p','Who shoots the better three-ball?','Three Point %','hi'],
-    ['ci-reb','Who wins the glass — more rebounds a game?','Rebounds Per Game','hi'],
-    ['ci-ast','More assists a game — who moves the ball?','Assists Per Game','hi'],
-    ['ci-stl','Which side gets its hands on more steals?','Steals Per Game','hi'],
-    ['ci-to','Who takes better care of it — fewer turnovers?','Total Turnovers Per Game','lo']
+  /* Real results first. Averages are the fallback, not the headline. */
+  try{ out=out.concat(ciPastBank()); }catch(_){}
+  /* The season table, second. Every one of these is now framed as a fact
+     about the games already played this year rather than as a quiz
+     question, because that is what it is. */
+  [ ['ci-ppg','Through this season, which side has scored more per game?','Points Per Game','hi'],
+    ['ci-pa','Which of these two has given up fewer points a game so far?','Points Against','lo'],
+    ['ci-fg','Who has shot it better from the field this season?','Field Goal %','hi'],
+    ['ci-3p','Who has been the better three-point team this year?','Three Point %','hi'],
+    ['ci-reb','Who has won the glass more often — more rebounds a game?','Rebounds Per Game','hi'],
+    ['ci-ast','Which side has moved the ball more — assists a game?','Assists Per Game','hi'],
+    ['ci-stl','Who has got their hands on more steals this season?','Steals Per Game','hi'],
+    ['ci-to','Who has taken better care of it — fewer turnovers a game?','Total Turnovers Per Game','lo']
   ].forEach(function(r){ var q=ciTeamQ(r[0],r[1],r[2],r[3]); if(q) out.push(q); });
   // Last ten is a record string, so it needs its own comparison.
   (function(){
@@ -7945,10 +8013,25 @@ function ensureCiCard(){
     'body.ciopen .screen.active{padding-top:var(--cih,0px);transition:padding-top .2s ease}'+
     /* The pinned block. A solid backdrop so the feed passing underneath
        never bleeds through the score. */
+    /* ============ STICKY IS FOR A SCOREBOARD, NOT FOR A QUESTION =====
+       Found on a real phone: with the question living in this block, the
+       sticky region became ~600px tall on an 852px screen. Everything
+       below it slid underneath and got covered — the practice card and
+       its button were half-eaten, and the page could not be scrolled to
+       the end because two thirds of the viewport was pinned.
+
+       Two rules now. While a question or a review is open the block is
+       NOT sticky at all: the question is the thing you are looking at, so
+       there is nothing to pin it against. And even when it is sticky it
+       may never take more than 42% of the viewport — if the board ever
+       grows again, it scrolls instead of eating the page. */
     '#gtSticky{position:sticky;top:0;z-index:60;background:var(--bg,var(--bg));'+
+      'max-height:42dvh;overflow:visible;'+
       'padding-top:6px;margin:0 -2px;padding-left:2px;padding-right:2px}'+
+    'body.qopen #gtSticky{position:static;max-height:none}'+
     '#gtSticky::after{content:"";position:absolute;left:0;right:0;top:100%;height:14px;'+
       'background:linear-gradient(180deg,var(--bg,var(--bg)),rgba(10,14,23,0));pointer-events:none}'+
+    'body.qopen #gtSticky::after{display:none}'+
     /* Docked in the slot it is a panel, not a floating card: square off the
        top so it reads as hanging from the scoreboard above it. */
     '#ciSlot #ciCard{border-top-left-radius:6px;border-top-right-radius:6px;'+
@@ -8196,10 +8279,30 @@ function ciPick(q,v){
    slides up, takes its six seconds, and gets out of the way. Which is also
    when a real Call It belongs: the timeout, the free-throw walk-up, the
    moment the broadcast itself pauses.                                    */
-var CI_BLOCKED=['live','name','join','rules','final','tally','landing'];
+/* ============ ONE PAGE, TWO QUESTIONS, ONE CLOCK ====================
+   "Let's also figure out one page when you can answer the questions at
+   the end of the quarter and have the Call It."
+
+   The old rule was blunt: Call It is banned on the 'live' screen. That
+   was right when 'live' was a separate page — a second prompt underneath
+   a 20-second question is not a feature, it is a way to lose the round
+   you are being paid for.
+
+   But 'live' is not a page any more, it is a slot on Gametime, and the
+   two questions now sit in the same scroll. So the rule gets sharper
+   instead of being deleted: Call It waits while a quarter question is
+   OPEN AND UNANSWERED, and appears the moment you have locked your answer
+   — in the slot directly below, with no screen change. You answer the
+   quarter, you look up, the Call It is already there.
+
+   The clock is the thing being protected, not the screen. */
+var CI_BLOCKED=['name','join','rules','final','tally','landing'];
 function ciScreenOk(){
   var scr=''; try{ scr=(S&&S.screen)||''; }catch(_){}
-  return CI_BLOCKED.indexOf(scr)<0;
+  if(CI_BLOCKED.indexOf(scr)>=0) return false;
+  /* A quarter question with the clock still running owns the screen. */
+  try{ if(scr==='live' && !S.answered) return false; }catch(_){}
+  return true;
 }
 function ciFlush(){
   if(!PCI.pending) return;
@@ -10219,7 +10322,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-12-onepage.78';
+const STATS_BUILD='2026-08-12-phonefix.79';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -10684,7 +10787,7 @@ function sportCfg(){
    want the radio hammered. Failures now back off and the screen offers a
    button instead of spinning forever. */
 var GS={ok:false,at:0,loading:false,state:'pre',teams:[],leaders:[],box:{},plays:[],
-        wp:[],info:{},line:null,err:'',fails:0,lastTry:0};
+        wp:[],info:{},line:null,series:[],form:[],seriesSummary:'',err:'',fails:0,lastTry:0};
 /* THE CLOCK, AS A CLOCK. ESPN hands back "30.5" inside the last minute —
    thirty and a half seconds — and printing that raw put a decimal point in
    the middle of a scoreboard. Under a minute reads :30. Over a minute is
@@ -10830,6 +10933,28 @@ async function loadGameStats(force){
             venue:((gi.venue||{}).fullName)||'',
             crew:(gi.officials||[]).map(function(o){ return String(o.displayName||''); }).filter(Boolean) };
     }catch(_){ _gi={}; }
+    /* WHAT HAS ALREADY HAPPENED. Both of these arrive in the same summary
+       response and both were being discarded. They are the only honest way
+       to run Call It before tip: a question about a game that has been
+       played is a question about something that happened, which is the
+       house rule. A season average is trivia. */
+    var _series=[], _form=[], _seriesSummary='';
+    try{
+      var ss=(j.seasonseries||[])[0]||{};
+      _series=(ss.events||[]).map(function(e){
+        return { date:e.date, cs:(e.competitors||[]).map(function(c){
+          return { ab:(c.team&&c.team.abbreviation)||'', score:Number(c.score), win:!!c.winner }; }) };
+      }).filter(function(m){ return m.cs.length===2 && m.cs.every(function(c){ return isFinite(c.score) && c.score>0; }); });
+      _seriesSummary=ss.summary||'';
+    }catch(_){ _series=[]; }
+    try{
+      _form=(j.lastFiveGames||[]).map(function(t){
+        return { ab:(t.team&&t.team.abbreviation)||'',
+                 games:(t.events||[]).map(function(g){
+                   return { res:g.gameResult, score:String(g.score||''), opp:(g.opponent&&g.opponent.abbreviation)||'', date:g.gameDate };
+                 }).filter(function(g){ return g.res && /\d+-\d+/.test(g.score); }) };
+      }).filter(function(t){ return t.ab && t.games.length; });
+    }catch(_){ _form=[]; }
     var _line=null;
     try{
       var pc=(j.pickcenter||[])[0]||{};
@@ -10837,7 +10962,8 @@ async function loadGameStats(force){
                              prov:((pc.provider||{}).name)||'' };
     }catch(_){ _line=null; }
     /* ---- THE COMMIT. One block, no awaits inside it. ---- */
-    GS.wp=_wp; GS.info=_gi; GS.line=_line;
+    GS.wp=_wp; GS.info=_gi; GS.line=_line; GS.series=_series; GS.form=_form;
+    GS.seriesSummary=(typeof _seriesSummary==='string')?_seriesSummary:'';
     GS.teams=teams; GS.box=box; GS.leaders=_leaders; GS.inj=_inj; GS.plays=_plays;
     GS.state=stat.state||'pre';
     GS.detail=String(stat.shortDetail||stat.detail||'')
@@ -12614,6 +12740,34 @@ function renderGametime(){
   let AC='var(--away)', HC='var(--home)';
   const T=gtTeams();
   try{ H=(GAME&&GAME.homeAb)||(GAME&&GAME.homeAbbr)||H; A=(GAME&&GAME.awayAb)||(GAME&&GAME.awayAbbr)||A; }catch(_){}
+  /* ============ A PRACTICE RUN IS NOT A COUNTDOWN =====================
+     Found on a real phone: pressing Practice ten hours before tip put a
+     rehearsal question under a board reading "10h 42m UNTIL TIP". The
+     player is mid-Q1 of a simulated game and the top of their screen is
+     counting down to a game that has not started. Practice has its own
+     scoreboard — the same simulated numbers the questions are graded
+     against — and it says PRACTICE on it, because a fake score that does
+     not announce itself is the one thing this product must never ship. */
+  try{
+    if(S && S.mode==='demo'){
+      var qi=Math.max(0,Math.min(NR-1, S.qi||0));
+      var r0=rounds[qi]||{};
+      var ph=(S.screen==='final') ? 'PRACTICE · FINAL' : ('PRACTICE · '+roundTag(qi));
+      head.innerHTML='<div class="card gtBoard" style="padding:15px 16px 14px">'
+        + '<div class="ascore">'
+        +   '<span class="alive pre"><i></i>'+esc(ph)+'</span>'
+        +   '<div class="ateams">'
+        +     '<div class="atm"><div class="ab" style="color:var(--away)">'+esc(String(A))+'</div>'
+        +       '<div class="n">'+(r0.away==null?'0':r0.away)+'</div></div>'
+        +     '<div class="aat">AT</div>'
+        +     '<div class="atm"><div class="ab" style="color:var(--home)">'+esc(String(H))+'</div>'
+        +       '<div class="n">'+(r0.home==null?'0':r0.home)+'</div></div>'
+        +   '</div>'
+        +   '<div class="acap" style="margin-top:10px">Simulated · nothing here is a real result</div>'
+        + '</div></div>';
+      return renderGametimeRest();
+    }
+  }catch(_){}
   let recA='', recH='';
   if(T){
     if(T.a.ab) A=T.a.ab; if(T.h.ab) H=T.h.ab;
@@ -13168,7 +13322,7 @@ body.hasrail{padding-top:38px}
    on a screen, which is the whole point of a feed. */
 .fdc{position:relative;background:transparent;border:0;border-radius:0;
   border-bottom:1px solid var(--line);
-  padding:11px 0 11px 14px;margin:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  padding:11px 2px 11px 14px;margin:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .fdc:last-child{border-bottom:0}
 /* A lead change or a three still deserves to be noticed — but with a
    lit background, not a border box. */
