@@ -1130,7 +1130,58 @@
          underside of it. The feed runs underneath both. -->
     <div id="gtSticky">
       <div id="gtHead"></div>
+      <!-- THE QUARTER QUESTION, IN PLACE. Everything inside is the exact
+           markup that used to be its own screen — same element ids, so the
+           question engine, the timer, the lifeline and the reveal all work
+           unchanged. It simply happens here now, six pixels under the
+           score, instead of on a page that replaced the score. -->
+      <div id="gtQuestion" style="display:none">
+        <div class="qmeta">
+          <span class="qn" id="qCount">Question 1 of 3</span>
+          <span class="worth" id="qWorth">Worth 1 pt</span>
+        </div>
+        <div class="timer" id="timerBar"><i id="timerFill"></i></div>
+        <div class="card tight" style="margin-top:6px">
+          <h2 id="qText" style="line-height:1.3">—</h2>
+          <div class="opts" id="qOpts"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+            <button class="helpbtn" id="helpBtn" onclick="useLifeline()">✨ Lifeline (1/half)</button>
+            <span style="font-size:12px;color:var(--dim)" id="helpNote"></span>
+          </div>
+          <div id="revealBox"></div>
+        </div>
+        <button class="btn" id="nextBtn" style="display:none" onclick="nextQuestion()">Next</button>
+        <div class="center" id="lockNote" style="display:none;font-size:12px;color:var(--dim);margin-top:8px">⚠️ Once you lock it in, you can't change it.</div>
+      </div>
+      <div id="gtReview" style="display:none">
+    <div class="center" style="margin-top:6px"><span class="pill" id="revPill">Score Q1</span></div>
+    <h1 class="center" style="margin-top:8px" id="revTitle">Score this quarter ✅</h1>
+    <p class="sub center" id="revNote">When the host posts the answers in the group chat, tap the correct answer for each question. Your picks are marked 🔵.</p>
+    <div id="revList"></div>
+    <button class="btn teal" id="revBtn" disabled onclick="confirmReview()">Confirm &amp; score quarter</button>
+    <div id="revResult"></div>
+    <button class="btn" id="revNextBtn" style="display:none" onclick="afterReview()">Continue</button>
+    <button class="btn ghost" id="revTalkBtn" style="display:none" onclick="openTalk()">🔥 Talk trash</button>
+  </div>
       <div id="ciSlot"></div>
+    </div>
+    <!-- Kept, hidden, because renderScore() / paintLiveStrip() run all night
+         and paint into these ids. They are not shown on this page — it has
+         a 52px scoreboard and a YOUR NIGHT block of its own — but deleting
+         them would turn every one of those calls into a silent no-op, which
+         is the exact class of bug this build exists to end. -->
+    <div id="legacyBits" style="display:none" aria-hidden="true">
+      <div class="youscore"><div><b id="youPts">0</b> <span>your pts</span></div>
+        <div style="text-align:right"><b id="youRank">–</b> <span id="youRankLbl">rank</span></div></div>
+      <div class="scorebar">
+        <div class="team"><span class="nm" id="teamHomeNm">DAL</span><span class="sc" id="scHome">–</span></div>
+        <div class="qtag" id="qLabel">Q1</div>
+        <div class="team"><span class="nm" id="teamAwayNm">TOR</span><span class="sc" id="scAway">–</span></div>
+      </div>
+      <div class="livestrip" id="liveStrip" style="display:none">
+        <span class="lsmain" id="liveStripMain"></span>
+        <span class="lsside" id="liveStripSide"></span>
+      </div>
     </div>
     <div id="gtIdle"></div>
     <!-- THE FEED. Everything below the Call It slot is an endless scroll of
@@ -1237,38 +1288,26 @@
   </section>
 
   <!-- 5. LIVE QUESTION -->
-  <section class="screen" id="s-live">
-    <div class="scoreself">
-      <div class="youscore"><div><b id="youPts">0</b> <span>your pts</span></div>
-        <div style="text-align:right"><b id="youRank">–</b> <span id="youRankLbl">rank</span></div></div>
-    </div>
-    <div class="scorebar">
-      <div class="team"><span class="nm" id="teamHomeNm">🔥 IND</span><span class="sc" id="scHome">–</span></div>
-      <div class="qtag" id="qLabel">Q1</div>
-      <div class="team"><span class="nm" id="teamAwayNm">SEA ⛈️</span><span class="sc" id="scAway">–</span></div>
-    </div>
-    <div class="livestrip" id="liveStrip" style="display:none">
-      <span class="lsmain" id="liveStripMain"></span>
-      <span class="lsside" id="liveStripSide"></span>
-    </div>
-    <div class="qmeta">
-      <span class="qn" id="qCount">Question 1 of 3</span>
-      <span class="worth" id="qWorth">Worth 1 pt</span>
-    </div>
-    <div class="timer" id="timerBar"><i id="timerFill"></i></div>
-    <div class="card tight" style="margin-top:6px">
-      <h2 id="qText" style="line-height:1.3">—</h2>
-      <div class="opts" id="qOpts"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
-        <button class="helpbtn" id="helpBtn" onclick="useLifeline()">✨ Lifeline (1/half)</button>
-        <span style="font-size:12px;color:var(--dim)" id="helpNote"></span>
-      </div>
-      <div id="revealBox"></div>
-    </div>
-    <div style="flex:1"></div>
-    <button class="btn" id="nextBtn" style="display:none" onclick="nextQuestion()">Next</button>
-    <div class="center" id="lockNote" style="display:none;font-size:12px;color:var(--dim);margin-top:8px">⚠️ Once you lock it in, you can't change it.</div>
-  </section>
+  <!-- THE LIVE QUESTION SCREEN IS GONE ON PURPOSE.
+
+       "We are still having the problem of where the game is played at the
+       end of the quarter and then the other parts of the game. Let's get
+       everything on one page."
+
+       Right, and it is the root cause of five separate bugs, not just an
+       annoyance. The night used to bounce between four sections — lobby,
+       live, review, lobby — and every one of those transitions was a place
+       to lose state, show a stale screen, or strand somebody. The question
+       and the scoring now happen IN PLACE on Gametime, under the same
+       scoreboard you were already looking at, which is where Call It has
+       always worked and is the only part of the night nobody has ever
+       reported getting lost in.
+
+       `S.place` and `S.screen` still say "live" and "review" — the save
+       format, the resume path and every guard that reads them are
+       unchanged. What changed is which section those two words point at.
+       See `map` below. -->
+  
 
   <!-- 6. QUARTER BREAK / LEADERBOARD -->
   <section class="screen" id="s-break">
@@ -1281,16 +1320,8 @@
   </section>
 
   <!-- QUARTER REVIEW (Game Night) -->
-  <section class="screen" id="s-review">
-    <div class="center" style="margin-top:6px"><span class="pill" id="revPill">Score Q1</span></div>
-    <h1 class="center" style="margin-top:8px" id="revTitle">Score this quarter ✅</h1>
-    <p class="sub center" id="revNote">When the host posts the answers in the group chat, tap the correct answer for each question. Your picks are marked 🔵.</p>
-    <div id="revList"></div>
-    <button class="btn teal" id="revBtn" disabled onclick="confirmReview()">Confirm &amp; score quarter</button>
-    <div id="revResult"></div>
-    <button class="btn" id="revNextBtn" style="display:none" onclick="afterReview()">Continue</button>
-    <button class="btn ghost" id="revTalkBtn" style="display:none" onclick="openTalk()">🔥 Talk trash</button>
-  </section>
+  <!-- The quarter review moved onto Gametime too. Same ids, same code. -->
+  
 
   <!-- PREDICTION REVIEW (Game Night final) -->
   <section class="screen" id="s-predreview">
@@ -3633,8 +3664,12 @@ const league={name:"The Barbershop",members:[
 
 /* ---------------- NAV ---------------- */
 const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-lobby",me:"s-me",gametime:"s-gametime",stats:"s-stats",board:"s-board",
-  live:"s-live",break:"s-break",final:"s-final",host:"s-host",league:"s-league",plus:"s-plus",
-  rules:"s-rules",review:"s-review",predreview:"s-predreview",tally:"s-tally",
+  /* ONE PAGE. `live` and `review` are POSITIONS in the night, not places
+     in the DOM — both of them now resolve to the Gametime section, which
+     shows or hides the right slot. Nothing that reads S.screen or S.place
+     had to change. */
+  live:"s-gametime",break:"s-break",final:"s-final",host:"s-host",league:"s-league",plus:"s-plus",
+  rules:"s-rules",review:"s-gametime",predreview:"s-predreview",tally:"s-tally",
   join:"s-join"};
 /* THE DOOR IS THE DOOR. You cannot reach the handle screen, the pick sheet, or
    anything that produces data until there is a real account behind it. Before
@@ -4136,6 +4171,30 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
   b.classList.toggle('show', showBack);
   try{ document.body.classList.toggle('hasback', showBack); }catch(_){}
   b.dataset.to=BACKMAP[k]||'';
+  /* ============ ONE PAGE — WHICH SLOT IS OPEN ======================
+     `live` and `review` both resolve to the Gametime section, so the
+     section alone cannot say what the player is doing. This does, and it
+     is the ONLY place that decides — the old four-screen version spread
+     that decision across a dozen call sites and every one of them could
+     disagree with the others. That disagreement is what produced a phone
+     showing "waiting on Q4" under a rail that said Final. */
+  try{
+    const q=document.getElementById('gtQuestion'), rv=document.getElementById('gtReview');
+    if(q)  q.style.display  = (k==='live')   ? '' : 'none';
+    if(rv) rv.style.display = (k==='review') ? '' : 'none';
+    try{ document.body.classList.toggle('qopen', k==='live' || k==='review'); }catch(_){}
+    if(k==='live' || k==='review'){
+      try{ if(typeof renderGametime==='function') renderGametime(); }catch(_){}
+      /* And the question has to be the thing you are looking at — without
+         yanking the page if it already is. */
+      /* TOP OF THE PAGE, ALWAYS. Scrolling to the question alone pushed the
+         scoreboard off the top — which is the one thing the player was
+         looking at, and the reason the question is here rather than on its
+         own screen. The board collapses instead (see body.qopen) so both
+         fit above the fold on a 375px phone. */
+      try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(_){}
+    }
+  }catch(_){}
   syncLobbyPolling();
   syncLivePolling();
   save();
@@ -5802,7 +5861,17 @@ function afterReview(){
   // re-read the room once the write lands, or the rank they see is a full
   // round stale and they look pinned to last place all night.
   pushScore().then(()=>{ if(S.screen==='lobby') refreshRoom(); }).catch(()=>{});
-  if(!isLastRound(S.qi)){S.nextQ=S.qi+1;renderLobby(S.nextQ);go('lobby');}
+  /* BACK TO THE GAME, NOT TO A WAITING ROOM. The old flow sent you to the
+     lobby after every quarter — a screen whose entire content is "wait
+     here", arrived at four times a night at the exact moment you were most
+     engaged. You go back to Gametime now: the score, your number, the deep
+     cut and the feed, all still running. */
+  if(!isLastRound(S.qi)){
+    S.nextQ=S.qi+1;
+    try{ renderLobby(S.nextQ); }catch(_){}
+    try{ renderGametime(); }catch(_){}
+    go('gametime');
+  }
   else{openPredReview();}
 }
 
@@ -10150,7 +10219,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-12-g7-tor-dal.77';
+const STATS_BUILD='2026-08-12-onepage.78';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -10246,7 +10315,12 @@ try{backendBadge();}catch(e){}
    hide the nav is a LIVE question with a clock on it, and the final screen
    is the opposite of that — it is the end, and the end of a game must not
    be the end of the product. The nav comes back at the buzzer. */
-const NAV_HIDE_ON = ['live','tally'];
+/* 'live' came off this list when the question moved onto Gametime. Hiding
+   the nav used to be the right call because the question was its own
+   screen and wandering away from it lost you the round. Now the question
+   IS the Gametime tab, so hiding the nav would hide the tab you are
+   standing on — and the round follows you anyway. */
+const NAV_HIDE_ON = ['tally'];
 /* The explicit door, for anyone who does not look at the bottom of the
    screen. Clears the night's local state first so Home paints as Home and
    not as "continue tonight's game" for a game that is over. */
@@ -10435,7 +10509,15 @@ function paintNav(active){
      so the rail sat directly above it printing the same two numbers in
      smaller type. Two scoreboards stacked is not redundancy, it is a bug
      you can see. */
-  try{ paintRail(!hide && scr!=='gametime' && (typeof S!=='undefined') && S.mode==='live'); }catch(_){}
+  /* THE RAIL IS OFF WHEREVER THE BIG BOARD IS. It used to test for the
+     string 'gametime', which stopped being the right test the moment the
+     question and the review moved onto that same page — a compact score
+     strip pinned above a 52px scoreboard is two scoreboards, and pinned
+     over a 20-second clock it costs somebody the question. Ask which
+     SECTION is on screen, not which word S.screen happens to hold. */
+  var onBoard=false;
+  try{ onBoard = (map[scr]==='s-gametime'); }catch(_){ onBoard = (scr==='gametime'); }
+  try{ paintRail(!hide && !onBoard && (typeof S!=='undefined') && S.mode==='live'); }catch(_){}
   try{ paintGameBar(); }catch(_){}
   try{ if(scr==='landing') paintContinueCard(); }catch(_){}
   // The pick-slip's action bar belongs to exactly one screen.
@@ -10649,6 +10731,7 @@ async function loadGameStats(force){
                   nothing and every night painted identically, which is the
                   exact bug this feature exists to end. */
                color:'#'+String((c.team&&c.team.color)||(t.team&&t.team.color)||'').replace(/^#/,''),
+               alt:'#'+String((c.team&&c.team.alternateColor)||(t.team&&t.team.alternateColor)||'').replace(/^#/,''),
                home:c.homeAway==='home', score:c.score==null?null:Number(c.score),
                rec:((c.records||[])[0]||{}).summary||'', m:m,
                stat:function(k){ return this.m[k]; } };
@@ -10913,11 +10996,65 @@ function tcGuard(hex){
     return out;
   }catch(_){ return null; }
 }
+/* ============ TWO TEAMS THAT LOOK THE SAME ARE ONE TEAM ============
+   Tonight is the case this was always going to hit: Toronto is #33476D and
+   Dallas is #002b5c. Both navy. Run them through the contrast guard, which
+   only ever compares a colour against the BACKGROUND, and you get two
+   near-identical blues on the same scoreboard — so the score, the run bar,
+   the shot zones and the feed edge all stop telling you who did what.
+
+   Colour has to be distinguishable from the background AND from the other
+   team. When the two are too close, the AWAY side moves to its alternate
+   (Toronto's is maroon), and if that is no better it takes the house teal,
+   which is guaranteed to separate. Home keeps its real colour, because
+   somebody has to, and the home crowd's colour is the one on the floor. */
+function tcHue(h){
+  try{
+    h=String(h||'').replace(/^#?/,'#'); if(!/^#[0-9a-f]{6}$/i.test(h)) return null;
+    var r=parseInt(h.substr(1,2),16)/255,g=parseInt(h.substr(3,2),16)/255,b=parseInt(h.substr(5,2),16)/255;
+    var mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;
+    if(!d) return null;
+    var hu = mx===r?((g-b)/d+(g<b?6:0)) : mx===g?((b-r)/d+2) : ((r-g)/d+4);
+    return (hu*60+360)%360;
+  }catch(_){ return null; }
+}
+function tcTooClose(a,b){
+  try{
+    if(tcRatio(a,b) < 1.6) return true;            // too similar in lightness
+    var ha=tcHue(a), hb=tcHue(b);
+    if(ha==null || hb==null) return false;
+    var d=Math.abs(ha-hb); if(d>180) d=360-d;
+    return d < 40;                                  // and too similar in hue
+  }catch(_){ return false; }
+}
+/* The furthest apart of a small, deliberately on-brand set. Measured, not
+   chosen: hue distance first, then contrast against the page. */
+function tcFarFrom(other){
+  var pool=['#ffc54d','#2ee6a6','#ff7a8a','#28e0d0','#ff924d','#b57cff'];
+  var ho=tcHue(other), best=pool[0], bestD=-1;
+  pool.forEach(function(c){
+    if(tcTooClose(c,other)) return;
+    var hc=tcHue(c); if(hc==null||ho==null) return;
+    var d=Math.abs(hc-ho); if(d>180) d=360-d;
+    if(d>bestD){ bestD=d; best=c; }
+  });
+  return best;
+}
 function paintTeamColours(){
   try{
     if(!GS.ok || !GS.teams || GS.teams.length!==2) return;
     var A=GS.teams[0], B=GS.teams[1];
     var av=tcGuard(A.color)||'#7fe3c7', hv=tcGuard(B.color)||'#4a86ff';
+    if(tcTooClose(av,hv)){
+      var alt=tcGuard(A.alt||'');
+      /* The alternate first, because it is still the team's own colour.
+         Only if that is no better do we borrow one, and then we PICK the
+         borrowed one by measurement rather than by having a favourite —
+         the first version of this reached for the house teal and produced
+         teal against blue, which is the same failure wearing a nicer hex. */
+      av = (alt && !tcTooClose(alt,hv)) ? alt : tcFarFrom(hv);
+      GS.colourSplit=true;
+    } else { GS.colourSplit=false; }
     var root=document.documentElement;
     root.style.setProperty('--away',av); root.style.setProperty('--home',hv);
     GS.awayC=av; GS.homeC=hv;
@@ -11074,7 +11211,7 @@ function renderBoard(){
 
    Indexed by lowercased display name so it joins straight onto the box
    score. Cached for the night — season averages do not move mid-game. */
-var SEA={ok:false,at:0,loading:false,by:{},n:0,err:''};
+var SEA={ok:false,at:0,loading:false,by:{},n:0,err:'',tries:0,lastTry:0};
 var SEA_CATS=[
   ['general',0,'gp','Games'],
   ['general',2,'dd','Double-doubles'],
@@ -11090,9 +11227,26 @@ var SEA_CATS=[
   ['defensive',0,'stl','Steals a game'],
   ['defensive',1,'blk','Blocks a game']
 ];
-async function loadSeason(){
-  if(SEA.loading || SEA.ok) return SEA;
-  SEA.loading=true;
+/* ============ A LOAD THAT FAILED IS NOT A LOAD THAT IS LOADING =======
+   "The stats is still not connecting."
+
+   It usually was connecting. What it was doing was worse: when the season
+   table failed — a slow phone, a rate limit, a captive portal — the header
+   read "DEEP CUTS · loading the season table…" and stayed that way for the
+   rest of the night. There was no retry and no way to know it had given
+   up, because the word on the screen said it hadn't. Same disease as the
+   green light over "Live count unavailable", in a different tab.
+
+   Now: three attempts with backoff, a state you can read (`SEA.state` is
+   one of loading / ok / failed), an honest line when it has failed, and a
+   button that tries again. A failure the player can act on is a different
+   thing entirely from a spinner that lies. */
+async function loadSeason(force){
+  if(SEA.loading) return SEA;
+  if(SEA.ok && !force) return SEA;
+  if(!force && SEA.tries>=3 && Date.now()-SEA.lastTry < 60000) return SEA;
+  if(force){ SEA.tries=0; SEA.err=''; }
+  SEA.loading=true; SEA.tries++; SEA.lastTry=Date.now();
   try{
     var path=sportCfg().path;
     var url='https://site.web.api.espn.com/apis/common/v3/sports/'+path
@@ -11115,8 +11269,35 @@ async function loadSeason(){
     if(!SEA.ok) SEA.err='no season rows';
   }catch(e){ SEA.err=e.message||'season feed unavailable'; }
   SEA.loading=false;
+  SEA.state = SEA.ok ? 'ok' : (SEA.tries<3 ? 'retrying' : 'failed');
+  /* One more go, quietly, before admitting defeat — most of these are a
+     single dropped request on a phone that has just woken up. */
+  if(!SEA.ok && SEA.tries<3){ setTimeout(function(){ try{ loadSeason(); }catch(_){} }, 2500*SEA.tries); }
+  try{ if((S&&S.screen)==='stats' && typeof renderStats==='function') renderStats(); }catch(_){}
   return SEA;
 }
+/* The line the Stats tab prints about the season table. It is allowed to
+   say three things and "loading" is only one of them. */
+function seaNote(){
+  if(SEA.ok) return '';
+  if(SEA.loading || SEA.state==='retrying') return ' · loading the season table…';
+  if(SEA.state==='failed') return ' · season table unavailable';
+  return ' · loading the season table…';
+}
+function seaRetryHTML(){
+  if(SEA.ok || SEA.state!=='failed') return '';
+  return '<div class="card" style="padding:13px 15px;margin-top:10px">'
+    + '<div style="font-size:14px;font-weight:800;color:var(--ink)">Couldn\u2019t load the season table</div>'
+    + '<p class="sub" style="font-size:14px;margin:6px 0 10px">Tonight\u2019s box score is fine \u2014 this is the league-wide table that '
+    + 'powers season ranks and averages. Deep cuts still work, they just can\u2019t say where a number ranks.</p>'
+    + '<button class="btn ghost sm" onclick="seaRetry()">Try again</button></div>';
+}
+function seaRetry(){
+  try{ SEA.state='retrying'; if(typeof renderStats==='function') renderStats(); }catch(_){}
+  try{ loadSeason(true).then(function(){ try{ seaFillGaps(); }catch(_){} 
+        try{ if((S&&S.screen)==='stats') renderStats(); }catch(_){} }); }catch(_){}
+}
+try{ window.seaRetry=seaRetry; }catch(_){}
 /* THE PLAYERS THE LEAGUE TABLE LEAVES OUT. The byathlete endpoint only
    returns QUALIFIED players — 128 of them — and a starter who has missed a
    month is not on it. Sabrina Ionescu, 21 games played on a night she is
@@ -11832,7 +12013,8 @@ function renderStats(){
     } else if(!cuts.length){
       out+=stEmpty('💎','Nothing worth telling you yet','Give it a few minutes of basketball. This only ever shows things that are actually true right now.');
     } else {
-      out+=stCard('DEEP CUTS'+(SEA.ok?'':' · loading the season table…'),
+      out+=seaRetryHTML();
+      out+=stCard('DEEP CUTS'+seaNote(),
         cuts.slice(0,14).map(function(c){
           return '<div class="stFact"><div class="stFactI">'+c.i+'</div><div class="stFactB">'
             + '<div class="stFactT">'+c.t+'</div>'
@@ -11895,7 +12077,7 @@ function ico(n){
   return '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" '
        + 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
 }
-var FEED={ items:[], seenTop:0, pending:0, reacts:{}, at:0 };
+var FEED={ items:[], seenTop:0, pending:0, reacts:{}, at:0, seaKicked:false };
 var FEED_EMOJI=['🔥','😮','😂','💯'];
 
 /* Plays worth a card. A missed jumper by a bench player is not news; a
@@ -12098,9 +12280,26 @@ function feedRender(force){
   /* The Feed shows deep cuts too, so it needs the same two background
      tables the Stats tab does. Kicked off from here as well, or a player
      who never opens Stats gets a feed with no history in it. */
-  try{ if(!SEA.ok && !SEA.loading) loadSeason().then(function(){
-        seaFillGaps(); loadLogs().then(function(){ try{ feedRender(true); }catch(_){} });
-      }); }catch(_){}
+  /* ============ THE LOOP THIS USED TO BE ============================
+     This kicked the season load whenever it was not loaded, and re-rendered
+     the feed when it came back. That was survivable while a failed load
+     took a network round trip. The moment loadSeason grew a backoff — and
+     started returning an already-resolved promise once it had given up —
+     it became a tight infinite loop: render, ask, resolve instantly, render.
+     The suite hung; a phone would have spun its fan flat.
+
+     One kick per session, and a re-render only when something actually
+     arrived. */
+  try{
+    if(!SEA.ok && !SEA.loading && !FEED.seaKicked){
+      FEED.seaKicked=true;
+      loadSeason().then(function(){
+        if(!SEA.ok) return;                       // nothing new to paint
+        try{ seaFillGaps(); }catch(_){}
+        loadLogs().then(function(){ try{ feedRender(true); }catch(_){} });
+      });
+    }
+  }catch(_){}
   var items=feedBuild();
   if(!items.length){
     el.innerHTML='<div class="card center" style="padding:24px 18px">'
@@ -13156,6 +13355,23 @@ body.member #s-landing .brand{margin-top:6px}
 .adraw>summary:hover{color:var(--body)}
 .adrawin{padding:0 0 14px}
 .adrawin .ablk:first-child{margin-top:4px}
+
+/* ============ THE BOARD MAKES ROOM FOR A QUESTION ==================
+   With the question on the same page as the scoreboard, the two of them
+   have to fit above the fold on the smallest phone we support or the
+   whole point of moving it here is lost. So while a question or a review
+   is open the board sheds everything that is not the score: the
+   win-probability sparkline, the run bar, the records. They come back the
+   moment it is answered. Nothing is removed from the DOM — this is a
+   height problem, not a data problem. */
+body.qopen #gtHead .apane,
+body.qopen #gtHead .ablk:nth-of-type(2),
+body.qopen #gtHead .atm .rec{display:none}
+body.qopen #gtHead .card{padding-top:11px;padding-bottom:11px}
+body.qopen #gtHead .atm .n{font-size:40px;letter-spacing:-2px}
+body.qopen #gtHead .ascore{padding:8px 0 0}
+/* and the question is what your eye lands on */
+body.qopen #gtQuestion{scroll-margin-top:8px}
 
 /* Duplicated on purpose: paintTeamColours overwrites --away/--home at
    runtime, and this keeps a sane default if the feed never lands. */
