@@ -46,14 +46,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="STATS GAMETIME">
 <meta property="og:title" content="STATS GAMETIME — the game that pays to pay attention">
-<meta property="og:description" content="Free live play-along for people watching sport. Predict before tip, call it during the game, climb the board.">
+<meta property="og:description" content="Free live play-along for people watching sport. Predict before tip, catch what happens during the game, climb the board.">
 <meta property="og:url" content="https://statsgametime.com/">
 <meta property="og:image" content="https://statsgametime.com/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="STATS GAMETIME — the game that pays to pay attention">
-<meta name="twitter:description" content="Free live play-along for people watching sport. Predict before tip, call it during the game, climb the board.">
+<meta name="twitter:description" content="Free live play-along for people watching sport. Predict before tip, catch what happens during the game, climb the board.">
 <meta name="twitter:image" content="https://statsgametime.com/og.png">
 <title>STATS GAMETIME — The game that pays to pay attention</title>
 <style>
@@ -826,7 +826,7 @@
       </div>
       <div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:11px">
         <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:var(--card2);border:1px solid var(--line2);color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">2</span>
-        <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Call it live.</b> <span style="color:var(--muted,#93a0bd)">One-tap reads during the game as it happens.</span></div>
+        <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Caught it live.</b> <span style="color:var(--muted,#93a0bd)">One-tap reads during the game as it happens.</span></div>
       </div>
       <div style="display:flex;gap:11px;align-items:flex-start">
         <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:var(--card2);border:1px solid var(--line2);color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">3</span>
@@ -1112,7 +1112,7 @@
   <!-- 4. LOBBY / TIP-OFF -->
   <!-- ME — a tab needs a destination. Scrolling Home to the top was a
        placeholder pretending to be navigation. -->
-  <!-- GAMETIME — where you park while the game is on. Call It renders
+  <!-- GAMETIME — where you park while the game is on. Caught It renders
        INSIDE here rather than floating over whatever you were doing.
        A live prompt should have an address, not ambush you. -->
   <section class="screen" id="s-gametime">
@@ -1120,7 +1120,7 @@
          says which tab you are on, in a highlighted colour, permanently —
          a page title repeating it cost ninety vertical pixels on a phone
          at the top of the one screen you sit on all night. -->
-    <!-- THE ANCHOR. Three attempts at "where does a Call It go" all failed
+    <!-- THE ANCHOR. Three attempts at "where does a Caught It go" all failed
          for the same reason: the question was being positioned relative to
          the SCREEN when it should be positioned relative to the SCORE. In
          the feed it scrolled away. Pinned to the bottom it sat in the
@@ -1184,7 +1184,7 @@
       </div>
     </div>
     <div id="gtIdle"></div>
-    <!-- THE FEED. Everything below the Call It slot is an endless scroll of
+    <!-- THE FEED. Everything below the Caught It slot is an endless scroll of
          the game itself: every bucket, every run, every deep cut, and your
          own card moving. See the FEED engine for why this exists. -->
     <button type="button" id="feedNew" onclick="feedShowNew()" style="display:none">↑ new</button>
@@ -1241,15 +1241,12 @@
       <span id="alertTxt">🔔 Ping me when the next quarter drops</span>
       <button class="alertbtn" id="alertBtn" onclick="alertBtnTap()">Turn on</button>
     </div>
-    <div class="a2hs" id="a2hs">
-      <div class="t" id="a2hsT">📲 Put STATS on your home screen</div>
-      <div class="b" id="a2hsB"></div>
-      <div class="acts">
-        <button class="go" id="a2hsGo" onclick="a2hsGo()">Show me</button>
-        <button class="no" onclick="a2hsNo()">Not now</button>
-      </div>
-    </div>
-    <!-- LIVE SCORE + LIVE STANDINGS.
+    <!-- The "put STATS on your home screen" card is gone. It was asking a
+         player for an install on the screen where they were waiting to
+         play, every night, and it was the third thing they read. The
+         notification opt-in above it earns its place; this did not. The
+         install path still exists on the Me tab for anyone who wants it. -->
+<!-- LIVE SCORE + LIVE STANDINGS.
          Game Night #1's flattest stretch was the wait between quarters:
          locked picks, a button that does nothing yet, and no reason to
          keep the app open. "No live scores shown", "no participant scores
@@ -1299,7 +1296,7 @@
        live, review, lobby — and every one of those transitions was a place
        to lose state, show a stale screen, or strand somebody. The question
        and the scoring now happen IN PLACE on Gametime, under the same
-       scoreboard you were already looking at, which is where Call It has
+       scoreboard you were already looking at, which is where Caught It has
        always worked and is the only part of the night nobody has ever
        reported getting lost in.
 
@@ -2697,7 +2694,7 @@ window.STATS_FIREBASE = {
     } catch (e) { return function () {}; }
   };
 
-  /* ---- Call It: the live in-game side-game (ISOLATED) ----------------
+  /* ---- Caught It: the live in-game side-game (ISOLATED) ----------------
      A separate code path from the scored game. Reads the host-written
      questions, writes ONE create-only pick per question, and a self-
      updated streak board. None of this touches pts, rounds, or the HR
@@ -3767,7 +3764,7 @@ function promptSignIn(after){
 let PENDING_AFTER=null;
 /* ============ A CLEAN SLATE, GUARANTEED ==============================
    Walking out of a live game by hand means unpicking a dozen pieces of
-   state — the card, the points, the Call It streak, the room seat, the
+   state — the card, the points, the Caught It streak, the room seat, the
    round index — and every one we forget is a ghost that turns up an hour
    later looking like a fresh bug. A reload is the only reset we can
    actually promise. Drop the save, note where to land, reload. */
@@ -3948,7 +3945,7 @@ function save(){try{
      card locked last night would be restored tonight, complete with last
      night's points and six players who are not in the building. */
   try{ S.nid=(typeof GAME!=='undefined'&&GAME.nightId)||''; }catch(_){}
-  // Snapshot the Call It record into the blob so a reload keeps the streak.
+  // Snapshot the Caught It record into the blob so a reload keeps the streak.
   try{ if(typeof PCI==='object') S.pci={called:PCI.called,hit:PCI.hit,streak:PCI.streak,best:PCI.best,heat:PCI.heat}; }catch(_){}
   localStorage.setItem(LS_KEY,JSON.stringify(S));
 }catch(e){}}
@@ -4045,7 +4042,7 @@ function doResume(){
   document.getElementById("resumeBar").style.display="none";
   document.getElementById("playerName").value=S.name||"";
   initColors();
-  // Restore the Call It record too. It lived in memory only, which is the
+  // Restore the Caught It record too. It lived in memory only, which is the
   // whole of "my streak is gone".
   try{
     if(S.pci && typeof PCI==='object'){
@@ -5177,7 +5174,7 @@ function lockPredictions(){
 }
 function renderLobby(qi){
   try{ renderAlertRow(); }catch(e){}
-  // Practice gets a taste of Call It in the lobbies before Q2 and Q3 —
+  // Practice gets a taste of Caught It in the lobbies before Q2 and Q3 —
   // learned here, so the real one mid-game needs no explanation.
   try{ if(S.mode==="demo"){ if(qi===0||qi===1) demoCallIt(0); if(qi>=2) demoCallIt(1); } }catch(e){}
   const btn=document.getElementById('lobbyBtn');
@@ -7564,11 +7561,11 @@ function hostedFor(qi){
 function startHostedWatch(){
   if(HR.unsub || !window.SB || !SB.watchRound) return;
   try{ HR.unsub = SB.watchRound(onHostedRound) || null; }catch(e){}
-  try{ startCallItWatch(); }catch(e){}   // Call It rides alongside, isolated
+  try{ startCallItWatch(); }catch(e){}   // Caught It rides alongside, isolated
   try{ ttBackgroundStart(); }catch(e){}  // and the room stops being silent
 }
 
-/* ================= CALL IT — player side (isolated side-game) =========
+/* ================= CAUGHT IT — player side (isolated side-game) =========
    A one-tap, dismissible card that shows the host's live question, locks
    the pick fast, self-grades off the resolved answer, and tracks a streak
    on a board that is SEPARATE from the 100-pt leaderboard. It never calls
@@ -7582,15 +7579,15 @@ function startCallItWatch(){
   try{ PCI.unsub = SB.watchCallIt(onCallItQuestions) || null; }catch(e){}
 }
 
-/* ---- Call It, practice edition ------------------------------------
+/* ---- Caught It, practice edition ------------------------------------
    The simulator taught every part of the night except the one that
-   happens DURING play. So a first-timer's first Call It question used
+   happens DURING play. So a first-timer's first Caught It question used
    to arrive mid-Q2 of a real game — the worst possible moment to learn
    a new mechanic. These are canned questions fed through the exact
    same card the live game uses: same look, same lock, same reveal,
    same streak flame. Nothing here touches the network; the only thing
    the guard below skips is the board write, which is live-night only. */
-/* ============ THE CALL IT BANK, BUILT FROM THE NUMBERS ==============
+/* ============ THE CAUGHT IT BANK, BUILT FROM THE NUMBERS ==============
    The old practice questions were "how many quarters are in a game",
    which teaches the button and insults the player. Every question below
    is generated from the live league feed at the moment it is asked, so
@@ -7603,7 +7600,7 @@ function startCallItWatch(){
      them has just done the homework their prediction card needs.
 
      DURING THE GAME — retrospective. What has already happened, which is
-     the house rule for Call It: never ask a player to predict something
+     the house rule for Caught It: never ask a player to predict something
      they cannot see, and never ask something the host can't settle in
      three seconds.
 
@@ -7619,7 +7616,7 @@ function ciTeamQ(id,prompt,label,dir,fmt){
     resolveText:(fmt||function(x,y){return A.ab+' '+x+', '+B.ab+' '+y+'.';})(gsFmt(label,A.stat(label)),gsFmt(label,B.stat(label))) };
 }
 /* ==================== BEFORE TIP, ASK ABOUT A GAME =================
-   "The Call It questions aren't good. They should be what happened
+   "The Caught It questions aren't good. They should be what happened
    during the game or some form of stats."
 
    Correct, and the pre-tip bank was the worst of it: "which defense gives
@@ -7627,7 +7624,7 @@ function ciTeamQ(id,prompt,label,dir,fmt){
    either happen to know it or you guess, and either way you learned
    nothing and watched nothing.
 
-   The house rule for Call It has always been ASK ABOUT SOMETHING THAT
+   The house rule for Caught It has always been ASK ABOUT SOMETHING THAT
    HAPPENED. Before tip there is no tonight to ask about — but there are
    two games these teams have already played against each other, and five
    recent games each, all of it sitting in the same response we already
@@ -7895,7 +7892,7 @@ function ciLiveBank(){
 /* STABLE ORDER, ON PURPOSE. An earlier version shuffled here, which looked
    harmless and was not: the lobby fires demo questions guarded by "have I
    already fired this question id?", and a shuffled bank hands back a
-   different id every call — so the guard never matched and a new Call It
+   different id every call — so the guard never matched and a new Caught It
    popped up on every single lobby repaint. Shuffling belongs to the caller
    that actually wants variety (the practice button), never to the bank. */
 function ciBank(){
@@ -7931,7 +7928,7 @@ function demoCiSet(){
   if(haveScore && leader!=='tie'){
     out.push({ qid:'demo-ci-1', prompt:'Scoreboard check — who is ahead right now?',
       options:[{k:H,v:'home'},{k:A,v:'away'}], answer:leader,
-      resolveText:(leader==='home'?H:A)+' lead it '+Math.max(hs,as)+'–'+Math.min(hs,as)+'. That’s Call It: one look, one tap, back to the game.' });
+      resolveText:(leader==='home'?H:A)+' lead it '+Math.max(hs,as)+'–'+Math.min(hs,as)+'. That’s Caught It: one look, one tap, back to the game.' });
     out.push({ qid:'demo-ci-2', prompt:'How close is it — is the lead under 5?',
       options:[{k:'Under 5',v:'u'},{k:'5 or more',v:'o'}], answer:(margin<5?'u':'o'),
       resolveText:'It’s '+margin+' point'+(margin===1?'':'s')+'. On game night these land the moment something happens.' });
@@ -7939,7 +7936,7 @@ function demoCiSet(){
     // No feed yet — ask something the player can still answer from the app.
     out.push({ qid:'demo-ci-1', prompt:'Warm-up — how many quarters does a game night run?',
       options:[{k:'Four',v:'4'},{k:'Two',v:'2'}], answer:'4',
-      resolveText:'Four quarters, and the last is worth four times the first. That’s Call It — one tap, straight back to the game.' });
+      resolveText:'Four quarters, and the last is worth four times the first. That’s Caught It — one tap, straight back to the game.' });
     out.push({ qid:'demo-ci-2', prompt:'Which quarter is worth the most points?',
       options:[{k:'Q1',v:'1'},{k:'Q4',v:'4'}], answer:'4',
       resolveText:'Q4 — 40 points a question. Nobody is out of it until the buzzer.' });
@@ -8072,7 +8069,7 @@ function ensureCiCard(){
     '#ciCard .cifoot{display:flex;gap:16px;align-items:center}'+
     '#ciCard .cimute{margin-top:10px;background:none;border:none;color:#5b6a8c;font-size:12px;cursor:pointer;text-decoration:underline}'+
     /* "The x you can't click and close it" — because there was no x. The
-       only dismissal was a link that muted Call It for the whole night,
+       only dismissal was a link that muted Caught It for the whole night,
        which is not the same offer at all. This closes THIS card. */
     '#ciCard .cix{position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:10px;'+
       'display:grid;place-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);'+
@@ -8119,7 +8116,7 @@ function ciOnGametime(){ try{ return (S&&S.screen)==='gametime'; }catch(_){ retu
 /* One card, two homes. On the Gametime tab it lives in the page, in its
    own slot, where the player is already looking. Anywhere else it is the
    floating sheet. Moving the node beats maintaining two renderers. */
-/* ---- A CALL IT HAS TO ARRIVE, NOT BE FOUND ------------------------
+/* ---- A CAUGHT IT HAS TO ARRIVE, NOT BE FOUND ------------------------
    It used to dock INTO the Gametime feed, as an ordinary card at whatever
    scroll position it happened to be created at. On the one tab people
    actually sit on during a game, a live twenty-second question was
@@ -8267,33 +8264,33 @@ function ciPick(q,v){
   try{ if(window.SB&&SB.callItPick) SB.callItPick(q.qid,v); }catch(e){}
   setTimeout(function(){ try{ renderCiCard(q); }catch(_){} }, 180);
 }
-/* ---- WHERE CALL IT IS ALLOWED TO EXIST -------------------------------
+/* ---- WHERE CAUGHT IT IS ALLOWED TO EXIST -------------------------------
    The rule, learned the hard way from a screenshot with two live questions
-   stacked on one screen: Call It NEVER shares space with a quarter
+   stacked on one screen: Caught It NEVER shares space with a quarter
    question. That question is the scoring task, it is on a 20-second clock,
    and a second prompt underneath it is not a feature — it is a way to lose
    the round you were actually being paid for.
 
-   So Call It is queued, not dropped. Arrive during a quarter question and
+   So Caught It is queued, not dropped. Arrive during a quarter question and
    it waits; the moment the player is back in dead air — lobby, break — it
    slides up, takes its six seconds, and gets out of the way. Which is also
-   when a real Call It belongs: the timeout, the free-throw walk-up, the
+   when a real Caught It belongs: the timeout, the free-throw walk-up, the
    moment the broadcast itself pauses.                                    */
 /* ============ ONE PAGE, TWO QUESTIONS, ONE CLOCK ====================
    "Let's also figure out one page when you can answer the questions at
-   the end of the quarter and have the Call It."
+   the end of the quarter and have the Caught It."
 
-   The old rule was blunt: Call It is banned on the 'live' screen. That
+   The old rule was blunt: Caught It is banned on the 'live' screen. That
    was right when 'live' was a separate page — a second prompt underneath
    a 20-second question is not a feature, it is a way to lose the round
    you are being paid for.
 
    But 'live' is not a page any more, it is a slot on Gametime, and the
    two questions now sit in the same scroll. So the rule gets sharper
-   instead of being deleted: Call It waits while a quarter question is
+   instead of being deleted: Caught It waits while a quarter question is
    OPEN AND UNANSWERED, and appears the moment you have locked your answer
    — in the slot directly below, with no screen change. You answer the
-   quarter, you look up, the Call It is already there.
+   quarter, you look up, the Caught It is already there.
 
    The clock is the thing being protected, not the screen. */
 var CI_BLOCKED=['name','join','rules','final','tally','landing'];
@@ -8317,7 +8314,7 @@ function renderCiCard(q){
   // Not now — hold it, and let ciFlush bring it back when the coast clears.
   if(!ciScreenOk()){ PCI.pending=q; c.style.display='none'; return; }
   var st=q.state||'open';
-  if(st==='void'){ ciShow('<div class="cihead">'+ico('live')+' Call It</div><div class="cibody">No result on that one — no harm done.</div>'); ciHideSoon(3500); return; }
+  if(st==='void'){ ciShow('<div class="cihead">'+ico('live')+' Caught It</div><div class="cibody">No result on that one — no harm done.</div>'); ciHideSoon(3500); return; }
   if(st==='resolved'){
     ciGrade(q);
     var pk=PCI.picked[q.qid];
@@ -8332,7 +8329,7 @@ function renderCiCard(q){
     var run  = (pk!=null && right && PCI.streak>1)
       ? '<div class="cirun">🔥 <b>'+PCI.streak+' in a row</b>'+(PCI.streak>=3?' — you’re on a run':'')+'</div>'
       : (pk!=null && !right && PCI.best>1 ? '<div class="cirun cimiss">streak reset · your best is '+PCI.best+'</div>' : '');
-    ciShow('<div class="cihead">'+ico('live')+' Call It · resolved</div>'+
+    ciShow('<div class="cihead">'+ico('live')+' Caught It · resolved</div>'+
            '<div class="cires'+(right?' ok':(pk==null?'':' no'))+'"><span class="ciresi">'+icon+'</span>'+
              '<div><div class="ciresh">'+esc(head)+'</div>'+
              (pk!=null?('<div class="ciresp">You said '+esc(ciLabel(q,pk))+'</div>'):'')+'</div></div>'+
@@ -8369,7 +8366,7 @@ function renderCiCard(q){
      your attention carried on demanding it after you had already dealt
      with it. */
   if(pick!=null && st!=='resolved'){
-    ciShow('<div class="cihead">'+ico('live')+' Call It · locked in</div>'+
+    ciShow('<div class="cihead">'+ico('live')+' Caught It · locked in</div>'+
            '<div class="cilocked"><span class="cichk">✓</span>'+
              '<div class="cilb"><div class="cilv">'+esc(ciLabel(q,pick))+'</div>'+
              '<div class="cilq">'+esc(q.prompt)+'</div></div>'+
@@ -8377,7 +8374,7 @@ function renderCiCard(q){
            '</div>'+
            '<div class="ciwait"><i></i></div>'+
            '<div class="cistat">Answer lands when the play settles. You can keep watching.</div>'+
-           '<div class="cifoot"><button class="cimute" data-cimute="1">mute Call It</button>'+
+           '<div class="cifoot"><button class="cimute" data-cimute="1">mute Caught It</button>'+
            '<button class="cimute" data-cihide="1">hide this</button></div>');
   } else {
     var opts=(q.options||[]).map(function(o){
@@ -8386,11 +8383,11 @@ function renderCiCard(q){
     var status = locked ? 'Time — the answer lands in a moment'
                         : 'Tap one. You’ve got a few seconds.';
     ciShow((locked?'':'<div class="cilockbar"><i style="width:'+pctLeft+'%;transition:width .25s linear"></i></div>')+
-           '<div class="cihead">'+ico('live')+' Call It</div>'+
+           '<div class="cihead">'+ico('live')+' Caught It</div>'+
            '<div class="ciq">'+esc(q.prompt)+'</div>'+
            '<div class="ciopts">'+opts+'</div>'+
            '<div class="cistat">'+status+(PCI.streak?(' · 🔥 '+PCI.streak+' in a row'):'')+'</div>'+
-           '<div class="cifoot"><button class="cimute" data-cimute="1">mute Call It</button></div>', !locked);
+           '<div class="cifoot"><button class="cimute" data-cimute="1">mute Caught It</button></div>', !locked);
   }
   var card=document.getElementById('ciCard');
   Array.prototype.forEach.call(card.querySelectorAll('.ciopt'), function(b){
@@ -8400,7 +8397,7 @@ function renderCiCard(q){
   var hb=card.querySelector('[data-cihide]'); if(hb) hb.onclick=function(){ card.style.display='none'; try{ if(typeof renderGametime==='function') renderGametime(); }catch(_){} };
   /* YOUR ANSWER IS IN — THE CARD GETS OUT OF THE WAY. A locked card that
      sits on screen until a host somewhere remembers to resolve it is how a
-     Call It ends up parked over the leaderboard for a whole quarter. The
+     Caught It ends up parked over the leaderboard for a whole quarter. The
      pick is already recorded, so hiding costs nothing; when the result
      lands the watcher renders the resolved card and it comes back. */
   /* Four seconds, not nine. Your pick is already recorded and the resolved
@@ -10193,7 +10190,7 @@ function renderPortal(){
       +'<div style="display:flex;gap:8px">'
       +  stat(season.toLocaleString(),'Season pts')
       +  stat(nights,'Game nights')
-      +  stat(ciBest?('🔥'+ciBest):'—','Best Call It')
+      +  stat(ciBest?('🔥'+ciBest):'—','Best Caught It')
       +'</div>'
       +'<p class="sub" style="font-size:12px;margin:10px 0 0">Your handle, card and points follow you to any phone.</p>';
     w.style.display='block';
@@ -10322,7 +10319,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-12-phonefix.79';
+const STATS_BUILD='2026-08-12-caughtit.80';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -10625,7 +10622,7 @@ function paintNav(active){
   try{ if(scr==='landing') paintContinueCard(); }catch(_){}
   // The pick-slip's action bar belongs to exactly one screen.
   try{ const pb=document.getElementById('pdBar'); if(pb) pb.style.display=(scr==='predict')?'block':'none'; }catch(_){}
-  // Call It is an in-game overlay. On the landing, the handle screen or the
+  // Caught It is an in-game overlay. On the landing, the handle screen or the
   // pick sheet it is just a box covering the nav — which is exactly how the
   // menu "disappeared".
   try{
@@ -10657,7 +10654,7 @@ function paintNav(active){
   }catch(e){}
 })();
 try{ setTimeout(paintNav, 600); }catch(e){}
-/* Warm the stats feed on boot. The Call It bank is generated FROM it, so a
+/* Warm the stats feed on boot. The Caught It bank is generated FROM it, so a
    cold cache is the difference between "which defense gives up fewer points
    a night" and the canned fallback nobody wants. One request, same endpoint
    the matchup card already hits. */
@@ -10692,21 +10689,21 @@ function renderMe(){
       +     (sport?'<div style="font-size:12px;color:#28e0d0;margin-top:3px;font-weight:800">'+esc(sport)+' fan</div>':'')
       +   '</div>'
       + '</div>'
-      + '<div style="display:flex;gap:9px;margin-top:15px">'+tile(season.toLocaleString(),'Season pts')+tile(nights,'Game nights')+tile(best?('🔥'+best):'—','Best Call It')+'</div>'
+      + '<div style="display:flex;gap:9px;margin-top:15px">'+tile(season.toLocaleString(),'Season pts')+tile(nights,'Game nights')+tile(best?('🔥'+best):'—','Best Caught It')+'</div>'
       + '</div>'
       + '<button class="btn ghost" style="margin-top:12px" onclick="go(\'landing\')">← Back to tonight</button>'
       /* The rehearsal lives here now — off the Gametime tab, which is a
          place to watch a game, not a place to find a grey test button. */
       + '<div class="card" style="margin-top:12px;padding:14px 16px">'
       +   '<div class="stHd">TRY IT OUT</div>'
-      +   '<button type="button" id="meTry" class="pdlock" style="background:var(--card2);color:#cfd8ea;font-size:14px;padding:13px">Run a practice Call It</button>'
+      +   '<button type="button" id="meTry" class="pdlock" style="background:var(--card2);color:#cfd8ea;font-size:14px;padding:13px">Run a practice Caught It</button>'
       +   '<div class="sub" style="font-size:12px;margin-top:7px">Fires a real question built from tonight’s numbers. Practice only — it doesn’t count toward your streak or your points.</div>'
       + '</div>'
       + '<button class="btn ghost" style="margin-top:12px;font-size:14px" onclick="openJoin(\'me\',\'\')">Tell us what you watch</button>'
       + '<button class="btn ghost" style="margin-top:8px;font-size:14px" onclick="doSignOut()">Sign out</button>'
     : '<div class="card center">'
       + '<b style="font-size:15px">You’re not signed in yet</b>'
-      + '<p class="sub" style="margin:8px 0 14px">Sign in and this becomes your card — season points, game nights played, and your best Call It streak.</p>'
+      + '<p class="sub" style="margin:8px 0 14px">Sign in and this becomes your card — season points, game nights played, and your best Caught It streak.</p>'
       + '<button class="btn" onclick="go(\'landing\')">Go to sign in</button>'
       + '</div>';
   el.innerHTML += buildStampHTML();
@@ -10745,7 +10742,7 @@ function buildStampHTML(){
 
 /* ---- THE GAMETIME TAB ----------------------------------------------
    The answer to "where do I sit while the game is on." A score strip at
-   the top, a slot in the middle where live Call It prompts land, and an
+   the top, a slot in the middle where live Caught It prompts land, and an
    honest line about what happens next. Nothing here scores anything —
    it is a place to be, which is exactly what was missing.             */
 /* ==================== THE STATS ENGINE ==============================
@@ -10755,7 +10752,7 @@ function buildStampHTML(){
 
      · the Stats tab            (scouting sheet before tip, box score during)
      · your card tracked live   (your picks vs the real leaders, per category)
-     · the Call It bank         (questions built FROM the numbers, so every
+     · the Caught It bank         (questions built FROM the numbers, so every
                                  one of them has a verifiable answer)
 
    The normalised shape is the whole point. Nothing downstream knows about
@@ -10935,7 +10932,7 @@ async function loadGameStats(force){
     }catch(_){ _gi={}; }
     /* WHAT HAS ALREADY HAPPENED. Both of these arrive in the same summary
        response and both were being discarded. They are the only honest way
-       to run Call It before tip: a question about a game that has been
+       to run Caught It before tip: a question about a game that has been
        played is a question about something that happened, which is the
        house rule. A season average is trivia. */
     var _series=[], _form=[], _seriesSummary='';
@@ -11847,7 +11844,7 @@ function takeoverTick(){
   try{
     if(TAKE.showing) return;
     if(Date.now()-TAKE.last < TAKE.MIN_GAP) return;
-    // Never over a scoring question. Same rule as Call It, same reason.
+    // Never over a scoring question. Same rule as Caught It, same reason.
     if(typeof ciScreenOk==='function' && !ciScreenOk()) return;
     if(typeof S==='undefined' || S.mode!=='live') return;
     var c=takeoverCandidates().filter(function(x){ return !TAKE.seen[x.key]; })[0];
@@ -11999,7 +11996,7 @@ function renderStats(){
     out+='<div class="stYou">'
       + tile(pts.toLocaleString(),'Points tonight')
       + tile(rank?('#'+rank):'—', fieldN?('of '+fieldN+' tonight'):'Your rank')
-      + tile(hit,'Call It hits', PCI.called>0&&PCI.hit/PCI.called>=0.6?'#2ee6a6':'')
+      + tile(hit,'Caught It hits', PCI.called>0&&PCI.hit/PCI.called>=0.6?'#2ee6a6':'')
       + '</div>';
   }catch(_){}
 
@@ -12015,33 +12012,60 @@ function renderStats(){
     if(!mine.length){
       out+=stEmpty('📋','Your card isn’t filled in yet','Once you lock a card, this is where you watch it race the real box score, category by category.');
     } else if(!live){
-      out+=stCard('YOUR CARD', mine.map(function(p){
-        return '<div class="stLead"><span class="stLeadN">'+esc(p.label)+'</span><span class="stLeadV">'+esc(String(S.predChoices[p.id]))+'</span></div>';
-      }).join('') + '<div class="sub" style="font-size:12px;margin-top:8px">The moment the ball goes up, each of these becomes a live race.</div>');
-      /* A LIST OF NAMES IS NOT A STAT SCREEN. Before tip this pane was six
-         rows of "category — name" and a promise, on the tab literally
-         called Stats. Every one of those picks has a season number behind
-         it and we already have the league table in memory, so show what
-         each pick is actually bringing to the night. */
-      try{
-        var wrap=[], anyN=false;
-        mine.forEach(function(p){
-          var who=String(S.predChoices[p.id]||''); if(!who) return;
-          var sv=null; try{ sv=seaOf(who); }catch(_){}
-          if(!sv) return;
-          var cat=String(p.label||'').replace(/^most /i,'').toLowerCase();
-          var key={points:'pts',assists:'ast',rebounds:'reb',steals:'stl',blocks:'blk'}[cat];
-          var v=key?sv[key]:null;
-          if(v==null||!isFinite(v)) return;
-          anyN=true;
-          var rk=null; try{ rk=rankIn(key,who); }catch(_){}
-          wrap.push('<div class="stLead"><span class="stLeadN">'+esc(who)+'</span>'
-            +'<span class="stLeadV">'+(Math.round(v*10)/10)+' '+esc(cat)+'<span class="stLeadR">'
-            +(rk?(' '+ord(rk)+' in the WNBA'):'')+'</span></span></div>');
-        });
-        if(anyN) out+=stCard('WHAT YOUR PICKS AVERAGE', wrap.join('')
-          + '<div class="sub" style="font-size:12px;margin-top:8px">Season numbers, straight from the league table. This is the bar each of them has to clear tonight.</div>');
-      }catch(_){}
+      /* ============ YOUR PICK, NEXT TO THE ONE YOU HAVE TO BEAT ========
+         "I don't like the your card. Before you would have your score next
+         to the actual stat leader and it was a good way to keep track."
+
+         That is exactly what this pane does DURING a game, so before tip it
+         should be the same thing with season numbers instead of tonight's.
+         Instead it was two cards — a list of names, then a separate list of
+         averages with no opponent anywhere in it. A number with nothing to
+         beat is not a race, it is a receipt.
+
+         One card now, the same row as the live version: your pick and their
+         season average on the left, whoever actually leads that category on
+         the right, a bar for the gap, and a sentence saying what has to
+         change. When the ball goes up the numbers become tonight's and
+         nothing else about the row moves. */
+      var SEACAT={pts:'pts',reb:'reb',ast:'ast',stl:'stl',blk:'blk'};
+      var ahead0=0, rows0=mine.map(function(p){
+        var key=SEACAT[p.id]; if(!key) return '';
+        var who=String(S.predChoices[p.id]||''); if(!who) return '';
+        var sv=null; try{ sv=seaOf(who); }catch(_){}
+        var val=(sv && isFinite(sv[key])) ? Math.round(sv[key]*10)/10 : null;
+        var bestN='', bestV=-1;
+        try{
+          Object.keys(SEA.by||{}).forEach(function(k){
+            var r=SEA.by[k], v=r?r[key]:null;
+            if(v!=null && isFinite(v) && v>bestV){ bestV=v; bestN=r.name; }
+          });
+        }catch(_){}
+        var cat=String(p.label||'').replace(/^most /i,'').toLowerCase();
+        if(val==null && bestV<0){
+          return '<div class="stPickRow2"><div class="stPickCat">'+esc(p.label)+'</div>'
+            + '<div class="stPickTop"><span class="stPickMine">'+esc(who)+'</span>'
+            + '<span class="stPickLead2">no season number yet</span></div></div>';
+        }
+        var lead=(val!=null && bestV>=0 && val>=bestV);
+        if(lead) ahead0++;
+        var pctw=(bestV>0 && val!=null)?Math.max(4,Math.min(100,Math.round((val/bestV)*100))):4;
+        var gap=(val!=null && bestV>0 && !lead)?Math.round((bestV-val)*10)/10:0;
+        var need = lead
+          ? '<div class="stNeed">Your pick leads the league in '+esc(cat)+'.</div>'
+          : (val==null
+             ? '<div class="stNeed">'+esc(who)+' has no qualifying league average for '+esc(cat)+' yet.</div>'
+             : '<div class="stNeed">'+gap+' '+esc(cat)+' a game behind '+esc(bestN)+' — but tonight is one game, so the gap is smaller than it looks.</div>');
+        return '<div class="stPickRow2">'
+          + '<div class="stPickCat">'+esc(p.label)+'</div>'
+          + '<div class="stPickTop"><span class="stPickMine'+(lead?' lead':'')+'">'+esc(who)+' <b>'+(val==null?'–':val)+'</b></span>'
+          +   '<span class="stPickLead2">'+(bestV<0?'—':('league '+esc(bestN)+' '+(Math.round(bestV*10)/10)))+'</span></div>'
+          + '<div class="stRace"><i style="width:'+pctw+'%;background:'+(lead?'#2ee6a6':'#28e0d0')+'"></i></div>'
+          + need + '</div>';
+      }).join('');
+      out+=stCard('YOUR CARD · SEASON FORM'+(SEA.ok?'':' · league table still loading'), rows0
+        + '<div class="sub" style="font-size:12px;margin-top:8px">Season averages against the league leader in each category. '
+        + 'The moment the ball goes up these become tonight’s numbers and it is a live race.</div>');
+      out+=seaRetryHTML();
     } else {
       var cfg=sportCfg().box, KEY={pts:cfg.pts,reb:cfg.reb,ast:cfg.ast,stl:cfg.stl,blk:cfg.blk};
       var winning=0, rows=mine.map(function(p){
@@ -12182,7 +12206,7 @@ try{ setInterval(function(){ try{ if((S&&S.screen)==='stats'){ loadGameStats().t
      2. IT IS BUILT, NOT STREAMED. The whole feed is derived from GS on
         every repaint, so a reload rebuilds it identically and there is no
         second copy of the truth to drift.
-     3. IT NEVER STEALS A TAP. Call It still owns the slot above; the feed
+     3. IT NEVER STEALS A TAP. Caught It still owns the slot above; the feed
         is what you scroll while you wait for one.
    ==================================================================== */
 /* One place for the interface's own glyphs. Emoji were doing this job and
@@ -12286,7 +12310,7 @@ function feedCardWatch(){
 
    The warm-up is the same feed, built from what we DO know before tip:
    the clock, the state of your card, who the season says to watch (with
-   real league ranks), who is ruled out, and a Call It you can fire right
+   real league ranks), who is ruled out, and a Caught It you can fire right
    now. Every card is real. None of it is filler.
    ================================================================== */
 function tipMs(){
@@ -12358,7 +12382,7 @@ function feedWarmUp(){
 
     // 5. something to actually press
     out.push({k:'try',id:'w-try',seq:1,icon:ico('live'),
-      text:'<b>Try a Call It now.</b> A real question, built from tonight’s numbers. It doesn’t count for anything.',
+      text:'<b>Try a Caught It now.</b> A real question, built from tonight’s numbers. It doesn’t count for anything.',
       meta:'', tag:'rehearsal', big:true});
   }catch(_){}
   return out;
@@ -12613,7 +12637,7 @@ function paintRun(){
      1. what is the score              the board
      2. is my team going to win        win probability, and the shape of it
      3. what just happened             the run
-     4. can I answer something         Call It, in place, never below the fold
+     4. can I answer something         Caught It, in place, never below the fold
      5. tell me something I don't know the deep cut
      6. show me the game               shot chart, who found who, who swung it
      7. what happened before I looked  the feed
@@ -13040,7 +13064,7 @@ function gtYourNight(){
   }catch(_){ return ''; }
 }
 
-/* ---- YOUR CALL IT NIGHT --------------------------------------------- */
+/* ---- YOUR CAUGHT IT NIGHT --------------------------------------------- */
 function gtCallItRecord(){
   try{
     if(!(PCI && PCI.called>0)) return '';
@@ -13124,7 +13148,7 @@ function gtDeepCutBlock(){
   }catch(_){ return ''; }
 }
 
-/* THE TEST HOOK. Fires a real Call It card, through the real renderer, into
+/* THE TEST HOOK. Fires a real Caught It card, through the real renderer, into
    the real slot — no game required. Every run gets a fresh qid so it can be
    run again and again, and it resolves a beat after you answer instead of
    sitting on a 22-second timer, because a test you have to wait out is a
@@ -13299,7 +13323,12 @@ body.hasnav{padding-bottom:calc(74px + env(safe-area-inset-bottom,0px))}
 .raildot{flex:0 0 auto;width:4px;height:4px;border-radius:99px;background:var(--line)}
 .railme{flex:0 0 auto;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;white-space:nowrap}
 .railme b{color:var(--gold,var(--gold));font-weight:900;font-size:14px}
-body.hasrail{padding-top:38px}
+/* THE RAIL WAS SITTING ON TOP OF THE FIRST CARD. The offset was a flat
+   38px, but the rail's own padding includes env(safe-area-inset-top) — so
+   on a notched phone the strip is taller than the space reserved for it
+   and it covers whatever is at the top of the screen. Reserve the real
+   height, not a guess at it. */
+body.hasrail{padding-top:calc(38px + env(safe-area-inset-top,0px))}
 
 /* ---- the feed ---- */
 #feedNew{position:sticky;top:8px;z-index:40;display:block;margin:0 auto;border:none;
