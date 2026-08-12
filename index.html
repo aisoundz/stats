@@ -5049,7 +5049,14 @@ function buildPred(){
   const worth=predWorthOf(p);
   const picked=S.predChoices[p.id]||'';
   const doneN=preds.filter(x=>S.predChoices[x.id]).length;
-  const pct=Math.round(((PD.i+1)/L.length)*100);
+  /* THE BAR IS PROGRESS, THE DOTS ARE POSITION. Found on a phone: the sheet
+     opened reading "1 / 6" over a bar already a sixth full, six inches above
+     a footer reading "0 / 6 locked". Both numbers were true — one counted
+     which card you were LOOKING at, the other counted what you had DONE —
+     and a player has no way to know that. Two counters that disagree on
+     first paint is a bug even when neither is wrong. The bar and the number
+     now both count picks made; the ringed dot is what says where you are. */
+  const pct=Math.round((preds.filter(function(x){return S.predChoices[x.id];}).length/L.length)*100);
 
   const optBtn=function(o){
     const on = String(picked)===String(o);
@@ -5091,7 +5098,7 @@ function buildPred(){
 
   c.innerHTML=
     '<div class="pdhead"><b>Your card</b><span class="pdpts">'+predRidingPts()+' pts riding</span></div>'
-   +'<div class="pdprog"><span class="pdn">'+(PD.i+1)+' / '+L.length+'</span>'
+   +'<div class="pdprog"><span class="pdn">'+preds.filter(function(x){return S.predChoices[x.id];}).length+' / '+L.length+' picked</span>'
    +  '<div class="pdbar"><i style="width:'+pct+'%"></i></div></div>'
    /* One dot per pick, filled when answered, hollow when not, ringed for the
       one you're on — and every one of them is a tap. This is the whole
@@ -5148,11 +5155,30 @@ function buildPred(){
        taken them to the card they missed. It is an ACTION. It looks like one
        now, and it names the category instead of counting. */
     const missP = left>0 ? (function(){ const m=L.find(function(x){return !S.predChoices[x.id];}); return m?m.label.toLowerCase():''; })() : '';
+    /* NOTHING IS "STILL NEEDED" BEFORE YOU HAVE STARTED. On first paint,
+       with nothing picked, this button read "Still need winning team →" —
+       pointing at the card already filling the screen, and scolding a
+       player for not having done a thing they had not yet had the chance
+       to do. At zero picks there is no card you missed, so there is
+       nowhere for this button to take you: it is not there. It appears
+       with your first pick, which is exactly when "which one did I miss"
+       becomes a real question. */
     bar.innerHTML=
       '<div class="pdsummary"><span>Your card so far</span><b>'+doneN+' / '+preds.length+' locked</b></div>'
-     +'<button type="button" class="pdlock'+(left<=0?' ready':' todo')+'" id="pdLock">'
-     +  (left<=0 ? 'Lock my card →' : ('Still need '+(missP||(left+' more'))+' →'))
-     +'</button>';
+     + (doneN===0 ? ''
+        : '<button type="button" class="pdlock'+(left<=0?' ready':' todo')+'" id="pdLock">'
+          + (left<=0 ? 'Lock my card →' : ('Still need '+(missP||(left+' more'))+' →'))
+          + '</button>');
+    /* AND THE BAR MUST NOT SIT ON THE CARD. It is fixed, 72px up to clear
+       the nav, and it was covering the bottom of the pick card — on a 393
+       phone the SECOND option of the very first question was behind it, so
+       a player could reasonably not know there was one. Reserve its real
+       measured height rather than a guessed constant, because the bar
+       changes height depending on whether that button is there. */
+    try{
+      var sp=document.getElementById('s-predict');
+      if(sp) sp.style.paddingBottom = (bar.offsetHeight + 88) + 'px';
+    }catch(_){}
   }
 
   Array.prototype.forEach.call(c.querySelectorAll('.pdopt'), function(b){
@@ -10502,7 +10528,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-12-door.85';
+const STATS_BUILD='2026-08-12-deck.86';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -10893,9 +10919,16 @@ function paintNav(active){
   bar.style.display = hide ? 'none' : 'block';
   /* The menu button lives wherever the nav does, and disappears for the
      same reason: nothing in the corner of a running clock. */
+  /* NOTHING IN THE CORNER OF A FOCUSED TASK. The menu already disappears
+     under a running clock; the pick sheet is the same argument. It is a
+     deliberate pre-tip job with its own back arrow, and on a 393px phone
+     the hamburger was printing on top of "Up to 600 pts" — the one number
+     that says what the sheet is worth. Reserving space for it instead
+     wrapped the eyebrow row into the back button, which is how you fix one
+     collision by making two. */
   try{ var mb=document.getElementById('menuBtn');
-       if(mb) mb.classList.toggle('show', !hide && scr!=='live'); }catch(_){}
-  try{ if(hide || scr==='live') closeMenu(); }catch(_){}
+       if(mb) mb.classList.toggle('show', !hide && scr!=='live' && scr!=='predict'); }catch(_){}
+  try{ if(hide || scr==='live' || scr==='predict') closeMenu(); }catch(_){}
   /* NOT ON GAMETIME. The rail is a compact score for screens that do not
      show one. Gametime shows the score big, at the top, with the clock —
      so the rail sat directly above it printing the same two numbers in
