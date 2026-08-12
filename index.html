@@ -3298,20 +3298,26 @@ window.STATS_FIREBASE = {
    re-skins to ANY game — NBA, G-League, college, WNBA.
    In production this loads from the nightly schedule feed. */
 const BB_GAME={
-  nightId:"gn6-2026-08-11-ny-ind",
-  espnEvent:"401857134",   // drives the auto-pulled matchup card on the home page
-  tipISO:"2026-08-11T23:30:00Z",   // 7:30 pm ET. Used by the countdown; never parsed from a display string.
-  homeName:"Indiana Fever",     homeAbbr:"IND", homeNick:"Fever",   homeEmoji:"🔥", homeColor:"#002d62",
-  awayName:"New York Liberty",  awayAbbr:"NY",  awayNick:"Liberty", awayEmoji:"🗽", awayColor:"#86cebc",
-  venue:"Gainbridge Fieldhouse", date:"Tue · August 11", short:"August 11", shareDate:"AUG 11", night:"Game Night #6",
-  // Verified against the ESPN schedule and the event feed: Tue Aug 11, New
-  // York Liberty at Indiana Fever, 7:30 p.m. ET, on ESPN, at Gainbridge
-  // Fieldhouse. New York are the road team so Indiana are `home` here — the
-  // app draws home on the right of the VS badge. ESPN event 401857134.
-  // THIRTY MINUTES EARLIER than the last five nights. Colours and records
-  // come from the same feed.
-  net:"ESPN",
-  tip:"Tip-off 7:30 ET · 6:30 CT · 4:30 PT · ESPN"
+  nightId:"gn7-2026-08-12-tor-dal",
+  espnEvent:"401857137",   // drives the auto-pulled matchup card on the home page
+  tipISO:"2026-08-13T00:00:00Z",   // 8:00 pm ET. Used by the countdown; never parsed from a display string.
+  homeName:"Dallas Wings",    homeAbbr:"DAL", homeNick:"Wings", homeEmoji:"🪽", homeColor:"#002b5c",
+  awayName:"Toronto Tempo",   awayAbbr:"TOR", awayNick:"Tempo", awayEmoji:"🍁", awayColor:"#33476D",
+  venue:"College Park Center", date:"Wed · August 12", short:"August 12", shareDate:"AUG 12", night:"Game Night #7",
+  /* Verified against the ESPN schedule and the event feed on Aug 12:
+     Toronto Tempo at Dallas Wings, 8:00 p.m. ET, USA Network, College Park
+     Center in Arlington. Toronto are the road team so Dallas are `home`
+     here — the app draws home on the right of the VS badge. Event
+     401857137. Colours, records and the OUT list come from the same feed.
+
+     FIRST NIGHT WITH AN EXPANSION TEAM IN IT. Toronto is a 2026 team, so
+     there is no franchise history to lean on and several of the season
+     splits the Deep Cut engine likes will be thin. That is fine — the
+     engine already hides a cut it cannot source — but it is the reason
+     tonight's questions lean on what is happening in front of you rather
+     than on career numbers. */
+  net:"USA Network",
+  tip:"Tip-off 8:00 ET · 7:00 CT · 5:00 PT · USA Network"
 };
 const COLORS=["#2f6bff","#19c3d6","#ff4d5e","#ffc54d","#2ee6a6","#b57cff","#ff924d","#4dd0ff"];
 /* THE WHOLE BENCH. Six a side was a deliberate cap for five game nights and
@@ -3325,12 +3331,18 @@ const COLORS=["#2f6bff","#19c3d6","#ff4d5e","#ffc54d","#2ee6a6","#b57cff","#ff92
    one. Anyone ruled out keeps their OUT flag; they stay pickable-adjacent
    so you can see for yourself who isn't available. */
 const BB_ROSTER={ // full names — used on the prediction sheet & final review
-  home:["Kelsey Mitchell","Aliyah Boston","Caitlin Clark","Sophie Cunningham","Lexie Hull",
-        "Myisha Hines-Allen","Monique Billings","Tyasha Harris","Makayla Timpson","Bree Hall",
-        "Raven Johnson","Grace VanSlooten","Michelle Onyiah","Damiris Dantas"],
-  away:["Breanna Stewart","Sabrina Ionescu","Jonquel Jones","Marine Johannes","Rebecca Allen",
-        "Rebekah Gardner","Marine Fauthoux","Pauline Astier","Raquel Carrera","Anneli Maley",
-        "Han Xu","Leonie Fiebich","Satou Sabally"]
+  /* Pulled live from the ESPN roster endpoints (teams/3 Dallas and
+     teams/131935 Toronto), not from memory, and ordered by who is most
+     likely to be on the floor. Four Dallas players and one Toronto player
+     are ruled out tonight; they stay on the list on purpose, carrying an
+     OUT flag, so a player can see for themselves who is unavailable
+     instead of wondering why a name is missing. */
+  home:["Paige Bueckers","Arike Ogunbowale","Maddy Siegrist","Alanna Smith","Aziaha James",
+        "Haley Jones","Awak Kuier","Odyssey Sims","Sug Sutton","Li Yueru",
+        "Alysha Clark","Azzi Fudd","Jessica Shepard","Costanza Verona"],
+  away:["Marina Mabrey","Kia Nurse","Nyara Sabally","Aneesah Morrow","Isabelle Harrison",
+        "Kiki Rice","Temi Fagbenle","Julie Allemand","Maria Conde","Zaay Green",
+        "Ornella Bankole","Laura Juskaite","Teonni Key","Brittney Sykes"]
 };
 /* Two short lists beat one long one. The deck reads this when it renders a
    player pick, so the roster order above is the only place names live. */
@@ -3360,11 +3372,11 @@ const BB_PREDS=[
   // NOTE: `answer`/`num` below are the SIMULATED results Practice mode plays
   // against — never a claim about the real game. They must always be names
   // that exist in the roster above, or practice grades against a ghost.
-  {id:"pts", q:"Who scores the most points?", label:"Most points", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Kelsey Mitchell", num:21, numLabel:"How many pts?"},
-  {id:"ast", q:"Who dishes the most assists?", label:"Most assists", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Sabrina Ionescu", num:8, numLabel:"How many assists?"},
-  {id:"stl", q:"Who racks up the most steals?", label:"Most steals", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Lexie Hull", num:3, numLabel:"How many steals?"},
-  {id:"reb", q:"Who grabs the most rebounds?", label:"Most rebounds", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Aliyah Boston", num:12, numLabel:"How many rebounds?"},
-  {id:"blk", q:"Who swats the most blocks?", label:"Most blocks", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Jonquel Jones", num:2, numLabel:"How many blocks?"}
+  {id:"pts", q:"Who scores the most points?", label:"Most points", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Paige Bueckers", num:24, numLabel:"How many pts?"},
+  {id:"ast", q:"Who dishes the most assists?", label:"Most assists", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Julie Allemand", num:7, numLabel:"How many assists?"},
+  {id:"stl", q:"Who racks up the most steals?", label:"Most steals", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Kia Nurse", num:3, numLabel:"How many steals?"},
+  {id:"reb", q:"Who grabs the most rebounds?", label:"Most rebounds", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Nyara Sabally", num:11, numLabel:"How many rebounds?"},
+  {id:"blk", q:"Who swats the most blocks?", label:"Most blocks", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Alanna Smith", num:3, numLabel:"How many blocks?"}
 ];
 /* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
    Every question is answerable by WATCHING the broadcast at the break — no lookups,
@@ -3420,7 +3432,7 @@ const BB_PREDS=[
    ------------------------------------------------------------------------ */
 const BBALL_ROUNDS=[
   // --- Q1 - 1 pt each - the warm-up. Low stakes, everybody in. ---
-  {home:23,away:19, q:[
+  {home:24,away:20, q:[
     {t:"The first bucket of the night — how did it go in?", o:["Layup or dunk","Mid-range jumper","Three","Free throw"], a:"Layup or dunk"},
     // TALLY. Timeouts are loud, they stop the game, and you cannot miss one.
     {t:"How many team timeouts in Q1? (media/TV timeouts don't count)", o:["None","1","2","3 or more"], a:"2"},
@@ -3430,7 +3442,7 @@ const BBALL_ROUNDS=[
     {t:"Q1 ended on…", o:["A made basket","A missed shot","A turnover","Free throws"], a:"A missed shot"}
   ]},
   /* --- Q2 - 2 pts each - the room warms up. --- */
-  {home:45,away:41, q:[
+  {home:48,away:41, q:[
     {t:"Who led at halftime?", o:[BB_GAME.homeNick,BB_GAME.awayNick,"Tied"], a:BB_GAME.homeNick},
     // TALLY. An and-one is a make and a whistle at the same time. Ask this
     // and people start listening for the whistle on every made basket.
@@ -3440,7 +3452,7 @@ const BBALL_ROUNDS=[
     {t:"The last shot before the halftime buzzer…", o:["Went in","Missed","Nobody got one off"], a:"Missed"}
   ]},
   /* --- Q3 - 3 pts each - the turn. Now it costs you to look away. --- */
-  {home:66,away:64, q:[
+  {home:72,away:63, q:[
     {t:"Which team scored FIRST in Q3?", o:[BB_GAME.homeNick,BB_GAME.awayNick], a:BB_GAME.awayNick},
     // TALLY. A replay review is dead time everybody tunes out of. Put a
     // point on it and dead time becomes the most-watched part of the quarter.
@@ -3450,7 +3462,7 @@ const BBALL_ROUNDS=[
     {t:"Which team won Q3 (outscored the other)?", o:[BB_GAME.homeNick,BB_GAME.awayNick,"Tied"], a:BB_GAME.homeNick}
   ]},
   // --- Q4 - 4 pts each - money time. The quarter that decides the night. ---
-  {home:89,away:82, q:[
+  {home:97,away:88, q:[
     {t:"The final basket of the game was worth…", o:["1","2","3","No basket — it ended on a miss or a turnover"], a:"2"},
     // TALLY, and the best question anyone gave us. It runs the WHOLE game,
     // it is asked at the end, and to answer it you have to watch the shot
@@ -10138,7 +10150,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-12-arena.76';
+const STATS_BUILD='2026-08-12-g7-tor-dal.77';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
