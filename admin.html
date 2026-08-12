@@ -3978,7 +3978,7 @@ AUTO.ui = (function(){
              +  '<div style="font-size:14px;line-height:1.4">'+esc(q.t)+'</div>'
              +  (r.ok
                   ? '<div style="font-size:14px;font-weight:800;color:#2ee6a6;margin-top:4px">'+esc(r.answer)+'</div>'
-                  : '<div style="font-size:13px;color:#ffc54d;margin-top:4px">no answer — '+esc(r.why)+'</div>')
+                  : '<div style="font-size:14px;color:#ffc54d;margin-top:4px">no answer — '+esc(r.why)+'</div>')
              +  '<div style="font-size:12px;color:#93a0bd;margin-top:3px">'+esc((q.o||[]).join(' · '))+'</div>'
              + '</div>';
       });
@@ -4033,8 +4033,8 @@ AUTO.ui = (function(){
         else if(String(human).trim() === String(r.answer).trim()){ mark = 'agreed — ' + r.answer; colour = '#2ee6a6'; agree++; }
         else { mark = 'DISAGREE — you: ' + human + ' · robot: ' + r.answer; colour = '#ff4d5e'; differ++; }
         rows += '<div style="border-top:1px solid rgba(255,255,255,.07);padding:7px 0">'
-             +  '<div style="font-size:13px;line-height:1.35">'+esc(q.t)+'</div>'
-             +  '<div style="font-size:13px;font-weight:800;color:'+colour+';margin-top:3px">'+esc(mark)+'</div>'
+             +  '<div style="font-size:14px;line-height:1.35">'+esc(q.t)+'</div>'
+             +  '<div style="font-size:14px;font-weight:800;color:'+colour+';margin-top:3px">'+esc(mark)+'</div>'
              + '</div>';
       });
       html += '<div style="margin-top:14px"><b>'+esc(tag)+'</b> '

@@ -5483,7 +5483,42 @@ function beep(freq,dur){try{
 }catch(e){}}
 function warnCue(){beep(880,0.15);try{navigator.vibrate&&navigator.vibrate(120);}catch(e){}}
 function timeCue(){beep(300,0.3);try{navigator.vibrate&&navigator.vibrate([80,60,80]);}catch(e){}}
-function startQuarter(qi){ try{ ciStash(); }catch(_){} S.qi=qi;S.ni=0;renderScore();loadQuestion();go('live');}
+/* ============ YOU CANNOT ANSWER A QUARTER THAT HAS NOT HAPPENED =====
+   Found in tonight's own Control Room, ten hours before tip: a submission
+   sitting in the Q1 grade grid, from a player with 10 points and 19 banked
+   speed — for a quarter of a game that had not been played. Somebody
+   opened the app on a live night in the morning, the host had pushed
+   nothing, so the app fell through to its BUILT-IN question bank and let
+   them answer "the first bucket of the night — how did it go in?" about a
+   game that tipped at eight.
+
+   The built-in bank is a real and good fallback: it is what lets a night
+   run with no Control Room at all. But it is a fallback for a game that is
+   HAPPENING. Before tip there is nothing to be right about, and every
+   point scored there is a point taken from the people who actually watch —
+   which is the one thing this product cannot allow, because paying
+   attention is the entire proposition.
+
+   Practice is untouched and always will be. Practice is a simulated game;
+   simulated games have already happened. */
+function liveRoundBlocked(qi){
+  try{
+    if(!S || S.mode!=='live') return null;                  // practice is free
+    var ph=''; try{ ph=phaseNow(); }catch(_){}
+    if(ph!=='pre') return null;                             // tipped, or over
+    /* A host who has deliberately pushed a round outranks the clock — if
+       the Control Room says a round is open, it is open, whatever the feed
+       thinks. The human is allowed to know something we do not. */
+    try{ var hd=hostedDoc(qi); if(hd && hd.state==='live') return null; }catch(_){}
+    return 'not-started';
+  }catch(_){ return null; }
+}
+function startQuarter(qi){
+  if(liveRoundBlocked(qi)){
+    try{ toast('The game hasn\u2019t tipped yet \u2014 there\u2019s nothing to be right about. Tap Practice to warm up.'); }catch(_){}
+    return;
+  }
+  try{ ciStash(); }catch(_){} S.qi=qi;S.ni=0;renderScore();loadQuestion();go('live');}
 /* The live branch of this function used to print a dash for both scores and
    then overwrite the rank slot with the speed counter, so a player in a real
    game night saw "– –" where the score goes and no idea where they stood
@@ -10528,7 +10563,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-12-deck.86';
+const STATS_BUILD='2026-08-12-pretip.87';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -13444,6 +13479,13 @@ function gtStartRow(){
     }
     var qi = (S.nextQ!=null ? S.nextQ : S.qi) || 0;
     if(qi>=NR) return '';
+    /* Before tip the button is not a button. Saying "Q1 ended? Answer now"
+       at four in the afternoon is the app asking somebody to make something
+       up. */
+    if(liveRoundBlocked(qi)){
+      return '<button class="btn ghost" style="margin-top:11px" disabled>'
+        + esc(roundTag(qi)+' opens when the game tips') + '</button>';
+    }
     /* Already answered and waiting on the host? Then there is nothing to
        open and a button would be a lie. */
     try{ if(HR && HR.submitted && HR.submitted[curRoundId&&curRoundId()]) return ''; }catch(_){}
