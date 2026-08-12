@@ -3846,6 +3846,9 @@ function promptSignIn(after){
   toast('Sign in first — takes one tap, and it saves everything you score.');
 }
 let PENDING_AFTER=null;
+/* Which tab they were reaching for when the door stopped them, so signing in
+   finishes the trip instead of dumping them on the home page. */
+let PENDING_TAB=null;
 /* ============ A CLEAN SLATE, GUARANTEED ==============================
    Walking out of a live game by hand means unpicking a dozen pieces of
    state — the card, the points, the Caught It streak, the room seat, the
@@ -10436,6 +10439,9 @@ async function portalGoogle(){
     toast('✅ Signed in — your points follow you everywhere now.');
     // They pressed Play and got sent here; finish the trip for them.
     if(PENDING_AFTER==='live'){ PENDING_AFTER=null; setTimeout(function(){ startLive(); }, 350); }
+    /* …and the same courtesy for a locked tab. */
+    else if(PENDING_TAB){ var _t=PENDING_TAB; PENDING_TAB=null; PENDING_AFTER=null;
+      setTimeout(function(){ try{ navGo(_t); }catch(_){} }, 350); }
     return;
   }
   const why=(r&&r.why)||'unknown';
@@ -10496,7 +10502,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-12-home.84';
+const STATS_BUILD='2026-08-12-door.85';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -10608,7 +10614,44 @@ function goHomeFromFinal(){
   try{ navGo('home'); }catch(_){ go('landing'); }
 }
 try{ window.goHomeFromFinal=goHomeFromFinal; }catch(_){}
+/* ============ THE TABS ARE BEHIND THE DOOR ==========================
+   "I can still tap in the other layers of the game without signing in."
+
+   The door already gated the handle screen and the pick sheet — startLive()
+   calls promptSignIn(). The five nav tabs did not, so a stranger could walk
+   into Gametime, Stats, the Board and the Me tab and play alongside the
+   night without ever creating an account. Everything those screens are for
+   — your number, your rank, your seat in the room — needs a seat to exist,
+   so they were showing a signed-out visitor the shape of a game they were
+   not in.
+
+   TWO EXCEPTIONS, both non-negotiable:
+
+   Practice needs no account and never will. The moment somebody starts a
+   rehearsal they are in a run (S.place is set), and a run has the whole app
+   — otherwise "Practice first — no account needed" is a lie and the only
+   way most people ever see this thing is a wall.
+
+   And anybody carrying a game in progress keeps the tabs, verified or not.
+   The alternative is a phone locked inside a game with the ways out on the
+   other side of a sign-in it cannot complete. Same rule, same reason, as
+   landingActionsWanted(). */
+var TAB_LOCKED={gametime:'Gametime',stats:'Stats',board:'the Board',crew:'Talk',me:'your card'};
+function tabsUnlocked(){
+  try{ if(signedInNow()) return true; }catch(_){}
+  /* In a run of any kind — practice or live, before tip or mid-quarter. */
+  try{ return GAME_SCREENS.indexOf(S.place||'')>=0; }catch(_){}
+  return false;
+}
 function navGo(tab){
+  if(TAB_LOCKED[tab] && !tabsUnlocked()){
+    try{ trk('tab_locked',{tab:tab}); }catch(_){}
+    try{ PENDING_TAB = tab; }catch(_){}
+    try{ go('landing'); }catch(_){}
+    try{ promptSignIn('tab'); }catch(_){}
+    try{ toast('Sign in to open '+TAB_LOCKED[tab]+' — or tap Practice, which needs no account.'); }catch(_){}
+    return;
+  }
   try{ trk('tab_view',{tab:tab}); }catch(_){}
   try{
     // Leaving the Crew tab closes the room. A modal that survives a tab
