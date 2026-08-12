@@ -57,18 +57,53 @@
 <meta name="twitter:image" content="https://statsgametime.com/og.png">
 <title>STATS GAMETIME — The game that pays to pay attention</title>
 <style>
+  /* ====================================================================
+     THE ARENA — ONE TOKEN SET, AND NOTHING BELOW IT GETS AN OPINION
+
+     Ninety-two hard-coded hex values used to be scattered through this
+     file, which meant "make the app darker" was a ninety-two place edit
+     nobody would ever attempt, and so the look never changed. Everything
+     visual now resolves through this block. Change a line here and the
+     whole product moves.
+
+     The palette is the Arena's: a deeper base than before (#070b12 on a
+     #05080e page, so the app reads as a lit surface floating on black
+     rather than a grey rectangle), hairlines made of white at 9% instead
+     of a solid slate line — they disappear against any background and
+     they never band — and one teal, not two. The old --teal (#19c3d6)
+     was a duller sibling of --teal2 that existed for no reason anyone
+     could name; both names survive so nothing breaks, and both point at
+     the Arena teal.
+
+     TEAM COLOUR IS THE GAME. --away / --home are painted from the feed
+     every night (see paintTeamColours). The teal→blue gradient is YOU and
+     only you. Gold is a milestone. Red is live. Everything else is grey,
+     which is exactly what makes those three carry weight.
+     ==================================================================== */
   :root{
-    --bg:#0a0e17; --bg2:#111726; --card:#161d2e; --card2:#1c2438;
-    --line:#26304a; --line2:#333f5e;
-    --ink:#eef2fb; --muted:#93a0bd; --dim:#5f6d8c;
-    --blue:#2f6bff; --blue2:#4d86ff; --teal:#19c3d6; --teal2:#28e0d0;
+    /* surfaces */
+    --page:#05080e; --bg:#070b12; --bg2:#0c1220; --card:#111a2b; --card2:#162034;
+    --glass:rgba(255,255,255,.045); --glass2:rgba(255,255,255,.075);
+    --chrome:rgba(7,11,18,.84);
+    /* hairlines — alpha, never solid */
+    --line:rgba(255,255,255,.09); --line2:rgba(255,255,255,.14);
+    --line3:rgba(255,255,255,.05);
+    /* type */
+    --ink:#ffffff; --body:#d6ddee; --muted:#93a0bd; --dim:#5d6883;
+    --f:-apple-system,system-ui,'Segoe UI',Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,'SF Mono',Menlo,monospace;
+    /* accents */
+    --blue:#2f6bff; --blue2:#4d86ff; --teal:#28e0d0; --teal2:#28e0d0;
     --red:#ff4d5e; --gold:#ffc54d; --green:#2ee6a6;
+    /* geometry */
     --shadow:0 18px 50px rgba(0,0,0,.55);
-    --r:18px;
+    --r:18px; --r2:14px; --r3:12px; --pill:999px;
+    /* the two the feed owns */
+    --away:#7fe3c7; --home:#4a86ff; --mile:#ffc54d;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  html,body{margin:0;padding:0;background:var(--page);color:var(--body);
+    font-family:var(--f);
     -webkit-font-smoothing:antialiased}
   /* 100dvh, not 100vh. On a phone `vh` is the LARGE viewport — the height
      the page would have if the browser chrome were hidden — so the document
@@ -77,9 +112,9 @@
      viewport that is actually on screen. The vh line stays first as the
      fallback for anything that does not know dvh. */
   body{min-height:100vh;min-height:100dvh;display:flex;justify-content:center;
-    background:radial-gradient(1200px 700px at 50% -10%,#15213b 0%,var(--bg) 55%)}
+    background:var(--page)}
   .phone{width:100%;max-width:440px;min-height:100vh;min-height:100dvh;position:relative;
-    background:linear-gradient(180deg,#0b1120,#0a0e17 40%);
+    background:var(--bg);
     /* overflow:hidden here silently disabled position:sticky in EVERY
        descendant — an ancestor with hidden overflow becomes the scroll
        container, so a sticky child has nothing to stick to. That is why
@@ -90,7 +125,37 @@
     overflow:hidden;
     overflow:clip;
     display:flex;flex-direction:column}
-  .screen{flex:1;display:none;flex-direction:column;padding:20px 18px 96px;animation:fade .35s ease}
+  .screen{position:relative;z-index:1;flex:1;display:none;flex-direction:column;
+    padding:20px 16px 96px;animation:fade .35s ease}
+
+  /* ==================================================================
+     LIVE ENERGY
+
+     The single biggest thing the Arena does that this app never has: the
+     room changes colour with the game. One fixed radial behind
+     everything, four states, a slow crossfade between them. It is one
+     element and one transition, it costs nothing to render, and it is
+     the difference between an app that is showing you a game and an app
+     that is IN one.
+
+       idle   cold blue    nothing is happening
+       open   lit blue     a question is up, the clock is running
+       hit    green        you just got one right
+       miss   red, brief   you did not
+
+     Team colour is deliberately NOT used here. This layer is about YOUR
+     night, not about who is winning — the scoreboard already says that,
+     and two colour systems fighting over the same background is how a
+     screen ends up looking like a slot machine.
+     ================================================================== */
+  #energy{position:fixed;inset:0;z-index:0;pointer-events:none;
+    transition:background 1.1s ease, opacity 1.1s ease;
+    background:radial-gradient(120% 52% at 50% 0%,#12314a 0%,var(--bg) 62%)}
+  #energy.open{background:radial-gradient(120% 58% at 50% 0%,#1d3f63 0%,#080e18 62%)}
+  #energy.hit {background:radial-gradient(120% 62% at 50% 0%,#10503f 0%,#06120e 62%)}
+  #energy.miss{background:radial-gradient(120% 62% at 50% 0%,#4a1622 0%,#120609 62%)}
+  #energy.dead{background:radial-gradient(120% 46% at 50% 0%,#0d1622 0%,var(--bg) 60%)}
+  @media (prefers-reduced-motion:reduce){ #energy{transition:none} }
   .screen.active{display:flex}
   @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.72)}}
@@ -101,26 +166,32 @@
     background:linear-gradient(90deg,var(--teal2),var(--blue2));
     -webkit-background-clip:text;background-clip:text;color:transparent}
   .tag{color:var(--muted);font-size:14px;text-align:center;margin:2px 0 0;font-weight:500}
-  .pill{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.8px;
-    text-transform:uppercase;padding:5px 11px;border-radius:999px;
-    background:rgba(25,195,214,.13);color:var(--teal2);border:1px solid rgba(25,195,214,.3)}
+  .pill{display:inline-block;font-size:12px;font-weight:800;letter-spacing:1.5px;
+    text-transform:uppercase;padding:6px 12px;border-radius:var(--pill);
+    background:rgba(40,224,208,.10);color:var(--teal);border:1px solid rgba(40,224,208,.30)}
 
-  h1{font-size:24px;margin:16px 0 6px;font-weight:850;line-height:1.15}
+  h1{font-size:26px;margin:16px 0 6px;font-weight:900;line-height:1.12;
+     letter-spacing:-.6px;color:var(--ink)}
   h2{font-size:17px;margin:0 0 4px;font-weight:800}
   p.sub{color:var(--muted);font-size:14px;line-height:1.5;margin:0 0 8px}
   .center{text-align:center}
 
+  /* A card is a lit pane of glass on a dark floor, not a grey box with a
+     border. Translucent so the energy layer reads through it, one hairline
+     of white at 9%, and a soft drop so it sits ABOVE the surface. */
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
-    padding:16px;margin:10px 0;box-shadow:0 2px 0 rgba(0,0,0,.2)}
+    padding:16px;margin:11px 0;box-shadow:0 10px 30px rgba(0,0,0,.34)}
   .card.tight{padding:13px}
 
-  .btn{display:block;width:100%;border:none;border-radius:14px;padding:16px;
+  .btn{display:block;width:100%;border:none;border-radius:var(--r2);padding:16px;
     font-size:15px;font-weight:800;color:#fff;cursor:pointer;margin-top:10px;
+    letter-spacing:-.1px;font-family:var(--f);
     background:linear-gradient(90deg,var(--blue),var(--blue2));
-    box-shadow:0 10px 22px rgba(47,107,255,.32);transition:transform .12s,filter .12s}
+    box-shadow:0 10px 26px rgba(47,107,255,.34);transition:transform .12s,filter .12s}
   .btn:active{transform:scale(.98)}
   .btn.teal{background:linear-gradient(90deg,var(--teal),#12a7d8);box-shadow:0 10px 22px rgba(25,195,214,.28)}
-  .btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--ink);box-shadow:none}
+  .btn.ghost{background:var(--glass);border:1px solid var(--line2);color:var(--body);box-shadow:none}
+  .btn.ghost:hover{background:var(--glass2)}
   .btn.gold{background:linear-gradient(90deg,#ffb020,var(--gold));color:#20160a;box-shadow:0 10px 22px rgba(255,197,77,.25)}
   .btn:disabled{opacity:.4;cursor:not-allowed}
   .btn.sm{padding:11px;font-size:14px;margin-top:0}
@@ -197,9 +268,10 @@
 
   /* option buttons */
   .opts{display:flex;flex-direction:column;gap:9px;margin-top:10px}
-  .opt{background:var(--card2);border:1.5px solid var(--line2);border-radius:13px;
-    padding:14px 15px;font-size:15px;font-weight:650;color:var(--ink);text-align:left;
-    cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:.12s}
+  .opt{background:var(--glass);border:1px solid var(--line2);border-radius:var(--r3);
+    padding:15px 15px;font-size:15px;font-weight:700;color:var(--body);text-align:left;
+    cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:.16s}
+  .opt:hover{background:var(--glass2)}
   .opt:active{transform:scale(.99)}
   .opt.sel{border-color:var(--blue2);background:rgba(47,107,255,.14)}
   .opt.correct{border-color:var(--green);background:rgba(46,230,166,.14)}
@@ -233,6 +305,15 @@
      the arrow — the first four characters were unreadable. Any screen
      that opens with a text row gets the same 56px of clearance. */
   body.hasback .screen.active > .qmeta:first-child > .qn{padding-left:52px}
+  /* The h1 grew from 24px to 26px with the Arena type ramp, which pushed the
+     first line of a couple of screens up under the back arrow. The arrow
+     gets its own lane on every screen that has one, rather than being
+     dodged screen by screen — the version of this that lists screens by
+     name is the version that breaks the next time a screen is added. */
+  body.hasback #s-plus  > *:first-child,
+  body.hasback #s-tally > *:first-child,
+  body.hasback #s-league> *:first-child,
+  body.hasback #s-host  > *:first-child{margin-top:46px}
   /* "The score is cutting off at the edge." It was: a flex row with no
      min-width:0 on its children, so a long handle pushed the number past
      the rounded corner instead of the name shortening. The NUMBER never
@@ -294,7 +375,7 @@
   .lb.me{border-color:var(--blue2);background:rgba(47,107,255,.12)}
   .rank{flex:0 0 26px;text-align:center;font-weight:900;font-size:15px;color:var(--muted)}
   .rank.g{color:var(--gold)}.rank.s{color:#cfd6e6}.rank.b{color:#e0955b}
-  .av{flex:0 0 38px;height:38px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:14px;color:#0a0e17}
+  .av{flex:0 0 38px;height:38px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:14px;color:var(--bg)}
   .lbname{flex:1;font-weight:750;font-size:15px}
   .lbname small{display:block;color:var(--dim);font-weight:600;font-size:12px}
   .lbpts{font-weight:900;font-size:15px}
@@ -314,7 +395,7 @@
      anybody should have to hit while half-watching a game. */
   .chip.pick{cursor:pointer;user-select:none;font-size:12px;padding:0 14px;min-height:40px;
     display:inline-flex;align-items:center;-webkit-tap-highlight-color:transparent}
-  .chip.pick.on{color:#04121a;background:var(--teal2,#2ee6a6);border-color:var(--teal2,#2ee6a6)}
+  .chip.pick.on{color:#04121a;background:var(--teal2,var(--green));border-color:var(--teal2,var(--green))}
   .jgrp{font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:14px 0 7px}
 
   /* verification row on the handle screen */
@@ -330,7 +411,7 @@
   .vmsg.warn{color:var(--gold)}
 
   /* host panel */
-  .hostwrap{background:repeating-linear-gradient(45deg,#0c1220,#0c1220 12px,#0e1526 12px,#0e1526 24px)}
+  .hostwrap{background:repeating-linear-gradient(45deg,var(--bg2),var(--bg2) 12px,var(--card) 12px,var(--card) 24px)}
   .hq{border:1px solid var(--line2);border-radius:12px;padding:12px;margin:8px 0;background:var(--card)}
   .hq b{font-size:14px}
   .hq .ha{font-size:12px;color:var(--muted);margin-top:6px}
@@ -376,7 +457,7 @@
     align-items:center;justify-content:center;padding:22px;backdrop-filter:blur(4px)}
   .modal.open{display:flex}
   .sharecard{width:100%;max-width:340px;border-radius:20px;padding:22px 20px;
-    background:linear-gradient(150deg,#101a33 0%,#0b1120 60%,#0f1f33 100%);
+    background:linear-gradient(150deg,#101a33 0%,var(--bg) 60%,#0f1f33 100%);
     border:1px solid var(--line2);box-shadow:var(--shadow);animation:fade .3s}
   .sharecard .sc-logo{font-weight:900;letter-spacing:2.5px;font-size:20px;
     background:linear-gradient(90deg,var(--teal2),var(--blue2));-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -400,7 +481,7 @@
      the slack and scrolls, the composer stays pinned where a thumb is. */
   .tt-sheet{width:100%;max-width:380px;height:min(86vh,660px);display:flex;flex-direction:column;
     overflow:hidden;border-radius:20px;padding:16px 15px 14px;
-    background:linear-gradient(160deg,#111a2e 0%,#0b1120 70%);border:1px solid var(--line2);
+    background:linear-gradient(160deg,#111a2e 0%,var(--bg) 70%);border:1px solid var(--line2);
     box-shadow:var(--shadow);animation:fade .25s}
   #talkBody{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
   .tt-compose{flex:0 0 auto;border-top:1px solid var(--line);padding-top:10px;margin-top:8px}
@@ -676,6 +757,7 @@
 </style>
 </head>
 <body>
+<div id="energy" aria-hidden="true"></div>
 <div class="phone" id="app">
 
   <button class="backbtn" id="backBtn" onclick="goBack()">←</button>
@@ -684,13 +766,20 @@
   <section class="screen active" id="s-landing" style="position:relative;isolation:isolate">
     <!-- Court + arena backdrop — original SVG, no external image. Hardwood,
          spotlights, a crowd line and court markings behind the wordmark. -->
-    <div aria-hidden="true" style="position:absolute;left:0;right:0;top:0;height:172px;overflow:hidden;pointer-events:none;z-index:-1">
+    <!-- The arena art dissolves into the page instead of stopping at a
+         line. Before the Arena palette the backdrop and the page were near
+         enough the same colour that the hard bottom edge did not read; on
+         the darker base it was a visible seam straight across the hero. A
+         mask costs nothing and there is no seam to notice. -->
+    <div aria-hidden="true" style="position:absolute;left:0;right:0;top:0;height:196px;overflow:hidden;pointer-events:none;z-index:-1;
+         -webkit-mask-image:linear-gradient(180deg,#000 46%,rgba(0,0,0,.55) 72%,transparent 100%);
+         mask-image:linear-gradient(180deg,#000 46%,rgba(0,0,0,.55) 72%,transparent 100%)">
       <svg width="100%" height="100%" viewBox="0 0 430 172" preserveAspectRatio="xMidYMid slice" style="display:block">
         <defs>
           <radialGradient id="heroGlow" cx="50%" cy="30%" r="75%">
             <stop offset="0" stop-color="#28e0d0" stop-opacity=".38"/>
             <stop offset="45%" stop-color="#4d86ff" stop-opacity=".18"/>
-            <stop offset="100%" stop-color="#0a0e17" stop-opacity="0"/>
+            <stop offset="100%" stop-color="#070b12" stop-opacity="0"/>
           </radialGradient>
           <linearGradient id="heroSpot" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stop-color="#eef2fb" stop-opacity=".13"/><stop offset="1" stop-color="#eef2fb" stop-opacity="0"/>
@@ -732,15 +821,15 @@
          anything. Signed-out only — a member already knows. -->
     <div id="howBlock" style="display:none;margin-top:16px">
       <div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:11px">
-        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:#16233b;border:1px solid #2f3a58;color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">1</span>
+        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:var(--card2);border:1px solid var(--line2);color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">1</span>
         <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Predict before tip.</b> <span style="color:var(--muted,#93a0bd)">Winner, stat leaders, the numbers.</span></div>
       </div>
       <div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:11px">
-        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:#16233b;border:1px solid #2f3a58;color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">2</span>
+        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:var(--card2);border:1px solid var(--line2);color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">2</span>
         <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Call it live.</b> <span style="color:var(--muted,#93a0bd)">One-tap reads during the game as it happens.</span></div>
       </div>
       <div style="display:flex;gap:11px;align-items:flex-start">
-        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:#16233b;border:1px solid #2f3a58;color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">3</span>
+        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:var(--card2);border:1px solid var(--line2);color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">3</span>
         <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Climb the board.</b> <span style="color:var(--muted,#93a0bd)">Sharpest, fastest fan wins the night.</span></div>
       </div>
     </div>
@@ -750,7 +839,7 @@
            which. The toggle exists because the two words carry different
            promises, and a returning player and a stranger deserve to be
            spoken to differently on the same door. -->
-      <div style="display:flex;gap:6px;background:#0e1626;border:1px solid #26304a;border-radius:12px;padding:5px;margin-bottom:13px">
+      <div style="display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:5px;margin-bottom:13px">
         <button id="segIn" onclick="portalSeg('in')" style="flex:1;border:none;border-radius:9px;padding:14px 8px;font-weight:800;font-size:14px;line-height:1;cursor:pointer;background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e">Sign in</button>
         <button id="segUp" onclick="portalSeg('up')" style="flex:1;border:none;border-radius:9px;padding:14px 8px;font-weight:800;font-size:14px;line-height:1;cursor:pointer;background:none;color:var(--muted,#93a0bd)">Sign up</button>
       </div>
@@ -777,7 +866,7 @@
     <!-- THE MOMENT RIBBON — what's true right now: a countdown before tip,
          the real score while live, the final after. Painted from the ESPN
          feed; hides entirely if the feed can't be reached. -->
-    <div id="heroRibbon" style="display:none;align-items:center;gap:7px;margin-top:12px;background:#0e1626;border:1px solid var(--line,#26304a);border-radius:12px;padding:11px 13px;font-size:14px;font-weight:700;color:var(--ink,#eef2fb)"></div>
+    <div id="heroRibbon" style="display:none;align-items:center;gap:7px;margin-top:12px;background:var(--card);border:1px solid var(--line,var(--line));border-radius:12px;padding:11px 13px;font-size:14px;font-weight:700;color:var(--ink,#eef2fb)"></div>
 
     <div class="card" style="margin-top:18px">
       <!-- These three are overwritten from BB_GAME on load; they are here only
@@ -885,7 +974,7 @@
 
   <!-- RULES -->
   <section class="screen" id="s-rules">
-    <div class="brand" style="margin-top:2px"><span class="logo" style="font-size:17px;letter-spacing:1px">STATS GAMETIME</span></div>
+    <div class="brand"><span class="logo" style="font-size:17px;letter-spacing:1px">STATS GAMETIME</span></div>
     <h1 style="margin-top:10px">Official Rules 📖</h1>
     <p class="sub">STATS Game Night · Friends & Family Beta · v1.0</p>
 
@@ -965,7 +1054,7 @@
           <div style="font-weight:800;font-size:14px">Signed in</div>
           <div id="acctEmail" style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
         </div>
-        <button onclick="doSignOut()" style="flex:0 0 auto;background:none;border:1px solid var(--line2,#2f3a58);color:var(--muted,#93a0bd);border-radius:999px;padding:6px 11px;font-weight:700;font-size:12px;cursor:pointer">Sign out</button>
+        <button onclick="doSignOut()" style="flex:0 0 auto;background:none;border:1px solid var(--line2,var(--line2));color:var(--muted,#93a0bd);border-radius:999px;padding:6px 11px;font-weight:700;font-size:12px;cursor:pointer">Sign out</button>
       </div>
       <label class="fld">Display name</label>
       <input id="playerName" maxlength="16" placeholder="e.g. CourtsideKing" oninput="checkName()">
@@ -1364,7 +1453,7 @@
 
   <!-- 9. LEAGUE -->
   <section class="screen" id="s-league">
-    <div class="brand" style="margin-top:2px"><span class="logo" style="font-size:17px;letter-spacing:1px">STATS GAMETIME</span></div>
+    <div class="brand"><span class="logo" style="font-size:17px;letter-spacing:1px">STATS GAMETIME</span></div>
     <div class="legalbox" style="background:rgba(255,197,77,.08);border-color:rgba(255,197,77,.3)"><b style="color:var(--gold)">Preview —</b> this is a sample of how Leagues will look. The members below are a demo; real friend leagues go live after the beta.</div>
     <div class="lg-head">
       <div class="lg-ic">💈</div>
@@ -1382,7 +1471,7 @@
 
   <!-- 10. STATS+ -->
   <section class="screen" id="s-plus">
-    <div class="brand" style="margin-top:2px"><span class="logo" style="font-size:17px;letter-spacing:.8px">STATS GAMETIME</span><span class="pill" style="align-self:center">Season pass</span></div>
+    <div class="brand"><span class="logo" style="font-size:17px;letter-spacing:.8px">STATS GAMETIME</span><span class="pill" style="align-self:center">Season pass</span></div>
     <h1 style="margin-top:12px">Go STATS+ ⭐</h1>
     <p class="sub">The game stays free. STATS+ is for the fans who want the full season experience — and it's what funds the prize pool.</p>
 
@@ -1413,7 +1502,7 @@
 
   <!-- 8. HOST / AUTOMATION PANEL -->
   <section class="screen hostwrap" id="s-host">
-    <div class="brand" style="margin-top:2px"><span class="logo" style="font-size:17px;letter-spacing:.8px">STATS GAMETIME</span>
+    <div class="brand"><span class="logo" style="font-size:17px;letter-spacing:.8px">STATS GAMETIME</span>
       <span class="status live" style="align-self:center">Host mode</span></div>
     <h1 style="font-size:20px;margin-top:10px">The engine room ⚙️</h1>
     <p class="sub">This is what <b>you</b> (or an automation) control on game night. It's the seed of the "auto-post & auto-score" pipeline.</p>
@@ -1458,7 +1547,7 @@
 
   <!-- HOST TALLY -->
   <section class="screen" id="s-tally">
-    <div class="brand" style="margin-top:2px"><span class="logo" style="font-size:17px;letter-spacing:.8px">STATS GAMETIME</span><span class="pill" style="align-self:center">Host tally</span></div>
+    <div class="brand"><span class="logo" style="font-size:17px;letter-spacing:.8px">STATS GAMETIME</span><span class="pill" style="align-self:center">Host tally</span></div>
     <h1 style="margin-top:10px">Crown the winner</h1>
     <p class="sub">Enter each player's final score from their result card. Highest points wins — ⚡ Speed breaks ties automatically.</p>
     <div id="tallyRows"></div>
@@ -1502,7 +1591,7 @@
     <div class="tt-sheet">
       <div class="tt-head"><b id="ttTitle">🔥 The room</b>
         <button id="ttMuteBtn" onclick="ttSetMute(!ttMuted())"
-                style="margin-left:auto;margin-right:8px;background:none;border:1px solid var(--line2,#2f3a58);color:var(--muted,#93a0bd);border-radius:999px;padding:5px 11px;font-weight:700;font-size:12px;cursor:pointer">🔔 Pings on</button>
+                style="margin-left:auto;margin-right:8px;background:none;border:1px solid var(--line2,var(--line2));color:var(--muted,#93a0bd);border-radius:999px;padding:5px 11px;font-weight:700;font-size:12px;cursor:pointer">🔔 Pings on</button>
         <button class="tt-x" onclick="closeTalk()">✕</button></div>
       <div id="talkBody"></div>
       <div class="tt-compose" id="ttCompose">
@@ -3658,6 +3747,48 @@ const LS_KEY="stats_gamenight_v1_"+SPORT_KEY; // saves never cross sports
 const GAME_SCREENS=["predict","lobby","live","review","predreview","break"];
 let resumeData=null;
 /* ====================================================================
+   LIVE ENERGY — the room changes colour with the game
+
+   One element, four states, a one-second crossfade. `setEnergy` is the
+   only thing allowed to touch it, and `syncEnergy` derives the resting
+   state from where the player actually is — so nothing has to remember to
+   turn it back off. A flash (hit/miss) is a temporary override that
+   expires back into whatever syncEnergy says is true.
+   ==================================================================== */
+var ENERGY_HOLD=0;
+function setEnergy(state){
+  try{
+    var el=document.getElementById('energy'); if(!el) return;
+    el.className = state || '';
+  }catch(_){}
+}
+function syncEnergy(){
+  try{
+    if(ENERGY_HOLD && Date.now()<ENERGY_HOLD) return;   // a flash owns the screen
+    var scr=''; try{ scr=(S&&S.screen)||''; }catch(_){}
+    // A question with a clock on it is the lit state, wherever it is.
+    var open=false;
+    try{ open = (scr==='live' && !S.answered); }catch(_){}
+    try{ var ci=document.getElementById('ciCard');
+         if(ci && ci.style.display!=='none' && !ci.classList.contains('cidone')) open=true; }catch(_){}
+    if(open) return setEnergy('open');
+    // Nothing on: the front door, or a night that has not started.
+    var dead = (scr==='landing'||scr==='name'||scr==='join'||scr==='rules');
+    try{ if(typeof phaseNow==='function' && phaseNow()==='final') dead=false; }catch(_){}
+    setEnergy(dead ? 'dead' : '');
+  }catch(_){}
+}
+function flashEnergy(kind,ms){
+  try{
+    setEnergy(kind==='hit'?'hit':'miss');
+    ENERGY_HOLD=Date.now()+(ms||2200);
+    setTimeout(function(){ ENERGY_HOLD=0; syncEnergy(); }, ms||2200);
+  }catch(_){}
+}
+try{ window.addEventListener('stats:screen', syncEnergy); }catch(_){}
+try{ setInterval(syncEnergy, 1500); }catch(_){}
+
+/* ====================================================================
    ONE SCORE, ONE SOURCE — THE LEDGER
 
    A0/A1 out of the Game Night #6 debrief, and the reason the phone, the
@@ -5420,6 +5551,7 @@ function answer(choice,btn){
   });
   S.results[S.qi].push(correct);
   const rb=document.getElementById('revealBox');
+  try{ flashEnergy(correct?'hit':'miss'); }catch(_){}
   if(correct){ledgerSet('q'+S.qi+'-'+S.ni, worth, 0, 'live');
     rb.innerHTML=`<div class="reveal good"><div class="r1">✓ CORRECT · +${worth} pt${worth>1?'s':''}</div>
       <div class="r2">Nice read. You're now on <b>${S.pts}</b> points.</div></div>`;
@@ -5613,6 +5745,7 @@ function confirmReview(){
      a host reveal that arrives twice, a resume that lands back here — now
      writes the same one line twice instead of paying twice. */
   ledgerSet('r'+S.qi, got, sp, 'live');
+  try{ flashEnergy(got>0?'hit':'miss', 2600); }catch(_){}
   document.getElementById('revBtn').style.display='none';
   /* THE REVEAL. This is the most addictive half-second of the night — the
      moment a player finds out. So it says the thing they actually want to
@@ -7718,7 +7851,7 @@ function ensureCiCard(){
   css.textContent =
     '#ciCard{position:fixed;left:50%;bottom:90px;width:min(430px,94vw);z-index:8400;'+
     'transform:translateX(-50%) translateY(0);animation:ciUp .34s cubic-bezier(.16,1,.3,1);'+
-      'background:#161d2e;border:1px solid #2b3a5e;'+
+      'background:var(--card);border:1px solid #2b3a5e;'+
       'border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.55);padding:14px 15px;display:none;font-family:inherit}'+
     '@keyframes ciUp{from{transform:translateX(-50%) translateY(-22px) scale(.97);opacity:0}to{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}'+
     /* An open question is the loudest thing on the screen for twenty
@@ -7731,10 +7864,10 @@ function ensureCiCard(){
     'body.ciopen .screen.active{padding-top:var(--cih,0px);transition:padding-top .2s ease}'+
     /* The pinned block. A solid backdrop so the feed passing underneath
        never bleeds through the score. */
-    '#gtSticky{position:sticky;top:0;z-index:60;background:var(--bg,#0a0e17);'+
+    '#gtSticky{position:sticky;top:0;z-index:60;background:var(--bg,var(--bg));'+
       'padding-top:6px;margin:0 -2px;padding-left:2px;padding-right:2px}'+
     '#gtSticky::after{content:"";position:absolute;left:0;right:0;top:100%;height:14px;'+
-      'background:linear-gradient(180deg,var(--bg,#0a0e17),rgba(10,14,23,0));pointer-events:none}'+
+      'background:linear-gradient(180deg,var(--bg,var(--bg)),rgba(10,14,23,0));pointer-events:none}'+
     /* Docked in the slot it is a panel, not a floating card: square off the
        top so it reads as hanging from the scoreboard above it. */
     '#ciSlot #ciCard{border-top-left-radius:6px;border-top-right-radius:6px;'+
@@ -7938,8 +8071,9 @@ function ciGrade(q){
   // record to protect, so it counts there.
   try{ if(String(q.qid).indexOf('ci-try-')===0 && S.mode==='live') return; }catch(_){}
   PCI.called++;
-  if(String(pick)===String(q.answer)){ PCI.hit++; PCI.streak++; if(PCI.streak>PCI.best)PCI.best=PCI.streak; PCI.heat=Math.min(9,PCI.heat+1); }
-  else { PCI.streak=0; PCI.heat=Math.max(0,PCI.heat-1); }
+  if(String(pick)===String(q.answer)){ PCI.hit++; PCI.streak++; if(PCI.streak>PCI.best)PCI.best=PCI.streak; PCI.heat=Math.min(9,PCI.heat+1);
+    try{ flashEnergy('hit',1800); }catch(_){} }
+  else { PCI.streak=0; PCI.heat=Math.max(0,PCI.heat-1); try{ flashEnergy('miss',1400); }catch(_){} }
   try{ if(window.SB&&SB.pushCallItBoard) SB.pushCallItBoard({called:PCI.called,hit:PCI.hit,streak:PCI.streak,best:PCI.best,heat:PCI.heat}); }catch(e){}
 }
 function ciPick(q,v){
@@ -9627,7 +9761,7 @@ async function mountMatchup(){
     .mu-bar{height:9px;border-radius:6px;background:var(--red,#ff4d5e);overflow:hidden}
     .mu-bar>i{display:block;height:100%;background:linear-gradient(90deg,#28e0d0,#4d86ff)}
     .mu-barrow{display:flex;justify-content:space-between;font-size:12px;font-weight:800;margin-top:5px}
-    .mu-div{height:1px;background:var(--line,#26304a);margin:14px 0}
+    .mu-div{height:1px;background:var(--line,var(--line));margin:14px 0}
     .mu-duel{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center}
     .mu-star{text-align:center}
     .mu-swho{font-weight:800;font-size:14px}
@@ -9860,7 +9994,7 @@ function renderPortal(){
     try{ season=Math.max(0,Math.round((S&&S.seasonPts)||0)); nights=Math.max(0,(S&&S.streak)||0); }catch(_){}
     try{ ciBest=Math.max(0,(typeof PCI!=='undefined'&&PCI&&PCI.best)||0); }catch(_){}
     const initial=esc((nm||'S').slice(0,1).toUpperCase());
-    const stat=function(v2,k){ return '<div style="flex:1;background:#0e1626;border:1px solid #26304a;border-radius:12px;padding:10px 8px;text-align:center">'
+    const stat=function(v2,k){ return '<div style="flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 8px;text-align:center">'
       +'<div style="font-size:17px;font-weight:900;color:#eef2fb">'+v2+'</div>'
       +'<div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#93a0bd;margin-top:2px">'+k+'</div></div>'; };
     w.innerHTML=
@@ -9870,7 +10004,7 @@ function renderPortal(){
       +    '<b style="font-size:15px">'+(nm?('Welcome back, '+esc(nm)):'✅ You’re in')+'</b>'
       +    '<div style="font-size:12px;color:var(--muted,#93a0bd);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(em||'')+'</div>'
       +  '</div>'
-      +  '<button onclick="doSignOut()" style="flex:0 0 auto;background:none;border:1px solid var(--line2,#2f3a58);color:var(--muted,#93a0bd);border-radius:999px;padding:6px 11px;font-weight:700;font-size:12px;cursor:pointer">Sign out</button>'
+      +  '<button onclick="doSignOut()" style="flex:0 0 auto;background:none;border:1px solid var(--line2,var(--line2));color:var(--muted,#93a0bd);border-radius:999px;padding:6px 11px;font-weight:700;font-size:12px;cursor:pointer">Sign out</button>'
       +'</div>'
       +'<div style="display:flex;gap:8px">'
       +  stat(season.toLocaleString(),'Season pts')
@@ -10004,7 +10138,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-12-buildA.74';
+const STATS_BUILD='2026-08-12-arena.75';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -10348,7 +10482,7 @@ function renderMe(){
   let season=0, nights=0, best=0;
   try{ season=Math.max(0,Math.round((S&&S.seasonPts)||0)); nights=Math.max(0,(S&&S.streak)||0); }catch(_){}
   try{ best=Math.max(0,(typeof PCI!=='undefined'&&PCI&&PCI.best)||0); }catch(_){}
-  const tile=function(a,k){ return '<div style="flex:1;background:#0e1626;border:1px solid #26304a;border-radius:14px;padding:15px 8px;text-align:center">'
+  const tile=function(a,k){ return '<div style="flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 8px;text-align:center">'
     +'<div style="font-size:24px;font-weight:900;color:#eef2fb">'+a+'</div>'
     +'<div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#93a0bd;margin-top:3px">'+k+'</div></div>'; };
   el.innerHTML= v
@@ -10368,7 +10502,7 @@ function renderMe(){
          place to watch a game, not a place to find a grey test button. */
       + '<div class="card" style="margin-top:12px;padding:14px 16px">'
       +   '<div class="stHd">TRY IT OUT</div>'
-      +   '<button type="button" id="meTry" class="pdlock" style="background:#16233b;color:#cfd8ea;font-size:14px;padding:13px">Run a practice Call It</button>'
+      +   '<button type="button" id="meTry" class="pdlock" style="background:var(--card2);color:#cfd8ea;font-size:14px;padding:13px">Run a practice Call It</button>'
       +   '<div class="sub" style="font-size:12px;margin-top:7px">Fires a real question built from tonight’s numbers. Practice only — it doesn’t count toward your streak or your points.</div>'
       + '</div>'
       + '<button class="btn ghost" style="margin-top:12px;font-size:14px" onclick="openJoin(\'me\',\'\')">Tell us what you watch</button>'
@@ -10455,7 +10589,8 @@ function sportCfg(){
    loop on any device with no signal, which is the exact moment you least
    want the radio hammered. Failures now back off and the screen offers a
    button instead of spinning forever. */
-var GS={ok:false,at:0,loading:false,state:'pre',teams:[],leaders:[],box:{},plays:[],err:'',fails:0,lastTry:0};
+var GS={ok:false,at:0,loading:false,state:'pre',teams:[],leaders:[],box:{},plays:[],
+        wp:[],info:{},line:null,err:'',fails:0,lastTry:0};
 /* THE CLOCK, AS A CLOCK. ESPN hands back "30.5" inside the last minute —
    thirty and a half seconds — and printing that raw put a decimal point in
    the middle of a scoreboard. Under a minute reads :30. Over a minute is
@@ -10557,10 +10692,20 @@ async function loadGameStats(force){
       var tById={}; teams.forEach(function(t){ tById[t.id]=t; });
       _plays=(j.plays||[]).map(function(pl){
         var tid=(pl.team&&pl.team.id)||'';
+        /* ESPN sends -214748364 (int32 min) for "no coordinate", which is
+           not a location, it is a null wearing a number's clothes. Anything
+           outside the court is dropped here so the shot chart never has to
+           know about it. x is 0–50 across the baseline, y is feet out from
+           it, basket at roughly x25 y4. */
+        var cx=null, cy=null;
+        try{ var c=pl.coordinate;
+             if(c && Math.abs(c.x)<200 && Math.abs(c.y)<200){ cx=Number(c.x); cy=Number(c.y); } }catch(_){}
         return { id:String(pl.id||pl.sequenceNumber||''),
                  seq:Number(pl.sequenceNumber||0),
                  text:String(pl.text||''),
                  scoring:!!pl.scoringPlay, value:Number(pl.scoreValue||0),
+                 shot:!!pl.shootingPlay, x:cx, y:cy,
+                 kind:((pl.type&&pl.type.text)||''),
                  ab:(tById[tid]&&tById[tid].ab)||'', tid:tid,
                  away:(pl.awayScore==null?null:Number(pl.awayScore)),
                  home:(pl.homeScore==null?null:Number(pl.homeScore)),
@@ -10568,7 +10713,36 @@ async function loadGameStats(force){
                  clock:((pl.clock&&pl.clock.displayValue)||'') };
       }).filter(function(x){ return x.text; });
     }catch(_){ _plays=GS.plays||[]; }
+    /* WIN PROBABILITY, THE BUILDING, AND THE LINE — all three were already
+       inside this response and all three were being thrown away. Per the
+       ESPN deep dive: `winprobability` carries a homeWinPercentage for
+       EVERY play (378 of them last night), which is the difference between
+       a list of events and a story with a shape. `gameInfo` has the crowd,
+       the venue and the crew. `pickcenter` has the line — which appears in
+       this product as a BENCHMARK the room is measured against, and never
+       as a pick. We are not a sportsbook and the line never asks you for
+       an opinion. */
+    var _wp=[];
+    try{
+      _wp=(j.winprobability||[]).map(function(w){
+        return { p:Number(w.homeWinPercentage), tie:Number(w.tiePercentage||0), pid:String(w.playId||'') };
+      }).filter(function(w){ return isFinite(w.p); });
+    }catch(_){ _wp=[]; }
+    var _gi={};
+    try{
+      var gi=j.gameInfo||{};
+      _gi={ att:(gi.attendance==null?null:Number(gi.attendance)),
+            venue:((gi.venue||{}).fullName)||'',
+            crew:(gi.officials||[]).map(function(o){ return String(o.displayName||''); }).filter(Boolean) };
+    }catch(_){ _gi={}; }
+    var _line=null;
+    try{
+      var pc=(j.pickcenter||[])[0]||{};
+      if(pc.details) _line={ spread:String(pc.details), ou:(pc.overUnder==null?null:Number(pc.overUnder)),
+                             prov:((pc.provider||{}).name)||'' };
+    }catch(_){ _line=null; }
     /* ---- THE COMMIT. One block, no awaits inside it. ---- */
+    GS.wp=_wp; GS.info=_gi; GS.line=_line;
     GS.teams=teams; GS.box=box; GS.leaders=_leaders; GS.inj=_inj; GS.plays=_plays;
     GS.state=stat.state||'pre';
     GS.detail=String(stat.shortDetail||stat.detail||'')
@@ -11469,7 +11643,7 @@ function renderStats(){
       +'<b style="font-size:15px">'+(dead?'Can’t reach the league feed':'Pulling the numbers…')+'</b>'
       +'<p class="sub" style="font-size:14px;margin:8px 0 12px">'
       +(dead?'Nothing here is ever typed in by hand, so rather than show you a made-up number this screen waits. Everything else in the app still works.':'Live from the league feed. One moment.')+'</p>'
-      +(dead?'<button type="button" id="stRetry" class="pdlock" style="max-width:260px;margin:0 auto;background:#16233b;color:#93a0bd;font-size:14px;padding:13px">Try again</button>':'')
+      +(dead?'<button type="button" id="stRetry" class="pdlock" style="max-width:260px;margin:0 auto;background:var(--card2);color:#93a0bd;font-size:14px;padding:13px">Try again</button>':'')
       +'</div>';
     var rb=document.getElementById('stRetry');
     if(rb) rb.onclick=function(){ GS.fails=0; renderStats(); };
@@ -11989,6 +12163,13 @@ function feedRender(force){
     card.onclick=function(){
       var t=Date.now();
       if(t-last<400){ feedReact(card.getAttribute('data-fd')+'|🔥', card); }
+      else {
+        /* One tap opens the reactions on THIS row and closes every other
+           one, so the feed never grows a second column of open drawers. */
+        var was=card.classList.contains('open');
+        Array.prototype.forEach.call(el.querySelectorAll('.fdc.open'), function(o){ o.classList.remove('open'); });
+        if(!was) card.classList.add('open');
+      }
       last=t;
     };
   });
@@ -12073,96 +12254,435 @@ function paintRun(){
   }catch(_){}
 }
 
-function renderGametime(){
-  const head=document.getElementById('gtHead'), idle=document.getElementById('gtIdle');
-  if(!head) return;
-  let H='Home', A='Away', hs=null, as=null, st='';
-  try{ H=(GAME&&GAME.homeAb)||(GAME&&GAME.homeName)||H; A=(GAME&&GAME.awayAb)||(GAME&&GAME.awayName)||A; }catch(_){}
-  /* THE LIVE FEED FIRST. This used to read `lastScore` — the number the HOST
-     types into the Control Room — so the Gametime tab sat on "Not started"
-     through three quarters of a game the app was already streaming into the
-     Stats tab. The feed is the truth; the host's post is an override. */
+/* ====================================================================
+   GAMETIME — THE ARENA
+
+   "It still looks like the same ol platform, not updated to the arena."
+
+   Right. The Arena existed as a concept page for a day and was never built.
+   This is it, built: the screen a player sits on for two and a half hours,
+   rebuilt so that every second of that is paid for.
+
+   Everything on it comes out of ONE request we were already making. Nine
+   of the eleven elements are data that was arriving every fifteen seconds
+   and being dropped on the floor — win probability per play, shot
+   coordinates, the crowd, the crew, lead changes, the line. Nothing here
+   costs a request that was not already being spent.
+
+   The order is deliberate and it is not the order of "what data do we
+   have". It is the order of what a person looking up from a television
+   wants to know:
+
+     1. what is the score              the board
+     2. is my team going to win        win probability, and the shape of it
+     3. what just happened             the run
+     4. can I answer something         Call It, in place, never below the fold
+     5. tell me something I don't know the deep cut
+     6. show me the game               shot chart, who found who, who swung it
+     7. what happened before I looked  the feed
+     8. where am I                     the building, and the line vs the room
+
+   One rule governs all of it: NOTHING ON THIS SCREEN ASSERTS A FACT IT
+   CANNOT SOURCE. Every block hides itself when its data is missing rather
+   than rendering a zero, a dash, or a guess. A screen with six real blocks
+   is better than a screen with eleven, five of which are lying.
+   ==================================================================== */
+
+/* The two teams, as the rest of this file wants them: away first. */
+function gtTeams(){
   try{
-    if(GS && GS.ok && GS.teams && GS.teams.length===2){
-      var tA=GS.teams.find(function(t){return !t.home;})||GS.teams[0];
-      var tH=GS.teams.find(function(t){return t.home;})||GS.teams[1];
-      if(tA&&tH){
-        if(tA.ab) A=tA.ab; if(tH.ab) H=tH.ab;
-        if(tA.score!=null && tH.score!=null){ as=tA.score; hs=tH.score; st=GS.detail||'LIVE'; }
-      }
+    if(!GS.ok || !GS.teams || GS.teams.length!==2) return null;
+    var a=GS.teams.find(function(t){return !t.home;})||GS.teams[0];
+    var h=GS.teams.find(function(t){return t.home;})||GS.teams[1];
+    if(!a||!h) return null;
+    return {a:a,h:h};
+  }catch(_){ return null; }
+}
+function gtStatusPill(){
+  var ph=''; try{ ph=phaseNow(); }catch(_){}
+  var det=''; try{ det=String(GS.detail||''); }catch(_){}
+  if(ph==='final') return {cls:'final', txt:det||'FINAL'};
+  if(ph==='live')  return {cls:'',      txt:det||'LIVE'};
+  return {cls:'pre', txt:det||'NOT STARTED'};
+}
+
+/* ---- WIN PROBABILITY ------------------------------------------------
+   The most valuable unused thing in the feed, and it is not close. A
+   number per play turns the night into a shape: you can see the moment it
+   turned, and so can everyone else in the room, which is the entire
+   argument for putting it on a screen people are watching together.
+
+   Two guards. It is hidden before tip, because a projection is not a win
+   probability and pretending otherwise is the kind of small dishonesty
+   that costs you a tester. And the sparkline needs at least a dozen
+   readings before it is a line rather than a rumour.                    */
+function gtWinProb(A,H,AC,HC){
+  try{
+    var wp=GS.wp||[]; if(!wp.length) return '';
+    var ph=phaseNow(); if(ph==='pre') return '';
+    var last=wp[wp.length-1]; if(!last||!isFinite(last.p)) return '';
+    var hp=Math.max(0,Math.min(1,last.p)), ap=1-hp;
+    var hpc=Math.round(hp*100), apc=100-hpc;
+    var out='<div class="ablk" style="margin-top:16px">'
+      + '<div class="alab"><span>Win probability</span><em>ESPN · '+wp.length+' plays</em></div>'
+      + '<div class="abar">'
+      +   '<i style="flex:'+ap.toFixed(4)+';background:'+AC+'"></i>'
+      +   '<i style="flex:'+hp.toFixed(4)+';background:'+HC+'"></i></div>'
+      + '<div class="abarn"><span style="color:'+AC+'">'+esc(A)+' '+apc+'%</span>'
+      +   '<span style="color:'+HC+'">'+hpc+'% '+esc(H)+'</span></div>';
+    if(wp.length>=12) out += '<div class="apane" style="margin-top:12px">'
+      + '<div class="alab" style="margin-bottom:7px"><span>The night so far</span><em style="color:var(--teal)">'
+      +   wp.length+' readings</em></div>'
+      + gtSpark(wp,AC,HC) + '</div>';
+    return out+'</div>';
+  }catch(_){ return ''; }
+}
+/* The curve. Home above the midline, away below, drawn as one filled path
+   so the eye reads territory rather than a wiggle. Downsampled to about a
+   hundred points — more than that is invisible at 320px wide and costs a
+   frame to draw. */
+function gtSpark(wp,AC,HC){
+  try{
+    var W=320,Hh=76,N=Math.min(110,wp.length);
+    var step=wp.length/N, pts=[];
+    for(var i=0;i<N;i++){
+      var v=wp[Math.min(wp.length-1,Math.floor(i*step))];
+      pts.push(Math.max(0,Math.min(1,v.p)));
     }
-  }catch(_){}
-  try{ if(hs==null && typeof lastScore!=='undefined'&&lastScore&&lastScore.home!=null){ hs=lastScore.home; as=lastScore.away; st=lastScore.state||''; } }catch(_){}
+    var d='', dz='M0,'+Hh;
+    pts.forEach(function(v,i){
+      var x=(i/(N-1))*W, y=Hh-(v*Hh);
+      d += (i?'L':'M')+x.toFixed(1)+','+y.toFixed(1);
+      dz+= 'L'+x.toFixed(1)+','+y.toFixed(1);
+    });
+    dz+='L'+W+','+Hh+'Z';
+    return '<svg viewBox="0 0 '+W+' '+Hh+'" width="100%" height="'+Hh+'" preserveAspectRatio="none" aria-hidden="true">'
+      + '<defs><linearGradient id="wpg" x1="0" y1="0" x2="0" y2="1">'
+      +   '<stop offset="0%" stop-color="'+HC+'" stop-opacity=".38"/>'
+      +   '<stop offset="100%" stop-color="'+HC+'" stop-opacity="0"/></linearGradient></defs>'
+      + '<line x1="0" y1="'+(Hh/2)+'" x2="'+W+'" y2="'+(Hh/2)+'" stroke="rgba(255,255,255,.14)" stroke-width="1" stroke-dasharray="3 4"/>'
+      + '<path d="'+dz+'" fill="url(#wpg)"/>'
+      + '<path d="'+d+'" fill="none" stroke="'+HC+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
+      + '</svg>';
+  }catch(_){ return ''; }
+}
+
+/* ---- THE RUN --------------------------------------------------------
+   Weighted by POINTS, not by the count of scores — counting scores was
+   the mistake that made the first version of this say nothing, because
+   four free throws and two threes are the same number of events and very
+   different basketball. */
+function gtRunBlock(A,H,AC,HC){
+  try{
+    var pls=(GS.plays||[]).filter(function(p){ return p.scoring && p.value>0; });
+    if(pls.length<4) return '';
+    var last=pls.slice(-12), aP=0, hP=0;
+    var T=gtTeams(); if(!T) return '';
+    last.forEach(function(p){ if(p.ab===T.a.ab) aP+=p.value; else if(p.ab===T.h.ab) hP+=p.value; });
+    var tot=aP+hP; if(!tot) return '';
+    var af=aP/tot, hf=hP/tot;
+    var lead = aP>hP ? {n:T.a.name||A, s:aP+'–'+hP} : hP>aP ? {n:T.h.name||H, s:hP+'–'+aP} : null;
+    return '<div class="ablk" style="margin-top:15px">'
+      + '<div class="abar" style="height:5px">'
+      +   '<i style="flex:'+af.toFixed(3)+';background:'+AC+'"></i>'
+      +   '<i style="flex:'+hf.toFixed(3)+';background:'+HC+'"></i></div>'
+      + '<div class="acap" style="display:flex;justify-content:space-between;margin-top:6px">'
+      +   '<span>'+esc(A)+'</span><span>Run · last 12 scores</span><span>'+esc(H)+'</span></div>'
+      + (lead
+          ? '<div style="text-align:center;font-size:14px;font-weight:800;color:var(--ink);margin-top:9px;line-height:1.4">'
+            + '<em style="font-style:normal;color:'+(aP>hP?AC:HC)+'">'+esc(lead.n)+'</em> '+lead.s+' over the last stretch.</div>'
+          : '<div style="text-align:center;font-size:14px;font-weight:800;color:var(--muted);margin-top:9px">Even over the last stretch.</div>')
+      + '</div>';
+  }catch(_){ return ''; }
+}
+
+function renderGametime(){
+  const head=document.getElementById('gtHead');
+  if(!head) return;
+  let H='Home', A='Away', hs=null, as=null;
+  let AC='var(--away)', HC='var(--home)';
+  const T=gtTeams();
+  try{ H=(GAME&&GAME.homeAb)||(GAME&&GAME.homeAbbr)||H; A=(GAME&&GAME.awayAb)||(GAME&&GAME.awayAbbr)||A; }catch(_){}
+  let recA='', recH='';
+  if(T){
+    if(T.a.ab) A=T.a.ab; if(T.h.ab) H=T.h.ab;
+    if(T.a.score!=null && T.h.score!=null){ as=T.a.score; hs=T.h.score; }
+    recA=T.a.rec||''; recH=T.h.rec||'';
+  }
+  try{ if(hs==null && typeof lastScore!=='undefined'&&lastScore&&lastScore.home!=null){ hs=lastScore.home; as=lastScore.away; } }catch(_){}
   const live = hs!=null && as!=null;
+
   /* BEFORE TIP, TWO DASHES AND THE WORD "NOT STARTED" IS NOT A SCOREBOARD.
      It is a placeholder telling you to come back later, at the top of the
-     screen we most want you sitting on. A countdown is the same information
-     doing an actual job. */
+     one screen we most want you sitting on. A countdown is the same
+     information doing an actual job. */
   if(!live){
     var u=null; try{ u=untilTip(); }catch(_){}
-    head.innerHTML='<div class="card center" style="padding:18px 16px">'
-      + '<div class="gtvs">'+esc(String(A))+' <i>at</i> '+esc(String(H))+'</div>'
-      + '<div class="gtcount">'+(u?esc(u):'Any minute now')+'</div>'
-      + '<div class="gtwhen">'+(u?'until tip':'')+(GAME.net?((u?' · ':'')+esc(GAME.net)):'')+'</div>'
+    head.innerHTML='<div class="card" style="padding:22px 16px;text-align:center">'
+      + '<div class="alab" style="justify-content:center;margin-bottom:12px">Tonight</div>'
+      + '<div class="ateams">'
+      +   '<div class="atm"><div class="ab" style="color:var(--away)">'+esc(String(A))+'</div></div>'
+      +   '<div class="aat" style="padding-top:0">AT</div>'
+      +   '<div class="atm"><div class="ab" style="color:var(--home)">'+esc(String(H))+'</div></div>'
+      + '</div>'
+      + '<div class="abig" style="font-size:40px;margin-top:16px;letter-spacing:-1.6px">'+(u?esc(u):'Any minute')+'</div>'
+      + '<div class="acap" style="margin-top:8px">'+(u?'until tip':'')+(GAME.net?((u?' · ':'')+esc(GAME.net)):'')+'</div>'
       + '</div>';
     return renderGametimeRest();
   }
-  /* ==== THE SCOREBOARD, ARENA ====================================
-     Rolling digits on three fixed slots so 99→100 animates instead of
-     rebuilding the DOM at the most dramatic score change in basketball.
-     Team colour on the corners. A run bar weighted by POINTS — not by
-     the count of scores, which is the mistake that made the first
-     version of this say nothing — with the sentence underneath, because
-     the graphic gives you the shape and the sentence gives you the line
-     worth repeating. */
-  head.innerHTML='<div class="card gtBoard" style="padding:17px 16px 14px">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between">'
-    +   '<div class="gtSide" id="gtSideA" style="flex:1;text-align:center">'
-    +     '<div class="gtAb a">'+esc(String(A))+'</div><div class="gtScore" id="gtScoreA"></div></div>'
-    +   '<div style="flex:0 0 auto;padding:0 10px"><span class="pill">'+esc(st||({pre:'Not started',live:'LIVE',final:'Final'}[phaseNow()]||'—'))+'</span></div>'
-    +   '<div class="gtSide" id="gtSideH" style="flex:1;text-align:center">'
-    +     '<div class="gtAb h">'+esc(String(H))+'</div><div class="gtScore" id="gtScoreH"></div></div>'
+
+  const pill=gtStatusPill();
+  head.innerHTML='<div class="card gtBoard" style="padding:15px 16px 14px">'
+    + '<div class="ascore">'
+    +   '<span class="alive '+pill.cls+'"><i></i>'+esc(pill.txt)+'</span>'
+    +   '<div class="ateams">'
+    +     '<div class="atm"><div class="ab" style="color:'+AC+'">'+esc(String(A))+'</div>'
+    +       '<div class="n" id="gtScoreA">'+as+'</div>'
+    +       (recA?'<div class="rec">'+esc(recA)+'</div>':'')+'</div>'
+    +     '<div class="aat">AT</div>'
+    +     '<div class="atm"><div class="ab" style="color:'+HC+'">'+esc(String(H))+'</div>'
+    +       '<div class="n" id="gtScoreH">'+hs+'</div>'
+    +       (recH?'<div class="rec">'+esc(recH)+'</div>':'')+'</div>'
+    +   '</div>'
     + '</div>'
-    + '<div class="gtRunBar" id="gtRunBar"><i class="a" id="gtRunA" style="width:50%"></i>'
-    +   '<i class="h" id="gtRunH" style="width:50%"></i></div>'
-    + '<div class="gtRunCap"><i>'+esc(String(A))+'</i><i>RUN · LAST FEW MINUTES</i><i>'+esc(String(H))+'</i></div>'
-    + '<div class="gtRun" id="gtRun">reading the play-by-play…</div>'
+    + gtWinProb(A,H,AC,HC)
+    + gtRunBlock(A,H,AC,HC)
     + '</div>';
-  try{ gtDigits('gtScoreA', as, 'gtSideA'); gtDigits('gtScoreH', hs, 'gtSideH'); }catch(_){}
-  try{ paintRun(); }catch(_){}
   return renderGametimeRest();
 }
+/* ---- THE SHOT CHART -------------------------------------------------
+   277 of last night's 378 plays carried a real coordinate and we drew none
+   of them. ESPN's space is x 0–50 across the baseline and y feet out from
+   it, basket around x25 y4 — so this is a half court with the hoop at the
+   bottom. Made shots are solid in team colour, misses are hollow grey, and
+   nothing is labelled, because a shot chart that needs a legend to be read
+   at a glance has failed at the one thing it is for.                     */
+function gtShotChart(){
+  try{
+    var T=gtTeams(); if(!T) return '';
+    var sh=(GS.plays||[]).filter(function(p){ return p.shot && p.x!=null && p.y!=null; });
+    if(sh.length<12) return '';
+    var W=240,Hh=150, PAD=8;
+    // x 0..50 -> PAD..W-PAD ; y 0..32 -> Hh-PAD (baseline) up to PAD
+    var fx=function(x){ return PAD + (Math.max(0,Math.min(50,x))/50)*(W-2*PAD); };
+    var fy=function(y){ return (Hh-PAD) - (Math.max(0,Math.min(32,y))/32)*(Hh-2*PAD); };
+    var dots='';
+    sh.slice(-140).forEach(function(p){
+      var col = p.ab===T.h.ab ? 'var(--home)' : 'var(--away)';
+      if(p.scoring) dots += '<circle cx="'+fx(p.x).toFixed(1)+'" cy="'+fy(p.y).toFixed(1)+'" r="3.1" fill="'+col+'" opacity=".95"/>';
+      else          dots += '<circle cx="'+fx(p.x).toFixed(1)+'" cy="'+fy(p.y).toFixed(1)+'" r="2.6" fill="none" stroke="#3b4a6b" stroke-width="1.2"/>';
+    });
+    var made=sh.filter(function(p){return p.scoring;}).length;
+    var court='<g fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1">'
+      + '<rect x="'+PAD+'" y="'+PAD+'" width="'+(W-2*PAD)+'" height="'+(Hh-2*PAD)+'" rx="4"/>'
+      + '<rect x="'+(W/2-26)+'" y="'+(Hh-PAD-38)+'" width="52" height="38"/>'
+      + '<circle cx="'+(W/2)+'" cy="'+(Hh-PAD-38)+'" r="14"/>'
+      + '<path d="M'+(PAD+10)+','+(Hh-PAD)+' L'+(PAD+10)+','+(Hh-PAD-34)+' A '+(W/2-PAD-10)+' '+(W/2-PAD-10)+' 0 0 0 '+(W-PAD-10)+','+(Hh-PAD-34)+' L'+(W-PAD-10)+','+(Hh-PAD)+'"/>'
+      + '</g>'
+      + '<circle cx="'+(W/2)+'" cy="'+(Hh-PAD-11)+'" r="3" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.4"/>';
+    return '<div class="ablk">'
+      + '<div class="alab"><span>Shot chart</span><em>'+made+' of '+sh.length+'</em></div>'
+      + '<div class="apane" style="padding:10px">'
+      +   '<svg viewBox="0 0 '+W+' '+Hh+'" width="100%" aria-hidden="true">'+court+dots+'</svg>'
+      +   '<div style="display:flex;gap:14px;justify-content:center;margin-top:9px;font-size:12px;font-weight:700;color:var(--muted)">'
+      +     '<span style="display:flex;align-items:center;gap:5px"><b style="width:8px;height:8px;border-radius:50%;display:block;background:var(--home)"></b>'+esc(T.h.ab)+' made</span>'
+      +     '<span style="display:flex;align-items:center;gap:5px"><b style="width:8px;height:8px;border-radius:50%;display:block;background:var(--away)"></b>'+esc(T.a.ab)+' made</span>'
+      +     '<span style="display:flex;align-items:center;gap:5px"><b style="width:8px;height:8px;border-radius:50%;display:block;border:1.2px solid #3b4a6b"></b>missed</span>'
+      +   '</div></div></div>';
+  }catch(_){ return ''; }
+}
+
+/* ---- WHO FOUND WHO --------------------------------------------------
+   The assist network, parsed straight out of the play text — "(Breanna
+   Stewart assists)". No extra request, and it is the one stat that says
+   something about how a team is playing rather than who is scoring.     */
+function gtAssists(){
+  try{
+    var pairs={};
+    (GS.plays||[]).forEach(function(p){
+      var m=/^(.+?)\s+makes\b.*?\(([^)]+?)\s+assists\)/i.exec(p.text||'');
+      if(!m) return;
+      var to=m[1].trim(), from=m[2].trim();
+      var k=from+'→'+to;
+      pairs[k]=(pairs[k]||0)+1;
+    });
+    var rows=Object.keys(pairs).map(function(k){
+      var b=k.split('→'); return {from:b[0],to:b[1],n:pairs[k]};
+    }).sort(function(a,b){ return b.n-a.n; }).slice(0,4);
+    if(!rows.length) return '';
+    var top=rows[0].n||1;
+    var sur=function(n){ var b=String(n||'').trim().split(/\s+/); return b.length>1?b.slice(1).join(' '):b[0]; };
+    var out='<div class="ablk"><div class="alab"><span>Who found who</span></div>';
+    rows.forEach(function(r){
+      out+='<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">'
+        + '<div style="font-size:20px;font-weight:900;color:var(--teal);width:26px;text-align:center;font-variant-numeric:tabular-nums">'+r.n+'</div>'
+        + '<div style="flex:1;min-width:0;font-size:14px;line-height:1.35">'
+        +   '<b style="color:var(--ink);font-weight:800">'+esc(sur(r.from))+'</b> <span style="color:var(--muted)">→</span> '
+        +   '<b style="color:var(--ink);font-weight:800">'+esc(sur(r.to))+'</b>'
+        +   '<div style="height:3px;border-radius:99px;background:var(--card2);margin-top:5px;overflow:hidden">'
+        +     '<i style="display:block;height:100%;background:var(--teal);width:'+Math.round((r.n/top)*100)+'%"></i></div>'
+        + '</div></div>';
+    });
+    return out+'</div>';
+  }catch(_){ return ''; }
+}
+
+/* ---- WHO ACTUALLY SWUNG IT -----------------------------------------
+   Plus/minus, which is in the box score we already read and which nobody
+   ever looks up. The caption is the point: the leading scorer being deeply
+   negative is the most repeatable line on this whole screen.            */
+function gtPlusMinus(){
+  try{
+    var rows=Object.keys(GS.box||{}).map(function(nm){
+      var r=GS.box[nm]||{};
+      return { nm:nm, min:gsNum(r.MIN), pts:gsNum(r.PTS), pm:gsNum(r['+/-']) };
+    }).filter(function(r){ return r.pm!=null && r.min!=null && r.min>=8; });
+    if(rows.length<4) return '';
+    rows.sort(function(a,b){ return (b.pm)-(a.pm); });
+    var show=rows.slice(0,3).concat(rows.slice(-2));
+    var seen={}, list=[];
+    show.forEach(function(r){ if(!seen[r.nm]){ seen[r.nm]=1; list.push(r); } });
+    var abbr=function(n){ var b=String(n).split(/\s+/); return b.length>1?(b[0][0]+'. '+b.slice(1).join(' ')):n; };
+    var out='<div class="ablk"><div class="alab"><span>Who actually swung it</span></div>'
+      + '<table class="atab"><tr><th>Player</th><th>MIN</th><th>PTS</th><th>+/−</th></tr>';
+    list.forEach(function(r){
+      out+='<tr><td>'+esc(abbr(r.nm))+'</td><td>'+(r.min==null?'—':r.min)+'</td><td>'+(r.pts==null?'—':r.pts)+'</td>'
+        + '<td class="'+(r.pm>0?'up':r.pm<0?'dn':'')+'">'+(r.pm>0?'+':'')+(r.pm<0?'−'+Math.abs(r.pm):r.pm)+'</td></tr>';
+    });
+    out+='</table>';
+    // the sentence. only when it is actually interesting.
+    var byPts=rows.slice().sort(function(a,b){ return (b.pts||0)-(a.pts||0); })[0];
+    if(byPts && byPts.pm!=null && byPts.pm<0)
+      out+='<div class="acap" style="margin-top:9px;text-transform:none;font-size:12px;letter-spacing:0;color:var(--muted)">'
+        + esc(abbr(byPts.nm))+' leads all scorers and is −'+Math.abs(byPts.pm)+'.</div>';
+    return out+'</div>';
+  }catch(_){ return ''; }
+}
+
+/* ---- THE BUILDING ---------------------------------------------------
+   Crowd, lead changes, largest lead, and the crew. Small, and the reason
+   it is here is that it makes the screen feel like a place rather than a
+   dashboard. All of it was already in the payload.                      */
+function gtBuilding(){
+  try{
+    var T=gtTeams(); if(!T) return '';
+    var info=GS.info||{};
+    var lc=null, ll=null;
+    try{
+      var m=T.h.m||{}, m2=T.a.m||{};
+      lc = gsNum(m['Lead Changes']); if(lc==null) lc=gsNum(m2['Lead Changes']);
+      ll = Math.max(gsNum(m['Largest Lead'])||0, gsNum(m2['Largest Lead'])||0) || null;
+    }catch(_){}
+    var tiles=[];
+    if(info.att) tiles.push('<div><b>'+Number(info.att).toLocaleString()+'</b><span>Crowd</span></div>');
+    if(lc!=null) tiles.push('<div><b>'+lc+'</b><span>Lead changes</span></div>');
+    if(ll!=null) tiles.push('<div><b>'+ll+'</b><span>Biggest lead</span></div>');
+    if(!tiles.length) return '';
+    var out='<div class="ablk"><div class="alab"><span>The building</span>'
+      + (info.venue?'<em>'+esc(info.venue)+'</em>':'')+'</div>'
+      + '<div class="atiles" style="margin-top:0">'+tiles.join('')+'</div>';
+    if(info.crew && info.crew.length)
+      out+='<div class="acap" style="margin-top:10px">Crew: '+esc(info.crew.join(' · '))+'</div>';
+    return out+'</div>';
+  }catch(_){ return ''; }
+}
+
+/* ---- THE LINE VS THE ROOM -------------------------------------------
+   THE ONE BLOCK ON THIS SCREEN THAT HAS A RULE WRITTEN ON IT.
+
+   The betting line appears here as a BENCHMARK and never as a pick. It is
+   the number the market published before tip, shown so a player can see
+   whether the game is beating it — the same way a marathon shows you the
+   pace car. There is nothing to tap. No odds are offered, no wager is
+   possible, and nothing in this app has ever accepted one.
+
+   If this block ever grows a button, it has stopped being STATS.        */
+function gtLine(){
+  try{
+    var L=GS.line; if(!L||!L.spread) return '';
+    var T=gtTeams(); if(!T) return '';
+    var ph=phaseNow();
+    var margin=null, leader='';
+    if(T.a.score!=null && T.h.score!=null){
+      var d=Number(T.h.score)-Number(T.a.score);
+      margin=Math.abs(d); leader = d>0?T.h.ab : d<0?T.a.ab : '';
+    }
+    var now = margin==null ? '' :
+      (margin===0 ? 'Right now it is <em>level</em>.'
+                  : 'Right now it is <em>'+esc(leader)+' by '+margin+'</em>.');
+    return '<div class="ablk"><div class="alab"><span>The line vs the game</span>'
+      + (L.prov?'<em>'+esc(L.prov)+'</em>':'')+'</div>'
+      + '<div class="atx" style="margin-top:0">Before tip the line said <b>'+esc(L.spread)+'</b>'
+      + (L.ou?', total <b>'+L.ou+'</b>':'')+'. '+now+'</div>'
+      + '<div class="acap" style="margin-top:8px">A benchmark, not a pick · nothing here is wagerable</div>'
+      + '</div>';
+  }catch(_){ return ''; }
+}
+
+/* ---- YOUR CALL IT NIGHT --------------------------------------------- */
+function gtCallItRecord(){
+  try{
+    if(!(PCI && PCI.called>0)) return '';
+    var pct=Math.round((PCI.hit/PCI.called)*100);
+    return '<div class="ablk"><div class="alab"><span>Your night</span></div>'
+      + '<div class="atiles" style="margin-top:0">'
+      +   '<div><b>'+PCI.hit+'/'+PCI.called+'</b><span>Called</span></div>'
+      +   '<div><b>'+pct+'%</b><span>Hit rate</span></div>'
+      +   '<div><b style="color:var(--gold)">'+(PCI.best||0)+'</b><span>Best run</span></div>'
+      + '</div></div>';
+  }catch(_){ return ''; }
+}
+
 function renderGametimeRest(){
   const idle=document.getElementById('gtIdle');
   if(!idle) return;
-  /* An empty room is not a feature. Before a question lands this tab has to
-     be worth sitting on: what you picked, how your Call It night is going,
-     and a button that fires a real one so you — and the host, an hour before
-     tip — can prove the thing works without waiting for a game to happen. */
-  /* WHAT USED TO BE HERE. A "leave this open" placeholder, a Call It
-     scoreboard and a copy of your prediction card — three cards of filler
-     stacked above nothing, because before the Feed there was nothing to put
-     on this tab between questions. There is now. The card itself moved to
-     Stats, where you asked for it; the only thing that survives here is your
-     Call It night, and only once there is one to report. */
+  /* THE ORDER IS THE ARGUMENT. Your own night first, because it is the
+     only block on the screen that is about you. Then the deep cut, which
+     is the thing you can say out loud that nobody else in the room knows.
+     Then the game itself. The feed runs underneath all of it. */
   let out='';
-  try{
-    if(PCI.called>0){
-      const pctv=Math.round((PCI.hit/PCI.called)*100);
-      out+='<div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;text-align:center">'
-        + '<div style="flex:1"><div style="font-size:17px;font-weight:900;color:#eef2fb">'+PCI.hit+'/'+PCI.called+'</div><div style="font-size:12px;letter-spacing:.12em;color:#93a0bd;font-weight:800">CALLED</div></div>'
-        + '<div style="flex:1"><div style="font-size:17px;font-weight:900;color:#eef2fb">'+pctv+'%</div><div style="font-size:12px;letter-spacing:.12em;color:#93a0bd;font-weight:800">HIT RATE</div></div>'
-        + '<div style="flex:1"><div style="font-size:17px;font-weight:900;color:var(--gold)">'+(PCI.best||0)+'</div><div style="font-size:12px;letter-spacing:.12em;color:#93a0bd;font-weight:800">BEST RUN</div></div>'
-        + '</div>';
-    }
-  }catch(_){}
+  try{ out += gtCallItRecord(); }catch(_){}
+  try{ out += gtDeepCutBlock(); }catch(_){}
+  try{ out += gtShotChart(); }catch(_){}
+  try{ out += gtAssists(); }catch(_){}
+  try{ out += gtPlusMinus(); }catch(_){}
+  try{ out += gtBuilding(); }catch(_){}
+  try{ out += gtLine(); }catch(_){}
   idle.innerHTML=out;
-  // No empty boxes holding space open. Three stacked containers with 14px
-  // margins left a dead 42-pixel band under the score before the feed began.
-  try{ idle.style.marginTop = out ? '14px' : '0'; }catch(_){}
+  // No empty boxes holding space open.
+  try{ idle.style.marginTop = out ? '4px' : '0'; }catch(_){}
   try{ var sl=document.getElementById('ciSlot'); if(sl) sl.style.marginTop = sl.children.length ? '14px' : '0'; }catch(_){}
   try{ feedRender(); }catch(_){}
 }
+
+/* The deep cut, in Arena dress. Moved out of the Stats tab, which is the
+   tab nobody opens during a game — this is the one thing on the screen a
+   player can say out loud that nobody else in the room knows, so it does
+   not belong two taps away.
+
+   deliberately NOT faking a big number here. deepCuts() returns a headline
+   sentence, not a metric, and pulling the first digit out of the sentence
+   to render it at 48px would sometimes be right and sometimes be nonsense
+   ("is 2 rebounds from a double-double" is not a stat that means 2). The
+   emoji carries the visual weight instead, which is honest and reads fine
+   at a glance. */
+function gtDeepCutBlock(){
+  try{
+    var cuts=[]; try{ cuts=deepCuts(); }catch(_){ cuts=[]; }
+    if(!cuts || !cuts.length) return '';
+    var c=cuts[0]; if(!c || !c.t) return '';
+    return '<div class="ablk"><div class="alab"><span>Deep cut</span>'
+      + '<em style="color:var(--teal)">nobody else has looked this up</em></div>'
+      + '<div style="display:flex;gap:13px;align-items:flex-start">'
+      +   '<div style="font-size:34px;line-height:1;flex:0 0 auto">'+(c.i||'📊')+'</div>'
+      +   '<div style="flex:1;min-width:0">'
+      +     '<div style="font-size:17px;font-weight:800;color:var(--ink);line-height:1.36">'+c.t+'</div>'
+      +     (c.s?'<div class="atx" style="font-size:14px;color:var(--muted);margin-top:6px">'+c.s+'</div>':'')
+      +   '</div>'
+      + '</div></div>';
+  }catch(_){ return ''; }
+}
+
 /* THE TEST HOOK. Fires a real Call It card, through the real renderer, into
    the real slot — no game required. Every run gets a fresh qid so it can be
    run again and again, and it resolves a beat after you answer instead of
@@ -12235,7 +12755,7 @@ try{ setInterval(function(){ try{ takeoverTick(); }catch(_){} }, 15000); }catch(
   </div>
 </div>
 <div id="botnav" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:8500;
-     background:rgba(10,14,23,.94);backdrop-filter:blur(12px);border-top:1px solid #1e2740;
+     background:rgba(10,14,23,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line2);
      transform:translateZ(0);
      padding:7px 6px calc(7px + env(safe-area-inset-bottom,0px));">
   <div style="max-width:430px;margin:0 auto;display:flex">
@@ -12266,95 +12786,112 @@ try{ setInterval(function(){ try{ takeoverTick(); }catch(_){} }, 15000); }catch(
    two-line tab makes the whole bar jump height when you switch to it. */
 #botnav .navb span{font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:359px){ #botnav .navb svg{width:20px;height:20px} }
-#botnav .navb.on{color:#28e0d0}
+#botnav .navb.on{color:var(--teal)}
 /* A lit edge over the live tab, the same language as the card edges. */
 #botnav .navb.on::before{content:'';position:absolute;top:-7px;left:50%;transform:translateX(-50%);
-  width:26px;height:2px;border-radius:0 0 3px 3px;background:#28e0d0;box-shadow:0 0 10px rgba(40,224,208,.7)}
+  width:26px;height:2px;border-radius:0 0 3px 3px;background:var(--teal);box-shadow:0 0 10px rgba(40,224,208,.7)}
 #botnav .navb:active{transform:scale(.94)}
 @media (prefers-reduced-motion:reduce){ #botnav .navb{transition:none} }
 body.hasnav{padding-bottom:calc(74px + env(safe-area-inset-bottom,0px))}
 
 /* ---- stats tab ---- */
-.stTeam{font-size:12px;letter-spacing:.14em;color:#93a0bd;font-weight:800}
-.stScore{font-size:30px;font-weight:900;color:#eef2fb;line-height:1.1}
-.stRec{font-size:12px;color:#5b6a8c;font-weight:700}
-.stHd{font-size:12px;letter-spacing:.14em;color:#28e0d0;font-weight:800;margin-bottom:10px}
+.stTeam{font-size:12px;letter-spacing:.14em;color:var(--muted);font-weight:800}
+.stScore{font-size:30px;font-weight:900;color:var(--ink);line-height:1.1}
+.stRec{font-size:12px;color:var(--dim);font-weight:700}
+.stHd{font-size:12px;letter-spacing:.14em;color:var(--teal);font-weight:800;margin-bottom:10px}
 .stRow{display:flex;align-items:center;gap:10px;margin-bottom:11px}
-.stV{flex:0 0 54px;text-align:center;font-size:14px;font-weight:800;color:#7e8cab}
-.stV.win{color:#eef2fb}
+.stV{flex:0 0 54px;text-align:center;font-size:14px;font-weight:800;color:var(--muted)}
+.stV.win{color:var(--ink)}
 .stMid{flex:1;min-width:0}
-.stLbl{font-size:12px;color:#93a0bd;font-weight:700;text-align:center;margin-bottom:5px}
+.stLbl{font-size:12px;color:var(--muted);font-weight:700;text-align:center;margin-bottom:5px}
 .stBars{display:flex;gap:4px}
-.stB{flex:1;height:6px;border-radius:99px;background:#141d2f;overflow:hidden}
+.stB{flex:1;height:6px;border-radius:99px;background:var(--card2);overflow:hidden}
 .stB i{display:block;height:100%;border-radius:99px;transition:width .4s ease}
 .stB.l{transform:scaleX(-1)}
 .stLead{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:14px}
-.stLeadN{color:#93a0bd}
-.stLeadN i{font-style:normal;font-size:12px;color:#5b6a8c;letter-spacing:.08em}
-.stLeadV{color:#eef2fb;font-weight:800;text-align:right}
-.stPickRow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 0;border-bottom:1px solid #1a2337}
+.stLeadN{color:var(--muted)}
+.stLeadN i{font-style:normal;font-size:12px;color:var(--dim);letter-spacing:.08em}
+.stLeadV{color:var(--ink);font-weight:800;text-align:right}
+.stPickRow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 0;border-bottom:1px solid var(--card2)}
 .stPickRow:last-of-type{border-bottom:none}
-.stPickCat{font-size:12px;letter-spacing:.1em;color:#5b6a8c;font-weight:800;text-transform:uppercase}
-.stPickMine{grid-column:1;font-size:14px;font-weight:800;color:#eef2fb}
-.stPickMine.lead{color:#2ee6a6}
-.stPickLead{grid-column:2;grid-row:1 / span 2;align-self:center;font-size:12px;color:#93a0bd;text-align:right}
+.stPickCat{font-size:12px;letter-spacing:.1em;color:var(--dim);font-weight:800;text-transform:uppercase}
+.stPickMine{grid-column:1;font-size:14px;font-weight:800;color:var(--ink)}
+.stPickMine.lead{color:var(--green)}
+.stPickLead{grid-column:2;grid-row:1 / span 2;align-self:center;font-size:12px;color:var(--muted);text-align:right}
 
 /* ---- stats tab v2: one thing at a time ---- */
-.stSeg{display:flex;gap:5px;background:#0e1626;border:1px solid #1e2740;border-radius:14px;
+.stSeg{display:flex;gap:5px;background:var(--card);border:1px solid var(--line2);border-radius:14px;
   padding:4px;margin-top:12px;position:sticky;top:6px;z-index:30;backdrop-filter:blur(10px)}
-.stSeg button{flex:1;border:none;background:none;color:#7e8cab;font-weight:800;font-size:12px;line-height:1;
+.stSeg button{flex:1;border:none;background:none;color:var(--muted);font-weight:800;font-size:12px;line-height:1;
   letter-spacing:.07em;padding:11px 3px;border-radius:10px;cursor:pointer;text-transform:uppercase;
   transition:background .15s ease,color .15s ease;white-space:nowrap}
-.stSeg button.on{background:#1b2a44;color:#eef2fb;box-shadow:0 1px 0 rgba(255,255,255,.05) inset}
+.stSeg button.on{background:#1b2a44;color:var(--ink);box-shadow:0 1px 0 rgba(255,255,255,.05) inset}
 .stSeg button:active{transform:scale(.96)}
 .stYou{display:flex;gap:8px;margin-top:12px}
-.stYouT{flex:1;background:#0e1626;border:1px solid #26304a;border-radius:14px;padding:13px 5px;text-align:center;min-width:0}
-.stYouN{font-size:20px;font-weight:900;color:#eef2fb;line-height:1.15}
-.stYouK{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:#93a0bd;margin-top:4px;font-weight:800}
-.stPickRow2{padding:11px 0;border-bottom:1px solid #1a2337}
+.stYouT{flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 5px;text-align:center;min-width:0}
+.stYouN{font-size:20px;font-weight:900;color:var(--ink);line-height:1.15}
+.stYouK{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-top:4px;font-weight:800}
+.stPickRow2{padding:11px 0;border-bottom:1px solid var(--card2)}
 .stPickRow2:last-child{border-bottom:none}
 .stPickTop{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:3px 0 7px}
-.stPickLead2{font-size:12px;color:#93a0bd;text-align:right;flex:0 0 auto}
-.stRace{height:5px;border-radius:99px;background:#141d2f;overflow:hidden}
+.stPickLead2{font-size:12px;color:var(--muted);text-align:right;flex:0 0 auto}
+.stRace{height:5px;border-radius:99px;background:var(--card2);overflow:hidden}
 .stRace i{display:block;height:100%;border-radius:99px;transition:width .5s ease}
-.stNeed{font-size:12px;color:#ffc54d;margin-top:6px;font-weight:700}
-.stFact{display:flex;gap:11px;padding:12px 0;border-bottom:1px solid #1a2337;align-items:flex-start}
+.stNeed{font-size:12px;color:var(--gold);margin-top:6px;font-weight:700}
+.stFact{display:flex;gap:11px;padding:12px 0;border-bottom:1px solid var(--card2);align-items:flex-start}
 .stFact:last-child{border-bottom:none}
 .stFactI{flex:0 0 auto;font-size:15px;line-height:1.35}
 .stFactB{flex:1;min-width:0}
-.stFactT{font-size:14px;color:#cfd8ea;font-weight:600;line-height:1.45}
-.stFactT b{color:#eef2fb;font-weight:900}
-.stFactS{font-size:12px;color:#5b6a8c;margin-top:3px;letter-spacing:.03em;line-height:1.4}
+.stFactT{font-size:14px;color:var(--body);font-weight:600;line-height:1.45}
+.stFactT b{color:var(--ink);font-weight:900}
+.stFactS{font-size:12px;color:var(--dim);margin-top:3px;letter-spacing:.03em;line-height:1.4}
 
 /* ---- the rail ---- */
 #rail{position:fixed;left:0;right:0;top:0;z-index:8400;background:rgba(10,14,23,.93);
-  backdrop-filter:blur(12px);border-bottom:1px solid #1e2740;
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--line2);
   padding:calc(6px + env(safe-area-inset-top,0px)) 12px 6px}
 .railin{max-width:430px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
-.railteams{font-size:12px;font-weight:700;color:#7e8cab;letter-spacing:.04em;white-space:nowrap;
+.railteams{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;white-space:nowrap;
   flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
-.railteams b{color:#eef2fb;font-weight:900;font-size:14px}
-.railteams i{font-style:normal;color:#28e0d0;font-weight:800;font-size:12px;letter-spacing:.08em;margin-left:4px}
-.raildot{flex:0 0 auto;width:4px;height:4px;border-radius:99px;background:#26304a}
-.railme{flex:0 0 auto;font-size:12px;font-weight:700;color:#7e8cab;letter-spacing:.04em;white-space:nowrap}
-.railme b{color:var(--gold,#ffc54d);font-weight:900;font-size:14px}
+.railteams b{color:var(--ink);font-weight:900;font-size:14px}
+.railteams i{font-style:normal;color:var(--teal);font-weight:800;font-size:12px;letter-spacing:.08em;margin-left:4px}
+.raildot{flex:0 0 auto;width:4px;height:4px;border-radius:99px;background:var(--line)}
+.railme{flex:0 0 auto;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;white-space:nowrap}
+.railme b{color:var(--gold,var(--gold));font-weight:900;font-size:14px}
 body.hasrail{padding-top:38px}
 
 /* ---- the feed ---- */
 #feedNew{position:sticky;top:8px;z-index:40;display:block;margin:0 auto;border:none;
-  background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e;font-weight:900;font-size:12px;line-height:1;
+  background:linear-gradient(92deg,var(--teal),var(--blue2));color:#04121e;font-weight:900;font-size:12px;line-height:1;
   letter-spacing:.05em;padding:10px 16px;border-radius:99px;cursor:pointer;
   box-shadow:0 6px 20px rgba(40,224,208,.28)}
 #feedNew:active{transform:scale(.95)}
-.fdc{position:relative;background:#0e1626;border:1px solid #1c2438;border-radius:16px;
-  padding:13px 14px 9px;margin-top:9px;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.fdc.big{border-color:#28384f;background:#101a2c}
+/* THE FEED, LIGHTENED (B-12).
+
+   Every play used to be a full card: its own background, its own border,
+   16px of radius, 9px of margin, and a permanent row of four emoji under
+   it. Two hundred of those is not a feed, it is a stack of receipts — and
+   the reaction row meant the actual play text got about a third of the
+   vertical space it was using.
+
+   A feed row is now a ROW: a 3px team-coloured edge, the play, the score,
+   and a hairline. The reactions are still there and still one tap away —
+   they reveal when you tap the row, which is also the gesture that already
+   existed for double-tap-to-react. Roughly three times as much game fits
+   on a screen, which is the whole point of a feed. */
+.fdc{position:relative;background:transparent;border:0;border-radius:0;
+  border-bottom:1px solid var(--line);
+  padding:11px 0 11px 14px;margin:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.fdc:last-child{border-bottom:0}
+/* A lead change or a three still deserves to be noticed — but with a
+   lit background, not a border box. */
+.fdc.big{background:linear-gradient(90deg,rgba(255,255,255,.05),transparent 70%)}
 .fdc:active{transform:scale(.995)}
-.fdtag{font-size:12px;letter-spacing:.14em;font-weight:900;color:#28e0d0;text-transform:uppercase;margin-bottom:6px}
+.fdtag{font-size:12px;letter-spacing:.14em;font-weight:900;color:var(--teal);text-transform:uppercase;margin-bottom:6px}
 .fdmain{display:flex;gap:11px;align-items:flex-start}
-.fdi{flex:0 0 auto;display:grid;place-items:center;width:26px;height:26px;border-radius:9px;
-  font-size:14px;font-weight:900;line-height:1;letter-spacing:0;
-  background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);color:#c3cee6}
+  .fdi{flex:0 0 auto;display:grid;place-items:center;width:23px;height:23px;border-radius:7px;
+  font-size:12px;font-weight:900;line-height:1;letter-spacing:0;
+  background:var(--glass);border:1px solid var(--line);color:#c3cee6}
 .fdc[data-team="h"] .fdi{color:var(--home);border-color:color-mix(in srgb,var(--home) 40%,transparent);
   background:color-mix(in srgb,var(--home) 13%,transparent)}
 .fdc[data-team="a"] .fdi{color:var(--away);border-color:color-mix(in srgb,var(--away) 40%,transparent);
@@ -12365,29 +12902,34 @@ body.hasrail{padding-top:38px}
 .fdc[data-k="you"] .fdi,.fdc[data-k="warm"] .fdi,.fdc[data-k="cut"] .fdi,.fdc[data-k="stat"] .fdi,.fdc[data-k="try"] .fdi{
   background:none;border:none;width:auto;height:auto;font-size:17px}
 .ico{width:20px;height:20px;display:block;flex:none}
-.fdc[data-k="you"] .fdi{color:var(--teal2,#28e0d0)}
+.fdc[data-k="you"] .fdi{color:var(--teal2,var(--teal))}
 .fdc[data-k="warm"] .fdi{color:#f2b83c}
-.fdc[data-k="try"] .fdi{color:var(--teal2,#28e0d0)}
+.fdc[data-k="try"] .fdi{color:var(--teal2,var(--teal))}
 .fdc[data-k="warm"] .fdi .ico{width:21px;height:21px}
 .fdb{flex:1;min-width:0}
-.fdt{font-size:14px;line-height:1.45;color:#cfd8ea;font-weight:600}
-.fdt b{color:#eef2fb;font-weight:900}
-.fdm{font-size:12px;color:#5b6a8c;margin-top:3px;letter-spacing:.05em;font-weight:700}
-.fds{flex:0 0 auto;font-size:14px;font-weight:900;color:#93a0bd;padding-left:6px;white-space:nowrap}
-.fdrow{display:flex;gap:6px;margin-top:9px;padding-top:8px;border-top:1px solid #172032}
-.fdr{border:none;background:#141d2f;color:#93a0bd;border-radius:99px;padding:5px 10px;
+.fdt{font-size:14px;line-height:1.45;color:var(--body);font-weight:600}
+.fdt b{color:var(--ink);font-weight:900}
+.fdm{font-size:12px;color:var(--dim);margin-top:3px;letter-spacing:.05em;font-weight:700}
+  .fds{flex:0 0 auto;font-size:12px;font-weight:800;color:var(--muted);padding-left:6px;
+  white-space:nowrap;font-variant-numeric:tabular-nums}
+/* Hidden until asked for. Tap the row, the reactions appear; tap again and
+   they go. Nothing is lost — it is the same row, it just is not taking up
+   40 pixels under every single play all night. */
+.fdrow{display:none;gap:6px;margin-top:9px;padding-top:8px;border-top:1px solid var(--line)}
+.fdc.open .fdrow{display:flex}
+.fdr{border:none;background:var(--card2);color:var(--muted);border-radius:99px;padding:5px 10px;
   font-weight:700;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;gap:4px}
-.fdr i{font-style:normal;font-size:12px;font-weight:900;color:#cfd8ea}
+.fdr i{font-style:normal;font-size:12px;font-weight:900;color:var(--body)}
 .fdr.on{background:#1b2a44;box-shadow:inset 0 0 0 1px rgba(40,224,208,.4)}
 .fdr:active{transform:scale(.9)}
 .fdlist{margin-top:9px}
 .fdli{display:grid;grid-template-columns:1fr auto;gap:1px 10px;padding:7px 0;border-bottom:1px solid #172032}
 .fdli:last-child{border-bottom:none}
-.fdln{font-size:14px;font-weight:800;color:#eef2fb}
-.fdln i{font-style:normal;font-size:12px;letter-spacing:.1em;color:#5b6a8c;margin-left:4px}
-.fdlv{font-size:12px;color:#93a0bd;text-align:right;font-weight:600}
-.fdlv b{color:#28e0d0;font-weight:900}
-.fdlr{grid-column:1 / -1;font-size:12px;color:#5b6a8c;letter-spacing:.04em;font-weight:700}
+.fdln{font-size:14px;font-weight:800;color:var(--ink)}
+.fdln i{font-style:normal;font-size:12px;letter-spacing:.1em;color:var(--dim);margin-left:4px}
+.fdlv{font-size:12px;color:var(--muted);text-align:right;font-weight:600}
+.fdlv b{color:var(--teal);font-weight:900}
+.fdlr{grid-column:1 / -1;font-size:12px;color:var(--dim);letter-spacing:.04em;font-weight:700}
 /* Everything a stranger needs and a member has already read. Hidden by a
    single class on <body> so there is one switch, not six. */
 body.member .strangers{display:none !important}
@@ -12399,18 +12941,122 @@ body.member #s-landing .brand{margin-top:6px}
 #takeover.on{display:flex;animation:tkIn .32s cubic-bezier(.16,1,.3,1)}
 @keyframes tkIn{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:scale(1)}}
 .tkin{max-width:430px;text-align:center}
-.tkmark{font-weight:900;font-size:12px;line-height:1;letter-spacing:.28em;color:#5b6a8c;margin-bottom:20px}
+.tkmark{font-weight:900;font-size:12px;line-height:1;letter-spacing:.28em;color:var(--dim);margin-bottom:20px}
 .tkicon{font-size:46px;line-height:1;margin-bottom:10px}
 .tkhead{font-weight:900;font-size:30px;line-height:1.05;letter-spacing:.02em;margin-bottom:12px;
-  background:linear-gradient(92deg,#28e0d0,#4d86ff);-webkit-background-clip:text;background-clip:text;color:transparent}
-.tkbody{font-size:17px;line-height:1.45;color:#eef2fb;font-weight:700}
-.tkscore{font-size:12px;letter-spacing:.1em;color:#93a0bd;font-weight:800;margin-top:16px;text-transform:uppercase}
+  background:linear-gradient(92deg,var(--teal),var(--blue2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.tkbody{font-size:17px;line-height:1.45;color:var(--ink);font-weight:700}
+.tkscore{font-size:12px;letter-spacing:.1em;color:var(--muted);font-weight:800;margin-top:16px;text-transform:uppercase}
 .tktap{font-size:12px;letter-spacing:.14em;color:#3f4c6b;font-weight:800;margin-top:26px;text-transform:uppercase}
-.fdr.fdsh{margin-left:auto;color:#5b6a8c}
+.fdr.fdsh{margin-left:auto;color:var(--dim)}
 /* ==================== ARENA ========================================
    Team colour on the game, brand on you, gold on a milestone, red on
    live. Everything else grey. See paintTeamColours() for where --away and
    --home come from and why they are guarded. */
+
+/* --------------------------------------------------------------------
+   THE ARENA COMPONENT LANGUAGE
+
+   Six pieces, and every screen in the app is built out of them. They are
+   here rather than scattered because the point of the rebuild is that the
+   next screen someone adds looks like the app without anybody deciding
+   anything.
+
+     .ablk   a labelled block of content — the workhorse
+     .alab   its label: 10.5px, 2px tracking, uppercase, muted
+     .abig   a number that is the point of the screen
+     .abar   a two-sided proportion bar (win probability, runs, splits)
+     .atile  a small stat in a row of small stats
+     .ahair  a hairline rule
+
+   Rules that are not negotiable:
+     · numbers are tabular — a score that shifts left as it counts up is
+       a score you cannot read at a glance
+     · labels are never sentence case, content is never uppercase
+     · one accent per block; if a block needs two it is two blocks
+   -------------------------------------------------------------------- */
+.ablk{margin-top:22px}
+.alab{font-size:12px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:7px;
+  line-height:1.25;flex-wrap:wrap}
+.alab s{text-decoration:none;color:var(--teal)}
+.alab em{font-style:normal;margin-left:auto;color:var(--dim);letter-spacing:1.2px}
+.abig{font-size:46px;font-weight:900;letter-spacing:-2.4px;line-height:.95;
+  font-variant-numeric:tabular-nums;color:var(--ink)}
+.abig.team{color:var(--home)}
+.atx{font-size:15px;line-height:1.48;color:var(--body);margin-top:9px}
+.atx b{color:var(--ink);font-weight:800}
+.atx em{font-style:normal;color:var(--gold);font-weight:700}
+.abar{height:7px;border-radius:var(--pill);overflow:hidden;display:flex;background:#101a29}
+.abar i{height:100%;transition:flex .8s cubic-bezier(.2,.8,.2,1);min-width:0}
+.abarn{display:flex;justify-content:space-between;margin-top:6px;font-size:14px;font-weight:900;
+  font-variant-numeric:tabular-nums}
+.acap{font-size:12px;color:var(--dim);margin-top:7px;letter-spacing:.9px;text-transform:uppercase;line-height:1.3}
+.atiles{display:flex;gap:8px;margin-top:14px}
+.atiles>div{flex:1;background:var(--glass);border-radius:var(--r3);padding:11px 8px;text-align:center;
+  border:1px solid var(--line3);min-width:0}
+.atiles b{display:block;font-size:17px;font-weight:900;color:var(--ink);font-variant-numeric:tabular-nums}
+/* Two lines rather than an ellipsis. "IN THE BUI…" is not a label, it is
+   a failure wearing one — and a three-across row on a 375px phone will
+   always be too narrow for a real word if it is forbidden to wrap. */
+.atiles span{font-size:12px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--dim);
+  display:block;margin-top:3px;line-height:1.2;white-space:normal;overflow-wrap:anywhere}
+.ahair{height:1px;background:var(--line);margin:18px 0;border:0}
+.abdg{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;
+  border-radius:var(--pill);background:var(--gold);color:#08111e;font-size:12px;font-weight:900;
+  vertical-align:middle;flex:0 0 auto}
+.apane{background:var(--glass);border-radius:var(--r2);padding:11px 11px 8px;border:1px solid var(--line3)}
+
+/* THE SCOREBOARD. 52px, 900, tight, tabular, team-coloured abbreviations
+   above and the record underneath. This is the single element that makes
+   the screen feel like a broadcast rather than a web page. */
+.ascore{position:relative;text-align:center;padding:14px 0 2px}
+.alive{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;
+  letter-spacing:1.6px;color:var(--ink);background:var(--glass2);padding:6px 13px;border-radius:var(--pill)}
+.alive i{width:6px;height:6px;border-radius:50%;background:var(--red);animation:aPulse 1.6s infinite}
+.alive.final i{background:var(--muted);animation:none}
+.alive.pre i{background:var(--teal);animation:none}
+@keyframes aPulse{50%{opacity:.25}}
+.ateams{display:flex;align-items:flex-start;justify-content:center;gap:12px;margin-top:12px}
+.atm{flex:1;min-width:0}
+.atm .ab{font-size:14px;font-weight:900;letter-spacing:2.2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.atm .n{font-size:52px;font-weight:900;letter-spacing:-2.6px;color:var(--ink);line-height:1;
+  font-variant-numeric:tabular-nums;margin-top:3px}
+.atm .rec{font-size:12px;color:var(--muted);font-weight:700;margin-top:5px}
+.aat{font-size:12px;font-weight:800;letter-spacing:2px;color:var(--dim);padding-top:26px;flex:0 0 auto}
+@media (max-width:359px){ .atm .n{font-size:46px;letter-spacing:-2px} }
+
+/* the live feed, one row per play, team colour on the edge */
+.afd{display:flex;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+.afd:last-child{border:0}
+.afdedge{width:3px;border-radius:var(--pill);flex:0 0 3px;background:var(--dim)}
+.afdb{flex:1;min-width:0}
+.afdt{font-size:14px;line-height:1.38;color:var(--body)}
+.afdt b{color:var(--ink);font-weight:800}
+.afdm{font-size:12px;color:var(--dim);margin-top:3px;letter-spacing:.3px}
+.afdm s{text-decoration:none;color:var(--teal);font-weight:700}
+.afdsc{font-size:12px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums;
+  white-space:nowrap;padding-top:1px}
+
+/* a table that reads like a box score instead of a spreadsheet */
+.atab{width:100%;border-collapse:collapse;font-size:14px}
+.atab th{font-size:12px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;color:var(--dim);
+  text-align:right;padding:0 0 8px}
+.atab th:first-child{text-align:left}
+.atab td{padding:8px 0;border-top:1px solid var(--line);text-align:right;
+  font-variant-numeric:tabular-nums;color:var(--body)}
+.atab td:first-child{text-align:left;color:var(--ink);font-weight:700}
+.atab .up{color:var(--green);font-weight:800}
+.atab .dn{color:var(--red);font-weight:800}
+
+/* the 19-game split bars under a deep cut */
+.abars{display:flex;align-items:flex-end;gap:3px;height:52px;margin-top:14px}
+.abars i{flex:1;background:var(--home);border-radius:2px;opacity:.8;min-height:2px}
+.abars i.hi{background:var(--ink);opacity:1}
+.abars i.lo{background:#243450}
+
+/* Duplicated on purpose: paintTeamColours overwrites --away/--home at
+   runtime, and this keeps a sane default if the feed never lands. */
 :root{ --away:#7fe3c7; --home:#4a86ff; --mile:#ffc54d; }
 
 /* every card gets a lit top edge. one line, and it is the difference
@@ -12421,9 +13067,9 @@ body.member #s-landing .brand{margin-top:6px}
 
 /* the feed carries the team on its edge, so you know who did what without
    reading a word */
-.fdc{padding-left:16px}
-.fdc::after{content:'';position:absolute;left:7px;top:14px;bottom:14px;width:3px;border-radius:99px;
-  background:#26304a}
+.fdc{padding-left:14px}
+.fdc::after{content:'';position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:99px;
+  background:var(--line)}
 .fdc[data-team="a"]::after{background:var(--away)}
 .fdc[data-team="h"]::after{background:var(--home)}
 
@@ -12445,7 +13091,7 @@ body.member #s-landing .brand{margin-top:6px}
 .gtDig.hide{width:0;opacity:0}
 .gtStrip{position:absolute;left:0;top:0;width:100%;transition:transform .42s cubic-bezier(.22,1,.28,1)}
 .gtStrip span{display:block;height:52px;font-weight:900;font-size:46px;line-height:52px;
-  text-align:center;letter-spacing:-.04em;color:#eef2fb}
+  text-align:center;letter-spacing:-.04em;color:var(--ink)}
 .gtSide.flash .gtStrip span{animation:gtPop .55s ease-out}
 @keyframes gtPop{0%{filter:brightness(2.4)}100%{filter:brightness(1)}}
 .gtRunBar{height:5px;border-radius:99px;overflow:hidden;background:#131826;display:flex;margin-top:15px}
@@ -12455,19 +13101,19 @@ body.member #s-landing .brand{margin-top:6px}
    LAST FEW MINUTESIND" — once the caption came up to the 12px floor and
    filled the row. Give the three cells air and say it in fewer words. */
 .gtRunCap{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-top:7px;gap:12px;
-  font-weight:800;font-size:12px;letter-spacing:.12em;color:#5b6a8c;white-space:nowrap}
+  font-weight:800;font-size:12px;letter-spacing:.12em;color:var(--dim);white-space:nowrap}
 .gtRunCap i{font-style:normal}
 .gtRunCap i:first-child{text-align:left;color:var(--away)}
 .gtRunCap i:last-child{text-align:right;color:var(--home)}
-.gtRun{margin-top:10px;text-align:center;font-weight:700;font-size:14px;line-height:1.4;color:#93a0bd}
+.gtRun{margin-top:10px;text-align:center;font-weight:700;font-size:14px;line-height:1.4;color:var(--muted)}
 .gtRun b{font-weight:900}
-.gtRun.quiet{color:#5b6a8c;font-weight:600;font-size:12px}
+.gtRun.quiet{color:var(--dim);font-weight:600;font-size:12px}
 
 /* the big numeral on a deep cut — her team's colour, unit on the baseline */
 .dcBig{display:flex;align-items:baseline;gap:10px;margin-bottom:5px}
 .dcNum{font-weight:900;font-size:40px;line-height:1;letter-spacing:-.045em;color:var(--home)}
 .dcNum.a{color:var(--away)}
-.dcUnit{font-weight:800;font-size:12px;letter-spacing:.15em;color:#93a0bd;text-transform:uppercase}
+.dcUnit{font-weight:800;font-size:12px;letter-spacing:.15em;color:var(--muted);text-transform:uppercase}
 
 /* motion is information; anyone who has asked for less gets less */
 @media(prefers-reduced-motion:reduce){
@@ -12478,14 +13124,14 @@ body.member #s-landing .brand{margin-top:6px}
 .fdc.quiet:active{transform:none}
 .fdgo{display:block;width:100%;margin-top:11px;border:none;border-radius:12px;cursor:pointer;
   padding:13px 12px;font-weight:900;font-size:14px;line-height:1;color:#04121e;
-  background:linear-gradient(92deg,#28e0d0,#4d86ff)}
+  background:linear-gradient(92deg,var(--teal),var(--blue2))}
 .fdgo:active{transform:scale(.98)}
-.gtvs{font-size:12px;letter-spacing:.12em;font-weight:800;color:#93a0bd;text-transform:uppercase}
-.gtvs i{font-style:normal;color:#5b6a8c;font-weight:700;letter-spacing:.06em}
+.gtvs{font-size:12px;letter-spacing:.12em;font-weight:800;color:var(--muted);text-transform:uppercase}
+.gtvs i{font-style:normal;color:var(--dim);font-weight:700;letter-spacing:.06em}
 .gtcount{font-size:34px;font-weight:900;line-height:1.15;margin-top:6px;
-  background:linear-gradient(92deg,#28e0d0,#4d86ff);-webkit-background-clip:text;
+  background:linear-gradient(92deg,var(--teal),var(--blue2));-webkit-background-clip:text;
   background-clip:text;color:transparent}
-.gtwhen{font-size:12px;letter-spacing:.1em;font-weight:800;color:#5b6a8c;text-transform:uppercase;margin-top:3px}
+.gtwhen{font-size:12px;letter-spacing:.1em;font-weight:800;color:var(--dim);text-transform:uppercase;margin-top:3px}
 .fdpop{position:absolute;right:18px;bottom:14px;font-size:26px;pointer-events:none;
   animation:fdpop .7s ease-out forwards}
 @keyframes fdpop{0%{opacity:0;transform:translateY(0) scale(.6)}
@@ -12493,21 +13139,21 @@ body.member #s-landing .brand{margin-top:6px}
   100%{opacity:0;transform:translateY(-46px) scale(1)}}
 
 /* ---- the final screen's fold ---- */
-.fdrawer{margin-top:12px;border:1px solid #1e2740;border-radius:16px;background:#0e1626;overflow:hidden}
+.fdrawer{margin-top:12px;border:1px solid var(--line2);border-radius:16px;background:var(--card);overflow:hidden}
 .fdrawer>summary{list-style:none;cursor:pointer;padding:15px 16px;font-weight:800;font-size:14px;line-height:1;
-  color:#93a0bd;display:flex;align-items:center;justify-content:space-between}
+  color:var(--muted);display:flex;align-items:center;justify-content:space-between}
 .fdrawer>summary::-webkit-details-marker{display:none}
-.fdrawer>summary::after{content:'▾';color:#5b6a8c;font-size:14px;transition:transform .2s ease}
+.fdrawer>summary::after{content:'▾';color:var(--dim);font-size:14px;transition:transform .2s ease}
 .fdrawer[open]>summary::after{transform:rotate(180deg)}
-.fdrawer[open]>summary{color:#eef2fb;border-bottom:1px solid #1a2337}
+.fdrawer[open]>summary{color:var(--ink);border-bottom:1px solid var(--card2)}
 .fdrawerin{padding:4px 12px 14px}
 .fdrawerin .card{margin-top:10px}
 
 /* ---- the return bar ---- */
 #gameBar{display:none;position:fixed;left:0;right:0;bottom:74px;z-index:8550;border:none;
   width:100%;padding:13px 14px;cursor:pointer;font-weight:800;font-size:14px;line-height:1.2;
-  background:#16233b;color:#cfd8ea;border-top:1px solid #26304a;text-align:center}
-#gameBar.urgent{background:linear-gradient(92deg,#ff4d5e,#ff7a3d);color:#fff;
+  background:var(--card2);color:var(--body);border-top:1px solid var(--line);text-align:center}
+#gameBar.urgent{background:linear-gradient(92deg,var(--red),#ff7a3d);color:#fff;
   animation:gbPulse 1.8s ease-in-out infinite}
 @keyframes gbPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
 #gameBar:active{filter:brightness(.94)}
@@ -12515,25 +13161,25 @@ body.member #s-landing .brand{margin-top:6px}
 body.hasgamebar .screen.active{padding-bottom:132px}
 
 /* ---- board ---- */
-.bdRow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #1a2337}
+.bdRow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--card2)}
 .bdRow:last-child{border-bottom:none}
 .bdRow.me{background:rgba(40,224,208,.07);border-radius:10px;padding-left:8px;padding-right:8px;border-bottom-color:transparent}
-.bdR{flex:0 0 20px;font-size:14px;font-weight:800;color:#5b6a8c;text-align:center}
+.bdR{flex:0 0 20px;font-size:14px;font-weight:800;color:var(--dim);text-align:center}
 .bdDot{flex:0 0 auto;width:9px;height:9px;border-radius:50%}
-.bdN{flex:1;min-width:0;font-size:15px;font-weight:800;color:#eef2fb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bdP{flex:0 0 auto;font-size:15px;font-weight:900;color:#eef2fb}
-.bdBig{font-size:22px;font-weight:900;color:#eef2fb}
-.bdK{font-size:12px;letter-spacing:.12em;color:#93a0bd;font-weight:800}
+.bdN{flex:1;min-width:0;font-size:15px;font-weight:800;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bdP{flex:0 0 auto;font-size:15px;font-weight:900;color:var(--ink)}
+.bdBig{font-size:22px;font-weight:900;color:var(--ink)}
+.bdK{font-size:12px;letter-spacing:.12em;color:var(--muted);font-weight:800}
 
 /* ---- pick-slip ---- */
 #predCard{padding:14px}
 .pdhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.pdhead b{font-size:20px;color:#28e0d0;letter-spacing:.2px}
+.pdhead b{font-size:20px;color:var(--teal);letter-spacing:.2px}
 .pdpts{font-size:14px;font-weight:800;color:var(--gold)}
 .pdprog{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.pdn{font-size:14px;font-weight:800;color:var(--muted,#93a0bd);flex:0 0 auto}
-.pdbar{flex:1;height:6px;border-radius:99px;background:#16233b;overflow:hidden}
-.pdbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(92deg,#28e0d0,#4d86ff);transition:width .28s ease}
+.pdn{font-size:14px;font-weight:800;color:var(--muted,var(--muted));flex:0 0 auto}
+.pdbar{flex:1;height:6px;border-radius:99px;background:var(--card2);overflow:hidden}
+.pdbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(92deg,var(--teal),var(--blue2));transition:width .28s ease}
 .pddots{display:flex;align-items:center;justify-content:center;gap:9px;margin:-4px 0 12px}
 /* The dot you see is 13px because six of them in a row should be quiet.
    The dot you TAP is 40px, because a 13px target on a phone is a miss
@@ -12542,20 +13188,20 @@ body.hasgamebar .screen.active{padding-bottom:132px}
   background:transparent;border:2px solid #3a4b73;transition:transform .15s,background .15s,border-color .15s}
 .pddot::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
   width:40px;height:40px;border-radius:50%}
-.pddot.fill{background:#28e0d0;border-color:#28e0d0}
+.pddot.fill{background:var(--teal);border-color:var(--teal)}
 .pddot.cur{transform:scale(1.42);box-shadow:0 0 0 3px rgba(40,224,208,.16)}
-.pddot:not(.fill){border-color:#ffc54d}
+.pddot:not(.fill){border-color:var(--gold)}
 .pddot:not(.fill).cur{box-shadow:0 0 0 3px rgba(255,197,77,.18)}
-.pdcard{background:#0e1626;border:1px solid #26304a;border-radius:16px;padding:17px 15px;touch-action:pan-y}
-@keyframes pdFlash{0%{border-color:#ffc54d;box-shadow:0 0 0 4px rgba(255,197,77,.22)}100%{border-color:#26304a;box-shadow:none}}
+.pdcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:17px 15px;touch-action:pan-y}
+@keyframes pdFlash{0%{border-color:var(--gold);box-shadow:0 0 0 4px rgba(255,197,77,.22)}100%{border-color:var(--line);box-shadow:none}}
 .pdcard.pdflash{animation:pdFlash .9s ease-out}
-.pdcat{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#28e0d0;font-weight:800}
-.pdq{font-size:22px;font-weight:900;line-height:1.2;color:#eef2fb;margin:7px 0 4px}
+.pdcat{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);font-weight:800}
+.pdq{font-size:22px;font-weight:900;line-height:1.2;color:var(--ink);margin:7px 0 4px}
 .pdworth{font-size:14px;font-weight:800;color:var(--gold);margin-bottom:14px}
-.pdteam{font-size:12px;letter-spacing:.14em;font-weight:900;color:#28e0d0;
+.pdteam{font-size:12px;letter-spacing:.14em;font-weight:900;color:var(--teal);
   margin:14px 0 8px;display:flex;align-items:baseline;gap:7px}
 .pdteam:first-child{margin-top:0}
-.pdteam i{font-style:normal;font-size:12px;letter-spacing:.04em;color:#5b6a8c;font-weight:700}
+.pdteam i{font-style:normal;font-size:12px;letter-spacing:.04em;color:var(--dim);font-weight:700}
 .pdopt.isout{opacity:.5;cursor:not-allowed;border-style:dashed;border-color:#3a2733;background:#12131c}
 .pdopt.isout .pdname{color:#7e8091;text-decoration:line-through;text-decoration-color:rgba(255,107,107,.55);text-decoration-thickness:1px}
 .pdopt.isout .pdradio{opacity:.35}
@@ -12595,15 +13241,15 @@ body.hasgamebar .screen.active{padding-bottom:132px}
   .pdopts.many .pdname{overflow:visible;text-overflow:clip;white-space:normal}
 }
 .pdopt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
-  background:#111a2b;border:1px solid #2f3a58;border-radius:13px;padding:15px 14px;
-  font-weight:800;font-size:15px;line-height:1.2;color:#eef2fb;transition:border-color .15s,background .15s}
+  background:#111a2b;border:1px solid var(--line2);border-radius:13px;padding:15px 14px;
+  font-weight:800;font-size:15px;line-height:1.2;color:var(--ink);transition:border-color .15s,background .15s}
 .pdopt:active{transform:scale(.99)}
-.pdopt.on{border-color:#28e0d0;background:rgba(40,224,208,.10)}
+.pdopt.on{border-color:var(--teal);background:rgba(40,224,208,.10)}
 .pdradio{flex:0 0 auto;width:20px;height:20px;border-radius:50%;border:2px solid #3a4b73;position:relative}
-.pdopt.on .pdradio{border-color:#28e0d0}
-.pdopt.on .pdradio:after{content:'';position:absolute;inset:3px;border-radius:50%;background:#28e0d0}
+.pdopt.on .pdradio{border-color:var(--teal)}
+.pdopt.on .pdradio:after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--teal)}
 .pdname{flex:1;min-width:0}
-.stLeadR{display:block;font-size:12px;font-weight:700;color:#5b6a8c;letter-spacing:.02em}
+.stLeadR{display:block;font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.02em}
 .pdout{flex:0 0 auto;margin-left:auto;font-size:12px;font-weight:900;line-height:1.5;letter-spacing:.06em;
   color:#ff8a94;border:1px solid rgba(255,107,107,.45);background:rgba(255,107,107,.10);
   border-radius:6px;padding:1px 6px;white-space:nowrap}
@@ -12614,28 +13260,28 @@ body.hasgamebar .screen.active{padding-bottom:132px}
   70%{box-shadow:0 0 0 0 rgba(242,184,60,.35)}
   100%{box-shadow:0 0 0 6px rgba(242,184,60,0)}}
 @media (prefers-reduced-motion:reduce){ .pdbonus.ask{animation:none} }
-.pdbonus label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted,#93a0bd);font-weight:800;margin-bottom:6px}
-.pdbonus input{width:100%;background:#111a2b;border:1px solid #2f3a58;border-radius:12px;padding:14px;color:#eef2fb;font-weight:800;font-size:15px}
-.pdrank{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:13px;font-size:12px;font-weight:800;color:var(--muted,#93a0bd)}
-.pdrank button{background:#16233b;border:1px solid #2f3a58;color:#93a0bd;border-radius:9px;width:34px;height:30px;cursor:pointer;font-size:12px}
+.pdbonus label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted,var(--muted));font-weight:800;margin-bottom:6px}
+.pdbonus input{width:100%;background:#111a2b;border:1px solid var(--line2);border-radius:12px;padding:14px;color:var(--ink);font-weight:800;font-size:15px}
+.pdrank{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:13px;font-size:12px;font-weight:800;color:var(--muted,var(--muted))}
+.pdrank button{background:var(--card2);border:1px solid var(--line2);color:var(--muted);border-radius:9px;width:34px;height:30px;cursor:pointer;font-size:12px}
 .pdrank button:disabled{opacity:.35}
 .pdnav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:13px}
-.pdarrow{background:#16233b;border:1px solid #2f3a58;color:#cfd8ea;border-radius:11px;padding:11px 15px;font-weight:800;font-size:14px;cursor:pointer}
+.pdarrow{background:var(--card2);border:1px solid var(--line2);color:var(--body);border-radius:11px;padding:11px 15px;font-weight:800;font-size:14px;cursor:pointer}
 .pdarrow:disabled{opacity:.35;cursor:default}
-.pdsofar{font-size:14px;font-weight:800;color:var(--muted,#93a0bd)}
+.pdsofar{font-size:14px;font-weight:800;color:var(--muted,var(--muted))}
 
 .pdsummary{display:flex;align-items:center;justify-content:space-between;margin-top:14px;
-  background:#0e1626;border:1px solid #26304a;border-radius:13px;padding:14px 15px;font-size:14px;font-weight:800;color:#eef2fb}
+  background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 15px;font-size:14px;font-weight:800;color:var(--ink)}
 .pdsummary b{color:var(--gold)}
 .pdlock{width:100%;margin-top:11px;border:none;border-radius:14px;padding:18px;cursor:pointer;
   font-weight:900;font-size:17px;line-height:1;background:#1b2740;color:#6c7a99;transition:filter .15s}
-.pdlock.ready{background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e}
+.pdlock.ready{background:linear-gradient(92deg,var(--teal),var(--blue2));color:#04121e}
 /* Unfinished is not disabled — it is the fastest way to finish. */
-.pdlock.todo{background:rgba(255,197,77,.12);border:1px solid rgba(255,197,77,.55);color:#ffc54d;padding:17px}
+.pdlock.todo{background:rgba(255,197,77,.12);border:1px solid rgba(255,197,77,.55);color:var(--gold);padding:17px}
 .pdlock:active{filter:brightness(.94)}
 
 #pdBar{display:none;position:fixed;left:0;right:0;bottom:72px;z-index:8600;padding:11px 14px calc(12px + env(safe-area-inset-bottom,0px));
-  background:rgba(10,14,23,.96);backdrop-filter:blur(14px);border-top:1px solid #1e2740}
+  background:rgba(10,14,23,.96);backdrop-filter:blur(14px);border-top:1px solid var(--line2)}
 #pdBar .pdsummary,#pdBar .pdlock{max-width:430px;margin-left:auto;margin-right:auto}
 #pdBar .pdsummary{margin-top:0}
 #pdBar .pdlock{margin-top:9px;display:block}
