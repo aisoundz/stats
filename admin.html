@@ -226,6 +226,7 @@
         <button data-tab="run">2 · Run</button>
         <button data-tab="grade">3 · Grade</button>
         <button data-tab="room">4 · Room</button>
+        <button data-tab="auto">5 · Auto</button>
       </nav>
     </div>
   </header>
@@ -432,6 +433,36 @@
       </div>
     </section>
 
+    <!-- ---------- TAB 5: AUTO ---------- -->
+    <section id="t-auto" class="hide">
+      <div class="card">
+        <h3>The robot host</h3>
+        <p class="sub">Every question in tonight's bank carries a <b>resolver</b> — a function that reads the answer straight out of the ESPN feed. This tab is where you check whether it agrees with you before you ever let it drive.</p>
+        <div class="statrow">
+          <div class="s"><div class="v" id="auEvent">—</div><div class="k">ESPN event</div></div>
+          <div class="s"><div class="v" id="auCover">—</div><div class="k">Questions with a resolver</div></div>
+          <div class="s"><div class="v" id="auState">—</div><div class="k">Feed says</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Dry run</h3>
+        <p class="sub">Point it at a game that has already finished, press the button, and read what it says. You know the answers; it does not know you know. Anything it gets wrong is a resolver that must be fixed or a question that must leave the bank — <b>a question with no reliable resolver does not belong in an automated night.</b></p>
+        <label for="auDryEvent">ESPN event id</label>
+        <input id="auDryEvent" spellcheck="false" autocapitalize="off" placeholder="401857132">
+        <p class="sub tip">Defaults to last night's game. Any finished WNBA event id works.</p>
+        <button class="btn" id="auDryBtn">Run the whole night against this game</button>
+        <div id="auDryOut"></div>
+      </div>
+
+      <div class="card">
+        <h3>Shadow mode — tonight</h3>
+        <p class="sub">While you run the night by hand, the robot runs it beside you and writes nothing. When you reveal a round, this compares its key to yours and says where you disagree. <b>One clean night of agreement is the price of admission before it touches a button.</b></p>
+        <button class="btn ghost" id="auShadowBtn">Start watching</button>
+        <div id="auShadowOut"></div>
+      </div>
+    </section>
+
   </div>
 </div>
 
@@ -441,7 +472,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-11-admin.31';
+window.ADMIN_BUILD='2026-08-12-admin.33-auto';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -494,7 +525,15 @@ window.STATS_FIREBASE = {
 const NIGHTS = [
   // First in this list is the night the Control Room opens on, so the live
   // fixture goes at the top.
-  { id:'gn6-2026-08-11-ny-ind', label:'Game Night #6 — Liberty @ Fever (Tue Aug 11, 7:30 ET · ESPN)',
+  /* `espn` is new and it is the hinge for the autonomous host: it is the
+     event id the resolvers read. A night without one can still be run by
+     hand, it just cannot be run by the robot. */
+  { id:'gn7-2026-08-12-tor-dal', label:'Game Night #7 — Tempo @ Wings (Wed Aug 12, 8:00 ET · USA Network)',
+    away:'TOR', home:'DAL', espn:'401857137',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[10,20,30,40] },
+  { id:'gn6-2026-08-11-ny-ind', espn:'401857132', label:'Game Night #6 — Liberty @ Fever (Tue Aug 11, 7:30 ET · ESPN)',
     away:'NY', home:'IND',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
@@ -542,6 +581,39 @@ const NIGHTS = [
 // simulated results for a fake game, not claims about the real one. The host
 // marks the real answer at the break, then pushes.
 const BANK = {
+  /* Game #7 — Tempo @ Wings. The Game #6 spine, re-pointed, with one rule
+     applied that was not applied before: EVERY LINE HERE HAS A RESOLVER.
+     See RESOLVERS below — each question carries an `r` key naming the
+     function that can read the answer straight out of the ESPN feed, and a
+     question with no resolver does not belong in this bank any more. That
+     single constraint is what turns the Control Room from a thing a human
+     drives into a thing a human watches. */
+  'gn7-2026-08-12-tor-dal': [
+    [
+      { t: 'The first points of the game — how did they come?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throws'], r:'firstScoreKind' },
+      { t: 'Which team made the first three-pointer of the game?', o: ['Wings', 'Tempo', 'Neither made one in Q1'], r:'firstThreeTeam' },
+      { t: 'Threes made in Q1, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'threesBand' },
+      { t: 'The team that scored first — were they still ahead at the Q1 buzzer?', o: ['Yes', 'No', 'It was tied'], r:'firstScorerStillAhead' }
+    ],
+    [
+      { t: 'In Q2, both teams combined — were there more made field goals or made free throws?', o: ['Made field goals', 'Made free throws', 'Equal'], r:'fgVsFt' },
+      { t: 'How many times did the lead change hands in Q2? (a tie is not a lead change)', o: ['None', 'Once', 'Twice', 'Three or more'], r:'leadChanges' },
+      { t: 'Did either team score 10 or more unanswered points at any stage of Q2?', o: ['Yes', 'No'], r:'tenUnanswered' },
+      { t: 'The last shot attempt before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'], r:'lastShotOfPeriod' }
+    ],
+    [
+      { t: 'Which team scored the first points after halftime?', o: ['Wings', 'Tempo'], r:'firstScoreTeam' },
+      { t: '24-second shot-clock violations tonight, both teams combined, Q1 through Q3 — how many?', o: ['None', '1', '2', '3 or more'], r:'shotClockCount' },
+      { t: 'In Q3, both teams combined — were there more threes made or turnovers?', o: ['Threes made', 'Turnovers', 'Equal'], r:'threesVsTurnovers' },
+      { t: 'Through three quarters, how many players have reached double figures in points, both teams combined?', o: ['None or one', 'Two', 'Three', 'Four or more'], r:'doubleFiguresBand' }
+    ],
+    [
+      { t: 'In the last two minutes, both teams combined — were there more free-throw attempts or field-goal attempts?', o: ['Free-throw attempts', 'Field-goal attempts', 'Equal'], r:'lastTwoFtVsFg' },
+      { t: 'Did any player on either team foul out?', o: ['Yes', 'No'], r:'anyFoulOut' },
+      { t: 'The last basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'], r:'lastBasketWorth' },
+      { t: 'The team that led at halftime — did they win the game?', o: ['Yes', 'No', 'It was tied at half'], r:'halftimeLeaderWon' }
+    ]
+  ],
   /* Game #6 — Liberty @ Fever. Same four-question spine as Game #5, which is
      the version that finally got a room through four quarters: every line
      resolves off the broadcast or the play-by-play, none of them need the box
@@ -1069,10 +1141,11 @@ function initUI(){
   document.querySelectorAll('nav button').forEach(b=>{
     b.onclick = () => {
       document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on', x===b));
-      ['write','run','grade','room'].forEach(t=>$('t-'+t).classList.toggle('hide', t!==b.dataset.tab));
+      ['write','run','grade','room','auto'].forEach(t=>$('t-'+t).classList.toggle('hide', t!==b.dataset.tab));
       if(b.dataset.tab==='run'){ renderRun(); loadScore(); }
       if(b.dataset.tab==='room') refreshRoom();
       if(b.dataset.tab==='grade'){ fillGradeSel(); watchGradeSubs(); renderGrade(); }
+      if(b.dataset.tab==='auto'){ try{ AUTO.render(); }catch(e){} }
     };
   });
 
@@ -3522,6 +3595,480 @@ boot();
   var tries=0;
   var iv=setInterval(function(){ tries++; if(document.getElementById('t-run')){ ESPN.mount(); } if(document.getElementById('espnCard')||tries>40) clearInterval(iv); }, 200);
 })();
+
+/* ====================================================================
+   THE ROBOT HOST — resolvers, and the harness that proves them
+   ====================================================================
+
+   "Instead of the possibility of a human in the control room messing
+    everything up, we should figure out how to get it automated. I don't
+    want to do anything in the control room. Only start game, which I can
+    do hours ahead, and it does it on its own."
+
+   The whole idea sits on one rule:
+
+       A QUESTION IS A PAIR — the words, and a function that reads the
+       answer out of the feed. A question with no resolver does not go
+       in the bank.
+
+   Once that holds, the Control Room stops being a driver and becomes a
+   viewer, because everything the human does at a break — decide the
+   round is over, publish the questions, mark the answers — is something
+   the feed already knows.
+
+   THIS FILE DOES NOT DRIVE ANYTHING. It resolves, it compares, and it
+   reports. The manual path stays exactly as it was and stays the path
+   that runs tonight. The robot earns the buttons by agreeing with a
+   human for a whole night first, and there is no code here that could
+   take them even if it wanted to — see AUTO.armed.
+   ==================================================================== */
+var AUTO = (function(){
+
+  var SUM = 'https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/summary?event=';
+
+  /* Never wired to a button anywhere. It exists so that the day somebody
+     does wire it, they have to change a line that says this out loud. */
+  var armed = false;
+
+  async function fetchFeed(ev){
+    var r = await fetch(SUM + encodeURIComponent(ev) + '&_=' + Date.now());
+    if(!r.ok) throw new Error('feed ' + r.status);
+    return r.json();
+  }
+
+  /* ---- reading the feed -------------------------------------------
+     Everything below works off two lists and nothing else: the plays,
+     and the box score. No announcer, no human judgement, no lookups. */
+
+  function comp(j){ try{ return j.header.competitions[0]; }catch(_){ return null; } }
+  function sides(j){
+    var c = comp(j) || {}, cs = c.competitors || [];
+    var h = cs.find(function(x){ return x.homeAway==='home'; }) || {};
+    var a = cs.find(function(x){ return x.homeAway==='away'; }) || {};
+    return { home:h, away:a, homeId:String((h.team||{}).id||''), awayId:String((a.team||{}).id||'') };
+  }
+  function plays(j){ return Array.isArray(j.plays) ? j.plays : []; }
+  function inPeriod(j, p){
+    return plays(j).filter(function(x){ return Number(((x.period)||{}).number) === Number(p); });
+  }
+  function isScore(x){ return !!x.scoringPlay; }
+  function val(x){ return Number(x.scoreValue||0); }
+  function txt(x){ return String((x.text||'') + ' ' + (((x.type)||{}).text||'')).toLowerCase(); }
+  function teamId(x){ return String(((x.team)||{}).id||''); }
+  function clockSec(x){
+    var d = String((((x.clock)||{}).displayValue)||'');
+    var m = d.match(/^(\d+):(\d+)/); if(!m) return null;
+    return Number(m[1])*60 + Number(m[2]);
+  }
+
+  /* Map a team to whichever option string names it. The bank writes
+     "Wings" and "Tempo"; the feed says "Dallas Wings", "DAL", id 3. Match
+     on every name the feed offers rather than on a hand-kept table — a
+     hand-kept table is a thing that goes stale on the one night nobody
+     checks it. */
+  function optForTeam(j, id, opts){
+    var s = sides(j);
+    var t = (String(id)===s.homeId) ? (s.home.team||{}) : (s.away.team||{});
+    var names = [t.displayName, t.shortDisplayName, t.name, t.nickname, t.abbreviation, t.location]
+      .filter(Boolean).map(function(x){ return String(x).toLowerCase(); });
+    var hit = (opts||[]).find(function(o){
+      var lo = String(o).toLowerCase();
+      return names.some(function(n){ return n===lo || n.indexOf(lo)>=0 || lo.indexOf(n)>=0; });
+    });
+    return hit || null;
+  }
+
+  function band(n, cuts, opts){
+    for(var i=0;i<cuts.length;i++){ if(n<=cuts[i]) return opts[i]; }
+    return opts[opts.length-1];
+  }
+
+  /* ---- THE RESOLVERS ----------------------------------------------
+     Each takes (feed, period, options) and returns the option string it
+     believes is correct, or null for "I cannot read this". NULL IS A
+     LEGITIMATE ANSWER and it is the important one: a resolver that
+     guesses is worse than no resolver, because a guess is indistinguish-
+     able from knowledge right up until it costs somebody the night. */
+  var R = {};
+
+  R.firstScoreKind = function(j, p, o){
+    var f = inPeriod(j,p).filter(isScore)[0]; if(!f) return null;
+    var t = txt(f);
+    if(/free throw/.test(t)) return o.find(function(x){ return /free throw/i.test(x); }) || null;
+    if(val(f)===3)           return o.find(function(x){ return /three/i.test(x); }) || null;
+    if(/layup|dunk|tip shot|alley|putback|hook/.test(t))
+                             return o.find(function(x){ return /layup|dunk/i.test(x); }) || null;
+    return o.find(function(x){ return /mid-?range|jumper/i.test(x); }) || null;
+  };
+
+  R.firstScoreTeam = function(j, p, o){
+    var f = inPeriod(j,p).filter(isScore)[0]; if(!f) return null;
+    return optForTeam(j, teamId(f), o);
+  };
+
+  R.firstThreeTeam = function(j, p, o){
+    var f = inPeriod(j,p).filter(function(x){ return isScore(x) && val(x)===3; })[0];
+    if(!f) return o.find(function(x){ return /neither|none/i.test(x); }) || null;
+    return optForTeam(j, teamId(f), o);
+  };
+
+  R.threesBand = function(j, p, o){
+    var n = inPeriod(j,p).filter(function(x){ return isScore(x) && val(x)===3; }).length;
+    return band(n, [1,3,5], o);
+  };
+
+  R.firstScorerStillAhead = function(j, p, o){
+    var ps = inPeriod(j,p), f = ps.filter(isScore)[0]; if(!f) return null;
+    var last = ps[ps.length-1]; if(!last) return null;
+    var s = sides(j);
+    var h = Number(last.homeScore), a = Number(last.awayScore);
+    if(!isFinite(h) || !isFinite(a)) return null;
+    if(h===a) return o.find(function(x){ return /tied/i.test(x); }) || null;
+    var leaderIsHome = h > a;
+    var firstIsHome  = teamId(f) === s.homeId;
+    return (leaderIsHome===firstIsHome)
+      ? (o.find(function(x){ return /^yes/i.test(x); }) || null)
+      : (o.find(function(x){ return /^no/i.test(x); })  || null);
+  };
+
+  R.fgVsFt = function(j, p, o){
+    var ps = inPeriod(j,p).filter(isScore);
+    var ft = ps.filter(function(x){ return /free throw/.test(txt(x)); }).length;
+    var fg = ps.filter(function(x){ return !/free throw/.test(txt(x)); }).length;
+    if(fg===ft) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    return fg>ft ? (o.find(function(x){ return /field goal/i.test(x); }) || null)
+                 : (o.find(function(x){ return /free throw/i.test(x); }) || null);
+  };
+
+  R.leadChanges = function(j, p, o){
+    var ps = inPeriod(j,p), n = 0, prev = null;
+    /* the sign coming INTO the quarter is the baseline, so a lead taken
+       in the first minute counts as the change it obviously is */
+    var before = plays(j).filter(function(x){ return Number(((x.period)||{}).number) < Number(p); });
+    var b = before[before.length-1];
+    if(b){ var d0 = Number(b.homeScore)-Number(b.awayScore); prev = d0>0?1:(d0<0?-1:null); }
+    ps.forEach(function(x){
+      var d = Number(x.homeScore)-Number(x.awayScore);
+      if(!isFinite(d) || d===0) return;              // a tie is not a lead change
+      var sgn = d>0?1:-1;
+      if(prev!==null && sgn!==prev) n++;
+      prev = sgn;
+    });
+    return band(n, [0,1,2], o);
+  };
+
+  R.tenUnanswered = function(j, p, o){
+    var ps = inPeriod(j,p).filter(isScore);
+    var run = 0, who = null, hit = false;
+    ps.forEach(function(x){
+      var t = teamId(x);
+      if(t===who){ run += val(x); } else { who = t; run = val(x); }
+      if(run>=10) hit = true;
+    });
+    return hit ? (o.find(function(x){ return /^yes/i.test(x); }) || null)
+               : (o.find(function(x){ return /^no/i.test(x); })  || null);
+  };
+
+  R.lastShotOfPeriod = function(j, p, o){
+    var ps = inPeriod(j,p).filter(function(x){ return x.shootingPlay && !/free throw/.test(txt(x)); });
+    var l = ps[ps.length-1];
+    if(!l) return o.find(function(x){ return /nobody/i.test(x); }) || null;
+    return isScore(l) ? (o.find(function(x){ return /went in|made/i.test(x); }) || null)
+                      : (o.find(function(x){ return /miss/i.test(x); }) || null);
+  };
+
+  R.shotClockCount = function(j, p, o){
+    var n = plays(j).filter(function(x){
+      return Number(((x.period)||{}).number) <= Number(p) && /shot clock/.test(txt(x));
+    }).length;
+    return band(n, [0,1,2], o);
+  };
+
+  R.threesVsTurnovers = function(j, p, o){
+    var ps = inPeriod(j,p);
+    var th = ps.filter(function(x){ return isScore(x) && val(x)===3; }).length;
+    var to = ps.filter(function(x){ return /turnover/.test(txt(x)); }).length;
+    if(th===to) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    return th>to ? (o.find(function(x){ return /three/i.test(x); }) || null)
+                 : (o.find(function(x){ return /turnover/i.test(x); }) || null);
+  };
+
+  /* The box score is CUMULATIVE, so this is only true at the moment the
+     period ends — which is exactly when a resolver runs. Reading it an
+     hour later gives the wrong answer to the right question, and that is
+     a trap worth naming rather than a bug worth hiding. */
+  R.doubleFiguresBand = function(j, p, o){
+    /* AND THIS ONE REFUSES RATHER THAN LIES. "Through three quarters" is
+       a question about a moment, and the box score only holds the present
+       — read it during the fourth and it answers a different question
+       with total confidence. If the game has moved past the period being
+       asked about, say nothing. A resolver that knows when it is out of
+       date is the difference between automation and a rumour. */
+    try{
+      var st = j.header.competitions[0].status;
+      var cur = Number(st.period)||0;
+      var done = !!(st.type && st.type.completed);
+      if(cur > Number(p) || (done && Number(p) < 4)) return null;
+    }catch(_){}
+    var n = 0, seen = 0;
+    try{
+      (j.boxscore.players||[]).forEach(function(tm){
+        (tm.statistics||[]).forEach(function(st){
+          var keys = (st.names||st.labels||[]).map(function(x){ return String(x).toUpperCase(); });
+          var pi = keys.indexOf('PTS');
+          (st.athletes||[]).forEach(function(a){
+            var v = pi>=0 ? Number((a.stats||[])[pi]) : NaN;
+            if(isFinite(v)){ seen++; if(v>=10) n++; }
+          });
+        });
+      });
+    }catch(_){ return null; }
+    if(!seen) return null;
+    return band(n, [1,2,3], o);
+  };
+
+  R.lastTwoFtVsFg = function(j, p, o){
+    var ps = inPeriod(j,p).filter(function(x){ var s = clockSec(x); return s!==null && s<=120; });
+    var ft = ps.filter(function(x){ return /free throw/.test(txt(x)); }).length;
+    var fg = ps.filter(function(x){ return x.shootingPlay && !/free throw/.test(txt(x)); }).length;
+    if(!ps.length) return null;
+    if(ft===fg) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    return ft>fg ? (o.find(function(x){ return /free.throw/i.test(x); }) || null)
+                 : (o.find(function(x){ return /field.goal/i.test(x); }) || null);
+  };
+
+  R.anyFoulOut = function(j, p, o){
+    var byPlay = plays(j).some(function(x){ return /fouled out|disqualif/.test(txt(x)); });
+    if(byPlay) return o.find(function(x){ return /^yes/i.test(x); }) || null;
+    var out = false, seen = 0;
+    try{
+      (j.boxscore.players||[]).forEach(function(tm){
+        (tm.statistics||[]).forEach(function(st){
+          var keys = (st.names||st.labels||[]).map(function(x){ return String(x).toUpperCase(); });
+          var pi = keys.indexOf('PF'); if(pi<0) return;
+          (st.athletes||[]).forEach(function(a){
+            var v = Number((a.stats||[])[pi]);
+            if(isFinite(v)){ seen++; if(v>=6) out = true; }
+          });
+        });
+      });
+    }catch(_){ return null; }
+    if(!seen) return null;
+    return out ? (o.find(function(x){ return /^yes/i.test(x); }) || null)
+               : (o.find(function(x){ return /^no/i.test(x); })  || null);
+  };
+
+  /* CAUGHT BY THE DRY RUN, AND IT IS THE WHOLE ARGUMENT FOR HAVING ONE.
+     The first version read the LAST PLAY of the game. The last play of
+     every game ever played is the row "End of Game", which is not a
+     basket — so this returned "no basket" every single time. It happened
+     to be right on the game it was first tried against, because that game
+     really did end on a shot-clock turnover, and a resolver that is right
+     for the wrong reason is worth less than one that is honestly wrong:
+     it passes the only test anybody runs and then costs somebody a night.
+
+     Walk back past the administrative rows to the last thing that was
+     actually an attempt or a turnover, and answer about THAT. */
+  var ADMIN_PLAY = /^end of|official timeout|full timeout|short timeout|substitution|enters the game|start of|jump ball|delay of game|instant replay/;
+  R.lastBasketWorth = function(j, p, o){
+    var ps = plays(j);
+    for(var i=ps.length-1; i>=0; i--){
+      var x = ps[i], t = txt(x);
+      if(ADMIN_PLAY.test(t.trim())) continue;
+      if(!(x.shootingPlay || isScore(x) || /turnover/.test(t))) continue;
+      if(isScore(x)){
+        var v = String(val(x));
+        return o.find(function(y){ return String(y).trim()===v; }) || null;
+      }
+      return o.find(function(y){ return /no basket/i.test(y); }) || null;
+    }
+    return null;
+  };
+
+  R.halftimeLeaderWon = function(j, p, o){
+    var h2 = inPeriod(j,2); var last = h2[h2.length-1]; if(!last) return null;
+    var hh = Number(last.homeScore), ah = Number(last.awayScore);
+    if(!isFinite(hh)||!isFinite(ah)) return null;
+    if(hh===ah) return o.find(function(x){ return /tied/i.test(x); }) || null;
+    var s = sides(j);
+    var fh = Number((s.home||{}).score), fa = Number((s.away||{}).score);
+    if(!isFinite(fh)||!isFinite(fa)) return null;
+    if(fh===fa) return null;                       // no such thing, but do not guess
+    var halfHome = hh>ah, finalHome = fh>fa;
+    return (halfHome===finalHome)
+      ? (o.find(function(x){ return /^yes/i.test(x); }) || null)
+      : (o.find(function(x){ return /^no/i.test(x); })  || null);
+  };
+
+  function resolve(name, j, p, opts){
+    var f = R[name];
+    if(typeof f !== 'function') return { ok:false, why:'no resolver named "'+name+'"' };
+    try{
+      var v = f(j, p, opts||[]);
+      if(v===null || v===undefined) return { ok:false, why:'the feed does not carry this yet' };
+      if((opts||[]).indexOf(v) < 0)  return { ok:false, why:'resolved to "'+v+'", which is not one of the options' };
+      return { ok:true, answer:v };
+    }catch(e){ return { ok:false, why:'threw: '+((e&&e.message)||e) }; }
+  }
+
+  return { fetchFeed:fetchFeed, resolve:resolve, R:R, sides:sides, plays:plays,
+           inPeriod:inPeriod, armed:armed };
+})();
+
+
+/* ---- THE AUTO TAB ------------------------------------------------
+   Three jobs and no fourth: say what coverage looks like, run the whole
+   night against a finished game so the resolvers can be judged, and sit
+   beside tonight's human and disagree out loud. */
+AUTO.ui = (function(){
+  function $a(id){ return document.getElementById(id); }
+  function cfgNow(){ try{ return nightCfg(night); }catch(_){ return null; } }
+  function bankNow(){ try{ return BANK[night] || null; }catch(_){ return null; } }
+
+  function coverage(){
+    var rs = bankNow(); if(!rs) return {n:0,total:0};
+    var n=0, total=0;
+    rs.forEach(function(r){ (r||[]).forEach(function(q){ total++; if(q && q.r && AUTO.R[q.r]) n++; }); });
+    return {n:n,total:total};
+  }
+
+  function render(){
+    var cfg = cfgNow(), cov = coverage();
+    if($a('auEvent')) $a('auEvent').textContent = (cfg && cfg.espn) ? cfg.espn : '—';
+    if($a('auCover')) $a('auCover').textContent = cov.total ? (cov.n+' / '+cov.total) : '—';
+    if($a('auState')) $a('auState').textContent = LASTSTATE || '—';
+    var d = $a('auDryEvent');
+    if(d && !d.value) d.value = '401857132';
+  }
+
+  var LASTSTATE = '';
+
+  /* ---- DRY RUN --------------------------------------------------
+     The whole night, resolved against a game whose answers you already
+     know. This is the only honest way to find out whether a resolver
+     works, and it is the reason this tab exists today rather than on
+     the night somebody trusts it. */
+  async function dryRun(){
+    var out = $a('auDryOut'); if(!out) return;
+    var ev = ($a('auDryEvent').value||'').trim();
+    if(!ev){ out.innerHTML = '<p class="sub">Give it an event id.</p>'; return; }
+    out.innerHTML = '<p class="sub">Reading the feed…</p>';
+    var j;
+    try{ j = await AUTO.fetchFeed(ev); }
+    catch(e){ out.innerHTML = '<p class="sub">Could not read that game: '+esc((e&&e.message)||e)+'</p>'; return; }
+
+    var st = ''; try{ st = j.header.competitions[0].status.type.description; }catch(_){}
+    LASTSTATE = st || '—';
+    if($a('auState')) $a('auState').textContent = LASTSTATE;
+
+    var rs = bankNow(), cfg = cfgNow();
+    if(!rs){ out.innerHTML = '<p class="sub">This night has no question bank to run.</p>'; return; }
+
+    var html = '<p class="sub">Feed says: <b>'+esc(st||'unknown')+'</b>. '
+             + 'Below is every question in tonight’s bank, answered by the robot off that game. '
+             + '<b>Read them against what actually happened.</b></p>';
+    var good=0, blank=0, none=0;
+
+    rs.forEach(function(round, i){
+      html += '<div style="margin-top:14px"><b>'+esc((cfg&&cfg.tags[i])||('R'+(i+1)))+'</b></div>';
+      (round||[]).forEach(function(q){
+        var r = q.r ? AUTO.resolve(q.r, j, i+1, q.o) : {ok:false, why:'no resolver on this question'};
+        if(!q.r) none++; else if(r.ok) good++; else blank++;
+        html += '<div style="border-top:1px solid rgba(255,255,255,.07);padding:9px 0">'
+             +  '<div style="font-size:14px;line-height:1.4">'+esc(q.t)+'</div>'
+             +  (r.ok
+                  ? '<div style="font-size:14px;font-weight:800;color:#2ee6a6;margin-top:4px">'+esc(r.answer)+'</div>'
+                  : '<div style="font-size:13px;color:#ffc54d;margin-top:4px">no answer — '+esc(r.why)+'</div>')
+             +  '<div style="font-size:12px;color:#93a0bd;margin-top:3px">'+esc((q.o||[]).join(' · '))+'</div>'
+             + '</div>';
+      });
+    });
+
+    html = '<div class="statrow" style="margin-top:10px">'
+         + '<div class="s"><div class="v">'+good+'</div><div class="k">Answered</div></div>'
+         + '<div class="s"><div class="v">'+blank+'</div><div class="k">Resolver came back empty</div></div>'
+         + '<div class="s"><div class="v">'+none+'</div><div class="k">No resolver at all</div></div>'
+         + '</div>' + html;
+    out.innerHTML = html;
+  }
+
+  /* ---- SHADOW ---------------------------------------------------
+     It watches. It writes nothing. When you reveal a round it prints
+     its own key beside yours and names every line you disagree on. */
+  var shadowTimer = null, shadowOn = false;
+
+  function keyFromBank(i){
+    try{ var r = (BANK[night]||[])[i]||[]; return r; }catch(_){ return []; }
+  }
+
+  async function shadowTick(){
+    var out = $a('auShadowOut'); if(!out) return;
+    var cfg = cfgNow();
+    if(!cfg || !cfg.espn){ out.innerHTML = '<p class="sub">This night has no ESPN event id, so there is nothing for the robot to read.</p>'; return; }
+    var j;
+    try{ j = await AUTO.fetchFeed(cfg.espn); }
+    catch(e){ out.innerHTML = '<p class="sub">Feed unreachable — '+esc((e&&e.message)||e)+'. Still watching.</p>'; return; }
+
+    var st='', per=0;
+    try{ var t=j.header.competitions[0].status; st=t.type.description; per=Number(t.period)||0; }catch(_){}
+    LASTSTATE = st || '—';
+    if($a('auState')) $a('auState').textContent = LASTSTATE;
+
+    var html = '<p class="sub">Feed says <b>'+esc(st)+'</b>, period <b>'+per+'</b>. '
+             + 'The robot is not touching anything.</p>';
+
+    /* what the human has published, from the draft this browser holds */
+    var nd = null; try{ nd = draft[night]; }catch(_){}
+    (cfg.tags||[]).forEach(function(tag, i){
+      var qs = keyFromBank(i);
+      if(!qs.length) return;
+      var mine = (nd && nd.rounds && nd.rounds[i] && nd.rounds[i].qs) || [];
+      var rows = '', agree = 0, differ = 0, quiet = 0;
+      qs.forEach(function(q, qi){
+        var r = q.r ? AUTO.resolve(q.r, j, i+1, q.o) : {ok:false, why:'no resolver'};
+        var human = (mine[qi] && mine[qi].k) || null;
+        var mark, colour;
+        if(!r.ok){ mark = 'robot has nothing yet'; colour = '#5d6883'; quiet++; }
+        else if(!human){ mark = 'robot says ' + r.answer + ' — you have not marked it'; colour = '#93a0bd'; }
+        else if(String(human).trim() === String(r.answer).trim()){ mark = 'agreed — ' + r.answer; colour = '#2ee6a6'; agree++; }
+        else { mark = 'DISAGREE — you: ' + human + ' · robot: ' + r.answer; colour = '#ff4d5e'; differ++; }
+        rows += '<div style="border-top:1px solid rgba(255,255,255,.07);padding:7px 0">'
+             +  '<div style="font-size:13px;line-height:1.35">'+esc(q.t)+'</div>'
+             +  '<div style="font-size:13px;font-weight:800;color:'+colour+';margin-top:3px">'+esc(mark)+'</div>'
+             + '</div>';
+      });
+      html += '<div style="margin-top:14px"><b>'+esc(tag)+'</b> '
+           +  '<span style="font-size:12px;color:#93a0bd">'+agree+' agreed · '+differ+' disagreed · '+quiet+' not readable yet</span></div>'
+           +  rows;
+    });
+    out.innerHTML = html;
+  }
+
+  function toggleShadow(){
+    var b = $a('auShadowBtn');
+    if(shadowOn){
+      clearInterval(shadowTimer); shadowTimer=null; shadowOn=false;
+      if(b) b.textContent = 'Start watching';
+      return;
+    }
+    shadowOn = true;
+    if(b) b.textContent = 'Stop watching';
+    shadowTick();
+    shadowTimer = setInterval(shadowTick, 30000);
+  }
+
+  function mount(){
+    var d = $a('auDryBtn'); if(d) d.onclick = dryRun;
+    var s2 = $a('auShadowBtn'); if(s2) s2.onclick = toggleShadow;
+    render();
+  }
+  try{ if(document.readyState!=='loading') setTimeout(mount, 400);
+       else document.addEventListener('DOMContentLoaded', function(){ setTimeout(mount,400); }); }catch(_){}
+
+  return { render:render, dryRun:dryRun, mount:mount };
+})();
+AUTO.render = function(){ try{ AUTO.ui.render(); }catch(_){} };
+
 </script>
 </body>
 </html>
