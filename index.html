@@ -987,7 +987,7 @@
     </div>
 
     <div class="card tight" id="ruleCatch" style="display:none">
-      <h2 style="font-size:14px">⚡ Live catches — 1 pt each</h2>
+      <h2 style="font-size:14px">⚡ Your watchlist — 1 pt each</h2>
       <p class="sub" style="font-size:14px" id="ruleCatchP"></p>
     </div>
 
@@ -1193,6 +1193,50 @@
       </div>
     </div>
     <div id="gtIdle"></div>
+    <!-- ============ THE WAITING ROOM, FOLDED IN =====================
+         "I should play the game on one page. I still want a seamless page
+         which should be the Gametime tab where people put in the questions
+         for the quarters and Caught It."
+
+         Asked three times. The question and the review moved here first,
+         then the button that opens them. This is the last third: the room
+         bar, the alert opt-in, tonight's top five and the watchlist all
+         now sit under the same scoreboard, so the night never leaves this
+         page. `map.lobby` points at this section — S.screen still says
+         "lobby" and every guard, save and resume path that reads it is
+         unchanged. What changed is which section that word points at.
+
+         An earlier attempt moved the whole section wholesale and broke
+         resume, the layout and the swipe handler. This one moves the four
+         nodes a player can actually see and leaves every id that anything
+         paints into exactly where it was — see #legacyLobbyBits. -->
+    <div id="gtLobby" style="display:none">
+      <div class="roombar" id="roomBar" style="display:none">
+        <span class="rdot" id="roomDot"></span>
+        <span id="roomTxt">Connecting to tonight's room…</span>
+        <span class="roomrank" id="roomRank"></span>
+      </div>
+      <!-- The single biggest note from Game Night #1 was "there needs to be
+           more touch points during the game — whether it's a text or a
+           notification". A toast is useless to a phone that is face down on
+           the couch, which is where every phone is between quarters. This is
+           the only opt-in in the app. -->
+      <div class="alertrow" id="alertRow" style="display:none">
+        <span id="alertTxt">🔔 Ping me when the quarter drops</span>
+        <button class="alertbtn" id="alertBtn" onclick="alertBtnTap()">Turn on</button>
+      </div>
+      <div class="standcard" id="standCard" style="display:none">
+        <div class="standhead"><span id="standTitle">Tonight's top 5</span><span id="standWhen"></span></div>
+        <div id="standList"></div>
+        <p class="standyou" id="standYou"></p>
+      </div>
+      <div class="card" id="catchCard" style="display:none">
+        <div class="catchhead"><b id="catchTitle">⚡ Your watchlist</b><span class="cpts" id="catchPtsLbl">6 × 1 pt</span></div>
+        <p class="sub" id="catchSub" style="font-size:12px;margin:4px 0 0">Set these before kickoff. They score themselves while you watch — no tapping during the match.</p>
+        <div class="catchgrid" id="catchGrid"></div>
+      </div>
+      <button class="btn ghost" id="gtTalkBtn" onclick="openTalk()">🔥 Talk trash</button>
+    </div>
     <!-- THE FEED. Everything below the Caught It slot is an endless scroll of
          the game itself: every bucket, every run, every deep cut, and your
          own card moving. See the FEED engine for why this exists. -->
@@ -1221,41 +1265,27 @@
     <div id="meBody" style="margin-top:22px"></div>
   </section>
 
-  <section class="screen" id="s-lobby">
-    <div class="brand" style="margin-top:40px"><span class="logo" style="letter-spacing:1.2px;font-size:22px">STATS GAMETIME</span></div>
-    <div class="center" style="margin-top:30px">
+  <!-- ============ THE WAITING ROOM IS GONE ON PURPOSE ================
+       Nothing routes here any more — `map.lobby` resolves to `s-gametime`,
+       so this section is never activated and a player can never see it.
+
+       It survives, hidden, for exactly the reason `#legacyBits` does:
+       renderLobby(), paintScore() and refreshLobby() run all night and
+       paint into these ids. Deleting them would turn every one of those
+       calls into a silent no-op, which is the precise class of bug this
+       whole build exists to end. The nodes a player can actually see —
+       the room bar, the alert opt-in, tonight's top five, the watchlist —
+       moved to #gtLobby on the Gametime tab. These are the leftovers:
+       either duplicated up there in better form (the score card, which is
+       a 52px scoreboard on Gametime; the two stat tiles, which are YOUR
+       NIGHT) or copy for a screen nobody lands on. -->
+  <section class="screen" id="s-lobby" aria-hidden="true">
+    <div id="legacyLobbyBits" style="display:none">
       <span class="pill" id="lobbyPill">Tipping off</span>
-      <h1 style="margin-top:16px">You're in.</h1>
       <p class="sub center" id="lobbySub">Predictions locked. When each quarter ends, questions drop here — be fast, points are live.</p>
-    </div>
-    <div class="statgrid" style="margin-top:10px">
-      <!-- These two nodes belong to the player, not the room. The crowd
-           count lives in the room bar below. The old default label here
-           said "Players tonight" over a dash, which is a promise this
-           slot never keeps. -->
       <div class="stat"><div class="v" id="lobStat1v">—</div><div class="k" id="lobStat1k">Your points so far</div></div>
       <div class="stat"><div class="v" id="lobStat2v">50</div><div class="k" id="lobStat2k">Your prediction pts (pending)</div></div>
-    </div>
-    <div class="roombar" id="roomBar" style="display:none">
-      <span class="rdot" id="roomDot"></span>
-      <span id="roomTxt">Connecting to tonight's room…</span>
-      <span class="roomrank" id="roomRank"></span>
-    </div>
-    <!-- The single biggest note from Game Night #1 was "there needs to be more
-         touch points during the game — whether it's a text or a notification".
-         A toast is useless to a phone that is face down on the couch, which is
-         where every phone is between quarters. This is the only opt-in in the
-         app and it is asked for once, on the screen where waiting happens. -->
-    <div class="alertrow" id="alertRow" style="display:none">
-      <span id="alertTxt">🔔 Ping me when the next quarter drops</span>
-      <button class="alertbtn" id="alertBtn" onclick="alertBtnTap()">Turn on</button>
-    </div>
-    <!-- The "put STATS on your home screen" card is gone. It was asking a
-         player for an install on the screen where they were waiting to
-         play, every night, and it was the third thing they read. The
-         notification opt-in above it earns its place; this did not. The
-         install path still exists on the Me tab for anyone who wants it. -->
-<!-- LIVE SCORE + LIVE STANDINGS.
+<!-- LIVE SCORE.
          Game Night #1's flattest stretch was the wait between quarters:
          locked picks, a button that does nothing yet, and no reason to
          keep the app open. "No live scores shown", "no participant scores
@@ -1277,20 +1307,9 @@
       <p class="sbstale" id="sbStale"></p>
     </div>
 
-    <div class="standcard" id="standCard" style="display:none">
-      <div class="standhead"><span id="standTitle">Tonight's top 5</span><span id="standWhen"></span></div>
-      <div id="standList"></div>
-      <p class="standyou" id="standYou"></p>
+      <button class="btn" id="lobbyBtn" onclick="startQuarter(0)">Start Quarter 1 ▶</button>
+      <p class="foot" id="lobbyFoot">In a real live run this waits for the on-court quarter to end. Here you drive it.</p>
     </div>
-    <div class="card" id="catchCard" style="display:none">
-      <div class="catchhead"><b id="catchTitle">⚡ Live catches</b><span class="cpts" id="catchPtsLbl">6 × 1 pt</span></div>
-      <p class="sub" id="catchSub" style="font-size:12px;margin:4px 0 0">Set these before kickoff. They score themselves while you watch — no tapping during the match.</p>
-      <div class="catchgrid" id="catchGrid"></div>
-    </div>
-    <div style="flex:1"></div>
-    <button class="btn" id="lobbyBtn" onclick="startQuarter(0)">Start Quarter 1 ▶</button>
-    <button class="btn ghost" onclick="openTalk()">🔥 Talk trash</button>
-    <p class="foot" id="lobbyFoot">In a real live run this waits for the on-court quarter to end. Here you drive it.</p>
   </section>
 
   <!-- 5. LIVE QUESTION -->
@@ -1336,8 +1355,8 @@
     <p class="sub center">Enter the official results (host announces from the final box score). Your picks are shown under each.</p>
     <div class="card" id="prCard"></div>
     <div class="card" id="prCatchCard" style="display:none">
-      <div class="catchhead"><b>⚡ Live catches</b><span class="cpts" id="prCatchPts">6 × 1 pt</span></div>
-      <p class="sub" style="font-size:12px;margin:4px 0 0">Tap what actually happened. Your catch is marked 🔵.</p>
+      <div class="catchhead"><b>⚡ Your watchlist</b><span class="cpts" id="prCatchPts">6 × 1 pt</span></div>
+      <p class="sub" style="font-size:12px;margin:4px 0 0">Tap what actually happened. Your pick is marked 🔵.</p>
       <div class="catchgrid" id="prCatchGrid"></div>
     </div>
     <button class="btn teal" id="prBtn" disabled onclick="confirmPreds()">Confirm & see my final score</button>
@@ -3608,14 +3627,14 @@ const SPORTS={
         unit:"match", Unit:"Match", period:"half", Period:"Half",
         league:"Leagues Cup", cadence:"2 halves" },
     startLbl:"{n} questions ▶", lifelineNote:"the break is long enough",
-    landing:"<b style=\"color:var(--ink)\">MLS v LIGA MX</b> — a month of it, Aug 4 to Sep 6. Set your card before kickoff, then put the phone down: your live catches score themselves while you watch. Two rounds of questions, halftime and full time. That's it.",
+    landing:"<b style=\"color:var(--ink)\">MLS v LIGA MX</b> — a month of it, Aug 4 to Sep 6. Set your card before kickoff, then put the phone down: your watchlist scores itself while you watch. Two rounds of questions, halftime and full time. That's it.",
     step1:"Ten picks before kickoff — result, goals, first corner, first card, added time. All of them always resolve. Worth up to 50 pts.",
-    step2h:"Set 6 live catches, then just watch",
+    step2h:"Set your 6-item watchlist, then just watch",
     step2:"First corner, first card, first sub, first offside. You set them before kickoff and they flip themselves as the match happens — no tapping, no phone during a counter-attack. 1 pt each.",
     step3:"Two question rounds only — halftime (3 pts each) and full time (5 pts each). Most points wins the night; ⚡ Speed breaks ties.",
     rulePred:"Lock 10 picks before kickoff, 5 pts each: result, total goals, first goal, both teams to score, higher-scoring half, first corner, first yellow, added-time goal, shots on target and winning margin. Every one of them resolves — there are no dead picks. Locked at kickoff.",
     ruleLive:"Two rounds only, because soccer only gives you two breaks. At halftime, 3 questions about the first 45 (3 pts each). At the final whistle, 3 questions about the whole match (5 pts each). 20 seconds per question, no lookups.",
-    ruleScore:"When the host posts the halftime and full-time answers (from the broadcast + official match stats), your half scores itself — nothing for you to tap in. At the final whistle the host settles your pre-match sheet and your live catches too."
+    ruleScore:"When the host posts the halftime and full-time answers (from the broadcast + official match stats), your half scores itself — nothing for you to tap in. At the final whistle the host settles your pre-match sheet and your watchlist too."
   }
 };
 const SPORT_KEY=(()=>{try{return (new URLSearchParams(location.search).get('sport')||'basketball').toLowerCase();}catch(e){return 'basketball';}})();
@@ -3665,11 +3684,16 @@ const league={name:"The Barbershop",members:[
 ]};
 
 /* ---------------- NAV ---------------- */
-const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-lobby",me:"s-me",gametime:"s-gametime",stats:"s-stats",board:"s-board",
-  /* ONE PAGE. `live` and `review` are POSITIONS in the night, not places
-     in the DOM — both of them now resolve to the Gametime section, which
-     shows or hides the right slot. Nothing that reads S.screen or S.place
-     had to change. */
+const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-gametime",me:"s-me",gametime:"s-gametime",stats:"s-stats",board:"s-board",
+  /* ONE PAGE. `live`, `review` and now `lobby` are POSITIONS in the night,
+     not places in the DOM — all three resolve to the Gametime section,
+     which shows or hides the right slot. Nothing that reads S.screen or
+     S.place had to change: a save written on any build still says "lobby",
+     resume still recognises it, and the only difference is that the word
+     now lands the player under the scoreboard instead of in a separate
+     waiting room. That waiting room was the last seam in the night — the
+     loop was Gametime → lobby → answer → Gametime, asked to be one page
+     three times, and this is the third of three moves that make it one. */
   live:"s-gametime",break:"s-break",final:"s-final",host:"s-host",league:"s-league",plus:"s-plus",
   rules:"s-rules",review:"s-gametime",predreview:"s-predreview",tally:"s-tally",
   join:"s-join"};
@@ -4161,7 +4185,10 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
      both how you arrived and how you leave. It was also sitting in the top
      corner of every screen doing nothing but taking a tap target and 60px
      of vertical space on a phone. */
-  const BACKMAP={landing:null,name:'landing',predict:'name',lobby:'landing',me:null,gametime:null,stats:null,board:null,
+  /* `lobby` has no back arrow any more for the same reason the five tabs
+     don't: it IS the Gametime tab now. A ← in the corner of the page you
+     spend the whole night on is a question with no answer. */
+  const BACKMAP={landing:null,name:'landing',predict:'name',lobby:null,me:null,gametime:null,stats:null,board:null,
     /* No back button during a timed question. It sat on top of the score
        strip (covering your own points), and "back" mid-question is not a
        thing we want to offer anyway — the clock keeps running. */
@@ -4186,6 +4213,18 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
     if(rv) rv.style.display = (k==='review') ? '' : 'none';
     try{ document.body.classList.toggle('qopen', k==='live' || k==='review'); }catch(_){}
     if(k==='live'){ try{ ciStash(); }catch(_){} }
+    /* The waiting room's own controls. Hidden during a question for the
+       same reason the nav and the menu are — nothing else on screen while
+       a twenty-second clock is running. */
+    try{ syncGtLobby(); }catch(_){}
+    /* Landing on the Gametime section by any route has to paint it. Before
+       the lobby merge only `live` and `review` came through here; `lobby`
+       arrived from renderLobby(), which paints the lobby's own ids and
+       knows nothing about the scoreboard above them. Without this the
+       player comes back from a quarter to last quarter's board. */
+    if(k==='lobby' || k==='gametime'){
+      try{ if(typeof renderGametime==='function') renderGametime(); }catch(_){}
+    }
     if(k==='live' || k==='review'){
       try{ if(typeof renderGametime==='function') renderGametime(); }catch(_){}
       /* And the question has to be the thing you are looking at — without
@@ -4276,7 +4315,7 @@ function renderAlertRow(){
     btn.textContent = S.alerts===false ? 'Unmute' : 'Mute';
   }else{
     row.className='alertrow';
-    txt.textContent='🔔 Ping me when the next quarter drops';
+    txt.textContent='🔔 Ping me when the quarter drops';
     btn.textContent='Turn on';
   }
 }
@@ -5266,8 +5305,8 @@ function renderCatchStrip(qi){
   // never say "5 of 6" while one is still live — that reads as a miss
   document.getElementById('catchSub').textContent = locked
     ? `Locked at ${L.start}. `+(!done ? `They resolve as the ${L.unit} plays.`
-        : pend ? `You've caught ${S.catchPts||0} of the ${done} that resolved — ${pend} still live.`
-               : `You caught ${S.catchPts||0} of ${CATCHES.length}.`)
+        : pend ? `${S.catchPts||0} of the ${done} that resolved landed — ${pend} still live.`
+               : `${S.catchPts||0} of ${CATCHES.length} landed.`)
     : `Set these before ${L.start}. They score themselves while you watch — no tapping during the ${L.unit}.`;
   const g=document.getElementById('catchGrid');g.innerHTML='';
   CATCHES.forEach(c=>{
@@ -5279,7 +5318,7 @@ function renderCatchStrip(qi){
     d.innerHTML=`<div class="cico">${c.icon}</div><div class="clab">${c.label}</div>
       <div class="cmin">${done?'resolved '+c.at:'~'+c.at}</div>
       <div class="catchopts"></div>
-      <div class="cres">${done?(hit?'✓ caught +1':'✕ '+S.catchResults[c.id]):(locked?'⏳ live':'')}</div>`;
+      <div class="cres">${done?(hit?'✓ +1':'✕ '+S.catchResults[c.id]):(locked?'⏳ live':'')}</div>`;
     const box=d.querySelector('.catchopts');
     c.opts.forEach(o=>{
       const b=document.createElement('button');b.textContent=o;
@@ -5886,7 +5925,12 @@ function afterReview(){
     S.nextQ=S.qi+1;
     try{ renderLobby(S.nextQ); }catch(_){}
     try{ renderGametime(); }catch(_){}
-    go('gametime');
+    /* 'lobby', not 'gametime' — and since the merge those are the same
+       pixels, so this costs nothing and buys two things. S.place records
+       the honest position (waiting on the next round) instead of leaving
+       it on 'review', and the room poll keeps running, which is what puts
+       a live count and a live rank in the bar now sitting on this page. */
+    go('lobby');
   }
   else{openPredReview();}
 }
@@ -6297,7 +6341,7 @@ function renderBreakdown(livePts){
     ph.total ? `${ph.hits} of ${ph.total} lines landed` : ''));
 
   if(CATCHES.length){
-    out.push(bRow('👀 Live catches', S.catchPts||0, CATCH_PTS, '',
+    out.push(bRow('👀 Your watchlist', S.catchPts||0, CATCH_PTS, '',
       `${S.catchPts||0} of ${CATCHES.length} caught`));
   }
 
@@ -6539,7 +6583,7 @@ const AWARDS=[
 
   { id:'eagle', emoji:'👀', name:'EAGLE EYE',
     test:c=>c.catchAll===true,
-    why:c=>`All <b>${c.catchTotal}</b> live catches. You saw every one of them coming.`,
+    why:c=>`Your whole <b>${c.catchTotal}</b>-item watchlist landed. You saw every one of them coming.`,
     short:c=>`${c.catchTotal}/${c.catchTotal} catches` },
 
   { id:'perfectq', emoji:'🧹', name:()=>`PERFECT ${String(L.Period).toUpperCase()}`,
@@ -7357,7 +7401,12 @@ async function refreshRoom(){
 const LOBBY_MS=45000;
 let lobbyTimer=null, lobbyTick=0, lastScore=null, lastStand=null;
 
-function lobbyLive(){ return S.mode==='live' && S.screen==='lobby'; }
+/* The room poll follows the ROOM BAR, and the room bar now lives on the
+   Gametime page. So "am I in the waiting room" is no longer a question
+   about one word: a player standing on that page between quarters is in
+   it whether S.screen says 'lobby' or 'gametime'. Getting this wrong is
+   silent — the bar simply shows a count and a rank from a round ago. */
+function lobbyLive(){ return S.mode==='live' && (S.screen==='lobby' || (S.screen==='gametime' && (S.place||'')==='lobby')); }
 
 function syncLobbyPolling(){ lobbyLive() ? startLobbyPolling() : stopLobbyPolling(); }
 
@@ -8067,6 +8116,16 @@ function ensureCiCard(){
     '#gtSticky::after{content:"";position:absolute;left:0;right:0;top:100%;height:14px;'+
       'background:linear-gradient(180deg,var(--bg,var(--bg)),rgba(10,14,23,0));pointer-events:none}'+
     'body.qopen #gtSticky::after{display:none}'+
+    /* THE WAITING ROOM'S CONTROLS, FOLDED ONTO THIS PAGE. Belt and braces
+       with syncGtLobby(): a stray render must never be able to put a room
+       bar or an alert opt-in next to a running clock. Also min-width:0 on
+       everything inside it — the standings card and the watchlist grid
+       came from a section with different padding, and the last attempt at
+       this merge shipped 149px of horizontal overflow. */
+    'body.qopen #gtLobby{display:none !important}'+
+    '#gtLobby{margin-top:12px;max-width:100%}'+
+    '#gtLobby > *{max-width:100%;min-width:0;box-sizing:border-box}'+
+    '#gtLobby .catchgrid,#gtLobby .standcard,#gtLobby .roombar,#gtLobby .alertrow{max-width:100%;box-sizing:border-box}'+
     /* Docked in the slot it is a panel, not a floating card: square off the
        top so it reads as hanging from the scoreboard above it. */
     '#ciSlot #ciCard{border-top-left-radius:6px;border-top-right-radius:6px;'+
@@ -9002,7 +9061,7 @@ function ttBurns(){
     add(90,`Perfect ${r.tag}. ${r.n} for ${r.n}. We watched the same ${L.unit} — I was just paying attention. 👀`);
   }
   if(f.catchN&&f.catchDone&&f.catchHits>=Math.ceil(f.catchDone*.6))
-    add(88,`${f.catchHits} of ${f.catchDone} live catches, set before ${L.start} and never touched again. That's not luck, that's homework. ⚡`);
+    add(88,`${f.catchHits} of ${f.catchDone} on your watchlist, set before ${L.start} and never touched again. That's not luck, that's homework. ⚡`);
   if(f.prev&&f.last&&f.prev.hits<f.prev.n&&f.last.hits===f.last.n)
     add(84,`${f.prev.tag} I was cold. ${f.last.tag} I went ${f.last.n} for ${f.last.n}. Adjust or get left. 📈`);
   if(f.lifeLeft>0&&!f.lifeAt&&f.rounds.length>=Math.ceil(NR/2)&&!f.final)
@@ -9075,7 +9134,7 @@ function ttPhase(){
 function ttSting(f){
   if(f.exact.length){const e=f.exact[0];return `I called ${e.pick} for ${e.n} before ${L.start}.`;}
   if(f.perfect.length)return `I went perfect in ${f.perfect[f.perfect.length-1].tag}.`;
-  if(f.catchN&&f.catchHits>=2)return `${f.catchHits} live catches, all locked before ${L.start}.`;
+  if(f.catchN&&f.catchHits>=2)return `${f.catchHits} off your watchlist, all locked before ${L.start}.`;
   if(f.predHits.length)return `${f.predHits.length} of ${f.predTotal} predictions hit.`;
   if(f.speed>=20)return `⚡${f.speed} speed banked.`;
   if(f.last)return `${f.hits} of ${f.asked} right through ${f.last.tag}.`;
@@ -10167,7 +10226,7 @@ function applySport(){
     + `on Game Night it adds +15 seconds to the clock (time to ask the room — ${SPORT.lifelineNote}).`);
   if(CATCH_PTS){
     const el=$('ruleCatch');if(el)el.style.display='';
-    set('ruleCatchP',`Before ${L.start} you set ${CATCH_PTS} live catches — first corner, first card, first sub and the like. They resolve themselves as the ${L.unit} plays, 1 pt each, and need no input from you while you're watching.`);
+    set('ruleCatchP',`Before ${L.start} you set a ${CATCH_PTS}-item watchlist — first corner, first card, first sub and the like. They resolve themselves as the ${L.unit} plays, 1 pt each, and need no input from you while you're watching.`);
   }
   // the play-by-play/engine demo runs on a basketball mock feed — don't show it elsewhere
   if(SPORT.key!=='basketball'){
@@ -10381,7 +10440,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-12-menu.82';
+const STATS_BUILD='2026-08-12-onepage.83';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -10500,8 +10559,16 @@ function navGo(tab){
     // change is the classic half-built-nav tell.
     if(tab!=='crew'){ try{ closeTalk(); }catch(_){} }
     if(tab==='home')  { go('landing'); }
-    else if(tab==='gametime'){ renderGametime(); go('gametime');
-      try{ loadGameStats(true).then(function(){ if(S.screen==='gametime') renderGametime(); }); }catch(_){} }
+    else if(tab==='gametime'){
+      /* THE TAB AND THE WAITING ROOM ARE THE SAME PAGE NOW. Coming back to
+         Gametime from Stats while the night is between quarters used to
+         land on `gametime` — same pixels, different position — which
+         stopped the room poll and put a "back to my game" bar on top of
+         the game. Land on the position the player is actually in. */
+      var k='gametime';
+      try{ if(S.mode==='live' && S.place==='lobby'){ k='lobby'; renderLobby(S.nextQ!=null?S.nextQ:S.qi); } }catch(_){}
+      renderGametime(); go(k);
+      try{ loadGameStats(true).then(function(){ if(map[S.screen]==='s-gametime') renderGametime(); }); }catch(_){} }
     else if(tab==='stats'){ go('stats'); renderStats(); loadGameStats(true).then(function(){ if(S.screen==='stats') renderStats(); }); }
     else if(tab==='board'){ renderBoard(); go('board');
       if(S.mode==='live'){ try{ refreshRoom(); }catch(_){} try{ boardRefresh(); }catch(_){} } }
@@ -10526,6 +10593,11 @@ function gameBarState(){
     const place=S.place||'';
     if(GAME_SCREENS.indexOf(place)<0) return null;      // not in a night
     if(S.screen===place) return null;                    // already there
+    /* …and "already there" is now a question about the SECTION, not the
+       word. lobby, live and review all resolve to the Gametime page, so a
+       player standing on that page must never be offered a bar telling
+       them to go to it. */
+    try{ if(map[S.screen] && map[S.screen]===map[place]) return null; }catch(_){}
     if(NAV_HIDE_ON.indexOf(S.screen)>=0) return null;    // mid-question
     // Is a round open and unanswered right now?
     let open=false, tag='';
@@ -13204,10 +13276,40 @@ function gtYourNight(){
 
 /* The one control the lobby owned that this page needed. Shows only when
    there is genuinely a round to open, and says which one. */
+/* ---- THE WAITING ROOM'S OWN CONTROLS ----------------------------------
+   #gtLobby holds the four things the lobby had that Gametime did not: the
+   room bar, the alert opt-in, tonight's top five and the watchlist. They
+   are only meaningful once somebody is IN a night, and they must not sit
+   under a running clock, so one function owns whether they are on screen
+   and every path that changes position calls it. */
+function syncGtLobby(){
+  try{
+    var el=document.getElementById('gtLobby'); if(!el) return;
+    var inNight=false;
+    try{
+      var pl=(S&&S.place)||'';
+      inNight = GAME_SCREENS.indexOf(pl)>=0 && pl!=='predict';
+    }catch(_){}
+    var scr=''; try{ scr=(S&&S.screen)||''; }catch(_){}
+    if(scr==='live' || scr==='review') inNight=false;
+    el.style.display = inNight ? '' : 'none';
+  }catch(_){}
+}
+
 function gtStartRow(){
   try{
-    if(!S || S.mode!=='live') return '';
+    if(!S) return '';
     if(S.screen==='live' || S.screen==='review') return '';
+    /* PRACTICE GETS THE BUTTON TOO. This used to bail on anything that was
+       not a live night, which was fine while the lobby still existed — the
+       practice run started from there. With the lobby folded in, bailing
+       here would leave a practice player on a page with no way to open a
+       quarter, which is the only way most people ever see this app. */
+    if(S.mode!=='live'){
+      var dq = (S.nextQ!=null ? S.nextQ : S.qi) || 0;
+      if(dq>=NR) return '';
+      return '<button class="btn" style="margin-top:11px" onclick="startQuarter('+dq+')">'+esc(startLabel(dq))+'</button>';
+    }
     var qi = (S.nextQ!=null ? S.nextQ : S.qi) || 0;
     if(qi>=NR) return '';
     /* Already answered and waiting on the host? Then there is nothing to
@@ -13291,6 +13393,7 @@ function renderGametimeRest(){
         +  '<div class="adrawin">'+more+'</div></details>';
   }
   idle.innerHTML=out;
+  try{ syncGtLobby(); }catch(_){}
   try{ idle.style.marginTop = out ? '4px' : '0'; }catch(_){}
   try{ var sl=document.getElementById('ciSlot'); if(sl) sl.style.marginTop = sl.children.length ? '14px' : '0'; }catch(_){}
   try{ feedRender(); }catch(_){}
