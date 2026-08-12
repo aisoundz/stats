@@ -70,9 +70,15 @@
   html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     -webkit-font-smoothing:antialiased}
-  body{min-height:100vh;display:flex;justify-content:center;
+  /* 100dvh, not 100vh. On a phone `vh` is the LARGE viewport — the height
+     the page would have if the browser chrome were hidden — so the document
+     is taller than what you can see, and the bottom of it (where the nav
+     lives) sits under the toolbar until you scroll. `dvh` tracks the
+     viewport that is actually on screen. The vh line stays first as the
+     fallback for anything that does not know dvh. */
+  body{min-height:100vh;min-height:100dvh;display:flex;justify-content:center;
     background:radial-gradient(1200px 700px at 50% -10%,#15213b 0%,var(--bg) 55%)}
-  .phone{width:100%;max-width:440px;min-height:100vh;position:relative;
+  .phone{width:100%;max-width:440px;min-height:100vh;min-height:100dvh;position:relative;
     background:linear-gradient(180deg,#0b1120,#0a0e17 40%);
     /* overflow:hidden here silently disabled position:sticky in EVERY
        descendant — an ancestor with hidden overflow becomes the scroll
@@ -227,9 +233,17 @@
      the arrow — the first four characters were unreadable. Any screen
      that opens with a text row gets the same 56px of clearance. */
   body.hasback .screen.active > .qmeta:first-child > .qn{padding-left:52px}
-  .youscore{display:flex;align-items:center;justify-content:space-between;
+  /* "The score is cutting off at the edge." It was: a flex row with no
+     min-width:0 on its children, so a long handle pushed the number past
+     the rounded corner instead of the name shortening. The NUMBER never
+     shrinks; the name does. */
+  .youscore{display:flex;align-items:center;justify-content:space-between;gap:10px;
     background:linear-gradient(90deg,rgba(47,107,255,.18),rgba(25,195,214,.12));
-    border:1px solid var(--line2);border-radius:13px;padding:10px 14px;margin-bottom:6px}
+    border:1px solid var(--line2);border-radius:13px;padding:10px 14px;margin-bottom:6px;
+    overflow:hidden}
+  .youscore>*{min-width:0}
+  .youscore span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .youscore b{flex:0 0 auto;white-space:nowrap}
   .youscore b{font-size:20px}.youscore span{font-size:12px;color:var(--muted);font-weight:700}
 
   .alertrow{display:flex;align-items:center;justify-content:space-between;gap:10px;
@@ -1682,11 +1696,90 @@ window.STATS_FIREBASE = {
 
   var SDK  = window.STATS_SDK_BASE || 'https://www.gstatic.com/firebasejs/10.12.2';
   var EMU  = window.STATS_EMULATOR || null;   // {host, firestorePort, authPort} for local tests
-  var calls = 0;
-  function budget() {
-    if (calls++ > MAX_CALLS) { setState('error', 'call budget exhausted'); return false; }
+  /* ============ THE CALL BUDGET, SPLIT INTO LANES =====================
+     B-44, and the most expensive bug of Game Night #6.
+
+     There used to be ONE counter here, shared by every call the app makes,
+     and one ceiling: 4,000. Reads and writes drew on it equally. A tester
+     opened the app two hours before tip and did practice questions; the
+     leaderboard poll, the count poll and the round watch spent his four
+     thousand calls on numbers nobody was looking at. From that moment
+     every answer he gave returned `false` before it ever attempted the
+     write — and returned it silently, because the only thing exhaustion
+     did was `setState('error')`, which the room bar rendered as "Live
+     count unavailable" next to a hardcoded green light.
+
+     He finished all four quarters. He scored nothing. The system punished
+     the most engaged player in the room for caring the most.
+
+     Three rules come out of that night:
+
+       1. LANES. Polling can never spend the allowance an answer needs.
+          Reads, durable writes and background chores each get their own
+          counter and their own ceiling.
+
+       2. AN ANSWER IS NEVER BLOCKED. The circuit breaker exists to stop a
+          runaway loop, and a runaway loop is a POLL — it is not a human
+          tapping an option once per question. So the answer lane counts,
+          warns and reports, but it does not refuse. A breaker that can
+          silently drop the one write the whole product exists to make is
+          not a safety feature.
+
+       3. EXHAUSTION IS NOT A GLOBAL OUTAGE. A spent lane says which lane,
+          in words, to the player and to the Control Room. It does not
+          reach over and mark the entire backend broken.
+
+     Counters reset when a new night is joined, not when the tab loads.   */
+  var MAX_READS  = 12000;   // polling lane: count, top, rank, talk, watches
+  var MAX_WRITES = 3000;    // durable lane: join, score push, signup, say
+  var MAX_CHORES = 800;     // background lane: heartbeat, telemetry, error logs, stamps
+  var nRead = 0, nWrite = 0, nChore = 0, nAnswer = 0;
+  var laneSpent = { read:false, write:false, chore:false };
+  SB.budget = function () {
+    return { read:nRead, write:nWrite, chore:nChore, answer:nAnswer,
+             maxRead:MAX_READS, maxWrite:MAX_WRITES, maxChore:MAX_CHORES,
+             spent:{ read:laneSpent.read, write:laneSpent.write, chore:laneSpent.chore } };
+  };
+  function budgetReset() { nRead = nWrite = nChore = nAnswer = 0;
+                           laneSpent.read = laneSpent.write = laneSpent.chore = false; }
+  SB.budgetReset = budgetReset;
+
+  /* A lane that runs out tells somebody. `notifyOps` is the one channel for
+     "the backend just did something the player needs to know about" — it
+     fires a DOM event the app listens for, and never touches SB.state, so
+     one spent lane cannot black out the whole room. */
+  function notifyOps(kind, msg) {
+    try { SB.lastOps = { kind:String(kind||''), msg:String(msg||''), at:Date.now() }; } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('stats:ops', { detail:{ kind:kind, msg:msg } })); } catch (_) {}
+    try { console.warn('[STATS] ' + kind + ': ' + msg); } catch (_) {}
+  }
+  SB.notifyOps = notifyOps;
+
+  function budgetRead(label) {
+    if (nRead++ < MAX_READS) return true;
+    if (!laneSpent.read) { laneSpent.read = true;
+      notifyOps('budget-read', 'This device has read the room too many times tonight — live counts will pause. Your answers are not affected.'); }
+    return false;
+  }
+  function budgetWrite(label) {
+    if (nWrite++ < MAX_WRITES) return true;
+    if (!laneSpent.write) { laneSpent.write = true;
+      notifyOps('budget-write', 'This device has hit its save limit for tonight. Reload the page to keep saving.'); }
+    return false;
+  }
+  function budgetChore(label) {
+    if (nChore++ < MAX_CHORES) return true;
+    if (!laneSpent.chore) { laneSpent.chore = true; }   // background only — nobody needs telling
+    return false;
+  }
+  /* Counts. Never refuses. See rule 2 above. */
+  function budgetAnswer(label) {
+    nAnswer++;
+    if (nAnswer === 500) notifyOps('answer-volume', 'Unusual number of answer writes from this device.');
     return true;
   }
+  /* Kept so an older caller cannot silently become unmetered. */
+  function budget() { return budgetRead('legacy'); }
 
   /* ---- a write that actually lands, or says why it didn't -------------
      Game #3 lost most players' answers: SB.submit did `catch(e){return
@@ -2040,8 +2133,12 @@ window.STATS_FIREBASE = {
 
   /* ---- join: claim a seat ------------------------------------------ */
   SB.join = async function (o) {
-    if (!SB.enabled || !budget()) return false;
+    if (!SB.enabled || !budgetWrite('join')) return false;
     try {
+      /* A NEW NIGHT IS A NEW ALLOWANCE. The old counter was per page-load,
+         so a phone left open since the morning arrived at tip-off already
+         spent. Lanes reset when the night changes. */
+      if (nightId !== o.nightId) budgetReset();
       nightId = o.nightId;
       SB.joinedAs = null;                 // stale from a previous call is a lie
       mine.name  = String(o.name || 'player').slice(0, 24);
@@ -2053,8 +2150,27 @@ window.STATS_FIREBASE = {
       // the Game #2 bug that cost a player his lead on a reload. So: read the
       // seat first. If it exists, keep its score and only touch name/color;
       // only a brand-new seat gets the fresh zeros.
-      var existing = null;
-      try { existing = await F.getDoc(meRef); } catch (e) {}
+      /* ============ UNKNOWN IS NOT NEW ==============================
+         Game Night #6, B-50. The read below used to be wrapped in a bare
+         `catch(e){}`, which made "the read failed" and "there is no seat
+         here" the same answer — and the else-branch of this if writes
+         pts:0. A player who re-joined during a wifi blip had fifty real
+         points overwritten with zeros by the very function whose comment
+         above promises it will never zero a seat.
+
+         So the failure now has its own name. If the existence read threw,
+         we do not know whether a seat exists, and the only safe move is to
+         write nothing at all and say so. A join that returns false costs a
+         player a retry. A join that guesses costs them their night.     */
+      var existing = null, readOk = false, readErr = '';
+      try { existing = await F.getDoc(meRef); readOk = true; }
+      catch (e) { readOk = false; readErr = (e && (e.code || e.message)) || 'read-failed'; }
+      if (!readOk) {
+        SB.lastJoinError = readErr;
+        try { console.error('[STATS] join aborted — could not read the seat (' + readErr + '). Refusing to write zeros over a score we cannot see.'); } catch (_) {}
+        try { notifyOps('join', 'Couldn’t read your seat — not saving anything until we can.'); } catch (_) {}
+        return false;
+      }
       if (existing && existing.exists()) {
         var d0 = existing.data() || {};
         ['pts','speed','predPts','catchPts','roundsDone'].forEach(function (k) {
@@ -2119,12 +2235,12 @@ window.STATS_FIREBASE = {
   function startHeartbeat() {
     if (hbTimer) clearInterval(hbTimer);
     hbTimer = setInterval(function () {
-      if (!meRef || !visible() || !budget()) return;
+      if (!meRef || !visible() || !budgetChore('heartbeat')) return;
       F.setDoc(meRef, { lastSeen: F.serverTimestamp() }, { merge: true }).catch(function () {});
     }, HEARTBEAT_MS);
     // stop burning quota when the tab is backgrounded, resume on return
     document.addEventListener('visibilitychange', function () {
-      if (visible() && meRef && budget()) {
+      if (visible() && meRef && budgetChore('heartbeat')) {
         F.setDoc(meRef, { lastSeen: F.serverTimestamp() }, { merge: true }).catch(function () {});
       }
     });
@@ -2258,7 +2374,7 @@ window.STATS_FIREBASE = {
 
   /* ---- push my score ------------------------------------------------ */
   SB.push = async function (o) {
-    if (!SB.enabled || !meRef || !budget()) return false;
+    if (!SB.enabled || !meRef || !budgetWrite('push-score')) return false;
     try {
       ['pts', 'speed', 'predPts', 'catchPts', 'roundsDone'].forEach(function (k) {
         if (typeof o[k] === 'number' && isFinite(o[k])) mine[k] = Math.max(0, Math.round(o[k]));
@@ -2279,7 +2395,7 @@ window.STATS_FIREBASE = {
      hundred, which is the difference between measuring the room and
      breaking it. */
   SB.trkWrite = async function (o) {
-    if (!SB.enabled || !nightId || !uid() || !budget()) return false;
+    if (!SB.enabled || !nightId || !uid() || !budgetChore('telemetry')) return false;
     try {
       return await writeTry('telemetry', function () {
         return F.setDoc(F.doc(db, 'nights', nightId, 'telemetry', uid()), {
@@ -2297,7 +2413,7 @@ window.STATS_FIREBASE = {
 
   /* ---- how many are actually here ---------------------------------- */
   SB.count = async function () {
-    if (!SB.enabled || !nightId || !budget()) return null;
+    if (!SB.enabled || !nightId || !budgetRead('count')) return null;
     try {
       var cutoff = new Date(Date.now() - PRESENT_MS);
       var q = F.query(
@@ -2322,7 +2438,7 @@ window.STATS_FIREBASE = {
      cost as count() — an aggregate query is 1 read per 1000 docs, not
      1 per doc — so having both is not an expense worth optimising. */
   SB.joined = async function () {
-    if (!SB.enabled || !nightId || !budget()) return null;
+    if (!SB.enabled || !nightId || !budgetRead('joined')) return null;
     try {
       var snap = await F.getCountFromServer(
         F.collection(db, 'nights', nightId, 'players'));
@@ -2347,7 +2463,7 @@ window.STATS_FIREBASE = {
      permission to read, so this costs a single document read per poll
      and needs no new index and no rules change.                        */
   SB.scoreboard = async function () {
-    if (!SB.enabled || !nightId || !budget()) return null;
+    if (!SB.enabled || !nightId || !budgetRead('scoreboard')) return null;
     try {
       var snap = await F.getDoc(F.doc(db, 'nights', nightId));
       if (!snap.exists()) return null;
@@ -2373,7 +2489,7 @@ window.STATS_FIREBASE = {
      and the user never has to create a composite index by hand.
      Speed is the documented tiebreaker, applied client-side.          */
   SB.top = async function (n) {
-    if (!SB.enabled || !nightId || !budget()) return null;
+    if (!SB.enabled || !nightId || !budgetRead('top')) return null;
     try {
       var q = F.query(
         F.collection(db, 'nights', nightId, 'players'),
@@ -2420,7 +2536,7 @@ window.STATS_FIREBASE = {
      Counting the players above me is one read regardless of how many
      players there are, so this stays cheap at any scale.              */
   SB.rank = async function () {
-    if (!SB.enabled || !nightId || !budget()) return null;
+    if (!SB.enabled || !nightId || !budgetRead('rank')) return null;
     try {
       var q = F.query(
         F.collection(db, 'nights', nightId, 'players'),
@@ -2477,15 +2593,19 @@ window.STATS_FIREBASE = {
       }, function () { cb([]); });
     } catch (e) { return function () {}; }
   };
+  /* An answer, therefore the answer lane: counted, never refused, retried,
+     and loud when it will not land. Same rule as SB.submit. */
   SB.callItPick = async function (qid, pick) {
     if (!SB.enabled || !nightId || !qid) return false;
-    try {
-      await F.setDoc(F.doc(db, 'nights', nightId, 'callit', qid, 'picks', uid()), {
+    budgetAnswer('callit');
+    var ok = await writeTry('callit-pick', function () {
+      return F.setDoc(F.doc(db, 'nights', nightId, 'callit', qid, 'picks', uid()), {
         uid: uid(), name: (SB.me && SB.me.name) || mine.name || 'player',
         pick: String(pick), at: F.serverTimestamp()
       });                                   // create-only; rules refuse a second pick / a late one
-      return true;
-    } catch (e) { return false; }
+    });
+    if (!ok) notifyOps('callit-unsaved', 'That pick didn’t reach the server. It still counts on this phone.');
+    return ok;
   };
   SB.pushCallItBoard = async function (r) {
     if (!SB.enabled || !nightId) return false;
@@ -2546,7 +2666,7 @@ window.STATS_FIREBASE = {
      player's speed "claimed" rather than "verified". A missing anti-cheat
      signal must never cost somebody their night.                        */
   SB.stampQ = function (roundId, n, kind) {
-    if (!SB.enabled || !nightId || !roundId || !budget()) return Promise.resolve(false);
+    if (!SB.enabled || !nightId || !roundId || !budgetChore('stamp')) return Promise.resolve(false);
     if (n == null || n < 0 || n > 11) return Promise.resolve(false);
     var f = {}; f[(kind === 'a' ? 'a' : 'o') + n] = F.serverTimestamp();
     try {
@@ -2569,7 +2689,7 @@ window.STATS_FIREBASE = {
       if (!SB.enabled || !nightId) return false;
       var now = Date.now();
       if (errN >= ERR_MAX || now - errAt < ERR_GAP) return false;
-      if (!budget()) return false;
+      if (!budgetChore('error-log')) return false;
       errN++; errAt = now;
       F.addDoc(F.collection(db, 'nights', nightId, 'errors'), {
         uid: uid(),
@@ -2585,15 +2705,86 @@ window.STATS_FIREBASE = {
     } catch (e) { return false; }
   };
 
+  /* ============ THE OUTBOX ============================================
+     "A write that cannot go queues, retries, and says so."
+
+     writeTry already gives a submit three attempts over about a second and
+     a half. That covers a blip. It does not cover a tunnel, a dead hotel
+     wifi, a phone that locked mid-round, or a backend that had not
+     finished connecting when the buzzer went — and in every one of those
+     cases the old code returned false into a caller that shrugged.
+
+     So a failed answer is no longer a failed answer. It is a QUEUED one.
+     It survives a reload (localStorage), it retries on a timer and on the
+     next visibility change, and while it is queued the player is told, in
+     one line, that it has not landed yet. When it lands they are told
+     that too. The one thing that never happens again is silence.        */
+  var OUT_KEY = 'stats_outbox_v2', outbox = [], outTimer = null, outDraining = false;
+  /* The night id, even before join() has landed. An answer given while the
+     seat is still being claimed must still know which night it belongs to. */
+  function nidNow() { try { return nightId || (window.GAME && window.GAME.nightId) || ''; } catch (_) { return nightId || ''; } }
+  function outLoad() {
+    try { var a = JSON.parse(localStorage.getItem(OUT_KEY) || '[]');
+          if (Array.isArray(a)) outbox = a.slice(0, 40); } catch (_) { outbox = []; }
+  }
+  function outSave() { try { localStorage.setItem(OUT_KEY, JSON.stringify(outbox.slice(0, 40))); } catch (_) {} }
+  function outAnnounce() {
+    SB.pending = outbox.length;
+    try { window.dispatchEvent(new CustomEvent('stats:outbox', { detail:{ pending: outbox.length } })); } catch (_) {}
+  }
+  SB.pendingWrites = function () { return outbox.length; };
+  function outQueue(rid, row) {
+    var nid = nidNow();
+    if (!nid) { notifyOps('write-lost', 'No night to save ' + rid + ' to. Tell the host.'); return; }
+    outbox = outbox.filter(function (e) { return !(e.nid === nid && e.rid === rid); });
+    outbox.push({ nid: nid, rid: String(rid), row: row, tries: 0 });
+    outSave(); outAnnounce();
+    notifyOps('write-queued', 'Your answers for ' + rid + ' haven’t reached the server yet — held on this phone and retrying.');
+    outStart();
+  }
+  function outStart() {
+    if (outTimer || !outbox.length) return;
+    outTimer = setInterval(outDrain, 8000);
+    try { document.addEventListener('visibilitychange', function () { if (visible()) outDrain(); }); } catch (_) {}
+  }
+  async function outDrain() {
+    if (outDraining || !outbox.length) return;
+    if (!SB.enabled || !uid()) return;
+    outDraining = true;
+    try {
+      var still = [];
+      for (var i = 0; i < outbox.length; i++) {
+        var e = outbox[i];
+        if (!e || !e.nid || !e.rid) continue;
+        e.tries = (e.tries || 0) + 1;
+        var sent = false;
+        try {
+          var body = {}; for (var k in e.row) if (Object.prototype.hasOwnProperty.call(e.row, k)) body[k] = e.row[k];
+          body.at = F.serverTimestamp(); body.queued = true; body.tries = e.tries;
+          await F.setDoc(F.doc(db, 'nights', e.nid, 'rounds', e.rid, 'subs', uid()), body);
+          sent = true;
+        } catch (_) { sent = false; }
+        if (sent) notifyOps('write-landed', 'Your ' + e.rid + ' answers are saved.');
+        else if (e.tries < 200) still.push(e);
+        else notifyOps('write-lost', 'Couldn’t save your ' + e.rid + ' answers after many tries. Tell the host — they can score you by hand.');
+      }
+      outbox = still; outSave(); outAnnounce();
+      if (!outbox.length && outTimer) { clearInterval(outTimer); outTimer = null; }
+    } finally { outDraining = false; }
+  }
+  try { outLoad(); if (outbox.length) { outAnnounce(); outStart(); } } catch (_) {}
+
   SB.submit = async function (roundId, o) {
-    if (!SB.enabled || !nightId || !roundId || !budget()) return false;
+    /* NOT GATED ON SB.enabled. A backend that has not finished connecting
+       is a reason to QUEUE an answer, not to lose it. */
+    if (!roundId) return false;
+    budgetAnswer('submit');
     o = o || {};
     try {
       var row = {
         name:  String(o.name || mine.name || 'player').slice(0, 24),
         picks: o.picks || [],
-        banks: o.banks || [],
-        at:    F.serverTimestamp()
+        banks: o.banks || []
       };
       // Everything below is advisory. Kept short so a round document stays
       // one small write even with twelve questions on it.
@@ -2623,17 +2814,23 @@ window.STATS_FIREBASE = {
       if (typeof o.worth === 'number' && o.worth > 0 && o.worth <= 60) row.worth = Math.round(o.worth);
       if (o.src) row.src = String(o.src).slice(0, 12);
       if (o.label) row.label = String(o.label).slice(0, 40);
-      return await writeTry('submit', function () {
+      if (!SB.enabled || !nightId || !uid()) { outQueue(roundId, row); return false; }
+
+      var ok = await writeTry('submit', function () {
+        var body = {}; for (var k in row) if (Object.prototype.hasOwnProperty.call(row, k)) body[k] = row[k];
+        body.at = F.serverTimestamp();
         return F.setDoc(
-          F.doc(db, 'nights', nightId, 'rounds', roundId, 'subs', uid()), row);
+          F.doc(db, 'nights', nightId, 'rounds', roundId, 'subs', uid()), body);
       });
+      if (!ok) outQueue(roundId, row);
+      return ok;
     } catch (e) { return false; }   // row-build error only; the write itself retries above.
   };
 
   /* Did I already answer this round? Used on resume, so a player who
      reloads mid-round is not handed the same questions a second time.  */
   SB.mySub = async function (roundId) {
-    if (!SB.enabled || !nightId || !roundId || !budget()) return null;
+    if (!SB.enabled || !nightId || !roundId || !budgetRead('my-sub')) return null;
     try {
       var s = await F.getDoc(
         F.doc(db, 'nights', nightId, 'rounds', roundId, 'subs', uid()));
@@ -2706,7 +2903,7 @@ window.STATS_FIREBASE = {
     // them cost us a whole night of not knowing which one we had.
     if (!SB.enabled || !SB.me) return { ok:false, why:'offline' };
     if (!o) return { ok:false, why:'empty' };
-    if (!budget()) return { ok:false, why:'budget' };
+    if (!budgetWrite('signup')) return { ok:false, why:'budget' };
     var email = String(o.email || '').trim().toLowerCase();
     // Not validation theatre — the rules reject a bad row anyway. This is
     // to avoid burning a write on something that cannot possibly be an
@@ -2812,7 +3009,7 @@ window.STATS_FIREBASE = {
      permission-denied, and the UI says so out loud instead of pretending. */
   SB.unsubscribe = async function () {
     if (!SB.enabled || !SB.me) return { ok:false, why:'offline' };
-    if (!budget()) return { ok:false, why:'budget' };
+    if (!budgetWrite('unsubscribe')) return { ok:false, why:'budget' };
     try {
       await F.deleteDoc(F.doc(db, 'signups', uid()));
       return { ok:true };
@@ -2860,7 +3057,7 @@ window.STATS_FIREBASE = {
     if (saidN >= TALK_MAX) return { ok:false, why:'limit' };
     var now = Date.now();
     if (now - saidAt < TALK_GAP_MS) return { ok:false, why:'slow' };
-    if (!budget()) return { ok:false, why:'budget' };
+    if (!budgetWrite('say')) return { ok:false, why:'budget' };
     try {
       await F.addDoc(F.collection(db, 'nights', nightId, 'talk'), {
         uid:   uid(),
@@ -2893,7 +3090,7 @@ window.STATS_FIREBASE = {
     SB.lastTalkError = '';
     if (!SB.enabled)  { SB.lastTalkError = 'backend-off';  return null; }
     if (!nightId)     { SB.lastTalkError = 'not-in-room';  return null; }
-    if (!budget())    { SB.lastTalkError = 'budget';       return null; }
+    if (!budgetRead('talk')) { SB.lastTalkError = 'budget'; return null; }
     try {
       var col = F.collection(db, 'nights', nightId, 'talk');
       var q = sinceMs
@@ -3317,7 +3514,7 @@ const bots=[
 let S={mode:"demo",practice:false,screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},predOrder:[],qi:0,ni:0,nextQ:0,answered:false,
   lifelineHalf1:true,lifelineHalf2:true,botScores:[],totalPlayers:1204,
   results:emptyRounds(), liveAnswers:emptyRounds(), streak:0, seasonPts:0,
-  catchChoices:{}, catchPts:null, catchesScored:false,
+  catchChoices:{}, catchPts:null, catchesScored:false, led:{}, predSettled:false,
   predTruth:null, predTruthNum:null, lifelineAt:null, tally:null, sport:'', a2hs:null};
 let secondsLeft=0, timerDur=15;
 // Set when the 20s clock expires on a question that is still open. It kills
@@ -3460,6 +3657,112 @@ const LS_KEY="stats_gamenight_v1_"+SPORT_KEY; // saves never cross sports
    game PHASE must. */
 const GAME_SCREENS=["predict","lobby","live","review","predreview","break"];
 let resumeData=null;
+/* ====================================================================
+   ONE SCORE, ONE SOURCE — THE LEDGER
+
+   A0/A1 out of the Game Night #6 debrief, and the reason the phone, the
+   server and the Control Room all showed a different number for the same
+   player. Until now the score was an ACCUMULATOR: `S.pts += got`, in six
+   places, from four screens, several of which can be re-entered. Score a
+   round twice and the total is wrong forever. Fail to score it once and
+   the points are gone forever. There was no way to check, because the
+   only record of what a player had earned WAS the running total.
+
+   So there is no running total any more. There is a ledger: one entry per
+   scoring event, keyed by what caused it, and the score is the SUM. That
+   changes three things at once —
+
+     · SCORING IS IDEMPOTENT. Writing r2 twice writes r2 once. Re-entering
+       the final screen cannot add the prediction card a second time.
+     · A SCORE CAN BE AUDITED. `S.led` says where every point came from,
+       so a disagreement with the Control Room is a diff, not an argument.
+     · NOTHING CAN DESTROY IT. There is no accumulated number to corrupt.
+       A wrong entry is one wrong line, and rewriting that line fixes it.
+
+   Kinds: 'live' (a quarter), 'pred' (the card), 'catch' (live catches).
+   S.pts / S.speed / S.predPts / S.catchPts still exist and still mean what
+   they meant — they are now DERIVED, and no code outside this block is
+   allowed to assign them.                                              */
+function ledger(){ if(!S.led || typeof S.led!=='object' || Array.isArray(S.led)) S.led={}; return S.led; }
+function recomputeScore(){
+  const L0=ledger(); let p=0,s=0,pp=0,cp=0;
+  Object.keys(L0).forEach(function(k){
+    const e=L0[k]||{}; const v=Math.max(0,Math.round(Number(e.p)||0)), w=Math.max(0,Math.round(Number(e.s)||0));
+    p+=v; s+=w;
+    if(e.k==='pred') pp+=v; else if(e.k==='catch') cp+=v;
+  });
+  S.pts=p; S.speed=s; S.predPts=pp; S.catchPts=cp;
+  return {pts:p,speed:s,predPts:pp,catchPts:cp};
+}
+function ledgerSet(key,pts,speed,kind){
+  if(!key) return recomputeScore();
+  ledger()[String(key)]={p:Math.max(0,Math.round(Number(pts)||0)),
+                         s:Math.max(0,Math.round(Number(speed)||0)),
+                         k:kind||'live'};
+  return recomputeScore();
+}
+function ledgerHas(key){ return Object.prototype.hasOwnProperty.call(ledger(),String(key)); }
+/* A SAVE FROM BEFORE THE LEDGER STILL HAS A SCORE. It is a bare total with
+   no history, so it becomes one honest line called `carried` rather than
+   being thrown away — which is what recomputing an empty ledger over the
+   top of it would have done, and would have read to the player as the app
+   deleting their night on reload. */
+function ledgerMigrate(){
+  /* Read the totals BEFORE recomputing, because recomputing overwrites
+     them — that is the whole point of the ledger and also the one way it
+     could quietly eat a score. */
+  const p=Number(S.pts)||0, sp=Number(S.speed)||0,
+        pd=Number(S.predPts)||0, ct=Number(S.catchPts)||0;
+  const hasLed = S.led && typeof S.led==='object' && !Array.isArray(S.led) && Object.keys(S.led).length;
+  if(!hasLed){
+    if(!p && !sp && !pd && !ct){ S.led={}; recomputeScore(); return false; }
+    S.led={};
+    // Old S.pts EXCLUDED pred/catch until showFinal folded them in, and we
+    // cannot tell from here whether that had happened. Take the larger
+    // reading so nobody loses a point to the migration.
+    const live=Math.max(0, p - pd - ct) || Math.max(0, p);
+    if(live || sp) S.led['carried']={p:live,s:sp,k:'live'};
+    if(pd)   S.led['pred']={p:pd,s:0,k:'pred'};
+    if(ct)   S.led['catch']={p:ct,s:0,k:'catch'};
+    recomputeScore();
+    return true;
+  }
+  /* THE LEDGER IS THE SCORE — BUT IT MAY NOT BE ALL OF IT. A save can be
+     internally inconsistent: written by a build that was half-upgraded, or
+     by a code path that still assigned a total directly. Trusting the
+     ledger blindly there would delete points a player really earned. So
+     the rule is the same one the server reconcile uses: the derived score
+     may be RAISED to meet a total we found, never lowered, and the
+     difference gets its own audit line. */
+  const r=recomputeScore();
+  const gapP=Math.max(0, p - r.pts), gapS=Math.max(0, sp - r.speed);
+  if(!gapP && !gapS) return false;
+  const prev=ledger()['carried']||{p:0,s:0};
+  ledgerSet('carried',(Number(prev.p)||0)+gapP,(Number(prev.s)||0)+gapS,'live');
+  return true;
+}
+/* The server may know about points this device has forgotten — a wiped
+   phone, a second device, a write that landed after the tab died. It is
+   allowed to raise the total and never to lower it, and the difference is
+   recorded as its own line so the breakdown still adds up. */
+function ledgerServerFloor(sv){
+  if(!sv) return false;
+  const r=recomputeScore();
+  const gapP=Math.max(0,(Number(sv.pts)||0)-r.pts);
+  const gapS=Math.max(0,(Number(sv.speed)||0)-r.speed);
+  if(!gapP && !gapS) return false;
+  const prev=ledger()['server']||{p:0,s:0};
+  ledgerSet('server',(Number(prev.p)||0)+gapP,(Number(prev.s)||0)+gapS,'server');
+  return true;
+}
+function ledgerClear(){ S.led={}; return recomputeScore(); }
+/* Points that are NOT the prediction card and NOT catches — i.e. what the
+   player earned during play. The final screen's breakdown needs this and
+   used to get it by snapshotting S.pts before mutating it, which is
+   exactly the pattern this block exists to delete. */
+function livePtsOnly(){ const r=recomputeScore(); return r.pts - r.predPts - r.catchPts; }
+window.STATS_LEDGER = { get:ledger, set:ledgerSet, clear:ledgerClear, sum:recomputeScore };
+
 function save(){try{
   if(S.mode!=="live") return;
   /* STAMP THE NIGHT. The save key is per-SPORT, which was fine when there
@@ -3553,6 +3856,7 @@ function checkResume(){
 function doResume(){
   if(!resumeData)return;
   S=resumeData;
+  try{ ledgerMigrate(); recomputeScore(); }catch(_){}
   // HR lives in memory only, so a refresh would otherwise erase the record
   // that this phone already played a round — and the host's key, when it
   // finally lands, skips anyone it thinks never played.
@@ -3606,9 +3910,7 @@ function doResume(){
       SB.myScore().then(function(sv){
         if(!sv) return;
         var moved=false;
-        ['pts','speed','predPts','catchPts'].forEach(function(k){
-          if(typeof sv[k]==='number' && sv[k] > (Number(S[k])||0)){ S[k]=sv[k]; moved=true; }
-        });
+        try{ moved = ledgerServerFloor(sv); }catch(_){ moved=false; }
         if(moved){ try{ save(); }catch(_){}
           try{ toast('Your points are back — '+(S.pts||0)+' from the scoreboard.'); }catch(_){}
           try{ if(S.screen==='lobby') renderLobby(S.nextQ!=null?S.nextQ:S.qi); }catch(_){}
@@ -3693,7 +3995,12 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
   b.dataset.to=BACKMAP[k]||'';
   syncLobbyPolling();
   syncLivePolling();
-  save();}
+  save();
+  /* One event, so anything that needs to react to WHERE the player is does
+     not have to be wired into this function by hand. The phase clock uses
+     it to settle a night the moment the player leaves a question screen. */
+  try{ window.dispatchEvent(new CustomEvent('stats:screen',{detail:{screen:k}})); }catch(_){}
+}
 let pendingBack=false;
 function goBack(){
   const to=document.getElementById('backBtn').dataset.to;
@@ -4644,7 +4951,9 @@ function lockPredictions(){
     preds.forEach(function(p){ const v=S.predChoices[p.id]; if(v && INACTIVE.has(String(v))) bad.push(String(v)); });
     if(bad.length && !confirm('Heads up — '+bad.join(', ')+' is listed OUT tonight.\n\nPicks lock for good once you continue. Change it?\n\nOK = lock anyway · Cancel = go back and change')) return;
   }
-  S.pts=0; S.speed=0; S.nextQ=0;
+  /* A locked card is the start of the night's scoring. Clear the ledger
+     rather than the totals — the totals are derived and cannot be set. */
+  ledgerClear(); S.nextQ=0;
   if(S.mode==="demo"){
     let pp=0;
     preds.forEach(p=>{
@@ -4654,9 +4963,11 @@ function lockPredictions(){
     // remember the truth so the trash-talk engine can cite real picks
     S.predTruth={};S.predTruthNum={};
     preds.forEach(p=>{S.predTruth[p.id]=p.answer;if(p.bonus)S.predTruthNum[p.id]=p.num;});
-    S.predPts=pp; seedBots();
+    ledgerSet('pred', pp, 0, 'pred'); seedBots();
   }else{
-    S.predPts=null; // scored at final buzzer vs the real box score
+    // Nothing on the card scores until the final buzzer settles it against
+    // the real box score, so it simply has no ledger entry yet.
+    S.predSettled=false;
     lockPredPicks();  // …and sent to the dashboard now, while nobody knows them
   }
   renderLobby(0);
@@ -4780,7 +5091,7 @@ function resolveCatches(throughRound){
     if(S.catchChoices[c.id]===c.answer)newHits++;
   });
   if(!newRes)return;
-  S.catchPts=(S.catchPts||0)+newHits;
+  ledgerSet('catch', (S.catchPts||0)+newHits, 0, 'catch');
   toast(newHits?`⚡ ${newHits} live catch${newHits>1?'es':''} hit — +${newHits} pts banked.`
                :`⚡ ${newRes} catch${newRes>1?'es':''} resolved — none caught.`);
 }
@@ -5109,7 +5420,7 @@ function answer(choice,btn){
   });
   S.results[S.qi].push(correct);
   const rb=document.getElementById('revealBox');
-  if(correct){S.pts+=worth;
+  if(correct){ledgerSet('q'+S.qi+'-'+S.ni, worth, 0, 'live');
     rb.innerHTML=`<div class="reveal good"><div class="r1">✓ CORRECT · +${worth} pt${worth>1?'s':''}</div>
       <div class="r2">Nice read. You're now on <b>${S.pts}</b> points.</div></div>`;
   }else{
@@ -5298,7 +5609,10 @@ function confirmReview(){
     if(correct){got+=worth;sp+=my.bank;nRight++;}
   });
   const before=S.pts;
-  S.pts+=got;S.speed+=sp;
+  /* IDEMPOTENT. Scoring the same round twice — a re-entered review screen,
+     a host reveal that arrives twice, a resume that lands back here — now
+     writes the same one line twice instead of paying twice. */
+  ledgerSet('r'+S.qi, got, sp, 'live');
   document.getElementById('revBtn').style.display='none';
   /* THE REVEAL. This is the most addictive half-second of the night — the
      moment a player finds out. So it says the thing they actually want to
@@ -5364,6 +5678,32 @@ function afterReview(){
    Ties are graded on VALUE, not on name. If two players finish level on
    blocks, everyone who picked either of them is right — which is the only
    defensible answer, and the old name-matching version got it wrong. */
+/* A NAME IS NOT A STRING MATCH. The pick deck's options come from the
+   roster constant; the box score's keys come from ESPN. They agree today
+   and there is no reason in the code why they have to. So comparison is
+   normalised — case, punctuation, accents and initials all collapse — and
+   a card is never marked wrong because one source wrote "Marine Johannès"
+   and the other wrote "Marine Johannes". */
+function nameKey(s){
+  var t=String(s==null?'':s);
+  try{ t=t.normalize('NFD').replace(/[\u0300-\u036f]/g,''); }catch(_){}
+  return t.toLowerCase().replace(/[^a-z ]/g,' ').replace(/\s+/g,' ').trim();
+}
+function sameName(a,b){
+  var x=nameKey(a), y=nameKey(b);
+  if(!x || !y) return false;
+  if(x===y) return true;
+  // "K. Mitchell" vs "Kelsey Mitchell": same surname, same first initial.
+  var xs=x.split(' '), ys=y.split(' ');
+  if(xs.length>1 && ys.length>1 && xs[xs.length-1]===ys[ys.length-1]
+     && xs[0][0]===ys[0][0]) return true;
+  return false;
+}
+/* PARTIAL BEATS NOTHING. This used to be all-or-nothing: one category the
+   box score could not resolve and `okAll` went false, the whole function
+   returned null, and six hundred points settled as zero for every player
+   in the room. A category we cannot read is now one unsettled LINE, not an
+   unsettled night. */
 function settleFromFeed(){
   try{
     if(!GS.ok || !GS.teams || GS.teams.length!==2) return null;
@@ -5373,20 +5713,24 @@ function settleFromFeed(){
     if(String(GS.state||'')!=='post') return null;   // never settle a game still being played
     if(Number(A.score)===Number(B.score)) return null;
     var win=(Number(A.score)>Number(B.score))?A:B;
-    var truth={}, num={}, tied={};
-    truth.winner = (win.ab===GAME.homeAbbr)?GAME.homeName:GAME.awayName;
+    var truth={}, num={}, tied={}, missing=[];
+    /* The winner, named three ways, because the pick deck, the feed and
+       the GAME constant do not have to agree on which one they use. */
+    var winNames=[win.name, win.ab];
+    try{ winNames.push((win.ab===GAME.homeAbbr)?GAME.homeName:GAME.awayName); }catch(_){}
+    try{ winNames.push((win.ab===GAME.homeAbbr)?GAME.homeNick:GAME.awayNick); }catch(_){}
+    truth.winner = (function(){ try{ return (win.ab===GAME.homeAbbr)?GAME.homeName:GAME.awayName; }catch(_){ return win.name; } })();
+    tied.winner  = winNames.filter(Boolean).map(String);
     var cfg=sportCfg().box, KEY={pts:cfg.pts,reb:cfg.reb,ast:cfg.ast,stl:cfg.stl,blk:cfg.blk};
-    var okAll=true;
     Object.keys(KEY).forEach(function(id){
       var k=KEY[id], bv=-1, who=[];
       Object.keys(box).forEach(function(nm){ var v=gsNum(box[nm][k]);
         if(v==null) return;
         if(v>bv){ bv=v; who=[nm]; } else if(v===bv){ who.push(nm); } });
-      if(!who.length || bv<0){ okAll=false; return; }
+      if(!who.length || bv<0){ missing.push(id); return; }
       truth[id]=who[0]; tied[id]=who; num[id]=bv;
     });
-    if(!okAll) return null;
-    return {truth:truth, num:num, tied:tied,
+    return {truth:truth, num:num, tied:tied, missing:missing,
             final:{home:(A.home?A:B), away:(A.home?B:A)}};
   }catch(_){ return null; }
 }
@@ -5394,14 +5738,18 @@ function settleFromFeed(){
 function applySettlement(st){
   var pp=0;
   S.predTruth={}; S.predTruthNum={}; S.predAuto=true; S.predTied=st.tied||{};
+  S.predMissing=[];
   preds.forEach(function(p){
     var mine=S.predChoices[p.id];
     S.predTruth[p.id]=st.truth[p.id]||'';
     if(p.bonus) S.predTruthNum[p.id]=(st.num[p.id]==null?null:st.num[p.id]);
     if(!mine) return;
-    var hit=false;
-    if(p.id==='winner'){ hit = String(mine)===String(st.truth.winner); }
-    else { hit = (st.tied[p.id]||[]).indexOf(String(mine))>=0; }
+    /* A line the box score could not resolve is NOT a wrong answer. It is
+       an unsettled line: no points, and the final screen says so, rather
+       than telling a player they got it wrong when nobody knows. */
+    if((st.missing||[]).indexOf(p.id)>=0){ (S.predMissing=S.predMissing||[]).push(p.id); return; }
+    var pool=st.tied[p.id]||[];
+    var hit=pool.some(function(n){ return sameName(n, mine); });
     if(hit){
       pp+=predWorthOf(p);
       if(p.bonus){
@@ -5410,7 +5758,8 @@ function applySettlement(st){
       }
     }
   });
-  S.predPts=pp;
+  ledgerSet('pred', pp, 0, 'pred');
+  S.predSettled=true;
   S.catchesScored=true;
   try{ save(); }catch(_){}
   try{ pushScore(); }catch(_){}
@@ -5430,7 +5779,7 @@ function openPredReview(){
      otherwise. It goes straight to the result, and says so. */
   try{
     if(S.mode!=='live'){
-      S.predTruth={}; S.predTruthNum={}; S.predPts=0;
+      S.predTruth={}; S.predTruthNum={}; ledgerSet('pred',0,0,'pred');
       S.predAuto=false; S.predSkipped=true;
       showFinal(); return;
     }
@@ -5477,7 +5826,7 @@ function predReviewDecide(){
     setTimeout(function(){ try{ loadGameStats(true).then(function(){ predReviewDecide(); }); }catch(_){ predReviewDecide(); } }, 15000);
     return;
   }
-  S.predTruth={}; S.predTruthNum={}; S.predPts=0;
+  S.predTruth={}; S.predTruthNum={}; ledgerSet('pred',0,0,'pred');
   S.predAuto=false; S.predUnsettled=true;
   showFinal();
 }
@@ -5525,13 +5874,14 @@ function confirmPreds(){
       if(p.bonus){const an=Number(document.getElementById('prn_'+p.id).value);
         if(an && Number(S.predChoices[p.id+'_num'])===an)pp+=p.bonus;}}
   });
-  S.predPts=pp;
+  ledgerSet('pred', pp, 0, 'pred');
+  S.predSettled=true;
   // catches settle here on Game Night — one screen, one pass
   if(CATCHES.length){
     S.catchResults={};let cp=0;
     CATCHES.forEach(c=>{S.catchResults[c.id]=prCatchMarks[c.id];
       if(S.catchChoices[c.id] && S.catchChoices[c.id]===prCatchMarks[c.id])cp++;});
-    S.catchPts=cp;
+    ledgerSet('catch', cp, 0, 'catch');
   }
   S.catchesScored=true;
   showFinal();
@@ -5592,6 +5942,13 @@ function finalCardNote(){
       el.style.display='';
       el.textContent='The official box score never arrived, so the prediction card '
         + 'couldn’t be settled. Your quarter points are all here and counted.';
+    } else if(S.predMissing && S.predMissing.length){
+      /* Honest about the gap. A line the feed could not read is neither
+         right nor wrong, and saying "you got it wrong" about a category
+         nobody can check is the kind of small lie that loses a tester. */
+      el.style.display='';
+      el.textContent='The box score didn’t carry '+S.predMissing.length+' of your categories, '
+        + 'so those lines couldn’t be settled either way. Everything else on this card is counted.';
     } else el.style.display='none';
   }catch(_){}
 }
@@ -5601,8 +5958,13 @@ function showFinal(){
   // the sheet and the catches land, or the breakdown below cannot tell
   // the two halves of the night apart.
   try{ finalCardNote(); }catch(_){}
-  const livePts = S.pts;
-  S.pts += (S.predPts||0) + (S.catchPts||0);
+  /* THE DOUBLE-ADD IS GONE. This line used to be `S.pts += predPts +
+     catchPts`, which meant every re-entry of the final screen — a reload,
+     a resume, a late host reveal that re-ran the ending — paid the card
+     out again. The total is now the sum of the ledger and adding to it is
+     not a thing this function can do. */
+  const livePts = livePtsOnly();
+  recomputeScore();
   // Practice only: the bots' sheets settle too. Without this the final
   // board compared your predictions-included total against bots who never
   // made predictions — you "won by a mile" over opponents who forgot to
@@ -6609,6 +6971,31 @@ function startRoomPolling(){
    wifi, an outage, a captive portal — the bar would sit on "Connecting to
    tonight's room…" for up to a minute and a half, which reads as a hung
    app. Repaint the moment the state actually settles instead. */
+/* ============ FAILURE IS VISIBLE ====================================
+   A6, and the single sentence that explains every serious bug this product
+   has ever had: an operation fails and nobody is told. The backend now
+   raises `stats:ops` whenever something the player would care about goes
+   wrong or comes right, and `stats:outbox` whenever the queue of unsaved
+   answers changes. This is the one place they land on screen.
+
+   Rules: an unsaved answer is always worth interrupting for. A spent read
+   lane is worth one line and no alarm. Nothing here ever claims something
+   is fine.                                                              */
+const OPS_TOAST={ 'write-queued':1, 'write-landed':1, 'write-lost':1,
+                  'budget-write':1, 'join':1, 'callit-unsaved':1 };
+try{
+  window.addEventListener('stats:ops', function(ev){
+    try{
+      const d=(ev&&ev.detail)||{};
+      if(OPS_TOAST[d.kind] && typeof toast==='function') toast(d.msg);
+      if(typeof refreshRoom==='function' && S.mode==='live') refreshRoom();
+    }catch(_){}
+  });
+  window.addEventListener('stats:outbox', function(){
+    try{ if(typeof refreshRoom==='function' && S.mode==='live') refreshRoom(); }catch(_){}
+  });
+}catch(_){}
+
 let roomStateHooked=false;
 function hookRoomState(){
   if(roomStateHooked || !window.SB || !SB.onState) return;
@@ -6616,11 +7003,31 @@ function hookRoomState(){
   SB.onState(()=>{ if(S.mode==="live") refreshRoom(); });
 }
 
-function setRoomBar(state, txt, rank){
+/* ============ THE LIGHT AND THE SENTENCE COME FROM ONE VALUE =========
+   B-41. Game Night #6: a phone showed a GREEN dot next to the words "Live
+   count unavailable". The dot was green because the only call site that
+   ever ran in the normal path passed the string 'on' as a literal, in the
+   same statement that passed text saying the opposite.
+
+   Two arguments, one truth, and nothing in the code obliged them to agree.
+
+   So setRoomBar no longer takes a state. It DERIVES one from the sentence
+   it is about to print. There is now no way to write a caller that shows a
+   healthy light over an unhealthy message, because the caller does not get
+   to have an opinion about the light.                                    */
+function roomBarState(txt){
+  const t=String(txt||'').replace(/<[^>]*>/g,'');
+  if(!t.trim()) return 'off';
+  if(/unavailable|can’t|can't|couldn’t|couldn't|offline|failed|no connection|not saved|retrying/i.test(t)) return 'err';
+  if(/connecting|checking|waiting/i.test(t)) return '';
+  return 'on';
+}
+function setRoomBar(txt, rank){
   const bar=document.getElementById('roomBar');
   if(!bar) return;
   if(S.mode!=="live" || !window.SB || SB.state==='off'){ bar.style.display='none'; return; }
   bar.style.display='flex';
+  const state=roomBarState(txt);
   const dot=document.getElementById('roomDot');
   dot.className='rdot'+(state==='on'?' on':state==='err'?' err':'');
   document.getElementById('roomTxt').innerHTML=txt;
@@ -6629,10 +7036,22 @@ function setRoomBar(state, txt, rank){
 
 async function refreshRoom(){
   if(S.mode!=="live") return;
-  if(!window.SB || SB.state==='off'){ setRoomBar('off',''); return; }
-  if(SB.state==='connecting'){ setRoomBar('','Connecting to tonight\'s room…'); return; }
+  /* AN UNSAVED ANSWER OUTRANKS EVERYTHING ELSE THIS BAR CAN SAY —
+     including the backend's own state. "The room is unreachable" and "your
+     round is sitting in a queue" are both true at once during an outage,
+     and only one of them is about the player. This check is first for that
+     reason, not by accident. */
+  try{
+    if(window.SB && SB.pendingWrites && SB.pendingWrites()>0){
+      const n=SB.pendingWrites();
+      setRoomBar(`Saving ${n} answer${n===1?'':'s'} — retrying, they’re safe on this phone.`);
+      return;
+    }
+  }catch(_){}
+  if(!window.SB || SB.state==='off'){ setRoomBar(''); return; }
+  if(SB.state==='connecting'){ setRoomBar('Connecting to tonight\'s room…'); return; }
   if(SB.state==='error'){
-    setRoomBar('err','Live count unavailable — your game is unaffected.');
+    setRoomBar('Live count unavailable — your game is unaffected.');
     return;
   }
   // joined() is newer than the rest of this contract, and the room bar is
@@ -6664,7 +7083,7 @@ async function refreshRoom(){
     cTxt = `<b>${c.toLocaleString()}</b> here now`;
     if(j!==null && j!==undefined && j>c) cTxt += ` · ${j.toLocaleString()} joined tonight`;
   }
-  setRoomBar('on', cTxt, (r===null||r===undefined)?'':`you're #${r}`);
+  setRoomBar(cTxt, (r===null||r===undefined)?'':`you're #${r}`);
 
   // Deliberately does NOT touch lobStat1. renderLobby() has just written
   // the player's own score into those two nodes; this function used to
@@ -9585,7 +10004,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-11-g6-ny-ind.73';
+const STATS_BUILD='2026-08-12-buildA.74';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -10037,9 +10456,31 @@ function sportCfg(){
    want the radio hammered. Failures now back off and the screen offers a
    button instead of spinning forever. */
 var GS={ok:false,at:0,loading:false,state:'pre',teams:[],leaders:[],box:{},plays:[],err:'',fails:0,lastTry:0};
+/* THE CLOCK, AS A CLOCK. ESPN hands back "30.5" inside the last minute —
+   thirty and a half seconds — and printing that raw put a decimal point in
+   the middle of a scoreboard. Under a minute reads :30. Over a minute is
+   already mm:ss and is left alone. */
+function fmtClock(v){
+  var t=String(v==null?'':v).trim();
+  if(!t) return '';
+  if(t.indexOf(':')>=0) return t;
+  var n=parseFloat(t);
+  if(!isFinite(n)) return t;
+  if(n<60) return ':'+String(Math.floor(n)).padStart(2,'0');
+  return Math.floor(n/60)+':'+String(Math.floor(n%60)).padStart(2,'0');
+}
 function gsFmt(label,v){ if(v==null) return ''; var s=String(v); return (/%/.test(label||'') && !/%$/.test(s)) ? s+'%' : s; }
 function gsNum(v){ var n=parseFloat(String(v==null?'':v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?null:n; }
+/* A CALLER THAT ASKS FOR FRESH DATA GETS FRESH DATA. `if(GS.loading)
+   return GS` handed back the PREVIOUS fetch's numbers to anyone who
+   happened to ask while another read was in flight — silently, as though
+   they were current. Harmless when the only caller was a visible tab.
+   Not harmless now that a background clock polls: a settlement that ran
+   half a second after the poller started would read last minute's game
+   state and refuse to settle. Concurrent callers now share the one
+   in-flight promise and all wait for the same answer. */
 async function loadGameStats(force){
+  if(GS.loading && GS._p) return GS._p;
   if(GS.loading) return GS;
   if(!force && GS.ok && Date.now()-GS.at<25000) return GS;
   // Exponential-ish backoff after failures: 3s, 6s, 12s, 24s, capped at 60s.
@@ -10047,6 +10488,7 @@ async function loadGameStats(force){
   var ev=null; try{ ev=(typeof GAME!=='undefined')&&GAME.espnEvent; }catch(_){}
   if(!ev){ GS.err='no event'; GS.fails++; GS.lastTry=Date.now(); return GS; }
   GS.loading=true; GS.lastTry=Date.now();
+  var _resolve; GS._p=new Promise(function(r){ _resolve=r; });
   try{
     var j=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sportCfg().path+'/summary?event='+ev+'&_='+Date.now()).then(function(r){return r.json();});
     var bs=j.boxscore||{}, comp=(j.header&&j.header.competitions&&j.header.competitions[0])||{};
@@ -10076,8 +10518,17 @@ async function loadGameStats(force){
         box[nm]=row;
       });
     });
-    GS.teams=teams; GS.box=box;
-    GS.leaders=(j.leaders||[]).map(function(l){
+    /* NOTHING READS A HALF-WRITTEN GS. This used to assign teams and box
+       here, then leaders, then injuries, then plays, then state — five
+       separate moments at which any reader could see a box score from this
+       fetch next to a game state from the last one. It did not matter
+       while the only caller was a tab the player was looking at. It
+       matters now that a background clock polls the feed on a timer: a
+       settlement that reads `state` before it has caught up voids a
+       prediction card, which is exactly the failure this build exists to
+       kill. Everything is built into locals and committed in ONE block at
+       the bottom. */
+    var _leaders=(j.leaders||[]).map(function(l){
       return { ab:(l.team&&l.team.abbreviation)||'', cats:(l.leaders||[]).map(function(c){
         var top=(c.leaders||[])[0]||{};
         return { label:c.displayName||c.name, who:(top.athlete&&top.athlete.displayName)||'', val:top.displayValue||'' };
@@ -10087,13 +10538,13 @@ async function loadGameStats(force){
        places: the OUT flag on the pick deck, the red bar above it, and the
        Stats tab. It used to be pulled by a second request that only ran in
        live mode, so a practice run — and the Stats tab — never knew. */
-    GS.inj=[];
+    var _inj=[];
     (j.injuries||[]).forEach(function(t){
       (t.injuries||[]).forEach(function(it){
         var nm=(it.athlete&&it.athlete.displayName)||''; if(!nm) return;
         var st=String(it.status||'');
-        GS.inj.push({ name:nm, status:st, ab:(t.team&&t.team.abbreviation)||'',
-                      out:/out|doubtful|suspend/i.test(st) });
+        _inj.push({ name:nm, status:st, ab:(t.team&&t.team.abbreviation)||'',
+                    out:/out|doubtful|suspend/i.test(st) });
       });
     });
     /* THE PLAY-BY-PLAY. Four hundred-odd entries a night, already inside the
@@ -10101,9 +10552,10 @@ async function loadGameStats(force){
        reason Gametime can be an endless scroll rather than a scoreboard with
        a question on it. Normalised here so nothing downstream reads ESPN's
        shape, same rule as everything else in this engine. */
+    var _plays=GS.plays||[];
     try{
       var tById={}; teams.forEach(function(t){ tById[t.id]=t; });
-      GS.plays=(j.plays||[]).map(function(pl){
+      _plays=(j.plays||[]).map(function(pl){
         var tid=(pl.team&&pl.team.id)||'';
         return { id:String(pl.id||pl.sequenceNumber||''),
                  seq:Number(pl.sequenceNumber||0),
@@ -10115,15 +10567,129 @@ async function loadGameStats(force){
                  period:((pl.period&&pl.period.number)||null),
                  clock:((pl.clock&&pl.clock.displayValue)||'') };
       }).filter(function(x){ return x.text; });
-    }catch(_){ GS.plays=GS.plays||[]; }
-    GS.state=stat.state||'pre'; GS.detail=stat.shortDetail||stat.detail||'';
+    }catch(_){ _plays=GS.plays||[]; }
+    /* ---- THE COMMIT. One block, no awaits inside it. ---- */
+    GS.teams=teams; GS.box=box; GS.leaders=_leaders; GS.inj=_inj; GS.plays=_plays;
+    GS.state=stat.state||'pre';
+    GS.detail=String(stat.shortDetail||stat.detail||'')
+      .replace(/(^|\s)(\d+\.\d)(?=\s|$|\s*-)/g, function(m,pre,num){ return pre+fmtClock(num); });
     GS.ok=teams.length>0; GS.at=Date.now();
-    try{ paintTeamColours(); }catch(_){}
     if(GS.ok){ GS.err=''; GS.fails=0; } else { GS.err='no teams in feed'; GS.fails++; }
+    try{ paintTeamColours(); }catch(_){}
   }catch(e){ GS.err=e.message||'feed unavailable'; GS.fails++; }
   GS.loading=false;
+  try{ phaseSync('feed'); }catch(_){}
+  try{ var _r=_resolve; GS._p=null; if(_r) _r(GS); }catch(_){}
   return GS;
 }
+
+/* ====================================================================
+   ONE CLOCK — THE PHASE
+
+   A0. After the buzzer on Game Night #6 one phone showed, at the same
+   moment: the rail saying FINAL, the lobby button saying "waiting on Q4",
+   and the matchup card saying LIVE. Three surfaces, three sources, three
+   answers. And because nothing in the app believed the game was over, the
+   prediction card — six hundred of the night's thousand points — was never
+   settled for anybody. The night simply never ended.
+
+   There is one phase now and the FEED owns it:
+
+       pre   · the ball has not gone up
+       live  · a period is in progress
+       final · the game is over
+
+   Two consequences, and they are the whole point:
+
+     1. NO SURFACE KEEPS ITS OWN COPY. Anything that wants to know whether
+        the game is on asks phaseNow().
+
+     2. THE GAME ENDS ITSELF. A player is never required to tap a button
+        for the night to finish. When the feed goes final and they are not
+        mid-question, the app takes them to settlement — which is the only
+        reason the prediction card exists, and the one thing that did not
+        happen last night.
+
+   The poll is deliberately cheap and only runs on a live night: 45s while
+   the game is on, 5 minutes before tip, and it stops entirely once we have
+   settled. It is an ESPN read, not a Firestore read — it costs nothing we
+   are metered on.                                                        */
+var PHASE={v:'', at:0, src:''};
+function phaseFromFeed(){
+  try{
+    if(!GS || !GS.ok) return '';
+    var st=String(GS.state||'');
+    if(st==='post') return 'final';
+    if(st==='in')   return 'live';
+    if(st==='pre')  return 'pre';
+  }catch(_){}
+  return '';
+}
+function phaseNow(){
+  var p=phaseFromFeed();
+  if(p) return p;
+  // No feed yet. The tip time is the only other honest signal we have.
+  try{
+    var t=Date.parse((typeof GAME!=='undefined' && GAME.tipISO)||'');
+    if(t && Date.now() < t) return 'pre';
+  }catch(_){}
+  return PHASE.v || '';
+}
+function phaseSync(src){
+  var p=phaseFromFeed(); if(!p) return PHASE.v;
+  if(p===PHASE.v) return p;
+  PHASE={v:p, at:Date.now(), src:src||'feed'};
+  try{ window.dispatchEvent(new CustomEvent('stats:phase',{detail:{phase:p,src:PHASE.src}})); }catch(_){}
+  try{ onPhase(p); }catch(_){}
+  return p;
+}
+/* Screens where interrupting the player would cost them points. Everything
+   else is dead air and safe to move them out of. */
+function inDeadAir(){
+  var scr=''; try{ scr=(S&&S.screen)||''; }catch(_){}
+  return ['lobby','break','review','board','gametime','stats','home','final','predreview'].indexOf(scr)>=0;
+}
+var FINALISED=false;
+function onPhase(p){
+  try{ if(typeof paintRail==='function') paintRail(); }catch(_){}
+  try{ if((S&&S.screen)==='gametime' && typeof renderGametime==='function') renderGametime(); }catch(_){}
+  try{ if(typeof renderAlertRow==='function') renderAlertRow(); }catch(_){}
+  if(p==='final') finishNightFromFeed();
+}
+/* THE BUZZER ENDS THE NIGHT, NOT A BUTTON. */
+function finishNightFromFeed(){
+  try{
+    if(FINALISED) return;
+    if(!S || S.mode!=='live') return;
+    if(S.screen==='final' || S.screen==='predreview') { FINALISED=true; return; }
+    if(!inDeadAir()) return;            // mid-question — catch them on the way out
+    // Nothing to settle if they never locked a card.
+    var locked=false; try{ locked=!!(S.predChoices && Object.keys(S.predChoices).length); }catch(_){}
+    if(!locked) return;
+    FINALISED=true;
+    try{ toast('🏁 Final buzzer — settling your card.'); }catch(_){}
+    try{ openPredReview(); }catch(_){ FINALISED=false; }
+  }catch(_){ }
+}
+var phaseTimer=null;
+function startPhaseClock(){
+  if(phaseTimer) clearInterval(phaseTimer);
+  phaseTimer=setInterval(function(){
+    try{
+      if(!S || S.mode!=='live') return;
+      if(PHASE.v==='final' && FINALISED) return;      // nothing left to learn
+      if(document.hidden && PHASE.v!=='live') return; // backgrounded and nothing happening
+      loadGameStats();
+    }catch(_){}
+  }, 45000);
+  // And once, now, so a phone that opens after the buzzer knows immediately.
+  try{ setTimeout(function(){ try{ if(S&&S.mode==='live') loadGameStats(true); }catch(_){} }, 900); }catch(_){}
+}
+try{ startPhaseClock(); }catch(_){}
+/* A player who was mid-question when the buzzer went gets settled the
+   moment they are back in dead air, not left holding a locked round. */
+try{ window.addEventListener('stats:screen', function(){ try{ if(PHASE.v==='final') finishNightFromFeed(); }catch(_){} }); }catch(_){}
+
 /* ==================== TEAM COLOUR ===================================
    The feed hands us both teams' hex on every event and we have thrown it
    away for six game nights, painting every night identically. From here
@@ -10924,7 +11490,7 @@ function renderStats(){
      Gametime tab is where you go to watch it move. ------------------ */
   out+='<div class="card" style="padding:11px 14px;display:flex;align-items:center;justify-content:space-between">'
     + '<div style="flex:1;text-align:center"><div class="stTeam">'+esc(A.ab)+'</div><div style="font-size:22px;font-weight:900;color:#eef2fb;line-height:1.15">'+(A.score==null?'–':A.score)+'</div></div>'
-    + '<div style="flex:0 0 auto;padding:0 10px"><span class="pill" style="font-size:12px">'+esc(GS.detail||(live?'LIVE':'Not started'))+'</span></div>'
+    + '<div style="flex:0 0 auto;padding:0 10px"><span class="pill" style="font-size:12px">'+esc(GS.detail||({pre:'Not started',live:'LIVE',final:'Final'}[phaseNow()]||(live?'LIVE':'Not started')))+'</span></div>'
     + '<div style="flex:1;text-align:center"><div class="stTeam">'+esc(B.ab)+'</div><div style="font-size:22px;font-weight:900;color:#eef2fb;line-height:1.15">'+(B.score==null?'–':B.score)+'</div></div>'
     + '</div>';
 
@@ -11169,7 +11735,7 @@ function feedPlayCard(p, prev){
   }
   return { k:'play', id:'p'+p.id, seq:p.seq, icon:icon,
            text:p.text,
-           meta:(p.period?('Q'+p.period+(p.clock?(' · '+p.clock):'')):'')
+           meta:(p.period?('Q'+p.period+(p.clock?(' · '+fmtClock(p.clock)):'')):'')
                 + (p.ab?(' · '+p.ab):''),
            score:(p.away!=null&&p.home!=null)?{a:p.away,h:p.home}:null,
            tag:swing, big:(p.value===3||!!swing) };
@@ -11553,7 +12119,7 @@ function renderGametime(){
     + '<div style="display:flex;align-items:center;justify-content:space-between">'
     +   '<div class="gtSide" id="gtSideA" style="flex:1;text-align:center">'
     +     '<div class="gtAb a">'+esc(String(A))+'</div><div class="gtScore" id="gtScoreA"></div></div>'
-    +   '<div style="flex:0 0 auto;padding:0 10px"><span class="pill">'+esc(st||'LIVE')+'</span></div>'
+    +   '<div style="flex:0 0 auto;padding:0 10px"><span class="pill">'+esc(st||({pre:'Not started',live:'LIVE',final:'Final'}[phaseNow()]||'—'))+'</span></div>'
     +   '<div class="gtSide" id="gtSideH" style="flex:1;text-align:center">'
     +     '<div class="gtAb h">'+esc(String(H))+'</div><div class="gtScore" id="gtScoreH"></div></div>'
     + '</div>'
@@ -11670,6 +12236,7 @@ try{ setInterval(function(){ try{ takeoverTick(); }catch(_){} }, 15000); }catch(
 </div>
 <div id="botnav" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:8500;
      background:rgba(10,14,23,.94);backdrop-filter:blur(12px);border-top:1px solid #1e2740;
+     transform:translateZ(0);
      padding:7px 6px calc(7px + env(safe-area-inset-bottom,0px));">
   <div style="max-width:430px;margin:0 auto;display:flex">
     <button class="navb" data-nav="home"  onclick="navGo('home')" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 10.6 12 3.4l8.8 7.2"/><path d="M5.6 9.6V20h12.8V9.6"/></svg><span>Home</span></button>
@@ -11705,7 +12272,7 @@ try{ setInterval(function(){ try{ takeoverTick(); }catch(_){} }, 15000); }catch(
   width:26px;height:2px;border-radius:0 0 3px 3px;background:#28e0d0;box-shadow:0 0 10px rgba(40,224,208,.7)}
 #botnav .navb:active{transform:scale(.94)}
 @media (prefers-reduced-motion:reduce){ #botnav .navb{transition:none} }
-body.hasnav{padding-bottom:74px}
+body.hasnav{padding-bottom:calc(74px + env(safe-area-inset-bottom,0px))}
 
 /* ---- stats tab ---- */
 .stTeam{font-size:12px;letter-spacing:.14em;color:#93a0bd;font-weight:800}
@@ -11763,9 +12330,9 @@ body.hasnav{padding-bottom:74px}
 #rail{position:fixed;left:0;right:0;top:0;z-index:8400;background:rgba(10,14,23,.93);
   backdrop-filter:blur(12px);border-bottom:1px solid #1e2740;
   padding:calc(6px + env(safe-area-inset-top,0px)) 12px 6px}
-.railin{max-width:430px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.railin{max-width:430px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
 .railteams{font-size:12px;font-weight:700;color:#7e8cab;letter-spacing:.04em;white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis}
+  flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .railteams b{color:#eef2fb;font-weight:900;font-size:14px}
 .railteams i{font-style:normal;color:#28e0d0;font-weight:800;font-size:12px;letter-spacing:.08em;margin-left:4px}
 .raildot{flex:0 0 auto;width:4px;height:4px;border-radius:99px;background:#26304a}
