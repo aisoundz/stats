@@ -472,7 +472,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-12-admin.33-auto';
+window.ADMIN_BUILD='2026-08-12-admin.34-auto';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -3900,9 +3900,56 @@ var AUTO = (function(){
       : (o.find(function(x){ return /^no/i.test(x); })  || null);
   };
 
+  /* ============ AN ABSENCE IS NOT AN ANSWER =========================
+     Caught in shadow mode forty minutes before Game Night #7 tipped, with
+     the feed reading "Scheduled, period 0" — no game, no plays, nothing:
+
+         Which team made the first three-pointer of the game?
+             robot says "Neither made one in Q1"
+         Threes made in Q1, both teams combined — how many?
+             robot says "None or one"
+
+     Both are false, and both are false in the worst possible way. The
+     resolvers counted made threes, found zero, and reported zero — which
+     is correct arithmetic and a lie about the world. There were no threes
+     because there was no basketball.
+
+     This is the same bug as the player-side pre-tip guard shipped in
+     `.87`, one layer down, and it is far more dangerous here: an armed
+     robot would have published an answer key for Q1 before tip and graded
+     the room against it.
+
+     THE RULE: a resolver may only speak about a period that has actually
+     FINISHED. Not started — finished. Every question in the bank is asked
+     at a break, so there is no case where an unfinished period should
+     produce an answer, and one guard in front of all sixteen is worth
+     more than sixteen guards that each have to remember.
+
+     It errs toward silence. If ESPN is slow to advance the period, the
+     robot says nothing for a few seconds longer. Silence costs a wait; a
+     confident wrong answer costs somebody the night. */
+  function periodDone(j, p){
+    var want = Number(p);
+    try{
+      var st = j.header.competitions[0].status;
+      if(st.type && st.type.completed) return true;         // whole game over
+      if(Number(st.period) > want) return true;             // the clock moved on
+    }catch(_){}
+    /* Belt and braces, and the more trustworthy of the two: the feed
+       writes an explicit "End of the Nth Quarter" row. If it is there,
+       that quarter is over whatever the header says. */
+    try{
+      return plays(j).some(function(x){
+        return Number(((x.period)||{}).number) === want
+            && /end of (the )?(1st|2nd|3rd|4th|\d)/i.test(String(x.text||''));
+      });
+    }catch(_){ return false; }
+  }
+
   function resolve(name, j, p, opts){
     var f = R[name];
     if(typeof f !== 'function') return { ok:false, why:'no resolver named "'+name+'"' };
+    if(!periodDone(j, p)) return { ok:false, why:'that quarter has not finished yet' };
     try{
       var v = f(j, p, opts||[]);
       if(v===null || v===undefined) return { ok:false, why:'the feed does not carry this yet' };
@@ -3911,7 +3958,7 @@ var AUTO = (function(){
     }catch(e){ return { ok:false, why:'threw: '+((e&&e.message)||e) }; }
   }
 
-  return { fetchFeed:fetchFeed, resolve:resolve, R:R, sides:sides, plays:plays,
+  return { fetchFeed:fetchFeed, resolve:resolve, periodDone:periodDone, R:R, sides:sides, plays:plays,
            inPeriod:inPeriod, armed:armed };
 })();
 
