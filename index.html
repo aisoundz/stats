@@ -4113,9 +4113,46 @@ function paintContinueCard(){
 function signedInNow(){
   try{ return !!(window.SB && SB.verified && SB.verified()); }catch(e){ return false; }
 }
+/* ---- B19: THE INTENT HAS TO SURVIVE THE INBOX -----------------------
+   "When it takes me to the sign in and then I go to my email, it doesn't
+   take me automatically back to the page. It should."
+
+   Correct. PENDING_AFTER was an in-memory variable, which is fine for the
+   one-tap Google popup — same page, same JS, the variable is still there
+   when it resolves. The email link is a different animal entirely: it
+   opens the app as a FRESH PAGE LOAD, usually in a new tab and sometimes
+   in a different browser. Every variable in this file is born again at
+   null. So the app signed them in perfectly and then stood there, because
+   nothing on the new page had any idea what they had been trying to do.
+
+   Putting sign-in in front of practice made this much more likely to be
+   hit, because the email path is now the front door for anybody without
+   a Google account. I built that and did not follow it through the inbox.
+
+   localStorage, not sessionStorage: a new tab gets a new session, which is
+   exactly the case that was broken. Stamped, because an intent is only
+   meaningful for a few minutes — a link opened tomorrow morning should
+   land you on the home page, not drop you into a practice game you have
+   long forgotten asking for. */
+var PEND_KEY = 'stats_pending_intent_v1';
+var PEND_TTL = 30 * 60 * 1000;                 // half an hour
+function pendSet(what, tab){
+  try{ localStorage.setItem(PEND_KEY, JSON.stringify({ what: what||'', tab: tab||'', at: Date.now() })); }catch(_){}
+}
+function pendRead(){
+  try{
+    var raw = localStorage.getItem(PEND_KEY); if(!raw) return null;
+    var o = JSON.parse(raw) || {};
+    if(!o.at || (Date.now() - o.at) > PEND_TTL){ pendClear(); return null; }
+    return o;
+  }catch(_){ return null; }
+}
+function pendClear(){ try{ localStorage.removeItem(PEND_KEY); }catch(_){} }
+
 /* Take them to the door, make it obvious, and try the one-tap immediately. */
 function promptSignIn(after){
   PENDING_AFTER = after || 'live';
+  pendSet(PENDING_AFTER, '');
   const card=document.getElementById('portalCard');
   if(card){
     card.style.display='block';
@@ -4125,6 +4162,18 @@ function promptSignIn(after){
     setTimeout(function(){ card.style.boxShadow='none'; }, 1800);
   }
   toast('Sign in first — takes one tap, and it saves everything you score.');
+}
+/* ONE resume path, called both by the popup's success handler and by boot
+   after an email link. Two copies of "where were they going" is how the
+   popup kept working while the inbox route quietly did nothing. */
+function finishPendingTrip(){
+  var mem = PENDING_AFTER, tab = PENDING_TAB;
+  if(!mem && !tab){ var o = pendRead(); if(o){ mem = o.what; tab = o.tab; } }
+  PENDING_AFTER = null; PENDING_TAB = null; pendClear();
+  if(mem==='live'){ setTimeout(function(){ try{ startLive(); }catch(_){} }, 350); return true; }
+  if(mem==='demo'){ setTimeout(function(){ try{ startDemo(); }catch(_){} }, 350); return true; }
+  if(tab){ setTimeout(function(){ try{ navGo(tab); }catch(_){} }, 350); return true; }
+  return false;
 }
 let PENDING_AFTER=null;
 /* Which tab they were reaching for when the door stopped them, so signing in
@@ -4273,6 +4322,26 @@ function recomputeScore(){
     if(e.k==='pred') pp+=v; else if(e.k==='catch') cp+=v; else if(e.k==='caught') gp+=v; else lv+=v;
   });
   S.pts=p; S.speed=s; S.predPts=pp; S.catchPts=cp; S.caughtPts=gp; S.livePts=lv;
+  /* B20 — WHEN THE SCORE CHANGES, SAY SO. Caught It resolved "+5", wrote
+     the ledger, and left YOUR NIGHT reading 50 — the total was 55 in
+     memory and nothing on screen had been told. The founder saw a card
+     award five points and a scoreboard ignore it, which reads as the
+     award being fake.
+
+     Announced from HERE rather than fixed at the call site, because the
+     call site was only the one I happened to be looking at: every future
+     path that scores anything gets the repaint for free. Same pattern as
+     the `stats:sub` receipt.
+
+     Only when the number actually moved — recomputeScore() is called on
+     every render and a repaint on every call would fight itself. */
+  try{
+    var _sig = p+'|'+s;
+    if(_sig !== recomputeScore._last){
+      recomputeScore._last = _sig;
+      window.dispatchEvent(new CustomEvent('stats:score', { detail:{ pts:p, speed:s } }));
+    }
+  }catch(_){}
   return {pts:p,speed:s,predPts:pp,catchPts:cp,caughtPts:gp,live:lv};
 }
 function ledgerSet(key,pts,speed,kind){
@@ -5095,6 +5164,18 @@ window.addEventListener('stats-verify', function(ev){
     toast('✅ Email verified — you’re saved.');
     // Re-write the contact row so the list knows this address is proven.
     try{ saveGateEmail(true); }catch(e){}
+    /* B19 — AND FINISH THE TRIP. This branch runs on a FRESH PAGE LOAD, the
+       one that happened when they tapped the link in their inbox. Every
+       in-memory variable is null here, which is why this route used to sign
+       somebody in beautifully and then leave them standing on the home page
+       wondering what they were doing. The intent was written to localStorage
+       before they left; spend it now.
+
+       Deliberately after the toast and the row write, so a failure in the
+       resume cannot cost them the sign-in that actually succeeded. */
+    try{
+      if(finishPendingTrip()) toast('Picking up where you left off…');
+    }catch(_){}
   }else if(d.why==='need-email'){
     // Cross-device: link opened on a phone, requested on a laptop. Firebase
     // needs the address back before it will spend the code, and it is not
@@ -6277,6 +6358,18 @@ function retrySubmit(rid){
   }catch(_){}
 }
 try{ window.addEventListener('stats:sub', function(){ try{ paintSubReceipt(); }catch(_){} }); }catch(_){}
+/* B20 — the one listener that keeps every score surface honest. Repaints
+   the board the player is actually looking at; anything else is repainted
+   when they navigate to it. Guarded so a render failure can never lose the
+   points themselves — the ledger has already been written by this point. */
+try{
+  window.addEventListener('stats:score', function(){
+    try{
+      if(document.getElementById('s-gametime') && map[S.screen]==='s-gametime') renderGametime();
+    }catch(_){}
+    try{ if(typeof paintHeroRibbon==='function') paintHeroRibbon(); }catch(_){}
+  });
+}catch(_){}
 
 function lockPicks(idx, tries){
   if(S.mode!=="live") return false;
@@ -11113,11 +11206,7 @@ async function portalGoogle(){
     renderPortal();
     toast('✅ Signed in — your points follow you everywhere now.');
     // They pressed Play and got sent here; finish the trip for them.
-    if(PENDING_AFTER==='live'){ PENDING_AFTER=null; setTimeout(function(){ startLive(); }, 350); }
-    else if(PENDING_AFTER==='demo'){ PENDING_AFTER=null; setTimeout(function(){ startDemo(); }, 350); }
-    /* …and the same courtesy for a locked tab. */
-    else if(PENDING_TAB){ var _t=PENDING_TAB; PENDING_TAB=null; PENDING_AFTER=null;
-      setTimeout(function(){ try{ navGo(_t); }catch(_){} }, 350); }
+    finishPendingTrip();
     return;
   }
   const why=(r&&r.why)||'unknown';
@@ -11198,7 +11287,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-13-adds-up.103';
+const STATS_BUILD='2026-08-13-tile.105';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -11366,7 +11455,7 @@ function navGo(tab){
   if(lean() && LEAN_TABS_OFF.indexOf(tab)>=0) return;
   if(TAB_LOCKED[tab] && !tabsUnlocked()){
     try{ trk('tab_locked',{tab:tab}); }catch(_){}
-    try{ PENDING_TAB = tab; }catch(_){}
+    try{ PENDING_TAB = tab; pendSet('', tab); }catch(_){}
     try{ go('landing'); }catch(_){}
     try{ promptSignIn('tab'); }catch(_){}
     try{ toast('Sign in to open '+TAB_LOCKED[tab]+'.'); }catch(_){}
