@@ -125,31 +125,60 @@ service cloud.firestore {
         // correct a score by hand, or overwrite one it does not believe.
         allow create, update: if isOwner();
 
-        allow create, update: if signedIn()
+        /* B15 — THE PLAYER NO LONGER WRITES THEIR OWN SCORE.
+           pts, speed and roundsDone are graded from the submissions by the
+           Control Room on reveal and by the off-laptop runner after it posts a
+           key. Both go through the same shared tally, so the number cannot
+           depend on which machine was awake. A signed-in player could
+           previously set their own total from a browser console.
+        
+           Reads .get(field, 0) rather than the field directly: a document
+           written by an older build might not carry all three, and a missing
+           field in a rule is an error, which would lock that player out of
+           their own row for the night.
+        
+           STILL CLIENT-REPORTED, HONESTLY: predPts and catchPts and caughtPts.
+           Predictions settle on the phone and Caught It resolves there, so the
+           server cannot derive them. They are BOUNDED here rather than trusted.
+           The real ceilings: predictions max at 600 (six picks, 100 + 5x50 of
+           base, plus 5x50 in exact-number bonuses) and Caught It is capped in
+           the app at 100 a night. The bounds below leave headroom without
+           leaving the door open. */
+        allow create: if signedIn()
           && request.auth.uid == uid
           && request.resource.data.name is string
           && request.resource.data.name.size() > 0
           && request.resource.data.name.size() <= 24
-          && request.resource.data.pts is int
-          && request.resource.data.pts >= 0
-          // 200 was below what a night can actually produce. Rounds alone are
-          // 4 questions at 10/20/30/40 = 400 points, before predictions and
-          // before Caught It. Every player who went past 200 had their own
-          // score write silently denied from then on — their phone knew the
-          // truth and the room's board did not, and nothing said so.
-          //
-          // This is still a bound, not a blank cheque: it exists to stop a
-          // bored tester with a console writing a megabyte into a row, not to
-          // police the game. The game's real ceiling is around 600.
-          //
-          // KNOWN, AND NOT CLOSED BY THIS LINE: a signed-in player can set
-          // their own score to anything under this bound, and raising it widens
-          // that. The real fix is making the dashboard and the runner the only
-          // writers of a score, which is a build and not a rules edit.
-          && request.resource.data.pts <= 5000
-          && request.resource.data.speed is int
-          && request.resource.data.speed >= 0
-          && request.resource.data.speed <= 2000;
+          && request.resource.data.get('pts', 0) == 0
+          && request.resource.data.get('speed', 0) == 0
+          && request.resource.data.get('roundsDone', 0) == 0
+          && request.resource.data.get('predPts', 0) is int
+          && request.resource.data.get('predPts', 0) >= 0
+          && request.resource.data.get('predPts', 0) <= 800
+          && request.resource.data.get('catchPts', 0) is int
+          && request.resource.data.get('catchPts', 0) >= 0
+          && request.resource.data.get('catchPts', 0) <= 200
+          && request.resource.data.get('caughtPts', 0) is int
+          && request.resource.data.get('caughtPts', 0) >= 0
+          && request.resource.data.get('caughtPts', 0) <= 200;
+
+        allow update: if signedIn()
+          && request.auth.uid == uid
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 24
+          && request.resource.data.get('pts', 0)        == resource.data.get('pts', 0)
+          && request.resource.data.get('speed', 0)      == resource.data.get('speed', 0)
+          && request.resource.data.get('roundsDone', 0) == resource.data.get('roundsDone', 0)
+          && request.resource.data.get('predPts', 0) is int
+          && request.resource.data.get('predPts', 0) >= 0
+          && request.resource.data.get('predPts', 0) <= 800
+          && request.resource.data.get('catchPts', 0) is int
+          && request.resource.data.get('catchPts', 0) >= 0
+          && request.resource.data.get('catchPts', 0) <= 200
+          && request.resource.data.get('caughtPts', 0) is int
+          && request.resource.data.get('caughtPts', 0) >= 0
+          && request.resource.data.get('caughtPts', 0) <= 200;
 
         // SWITCH — Phase 2. Uncomment to make the admin dashboard the only
         // thing that can set a score, and delete the two `pts` lines above.
