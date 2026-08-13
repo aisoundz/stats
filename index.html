@@ -878,13 +878,13 @@
       <button class="btn ghost sm" id="portalEmailBtn" style="margin-top:8px" onclick="portalEmailPath()">✉️ Use email instead</button>
       <div id="portalDown" style="display:none;margin-top:10px;background:rgba(255,197,77,.10);border:1px solid rgba(255,197,77,.35);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)">
         <b>Our sign-in server isn’t answering right now.</b><br>
-        <span style="color:var(--muted,#93a0bd)">Nothing you do here would save, so we’ve switched the buttons off rather than let you lose a night’s points. Try a refresh in a minute — or tap <b>Practice</b> below, which needs no account at all.</span>
+        <span style="color:var(--muted,#93a0bd)">Nothing you do here would save, so we’ve switched the buttons off rather than let you lose a night’s points. Try a refresh in a minute.</span>
       </div>
       <label style="display:flex;gap:9px;align-items:flex-start;margin-top:12px;cursor:pointer">
         <input type="checkbox" id="portalConsent" checked style="margin-top:1px;width:26px;height:26px;padding:6px;flex:0 0 auto;accent-color:#28e0d0">
         <span style="font-size:12px;line-height:1.45;color:var(--muted,#93a0bd)">Email me when the next game night is on. One a game, unsubscribe any time.</span>
       </label>
-      <button class="btn ghost sm" style="margin-top:11px;font-size:14px" onclick="startDemo()">Practice first — no account needed</button>
+      <button class="btn ghost sm" style="margin-top:11px;font-size:14px" onclick="startDemo()">Try a practice game</button>
       <p class="foot" style="margin:10px 0 0;text-align:center">Free to play · Not gambling · Prizes are sponsor-funded</p>
     </div>
     <div class="card" id="welcomeStrip" style="display:none;margin-top:14px;padding:11px 14px;border-color:rgba(46,230,166,.35)"></div>
@@ -4109,6 +4109,23 @@ function startDemo(){
      "Continue tonight's game · waiting on Q4, 110 pts". Pressing Practice
      is an explicit choice to not be in that game. */
   try{ resumeData=null; var rb=document.getElementById('resumeBar'); if(rb) rb.style.display='none'; }catch(_){}
+  /* B14 — practice is behind the door now too. Bounced rather than
+     refused: the address is remembered and the trip finishes itself the
+     moment they sign in, the same courtesy a locked tab already got. */
+  try{
+    if(!signedInNow()){
+      try{ trk('practice_locked',{}); }catch(_){}
+      try{ go('landing'); }catch(_){}
+      /* promptSignIn OWNS PENDING_AFTER — it does `PENDING_AFTER = after ||
+         'live'` on the way in. Setting it here first and then calling this
+         would silently overwrite it and the trip would never finish: they
+         would sign in and land on the home page wondering what happened.
+         One writer. I wrote that bug into this function ten minutes ago
+         and it is the same shape as everything else today. */
+      try{ promptSignIn('demo'); }catch(_){}
+      return;
+    }
+  }catch(_){}
   S.mode="demo";S.practice=true;try{Object.keys(demoCiFired).forEach(k=>delete demoCiFired[k]);PCI.muted=false;}catch(e){}go('name');prefillGate();}
 
 /* ---------------- PERSISTENCE (Game Night only) ---------------- */
@@ -5055,9 +5072,10 @@ function savedEmail(){ try{ return localStorage.getItem(EMAIL_KEY)||''; }catch(e
 function rememberEmail(v){ try{ localStorage.setItem(EMAIL_KEY,v); }catch(e){} }
 function gateEmailValue(){ const e=document.getElementById('gateEmail'); return e?(e.value||'').trim():''; }
 
-/* Practice mode is not gated. Someone tapping "Practice first" is deciding
-   whether this game is worth their evening, and charging them an email for
-   that is how you lose the ones who would have signed up after. */
+/* This is the EMAIL gate, which is a different door from the sign-in one
+   and stays where it was: once somebody is signed in, practice does not
+   also demand an address. The account gate now sits in front of practice
+   (see B14 on tabsUnlocked) — do not add a second toll behind it. */
 function gateNeeded(){ return S.mode==='live'; }
 
 /* ---- THE RETURNING PLAYER ----------------------------------------
@@ -11046,6 +11064,7 @@ async function portalGoogle(){
     toast('✅ Signed in — your points follow you everywhere now.');
     // They pressed Play and got sent here; finish the trip for them.
     if(PENDING_AFTER==='live'){ PENDING_AFTER=null; setTimeout(function(){ startLive(); }, 350); }
+    else if(PENDING_AFTER==='demo'){ PENDING_AFTER=null; setTimeout(function(){ startDemo(); }, 350); }
     /* …and the same courtesy for a locked tab. */
     else if(PENDING_TAB){ var _t=PENDING_TAB; PENDING_TAB=null; PENDING_AFTER=null;
       setTimeout(function(){ try{ navGo(_t); }catch(_){} }, 350); }
@@ -11129,7 +11148,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-13-statson.98';
+const STATS_BUILD='2026-08-13-door.99';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -11252,22 +11271,41 @@ try{ window.goHomeFromFinal=goHomeFromFinal; }catch(_){}
    so they were showing a signed-out visitor the shape of a game they were
    not in.
 
-   TWO EXCEPTIONS, both non-negotiable:
+   THERE USED TO BE TWO EXCEPTIONS. There is now one.
 
-   Practice needs no account and never will. The moment somebody starts a
-   rehearsal they are in a run (S.place is set), and a run has the whole app
-   — otherwise "Practice first — no account needed" is a lie and the only
-   way most people ever see this thing is a wall.
+   ~~Practice needs no account and never will.~~ It does now — see B14 on
+   tabsUnlocked below. This paragraph is left struck through rather than
+   deleted because it argued its case well and the case simply stopped
+   applying: it was written for a product courting strangers, and this one
+   is deliberately not courting anyone yet. The landing copy that made it a
+   promise went in the same build.
 
-   And anybody carrying a game in progress keeps the tabs, verified or not.
-   The alternative is a phone locked inside a game with the ways out on the
-   other side of a sign-in it cannot complete. Same rule, same reason, as
-   landingActionsWanted(). */
+   THE ONE THAT SURVIVES: anybody carrying a game in progress keeps the
+   tabs, verified or not. The alternative is a phone locked inside a game
+   with the ways out on the other side of a sign-in it cannot complete.
+   Same rule, same reason, as landingActionsWanted(). */
 var TAB_LOCKED={gametime:'Gametime',stats:'Stats',board:'the Board',crew:'Talk',me:'your card'};
+/* B14 — PRACTICE NO LONGER OPENS THE APP. Founder decision, 13 Aug.
+
+   The old rule let a rehearsal unlock every tab, on the argument that a
+   stranger evaluating the product should not meet a signup wall. That
+   argument is correct for a product trying to grow and this one is not:
+   "I don't trust the platform enough yet to bring in more people." There
+   are no strangers arriving. What the open door actually bought was three
+   more surfaces that can be wrong, and a half-state where somebody is
+   inside the app with no seat, no saved score and no room.
+
+   ONE EXCEPTION SURVIVES, and it is not negotiable: a game already in
+   progress is never locked out. A stale save once trapped a phone inside
+   a game that was not happening with every exit behind a sign-in it could
+   not complete, and locking practice must not resurrect that. Note this
+   is now the ONLY reason the second clause exists — it is a fire escape,
+   not a demo. */
 function tabsUnlocked(){
   try{ if(signedInNow()) return true; }catch(_){}
-  /* In a run of any kind — practice or live, before tip or mid-quarter. */
-  try{ return GAME_SCREENS.indexOf(S.place||'')>=0; }catch(_){}
+  try{
+    if(S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0) return true;
+  }catch(_){}
   return false;
 }
 function navGo(tab){
@@ -11281,7 +11319,7 @@ function navGo(tab){
     try{ PENDING_TAB = tab; }catch(_){}
     try{ go('landing'); }catch(_){}
     try{ promptSignIn('tab'); }catch(_){}
-    try{ toast('Sign in to open '+TAB_LOCKED[tab]+' — or tap Practice, which needs no account.'); }catch(_){}
+    try{ toast('Sign in to open '+TAB_LOCKED[tab]+'.'); }catch(_){}
     return;
   }
   try{ trk('tab_view',{tab:tab}); }catch(_){}
