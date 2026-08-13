@@ -1491,7 +1491,11 @@
         <div class="slc"><div class="v">🔥<span id="streakN">1</span></div><div class="k">Streak</div></div>
       </div>
       <div class="tcase" id="slCase"></div>
-      <p class="fbnote" style="margin-top:10px">Season rating <b id="seasonRating" style="color:var(--teal2)">1,000</b> · Play the next game to keep the streak alive.</p>
+      <!-- SEASON RATING IS GONE. It was a number starting at 1,000 with no
+         scale, no ceiling and nobody to compare against — an ELO with a
+         population of one. "1,422" told a player nothing they could act on
+         or repeat out loud. If it comes back it comes back as a rank. -->
+    <p class="fbnote" style="margin-top:10px">Play the next game to keep the streak alive.</p>
         </div>
       </div>
     </details>
@@ -3487,7 +3491,23 @@ const BB_GAME={
    with it on. */
 var LEAN_ON = true;
 function lean(){ try{ return !!LEAN_ON; }catch(_){ return false; } }
-const LEAN_TABS_OFF = ['stats','crew'];
+/* FOUR TABS: Home \u00B7 STATS \u00B7 Gametime \u00B7 Board, with Gametime dead centre
+   under the thumb.
+
+   `me` is gone from the row entirely — not flagged, retired. It was a whole
+   tab rendering the member card that already sits on Home, and the slot is
+   worth more than the duplicate. Sign-out and profile live in the ☰ menu,
+   which is where a person looks for them anyway.
+
+   `crew` (Talk) is gone for the same reason it was flagged: it is a group
+   chat competing with the group chat these people are already in.
+
+   `stats` is in the row and dark for now. It is the first thing that comes
+   back after two clean nights — see STATS-Tab-Spec.md. Shipping the button
+   before the tab would be the exact "visible control that does nothing"
+   failure this list exists to prevent, so LEAN hides it until it is real. */
+const LEAN_TABS_OFF = ['stats'];
+const NAV_RETIRED   = ['crew','me'];
 /* Toggles BOTH ways, and paintNav calls it, so the nav can never be left
    showing a tab that navGo will refuse — a visible button that does nothing
    when tapped is worse than a missing one.
@@ -3504,6 +3524,12 @@ const LEAN_TABS_OFF = ['stats','crew'];
    the label is what the player reads and is the thing that must not be
    there. Same reason ttPaintBadge() finds its buttons the same way. */
 function leanStripTabs(){
+  try{
+    NAV_RETIRED.forEach(function(t){
+      var b=document.querySelector('#botnav [data-nav="'+t+'"]');
+      if(b){ b.style.display='none'; b.disabled=true; }
+    });
+  }catch(_){}
   try{
     LEAN_TABS_OFF.forEach(function(t){
       var b=document.querySelector('#botnav [data-nav="'+t+'"]');
@@ -3567,15 +3593,40 @@ const BB_GROUPS=[{ab:BB_GAME.homeAbbr,name:BB_GAME.homeName,names:BB_ROSTER.home
    room has an opinion about before tip-off, including the person who has
    never watched a full WNBA game. It is the hook that gets a sheet filled. */
 const BB_PREDS=[
-  {id:"winner", label:"Winning team", q:"Who takes it tonight?", base:100, opts:[BB_GAME.homeName,BB_GAME.awayName], answer:BB_GAME.homeName},
-  // NOTE: `answer`/`num` below are the SIMULATED results Practice mode plays
-  // against — never a claim about the real game. They must always be names
-  // that exist in the roster above, or practice grades against a ghost.
-  {id:"pts", q:"Who scores the most points?", label:"Most points", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Caitlin Clark", num:22, numLabel:"How many pts?"},
-  {id:"ast", q:"Who dishes the most assists?", label:"Most assists", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Caitlin Clark", num:8, numLabel:"How many assists?"},
-  {id:"stl", q:"Who racks up the most steals?", label:"Most steals", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Lexie Hull", num:3, numLabel:"How many steals?"},
-  {id:"reb", q:"Who grabs the most rebounds?", label:"Most rebounds", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Aliyah Boston", num:10, numLabel:"How many rebounds?"},
-  {id:"blk", q:"Who swats the most blocks?", label:"Most blocks", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Aliyah Boston", num:2, numLabel:"How many blocks?"}
+  /* ============ THREE PICKS, NOT SIX, AND NO NUMBER ENTRY ===========
+     This sheet was six picks, five of them carrying an exact-number bonus:
+     twelve inputs before tip, against an email that promises "about a
+     minute". That gap is the biggest drop-off in the funnel and it is
+     invisible from the inside, because every player we ever hear from is
+     one who already got through it.
+
+     Two cuts, for two different reasons.
+
+     THE NUMBER ENTRY GOES because a bonus nobody claims is not a bonus, it
+     is a form field. Picking a player is an opinion; typing "how many
+     rebounds" is homework, and it sits between a person and the thing they
+     actually came for.
+
+     STEALS AND BLOCKS GO because nobody has a read on them before tip.
+     They are close to coin flips, and a coin flip that decides a hundred
+     points is not a prediction, it is a lottery that punishes the person
+     who watched more basketball. Winner, points and rebounds are things a
+     room argues about out loud. That is the test.
+
+     AND THE WEIGHTING FLIPS, which is the part that matters most. The sheet
+     used to be 600 of a 1000-point night — meaning most of the score was
+     decided before tip-off, by guessing, in an app whose entire promise is
+     that it pays you to pay attention. It is 300 now against 400 live. The
+     night is won by watching. */
+  {id:"winner", label:"Winning team", q:"Who takes it tonight?", base:100,
+   opts:[BB_GAME.homeName,BB_GAME.awayName], answer:BB_GAME.homeName},
+  // `answer` below is the SIMULATED result Practice mode plays against —
+  // never a claim about the real game. It must always be a name that exists
+  // in the roster above, or practice grades against a ghost.
+  {id:"pts", q:"Who scores the most points?", label:"Most points", base:100,
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Caitlin Clark"},
+  {id:"reb", q:"Who grabs the most rebounds?", label:"Most rebounds", base:100,
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Aliyah Boston"}
 ];
 /* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
    Every question is answerable by WATCHING the broadcast at the break — no lookups,
@@ -3762,8 +3813,8 @@ const SPORTS={
     step2h:"Answer at every quarter break",
     step2:"4 questions about what JUST happened — and not the ones you'd expect. Points rise: Q1 = 10 pts → Q4 = 40, so the last quarter is worth four times the first. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.",
     step3:"The second the host reveals a quarter, your answers are scored for you — nothing to tap, even if your phone was in your pocket. Most points wins the night; ⚡ Speed breaks ties.",
-    rulePred:"Lock 6 picks before tip-off: winning team (100 pts) and the leader in points, assists, steals, rebounds & blocks (50 pts each). Nail the leader's exact stat total for a +50 bonus per category — so a category you fully nail is worth 100. Predictions can't be changed after tip-off.",
-    ruleLive:"At the end of each quarter, answer 4 questions about the quarter you just watched. They are not box-score trivia — they're the stuff you only catch if the game is actually on in front of you. Correct answers are worth 10 pts each in Q1, 20 in Q2, 30 in Q3, and 40 in Q4 — 400 points across the night, and the fourth quarter alone is worth 160 of them. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.",
+    rulePred:"Lock 3 picks before tip-off, 100 pts each: the winning team, the leading scorer and the leading rebounder. Three taps, no typing. Picks can't be changed after tip-off — and they're only 300 of the night, because the other 400 are won by watching.",
+    ruleLive:"At the end of each quarter, answer 4 questions about the quarter you just watched. They are not box-score trivia — they're the stuff you only catch if the game is actually on in front of you. Correct answers are worth 10 pts each in Q1, 20 in Q2, 30 in Q3, and 40 in Q4 — 400 points across the night, more than the pick sheet, and the fourth quarter alone is worth 160. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.",
     ruleScore:"When the host posts each quarter's answers (from the broadcast + official box score), your quarter scores itself on your phone — there is nothing for you to tap in. After the final buzzer the host settles the official stat leaders and your prediction sheet scores too."
   },
   soccer:{
@@ -5162,8 +5213,23 @@ function predFocus(){
 }
 function predGo(d){
   const L=predOrderList();
+  const before=PD.i;
   PD.i=Math.max(0,Math.min(L.length-1,PD.i+d));
   buildPred();
+  /* SCROLL EVEN WHEN THE INDEX DOES NOT MOVE. buildPred() brings a NEW card
+     to the top; asking for a card you are already on used to do nothing at
+     all, including nothing about where the page happened to be scrolled.
+     Rare before — you had to tap Next on the last card. Not rare now: with
+     the bonus fields gone, picking a player auto-advances, so the deck is
+     frequently already where the next tap is asking it to go, and the tap
+     read as broken. "Go to question n" means the question is on screen. */
+  if(PD.i===before){
+    try{
+      const c=document.getElementById('predCard');
+      if(c){ const t=c.getBoundingClientRect().top;
+             if(t<-40 || t>240) c.scrollIntoView({block:'start', behavior:'auto'}); }
+    }catch(_){}
+  }
 }
 /* THE BUG THIS EXISTS TO KILL. You could tap Next past a card you had not
    answered, and nothing anywhere said so. Six cards later you were staring
@@ -6508,7 +6574,7 @@ function predReviewManual(){
     sel.onchange=validatePredReview;
     row.appendChild(sel);
     if(p.bonus){const inp=document.createElement('input');inp.type='number';inp.id='prn_'+p.id;
-      inp.placeholder='Official '+p.numLabel.toLowerCase();inp.style.marginTop='8px';row.appendChild(inp);}
+      inp.placeholder='Official '+String(p.numLabel||'number').toLowerCase();inp.style.marginTop='8px';row.appendChild(inp);}
     c.appendChild(row);
   });
   document.getElementById('prPill').textContent=L.End;
@@ -6650,7 +6716,15 @@ function showFinal(){
     // the room a moment later. Until it answers we say so, rather than
     // parking speed points in a tile labelled "Final rank".
     setStat(1,'—','Final rank');
-    setStat(2,'⚡'+S.speed,'Speed points (tiebreaker)');
+    /* Was the speed tile. The second slot now answers the question a player
+       actually has at the buzzer — how much of the night did I get right —
+       which is comparable across nights in a way a seconds-banked total
+       never was. Speed still breaks the tie, silently. */
+    (function(){
+      var g=null; try{ g=countGraded(); }catch(_){}
+      if(g && g.total) setStat(2, g.hits+'/'+g.total, 'Questions right');
+      else setStat(2, String(S.pts||0), 'Points tonight');
+    })();
     $f('finalTitle').textContent=`${L.End.replace(/[^A-Za-z]+$/,'')}, ${S.name||'player'}!`;
     $f('finalLb').innerHTML=
       `<div class="card tight"><p class="sub" style="font-size:14px;margin:0">📲 Post your result card in the group chat. Highest points wins the night — ⚡ Speed breaks ties. Rematch at the next Game of the Night.</p></div>`;
@@ -6955,10 +7029,27 @@ function awardCtx(rank){
    the next two become chips under it. `hides` stops an award being printed
    beside a stronger one that already contains it — "perfect night" sitting
    above "perfect quarter" reads as padding, not as two achievements. */
+/* ============ THREE AWARDS ==========================================
+   There were fifteen, with a hides:[] table so they would not fire on top
+   of each other. Fifteen awards in a room of three people is not a trophy
+   cabinet, it is a participation sticker sheet with good copy — and one of
+   them, PERFECT NIGHT, was handed to a player whose night had been
+   destroyed, because it counted only the questions that got graded.
+
+   An award is worth something in proportion to how often it is withheld.
+   Four, and every one of them is a real achievement:
+
+     THE GAME BALL     you won, on a night that actually finished
+     PERFECT NIGHT     you missed nothing, on a night that actually finished
+     PERFECT QUARTER   a full round without a scratch
+     NEVER LOOKED AWAY you scored in every quarter — the floor, and the
+                       behaviour this whole product exists to create
+
+   The rest are recoverable from git if a room ever gets big enough to need
+   a middle tier. Today they dilute the two that mean something.        */
 const AWARDS=[
   { id:'gameball', emoji:'👑',
     name:()=> SPORT_KEY==='soccer' ? 'PLAYER OF THE MATCH' : 'THE GAME BALL',
-    hides:['podium'],
     /* A first place declared while your own rounds are still unscored is a
        guess dressed as a trophy. Wait for the night to settle. */
     test:c=>c.rank===1 && c.settled,
@@ -6966,97 +7057,35 @@ const AWARDS=[
     short:()=>'won the night' },
 
   { id:'perfect', emoji:'💎', name:'PERFECT NIGHT',
-    hides:['closer','hotstart','perfectq','quickdraw','board','wire'],
+    hides:['perfectq'],
     test:c=>c.settled && c.graded.total>=4 && c.graded.hits===c.graded.total,
     why:c=>`<b>${c.graded.total} of ${c.graded.total}</b> — you did not miss a single graded question all night.`,
     short:c=>`${c.graded.total}/${c.graded.total} clean` },
 
-  { id:'number', emoji:'🎯', name:'CALLED THE NUMBER',
-    test:c=>c.exactNum===true,
-    why:()=>`You didn't just pick the leader — you called their <b>exact stat total</b>. Almost nobody hits that.`,
-    short:()=>'nailed an exact total' },
-
-  { id:'oracle', emoji:'🔮', name:'THE ORACLE',
-    test:c=>c.preds.total>=4 && (c.preds.hits/c.preds.total)>=0.6,
-    why:c=>`<b>${c.preds.hits} of ${c.preds.total}</b> prediction lines landed — you called this one before ${L.start}.`,
-    short:c=>`${c.preds.hits}/${c.preds.total} predictions` },
-
-  { id:'closer', emoji:'🧊', name:'THE CLOSER',
-    hides:['perfectq'],
-    test:c=>c.roundClean[NR-1]===true,
-    why:()=>`Clean sweep of <b>${roundName(NR-1)}</b> — the round worth the most, when everyone else is guessing.`,
-    short:()=>`clean ${roundTag(NR-1)}` },
-
-  { id:'eagle', emoji:'👀', name:'EAGLE EYE',
-    test:c=>c.catchAll===true,
-    why:c=>`Your whole <b>${c.catchTotal}</b>-item watchlist landed. You saw every one of them coming.`,
-    short:c=>`${c.catchTotal}/${c.catchTotal} catches` },
-
   { id:'perfectq', emoji:'🧹', name:()=>`PERFECT ${String(L.Period).toUpperCase()}`,
-    test:c=>c.roundClean.some((v,i)=>v===true && i>0 && i<NR-1),
-    why:c=>{ const i=c.roundClean.findIndex((v,k)=>v===true && k>0 && k<NR-1);
+    test:c=>c.settled && c.roundClean.some((v,i)=>v===true),
+    why:c=>{ const i=c.roundClean.findIndex(v=>v===true);
              return `Every question in <b>${roundName(i)}</b>, correct. A full round without a scratch.`; },
     short:()=>'a full clean round' },
 
-  { id:'hotstart', emoji:'🚀', name:'HOT START',
-    test:c=>c.roundClean[0]===true,
-    why:()=>`Clean sweep of <b>${roundName(0)}</b>. Locked in from ${L.start}.`,
-    short:()=>`clean ${roundTag(0)}` },
+  /* FOUR, NOT THREE. The first cut of this list took it to three and the
+     gate refused it: a night of seven-from-sixteen with a score in all four
+     quarters came out with no award at all, and the renderer printed
+     "undefined" into the gap.
 
-  { id:'quickdraw', emoji:'⚡', name:'QUICK DRAW',
-    test:c=>c.bestBank>=15,
-    why:c=>`You locked a correct answer with <b>${c.bestBank} seconds</b> still on the clock. That's knowing it, not working it out.`,
-    short:c=>`${c.bestBank}s banked` },
-
-  { id:'podium', emoji:'🥉', name:'PODIUM FINISH',
-    test:c=>c.rank!==null && c.rank>=2 && c.rank<=3,
-    why:c=>`Finished <b>#${c.rank}</b> in the room. That close to the top.`,
-    short:c=>`#${c.rank} finish` },
-
-  { id:'wire', emoji:'🔒', name:'WIRE TO WIRE',
-    test:c=>c.settled && c.answeredAll && c.answered>=4,
-    why:c=>`You answered <b>every single question</b> put in front of you — all ${c.answered}. Most people drop one.`,
-    short:()=>'answered everything' },
-
-  /* THE GAP THAT PRODUCED A THUMBTACK. Seven of sixteen right, 290 points,
-     scored in all four quarters — and the best the table could offer was
-     "ON THE BOARD" with a drawing pin on it. That is a participation
-     sticker for a genuinely good night. The two awards below fill the space
-     between perfection and nothing, and the first of them rewards exactly
-     the behaviour this whole product exists to create: you were still
-     watching in the fourth. */
+     That is the failure the deleted middle tier existed to prevent, and the
+     lesson is that I was cutting toward a number instead of toward a reason.
+     The reason is that an award should be withheld often enough to mean
+     something AND should fire for the behaviour the product is trying to
+     create. This one is that behaviour, exactly: you were still watching in
+     the fourth. It is also the floor — a good night can never come back
+     empty-handed again. */
   { id:'everyq', emoji:'🏆', name:'NEVER LOOKED AWAY',
-    hides:['board'],
     test:c=>Array.isArray(c.roundHits) && c.roundHits.length>=NR && c.roundHits.every(n=>n>=1),
     why:c=>`You scored in <b>all ${NR} ${L.periods||'quarters'}</b> — first to last. Most people fade after half; you did not.`,
-    short:()=>`scored in every ${L.period||'quarter'}` },
-
-  { id:'sharp', emoji:'🏅', name:'SHARP NIGHT',
-    hides:['board'],
-    test:c=>c.graded.total>=8 && (c.graded.hits/c.graded.total)>=0.5,
-    why:c=>`<b>${c.graded.hits} of ${c.graded.total}</b> — right more often than not, on questions built to be hard.`,
-    short:c=>`${c.graded.hits}/${c.graded.total} right` },
-
-  { id:'board', emoji:'⭐', name:'ON THE BOARD',
-    test:c=>c.graded.hits>=1,
-    why:c=>`<b>${c.graded.hits}</b> right${c.pts?` and ${c.pts} points`:''} on the board. Every season starts with one.`,
-    short:c=>`${c.graded.hits} correct` },
-
-  /* The floor. Still true, still specific to this player, never a
-     participation lie — it names the streak or it names the fact that a
-     season record now exists that did not exist an hour ago. */
-  /* This used to be "🎬 ON THE RECORD". The clapper board rendered as a
-     black slate on iOS and the pun landed on nobody — "a slate emoji for
-     record, that doesn't make any sense" was exactly right. A badge has one
-     job: say what you did, in words a person would use. */
-  { id:'record', emoji:c=>c.streak>1?'🔥':'✅',
-    name:()=>'',
-    test:()=>true,
-    why:c=>c.streak>1
-      ? `<b>${c.streak} game nights in a row.</b> Keep it alive and it keeps counting.`
-      : `Game 1 of your season is done. Everything from here is a personal best.`,
-    short:c=>c.streak>1?`${c.streak}-night streak`:'season opened' }
+    short:()=>`scored in every ${L.period||'quarter'}` }
 ];
+
 
 function awardName(a,ctx){
   var n = (typeof a.name==='function') ? a.name(ctx) : a.name;
@@ -7248,12 +7277,7 @@ function renderStatLine(line){
   set('slPts',  (live?t.pts:(S.pts||0)).toLocaleString());
   set('slAcc',  (live && t.total) ? t.acc+'%' : '—');
   set('streakN', S.streak || (live?t.games:1));
-  /* The rating is derived from the same season the Board and the member
-     card read. It used to add S.seasonPts on one branch and t.pts on the
-     other, which is how one screen could rate a season the next screen did
-     not believe in. */
-  var _sr=0; try{ _sr=seasonStats().total||0; }catch(_){}
-  set('seasonRating', (1000 + (live ? _sr + t.speed : (S.pts||0)+(S.speed||0))).toLocaleString());
+  // seasonRating retired — see the note in the final screen markup.
   const cs=document.getElementById('slCase'); if(!cs) return;
   const ids=Object.keys(t.trophies).sort((a,b)=>t.trophies[b]-t.trophies[a]);
   cs.innerHTML = ids.length
@@ -10553,8 +10577,10 @@ const PRED_MAX=preds.reduce((a,p)=>a+p.base+(p.bonus||0),0);
 const LIVE_MAX=rounds.reduce((a,r,i)=>a+r.q.length*roundWorth(i),0);
 /* Caught It is capped rather than counted, because how many cards fire on a
    given night is the host's choice, not a fixed denominator. The cap IS the
-   denominator. */
-const MAXPTS=PRED_MAX+LIVE_MAX+CATCH_PTS+CAUGHT_NIGHT_CAP;
+   denominator — and it only counts when Caught It is actually running. A
+   denominator that includes a switched-off feature is a wrong total, which
+   is exactly the class of thing LEAN exists to avoid rather than create. */
+const MAXPTS=PRED_MAX+LIVE_MAX+CATCH_PTS+(lean()?0:CAUGHT_NIGHT_CAP);
 /* ---------------- BROADCAST CHROME ----------------
    Reusable team-crest + court/arena artwork carried across the in-game
    screens (live question header + final buzzer card). All original SVG/CSS,
@@ -11077,7 +11103,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-13-oneseason.95';
+const STATS_BUILD='2026-08-13-cuts.96';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -11222,6 +11248,7 @@ function navGo(tab){
   /* Belt and braces with leanStripTabs(): a hidden button is not a closed
      door. Swipe handlers, the keyboard and any stale onclick all come
      through here. */
+  if(NAV_RETIRED.indexOf(tab)>=0) return;
   if(lean() && LEAN_TABS_OFF.indexOf(tab)>=0) return;
   if(TAB_LOCKED[tab] && !tabsUnlocked()){
     try{ trk('tab_locked',{tab:tab}); }catch(_){}
@@ -14025,8 +14052,21 @@ function gtYourNight(){
       var locked=!!(S.predChoices && Object.keys(S.predChoices).length);
       if(locked && !S.predSettled && S.mode==='live') riding=PRED_MAX;
     }catch(_){}
+    /* ============ SPEED IS A TIEBREAK, NOT A CURRENCY ==============
+       ⚡ had a tile here, a tile on the final card, a column on the board
+       and a line in the rail — four persistent places carrying a second
+       number the player has to track, to settle something that almost
+       never needs settling. Two players tie on points perhaps once a
+       season; the rest of the time it is arithmetic homework attached to
+       every screen.
+
+       It stays as feedback IN the moment — the 20-second clock still says
+       what you banked, because that is a reaction to the thing you just
+       did and it is the whole texture of answering fast. And it still
+       breaks ties, silently, which is all it was ever for.
+
+       What goes is speed presented as a score you are carrying around. */
     var tiles='';
-    tiles += '<div><b>'+spd+'</b><span>Speed ⚡</span></div>';
     if(rank!=null) tiles += '<div><b>#'+rank+'</b><span>'+(of?('of '+of):'In the room')+'</span></div>';
     if(riding)     tiles += '<div><b style="color:var(--gold)">'+riding+'</b><span>Still riding</span></div>';
     return '<div class="card" style="padding:15px 16px 14px;margin-top:11px">'
@@ -14353,11 +14393,9 @@ try{ setInterval(function(){ try{ takeoverTick(); }catch(_){} }, 15000); }catch(
        the round opens. See LEAN. -->
   <div style="max-width:430px;margin:0 auto;display:flex">
     <button class="navb" data-nav="home"  onclick="navGo('home')" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 10.6 12 3.4l8.8 7.2"/><path d="M5.6 9.6V20h12.8V9.6"/></svg><span>Home</span></button>
-    <button class="navb" data-nav="gametime" onclick="navGo('gametime')" aria-label="Gametime"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.6"/><path d="M10.2 8.4 16 12l-5.8 3.6z" fill="currentColor" stroke="none"/></svg><span>Gametime</span></button>
     <button class="navb" data-nav="stats" onclick="navGo('stats')" aria-label="Stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20v-7.4"/><path d="M12 20V4.6"/><path d="M19 20V9.4"/></svg><span>Stats</span></button>
+    <button class="navb" data-nav="gametime" onclick="navGo('gametime')" aria-label="Gametime"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.6"/><path d="M10.2 8.4 16 12l-5.8 3.6z" fill="currentColor" stroke="none"/></svg><span>Gametime</span></button>
     <button class="navb" data-nav="board" onclick="navGo('board')" aria-label="Board"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.4 4h9.2v4.6a4.6 4.6 0 0 1-9.2 0z"/><path d="M7.4 5.8H5A2.4 2.4 0 0 0 7.4 9.6"/><path d="M16.6 5.8H19a2.4 2.4 0 0 1-2.4 3.8"/><path d="M12 13.2v3.4"/><path d="M8.4 20h7.2"/></svg><span>Board</span></button>
-    <button class="navb" data-nav="crew"  onclick="navGo('crew')" aria-label="Trash Talk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12.2c0 3.7-3.6 6.8-8 6.8-.9 0-1.9-.2-2.7-.4L4.6 20.4l1.5-3.5A6.4 6.4 0 0 1 4 12.2C4 8.5 7.6 5.4 12 5.4s8 3.1 8 6.8z"/></svg><span>Talk</span></button>
-    <button class="navb" data-nav="me"    onclick="navGo('me')" aria-label="Me"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 19.6a7 7 0 0 1 14 0"/></svg><span>Me</span></button>
   </div>
 </div>
 <style>
