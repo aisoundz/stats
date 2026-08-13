@@ -2562,10 +2562,27 @@ window.STATS_FIREBASE = {
       ['pts', 'speed', 'predPts', 'catchPts', 'roundsDone'].forEach(function (k) {
         if (typeof o[k] === 'number' && isFinite(o[k])) mine[k] = Math.max(0, Math.round(o[k]));
       });
+      /* B15 — THE PHONE NO LONGER REPORTS ITS OWN SCORE.
+         `pts`, `speed` and `roundsDone` are written by the Control Room on
+         reveal and by the off-laptop runner after it posts a key, both of
+         which grade from the submissions rather than from what a phone
+         claims. A signed-in player could previously set their own total
+         from a browser console; the security rules now refuse any write
+         that changes those three, so this stops sending them.
+
+         `mine` is still updated above, because the number on YOUR screen is
+         computed locally and should keep moving the instant you answer.
+         What changed is that the local number is no longer evidence — it is
+         a preview of a total the server will confirm.
+
+         Still client-reported, and honestly so: predPts and catchPts.
+         Predictions settle on the phone and Caught It resolves there, so
+         the server cannot derive them. They are bounded in the rules
+         instead of trusted. That is a smaller hole, not no hole. */
       return await writeTry('push-score', function () {
         return F.setDoc(meRef, {
-          pts: mine.pts, speed: mine.speed, predPts: mine.predPts,
-          catchPts: mine.catchPts, roundsDone: mine.roundsDone,
+          predPts: mine.predPts,
+          catchPts: mine.catchPts,
           lastSeen: F.serverTimestamp()
         }, { merge: true });
       });
@@ -11148,7 +11165,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-13-door.99';
+const STATS_BUILD='2026-08-13-server.100';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

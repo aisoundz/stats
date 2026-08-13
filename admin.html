@@ -486,7 +486,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-13-admin.40-pretip';
+window.ADMIN_BUILD='2026-08-13-admin.41-tally';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -2053,40 +2053,37 @@ async function gradeAllScored(){
 
   // 2) every player — so their prediction/catch points are preserved, not clobbered.
   const playersSnap = await F.getDocs(F.collection(db,'nights',night,'players'));
-  const tally = {};
+  const players = {};
   playersSnap.forEach(p=>{
     const d = p.data() || {};
-    tally[p.id] = { live:0, speed:0, rounds:0,
-      predPts:(typeof d.predPts==='number'?d.predPts:0),
-      catchPts:(typeof d.catchPts==='number'?d.catchPts:0) };
+    players[p.id] = { predPts:(typeof d.predPts==='number'?d.predPts:0),
+                      catchPts:(typeof d.catchPts==='number'?d.catchPts:0) };
   });
 
-  // 3) grade each scored round from its subs (pick text === key text).
+  // 3) every scored round's submissions, as plain data.
+  const subs = {};
   for(const rd of scored){
     const subsSnap = await F.getDocs(F.collection(db,'nights',night,'rounds',rd.id,'subs'));
+    subs[rd.id] = {};
     subsSnap.forEach(s=>{
-      const t = tally[s.id]; if(!t) return;      // a sub with no player doc — skip
       const sub = s.data() || {};
-      const picks = Array.isArray(sub.picks)?sub.picks:[];
-      const banks = Array.isArray(sub.banks)?sub.banks:[];
-      let correct = 0, sp = 0;
-      for(let i=0;i<rd.key.length;i++){
-        const pk = picks[i];
-        if(pk!=null && pk!=='' && String(pk)===String(rd.key[i])){ correct++; sp += Number(banks[i]||0); }
-      }
-      t.live  += correct * rd.worth;
-      t.speed += sp;
-      t.rounds += 1;                              // rounds this player actually answered
+      subs[rd.id][s.id] = { picks: Array.isArray(sub.picks)?sub.picks:[],
+                            banks: Array.isArray(sub.banks)?sub.banks:[] };
     });
   }
 
-  // 4) write each player's authoritative total. pts = live + their own
-  //    prediction/catch points, so nothing else on the doc is disturbed.
+  /* 4) the arithmetic itself lives in the @host-shared block, so the
+        off-laptop runner scores with THIS function rather than a second
+        copy of it. Fetching and writing stay here where the web SDK is;
+        only the maths is shared. */
+  const t3 = AUTO.tally(scored, players, subs);
+
+  // 5) write each player's authoritative total.
   let n = 0;
-  for(const uid in tally){
-    const t = tally[uid];
+  for(const uid in t3){
+    const t = t3[uid];
     await F.setDoc(F.doc(db,'nights',night,'players',uid), {
-      pts: t.live + t.predPts + t.catchPts,
+      pts: t.pts,
       speed: t.speed,
       roundsDone: t.rounds,
       lastScoredBy: 'host',
@@ -4505,8 +4502,64 @@ var AUTO = (function(){
     }catch(e){ return { ok:false, why:'threw: '+((e&&e.message)||e) }; }
   }
 
+  /* ---- SCORING, AS ARITHMETIC ------------------------------------
+     Deliberately pure: no Firestore, no DOM, no clock. It takes what the
+     database already said and returns what every player is worth. The
+     caller does all the reading and all the writing.
+
+     That split is the whole point. The Control Room fetches with the web
+     SDK, the off-laptop runner fetches with the Admin SDK, and both hand
+     the same shapes to this one function — so a score cannot come out
+     differently depending on which machine happened to be awake. Two
+     scorers would be the same bug as two question banks, and that one
+     cost a player his entire night on Game Night #7.
+
+     `scored`  [{ id, key:[text], worth }]
+     `players` { uid: { predPts, catchPts } }
+     `subs`    { roundId: { uid: { picks:[text], banks:[number] } } }
+
+     Prediction and Caught It points are carried straight through from the
+     player document and NOT recomputed, because only the phone knows them.
+     That is a real limit on how much of this the server can own, and it is
+     written here rather than hidden: round points are unforgeable after
+     this change, the other two lanes are still reported by the client. */
+  function tally(scored, players, subs){
+    var out = {};
+    Object.keys(players||{}).forEach(function(uid){
+      var p = players[uid] || {};
+      out[uid] = { live:0, speed:0, rounds:0,
+                   predPts: (typeof p.predPts==='number' && isFinite(p.predPts)) ? p.predPts : 0,
+                   catchPts:(typeof p.catchPts==='number'&& isFinite(p.catchPts)) ? p.catchPts : 0 };
+    });
+    (scored||[]).forEach(function(rd){
+      var worth = (typeof rd.worth==='number' && rd.worth > 0) ? rd.worth : 1;
+      var key = rd.key || [];
+      var perRound = (subs||{})[rd.id] || {};
+      Object.keys(perRound).forEach(function(uid){
+        var t = out[uid]; if(!t) return;          // a sub with no player row
+        var sub = perRound[uid] || {};
+        var picks = sub.picks || [], banks = sub.banks || [];
+        var correct = 0, sp = 0;
+        for(var i=0;i<key.length;i++){
+          var pk = picks[i];
+          if(pk!==null && pk!==undefined && pk!=='' && String(pk)===String(key[i])){
+            correct++; sp += Number(banks[i]||0) || 0;
+          }
+        }
+        t.live  += correct * worth;
+        t.speed += sp;
+        t.rounds += 1;
+      });
+    });
+    Object.keys(out).forEach(function(uid){
+      var t = out[uid];
+      t.pts = t.live + t.predPts + t.catchPts;
+    });
+    return out;
+  }
+
   return { fetchFeed:fetchFeed, resolve:resolve, periodDone:periodDone, R:R, sides:sides, plays:plays,
-           inPeriod:inPeriod, armed:armed, clockSec:clockSec };
+           inPeriod:inPeriod, armed:armed, clockSec:clockSec, tally:tally };
 })();
 /* @host-shared:end */
 
