@@ -486,7 +486,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-13-admin.38-onepush';
+window.ADMIN_BUILD='2026-08-13-admin.39-quiet';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -1797,6 +1797,15 @@ function renderRun(){
         p.textContent = keyReady
           ? `This is the next round. Push it from the step at the top — the answers are already marked, so it can be revealed the second the quarter ends.`
           : `This is the next round. Push it from the step at the top of this tab, which knows where the game is up to.`;
+        a.appendChild(p);
+      }else if(nextIdx === 0){
+        /* Nothing has been pushed yet, so there is no sequence to be out of.
+           "Skip Q1" before the game has started is not a recovery path, it
+           is three buttons offering something nobody can want — which is the
+           clutter this whole change was supposed to remove, just quieter.
+           An out-of-order push only becomes a real idea once the night has
+           actually begun. */
+        p.textContent = `Waiting its turn. Nothing has been pushed yet.`;
         a.appendChild(p);
       }else{
         const skipped = cfg.tags.slice(nextIdx, i).join(', ');
