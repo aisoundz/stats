@@ -2002,7 +2002,7 @@ window.STATS_FIREBASE = {
     return (SB.me && SB.me.uid) || '';
   }
   SB.uid = uid;
-  var mine = { name: '', color: '', pts: 0, speed: 0, predPts: 0, catchPts: 0, roundsDone: 0 };
+  var mine = { name: '', color: '', pts: 0, speed: 0, predPts: 0, catchPts: 0, caughtPts: 0, roundsDone: 0 };
 
   /* ---- REAL ACCOUNTS, VIA THE INBOX --------------------------------
      A is the auth module, kept at module scope so the verification
@@ -2559,7 +2559,7 @@ window.STATS_FIREBASE = {
   SB.push = async function (o) {
     if (!SB.enabled || !meRef || !budgetWrite('push-score')) return false;
     try {
-      ['pts', 'speed', 'predPts', 'catchPts', 'roundsDone'].forEach(function (k) {
+      ['pts', 'speed', 'predPts', 'catchPts', 'caughtPts', 'roundsDone'].forEach(function (k) {
         if (typeof o[k] === 'number' && isFinite(o[k])) mine[k] = Math.max(0, Math.round(o[k]));
       });
       /* B15 — THE PHONE NO LONGER REPORTS ITS OWN SCORE.
@@ -2583,6 +2583,17 @@ window.STATS_FIREBASE = {
         return F.setDoc(meRef, {
           predPts: mine.predPts,
           catchPts: mine.catchPts,
+          /* B16 — CAUGHT IT WAS ABOUT TO STOP COUNTING. It reached the board
+             only inside the phone's own `pts` push, because gradeAllScored
+             has always computed live + predPts + catchPts and never knew
+             about the caught lane. That was survivable while the phone also
+             wrote the total; the moment it stopped, every Caught It point
+             would have quietly vanished from the room and only the player's
+             own screen would have remembered them.
+             Found by working out the real prediction ceiling for the rules,
+             not by a test. Same category as predPts: the phone resolves it,
+             so the phone reports it, and the rules bound it. */
+          caughtPts: mine.caughtPts,
           lastSeen: F.serverTimestamp()
         }, { merge: true });
       });
@@ -7714,7 +7725,7 @@ async function pushScore(){
   if(!window.SB || !SB.enabled) return;
   await SB.push({
     pts:S.pts, speed:S.speed,
-    predPts:S.predPts||0, catchPts:S.catchPts||0,
+    predPts:S.predPts||0, catchPts:S.catchPts||0, caughtPts:S.caughtPts||0,
     roundsDone:S.qi+1
   });
 }
@@ -11165,7 +11176,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-13-server.100';
+const STATS_BUILD='2026-08-13-server.101';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

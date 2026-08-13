@@ -486,7 +486,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-13-admin.41-tally';
+window.ADMIN_BUILD='2026-08-13-admin.42-lanes';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -2057,7 +2057,8 @@ async function gradeAllScored(){
   playersSnap.forEach(p=>{
     const d = p.data() || {};
     players[p.id] = { predPts:(typeof d.predPts==='number'?d.predPts:0),
-                      catchPts:(typeof d.catchPts==='number'?d.catchPts:0) };
+                      catchPts:(typeof d.catchPts==='number'?d.catchPts:0),
+                      caughtPts:(typeof d.caughtPts==='number'?d.caughtPts:0) };
   });
 
   // 3) every scored round's submissions, as plain data.
@@ -4529,7 +4530,8 @@ var AUTO = (function(){
       var p = players[uid] || {};
       out[uid] = { live:0, speed:0, rounds:0,
                    predPts: (typeof p.predPts==='number' && isFinite(p.predPts)) ? p.predPts : 0,
-                   catchPts:(typeof p.catchPts==='number'&& isFinite(p.catchPts)) ? p.catchPts : 0 };
+                   catchPts:(typeof p.catchPts==='number'&& isFinite(p.catchPts)) ? p.catchPts : 0,
+                   caughtPts:(typeof p.caughtPts==='number'&& isFinite(p.caughtPts)) ? p.caughtPts : 0 };
     });
     (scored||[]).forEach(function(rd){
       var worth = (typeof rd.worth==='number' && rd.worth > 0) ? rd.worth : 1;
@@ -4553,7 +4555,10 @@ var AUTO = (function(){
     });
     Object.keys(out).forEach(function(uid){
       var t = out[uid];
-      t.pts = t.live + t.predPts + t.catchPts;
+      /* Four lanes, not three. The caught lane was missing here for as
+         long as this function has existed and nobody noticed, because the
+         phone was also writing the total and its version had all four. */
+      t.pts = t.live + t.predPts + t.catchPts + t.caughtPts;
     });
     return out;
   }
