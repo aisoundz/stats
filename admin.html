@@ -486,7 +486,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-13-admin.36-autopilot';
+window.ADMIN_BUILD='2026-08-13-admin.37-resolvers';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -957,10 +957,42 @@ function loadDraft(){
    every phone in the room. So the questions arrive ready and the answer
    arrives from the host, which is exactly the split that makes the number
    on the leaderboard mean something. */
+/* B11 — THE RESOLVER NEVER REACHED THE DRAFT.
+   This line copied the text, the options and the answer slot, and dropped
+   `r` on the floor. It did not matter for a year of nights, because the
+   only thing that used resolvers was the ESPN panel, and that reads BANK
+   directly. The moment the plan was published FROM THE DRAFT instead, all
+   sixteen resolvers vanished and the off-laptop runner would have opened
+   every round on time and then stalled on every single one — while the
+   Control Room said "automated".
+
+   One fact, many copies, again: BANK owns the resolver, the draft was a
+   copy of BANK, and the copy was lossy. Carry it. */
 function bankRound(id, i){
   const rs = BANK[id];
   if(!rs || !rs[i]) return [];
-  return rs[i].map(q => ({ t:String(q.t||''), o:(q.o||[]).map(String), k:null }));
+  return rs[i].map(q => ({ t:String(q.t||''), o:(q.o||[]).map(String), r:String(q.r||''), k:null }));
+}
+/* The fix above only helps a round seeded from now on. Every draft already
+   sitting in a host's localStorage was seeded by the lossy version and has
+   no `r` in it, and `seedRound` deliberately refuses to re-seed a round it
+   has already fed. So the plan publisher needs to be able to recover the
+   resolver from the bank.
+
+   MATCHED ON TEXT, NOT ON INDEX. Position alone would happily hand question
+   three's resolver to a question the host rewrote by hand, and a resolver
+   attached to the wrong question is exactly the confidently-wrong key this
+   whole design exists to prevent. If the text has changed, the question has
+   no resolver and Publish says so. */
+function resolverFor(id, i, x, q){
+  try{
+    if(q && q.r) return String(q.r);
+    var b = (BANK[id]||[])[i]||[];
+    var bq = b[x];
+    if(!bq || !bq.r) return '';
+    if(String(bq.t||'').trim() !== String((q&&q.t)||'').trim()) return '';
+    return String(bq.r);
+  }catch(_){ return ''; }
 }
 /* A fingerprint of a round's question TEXT. Options and answer keys are
    deliberately excluded: the host marking an answer is not an edit to the
@@ -2341,6 +2373,7 @@ function watchSubs(i){
    rewrite — that is why the deciding is separated from the doing here.
    ================================================================== */
 var HOST = {
+  event: '',            // B12: the autopilot's own event id, never borrowed
   on:false, tick:null, log:[], busy:false,
   answerMs: 150000,        // 2m30 of answering, unless the room finishes early
   graceMs:  20000,         // let the feed settle before trusting "period done"
@@ -2425,10 +2458,28 @@ async function hostTick(){
     if(!FB || !FB.auth || !FB.auth.currentUser){ hostSay('stop','Signed out — the host cannot write. Stopping.'); hostStop(); return; }
     if(typeof night === 'undefined' || !night){ return; }
     var cfg = nightCfg(night);
-    if(!eventId){ try{ eventId = await ESPN.resolveEvent(cfg, night); }catch(_){} }
-    if(!eventId){ hostSay('wait','Still looking for the game on ESPN.'); return; }
+    /* B12 — this used to read `eventId`, which is declared inside the ESPN
+       panel's IIFE eleven hundred lines below and is invisible from here.
+       Not a subtle failure: every tick threw ReferenceError before it ever
+       reached the feed, so the autopilot had never once looked at a game.
+       The log said "Tick failed: eventId is not defined" every 20 seconds
+       and I had not read my own log.
 
-    var sum; try{ sum = await AUTO.fetchFeed(eventId); }
+       HOST now owns its own copy, seeded from the thing that actually owns
+       the mapping — the night config, which carries `espn` — and only falls
+       back to a search when a night was configured without one. */
+    if(!HOST.event){
+      try{ if(cfg && cfg.espn) HOST.event = String(cfg.espn); }catch(_){}
+    }
+    if(!HOST.event){
+      try{
+        var _E = window.STATS_ESPN;
+        if(_E && _E.resolveEvent) HOST.event = await _E.resolveEvent(cfg, night);
+      }catch(_){}
+    }
+    if(!HOST.event){ hostSay('wait','Still looking for the game on ESPN.'); return; }
+
+    var sum; try{ sum = await AUTO.fetchFeed(HOST.event); }
     catch(e){ hostSay('wait','Feed unreachable — will try again.'); return; }
 
     /* The heartbeat. A room whose host has gone offline should be able to
@@ -2513,10 +2564,10 @@ async function publishPlan(){
   var rounds = nd.rounds.map(function(rd,i){
     return {
       tag: cfg.tags[i], name: cfg.names[i], worth: rd.worth,
-      qs: rd.qs.map(function(q){
+      qs: rd.qs.map(function(q,x){
         return { t:String(q.t||'').trim(),
                  o:(q.o||[]).map(function(o){ return String(o).trim(); }).filter(Boolean),
-                 r:q.r||'',
+                 r:resolverFor(night, i, x, q),
                  /* A mark the host has already set travels with the plan,
                     and the runner uses it verbatim rather than resolving
                     over the top of a human's decision. */
@@ -2545,8 +2596,19 @@ function hostStart(){
   if(HOST.on) return;
   HOST.on = true;
   HOST.acted = {}; HOST.seenDone = {};
+  /* Cleared on every start, not just declared once: a host who switches
+     nights and presses go again must not inherit the previous game's id. */
+  HOST.event = '';
   hostSay('on','Autopilot on. Watching the feed — it will open each quarter when it ends and score it when the room is in.');
-  try{ if(!ESPN.liveOn) ESPN.toggleLive(); }catch(_){}
+  /* Same B12 scope bug as the tick, and worse for being inside a catch that
+     ate it: `ESPN` is private to the panel's IIFE, so this line has never
+     done anything. The autopilot claimed to be watching and left the live
+     scoreboard switched off, silently, every night. Reach for the global
+     the panel actually publishes. */
+  try{
+    var _E0 = window.STATS_ESPN;
+    if(_E0 && !_E0.liveOn && _E0.toggleLive) _E0.toggleLive();
+  }catch(_){}
   HOST.tick = setInterval(hostTick, 20000);
   hostTick();
   try{ renderHost(); }catch(_){}
