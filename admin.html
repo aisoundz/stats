@@ -486,7 +486,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-13-admin.39-quiet';
+window.ADMIN_BUILD='2026-08-13-admin.40-pretip';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -3704,10 +3704,40 @@ boot();
     var T = E.teams(sum);
     var st = sum.header?.competitions?.[0]?.status || {};
     var per = st.period||0, state = st.type?.state;
-    var label = state==='post' ? 'Final' : (per>=1 && cfg.tags[per-1] ? cfg.tags[per-1]+' in progress' : cfg.tags[0]+' in progress');
+    /* B13 — THE SAME BUG I FIXED IN THE RUNNER AND LEFT SITTING HERE.
+       This line used to fall through to `cfg.tags[0]` for any state that
+       wasn't 'post', so a game that had not started reported period 0 as
+       "Q1 in progress" and this tick posted 0 — 0 into the room. It did
+       exactly that to Game Night #8 fifteen minutes before the runner's
+       first heartbeat: every phone opening the app the day before tip saw
+       the Fever and the Wings locked at nil-nil in the first quarter.
+
+       Found by the runner staying silent next to it. That contrast is the
+       whole argument for the shadow test — and the fact that I patched
+       run.js this morning and left the identical line here, on the same
+       day I kept saying every bug is one fact in two places, is the
+       argument for fixing BOTH copies or neither.
+
+       Empty label means say nothing, and saying nothing is correct until
+       the ball is up. Overtime is named too, rather than wrapping round to
+       "Q1 in progress" for the best five minutes of the night. */
+    var label = '';
+    if(state==='post') label = 'Final';
+    else if(state==='in'){
+      if(per > cfg.tags.length) label = (per-cfg.tags.length>1 ? 'OT'+(per-cfg.tags.length) : 'OT') + ' in progress';
+      else label = (per>=1 && cfg.tags[per-1] ? cfg.tags[per-1] : cfg.tags[0]) + ' in progress';
+    }
     if($('scAway')) $('scAway').value = T.awayScore;
     if($('scHome')) $('scHome').value = T.homeScore;
     var sel=$('scPeriod'); if(sel){ var opt=Array.prototype.find.call(sel.options,function(o){return o.value===label;}); if(opt) sel.value=label; }
+    if(!label){
+      /* Before tip there is nothing true to post. Say so on the host's own
+         screen rather than silently doing nothing, so the panel reading
+         "waiting" is a fact and not a symptom. */
+      setState('waiting for tip-off — nothing posted to the room yet');
+      try{ await CI.tick(sum, T); }catch(e){}
+      return;
+    }
     try{ await writeScore(T.awayScore, T.homeScore, label, ($('scNote')&&$('scNote').value)||''); }catch(e){}
     setState((state==='post'?'Final':'live')+' · '+cfg.away+' '+T.awayScore+' — '+cfg.home+' '+T.homeScore+' ('+(st.type?.shortDetail||label)+')');
     /* Call It rides this same tick — isolated, never touches the score above. */
