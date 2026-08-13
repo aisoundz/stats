@@ -472,7 +472,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-12-admin.34-auto';
+window.ADMIN_BUILD='2026-08-13-admin.35-gn8';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -528,6 +528,16 @@ const NIGHTS = [
   /* `espn` is new and it is the hinge for the autonomous host: it is the
      event id the resolvers read. A night without one can still be run by
      hand, it just cannot be run by the robot. */
+  /* GAME NIGHT #8 — DALLAS AT INDIANA, and note the tip: 7:30 ET, not 8:00.
+     The last two nights were 8:00 and that is exactly the kind of fact that
+     gets copied forward by hand. Verified against the scoreboard feed for
+     2026-08-14: event 401857143, ION, Gainbridge Fieldhouse. Indiana are
+     home so they are drawn on the right. */
+  { id:'gn8-2026-08-14-dal-ind', label:'Game Night #8 — Wings @ Fever (Fri Aug 14, 7:30 ET · ION)',
+    away:'DAL', home:'IND', espn:'401857143',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[10,20,30,40] },
   { id:'gn7-2026-08-12-tor-dal', label:'Game Night #7 — Tempo @ Wings (Wed Aug 12, 8:00 ET · USA Network)',
     away:'TOR', home:'DAL', espn:'401857137',
     tags:['Q1','Q2','Q3','Q4'],
@@ -588,6 +598,45 @@ const BANK = {
      question with no resolver does not belong in this bank any more. That
      single constraint is what turns the Control Room from a thing a human
      drives into a thing a human watches. */
+  /* GAME NIGHT #8. This is Game Night #7's bank with two words changed.
+
+     That is the point, and it is a deliberate refusal to be creative. All
+     sixteen of these resolved correctly on Wednesday — the autofill filled
+     twelve across three finished quarters, eleven at HIGH confidence and one
+     at MED, and the MED one was right too. A question bank that has survived
+     a real night is worth more than a better idea that has not, and Friday
+     is a night for proving the machinery rather than the questions.
+
+     Only the two team words move: Wings and Fever, Dallas away, Indiana
+     home. teamOpt() matches option text against the live team name and
+     abbreviation, so it does not care about the order, but a host reading
+     these out loud does. */
+  'gn8-2026-08-14-dal-ind': [
+    [
+      { t: 'The first points of the game — how did they come?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throws'], r:'firstScoreKind' },
+      { t: 'Which team made the first three-pointer of the game?', o: ['Fever', 'Wings', 'Neither made one in Q1'], r:'firstThreeTeam' },
+      { t: 'Threes made in Q1, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'threesBand' },
+      { t: 'The team that scored first — were they still ahead at the Q1 buzzer?', o: ['Yes', 'No', 'It was tied'], r:'firstScorerStillAhead' }
+    ],
+    [
+      { t: 'In Q2, both teams combined — were there more made field goals or made free throws?', o: ['Made field goals', 'Made free throws', 'Equal'], r:'fgVsFt' },
+      { t: 'How many times did the lead change hands in Q2? (a tie is not a lead change)', o: ['None', 'Once', 'Twice', 'Three or more'], r:'leadChanges' },
+      { t: 'Did either team score 10 or more unanswered points at any stage of Q2?', o: ['Yes', 'No'], r:'tenUnanswered' },
+      { t: 'The last shot attempt before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'], r:'lastShotOfPeriod' }
+    ],
+    [
+      { t: 'Which team scored the first points after halftime?', o: ['Fever', 'Wings'], r:'firstScoreTeam' },
+      { t: '24-second shot-clock violations tonight, both teams combined, Q1 through Q3 — how many?', o: ['None', '1', '2', '3 or more'], r:'shotClockCount' },
+      { t: 'In Q3, both teams combined — were there more threes made or turnovers?', o: ['Threes made', 'Turnovers', 'Equal'], r:'threesVsTurnovers' },
+      { t: 'Through three quarters, how many players have reached double figures in points, both teams combined?', o: ['None or one', 'Two', 'Three', 'Four or more'], r:'doubleFiguresBand' }
+    ],
+    [
+      { t: 'In the last two minutes, both teams combined — were there more free-throw attempts or field-goal attempts?', o: ['Free-throw attempts', 'Field-goal attempts', 'Equal'], r:'lastTwoFtVsFg' },
+      { t: 'Did any player on either team foul out?', o: ['Yes', 'No'], r:'anyFoulOut' },
+      { t: 'The last basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'], r:'lastBasketWorth' },
+      { t: 'The team that led at halftime — did they win the game?', o: ['Yes', 'No', 'It was tied at half'], r:'halftimeLeaderWon' }
+    ]
+  ],
   'gn7-2026-08-12-tor-dal': [
     [
       { t: 'The first points of the game — how did they come?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throws'], r:'firstScoreKind' },

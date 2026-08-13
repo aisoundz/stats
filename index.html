@@ -3421,27 +3421,86 @@ window.STATS_FIREBASE = {
    re-skins to ANY game — NBA, G-League, college, WNBA.
    In production this loads from the nightly schedule feed. */
 const BB_GAME={
-  nightId:"gn7-2026-08-12-tor-dal",
-  espnEvent:"401857137",   // drives the auto-pulled matchup card on the home page
-  tipISO:"2026-08-13T00:00:00Z",   // 8:00 pm ET. Used by the countdown; never parsed from a display string.
-  homeName:"Dallas Wings",    homeAbbr:"DAL", homeNick:"Wings", homeEmoji:"🪽", homeColor:"#002b5c",
-  awayName:"Toronto Tempo",   awayAbbr:"TOR", awayNick:"Tempo", awayEmoji:"🍁", awayColor:"#33476D",
-  venue:"College Park Center", date:"Wed · August 12", short:"August 12", shareDate:"AUG 12", night:"Game Night #7",
-  /* Verified against the ESPN schedule and the event feed on Aug 12:
-     Toronto Tempo at Dallas Wings, 8:00 p.m. ET, USA Network, College Park
-     Center in Arlington. Toronto are the road team so Dallas are `home`
-     here — the app draws home on the right of the VS badge. Event
-     401857137. Colours, records and the OUT list come from the same feed.
+  nightId:"gn8-2026-08-14-dal-ind",
+  espnEvent:"401857143",   // verified against the WNBA scoreboard for 2026-08-14
+  tipISO:"2026-08-14T23:30:00Z",   // 7:30 pm ET. Never parsed from a display string.
+  homeName:"Indiana Fever",   homeAbbr:"IND", homeNick:"Fever", homeEmoji:"\uD83D\uDD25", homeColor:"#002d62",
+  awayName:"Dallas Wings",    awayAbbr:"DAL", awayNick:"Wings", awayEmoji:"\uD83E\uDEBD", awayColor:"#002b5c",
+  venue:"Gainbridge Fieldhouse", date:"Fri \u00B7 August 14", short:"August 14", shareDate:"AUG 14", night:"Game Night #8",
+  /* Pulled from the event feed on Aug 13, not from memory: Dallas Wings at
+     Indiana Fever, 7:30 p.m. ET \u2014 NOT 8:00, which is what the last two
+     nights have been and is exactly the sort of thing that gets copied
+     forward by hand. On ION. Gainbridge Fieldhouse, Indianapolis. Indiana
+     are home, so the app draws them on the right of the VS badge.
 
-     FIRST NIGHT WITH AN EXPANSION TEAM IN IT. Toronto is a 2026 team, so
-     there is no franchise history to lean on and several of the season
-     splits the Deep Cut engine likes will be thin. That is fine — the
-     engine already hides a cut it cannot source — but it is the reason
-     tonight's questions lean on what is happening in front of you rather
-     than on career numbers. */
-  net:"USA Network",
-  tip:"Tip-off 8:00 ET · 7:00 CT · 5:00 PT · USA Network"
+     TWO THINGS TO CHECK BEFORE THE EMAIL GOES OUT. Indiana's primary colour
+     is #002d62 \u2014 navy on near-black, which is the exact case tcGuard()
+     exists for; it lifts lightness in HSL and verifies by measurement, so
+     this should be readable, but it is worth one look on a phone.
+
+     And Dallas are listed with FIVE players out, including Aziaha James,
+     who played on Wednesday. An injury list that long two days out is
+     usually provisional. Re-read it on Friday afternoon before writing the
+     email, because "two of your six picks just lost their obvious answer"
+     is only a good line while it is true. */
+  net:"ION",
+  tip:"Tip-off 7:30 ET \u00B7 6:30 CT \u00B7 4:30 PT \u00B7 ION"
 };
+/* ============ LEAN — THE FOUR SURFACES ==============================
+   Game Night #7 ran nine surfaces in front of three players and produced
+   nine ambiguous signals. Five of twelve rounds reached the server and not
+   one player finished on their true score, and it took six hours of live
+   triage to find out — because when everything is on, a break is not
+   attributable to anything.
+
+   So the night runs on four things: THE SCORE, THE QUARTER ROUND, THE
+   RECEIPT, THE BOARD. That is the whole product for the next two nights.
+
+   What LEAN switches off, and why each one is extra rather than wrong:
+
+     Win probability     ESPN's number, weighted by a pregame line. It said
+                         89% DAL on a six-point game and every player who
+                         read it trusted the app less.
+     The sparkline       The biggest block on the page. 157 readings of a
+                         near-flat line with no axis. Also the element that
+                         pushed the sticky header past its cap.
+     The run bar         True, and it contradicted the win probability
+                         directly above it, in adjacent lines.
+     Deep cuts           A stranger's season average, printed larger than
+                         your own card.
+     The game in numbers Shot zones, assist networks, plus/minus, the line.
+     The play-by-play    The one thing ESPN does better than us.
+     The watchlist       A second scoring mechanic on a night we are trying
+                         to prove the first one.
+     Caught It           Now scores properly and is tested. Still a second
+                         scoring mechanic. It comes back first.
+     Stats and Talk      Two whole tabs nobody opened during a live game.
+
+   Nothing here is deleted. This is one boolean, and every feature comes
+   back one per night once the floor holds two clean nights in a row.
+   Flip it to false and the app is exactly what it was.                  */
+/* A `var`, not a `const`, for one reason: the gate has to be able to prove
+   BOTH modes. Every check written before tonight drives the full app, and a
+   flag that cannot be turned off would have silently deleted that coverage
+   the moment it shipped — which is the exact class of thing this flag exists
+   to stop. The suite runs the machinery with it off and the four surfaces
+   with it on. */
+var LEAN_ON = true;
+function lean(){ try{ return !!LEAN_ON; }catch(_){ return false; } }
+const LEAN_TABS_OFF = ['stats','crew'];
+/* Toggles BOTH ways, and paintNav calls it, so the nav can never be left
+   showing a tab that navGo will refuse — a visible button that does nothing
+   when tapped is worse than a missing one. */
+function leanStripTabs(){
+  try{
+    LEAN_TABS_OFF.forEach(function(t){
+      var b=document.querySelector('#botnav [data-nav="'+t+'"]');
+      if(b){ b.style.display = lean() ? 'none' : ''; b.disabled = !!lean(); }
+    });
+  }catch(_){}
+}
+try{ document.addEventListener('DOMContentLoaded', leanStripTabs); setTimeout(leanStripTabs, 0); }catch(_){}
+
 const COLORS=["#2f6bff","#19c3d6","#ff4d5e","#ffc54d","#2ee6a6","#b57cff","#ff924d","#4dd0ff"];
 /* THE WHOLE BENCH. Six a side was a deliberate cap for five game nights and
    it was the wrong call: "if I think a rookie might do good I can't vote for
@@ -3453,22 +3512,20 @@ const COLORS=["#2f6bff","#19c3d6","#ff4d5e","#ffc54d","#2ee6a6","#b57cff","#ff92
    twenty-seven names still reads as two short lists rather than one long
    one. Anyone ruled out keeps their OUT flag; they stay pickable-adjacent
    so you can see for yourself who isn't available. */
-const BB_ROSTER={ // full names — used on the prediction sheet & final review
-  /* Pulled live from the ESPN roster endpoints (teams/3 Dallas and
-     teams/131935 Toronto), not from memory, and ordered by who is most
-     likely to be on the floor. Four Dallas players and one Toronto player
-     are ruled out tonight; they stay on the list on purpose, carrying an
-     OUT flag, so a player can see for themselves who is unavailable
-     instead of wondering why a name is missing. */
-  home:["Paige Bueckers","Arike Ogunbowale","Maddy Siegrist","Alanna Smith","Aziaha James",
-        "Haley Jones","Awak Kuier","Odyssey Sims","Sug Sutton","Li Yueru",
-        "Alysha Clark","Azzi Fudd","Jessica Shepard","Costanza Verona"],
-  away:["Marina Mabrey","Kia Nurse","Nyara Sabally","Aneesah Morrow","Isabelle Harrison",
-        "Kiki Rice","Temi Fagbenle","Julie Allemand","Maria Conde","Zaay Green",
-        "Ornella Bankole","Laura Juskaite","Teonni Key","Brittney Sykes"]
+const BB_ROSTER={ // full names \u2014 used on the prediction sheet & final review
+  /* Pulled live from the ESPN roster endpoints (teams/5 Indiana, teams/3
+     Dallas) on Aug 13, ordered by who is most likely to be on the floor.
+     Players currently listed OUT stay on the list on purpose \u2014 a name that
+     simply vanishes reads as a bug, and seeing who is unavailable is part of
+     reading the game. */
+  home:["Caitlin Clark","Kelsey Mitchell","Aliyah Boston","Lexie Hull","Sophie Cunningham",
+        "Monique Billings","Makayla Timpson","Myisha Hines-Allen","Tyasha Harris",
+        "Mercedes Russell","Grace VanSlooten","Raven Johnson","Damiris Dantas",
+        "Bree Hall","Michelle Onyiah"],
+  away:["Paige Bueckers","Arike Ogunbowale","Maddy Siegrist","Alanna Smith","Awak Kuier",
+        "Odyssey Sims","Alysha Clark","Sug Sutton","Li Yueru","Aziaha James",
+        "Haley Jones","Azzi Fudd","Jessica Shepard","Costanza Verona"]
 };
-/* Two short lists beat one long one. The deck reads this when it renders a
-   player pick, so the roster order above is the only place names live. */
 const BB_GROUPS=[{ab:BB_GAME.homeAbbr,name:BB_GAME.homeName,names:BB_ROSTER.home},
                  {ab:BB_GAME.awayAbbr,name:BB_GAME.awayName,names:BB_ROSTER.away}];
 /* Prediction sheet definition (matches arena rules: 6 categories, base + bonus)
@@ -3495,11 +3552,11 @@ const BB_PREDS=[
   // NOTE: `answer`/`num` below are the SIMULATED results Practice mode plays
   // against — never a claim about the real game. They must always be names
   // that exist in the roster above, or practice grades against a ghost.
-  {id:"pts", q:"Who scores the most points?", label:"Most points", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Paige Bueckers", num:24, numLabel:"How many pts?"},
-  {id:"ast", q:"Who dishes the most assists?", label:"Most assists", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Julie Allemand", num:7, numLabel:"How many assists?"},
-  {id:"stl", q:"Who racks up the most steals?", label:"Most steals", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Kia Nurse", num:3, numLabel:"How many steals?"},
-  {id:"reb", q:"Who grabs the most rebounds?", label:"Most rebounds", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Nyara Sabally", num:11, numLabel:"How many rebounds?"},
-  {id:"blk", q:"Who swats the most blocks?", label:"Most blocks", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Alanna Smith", num:3, numLabel:"How many blocks?"}
+  {id:"pts", q:"Who scores the most points?", label:"Most points", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Caitlin Clark", num:22, numLabel:"How many pts?"},
+  {id:"ast", q:"Who dishes the most assists?", label:"Most assists", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Caitlin Clark", num:8, numLabel:"How many assists?"},
+  {id:"stl", q:"Who racks up the most steals?", label:"Most steals", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Lexie Hull", num:3, numLabel:"How many steals?"},
+  {id:"reb", q:"Who grabs the most rebounds?", label:"Most rebounds", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Aliyah Boston", num:10, numLabel:"How many rebounds?"},
+  {id:"blk", q:"Who swats the most blocks?", label:"Most blocks", base:50, bonus:50, opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Aliyah Boston", num:2, numLabel:"How many blocks?"}
 ];
 /* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
    Every question is answerable by WATCHING the broadcast at the break — no lookups,
@@ -3751,6 +3808,11 @@ function isLastRound(i){return i>=NR-1;}
 // or the 1st half vs the 2nd.
 function lifelineKey(i){return i < Math.ceil(NR/2) ? 'lifelineHalf1' : 'lifelineHalf2';}
 function emptyRounds(){return Array.from({length:NR},()=>[]);}
+/* LEAN empties the watchlist rather than hiding it, so every downstream
+   count, cap and denominator that reads CATCHES.length agrees there is
+   nothing there — a hidden card whose points still exist in MAXPTS is the
+   kind of half-off that produces a wrong total. */
+if(typeof LEAN_ON!=='undefined' && LEAN_ON){ try{ CATCHES.length=0; }catch(_){} }
 const CATCH_PTS=CATCHES.length*10;                    // 10 pts per catch
 
 const bots=[
@@ -7999,6 +8061,10 @@ function caughtWorth(streak){
 }
 
 function startCallItWatch(){
+  /* LEAN. Caught It scores properly now and it is tested, but it is still a
+     second scoring mechanic on a night whose whole purpose is proving the
+     first one. It is the first thing that comes back. */
+  if(lean()) return;
   if(PCI.unsub || S.mode!=='live' || !window.SB || !SB.watchCallIt) return;
   ensureCiCard();
   try{ PCI.unsub = SB.watchCallIt(onCallItQuestions) || null; }catch(e){}
@@ -10982,7 +11048,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-13-truth.93';
+const STATS_BUILD='2026-08-13-lean.94';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -11124,6 +11190,10 @@ function tabsUnlocked(){
   return false;
 }
 function navGo(tab){
+  /* Belt and braces with leanStripTabs(): a hidden button is not a closed
+     door. Swipe handlers, the keyboard and any stale onclick all come
+     through here. */
+  if(lean() && LEAN_TABS_OFF.indexOf(tab)>=0) return;
   if(TAB_LOCKED[tab] && !tabsUnlocked()){
     try{ trk('tab_locked',{tab:tab}); }catch(_){}
     try{ PENDING_TAB = tab; }catch(_){}
@@ -11368,6 +11438,7 @@ try{ document.addEventListener('keydown',function(e){ if(e.key==='Escape') close
 
 function paintNav(active){
   const bar=document.getElementById('botnav'); if(!bar) return;
+  try{ leanStripTabs(); }catch(_){}
   let scr=''; try{ scr=S.screen||''; }catch(_){}
   const hide = NAV_HIDE_ON.indexOf(scr)>=0;
   bar.style.display = hide ? 'none' : 'block';
@@ -13662,8 +13733,8 @@ function renderGametime(){
     +       (recH?'<div class="rec">'+esc(recH)+'</div>':'')+'</div>'
     +   '</div>'
     + '</div>'
-    + gtWinProb(A,H,AC,HC)
-    + gtRunBlock(A,H,AC,HC)
+    + (lean()?'':gtWinProb(A,H,AC,HC))
+    + (lean()?'':gtRunBlock(A,H,AC,HC))
     + '</div>';
   return renderGametimeRest();
 }
@@ -14047,15 +14118,17 @@ function renderGametimeRest(){
   let out='';
   try{ out += gtStartRow(); }catch(_){}
   try{ out += gtYourNight(); }catch(_){}
-  try{ out += gtDeepCutBlock(); }catch(_){}
+  if(!lean()){ try{ out += gtDeepCutBlock(); }catch(_){} }
 
   let more='';
-  try{ more += gtShotZones(); }catch(_){}
-  try{ more += gtAssists(); }catch(_){}
-  try{ more += gtPlusMinus(); }catch(_){}
-  try{ more += gtBuilding(); }catch(_){}
-  try{ more += gtLine(); }catch(_){}
-  try{ more += gtCallItRecord(); }catch(_){}
+  if(!lean()){
+    try{ more += gtShotZones(); }catch(_){}
+    try{ more += gtAssists(); }catch(_){}
+    try{ more += gtPlusMinus(); }catch(_){}
+    try{ more += gtBuilding(); }catch(_){}
+    try{ more += gtLine(); }catch(_){}
+    try{ more += gtCallItRecord(); }catch(_){}
+  }
   if(more){
     out += '<details class="adraw"><summary>The game, in numbers</summary>'
         +  '<div class="adrawin">'+more+'</div></details>';
@@ -14065,7 +14138,8 @@ function renderGametimeRest(){
   try{ syncStickyFit(); }catch(_){}
   try{ idle.style.marginTop = out ? '4px' : '0'; }catch(_){}
   try{ var sl=document.getElementById('ciSlot'); if(sl) sl.style.marginTop = sl.children.length ? '14px' : '0'; }catch(_){}
-  try{ feedRender(); }catch(_){}
+  if(!lean()){ try{ feedRender(); }catch(_){} }
+  else { try{ var fw=document.getElementById('gtFeed'); if(fw) fw.innerHTML=''; }catch(_){} }
 }
 
 /* The deep cut, in Arena dress. Moved out of the Stats tab, which is the
@@ -14194,6 +14268,9 @@ try{ setInterval(function(){ try{ takeoverTick(); }catch(_){} }, 15000); }catch(
      background:rgba(10,14,23,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line2);
      transform:translateZ(0);
      padding:7px 6px calc(7px + env(safe-area-inset-bottom,0px));">
+  <!-- LEAN removes Stats and Talk from this row at boot. Both are whole tabs
+       nobody opened during a live game, and every tab is a place to be when
+       the round opens. See LEAN. -->
   <div style="max-width:430px;margin:0 auto;display:flex">
     <button class="navb" data-nav="home"  onclick="navGo('home')" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 10.6 12 3.4l8.8 7.2"/><path d="M5.6 9.6V20h12.8V9.6"/></svg><span>Home</span></button>
     <button class="navb" data-nav="gametime" onclick="navGo('gametime')" aria-label="Gametime"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.6"/><path d="M10.2 8.4 16 12l-5.8 3.6z" fill="currentColor" stroke="none"/></svg><span>Gametime</span></button>
