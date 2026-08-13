@@ -338,32 +338,37 @@
            that did nothing yet, and silence. Now it has the score of the
            game they are watching and where they stand in the room.
 
-           There is no play-by-play feed behind this and it does not
-           pretend there is. It is you, typing a number you can see on
-           your own television, and every phone in the room labels it
-           "posted by the host" with the minute you last touched it.
-           Slower than a feed, and honest, which is the trade we chose.
+           WHAT CHANGED, 13 Aug: the runner writes this document itself
+           every twenty seconds of a live game, so the hand-typed version
+           is now the fallback rather than the method. The copy says so
+           in as few words as it can, because a host who does not know
+           that will type a score, watch the automation replace it eight
+           seconds later, and reasonably conclude the panel is broken.
 
            Leave it blank and no card appears on anybody's phone. A
            scoreboard that says 0-0 at halftime is worse than none. -->
       <div class="card">
-        <h3>Live score <span class="chip" id="scState">not posted</span></h3>
-        <p class="sub">Type what's on your screen and press Post. Every phone waiting between rounds picks it up within about a minute. One line of text is optional — that's the bit people come back for.</p>
+        <h3>The score card <span class="chip" id="scState">not showing</span></h3>
+        <p class="sub"><b>You do not need this during a game.</b> Once the ball is up the host writes the score by
+          itself and keeps it within about twenty seconds of the broadcast. This panel is here for the two times
+          that is not true: the automation is down, or something wrong is showing and you want it gone.</p>
         <div class="row" style="margin-top:10px;align-items:flex-end">
           <div style="flex:1"><label for="scAway" id="scAwayLbl">Away</label>
             <input id="scAway" type="number" inputmode="numeric" min="0" max="300" step="1" placeholder="0"></div>
           <div style="flex:1"><label for="scHome" id="scHomeLbl">Home</label>
             <input id="scHome" type="number" inputmode="numeric" min="0" max="300" step="1" placeholder="0"></div>
         </div>
-        <label for="scPeriod" style="margin-top:10px;display:block">Where the game is</label>
+        <label for="scPeriod" style="margin-top:10px;display:block">What the card says under the score</label>
         <select id="scPeriod"></select>
         <label for="scNote" style="margin-top:10px;display:block">One line for the room (optional)</label>
         <input id="scNote" maxlength="90" placeholder="e.g. Fever on an 8-0 run — Clark has 14.">
         <div class="row" style="margin-top:12px">
-          <button class="btn" id="scPost" style="flex:1">Post the score</button>
-          <button class="btn ghost" id="scClear">Take it down</button>
+          <button class="btn" id="scPost" style="flex:1">Show this score</button>
+          <button class="btn ghost" id="scClear">Hide the card</button>
         </div>
-        <p class="sub tip" id="scNote2" style="margin-top:10px">Nothing here touches scoring. It is a number on a card — if you never post one, the night runs exactly as it does today.</p>
+        <p class="sub tip" id="scNote2" style="margin-top:10px"><b>Nobody's points change either way.</b> These two
+          buttons only decide whether a score card appears on the players' home screen. While a game is live the
+          automatic host will overwrite whatever you type here on its next pass — that is it doing its job.</p>
       </div>
 
       <div class="card">
@@ -487,7 +492,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-13-admin.44-archive';
+window.ADMIN_BUILD='2026-08-13-admin.45-score-copy';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -2425,7 +2430,7 @@ function fillScoreUI(){
    the laptop mid-game does not show an empty box over a live card. */
 async function loadScore(){
   fillScoreUI();
-  $('scState').textContent = 'not posted';
+  $('scState').textContent = 'not showing';
   $('scState').className = 'chip draft';
   if(!FB || !night) return;
   try{
@@ -2455,13 +2460,13 @@ async function postScore(){
 }
 
 async function clearScore(){
-  if(!confirm('Take the scoreboard down?\n\nThe card disappears from every phone. Nothing that has been scored is affected.')) return;
+  if(!confirm('Hide the score card?\n\nIt disappears from every phone. Nobody\u2019s points change.')) return;
   try{
     const { F, db } = FB;
     await F.setDoc(F.doc(db,'nights',night), { score: F.deleteField() }, { merge: true });
-    $('scState').textContent = 'not posted';
+    $('scState').textContent = 'not showing';
     $('scState').className = 'chip draft';
-    toast('Scoreboard taken down.');
+    toast('Score card hidden.');
   }catch(e){ toast('Could not take it down: ' + ((e&&e.message)||e)); }
 }
 
