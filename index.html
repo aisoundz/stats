@@ -2003,6 +2003,17 @@ window.STATS_FIREBASE = {
   }
   SB.uid = uid;
   var mine = { name: '', color: '', pts: 0, speed: 0, predPts: 0, catchPts: 0, caughtPts: 0, roundsDone: 0 };
+  /* B17 — ONE LIST OF THE SCORE LANES.
+     There were three separate literal arrays naming these fields: the join
+     restore, the read-back, and the push. Adding `caughtPts` to the push
+     and not the other two would have meant a player who refreshed mid-game
+     restored a local zero and then wrote that zero over their real Caught
+     It points on the very next push. Their own screen would have deleted
+     their score and told them nothing.
+
+     I introduced that bug half an hour ago by editing one of the three.
+     The list is a fact; it gets one home. */
+  var SCORE_LANES = ['pts', 'speed', 'predPts', 'catchPts', 'caughtPts', 'roundsDone'];
 
   /* ---- REAL ACCOUNTS, VIA THE INBOX --------------------------------
      A is the auth module, kept at module scope so the verification
@@ -2356,7 +2367,7 @@ window.STATS_FIREBASE = {
       }
       if (existing && existing.exists()) {
         var d0 = existing.data() || {};
-        ['pts','speed','predPts','catchPts','roundsDone'].forEach(function (k) {
+        SCORE_LANES.forEach(function (k) {
           if (typeof d0[k] === 'number' && isFinite(d0[k])) mine[k] = d0[k];
         });
         /* NEVER DOWNGRADE A NAME. Same reasoning as never zeroing the points
@@ -2400,7 +2411,7 @@ window.STATS_FIREBASE = {
       var snap = await F.getDoc(meRef);
       if (!snap.exists()) return null;
       var d = snap.data() || {}, out = {};
-      ['pts','speed','predPts','catchPts','roundsDone'].forEach(function (k) {
+      SCORE_LANES.forEach(function (k) {
         if (typeof d[k] === 'number' && isFinite(d[k])) out[k] = d[k];
       });
       return out;
@@ -2559,7 +2570,7 @@ window.STATS_FIREBASE = {
   SB.push = async function (o) {
     if (!SB.enabled || !meRef || !budgetWrite('push-score')) return false;
     try {
-      ['pts', 'speed', 'predPts', 'catchPts', 'caughtPts', 'roundsDone'].forEach(function (k) {
+      SCORE_LANES.forEach(function (k) {
         if (typeof o[k] === 'number' && isFinite(o[k])) mine[k] = Math.max(0, Math.round(o[k]));
       });
       /* B15 — THE PHONE NO LONGER REPORTS ITS OWN SCORE.
@@ -11176,7 +11187,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-13-server.101';
+const STATS_BUILD='2026-08-13-server.102';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
