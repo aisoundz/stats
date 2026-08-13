@@ -10270,7 +10270,24 @@ async function mountMatchup(){
     // season series
     const ss=(s.seasonseries||[])[0]||{};
     const seriesSummary=ss.summary||null;
-    const meetings=(ss.events||[]).map(e=>{
+    /* B1. TONIGHT IS NOT A PREVIOUS MEETING. Found live in the second
+       quarter of Game Night #7: the season series read "Jul 5 · Jul 10 ·
+       Aug 12: DAL 41–35" and the trash-talk line underneath said "DAL took
+       the last one 41–35" — while the game was still being played, at a
+       score the player could see moving on the same screen. Three meetings
+       listed under a header that said 2-0.
+
+       ESPN's seasonseries includes the CURRENT event, with whatever the
+       score happens to be at that moment. Every score in this list must be
+       a finished game: drop the event we are playing, and drop anything
+       ESPN has not marked completed. */
+    const _curEv=(()=>{ try{ return String(GAME.espnEvent||''); }catch(_){ return ''; } })();
+    const meetings=(ss.events||[]).filter(e=>{
+      if(_curEv && String(e.id||'')===_curEv) return false;
+      try{ const st=(e.status&&e.status.type)||e.statusType||null;
+           if(st && st.completed===false) return false; }catch(_){}
+      return true;
+    }).map(e=>{
       const cs=(e.competitors||[]).map(c=>({ab:c.team&&c.team.abbreviation,score:Number(c.score)}));
       return {date:e.date, cs}; }).filter(m=>m.cs.length===2 && m.cs.every(c=>isFinite(c.score)&&c.score>0));
     // win projection
@@ -10309,7 +10326,7 @@ async function mountMatchup(){
     }
 
     card.innerHTML=`<div class="mu">
-      <div class="mu-h"><b>Tale of the Tape</b><span class="mu-src">Live · ESPN</span></div>
+      <div class="mu-h"><b>Tale of the Tape</b><span class="mu-src">Live · ${esc(GAME.net||'ESPN data')}</span></div>
       <div class="mu-teams">${teamCol(A,GAME.awayNick,GAME.awayEmoji,AC)}<div class="mu-at">VS</div>${teamCol(H,GAME.homeNick,GAME.homeEmoji,HC)}</div>
       <div class="mu-lab">Last 5</div>
       <div class="mu-teams"><div class="mu-form">${dots(A)}</div><div></div><div class="mu-form">${dots(H)}</div></div>
@@ -10592,7 +10609,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-12-sticky.89';
+const STATS_BUILD='2026-08-12-button.90';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -13552,8 +13569,27 @@ function gtStartRow(){
         + esc(roundTag(qi)+' opens when the game tips') + '</button>';
     }
     /* Already answered and waiting on the host? Then there is nothing to
-       open and a button would be a lie. */
-    try{ if(HR && HR.submitted && HR.submitted[curRoundId&&curRoundId()]) return ''; }catch(_){}
+       open and a button would be a lie.
+
+       B0. THE BUTTON ASKED ABOUT THE WRONG QUARTER. Found on Game Night #7
+       with two devices side by side: the phone offered "Q2 ended? Answer
+       now" and the laptop, signed in as a player who had already scored
+       Q1, offered nothing at all. Same night, same round, no button.
+
+       `afterReview()` sets `S.nextQ = S.qi + 1` and deliberately leaves
+       `S.qi` where it is — `S.qi` only moves when `startQuarter()` opens a
+       round. So between scoring Q1 and opening Q2 the two disagree, which
+       is correct and intended. What was not intended is that this function
+       read BOTH: the label came from `nextQ` (Q2) and this guard came from
+       `curRoundId()`, which is built from `S.qi` (Q1). You submitted Q1, so
+       the guard fired, so the Q2 button was removed.
+
+       Score a quarter, lose the button for the next one — every quarter,
+       for every player who was keeping up. Ask about the round you are
+       actually offering. */
+    var _rid='r'+qi;
+    try{ var _h=hostedDoc(qi); if(_h && _h.id) _rid=String(_h.id); }catch(_){}
+    try{ if(HR && HR.submitted && HR.submitted[_rid]) return ''; }catch(_){}
     var hd=null; try{ hd=hostedDoc(qi); }catch(_){}
     var hLive = hd && hd.state==='live';
     var held=false; try{ held=!!(HR&&HR.held&&HR.held['r'+qi]); }catch(_){}
