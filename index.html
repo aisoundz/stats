@@ -3490,12 +3490,31 @@ function lean(){ try{ return !!LEAN_ON; }catch(_){ return false; } }
 const LEAN_TABS_OFF = ['stats','crew'];
 /* Toggles BOTH ways, and paintNav calls it, so the nav can never be left
    showing a tab that navGo will refuse — a visible button that does nothing
-   when tapped is worse than a missing one. */
+   when tapped is worse than a missing one.
+
+   IT ALSO SWEEPS THE DOOR-BEHIND-THE-DOOR. Removing the Talk tab from the
+   nav does not remove Talk: there are four other buttons that open it — on
+   the review screen, on Gametime, on the break screen and on the final
+   screen — and the first version of LEAN shipped with all four still live.
+   The player's own end-of-game screenshot caught it, which is the correct
+   outcome and the wrong way to find out.
+
+   Sweeping by visible label rather than by id is deliberate. Ids drift and
+   a fifth button will be added by someone who has forgotten this exists;
+   the label is what the player reads and is the thing that must not be
+   there. Same reason ttPaintBadge() finds its buttons the same way. */
 function leanStripTabs(){
   try{
     LEAN_TABS_OFF.forEach(function(t){
       var b=document.querySelector('#botnav [data-nav="'+t+'"]');
       if(b){ b.style.display = lean() ? 'none' : ''; b.disabled = !!lean(); }
+    });
+  }catch(_){}
+  try{
+    document.querySelectorAll('button').forEach(function(b){
+      if(!/talk trash/i.test(b.textContent||'')) return;
+      if(lean()){ b.dataset.leanHid='1'; b.style.display='none'; }
+      else if(b.dataset.leanHid){ delete b.dataset.leanHid; b.style.display=''; }
     });
   }catch(_){}
 }
@@ -7229,8 +7248,12 @@ function renderStatLine(line){
   set('slPts',  (live?t.pts:(S.pts||0)).toLocaleString());
   set('slAcc',  (live && t.total) ? t.acc+'%' : '—');
   set('streakN', S.streak || (live?t.games:1));
-  set('seasonRating',
-      (1000 + (live ? t.pts+t.speed : (S.seasonPts||0)+(S.pts||0)+(S.speed||0))).toLocaleString());
+  /* The rating is derived from the same season the Board and the member
+     card read. It used to add S.seasonPts on one branch and t.pts on the
+     other, which is how one screen could rate a season the next screen did
+     not believe in. */
+  var _sr=0; try{ _sr=seasonStats().total||0; }catch(_){}
+  set('seasonRating', (1000 + (live ? _sr + t.speed : (S.pts||0)+(S.speed||0))).toLocaleString());
   const cs=document.getElementById('slCase'); if(!cs) return;
   const ids=Object.keys(t.trophies).sort((a,b)=>t.trophies[b]-t.trophies[a]);
   cs.innerHTML = ids.length
@@ -9728,6 +9751,9 @@ function ttNode(cls,txt){const d=document.createElement('div');d.className=cls;i
 const TT_EMOJI=['🔥','😂','👀','💀','🎯','🐐','😭','🥶','🙌','😤','📈','📉','🤡','⚡'];
 
 function openTalk(){
+  /* Belt and braces with the sweep above: a hidden button is not a closed
+     door, and openTalk is reachable from a stale onclick and from go(). */
+  if(lean()) return;
   /* JOINING IS PART OF OPENING. Trash Talk is reachable from the nav at
      any moment, including before the player has ever pressed Play — and
      until they join, the backend has no nightId, so every read returns
@@ -10877,8 +10903,11 @@ function renderPortal(){
     try{ const pr=savedProfile(); nm=pr.name||''; clr=pr.color||''; }catch(_){}
     if(!nm) try{ nm=(S&&S.name)||''; }catch(_){}
     if(!clr) try{ clr=(S&&S.color)||'#2f6bff'; }catch(_){}
+    /* B10. Was S.seasonPts and S.streak — the save blob, which showFinal()
+       clears, so this card printed 0 / 0 over a night that had just been
+       played and banked. It reads the one season store now. */
     let season=0, nights=0, ciBest=0;
-    try{ season=Math.max(0,Math.round((S&&S.seasonPts)||0)); nights=Math.max(0,(S&&S.streak)||0); }catch(_){}
+    try{ var _ss=seasonStats(); season=Math.max(0,Math.round(_ss.total||0)); nights=Math.max(0,_ss.played||0); }catch(_){}
     try{ ciBest=Math.max(0,(typeof PCI!=='undefined'&&PCI&&PCI.best)||0); }catch(_){}
     const initial=esc((nm||'S').slice(0,1).toUpperCase());
     const stat=function(v2,k){ return '<div style="flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 8px;text-align:center">'
@@ -11048,7 +11077,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-13-lean.94';
+const STATS_BUILD='2026-08-13-oneseason.95';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -11524,7 +11553,7 @@ function renderMe(){
   try{ const pr=savedProfile(); nm=pr.name||''; clr=pr.color||clr; sport=pr.sport||''; }catch(_){}
   if(!nm) try{ nm=(S&&S.name)||''; }catch(_){}
   let season=0, nights=0, best=0;
-  try{ season=Math.max(0,Math.round((S&&S.seasonPts)||0)); nights=Math.max(0,(S&&S.streak)||0); }catch(_){}
+  try{ var _ss2=seasonStats(); season=Math.max(0,Math.round(_ss2.total||0)); nights=Math.max(0,_ss2.played||0); }catch(_){}
   try{ best=Math.max(0,(typeof PCI!=='undefined'&&PCI&&PCI.best)||0); }catch(_){}
   const tile=function(a,k){ return '<div style="flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 8px;text-align:center">'
     +'<div style="font-size:24px;font-weight:900;color:#eef2fb">'+a+'</div>'
@@ -12087,17 +12116,68 @@ function seasonRecord(nightId, pts, rank){
   var s=seasonRead();
   s.nights=s.nights||{};
   if(s.nights[nightId]) return s;                 // already banked
+  /* B10. This store is now READ-ONLY legacy — seasonStats() folds it in and
+     the statline is the source. Still written for one release so a rollback
+     does not lose a night, then it goes. */
   s.nights[nightId]={pts:Number(pts)||0, rank:rank||null, at:Date.now()};
   s.total=Object.keys(s.nights).reduce(function(a,k){ return a+(Number(s.nights[k].pts)||0); },0);
   s.played=Object.keys(s.nights).length;
   s.best=Math.max(Number(s.best)||0, Number(pts)||0);
   seasonWrite(s); return s;
 }
+/* ============ `B10` · ONE SEASON, ONE SOURCE ========================
+   Three stores held "your season" and all three disagreed on one device,
+   for one signed-in account, on three screens at the same moment:
+
+     final screen  270 points, 2 games   \u2014 stats_statline_v1
+     the Board     180 points, 1 night   \u2014 stats_season_v1
+     home card       0 points, 0 nights  \u2014 S.seasonPts
+
+   Each was defensible on its own. `stats_statline_v1` holds a rich row per
+   night (points, hits, speed, awards) and is deduped by night id.
+   `stats_season_v1` holds a thinner row and is written from a different
+   call site. `S.seasonPts` lives in the save blob \u2014 which showFinal()
+   deliberately clears, so the member card reads zero over a game that just
+   happened.
+
+   And the reason they diverged THIS time is worth writing down, because it
+   is the shape of the whole problem: swapping the night config from #7 to
+   #8 changed `GAME.nightId`, so a test game banked a second row in one
+   store and not in the other. A fact stored twice does not drift because
+   somebody was careless. It drifts because the two copies are written by
+   different code on different triggers, and eventually one trigger fires
+   and the other does not.
+
+   So there is one store now. `stats_statline_v1` wins \u2014 it is the richest
+   and the only one deduped by night \u2014 and everything else derives. The old
+   store is read once, folded in, and never written again. */
 function seasonStats(){
-  var s=seasonRead(), n=s.nights||{};
-  var keys=Object.keys(n).sort(function(a,b){ return (n[a].at||0)-(n[b].at||0); });
-  return { total:Number(s.total)||0, played:keys.length, best:Number(s.best)||0,
-           last:keys.length?n[keys[keys.length-1]]:null, keys:keys, nights:n };
+  var line = loadLine();
+  var nights = {}, keys = [];
+  (line.games||[]).forEach(function(g, i){
+    if(!g || !g.night) return;
+    nights[g.night] = { pts:Number(g.pts)||0, rank:(g.rank==null?null:g.rank), at:i };
+    keys.push(g.night);
+  });
+  /* ONE-TIME FOLD-IN. A season recorded before this change lives in the old
+     key. Read it, keep any night the statline does not already have, and
+     never write there again. Deleting it outright would silently shorten
+     somebody's season, which is the one thing a season record must never
+     do to the person who earned it. */
+  try{
+    var legacy = seasonRead().nights || {};
+    Object.keys(legacy).forEach(function(k){
+      if(nights[k]) return;
+      nights[k] = { pts:Number(legacy[k].pts)||0, rank:legacy[k].rank||null, at:legacy[k].at||0 };
+      keys.push(k);
+    });
+  }catch(_){}
+  keys = keys.filter(function(k,i){ return keys.indexOf(k)===i; })
+             .sort(function(a,b){ return (nights[a].at||0)-(nights[b].at||0); });
+  var total = keys.reduce(function(a,k){ return a + (nights[k].pts||0); }, 0);
+  var best  = keys.reduce(function(a,k){ return Math.max(a, nights[k].pts||0); }, 0);
+  return { total:total, played:keys.length, best:best,
+           last:keys.length?nights[keys[keys.length-1]]:null, keys:keys, nights:nights };
 }
 /* The Board used to render whatever the LOBBY poller had last cached. Open
    it without passing through the lobby — which the bottom nav made easy —

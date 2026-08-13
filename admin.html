@@ -3704,10 +3704,31 @@ var AUTO = (function(){
   function val(x){ return Number(x.scoreValue||0); }
   function txt(x){ return String((x.text||'') + ' ' + (((x.type)||{}).text||'')).toLowerCase(); }
   function teamId(x){ return String(((x.team)||{}).id||''); }
+  /* THE LAST MINUTE WAS INVISIBLE.
+
+     Found by replaying Game Night #7 against the keys the host actually
+     posted: the robot said the last two minutes had more field-goal
+     attempts than free throws. The host said free throws. The host was
+     right — 6 to 4 — and this function is why.
+
+     ESPN sends `mm:ss` for most of a period and then, inside the final
+     minute, drops the minutes and sends a bare decimal: "50.1", "46.5",
+     "25.7". The old pattern only matched `mm:ss`, returned null for those,
+     and every caller filters on `s !== null && s <= 120` — so null did not
+     mean "unknown", it meant EXCLUDED. "The last two minutes" was really
+     "the third and fourth-to-last minute", silently, and the one stretch
+     of a basketball game that is nothing but free throws was the exact
+     stretch being thrown away.
+
+     The player app has known this since Game Night #4 — see fmtClock() in
+     index.html, same fact, same feed. It never crossed over. One fact,
+     two copies, one of them stale, again.                              */
   function clockSec(x){
-    var d = String((((x.clock)||{}).displayValue)||'');
-    var m = d.match(/^(\d+):(\d+)/); if(!m) return null;
-    return Number(m[1])*60 + Number(m[2]);
+    var d = String((((x.clock)||{}).displayValue)||'').trim();
+    var m = d.match(/^(\d+):(\d+)/);
+    if(m) return Number(m[1])*60 + Number(m[2]);
+    if(/^\d+(\.\d+)?$/.test(d)) return Math.round(Number(d));
+    return null;
   }
 
   /* Map a team to whichever option string names it. The bank writes
@@ -4008,7 +4029,7 @@ var AUTO = (function(){
   }
 
   return { fetchFeed:fetchFeed, resolve:resolve, periodDone:periodDone, R:R, sides:sides, plays:plays,
-           inPeriod:inPeriod, armed:armed };
+           inPeriod:inPeriod, armed:armed, clockSec:clockSec };
 })();
 
 
