@@ -7680,8 +7680,17 @@ function paintStand(list){
   // One player is not a leaderboard, it is a mirror. Game Night #1 ended
   // on the words "Tonight's top 5 of 1 players", and that screenshot is
   // the entire reason for the length check on this line.
-  if(!list || list.length<2){ card.style.display='none'; lastStand=null; return; }
+  /* HIDE YOUR OWN CARD; DO NOT ERASE SOMEBODY ELSE'S DATA. This line used
+     to set `lastStand = null`, and `lastStand` is what the BOARD renders
+     from. So the lobby's entirely reasonable rule — one player is not a
+     leaderboard — reached across the app and blanked a different screen,
+     which then reported the blank as "Nobody has joined this night yet."
+     Three people were in the room at the time.
+     A cache with two writers and one of them allowed to wipe it is not a
+     cache, it is a race. */
+  if(!list || !list.length){ card.style.display='none'; return; }
   lastStand=list;
+  if(list.length<2){ card.style.display='none'; return; }
   card.style.display='block';
   const five=list.slice(0,5);
   document.getElementById('standList').innerHTML=five.map((p,i)=>
@@ -8232,6 +8241,26 @@ function ensureCiCard(){
       'max-height:42dvh;overflow:visible;'+
       'padding-top:6px;margin:0 -2px;padding-left:2px;padding-right:2px}'+
     'body.qopen #gtSticky{position:static;max-height:none}'+
+    /* ============ A STICKY BLOCK THAT DOES NOT FIT IS NOT STICKY =====
+       Found on a real phone, mid-Q1: "the top of the score is overlapping
+       the other parts and when I scroll down it stays still."
+
+       Exactly that. The cap below says this block may never take more
+       than 42% of the viewport — but `overflow:visible` means the cap
+       only constrains LAYOUT, not PAINT. Once the scoreboard, the win
+       probability and the run block together exceed it, the excess is
+       drawn straight over the top of the page beneath it, and because
+       the block is stuck to the top it never moves. The page underneath
+       scrolls behind a frozen slab.
+
+       The cap was the right instinct and the wrong lever. When the
+       content does not fit, the honest answer is to stop pinning it:
+       everything scrolls, nothing overlaps, and the only thing lost is a
+       pinned score on the smallest phones — which is a straight trade
+       against a screen you cannot read. Same escape hatch as body.qopen,
+       measured instead of guessed. */
+    'body.stickyoff #gtSticky{position:static;max-height:none;overflow:visible}'+
+    'body.stickyoff #gtSticky::after{display:none}'+
     '#gtSticky::after{content:"";position:absolute;left:0;right:0;top:100%;height:14px;'+
       'background:linear-gradient(180deg,var(--bg,var(--bg)),rgba(10,14,23,0));pointer-events:none}'+
     'body.qopen #gtSticky::after{display:none}'+
@@ -10563,7 +10592,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-12-pretip.87';
+const STATS_BUILD='2026-08-12-sticky.89';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -11638,6 +11667,22 @@ function boardRefresh(){
 }
 try{ setInterval(function(){ try{ if(S.screen==='board' && !bdLive) boardRefresh(); }catch(_){} }, 15000); }catch(e){}
 
+/* THE BOARD ASKS. It used to render whatever happened to be in a shared
+   cache and, finding nothing, announce that nobody had joined — the single
+   most confident sentence in the app, produced by never having looked.
+   If there is no cache, go and read, say so while reading, and only ever
+   claim the room is empty when the database has actually said so. */
+var bdAsked=false;
+function boardAskOnce(){
+  if(bdAsked) return; bdAsked=true;
+  try{
+    if(!window.SB || !SB.top || S.mode!=='live') return;
+    SB.top(10).then(function(list){
+      if(list && list.length){ try{ boardTake(list); }catch(_){ } }
+      else { try{ SB.boardSaidEmpty = (list!==null); }catch(_){} if(S.screen==='board') renderBoard(); }
+    }).catch(function(){ if(S.screen==='board') renderBoard(); });
+  }catch(_){}
+}
 function renderBoard(){
   var el=document.getElementById('bdBody'); if(!el) return;
   var out='', list=null;
@@ -11659,7 +11704,11 @@ function renderBoard(){
       else if(!window.SB || !SB.enabled) why='Not connected to the room — sign in and rejoin.';
       else if(SB.lastTopError==='permission-denied') why='The database is refusing to list players. That is a Firestore rules fix, not a phone problem.';
       else if(SB.lastTopError) why='Could not read the room ('+SB.lastTopError+').';
-      else why='Nobody has joined this night yet.';
+      /* The honest three-way split. "I have not looked yet" and "I looked
+         and the room is empty" are different facts, and the app spent
+         tonight printing the second one while meaning the first. */
+      else if(SB.boardSaidEmpty===true) why='Nobody has joined this night yet.';
+      else { why='Reading the room…'; try{ boardAskOnce(); }catch(_){} }
     }catch(_){}
     out+='<div class="card center" style="padding:22px"><div style="font-size:26px">🏆</div>'
       + '<b style="font-size:15px">'+(S.mode==='live'?'No players on the board yet':'The board fills up at tip-off')+'</b>'
@@ -13463,6 +13512,22 @@ function syncGtLobby(){
   }catch(_){}
 }
 
+/* Measure, do not guess. The block is allowed to be sticky only while it
+   actually fits inside its own cap; the moment the content grows past it —
+   a longer run sentence, a taller win-probability chart, a bigger phone
+   font — pinning it would mean painting it over the page. */
+function syncStickyFit(){
+  try{
+    var el=document.getElementById('gtSticky'); if(!el) return;
+    var cap = (window.innerHeight||0) * 0.42;
+    if(!cap) return;
+    var over = el.scrollHeight > (cap + 4);
+    document.body.classList.toggle('stickyoff', !!over);
+  }catch(_){}
+}
+try{ window.addEventListener('resize', function(){ try{ syncStickyFit(); }catch(_){} }); }catch(_){}
+try{ window.addEventListener('orientationchange', function(){ setTimeout(function(){ try{ syncStickyFit(); }catch(_){} },250); }); }catch(_){}
+
 function gtStartRow(){
   try{
     if(!S) return '';
@@ -13568,6 +13633,7 @@ function renderGametimeRest(){
   }
   idle.innerHTML=out;
   try{ syncGtLobby(); }catch(_){}
+  try{ syncStickyFit(); }catch(_){}
   try{ idle.style.marginTop = out ? '4px' : '0'; }catch(_){}
   try{ var sl=document.getElementById('ciSlot'); if(sl) sl.style.marginTop = sl.children.length ? '14px' : '0'; }catch(_){}
   try{ feedRender(); }catch(_){}
