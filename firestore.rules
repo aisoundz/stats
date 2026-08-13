@@ -132,7 +132,21 @@ service cloud.firestore {
           && request.resource.data.name.size() <= 24
           && request.resource.data.pts is int
           && request.resource.data.pts >= 0
-          && request.resource.data.pts <= 200
+          // 200 was below what a night can actually produce. Rounds alone are
+          // 4 questions at 10/20/30/40 = 400 points, before predictions and
+          // before Caught It. Every player who went past 200 had their own
+          // score write silently denied from then on — their phone knew the
+          // truth and the room's board did not, and nothing said so.
+          //
+          // This is still a bound, not a blank cheque: it exists to stop a
+          // bored tester with a console writing a megabyte into a row, not to
+          // police the game. The game's real ceiling is around 600.
+          //
+          // KNOWN, AND NOT CLOSED BY THIS LINE: a signed-in player can set
+          // their own score to anything under this bound, and raising it widens
+          // that. The real fix is making the dashboard and the runner the only
+          // writers of a score, which is a build and not a rules edit.
+          && request.resource.data.pts <= 5000
           && request.resource.data.speed is int
           && request.resource.data.speed >= 0
           && request.resource.data.speed <= 2000;
