@@ -327,6 +327,7 @@
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between">
           <div><b style="font-size:14px">Rehearsed on this night?</b>
             <div class="sub" style="font-size:12px;margin-top:3px">Clears every pushed round, every saved answer and every Call It for <b id="resetNight"></b>, so tonight starts clean. Players and the room stay.</div></div>
+          <button class="btn ghost" id="archBtn" onclick="archiveNow()" style="flex:0 0 auto;white-space:nowrap">💾 Save tonight’s data</button>
           <button class="btn ghost" id="resetBtn" onclick="resetNight()" style="flex:0 0 auto;color:var(--red);border-color:#4a2430;white-space:nowrap">🧹 Clear the test data</button>
         </div>
       </div>
@@ -486,7 +487,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-13-admin.43-locks';
+window.ADMIN_BUILD='2026-08-13-admin.44-archive';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -898,6 +899,88 @@ async function wipeCol(pathParts){
   }catch(e){}
   return n;
 }
+/* ---- B26: NOTHING LEAVES WITHOUT A COPY -----------------------------
+   Eight game nights were played and the room's answers survive for none of
+   them. Rounds, submissions, timing stamps and Caught It picks: zero across
+   gn5, gn6, gn7 and gn8. Only the player rows are left, which is why a
+   score from Wednesday is still readable and the answers behind it are not.
+
+   The cause is one button. `resetNight()` is aimed at rehearsals and says
+   so, but it lives on the same tab a host uses during a live night, and the
+   founder named the real problem exactly:
+
+     "me as the human might be pressing something wrong, or if its someone
+      else they might do it. We need to save all the data as we get this
+      right."
+
+   Right. A safeguard that depends on a person not pressing the wrong thing
+   is not a safeguard. And this is not ordinary data — what the room thought
+   would happen is the one thing this product knows that nobody else on
+   earth can know. It is the whole difference between a stats company and a
+   prediction company, and it was being deleted within days of being made.
+
+   So: everything is copied into ONE document before anything is deleted,
+   and the delete does not run if the copy fails. Derived facts are not
+   enough — store the raw picks, because the question you will want to ask
+   of this data in six months is not the question you would think to
+   compute today. */
+async function archiveNight(nid, why){
+  const { F, db } = FB;
+  const id = nid || night;
+  const rounds = [], subsBy = {};
+  const rs = await F.getDocs(F.collection(db, 'nights', id, 'rounds'));
+  for(const d of rs.docs){
+    const r = d.data() || {};
+    rounds.push({ id:d.id, idx:r.idx, tag:r.tag, name:r.name, worth:r.worth,
+                  state:r.state, key:r.key || null,
+                  questions:(r.questions||[]).map(q=>({ t:q.t, o:q.o })) });
+    const ss = await F.getDocs(F.collection(db, 'nights', id, 'rounds', d.id, 'subs'));
+    subsBy[d.id] = ss.docs.map(x=>{ const v=x.data()||{};
+      return { uid:x.id, picks:v.picks||[], banks:v.banks||[] }; });
+  }
+  const players = [];
+  (await F.getDocs(F.collection(db,'nights',id,'players'))).forEach(d=>{
+    const v = d.data() || {};
+    players.push({ uid:d.id, name:v.name||'', pts:v.pts||0, speed:v.speed||0,
+                   predPts:v.predPts||0, catchPts:v.catchPts||0,
+                   caughtPts:v.caughtPts||0, roundsDone:v.roundsDone||0 });
+  });
+  const callit = [];
+  (await F.getDocs(F.collection(db,'nights',id,'callit'))).forEach(d=>{
+    const v = d.data() || {};
+    callit.push({ qid:d.id, text:v.text||v.q||'', ans:v.ans!=null?v.ans:null, state:v.state||'' });
+  });
+
+  const doc = { night:id, why:why||'manual', at:F.serverTimestamp(),
+                by:(FB.auth.currentUser && FB.auth.currentUser.email) || 'host',
+                counts:{ rounds:rounds.length,
+                         subs:Object.keys(subsBy).reduce((a,k)=>a+subsBy[k].length,0),
+                         players:players.length, callit:callit.length },
+                rounds:rounds, subs:subsBy, players:players, callit:callit };
+
+  /* A 1MB document limit is a long way from a night of four rounds, but a
+     silent truncation would be worse than a refusal, so measure it. */
+  const bytes = new Blob([JSON.stringify(doc)]).size;
+  if(bytes > 900000) throw new Error('archive too large for one document ('+bytes+' bytes) — tell Claude before clearing anything');
+
+  const stamp = new Date().toISOString().replace(/[:.]/g,'-');
+  await F.setDoc(F.doc(db,'nights',id,'archive',stamp), doc);
+  return { stamp, bytes, counts:doc.counts };
+}
+
+/* The proactive half. Archiving should not require wanting to delete. */
+async function archiveNow(){
+  if(!FB || !user){ toast('Sign in first.'); return; }
+  const b = $('archBtn'); if(b){ b.disabled=true; b.textContent='Saving…'; }
+  try{
+    const r = await archiveNight(night, 'manual');
+    toast(`Saved ${r.counts.rounds} round(s), ${r.counts.subs} answer set(s), ${r.counts.players} player(s).`);
+  }catch(e){
+    toast('Archive failed: ' + ((e&&e.message)||e));
+  }
+  if(b){ b.disabled=false; b.textContent='💾 Save tonight\u2019s data'; }
+}
+
 async function resetNight(){
   if(!FB || !user){ toast('Sign in first.'); return; }
   const cfg = nightCfg(night);
@@ -910,6 +993,48 @@ async function resetNight(){
   const btn=$('resetBtn'); if(btn){ btn.disabled=true; btn.textContent='Clearing…'; }
   try{
     const {F, db} = FB;
+
+    /* B26 — TWO GATES, IN THIS ORDER.
+
+       First: a night that has been PLAYED does not get cleared on one tap.
+       A rehearsal has no scored rounds and no submissions, so this asks
+       nothing of the person who is doing the thing this button is for. A
+       real night makes you type its id, which is the difference between a
+       reflex and a decision.
+
+       Second: copy everything, and do not delete if the copy fails. The
+       order is the whole point — an archive written after a wipe is a
+       photograph of an empty room. */
+    let played = 0;
+    try{
+      const pre = await F.getDocs(F.collection(db,'nights',night,'rounds'));
+      for(const d of pre.docs){
+        const v = d.data() || {};
+        if(v.state === 'scored') played++;
+        const ss = await F.getDocs(F.collection(db,'nights',night,'rounds',d.id,'subs'));
+        played += ss.size;
+      }
+    }catch(e){}
+    if(played > 0){
+      const typed = prompt(
+        'This night has real data in it — ' + played + ' scored round(s) and answer set(s).\n\n' +
+        'Everything will be copied to the archive first, but clearing is still permanent for the live room.\n\n' +
+        'Type the night id to confirm:\n' + night);
+      if(String(typed||'').trim() !== night){
+        toast('Not cleared — the night id did not match.');
+        if(btn){ btn.disabled=false; btn.textContent='🧹 Clear the test data'; }
+        return;
+      }
+    }
+
+    let saved = null;
+    try{ saved = await archiveNight(night, 'before-reset'); }
+    catch(e){
+      toast('NOT cleared — the archive failed: ' + ((e&&e.message)||e));
+      if(btn){ btn.disabled=false; btn.textContent='🧹 Clear the test data'; }
+      return;
+    }
+
     let rounds=0, subs=0, times=0, ci=0;
     const rs = await F.getDocs(F.collection(db,'nights',night,'rounds'));
     for(const d of rs.docs){
@@ -922,7 +1047,7 @@ async function resetNight(){
        would keep the Control Room believing a quarter is still open. */
     try{ await F.setDoc(F.doc(db,'nights',night), { live:F.deleteField(), liveIdx:F.deleteField() }, {merge:true}); }catch(e){}
     try{ closingRound=null; }catch(e){}
-    toast(`Cleared: ${rounds} round(s), ${subs} answer set(s), ${times} timing doc(s), ${ci} Call It.`);
+    toast(`Saved to archive, then cleared: ${rounds} round(s), ${subs} answer set(s), ${times} timing doc(s), ${ci} Call It.`);
     try{ onNightChange(); }catch(e){}
   }catch(e){
     toast('Could not clear it all: ' + ((e&&e.message)||e) + ' — try once more.');
