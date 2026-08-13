@@ -184,7 +184,77 @@ async function writeLiveScore(db, FieldValue, sum, plan, last){
   return sig;
 }
 
-/* ---- 5. the loop ---------------------------------------------------- */
+/* ---- 5. scoring the room --------------------------------------------
+   The runner posts keys. Until now, nothing then turned those keys into
+   scores unless a human pressed Reveal in the Control Room — so a fully
+   automated night would have opened every quarter, keyed every question,
+   and left every player on zero. The automation was complete right up to
+   the part players can see.
+
+   The arithmetic is NOT in this file. It is `AUTO.tally`, read out of
+   admin.html between the @host-shared sentinels, exactly like the sixteen
+   resolvers. The Control Room fetches with the web SDK and this fetches
+   with the Admin SDK, and both hand identical shapes to the same function.
+   A score that came out differently depending on which machine was awake
+   would be Game Night #7's question-bank bug wearing a new hat.
+
+   WHAT THIS DOES NOT OWN: predPts and catchPts come off the player
+   document, because predictions settle on the phone and Caught It resolves
+   there. Round points are now unforgeable. Those two lanes are still
+   client-reported and bounded only by the security rules. Said plainly
+   here so nobody reads "the server scores it" and believes more than is
+   true. */
+async function scoreRoom(db, FieldValue, AUTO){
+  const roundsSnap = await db.collection(`nights/${NIGHT}/rounds`).get();
+  const scored = [];
+  roundsSnap.forEach(d => {
+    const r = d.data() || {};
+    if(r.state === 'scored' && Array.isArray(r.key) && r.key.length){
+      scored.push({ id: d.id, key: r.key, worth: (typeof r.worth === 'number' && r.worth > 0) ? r.worth : 1 });
+    }
+  });
+  if(!scored.length) return 0;
+
+  const playersSnap = await db.collection(`nights/${NIGHT}/players`).get();
+  const players = {};
+  playersSnap.forEach(d => {
+    const v = d.data() || {};
+    players[d.id] = { predPts: typeof v.predPts === 'number' ? v.predPts : 0,
+                      catchPts: typeof v.catchPts === 'number' ? v.catchPts : 0 };
+  });
+  if(!Object.keys(players).length) return 0;
+
+  const subs = {};
+  for(const rd of scored){
+    const ss = await db.collection(`nights/${NIGHT}/rounds/${rd.id}/subs`).get();
+    subs[rd.id] = {};
+    ss.forEach(d => {
+      const v = d.data() || {};
+      subs[rd.id][d.id] = { picks: Array.isArray(v.picks) ? v.picks : [],
+                            banks: Array.isArray(v.banks) ? v.banks : [] };
+    });
+  }
+
+  const t = AUTO.tally(scored, players, subs);
+
+  /* Recomputed from the submissions every time rather than added to, so
+     running it twice cannot double anybody's score. That is the same
+     property the Control Room's version has and it is why this is safe to
+     call after every key. */
+  let n = 0;
+  for(const uid of Object.keys(t)){
+    const row = t[uid];
+    await db.doc(`nights/${NIGHT}/players/${uid}`).set({
+      pts: row.pts, speed: row.speed, roundsDone: row.rounds,
+      lastScoredBy: 'runner', lastScoredAt: FieldValue.serverTimestamp()
+    }, { merge: true });
+    n++;
+  }
+  log('score', `${n} player${n===1?'':'s'} scored from ${scored.length} round${scored.length===1?'':'s'}`);
+  return n;
+}
+
+/* ---- 6. the loop ---------------------------------------------------- */
 async function main(){
   if(!NIGHT) die('NIGHT_ID is not set');
   if(!EVENT) die('ESPN_EVENT is not set');
@@ -282,6 +352,11 @@ async function main(){
             closedAt: FieldValue.serverTimestamp()
           }, { merge: true });
           log('key', `${R.tag} scored — ${why.join(' · ')}`);
+          /* The key is worthless to a player until it is a number on their
+             screen. Score immediately, and never let a scoring failure
+             undo a key that is already correct and posted. */
+          try{ await scoreRoom(db, FieldValue, AUTO); }
+          catch(e){ log('err', 'scoring failed after ' + R.tag + ': ' + ((e && e.message) || e)); }
           continue;
         }
       }
@@ -299,6 +374,11 @@ async function main(){
              the difference between "Q4 in progress" and "Final" is the
              whole reason a phone stops waiting. */
           await writeLiveScore(db, FieldValue, sum, plan, '');
+          /* One last pass. A round a human settled by hand while the runner
+             was up would otherwise never be added to anyone's total, and
+             the night would end with the board quietly short. */
+          try{ await scoreRoom(db, FieldValue, AUTO); }
+          catch(e){ log('err', 'final scoring pass failed: ' + ((e && e.message) || e)); }
           log('done', 'final buzzer, every quarter scored — the runner is finished');
           return;
         }
