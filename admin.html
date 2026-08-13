@@ -486,7 +486,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-13-admin.42-lanes';
+window.ADMIN_BUILD='2026-08-13-admin.43-locks';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -3761,6 +3761,23 @@ boot();
      flips it on for the night, which also sets `config.callit` so phones
      know to watch. This is piece 1 (the host loop); the player card is
      piece 2. */
+/* B23 — ONE LOCK WINDOW. The document written to every phone said one
+   thing and the timer that publishes the answer said another:
+
+     locksMs: /^(saw|qtr)/.test(kind) ? 9000 : 6000     // what the phone obeys
+     locks:   kind.indexOf('saw')===0 ? 9000 : 6000     // what the host obeys
+
+   The `qtr` kinds — qtrFirst, qtrThrees, qtrMore — matched the first and
+   not the second, so the host released the answer at 7.2s while the card
+   on every phone stayed open until 9s. For 1.8 seconds the answer was
+   public and the question was still live: a player tapping in that window
+   had the card swap to the resolved view mid-tap, was graded as having sat
+   it out, and was shown the answer they were about to give.
+
+   One predicate, one owner. */
+function lockMsFor(kind){
+  return /^(saw|qtr)/.test(String(kind||'')) ? 9000 : 6000;
+}
   var CI = { on:false, seeded:false, lastSeq:0, openQid:null, lastOpenAt:0, lastPlayAt:0, countPer:{}, pending:null, relT:null,
              pace:'normal', gapMs:80000, capPer:8 };
   /* The host's frequency dial. Chill for a blowout, Hype for a game people are
@@ -3941,7 +3958,7 @@ boot();
       state:'open', answer:null, resolveText:null,
       // Retrospective questions need a beat longer to read than "next
       // bucket?" did — they name a score and sometimes a player.
-      opensAt:F.serverTimestamp(), locksMs:(/^(saw|qtr)/.test(String(q.kind||''))?9000:6000), seq:Date.now()
+      opensAt:F.serverTimestamp(), locksMs:lockMsFor(q.kind), seq:Date.now()
     }, {merge:true});
   };
   /* One writer for the held answer, used by both the timer and the tick. */
@@ -3990,7 +4007,7 @@ boot();
     await CI.write(q);
     /* The answer is already known — held here, never written to the doc the
        phones read, and released the moment the clock locks. */
-    CI.pending = (q.ans!=null) ? { qid:q.qid, ans:String(q.ans), text:q.atext||'', locks:(String(q.kind||'').indexOf('saw')===0?9000:6000) } : null;
+    CI.pending = (q.ans!=null) ? { qid:q.qid, ans:String(q.ans), text:q.atext||'', locks:lockMsFor(q.kind) } : null;
     CI.openQid=q.qid; CI.lastOpenAt=Date.now(); CI.countPer[per]=(CI.countPer[per]||0)+1;
     /* Fire the release on its own timer. The feed poll is every 20 seconds,
        and hanging a known answer on it would leave the room staring at a

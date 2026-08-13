@@ -4378,8 +4378,15 @@ function ledgerMigrate(){
   /* Read the totals BEFORE recomputing, because recomputing overwrites
      them — that is the whole point of the ledger and also the one way it
      could quietly eat a score. */
+  /* B25 — the caught lane was missing here too. ledgerMigrate rebuilt an
+     old save's ledger from pts/speed/pred/catch and never read caughtPts,
+     so a migrated save folded Caught It points into the `carried` live lane
+     and left S.caughtPts at zero — which the very next pushScore() then
+     wrote over the server's real value. One function away from B18, same
+     omission, same lane. */
   const p=Number(S.pts)||0, sp=Number(S.speed)||0,
-        pd=Number(S.predPts)||0, ct=Number(S.catchPts)||0;
+        pd=Number(S.predPts)||0, ct=Number(S.catchPts)||0,
+        gt=Number(S.caughtPts)||0;
   const hasLed = S.led && typeof S.led==='object' && !Array.isArray(S.led) && Object.keys(S.led).length;
   if(!hasLed){
     if(!p && !sp && !pd && !ct){ S.led={}; recomputeScore(); return false; }
@@ -4387,10 +4394,11 @@ function ledgerMigrate(){
     // Old S.pts EXCLUDED pred/catch until showFinal folded them in, and we
     // cannot tell from here whether that had happened. Take the larger
     // reading so nobody loses a point to the migration.
-    const live=Math.max(0, p - pd - ct) || Math.max(0, p);
+    const live=Math.max(0, p - pd - ct - gt) || Math.max(0, p);
     if(live || sp) S.led['carried']={p:live,s:sp,k:'live'};
     if(pd)   S.led['pred']={p:pd,s:0,k:'pred'};
     if(ct)   S.led['catch']={p:ct,s:0,k:'catch'};
+    if(gt)   S.led['caught']={p:gt,s:0,k:'caught'};
     recomputeScore();
     return true;
   }
@@ -9085,7 +9093,8 @@ function ciGrade(q){
     /* THE POINTS. One line in the ledger, its own kind, so it shows as its
        own row on the final card and can be audited like everything else —
        and so that recomputing never double-pays a card that grades twice. */
-    PCI.pts = Math.min(CAUGHT_NIGHT_CAP, (Number(PCI.pts)||0) + caughtWorth(PCI.streak));
+    PCI.ptsBefore = Number(PCI.pts)||0;
+    PCI.pts = Math.min(CAUGHT_NIGHT_CAP, PCI.ptsBefore + caughtWorth(PCI.streak));
     try{ ledgerSet('caught', PCI.pts, 0, 'caught'); save(); }catch(_){}
     try{ flashEnergy('hit',1800); }catch(_){} }
   else { PCI.streak=0; PCI.heat=Math.max(0,PCI.heat-1); try{ flashEnergy('miss',1400); }catch(_){} }
@@ -9202,7 +9211,19 @@ function renderCiCard(q){
        player starts protecting a streak instead of guessing, and that is
        the whole behaviour we want. */
     var heat = right ? Math.min(3, Math.floor(PCI.streak/3)) : 0;
-    var paid = right ? caughtWorth(PCI.streak) : 0;
+    /* B24 — ANNOUNCE WHAT WAS ACTUALLY PAID. This recomputed the award
+       from the streak and ignored the night cap that ciGrade applies, so a
+       player sitting on the 100-point ceiling was told "Nice call · +25"
+       while the ledger added nothing. Points announced and not paid is the
+       complaint that started this whole thread; here it was the card lying
+       rather than the scoreboard lagging. Ask the owner what it paid. */
+    var paid = 0;
+    if(right){
+      var _before = Number(PCI.ptsBefore);
+      var _after  = Number(PCI.pts);
+      paid = (isFinite(_before) && isFinite(_after)) ? Math.max(0, _after - _before)
+                                                    : caughtWorth(PCI.streak);
+    }
     var head = pk==null ? 'You sat this one out'
              : (right ? ('Nice call \u00B7 +'+paid) : 'Not this time');
     var icon = pk==null ? '—' : (right?'✅':'✕');
@@ -11312,7 +11333,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-13-identity.106';
+const STATS_BUILD='2026-08-13-tighten.107';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
