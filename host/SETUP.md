@@ -106,9 +106,31 @@ public website.
 
 ---
 
+## The live score
+
+The runner writes it now, on the same twenty-second tick, into the same `nights/{id}.score`
+document the phones already read. Nothing on a phone can tell which machine wrote it, which was
+the point — the Control Room's ESPN panel still works exactly as before if you happen to have it
+open, and neither one needs the other.
+
+It only writes when the score or the period actually changed, which is roughly sixty writes a
+night instead of seven hundred. It writes nothing at all before tip-off, and it forces one last
+write at the buzzer so the room flips from "Q4 in progress" to "Final" even if the number did
+not move on the last basket.
+
+That was the last thing keeping a tab open. With the plan published, Friday needs nothing
+switched on.
+
+---
+
 ## What this does not fix
 
-The runner replaces the laptop for **opening, closing and scoring quarters**. It does not yet
-write the live score into the room — that is still the ESPN auto panel in the Control Room tab.
-Moving it is a ten-line change to `host/run.js` and it should happen next, because it is the
-last thing keeping a tab open.
+Two things, both known and neither one a Friday blocker.
+
+**Firestore security rules** are still open. That was already the top structural item and the
+runner raises it, because there is now a service account writing to the same database. Rules are
+the next piece of work.
+
+**A question with no resolver** still stops its round and waits for a person. That is deliberate
+— see the last section — but it does mean a night with a hand-keyed question needs somebody
+within reach of the Control Room when that quarter ends.

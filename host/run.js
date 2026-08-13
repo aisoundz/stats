@@ -108,7 +108,83 @@ async function readPlan(db){
   return plan;
 }
 
-/* ---- 4. the loop ---------------------------------------------------- */
+/* ---- 4. the live score ----------------------------------------------
+   The last thing that needed a browser tab open. Everything above this was
+   about the ROUNDS — opening them, closing them, keying them — and while
+   that moved to the server the score on every phone was still being written
+   by a laptop in somebody's kitchen.
+
+   That was the whole complaint. "Sometimes the laptop sleeps and the phone
+   locks." A night whose quarters open by themselves but whose scoreboard
+   freezes when a lid closes is not automated, it is automated in the half
+   nobody notices.
+
+   Identical shape to writeScore() in the Control Room, deliberately: the
+   phones already read `nights/{id}.score` and neither they nor the Control
+   Room can tell which machine wrote it. Two writers, one document, one
+   shape — and because it is a whole-object merge rather than a set of
+   fields, the last writer wins cleanly instead of leaving a half-updated
+   score behind. */
+function periodLabel(sum, plan){
+  try{
+    const st = sum.header.competitions[0].status;
+    const state = (st.type && st.type.state) || '';
+    if(state === 'post') return 'Final';
+    /* Before tip there is no period to name, and this matters more than it
+       looks: the runner starts half an hour early on purpose, and the first
+       version of this function read period 0, fell through to rounds[0] and
+       would have put "0 — 0 · Q1 in progress" on every phone in the room
+       thirty minutes before anybody tipped off. An empty label means "say
+       nothing", and saying nothing is correct until the ball is up. */
+    if(state !== 'in') return '';
+    const per = Number(st.period) || 0;
+    /* Overtime runs off the end of the plan. The old Control Room version
+       fell back to the first tag here, which would have put "Q1 in
+       progress" on every phone during the most exciting five minutes of
+       the night. There is no fifth round to play, but the scoreboard still
+       has to tell the truth about where the game is. */
+    if(per > plan.rounds.length) return (per - plan.rounds.length > 1 ? 'OT' + (per - plan.rounds.length) : 'OT') + ' in progress';
+    const tag = per >= 1 && plan.rounds[per - 1] ? plan.rounds[per - 1].tag : (plan.rounds[0] || {}).tag;
+    return (tag || 'Q1') + ' in progress';
+  }catch(_){ return ''; }
+}
+
+async function writeLiveScore(db, FieldValue, sum, plan, last){
+  const label = periodLabel(sum, plan);
+  /* No label means the game has not started, or the feed came back in a
+     shape this cannot read. Either way the honest move is to leave the
+     score document alone rather than overwrite it with a guess. */
+  if(!label) return last;
+
+  let away = null, home = null;
+  try{
+    const cs = sum.header.competitions[0].competitors || [];
+    const h = cs.find(c => c.homeAway === 'home') || {};
+    const a = cs.find(c => c.homeAway === 'away') || {};
+    /* Number('') is 0, not NaN — so a feed with an empty score field would
+       sail past isFinite() and post a 0 — 0 that looks exactly like a real
+       one. Require digits before believing anything. */
+    const digits = v => /^\d+$/.test(String(v == null ? '' : v).trim());
+    if(!digits(h.score) || !digits(a.score)) return last;
+    home = Number(h.score); away = Number(a.score);
+  }catch(_){ return last; }
+  if(!isFinite(home) || !isFinite(away)) return last;
+
+  const sig = away + '-' + home + '|' + label;
+  /* Only write when something actually changed. A basketball game is about
+     two hundred ticks long and most of them are the same score as the one
+     before; writing every time would be two hundred writes a night for
+     maybe sixty real changes, on a free tier, for no benefit to anybody. */
+  if(sig === last) return last;
+
+  await db.doc(`nights/${NIGHT}`).set({
+    score: { away, home, period: label, note: '', at: FieldValue.serverTimestamp() }
+  }, { merge: true });
+  log('score', `${away} — ${home}  ${label}`);
+  return sig;
+}
+
+/* ---- 5. the loop ---------------------------------------------------- */
 async function main(){
   if(!NIGHT) die('NIGHT_ID is not set');
   if(!EVENT) die('ESPN_EVENT is not set');
@@ -120,6 +196,7 @@ async function main(){
   log('boot', `night ${NIGHT} · event ${EVENT} · ${N} rounds · running for up to ${MINUTES}m`);
 
   const acted = {}, seenDone = {};
+  let lastScoreSig = '';
   const until = Date.now() + MINUTES * 60000;
 
   while(Date.now() < until){
@@ -131,6 +208,8 @@ async function main(){
       await db.doc(`nights/${NIGHT}`).set(
         { host: { auto: true, where: 'runner', at: FieldValue.serverTimestamp() } },
         { merge: true });
+
+      lastScoreSig = await writeLiveScore(db, FieldValue, sum, plan, lastScoreSig);
 
       const roundsSnap = await db.collection(`nights/${NIGHT}/rounds`).get();
       const live = {}; roundsSnap.forEach(d => { live[d.id] = d.data(); });
@@ -216,6 +295,10 @@ async function main(){
           await db.doc(`nights/${NIGHT}`).set(
             { host: { auto: true, where: 'runner', finishedAt: FieldValue.serverTimestamp() } },
             { merge: true });
+          /* Force the final score out even if it matched the last one —
+             the difference between "Q4 in progress" and "Final" is the
+             whole reason a phone stops waiting. */
+          await writeLiveScore(db, FieldValue, sum, plan, '');
           log('done', 'final buzzer, every quarter scored — the runner is finished');
           return;
         }
