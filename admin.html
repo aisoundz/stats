@@ -2496,6 +2496,51 @@ async function hostTick(){
   }finally{ HOST.busy = false; }
 }
 
+/* ---- PUBLISHING THE PLAN --------------------------------------------
+   The server runner refuses to start without this, and the refusal is the
+   feature. A runner carrying its own copy of the question bank could open
+   a round asking different questions from the ones the phones were shown —
+   which is not a hypothetical, it is exactly what cost a player his whole
+   night on Game Night #7, when one phone answered the built-in bank and
+   the host keyed a different list.
+
+   So there is one bank, it is the one in this Control Room, and it gets
+   written to the room before the runner is allowed to touch anything. */
+async function publishPlan(){
+  if(!FB || !FB.auth || !FB.auth.currentUser){ toast('Sign in first.'); return; }
+  if(typeof night==='undefined' || !night){ toast('Pick a night first.'); return; }
+  var cfg = nightCfg(night), nd = nightDraft(night);
+  var rounds = nd.rounds.map(function(rd,i){
+    return {
+      tag: cfg.tags[i], name: cfg.names[i], worth: rd.worth,
+      qs: rd.qs.map(function(q){
+        return { t:String(q.t||'').trim(),
+                 o:(q.o||[]).map(function(o){ return String(o).trim(); }).filter(Boolean),
+                 r:q.r||'',
+                 /* A mark the host has already set travels with the plan,
+                    and the runner uses it verbatim rather than resolving
+                    over the top of a human's decision. */
+                 k:(q.k==null ? null : String(q.o[q.k]==null?'':q.o[q.k]).trim()) };
+      })
+    };
+  });
+  var bad = [];
+  rounds.forEach(function(r,i){ r.qs.forEach(function(q,x){
+    if(!q.t) bad.push(cfg.tags[i]+' Q'+(x+1)+' has no question text');
+    if(q.o.length<2) bad.push(cfg.tags[i]+' Q'+(x+1)+' has fewer than two options');
+    if(!q.r && q.k==null) bad.push(cfg.tags[i]+' Q'+(x+1)+' has no resolver and no answer \u2014 the runner would stall on it');
+  }); });
+  try{
+    await FB.F.setDoc(FB.F.doc(FB.db,'nights',night,'plan','rounds'),
+      { rounds:rounds, at:FB.F.serverTimestamp(), by:(FB.auth.currentUser.email||'host') });
+    hostSay('key','Plan published \u2014 '+rounds.length+' rounds, '
+      + rounds.reduce(function(a,r){ return a+r.qs.length; },0) + ' questions.'
+      + (bad.length ? ' Heads up, ' + bad.length + ' will need you: ' + bad[0]
+                    : ' Every line has a resolver.'));
+    toast('Plan published. The runner can take it from here.');
+  }catch(e){ toast('Publish failed: ' + ((e&&e.message)||e)); }
+}
+
 function hostStart(){
   if(HOST.on) return;
   HOST.on = true;
@@ -2530,6 +2575,12 @@ function renderHost(){
         ? 'Watching the feed every 20 seconds. A quarter opens the moment it ends, and closes when everyone has answered or after 2m30 — whichever comes first. Anything the resolvers cannot answer is handed back to you rather than guessed.'
         : 'It opens each quarter when the feed says it ended, waits for the room, resolves the four questions and posts the key. It will not guess: one unresolved question stops that round and asks you.')
     + '</div>'
+    + '<button type="button" id="hostPub" style="width:100%;margin-top:9px;padding:12px;font-size:14px;'
+    + 'font-weight:800;border-radius:11px;border:1px solid var(--line);background:var(--card2);color:var(--ink);cursor:pointer">'
+    + 'Publish tonight\u2019s plan to the server</button>'
+    + '<div style="margin-top:7px;font-size:12px;color:var(--dim);line-height:1.5">'
+    + 'The off-laptop runner will not start without this, and will not invent questions. '
+    + 'Press it once the bank is written \u2014 it sends the exact questions this room will ask.</div>'
     + (HOST.log.length
         ? '<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px">'
           + HOST.log.map(function(r){
@@ -2543,6 +2594,8 @@ function renderHost(){
         : '');
   var b = document.getElementById('hostBtn');
   if(b) b.onclick = hostToggle;
+  var pb = document.getElementById('hostPub');
+  if(pb) pb.onclick = publishPlan;
 }
 
 /* =====================================================================
@@ -3932,6 +3985,27 @@ boot();
    human for a whole night first, and there is no code here that could
    take them even if it wanted to — see AUTO.armed.
    ==================================================================== */
+/* @host-shared:start
+   ---------------------------------------------------------------------
+   EVERYTHING BETWEEN THESE TWO SENTINELS IS READ VERBATIM BY THE SERVER
+   RUNNER (host/run.js). It is not copied there — the runner checks this
+   file out of the same repo, slices it between these markers and
+   evaluates it, so there is exactly one copy of the resolver engine and
+   a change here is a change there.
+
+   That matters more than it looks. A second copy of sixteen resolvers is
+   sixteen chances for the browser and the server to answer the same
+   question differently on the same night, which is the failure this whole
+   product spent a week learning to fear. The clock bug found on Game
+   Night #7 was one fact stored twice; this is the same fact stored twice
+   with a network in between.
+
+   TWO RULES FOR ANYTHING ADDED IN HERE:
+     1. No `document`, no `window`, no DOM. It has to run in Node.
+     2. No dependency on anything defined outside the sentinels.
+   The runner asserts both by failing loudly at startup rather than
+   quietly resolving nothing.
+   ------------------------------------------------------------------ */
 var AUTO = (function(){
 
   var SUM = 'https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/summary?event=';
@@ -4292,6 +4366,8 @@ var AUTO = (function(){
   return { fetchFeed:fetchFeed, resolve:resolve, periodDone:periodDone, R:R, sides:sides, plays:plays,
            inPeriod:inPeriod, armed:armed, clockSec:clockSec };
 })();
+/* @host-shared:end */
+
 
 
 /* ---- THE AUTO TAB ------------------------------------------------
