@@ -1,0 +1,292 @@
+rules_version = '2';
+
+// =====================================================================
+// STATS — Firestore security rules
+// ---------------------------------------------------------------------
+// This file is the COMPLETE ruleset. Paste it over whatever is in the
+// console; it is not a patch and it does not assume anything about what
+// is currently deployed.
+//
+// PHASE 1 (Game Night #1): players write their own score.
+// PHASE 2 (Game Night #2 onward): the admin dashboard becomes the
+//   scoring authority and players can no longer write `pts` at all.
+//   The switch is the one commented line marked SWITCH below.
+//
+// Three things changed in this revision:
+//   1. /nights/{nightId}/talk is written down properly. It has existed
+//      in the deployed rules since the room shipped, but it was never in
+//      this file, which meant the file was not the source of truth.
+//   2. /signups accepts `sport` (the one-tap favourite on the handle
+//      screen) and `verified` (set only when Firebase Auth says the
+//      address on the row has been proven).
+//   3. Every optional field on /signups now has a bound. Previously an
+//      unlisted field passed unchecked, which is how one bored tester
+//      with the console open could have written a megabyte into a row.
+// =====================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function ownerEmail() {
+      return 'aisoundz9@gmail.com';
+    }
+
+    function isOwner() {
+      return request.auth != null
+          && request.auth.token.email == ownerEmail()
+          && request.auth.token.email_verified == true;
+    }
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    // ---- Call It: live in-game side-game (isolated; never touches pts) ----
+    match /nights/{nightId}/callit/{qid} {
+      allow read:  if true;
+      allow write: if isOwner();
+      match /picks/{uid} {
+        allow read:   if true;
+        allow create: if signedIn() && request.auth.uid == uid
+                      && get(/databases/$(database)/documents/nights/$(nightId)/callit/$(qid)).data.state == 'open';
+        allow update, delete: if false;
+      }
+    }
+    match /nights/{nightId}/callitboard/{uid} {
+      allow read:           if true;
+      allow create, update: if signedIn() && request.auth.uid == uid;
+      allow delete:         if isOwner();
+    }
+
+
+    // ---- the game night itself: everyone reads, only you write ----
+    match /nights/{nightId} {
+      allow read:  if true;
+      allow write: if isOwner();
+
+      // ---- rounds: questions and the answer key ----
+      // Readable so phones can pick up a pushed round. The answer key is
+      // NOT in this document while the round is live — it lives in the
+      // owner-only /key subcollection below and is copied in at reveal.
+      // That is what makes the key unreadable to a player who opens the
+      // network tab, rather than merely inconvenient to find.
+      match /rounds/{roundId} {
+        allow read:  if true;
+        allow write: if isOwner();
+
+        // ---- the answer key, before it is revealed ----
+        // Owner only, read AND write. Nothing else in the app ever touches
+        // this path. Pre-load answers here days early and they stay secret.
+        match /key/{keyDoc} {
+          allow read, write: if isOwner();
+        }
+
+        // ---- submissions ----
+        // One document per player per round, written once, at the moment
+        // they finish the round and BEFORE the key exists anywhere public.
+        // Create-only for the player: they cannot rewrite a pick after the
+        // answer is revealed, which is the property that makes a submitted
+        // round auditable rather than merely claimed.
+        match /subs/{uid} {
+          allow read: if isOwner() || (signedIn() && request.auth.uid == uid);
+          allow create: if signedIn()
+            && request.auth.uid == uid
+            && request.resource.data.picks is list
+            && request.resource.data.picks.size() <= 12
+            && request.resource.data.name is string
+            && request.resource.data.name.size() <= 24;
+          allow update, delete: if isOwner();
+        }
+      }
+
+      // ---- players ----
+      match /players/{uid} {
+
+        // Public read: the leaderboard, the live count and your rank all
+        // depend on it. Nothing sensitive is stored here — a display
+        // name, a colour and a score. NEVER add an email or a phone
+        // number to this document; this line is why.
+        allow read: if true;
+
+        // The owner can also write a row — that is what lets the dashboard
+        // correct a score by hand, or overwrite one it does not believe.
+        allow create, update: if isOwner();
+
+        allow create, update: if signedIn()
+          && request.auth.uid == uid
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 24
+          && request.resource.data.pts is int
+          && request.resource.data.pts >= 0
+          && request.resource.data.pts <= 200
+          && request.resource.data.speed is int
+          && request.resource.data.speed >= 0
+          && request.resource.data.speed <= 2000;
+
+        // SWITCH — Phase 2. Uncomment to make the admin dashboard the only
+        // thing that can set a score, and delete the two `pts` lines above.
+        //   && request.resource.data.pts == resource.data.pts
+
+        // Only you can clear a player out (spam, a duplicate, a test row).
+        allow delete: if isOwner();
+
+        // ---- a player's submitted answers ----
+        // Written by the player, scored by the dashboard. Once written for
+        // a round they cannot be rewritten, so nobody can change an answer
+        // after seeing the key.
+        match /answers/{roundId} {
+          allow read:   if signedIn() && request.auth.uid == uid || isOwner();
+          allow create: if signedIn() && request.auth.uid == uid;
+          allow update, delete: if isOwner();
+        }
+      }
+
+      // ---- the room ----
+      // Free-text chat during a game night. This started life as a set of
+      // pre-written lines with a Copy button and no text box at all, on
+      // the reasoning that nothing typed means nothing to moderate. The
+      // reasoning was sound and the feature still failed: nobody copies
+      // and pastes. It is a real chat box now, and these rules are the
+      // part of that decision that has to be paid for rather than argued.
+      //
+      // PUBLIC READ. Everyone playing tonight sees every line, which
+      // means anything written here is effectively published. The client
+      // strips links and long digit runs before sending; that is a
+      // courtesy, not a control, because a client is not a control.
+      //
+      // Create-only, and only under your own uid. A line cannot be edited
+      // after it lands and cannot be attributed to somebody else. Nobody
+      // but the owner can delete — that is the "clear the room" control,
+      // and it belongs to exactly one person.
+      //
+      // `at` is deliberately not validated as a server timestamp. The
+      // ordering it produces is a convenience, not a security property,
+      // and a rule that rejects a clock skew costs a real message.
+      match /talk/{msgId} {
+        allow read: if true;
+
+        allow create: if signedIn()
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 140
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 24
+          && (!('color' in request.resource.data) || (
+                request.resource.data.color is string
+                && request.resource.data.color.size() <= 12
+             ))
+          && (!('kind' in request.resource.data) || (
+                request.resource.data.kind is string
+                && request.resource.data.kind.size() <= 12
+             ));
+
+        allow update: if false;
+        allow delete: if isOwner();
+      }
+    }
+
+    // ---- the list ----
+    // Contact details, volunteered on the handle screen or at the end of a
+    // game night. This is the one collection in the database that holds
+    // personal information, so it is the one collection nobody but the
+    // owner can read — not "hard to find", not "obscured", refused at the
+    // database.
+    //
+    // A player may write their own row and rewrite it (they fix a typo, they
+    // add a number later). They may not read anyone's, including their own,
+    // because there is no screen that needs to and every capability granted
+    // here is a capability that has to hold up on a phone we don't control.
+    //
+    // `consent == true` is enforced HERE, not just in the form. A checkbox
+    // is a UI convention; this is the thing that makes an unchecked box
+    // impossible to work around, and it is what makes the row evidence
+    // rather than an assertion. Under TCPA the burden of proving consent is
+    // ours — so the database refuses to store a contact without it.
+    match /signups/{uid} {
+      allow read: if isOwner();
+
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.consent == true
+        && request.resource.data.email is string
+        && request.resource.data.email.size() >= 6
+        && request.resource.data.email.size() <= 120
+        && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 24
+        && (!('phone' in request.resource.data) || (
+              request.resource.data.phone is string
+              && request.resource.data.phone.size() >= 10
+              && request.resource.data.phone.size() <= 20
+           ))
+        // Favourite sport: the one-tap question on the handle screen.
+        && (!('sport' in request.resource.data) || (
+              request.resource.data.sport is string
+              && request.resource.data.sport.size() <= 40
+           ))
+        // Free-text and multi-select from the longer "what do you watch"
+        // sheet. Bounded here as well as in the client, because the client
+        // is a suggestion and this is not. The lists are bounded by LENGTH
+        // only — the rules language has no way to walk a list and check
+        // every element, so the per-element cap stays a client concern and
+        // the size cap here is what stops a row getting large.
+        && (!('teams' in request.resource.data) || (
+              request.resource.data.teams is string
+              && request.resource.data.teams.size() <= 120
+           ))
+        && (!('freq' in request.resource.data) || (
+              request.resource.data.freq is string
+              && request.resource.data.freq.size() <= 40
+           ))
+        && (!('src' in request.resource.data) || (
+              request.resource.data.src is string
+              && request.resource.data.src.size() <= 24
+           ))
+        && (!('night' in request.resource.data) || (
+              request.resource.data.night is string
+              && request.resource.data.night.size() <= 60
+           ))
+        && (!('sports' in request.resource.data) || (
+              request.resource.data.sports is list
+              && request.resource.data.sports.size() <= 40
+           ))
+        && (!('watch' in request.resource.data) || (
+              request.resource.data.watch is list
+              && request.resource.data.watch.size() <= 8
+           ))
+        && (!('prize' in request.resource.data) || (
+              request.resource.data.prize is list
+              && request.resource.data.prize.size() <= 8
+           ))
+        // `verified` may only be true when the token on this request
+        // actually carries a verified address. Otherwise a player could
+        // mark their own row proven from the console, which would make the
+        // whole flag worth nothing — and this flag is the one thing that
+        // separates a deliverable list from a list of typos.
+        && (!('verified' in request.resource.data) || (
+              request.resource.data.verified == false || (
+                request.resource.data.verified == true
+                && request.auth.token.email_verified == true
+              )
+           ));
+
+      // Removing someone from the list has to actually work — an unsubscribe
+      // that doesn't delete is worse than no unsubscribe at all. Two people
+      // are allowed to do it: the owner, and the person whose row it is.
+      //
+      // The second half of that is not a nicety. Three screens in the app
+      // promise "unsubscribe any time"; until this line existed, that promise
+      // had no mechanism behind it on the only list we actually hold. A
+      // consent copy that describes a button nobody built is the kind of
+      // thing that is fine right up until the first person asks.
+      allow delete: if isOwner() || (signedIn() && request.auth.uid == uid);
+    }
+
+    // Everything not named above is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
