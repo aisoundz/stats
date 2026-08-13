@@ -220,7 +220,8 @@ async function scoreRoom(db, FieldValue, AUTO){
   playersSnap.forEach(d => {
     const v = d.data() || {};
     players[d.id] = { predPts: typeof v.predPts === 'number' ? v.predPts : 0,
-                      catchPts: typeof v.catchPts === 'number' ? v.catchPts : 0 };
+                      catchPts: typeof v.catchPts === 'number' ? v.catchPts : 0,
+                      caughtPts: typeof v.caughtPts === 'number' ? v.caughtPts : 0 };
   });
   if(!Object.keys(players).length) return 0;
 
