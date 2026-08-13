@@ -2313,9 +2313,26 @@ window.STATS_FIREBASE = {
         });
       }
 
-      SB.me = { uid: auth.currentUser.uid, name: '', email: auth.currentUser.email || '',
-                verified: !!auth.currentUser.email && auth.currentUser.emailVerified !== false,
-                anon: auth.currentUser.isAnonymous === true };
+      /* B22 — IDENTITY HAS TO BE ANNOUNCED, AND THIS IS WHY IT WASN'T.
+
+         This used to build SB.me by hand: four lines that are a verbatim
+         copy of what refreshMe() already does. Being a copy, it skipped
+         the one thing refreshMe does that matters — dispatching
+         `stats-identity`. So on the page load that follows an email-link
+         sign-in, the home page painted its signed-out state, identity
+         arrived a moment later, and NOTHING was ever told. The player was
+         signed in and the entire app disagreed: "Sign in to build your
+         card" on Home, "Sign in to open Stats", and a handle screen asking
+         for the address they had just proved they owned.
+
+         Then it got quieter still: the onAuthStateChanged below fires with
+         the same user, refreshMe compares it to the SB.me this block had
+         already written, sees nothing changed, and stays silent. A second
+         copy of the truth suppressing the announcement of the truth.
+
+         One path in. refreshMe owns SB.me, and anybody who builds it
+         another way loses the broadcast. */
+      SB.refreshMe(auth.currentUser);
 
       authMod.onAuthStateChanged(auth, function (u) { SB.refreshMe(u); });
 
@@ -5258,9 +5275,17 @@ function prefillGate(){
     if(lbl) lbl.textContent='You\u2019re on the list for the next game night.';
   }
   if(!gateNeeded()){
-    // Practice: the field stays, but it is plainly optional and never blocks.
-    if(note) note.textContent='Optional in practice mode — add it and we\'ll tell you when the real night is on.';
+    /* Practice used to be playable with no account at all, and this line
+       said so. It is no longer true — B14 put sign-in in front of practice
+       — and a form that describes a rule the app stopped having is worse
+       than a form that says nothing. */
+    if(note) note.textContent='This is just how you show up on the board. You can change it any time.';
   }
+  /* The email field, the account row and the note are all owned by
+     paintAccountRow() and checkName(), which already do exactly the right
+     thing — I wrote a second copy of both before noticing, which is the
+     bug this whole file keeps having. See B22: the reason they looked
+     broken was that identity never arrived, not that they were wrong. */
   initSports();
   initColors();
   renderVerify();
@@ -11287,7 +11312,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-13-tile.105';
+const STATS_BUILD='2026-08-13-identity.106';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
