@@ -77,6 +77,19 @@ service cloud.firestore {
         allow read, write: if isOwner();
       }
 
+      /* B26 — THE ARCHIVE. Eight game nights were played and the room's
+         answers survive for none of them: one button cleared rounds and
+         submissions, and it sits on the tab the host uses live. What the
+         room THOUGHT would happen is the one thing this product knows that
+         nobody else can, and it was being deleted within days.
+      
+         Owner-only read as well as write. An archive holds every player's
+         raw picks for every round — it is the most revealing document in
+         the database and the least reason for anyone else to read it. */
+      match /archive/{stamp} {
+        allow read, write: if isOwner();
+      }
+
       // ---- rounds: questions and the answer key ----
       // Readable so phones can pick up a pushed round. The answer key is
       // NOT in this document while the round is live — it lives in the
