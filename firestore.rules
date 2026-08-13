@@ -63,6 +63,20 @@ service cloud.firestore {
       allow read:  if true;
       allow write: if isOwner();
 
+      // ---- the plan the off-laptop runner reads ----
+      // Owner only, read AND write, for exactly the same reason /key below
+      // is: this document carries the question list AND any answer already
+      // set by hand, so a public read would hand a player the key before
+      // the round opens.
+      //
+      // The runner is unaffected by this line. It connects with a service
+      // account through the Admin SDK, which does not consult these rules
+      // at all. This exists so the Control Room can publish the plan, and
+      // so nobody else can read it.
+      match /plan/{doc} {
+        allow read, write: if isOwner();
+      }
+
       // ---- rounds: questions and the answer key ----
       // Readable so phones can pick up a pushed round. The answer key is
       // NOT in this document while the round is live — it lives in the
