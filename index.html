@@ -4255,14 +4255,25 @@ try{ setInterval(syncEnergy, 1500); }catch(_){}
    block is allowed to assign them.                                     */
 function ledger(){ if(!S.led || typeof S.led!=='object' || Array.isArray(S.led)) S.led={}; return S.led; }
 function recomputeScore(){
-  const L0=ledger(); let p=0,s=0,pp=0,cp=0,gp=0;
+  const L0=ledger(); let p=0,s=0,pp=0,cp=0,gp=0,lv=0;
   Object.keys(L0).forEach(function(k){
     const e=L0[k]||{}; const v=Math.max(0,Math.round(Number(e.p)||0)), w=Math.max(0,Math.round(Number(e.s)||0));
     p+=v; s+=w;
-    if(e.k==='pred') pp+=v; else if(e.k==='catch') cp+=v; else if(e.k==='caught') gp+=v;
+    /* B18 — `live` is DERIVED HERE, not subtracted somewhere else.
+       livePtsOnly() used to compute the quarter-questions figure as
+       pts - predPts - catchPts, forgetting the caught lane that was added
+       later. The result: Caught It points were inside the "Quarter
+       questions" bar AND on their own row, so the breakdown added up to
+       five more than the total it was breaking down. The ring was right
+       and the explanation underneath it was wrong, which is the worse of
+       the two ways to be wrong.
+       This switch is now the ONE place that knows what the lanes are. A
+       future lane that nobody adds a branch for lands in `live` — visible
+       and wrong in the open, rather than double-counted or vanished. */
+    if(e.k==='pred') pp+=v; else if(e.k==='catch') cp+=v; else if(e.k==='caught') gp+=v; else lv+=v;
   });
-  S.pts=p; S.speed=s; S.predPts=pp; S.catchPts=cp; S.caughtPts=gp;
-  return {pts:p,speed:s,predPts:pp,catchPts:cp,caughtPts:gp};
+  S.pts=p; S.speed=s; S.predPts=pp; S.catchPts=cp; S.caughtPts=gp; S.livePts=lv;
+  return {pts:p,speed:s,predPts:pp,catchPts:cp,caughtPts:gp,live:lv};
 }
 function ledgerSet(key,pts,speed,kind){
   if(!key) return recomputeScore();
@@ -4330,7 +4341,7 @@ function ledgerClear(){ S.led={}; return recomputeScore(); }
    player earned during play. The final screen's breakdown needs this and
    used to get it by snapshotting S.pts before mutating it, which is
    exactly the pattern this block exists to delete. */
-function livePtsOnly(){ const r=recomputeScore(); return r.pts - r.predPts - r.catchPts; }
+function livePtsOnly(){ return recomputeScore().live; }
 window.STATS_LEDGER = { get:ledger, set:ledgerSet, clear:ledgerClear, sum:recomputeScore };
 
 function save(){try{
@@ -11187,7 +11198,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-13-server.102';
+const STATS_BUILD='2026-08-13-adds-up.103';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
