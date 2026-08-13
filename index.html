@@ -3673,6 +3673,28 @@ const SPORT_KEY=(()=>{try{return (new URLSearchParams(location.search).get('spor
 const SPORT=SPORTS[SPORT_KEY]||SPORTS.basketball;
 const L=SPORT.L;
 const GAME=SPORT.game, roster=SPORT.roster, preds=SPORT.preds, rounds=SPORT.rounds, CATCHES=SPORT.catches;
+/* B3 · THE SAFETY NET WAS NEVER CONNECTED. Last thing that happened on Game
+   Night #7: a player finished Q4, and instead of a score got the toast "No
+   night to save r3 to. Tell the host." His fourth quarter was thrown away at
+   the buzzer.
+
+   That message comes from outQueue(), which refuses to queue a write when
+   nidNow() is empty. And nidNow() reads:
+
+       nightId || (window.GAME && window.GAME.nightId) || ''
+
+   `nightId` is set once, inside join(). The second term is the safety net for
+   exactly the case that bit him — a session that has the night configured but
+   never completed a join in this page instance, which is what a reload plus a
+   restore-from-save produces.
+
+   `GAME` is a top-level `const`. A top-level const does not become a property
+   of `window`. So `window.GAME` has been undefined since the day that line was
+   written, the `&&` short-circuits, and the net has never once caught anything.
+   It read as belt-and-braces in review and was a comment.
+
+   One line, and it is a net again. Everything downstream already worked.   */
+try{ window.GAME = GAME; }catch(_){}
 const NR=rounds.length;                               // number of scoring rounds
 // A pushed round can be worth something other than the built-in schedule —
 // the host decides on the night. Empty until a round is actually pushed, so
@@ -5501,20 +5523,57 @@ function timeCue(){beep(300,0.3);try{navigator.vibrate&&navigator.vibrate([80,60
 
    Practice is untouched and always will be. Practice is a simulated game;
    simulated games have already happened. */
+/* ============ B2 · ONE NIGHT, ONE SET OF QUESTIONS ==================
+   Game Night #7, third quarter, two devices side by side. The phone was
+   asked "Which team scored the first points after halftime?" and scored it.
+   The laptop was asked "Which team scored FIRST in Q3?" and sat on "Locked
+   in — waiting on the host" for the rest of the night.
+
+   Two different quizzes, one quarter. The phone had the four questions the
+   host pushed. The laptop had four out of the app's own built-in bank,
+   because it opened the round before the push landed and nothing stopped it.
+
+   Everything downstream then behaved correctly, which is what made this so
+   hard to see. holdForHost() locked the picks and recorded WHICH questions
+   that device answered. When the key arrived, applyHostedScore() compared
+   the two lists, found they did not match, and refused to grade — because
+   scoring answer 3 against somebody else's question 3 is worse than not
+   scoring at all. Every part did its job and the player still finished the
+   night holding a round that could never pay.
+
+   The hole is upstream of all of it: in a LIVE night this app has two
+   question banks, and which one you get is settled by a race between your
+   thumb and the host's push. So now it has one. No hosted round means no
+   round — the button says so and stays shut. Nothing is lost by dropping
+   the fallback; a held round was never payable, it just took four answers
+   and a minute of someone's attention before telling them so.
+
+   Practice is untouched. There the built-in bank IS the game.           */
 function liveRoundBlocked(qi){
   try{
     if(!S || S.mode!=='live') return null;                  // practice is free
+    /* A hosted round for this index, in ANY state, means the host owns these
+       questions and this phone gets the same four as every other phone. That
+       is the only condition under which a live round may open. It also
+       outranks the clock: if the Control Room says a round exists, it
+       exists, whatever the feed thinks. */
+    try{ var hd=hostedDoc(qi); if(hd) return null; }catch(_){}
+    /* Already held off the built-in bank on an older build? Leave that path
+       alone — gtStartRow already renders it as 'locked, waiting on the
+       host', and re-blocking it would change a player's screen mid-night. */
+    try{ if(HR && HR.held && HR.held[qi]) return null; }catch(_){}
     var ph=''; try{ ph=phaseNow(); }catch(_){}
-    if(ph!=='pre') return null;                             // tipped, or over
-    /* A host who has deliberately pushed a round outranks the clock — if
-       the Control Room says a round is open, it is open, whatever the feed
-       thinks. The human is allowed to know something we do not. */
-    try{ var hd=hostedDoc(qi); if(hd && hd.state==='live') return null; }catch(_){}
-    return 'not-started';
+    if(ph!=='pre') return 'no-host';                        // tipped, not pushed
+    return 'not-started';                                   // no tip yet
   }catch(_){ return null; }
 }
 function startQuarter(qi){
-  if(liveRoundBlocked(qi)){
+  var _blk=liveRoundBlocked(qi);
+  if(_blk==='no-host'){
+    try{ toast('The host hasn\u2019t opened this '+L.period+' yet \u2014 it appears here the moment they do.'); }catch(_){}
+    return;
+  }
+  if(_blk){
     try{ toast('The game hasn\u2019t tipped yet \u2014 there\u2019s nothing to be right about. Tap Practice to warm up.'); }catch(_){}
     return;
   }
@@ -10609,7 +10668,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-12-button.90';
+const STATS_BUILD='2026-08-12-onebank.91';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -13564,9 +13623,17 @@ function gtStartRow(){
     /* Before tip the button is not a button. Saying "Q1 ended? Answer now"
        at four in the afternoon is the app asking somebody to make something
        up. */
-    if(liveRoundBlocked(qi)){
+    var blk=liveRoundBlocked(qi);
+    if(blk){
+      /* Two different reasons, two different sentences. "Opens when the game
+         tips" told a player at 9:40pm, mid-third-quarter, something they
+         could see with their own eyes was false — and taught them the app
+         was not paying attention to the game it was about. */
+      var why = (blk==='no-host')
+        ? (roundTag(qi)+' opens when the host pushes it')
+        : (roundTag(qi)+' opens when the game tips');
       return '<button class="btn ghost" style="margin-top:11px" disabled>'
-        + esc(roundTag(qi)+' opens when the game tips') + '</button>';
+        + esc(why) + '</button>';
     }
     /* Already answered and waiting on the host? Then there is nothing to
        open and a button would be a lie.
