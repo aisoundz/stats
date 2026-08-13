@@ -1198,6 +1198,9 @@
     <div class="center" style="margin-top:6px"><span class="pill" id="revPill">Score Q1</span></div>
     <h1 class="center" style="margin-top:8px" id="revTitle">Score this quarter ✅</h1>
     <p class="sub center" id="revNote">When the host posts the answers in the group chat, tap the correct answer for each question. Your picks are marked 🔵.</p>
+    <!-- THE RECEIPT. Not body copy — a status, in its own box, that only
+         says "saved" once the server has said so. See SB.subState. -->
+    <div id="subRcpt" style="display:none"></div>
     <div id="revList"></div>
     <button class="btn teal" id="revBtn" disabled onclick="confirmReview()">Confirm &amp; score quarter</button>
     <div id="revResult"></div>
@@ -1401,6 +1404,12 @@
     <!-- Says why the prediction card scored nothing, on the two occasions
          it legitimately cannot. Silence here reads as a bug. -->
     <p class="sub center" id="finalCardNote" style="display:none;margin:6px 12px 0;font-size:14px"></p>
+    <!-- `B7`. Rounds this player answered that were never scored. This is the
+         most important thing on the screen when it is not empty, so it sits
+         above the award and the ring rather than under them. -->
+    <div id="finalUnsettled" style="display:none;margin:12px 12px 0;padding:13px 15px;border-radius:14px;
+         background:rgba(255,197,77,.10);border:1px solid rgba(255,197,77,.40);
+         color:var(--gold,#ffc54d);font-size:14px;font-weight:700;line-height:1.45;text-align:left"></div>
 
     <!-- THE AWARD. Lands last on purpose: ring, then number, then this.
          Every award is derived from data the app already holds and none
@@ -2903,14 +2912,46 @@ window.STATS_FIREBASE = {
     try { window.dispatchEvent(new CustomEvent('stats:outbox', { detail:{ pending: outbox.length } })); } catch (_) {}
   }
   SB.pendingWrites = function () { return outbox.length; };
+
+  /* ============ THE RECEIPT ==========================================
+     Game Night #7: one player answered every round and finished on zero,
+     another lost his fourth quarter at the buzzer. Neither of them knew.
+     The app's screen said "Your answers are locked and sent" in both
+     cases, because that sentence was printed by the code that ASKED for
+     the write, not by the code that watched it land.
+
+     "I entered my answers" and "the server has my answers" are two
+     different facts. Until now they looked identical — to the player, and
+     to us reading the same screen over their shoulder.
+
+     So every submit now reports one of four states, and the screen shows
+     which one it is:
+
+       sending  the write is in flight
+       saved    the server has it, confirmed
+       queued   the write failed and is held on this phone, retrying
+       lost     it could not even be queued — nobody has these answers
+
+     `lost` is the one that mattered on Game Night #7 and the one that had
+     no representation anywhere. It now has a loud one.                  */
+  SB.subState = {};
+  function subMark(rid, st) {
+    if (!rid) return st;
+    SB.subState[String(rid)] = st;
+    try { window.dispatchEvent(new CustomEvent('stats:sub', { detail:{ rid:String(rid), state:st } })); } catch (_) {}
+    return st;
+  }
+  SB.subStateOf = function (rid) { return SB.subState[String(rid)] || ''; };
+
   function outQueue(rid, row) {
     var nid = nidNow();
-    if (!nid) { notifyOps('write-lost', 'No night to save ' + rid + ' to. Tell the host.'); return; }
+    if (!nid) { notifyOps('write-lost', 'No night to save ' + rid + ' to. Tell the host.'); subMark(rid,'lost'); return false; }
     outbox = outbox.filter(function (e) { return !(e.nid === nid && e.rid === rid); });
     outbox.push({ nid: nid, rid: String(rid), row: row, tries: 0 });
     outSave(); outAnnounce();
     notifyOps('write-queued', 'Your answers for ' + rid + ' haven’t reached the server yet — held on this phone and retrying.');
     outStart();
+    return subMark(rid,'queued') && true;
   }
   function outStart() {
     if (outTimer || !outbox.length) return;
@@ -2934,9 +2975,9 @@ window.STATS_FIREBASE = {
           await F.setDoc(F.doc(db, 'nights', e.nid, 'rounds', e.rid, 'subs', uid()), body);
           sent = true;
         } catch (_) { sent = false; }
-        if (sent) notifyOps('write-landed', 'Your ' + e.rid + ' answers are saved.');
+        if (sent) { notifyOps('write-landed', 'Your ' + e.rid + ' answers are saved.'); subMark(e.rid,'saved'); }
         else if (e.tries < 200) still.push(e);
-        else notifyOps('write-lost', 'Couldn’t save your ' + e.rid + ' answers after many tries. Tell the host — they can score you by hand.');
+        else { notifyOps('write-lost', 'Couldn’t save your ' + e.rid + ' answers after many tries. Tell the host — they can score you by hand.'); subMark(e.rid,'lost'); }
       }
       outbox = still; outSave(); outAnnounce();
       if (!outbox.length && outTimer) { clearInterval(outTimer); outTimer = null; }
@@ -2984,6 +3025,7 @@ window.STATS_FIREBASE = {
       if (typeof o.worth === 'number' && o.worth > 0 && o.worth <= 60) row.worth = Math.round(o.worth);
       if (o.src) row.src = String(o.src).slice(0, 12);
       if (o.label) row.label = String(o.label).slice(0, 40);
+      subMark(roundId, 'sending');
       if (!SB.enabled || !nightId || !uid()) { outQueue(roundId, row); return false; }
 
       var ok = await writeTry('submit', function () {
@@ -2992,9 +3034,9 @@ window.STATS_FIREBASE = {
         return F.setDoc(
           F.doc(db, 'nights', nightId, 'rounds', roundId, 'subs', uid()), body);
       });
-      if (!ok) outQueue(roundId, row);
+      if (!ok) outQueue(roundId, row); else subMark(roundId, 'saved');
       return ok;
-    } catch (e) { return false; }   // row-build error only; the write itself retries above.
+    } catch (e) { subMark(roundId,'lost'); return false; }   // row-build error only; the write itself retries above.
   };
 
   /* Did I already answer this round? Used on resume, so a player who
@@ -3784,6 +3826,24 @@ function startLive(){
    game — start over", which are the two ways out of a stale save. An
    escape hatch you hide when things go wrong is not an escape hatch, and
    the failure mode is a phone locked inside a game that is not happening. */
+/* Tip-off before the game, the score during it, the result after. The
+   scoreline comes off GS — the one read — so this can never disagree with
+   the ribbon eight pixels below it. */
+function landingTipLine(){
+  try{
+    var ph=''; try{ ph=phaseNow(); }catch(_){}
+    if(ph!=='live' && ph!=='final') return GAME.tip;
+    var A=null,B=null;
+    try{ A=GS.teams.find(function(t){return !t.home;}); B=GS.teams.find(function(t){return t.home;}); }catch(_){}
+    if(!A||!B||A.score==null||B.score==null){
+      return ph==='final' ? '\uD83C\uDFC1 Final' : '\uD83D\uDD34 Live now';
+    }
+    var line=esc(A.ab)+' '+A.score+' \u2013 '+B.score+' '+esc(B.ab);
+    if(ph==='final') return '\uD83C\uDFC1 Final \u00B7 '+line;
+    var det=''; try{ det=String(GS.detail||''); }catch(_){}
+    return '\uD83D\uDD34 Live \u00B7 '+line+(det?(' \u00B7 '+det):'');
+  }catch(_){ try{ return GAME.tip; }catch(_2){ return ''; } }
+}
 function landingActionsWanted(){
   try{ if(signedInNow()) return true; }catch(_){}
   try{ return (S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0 && S.place!=='predict'); }catch(_){}
@@ -3815,7 +3875,16 @@ function paintContinueCard(){
     let where='';
     try{
       if(S.place==='live') where=roundTag(S.qi)+' is open';
-      else if(S.place==='lobby') where='waiting on '+roundTag(S.nextQ!=null?S.nextQ:S.qi);
+      else if(S.place==='lobby'){
+        /* "waiting on Q1" printed during Q2 was another pre-game copy. The
+           honest version depends on whether the HOST has opened the next
+           round, which is a fact we hold — not on what this device last
+           happened to score. */
+        var nq=(S.nextQ!=null?S.nextQ:S.qi);
+        var open=false; try{ var hd=hostedDoc(nq); open=!!(hd && hd.state==='live'); }catch(_){}
+        where = open ? (roundTag(nq)+' is open \u2014 answer now')
+                     : (roundTag(nq)+' opens at the break');
+      }
       else if(S.place==='review'||S.place==='break') where='between quarters';
       else where='in progress';
     }catch(_){ where='in progress'; }
@@ -3963,20 +4032,30 @@ try{ setInterval(syncEnergy, 1500); }catch(_){}
      · NOTHING CAN DESTROY IT. There is no accumulated number to corrupt.
        A wrong entry is one wrong line, and rewriting that line fixes it.
 
-   Kinds: 'live' (a quarter), 'pred' (the card), 'catch' (live catches).
-   S.pts / S.speed / S.predPts / S.catchPts still exist and still mean what
-   they meant — they are now DERIVED, and no code outside this block is
-   allowed to assign them.                                              */
+   Kinds: 'live' (a quarter), 'pred' (the card), 'catch' (the watchlist),
+   'caught' (Caught It).
+
+   'catch' vs 'caught' is a bad pair of names and it cost a whole game
+   night. 'catch' is the WATCHLIST — the things you flag before tip that
+   resolve themselves while you watch. 'caught' is CAUGHT IT — the
+   six-second card that fires mid-game. They were one letter apart and one
+   of them did not exist, which is how Caught It shipped for seven game
+   nights flashing the scoreboard green and paying nothing. Rename them
+   together or not at all.
+
+   S.pts / S.speed / S.predPts / S.catchPts / S.caughtPts still exist and
+   still mean what they meant — they are DERIVED, and no code outside this
+   block is allowed to assign them.                                     */
 function ledger(){ if(!S.led || typeof S.led!=='object' || Array.isArray(S.led)) S.led={}; return S.led; }
 function recomputeScore(){
-  const L0=ledger(); let p=0,s=0,pp=0,cp=0;
+  const L0=ledger(); let p=0,s=0,pp=0,cp=0,gp=0;
   Object.keys(L0).forEach(function(k){
     const e=L0[k]||{}; const v=Math.max(0,Math.round(Number(e.p)||0)), w=Math.max(0,Math.round(Number(e.s)||0));
     p+=v; s+=w;
-    if(e.k==='pred') pp+=v; else if(e.k==='catch') cp+=v;
+    if(e.k==='pred') pp+=v; else if(e.k==='catch') cp+=v; else if(e.k==='caught') gp+=v;
   });
-  S.pts=p; S.speed=s; S.predPts=pp; S.catchPts=cp;
-  return {pts:p,speed:s,predPts:pp,catchPts:cp};
+  S.pts=p; S.speed=s; S.predPts=pp; S.catchPts=cp; S.caughtPts=gp;
+  return {pts:p,speed:s,predPts:pp,catchPts:cp,caughtPts:gp};
 }
 function ledgerSet(key,pts,speed,kind){
   if(!key) return recomputeScore();
@@ -4055,7 +4134,7 @@ function save(){try{
      night's points and six players who are not in the building. */
   try{ S.nid=(typeof GAME!=='undefined'&&GAME.nightId)||''; }catch(_){}
   // Snapshot the Caught It record into the blob so a reload keeps the streak.
-  try{ if(typeof PCI==='object') S.pci={called:PCI.called,hit:PCI.hit,streak:PCI.streak,best:PCI.best,heat:PCI.heat}; }catch(_){}
+  try{ if(typeof PCI==='object') S.pci={called:PCI.called,hit:PCI.hit,streak:PCI.streak,best:PCI.best,heat:PCI.heat,pts:PCI.pts}; }catch(_){}
   localStorage.setItem(LS_KEY,JSON.stringify(S));
 }catch(e){}}
 function clearSave(){try{localStorage.removeItem(LS_KEY);}catch(e){}}
@@ -5921,6 +6000,50 @@ function nextQuestion(){
    completely normal night — they just won't appear in the grid, and the
    host can still take their score off the phone by hand.                */
 const LOCKED = {};                     // roundId -> already sent from here
+/* ============ THE RECEIPT, PLAYER SIDE ==============================
+   The backend now reports four states per round (SB.subState). This is the
+   only thing that draws them, and it is deliberately the ONLY place in the
+   app allowed to tell a player their answers are safe.
+
+   The rule it enforces: "saved" is not something we say because we asked
+   for a write. It is something we say because the server answered.       */
+var RCPT_RID = '';
+function subReceiptFor(rid){
+  RCPT_RID = String(rid||'');
+  paintSubReceipt();
+}
+function paintSubReceipt(){
+  var el=document.getElementById('subRcpt'); if(!el) return;
+  var rid=RCPT_RID;
+  if(!rid || !S || S.mode!=='live'){ el.style.display='none'; return; }
+  var st=''; try{ st=(window.SB && SB.subStateOf) ? SB.subStateOf(rid) : ''; }catch(_){}
+  if(!st){ el.style.display='none'; return; }
+  var copy={
+    sending:'Sending your answers…',
+    saved:  'Saved to tonight\u2019s room \u2014 the host has them.',
+    queued: 'Not on the server yet \u2014 held on this device, still trying.',
+    lost:   'These answers did NOT reach the room. Tell the host.'
+  }[st] || '';
+  el.className='s-'+st;
+  el.innerHTML='<span class="rdot"></span><span>'+esc(copy)+'</span>'
+    + ((st==='lost'||st==='queued') ? '<button class="rtry" data-rtry="1">Try again</button>' : '');
+  el.style.display='flex';
+  try{
+    var b=el.querySelector('[data-rtry]');
+    if(b) b.onclick=function(){ try{ retrySubmit(rid); }catch(_){} };
+  }catch(_){}
+}
+/* One button, one job: send it again, from whichever path owns this round. */
+function retrySubmit(rid){
+  try{
+    var idx=parseInt(String(rid).replace(/^r/,''),10);
+    var hd=null; try{ hd=HR.doc && HR.doc.id===rid ? HR.doc : null; }catch(_){}
+    if(hd){ submitHostedWrite(hd, isNaN(idx)?S.qi:idx); return; }
+    if(!isNaN(idx)){ delete LOCKED['r'+idx]; lockPicks(idx); }
+  }catch(_){}
+}
+try{ window.addEventListener('stats:sub', function(){ try{ paintSubReceipt(); }catch(_){} }); }catch(_){}
+
 function lockPicks(idx, tries){
   if(S.mode!=="live") return false;
   const rid = 'r'+idx;
@@ -5930,6 +6053,7 @@ function lockPicks(idx, tries){
   const again = ()=>{ const n=(tries||0)+1; if(n<=2) setTimeout(()=>lockPicks(idx, n), 3000*n); };
   if(!window.SB || !SB.enabled || !SB.submit){ again(); return false; }
   LOCKED[rid] = true;
+  subReceiptFor(rid);
   const mine = S.liveAnswers[idx] || [];
   SB.submit(rid, {
     name:  S.name || 'player',
@@ -6522,6 +6646,13 @@ function renderBreakdown(livePts){
     out.push(bRow('👀 Your watchlist', S.catchPts||0, CATCH_PTS, '',
       `${S.catchPts||0} of ${CATCHES.length} caught`));
   }
+  /* Caught It, as its own auditable row. It only appears if a card actually
+     fired, because a zero next to a side game nobody played reads as a
+     failure rather than an absence. */
+  if((S.caughtPts||0)>0 || (PCI && PCI.called>0)){
+    out.push(bRow('⚡ Caught It', S.caughtPts||0, CAUGHT_NIGHT_CAP, '',
+      `${PCI.hit||0} of ${PCI.called||0} caught${(PCI.best||0)>1?` · best run ${PCI.best}`:''}`));
+  }
 
   rows.innerHTML = out.join('')
     + `<div class="fbspeed"><span class="fbl">⚡ Speed banked</span>`
@@ -6684,7 +6815,15 @@ function awardCtx(rank){
     graded:countGraded(), preds:predHits(),
     roundClean:[], roundGraded:[], roundHits:[],
     bestBank:0, answered:0, answeredAll:false, exactNum:false,
-    catchHits:S.catchPts||0, catchTotal:CATCHES.length, catchAll:false
+    catchHits:S.catchPts||0, catchTotal:CATCHES.length, catchAll:false,
+    /* `B7` · rounds this player answered that were never scored. On Game
+       Night #7 one man answered sixteen questions, had four of them graded,
+       and was handed PERFECT NIGHT — "you did not miss a single graded
+       question all night" — because the award counts GRADED questions, so
+       the more of your night that fails, the easier perfection becomes.
+       An award engine with no idea whether the night worked will
+       congratulate you on the wreckage. Now it knows. */
+    unsettled:0, settled:true
   };
   let asked=0;
   rounds.forEach((r,i)=>{
@@ -6702,7 +6841,13 @@ function awardCtx(rank){
     c.roundGraded[i]=g;
     c.roundHits[i]=h;
     c.roundClean[i]=(g>=2 && h===g);
+    /* Answered something in this round and nothing came back for it. Not
+       "the host never pushed it" — that was never your chance to miss —
+       but "you played it and it never paid". */
+    var played=false; try{ played=r.q.some(function(q,j){ var m=ans[j]; return !!(m&&m.choice); }); }catch(_){}
+    if(played && g===0) c.unsettled++;
   });
+  c.settled = c.unsettled===0;
   c.answeredAll = asked>0 && c.answered===asked;
   // The exact-number bonus on the prediction sheet, resolved exactly the
   // way bestCall() resolves it — one truth, one place.
@@ -6733,13 +6878,15 @@ const AWARDS=[
   { id:'gameball', emoji:'👑',
     name:()=> SPORT_KEY==='soccer' ? 'PLAYER OF THE MATCH' : 'THE GAME BALL',
     hides:['podium'],
-    test:c=>c.rank===1,
+    /* A first place declared while your own rounds are still unscored is a
+       guess dressed as a trophy. Wait for the night to settle. */
+    test:c=>c.rank===1 && c.settled,
     why:c=>`First place. <b>${c.pts} points</b> — nobody in the room read this ${L.unit} better than you.`,
     short:()=>'won the night' },
 
   { id:'perfect', emoji:'💎', name:'PERFECT NIGHT',
     hides:['closer','hotstart','perfectq','quickdraw','board','wire'],
-    test:c=>c.graded.total>=4 && c.graded.hits===c.graded.total,
+    test:c=>c.settled && c.graded.total>=4 && c.graded.hits===c.graded.total,
     why:c=>`<b>${c.graded.total} of ${c.graded.total}</b> — you did not miss a single graded question all night.`,
     short:c=>`${c.graded.total}/${c.graded.total} clean` },
 
@@ -6786,7 +6933,7 @@ const AWARDS=[
     short:c=>`#${c.rank} finish` },
 
   { id:'wire', emoji:'🔒', name:'WIRE TO WIRE',
-    test:c=>c.answeredAll && c.answered>=4,
+    test:c=>c.settled && c.answeredAll && c.answered>=4,
     why:c=>`You answered <b>every single question</b> put in front of you — all ${c.answered}. Most people drop one.`,
     short:()=>'answered everything' },
 
@@ -7826,7 +7973,30 @@ function startHostedWatch(){
    on a board that is SEPARATE from the 100-pt leaderboard. It never calls
    SB.join / SB.push / the HR flow, and if the whole thing broke the main
    game would not notice. */
-var PCI = { unsub:null, active:null, picked:{}, graded:{}, streak:0, best:0, called:0, hit:0, heat:0, muted:false, tick:null, hideT:null };
+var PCI = { unsub:null, active:null, picked:{}, graded:{}, streak:0, best:0, called:0, hit:0, heat:0, pts:0, muted:false, tick:null, hideT:null };
+
+/* ============ WHAT A CAUGHT IT IS WORTH =============================
+   For seven game nights: nothing. ciGrade() incremented five counters,
+   pushed them to a side board, and stopped. It never called ledgerSet.
+   Meanwhile the card said "Nice call", flashed the scoreboard green and
+   buzzed the phone — every signal the app owns for "you just scored",
+   attached to zero points. The report that finally surfaced it was exact:
+   "as I am getting points for the Caught It, it's not registering." There
+   were no points to register.
+
+   Founder's call on the number: 5 a catch with a streak multiplier.
+   The reasoning is that a Caught It is a six-second read on a live moment,
+   so it should be small next to a quarter question — a Q1 question is
+   worth 10 — and it should pay the RUN rather than the single call, since
+   protecting a streak is the exact behaviour this side game exists to
+   create. A run of five is worth 75; the night is capped at 100 so a hot
+   Caught It night can never outrun a good quarter, and the cap is a
+   deliberate ceiling rather than a bug to be discovered later.        */
+var CAUGHT_BASE=5, CAUGHT_STREAK_CAP=5, CAUGHT_NIGHT_CAP=100;
+function caughtWorth(streak){
+  var mult=Math.max(1, Math.min(CAUGHT_STREAK_CAP, Number(streak)||1));
+  return CAUGHT_BASE*mult;
+}
 
 function startCallItWatch(){
   if(PCI.unsub || S.mode!=='live' || !window.SB || !SB.watchCallIt) return;
@@ -8318,6 +8488,23 @@ function ensureCiCard(){
        pinned score on the smallest phones — which is a straight trade
        against a screen you cannot read. Same escape hatch as body.qopen,
        measured instead of guessed. */
+    /* THE RECEIPT. Four states, three colours. 'sending' is grey because
+       nothing has happened yet; 'saved' is the only green in the set and it
+       is earned; 'queued' is gold — your answers exist, just not there yet;
+       'lost' is red and does not fade, because it is the one that needs a
+       human. */
+    '#subRcpt{margin:10px 0 2px;padding:11px 13px;border-radius:12px;font-size:14px;'+
+      'font-weight:700;display:flex;align-items:center;gap:9px;border:1px solid var(--line)}'+
+    '#subRcpt .rdot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:var(--dim)}'+
+    '#subRcpt.s-sending{background:var(--card);color:var(--muted)}'+
+    '#subRcpt.s-saved{background:rgba(46,230,166,.09);border-color:rgba(46,230,166,.34);color:#2ee6a6}'+
+    '#subRcpt.s-saved .rdot{background:#2ee6a6}'+
+    '#subRcpt.s-queued{background:rgba(255,197,77,.09);border-color:rgba(255,197,77,.34);color:var(--gold,#ffc54d)}'+
+    '#subRcpt.s-queued .rdot{background:var(--gold,#ffc54d)}'+
+    '#subRcpt.s-lost{background:rgba(255,77,94,.11);border-color:rgba(255,77,94,.44);color:#ff8b96}'+
+    '#subRcpt.s-lost .rdot{background:#ff4d5e}'+
+    '#subRcpt .rtry{margin-left:auto;font-size:12px;font-weight:800;padding:6px 11px;border-radius:9px;'+
+      'border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer}'+
     'body.stickyoff #gtSticky{position:static;max-height:none;overflow:visible}'+
     'body.stickyoff #gtSticky::after{display:none}'+
     '#gtSticky::after{content:"";position:absolute;left:0;right:0;top:100%;height:14px;'+
@@ -8508,13 +8695,46 @@ function ciShow(html, live){
      height was always zero. The page moves down by exactly the card's
      height so the score stays visible directly beneath it. */
   try{ ciFit(); }catch(_){}
+  /* `B8` · A VIBRATION IS NOT A NOTIFICATION ON A LAPTOP. Game Night #7:
+     "I got a Caught It question on my smartphone but not on the laptop."
+     Both received it. The phone buzzed in his hand; the desktop drew a card
+     silently, waited six seconds and removed itself. The card's entire
+     notification budget was one line of `navigator.vibrate`, which desktop
+     browsers do not implement.
+
+     So: buzz where buzzing works, and everywhere, a short tone and a visible
+     arrival. The tone is generated rather than fetched — no asset, no
+     latency, and nothing to 404 mid-game — and it is wrapped because an
+     AudioContext that has never been unlocked by a gesture will throw. */
   try{ if(live && navigator.vibrate) navigator.vibrate(18); }catch(_){}
+  try{ if(live) ciChime(); }catch(_){}
   // The 'leave this open' placeholder and a live question are mutually
   // exclusive — showing both reads as two half-built things.
   // Repaint the tab around it: the 'leave this open' placeholder steps aside
   // for a live question, but the rehearsal control has to survive — a test
   // button that disappears the moment you use it can't be used twice.
   try{ if(ciOnGametime() && typeof renderGametime==='function') renderGametime(); }catch(_){} }
+/* One short two-note rise. Quiet on purpose — this arrives while a
+   broadcast is playing and it is a tap on the shoulder, not an alarm. */
+var _ciAC=null;
+function ciChime(){
+  try{
+    if(PCI && PCI.muted) return;
+    var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+    _ciAC = _ciAC || new AC();
+    if(_ciAC.state==='suspended'){ try{ _ciAC.resume(); }catch(_){} }
+    var t=_ciAC.currentTime;
+    [[880,0],[1320,0.085]].forEach(function(n){
+      var o=_ciAC.createOscillator(), g=_ciAC.createGain();
+      o.type='sine'; o.frequency.value=n[0];
+      g.gain.setValueAtTime(0.0001, t+n[1]);
+      g.gain.exponentialRampToValueAtTime(0.14, t+n[1]+0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+n[1]+0.20);
+      o.connect(g); g.connect(_ciAC.destination);
+      o.start(t+n[1]); o.stop(t+n[1]+0.22);
+    });
+  }catch(_){}
+}
 function ciFit(){
   var c=document.getElementById('ciCard'); if(!c) return;
   var up = c.style.display!=='none';
@@ -8537,6 +8757,11 @@ function ciGrade(q){
   try{ if(String(q.qid).indexOf('ci-try-')===0 && S.mode==='live') return; }catch(_){}
   PCI.called++;
   if(String(pick)===String(q.answer)){ PCI.hit++; PCI.streak++; if(PCI.streak>PCI.best)PCI.best=PCI.streak; PCI.heat=Math.min(9,PCI.heat+1);
+    /* THE POINTS. One line in the ledger, its own kind, so it shows as its
+       own row on the final card and can be audited like everything else —
+       and so that recomputing never double-pays a card that grades twice. */
+    PCI.pts = Math.min(CAUGHT_NIGHT_CAP, (Number(PCI.pts)||0) + caughtWorth(PCI.streak));
+    try{ ledgerSet('caught', PCI.pts, 0, 'caught'); save(); }catch(_){}
     try{ flashEnergy('hit',1800); }catch(_){} }
   else { PCI.streak=0; PCI.heat=Math.max(0,PCI.heat-1); try{ flashEnergy('miss',1400); }catch(_){} }
   try{ if(window.SB&&SB.pushCallItBoard) SB.pushCallItBoard({called:PCI.called,hit:PCI.hit,streak:PCI.streak,best:PCI.best,heat:PCI.heat}); }catch(e){}
@@ -8652,7 +8877,9 @@ function renderCiCard(q){
        player starts protecting a streak instead of guessing, and that is
        the whole behaviour we want. */
     var heat = right ? Math.min(3, Math.floor(PCI.streak/3)) : 0;
-    var head = pk==null ? 'You sat this one out' : (right?'Nice call':'Not this time');
+    var paid = right ? caughtWorth(PCI.streak) : 0;
+    var head = pk==null ? 'You sat this one out'
+             : (right ? ('Nice call \u00B7 +'+paid) : 'Not this time');
     var icon = pk==null ? '—' : (right?'✅':'✕');
     var run  = (pk!=null && right && PCI.streak>1)
       ? '<div class="cirun">🔥 <b>'+PCI.streak+' in a row</b>'+(PCI.streak>=3?' — you’re on a run':'')+'</div>'
@@ -8830,21 +9057,45 @@ function submitHosted(h){
   renderHostedReview(h, idx, false);
   go('review');
   save();
-  if(window.SB && SB.submit){
-    SB.submit(h.id,{picks:picks,banks:banks,name:S.name||'player'}).then(okv=>{
-      HR.submitted[h.id]=true;
-      const note=document.getElementById('revNote');
-      if(note && S.screen==='review' && !HR.scored[h.id]){
-        // If the write failed we say so, because the honest version is still
-        // fine: the key arrives over the same watch and scores them locally.
-        note.textContent = okv
-          ? 'Your picks are locked. The second the host reveals the answers, this screen scores itself — nothing to tap.'
-          : 'Couldn\'t reach the server, so your picks are held on this phone. They still score the moment the host reveals.';
-      }
-    }).catch(()=>{});
+  submitHostedWrite(h, idx, picks, banks);
+  submitHostedTail(h);
+}
+
+/* The write itself, split out so the receipt's "Try again" can run it a
+   second time without re-rendering the screen underneath the player.
+
+   `HR.submitted` used to be set inside the .then() REGARDLESS of the
+   result, so a write that failed was recorded as submitted anyway — which
+   is how a lost round could still hide the button for the next one. It is
+   now set only when the server has the row, or the outbox is holding it
+   and will keep trying. A `lost` write marks nothing. */
+function submitHostedWrite(h, idx, picks, banks){
+  if(!window.SB || !SB.submit) return;
+  if(!picks || !banks){
+    try{
+      var qi=(idx==null)?S.qi:idx;
+      picks=rounds[qi].q.map(function(q,i){var m=S.liveAnswers[qi][i];return (m&&m.choice)||'';});
+      banks=rounds[qi].q.map(function(q,i){var m=S.liveAnswers[qi][i];return (m&&m.bank)||0;});
+    }catch(_){ return; }
   }
+  subReceiptFor(h.id);
+  SB.submit(h.id,{picks:picks,banks:banks,name:S.name||'player'}).then(function(okv){
+    var st=''; try{ st=SB.subStateOf(h.id); }catch(_){}
+    if(okv || st==='queued'){ HR.submitted[h.id]=true; }
+    try{ paintSubReceipt(); }catch(_){}
+    var note=document.getElementById('revNote');
+    if(note && S.screen==='review' && !HR.scored[h.id]){
+      note.textContent = okv
+        ? 'Your picks are locked. The second the host reveals the answers, this screen scores itself — nothing to tap.'
+        : (st==='queued'
+            ? 'Held on this device and still sending. They score the moment they land and the host reveals.'
+            : 'These answers did not reach tonight\u2019s room. Tap Try again, or tell the host so they can score you by hand.');
+    }
+  }).catch(function(){ try{ paintSubReceipt(); }catch(_){} });
+}
+
+function submitHostedTail(h){
   S.subIds=S.subIds||{}; S.subIds[h.id]=true; save();
-  // Host revealed while they were still answering — score it now.
   setTimeout(function(){try{flushPendingScore();}catch(e){}},0);
 }
 
@@ -8954,6 +9205,9 @@ function renderHostedReview(r, idx, revealed){
   document.getElementById('revNote').textContent = revealed
     ? 'The host revealed the answers. This is what you got.'
     : 'Your picks are locked. The second the host reveals the answers, this screen scores itself — nothing to tap.';
+  /* Once it is scored the receipt has nothing left to say — the score IS
+     the receipt. Before that it is the most important line on the screen. */
+  try{ revealed ? subReceiptFor('') : subReceiptFor(r && r.id ? r.id : ('r'+idx)); }catch(_){}
   document.getElementById('revResult').innerHTML = revealed ? '' :
     `<div class="reveal"><div class="r1">⏳ ${roundTag(idx)}: locked, not yet scored</div>
      <div class="r2">Running total so far: <b>${S.pts}</b> pts · <b>${S.speed}</b> ⚡ — this `
@@ -9028,9 +9282,13 @@ function holdForHost(idx){
   const $=id=>document.getElementById(id);
   $('revPill').textContent = roundTag(idx)+' locked';
   $('revTitle').textContent = 'Locked in — waiting on the host ⏳';
+  /* "locked and sent" was the sentence that lied to two players on Game
+     Night #7. It is now "locked", full stop — whether anything was SENT is
+     the receipt's job to say, underneath, once the server has answered. */
   $('revNote').textContent =
-    'Your answers are locked and sent. Nothing to tap. The moment the host '
-    +'posts this '+L.period+"'s answers, this screen scores itself.";
+    'Your answers are locked. The moment the host '
+    +'posts this '+L.period+"'s answers, this screen scores itself."
+  try{ subReceiptFor('r'+idx); }catch(_){};
   $('revBtn').style.display='none';
 
   const list=$('revList'); list.innerHTML='';
@@ -9078,8 +9336,28 @@ async function finishLive(){
     ? Math.max(joined, top.length) : joined;
   if(rank!==null && rank!==undefined && total){
     setStat(1,'#'+rank,`Final rank of ${total.toLocaleString()}`);
+    /* `B7` · DO NOT CROWN AN UNFINISHED NIGHT. On Game Night #7 this fired
+       before the host had revealed, and again for a player whose last three
+       quarters were never scored. A trophy handed out over incomplete data
+       is the loudest possible version of the app not knowing what it is
+       talking about. If rounds are still owed, say that instead — it is
+       both truer and more useful, because it tells them to go find the
+       host rather than to celebrate. */
+    var _un=0; try{ _un=awardCtx(rank).unsettled||0; }catch(_){}
     document.getElementById('finalTitle').textContent =
-      rank===1 ? '🏆 You won the night!' : `Great game, ${S.name||'player'}!`;
+      _un>0 ? `Hold on — ${_un} ${_un===1?'round is':'rounds are'} still unscored`
+            : (rank===1 ? '🏆 You won the night!' : `Great game, ${S.name||'player'}!`);
+    try{
+      var _ub=document.getElementById('finalUnsettled');
+      if(_ub){
+        if(_un>0){
+          _ub.textContent = '\u26A0\uFE0F You answered '+(_un===1?'a round':(_un+' rounds'))
+            +' that never came back with a score, so this total is not final. '
+            +'Tell the host \u2014 they have your answers in the Control Room and can settle it by hand.';
+          _ub.style.display='block';
+        } else { _ub.style.display='none'; }
+      }
+    }catch(_){}
     document.getElementById('scRankLine').textContent=`Rank #${rank} of ${total.toLocaleString()}`;
     // The two rarest awards in the table need the room. Now that we have it,
     // re-run the engine and rewrite tonight's row in the season record.
@@ -10181,7 +10459,10 @@ function movePred(id,dir){
 }
 const PRED_MAX=preds.reduce((a,p)=>a+p.base+(p.bonus||0),0);
 const LIVE_MAX=rounds.reduce((a,r,i)=>a+r.q.length*roundWorth(i),0);
-const MAXPTS=PRED_MAX+LIVE_MAX+CATCH_PTS;
+/* Caught It is capped rather than counted, because how many cards fire on a
+   given night is the host's choice, not a fixed denominator. The cap IS the
+   denominator. */
+const MAXPTS=PRED_MAX+LIVE_MAX+CATCH_PTS+CAUGHT_NIGHT_CAP;
 /* ---------------- BROADCAST CHROME ----------------
    Reusable team-crest + court/arena artwork carried across the in-game
    screens (live question header + final buzzer card). All original SVG/CSS,
@@ -10286,9 +10567,14 @@ async function mountMatchup(){
   }
   card.style.display='block';
   card.innerHTML='<div class="mu-skel">Loading the matchup…</div>';
+  /* `B5` · ONE THING FETCHES THE GAME. This used to open its own request to
+     the same endpoint GS already polls. It now rides GS's read, which has a
+     25-second cache and a backoff in front of it, so opening Home no longer
+     costs an extra round trip and this card can never show a different
+     score from the ribbon eight pixels above it. */
   let s;
-  try{ s=await fetch(API+'/summary?event='+ev+'&_='+Date.now()).then(r=>r.json()); }
-  catch(e){ card.style.display='none'; return; }
+  try{ await loadGameStats(); s=GS.raw; }catch(e){ s=null; }
+  if(!s){ card.style.display='none'; return; }
   try{
     const A=GAME.awayAbbr, H=GAME.homeAbbr;
     const comps=(((s.header||{}).competitions||[])[0]||{}).competitors||[];
@@ -10398,7 +10684,15 @@ function applySport(){
   const $=id=>document.getElementById(id);
   const set=(id,txt)=>{const e=$(id);if(e)e.textContent=txt;};
   const html=(id,h)=>{const e=$(id);if(e)e.innerHTML=h;};
-  set('landingTip',GAME.tip);
+  /* `B6` · THE HOME PAGE HELD A PRE-GAME COPY OF A FACT THAT CHANGED AT TIP.
+     Mid-second-quarter on Game Night #7 the loudest line on this page — gold,
+     bold, above everything — still read "Tip-off 8:00 ET". A page that keeps
+     announcing an event that started ninety minutes ago is not just stale, it
+     is the app telling you it has not looked at the game it is about.
+
+     One line, three states, derived from the same phase clock everything else
+     reads. Never a fourth opinion. */
+  set('landingTip', landingTipLine());
   html('landingMatch',SPORT.landing);
   set('landingHead',`${GAME.night} · ${GAME.date}`.replace(' · ·',' ·'));
   set('landingChip1',SPORT.L.league);
@@ -10617,33 +10911,53 @@ async function portalGoogle(){
     : 'Couldn’t sign you in — tap again, or use email below.');
 }
 
-/* ============ THE MOMENT RIBBON (sprint 2) ===========================
-   One line of truth under the wordmark: tips-in countdown before the
-   game, the live score during it, the final after. Real feed only —
-   on any doubt it hides. */
+/* ============ THE MOMENT RIBBON =====================================
+   One line of truth under the wordmark: tips-in countdown before the game,
+   the live score during it, the final after.
+
+   `B5` · IT USED TO HAVE ITS OWN EYES. This function opened its own
+   `fetch()` to ESPN, on its own 30-second timer, and never touched GS —
+   the object every other surface in the app reads. Two HTTP clients, two
+   refresh clocks, one game.
+
+   Game Night #7 put both on screen at once. The rail said TOR 22 DAL 32 at
+   7:37; this ribbon, two hundred pixels underneath it, said TOR 24 — 32 DAL
+   at 6:50. Neither was wrong. They were different ages, and the player was
+   asked to hold both.
+
+   A scoring game that shows two scores forfeits the right to be believed
+   about the third one, which is the player's own. So the ribbon has no eyes
+   any more. It reads GS, like everything else, and if GS has nothing it
+   says nothing rather than going to find its own answer.                */
 async function paintHeroRibbon(){
   const el=document.getElementById('heroRibbon'); if(!el) return;
   const ev=(typeof GAME!=='undefined')&&GAME.espnEvent; if(!ev){ el.style.display='none'; return; }
   try{
-    const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/summary?event='+ev+'&_='+Date.now());
-    const j=await r.json();
-    const comp=j.header&&j.header.competitions&&j.header.competitions[0]; if(!comp){ el.style.display='none'; return; }
-    const st=(comp.status&&comp.status.type)||{};
-    const cs=comp.competitors||[];
-    const home=cs.find(c=>c.homeAway==='home')||{}, away=cs.find(c=>c.homeAway==='away')||{};
-    const hA=(home.team&&home.team.abbreviation)||'', aA=(away.team&&away.team.abbreviation)||'';
+    /* The one read. Unforced — loadGameStats() has its own 25s cache and a
+       backoff, so this rides whatever the rest of the app already fetched
+       instead of adding a request per surface. */
+    try{ await loadGameStats(); }catch(_){}
+    if(!GS.ok || !GS.teams || GS.teams.length<2){ el.style.display='none'; return; }
+    const home=GS.teams.find(t=>t.home)||GS.teams[1]||{},
+          away=GS.teams.find(t=>!t.home)||GS.teams[0]||{};
+    const hA=home.ab||'', aA=away.ab||'';
+    /* phaseNow() is the app's single answer to "where are we in this game".
+       Reading `st.state` here was a fourth opinion on the same question. */
+    let ph=''; try{ ph=phaseNow(); }catch(_){ ph=''; }
+    const st={ state: (ph==='live'?'in':(ph==='final'?'post':'pre')),
+               shortDetail: String(GS.detail||'') };
     if(st.state==='in'){
       el.innerHTML='<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red,#ff4d5e);animation:ribPulse 1.4s infinite"></span>'
         +'<b style="color:var(--red,#ff4d5e)">LIVE</b><span style="color:var(--muted)">·</span> '
-        +esc(aA)+' <b>'+esc(String(away.score??''))+'</b> — <b>'+esc(String(home.score??''))+'</b> '+esc(hA)
+        +esc(aA)+' <b>'+esc(away.score==null?'–':String(away.score))+'</b> — <b>'+esc(home.score==null?'–':String(home.score))+'</b> '+esc(hA)
         +' <span style="color:var(--muted);font-weight:600;margin-left:auto">'+esc(st.shortDetail||'')+'</span>';
       el.style.display='flex';
     } else if(st.state==='post'){
       el.innerHTML='🏁 <b>Final</b><span style="color:var(--muted)">·</span> '
-        +esc(aA)+' <b>'+esc(String(away.score??''))+'</b> — <b>'+esc(String(home.score??''))+'</b> '+esc(hA);
+        +esc(aA)+' <b>'+esc(away.score==null?'–':String(away.score))+'</b> — <b>'+esc(home.score==null?'–':String(home.score))+'</b> '+esc(hA);
       el.style.display='flex';
     } else {
-      const d=new Date(comp.date||''); const ms=d-Date.now();
+      const d=new Date((GS.info&&GS.info.date)||(GAME&&GAME.tipISO)||''); const ms=d-Date.now();
       if(isFinite(ms)&&ms>0){
         const h=Math.floor(ms/3.6e6), m=Math.max(1,Math.round((ms%3.6e6)/6e4));
         el.innerHTML='⏱ Tips in <b style="color:var(--gold,#ffc54d)">'+(h>0?(h+'h '):'')+m+'m</b>'
@@ -10668,7 +10982,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-12-onebank.91';
+const STATS_BUILD='2026-08-13-truth.93';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -11430,6 +11744,18 @@ async function loadGameStats(force){
     GS.state=stat.state||'pre';
     GS.detail=String(stat.shortDetail||stat.detail||'')
       .replace(/(^|\s)(\d+\.\d)(?=\s|$|\s*-)/g, function(m,pre,num){ return pre+fmtClock(num); });
+    /* THE RAW PAYLOAD, KEPT ON PURPOSE. Two other surfaces used to re-fetch
+       this exact document because they wanted a field GS did not model —
+       the matchup card wants `predictor` and `lastFiveGames`, the ribbon
+       wanted `header.competitions[0].status`. Three HTTP clients, three
+       clocks, one game, and Game Night #7 showed two of their answers on
+       one screen 47 seconds apart.
+
+       Modelling every field either of them might ever want is a losing
+       game. Keeping the response is not: one request, one age, and a
+       surface that needs something exotic reads it from here instead of
+       going out on its own. */
+    GS.raw=j;
     GS.ok=teams.length>0; GS.at=Date.now();
     if(GS.ok){ GS.err=''; GS.fails=0; } else { GS.err='no teams in feed'; GS.fails++; }
     try{ paintTeamColours(); }catch(_){}
