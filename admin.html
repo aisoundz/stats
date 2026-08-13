@@ -290,6 +290,20 @@
 
     <!-- ---------- TAB 2: RUN ---------- -->
     <section id="t-run" class="hide">
+      <!-- ================= AUTOPILOT ================================
+         Above the guided steps on purpose. The guided card is the manual
+         transmission — one step lit at a time, in the right order, for a
+         human who is going to drive. This is the offer to not drive at
+         all, and it has to be the first thing on the screen or the person
+         who wanted it will have already started pressing buttons. -->
+      <div class="card" style="margin-bottom:14px;border-color:var(--blue,#2f6bff)">
+        <h3 style="margin:0 0 4px;font-size:15px">🤖 Autopilot</h3>
+        <p class="sub" style="margin:0 0 12px;font-size:12px">
+          Opens each quarter when it ends, waits for the room, works out the answers
+          from the feed and posts the key. It never guesses.</p>
+        <div id="hostBody"></div>
+      </div>
+
       <!-- ================= GUIDED HOST MODE ==========================
          The Control Room works, but only if you already know the order:
          push when the quarter ENDS, mark while the next one plays, reveal,
@@ -472,7 +486,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-13-admin.35-gn8';
+window.ADMIN_BUILD='2026-08-13-admin.36-autopilot';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -1669,6 +1683,7 @@ function renderGuide(){
 }
 
 function renderRun(){
+  try{ renderHost(); }catch(_){}
   const cfg = nightCfg(night);
   const wrap = $('runList'); if(!wrap) return;
   wrap.innerHTML = '';
@@ -2282,6 +2297,252 @@ function watchSubs(i){
       renderRun();
     }, ()=>{});
   }catch(e){}
+}
+
+/* =====================================================================
+   THE AUTONOMOUS HOST  (`B-55`)
+   ---------------------------------------------------------------------
+   "We've tried a bunch of times with me pressing the quarter is open and
+   then closing it. Our biggest problem is that it's not doing it
+   automatically."
+
+   Every piece needed to run a night without a human already existed and
+   none of them were joined up. The feed poll knew when a quarter ended.
+   The sixteen resolvers knew the answers — proved against Game Night #7's
+   finished game, where they agreed with the host's own key on fifteen of
+   sixteen and the one disagreement was the resolver being right about a
+   clock bug. writePush, writeReveal and writeScore were already pulled
+   apart into three single writes precisely so that something other than a
+   button could call them. What was missing was the thing that decides.
+
+   This is that thing. It is a loop, and it is deliberately dumb:
+
+     a quarter finishes            -> push that round
+     the room has answered, or
+       the window runs out         -> resolve all four from the feed
+     all four resolved confidently -> post the key, which scores everyone
+     any one of them did not       -> STOP, and say so
+
+   THE LAST LINE IS THE WHOLE DESIGN. An automatic host that guesses is
+   worse than no automatic host, because a wrong key is not a missing
+   score — it is a score that is confidently wrong, applied to everybody,
+   and nobody in the room can tell. So the robot may only act when every
+   answer in a round resolves. One unresolved question hands the entire
+   round back to a human, loudly, and the loop moves on.
+
+   WHERE THIS RUNS, AND WHY THAT IS STILL WRONG. In this browser tab. If
+   the laptop sleeps or the tab closes, the night stops being hosted — the
+   exact failure that put B-55 at the top of the list after Game Night #7.
+   Two things make that survivable rather than silent: the loop is
+   idempotent, so reopening the tab catches up on everything it missed in
+   one tick, and it writes a heartbeat the player app can read, so "the
+   host is offline" becomes a fact on the page instead of a room quietly
+   waiting. Moving the loop to a server is a change of address, not a
+   rewrite — that is why the deciding is separated from the doing here.
+   ================================================================== */
+var HOST = {
+  on:false, tick:null, log:[], busy:false,
+  answerMs: 150000,        // 2m30 of answering, unless the room finishes early
+  graceMs:  20000,         // let the feed settle before trusting "period done"
+  seenDone: {},            // idx -> ms the quarter first read as finished
+  acted:    {}             // 'push0' / 'key0' -> true, so a tick can never repeat itself
+};
+
+function hostSay(kind, msg){
+  var t = new Date();
+  var hh = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+  HOST.log.unshift({ at:hh, kind:kind, msg:msg });
+  HOST.log = HOST.log.slice(0, 40);
+  try{ renderHost(); }catch(_){}
+}
+
+/* How many people are actually sitting in this night. The loop closes a
+   round early when everyone has answered, and "everyone" has to mean the
+   people in the room rather than the people who ever joined. */
+async function hostSeats(){
+  try{
+    var snap = await FB.F.getDocs(FB.F.collection(FB.db,'nights',night,'players'));
+    return snap.size;
+  }catch(_){ return 0; }
+}
+
+async function hostSubs(i){
+  try{
+    var snap = await FB.F.getDocs(FB.F.collection(FB.db,'nights',night,'rounds',roundDocId(i),'subs'));
+    return snap.size;
+  }catch(_){ return 0; }
+}
+
+/* Resolve every question in a round. Returns null the moment one of them
+   cannot be answered — no partial keys, ever. */
+function hostResolveRound(sum, i){
+  var nd = nightDraft(night), rd = nd.rounds[i];
+  if(!rd || !rd.qs || !rd.qs.length) return null;
+  var out = [], why = [];
+  for(var x=0; x<rd.qs.length; x++){
+    var q = rd.qs[x];
+    if(q.k != null){ out.push(q.k); why.push('already marked by hand'); continue; }
+    if(!q.r){ return { fail:'Q'+(x+1)+' has no resolver — it needs a human.' }; }
+    var res;
+    try{ res = AUTO.resolve(q.r, sum, i+1, q.o); }
+    catch(e){ return { fail:'Q'+(x+1)+' threw: ' + ((e&&e.message)||e) }; }
+    if(!res || !res.ok) return { fail:'Q'+(x+1)+' — ' + ((res&&res.why)||'no answer') };
+    var ix = q.o.indexOf(res.answer);
+    if(ix < 0) return { fail:'Q'+(x+1)+' resolved to "'+res.answer+'", which is not one of its options.' };
+    out.push(ix); why.push(res.answer);
+  }
+  return { marks:out, why:why };
+}
+
+async function hostCloseRound(sum, i){
+  var cfg = nightCfg(night);
+  var r = hostResolveRound(sum, i);
+  if(!r){ return; }
+  if(r.fail){
+    if(!HOST.acted['held'+i]){
+      HOST.acted['held'+i] = true;
+      hostSay('hold', cfg.tags[i] + ' needs you — ' + r.fail);
+    }
+    return;
+  }
+  // Write the marks into the draft, then post the key. Same two calls the
+  // buttons make; the robot is not allowed a private path to the database.
+  var nd = nightDraft(night);
+  r.marks.forEach(function(k, x){ nd.rounds[i].qs[x].k = k; });
+  saveDraft();
+  try{ renderRun(); }catch(_){}
+  try{ renderWrite(); }catch(_){}
+  await writeReveal(i);
+  try{ await gradeAllScored(); }catch(_){}   // the same call the Reveal button makes
+  HOST.acted['key'+i] = true;
+  hostSay('key', cfg.tags[i] + ' scored — ' + r.why.join(' · '));
+}
+
+async function hostTick(){
+  if(!HOST.on || HOST.busy) return;
+  HOST.busy = true;
+  try{
+    if(!FB || !FB.auth || !FB.auth.currentUser){ hostSay('stop','Signed out — the host cannot write. Stopping.'); hostStop(); return; }
+    if(typeof night === 'undefined' || !night){ return; }
+    var cfg = nightCfg(night);
+    if(!eventId){ try{ eventId = await ESPN.resolveEvent(cfg, night); }catch(_){} }
+    if(!eventId){ hostSay('wait','Still looking for the game on ESPN.'); return; }
+
+    var sum; try{ sum = await AUTO.fetchFeed(eventId); }
+    catch(e){ hostSay('wait','Feed unreachable — will try again.'); return; }
+
+    /* The heartbeat. A room whose host has gone offline should be able to
+       say so rather than waiting in silence. */
+    try{
+      await FB.F.setDoc(FB.F.doc(FB.db,'nights',night),
+        { host:{ auto:true, at:FB.F.serverTimestamp() } }, { merge:true });
+    }catch(_){}
+
+    var now = Date.now();
+    var n = (cfg.tags||[]).length;
+    for(var i=0; i<n; i++){
+      var doc = liveDocs[roundDocId(i)] || null;
+      var done = false;
+      try{ done = AUTO.periodDone(sum, i+1); }catch(_){}
+
+      /* ---- OPEN ---------------------------------------------------- */
+      if(!doc && done){
+        /* A short grace period before believing the feed. ESPN posts the
+           end-of-period row a beat before the last plays of that period
+           land, and a round pushed inside that window is a round whose
+           questions are about plays the resolvers cannot see yet. */
+        if(!HOST.seenDone[i]){ HOST.seenDone[i] = now; continue; }
+        if(now - HOST.seenDone[i] < HOST.graceMs) continue;
+        if(HOST.acted['push'+i]) continue;
+        var issues = pushIssues(i);
+        if(issues.length){
+          if(!HOST.acted['badpush'+i]){ HOST.acted['badpush'+i]=true;
+            hostSay('hold', cfg.tags[i] + ' cannot be pushed — ' + issues[0]); }
+          continue;
+        }
+        HOST.acted['push'+i] = true;
+        await writePush(i);
+        hostSay('push', cfg.tags[i] + ' is live on every phone.');
+        continue;
+      }
+
+      /* ---- CLOSE --------------------------------------------------- */
+      if(doc && doc.state === 'live' && !HOST.acted['key'+i]){
+        var opened = 0;
+        try{ opened = doc.openedAt && doc.openedAt.toMillis ? doc.openedAt.toMillis() : 0; }catch(_){}
+        var waited = opened ? (now - opened) : 0;
+        var seats = await hostSeats(), subs = await hostSubs(i);
+        var everyoneIn = seats > 0 && subs >= seats;
+        if(!everyoneIn && waited < HOST.answerMs) continue;
+        if(everyoneIn) hostSay('room','Everyone has answered ' + cfg.tags[i] + ' — closing early.');
+        await hostCloseRound(sum, i);
+        continue;
+      }
+    }
+
+    /* ---- THE BUZZER ------------------------------------------------ */
+    var over = false;
+    try{ over = !!(((sum.header.competitions[0].status||{}).type||{}).completed); }catch(_){}
+    if(over && !HOST.acted.final){
+      var allScored = true;
+      for(var k=0;k<n;k++){ var d=liveDocs[roundDocId(k)]; if(!d || d.state!=='scored') allScored=false; }
+      if(allScored){
+        HOST.acted.final = true;
+        hostSay('done','Final buzzer. Every quarter is scored — the prediction cards settle on the phones.');
+      }
+    }
+  }catch(e){
+    hostSay('err','Tick failed: ' + ((e&&e.message)||e));
+  }finally{ HOST.busy = false; }
+}
+
+function hostStart(){
+  if(HOST.on) return;
+  HOST.on = true;
+  HOST.acted = {}; HOST.seenDone = {};
+  hostSay('on','Autopilot on. Watching the feed — it will open each quarter when it ends and score it when the room is in.');
+  try{ if(!ESPN.liveOn) ESPN.toggleLive(); }catch(_){}
+  HOST.tick = setInterval(hostTick, 20000);
+  hostTick();
+  try{ renderHost(); }catch(_){}
+}
+function hostStop(){
+  HOST.on = false;
+  if(HOST.tick){ clearInterval(HOST.tick); HOST.tick = null; }
+  hostSay('off','Autopilot off. Nothing will open or close on its own.');
+  try{ renderHost(); }catch(_){}
+}
+function hostToggle(){ HOST.on ? hostStop() : hostStart(); }
+
+/* The log is the product here. An automatic host you cannot watch is a
+   thing that either worked or did not, and you find out at the buzzer. */
+function renderHost(){
+  var el = document.getElementById('hostBody'); if(!el) return;
+  var ICON = { push:'▶', key:'✅', hold:'⚠️', room:'👥', on:'🟢', off:'⚪️',
+               wait:'⏳', err:'✕', done:'🏁', stop:'✕' };
+  el.innerHTML =
+    '<button type="button" id="hostBtn" class="' + (HOST.on ? 'danger' : 'primary') + '" '
+    + 'style="width:100%;padding:15px;font-size:15px;font-weight:800;border-radius:12px;border:0;cursor:pointer;'
+    + 'background:' + (HOST.on ? 'var(--red,#ff4d5e)' : 'var(--blue,#2f6bff)') + ';color:#fff">'
+    + (HOST.on ? 'Stop autopilot' : 'Run tonight on autopilot') + '</button>'
+    + '<div style="margin-top:10px;font-size:12px;color:var(--dim);line-height:1.5">'
+    + (HOST.on
+        ? 'Watching the feed every 20 seconds. A quarter opens the moment it ends, and closes when everyone has answered or after 2m30 — whichever comes first. Anything the resolvers cannot answer is handed back to you rather than guessed.'
+        : 'It opens each quarter when the feed says it ended, waits for the room, resolves the four questions and posts the key. It will not guess: one unresolved question stops that round and asks you.')
+    + '</div>'
+    + (HOST.log.length
+        ? '<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px">'
+          + HOST.log.map(function(r){
+              return '<div style="display:flex;gap:9px;padding:6px 0;font-size:12px;line-height:1.45">'
+                + '<span style="flex:0 0 auto;opacity:.55">' + r.at + '</span>'
+                + '<span style="flex:0 0 auto">' + (ICON[r.kind]||'·') + '</span>'
+                + '<span style="flex:1;min-width:0;color:' + (r.kind==='hold'||r.kind==='err' ? 'var(--gold,#ffc54d)' : 'var(--ink)') + '">'
+                + esc(r.msg) + '</span></div>';
+            }).join('')
+          + '</div>'
+        : '');
+  var b = document.getElementById('hostBtn');
+  if(b) b.onclick = hostToggle;
 }
 
 /* =====================================================================
