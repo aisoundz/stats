@@ -3502,11 +3502,23 @@ function lean(){ try{ return !!LEAN_ON; }catch(_){ return false; } }
    `crew` (Talk) is gone for the same reason it was flagged: it is a group
    chat competing with the group chat these people are already in.
 
-   `stats` is in the row and dark for now. It is the first thing that comes
-   back after two clean nights — see STATS-Tab-Spec.md. Shipping the button
-   before the tab would be the exact "visible control that does nothing"
-   failure this list exists to prevent, so LEAN hides it until it is real. */
-const LEAN_TABS_OFF = ['stats'];
+   `stats` IS LIVE, and it is deliberately not governed by LEAN.
+
+   That looks like a contradiction — LEAN strips the deep cuts, the win
+   probability, the sparkline and the play-by-play, and the STATS tab is
+   made of exactly those things. It is not a contradiction, it is the
+   point. Those numbers were never bad; they were in the wrong place,
+   competing with a twenty-second clock on the one screen where the player
+   had a job to do. LEAN takes them off GAMETIME. STATS is where they live.
+
+   So the night still runs on the score, the round, the receipt and the
+   board — nothing has been added to the thing being tested. What changed
+   is that the material LEAN removed now has an address instead of a bin,
+   and it is one tab away rather than in front of you mid-round.
+
+   Caught It stays off. It is a second scoring mechanic, which is a
+   different kind of thing from a second screen. */
+const LEAN_TABS_OFF = [];
 const NAV_RETIRED   = ['crew','me'];
 /* Toggles BOTH ways, and paintNav calls it, so the nav can never be left
    showing a tab that navGo will refuse — a visible button that does nothing
@@ -3593,40 +3605,47 @@ const BB_GROUPS=[{ab:BB_GAME.homeAbbr,name:BB_GAME.homeName,names:BB_ROSTER.home
    room has an opinion about before tip-off, including the person who has
    never watched a full WNBA game. It is the hook that gets a sheet filled. */
 const BB_PREDS=[
-  /* ============ THREE PICKS, NOT SIX, AND NO NUMBER ENTRY ===========
-     This sheet was six picks, five of them carrying an exact-number bonus:
-     twelve inputs before tip, against an email that promises "about a
-     minute". That gap is the biggest drop-off in the funnel and it is
-     invisible from the inside, because every player we ever hear from is
-     one who already got through it.
+  /* ============ SIX PICKS, WITH THE NUMBER ==========================
+     This was cut to three with no number entry, and the founder put it
+     back. He is right, and the reason is worth recording because it is a
+     lesson about who this is for rather than a change of mind.
 
-     Two cuts, for two different reasons.
+     The cut was argued from FRICTION: twelve inputs before tip against an
+     email promising "about a minute", and the number field sitting between
+     a person and the thing they came for. That argument is sound for the
+     audience the app had when it was pitched as "the game that pays to pay
+     attention" — somebody who came to play along, for whom the sheet is a
+     toll on the way in.
 
-     THE NUMBER ENTRY GOES because a bonus nobody claims is not a bonus, it
-     is a form field. Picking a player is an opinion; typing "how many
-     rebounds" is homework, and it sits between a person and the thing they
-     actually came for.
+     It is the wrong argument for the audience the app now says it is for.
+     "Anybody who loves stats" does not experience "how many rebounds?" as
+     homework. That is the part they came for. The number is not a form
+     field to that person, it is the bet — and six categories is six ways
+     to still be alive in the fourth quarter instead of three.
 
-     STEALS AND BLOCKS GO because nobody has a read on them before tip.
-     They are close to coin flips, and a coin flip that decides a hundred
-     points is not a prediction, it is a lottery that punishes the person
-     who watched more basketball. Winner, points and rebounds are things a
-     room argues about out loud. That is the test.
+     "3 questions without adding stats takes away." Correct: cutting the
+     categories cut the surface area of the thing being sold.
 
-     AND THE WEIGHTING FLIPS, which is the part that matters most. The sheet
-     used to be 600 of a 1000-point night — meaning most of the score was
-     decided before tip-off, by guessing, in an app whose entire promise is
-     that it pays you to pay attention. It is 300 now against 400 live. The
-     night is won by watching. */
+     One note kept from the cut, not acted on: at 600 the sheet is 60% of
+     a 1000-point night, which means most of the score is settled before
+     tip. If that ever needs balancing, raise the live rounds rather than
+     shrink this — the fix is to make watching worth more, not to make
+     predicting worth less. */
   {id:"winner", label:"Winning team", q:"Who takes it tonight?", base:100,
    opts:[BB_GAME.homeName,BB_GAME.awayName], answer:BB_GAME.homeName},
-  // `answer` below is the SIMULATED result Practice mode plays against —
-  // never a claim about the real game. It must always be a name that exists
-  // in the roster above, or practice grades against a ghost.
-  {id:"pts", q:"Who scores the most points?", label:"Most points", base:100,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Caitlin Clark"},
-  {id:"reb", q:"Who grabs the most rebounds?", label:"Most rebounds", base:100,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Aliyah Boston"}
+  // NOTE: `answer`/`num` below are the SIMULATED results Practice mode plays
+  // against — never a claim about the real game. They must always be names
+  // that exist in the roster above, or practice grades against a ghost.
+  {id:"pts", q:"Who scores the most points?", label:"Most points", base:50, bonus:50,
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Caitlin Clark", num:22, numLabel:"How many pts?"},
+  {id:"ast", q:"Who dishes the most assists?", label:"Most assists", base:50, bonus:50,
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Caitlin Clark", num:8, numLabel:"How many assists?"},
+  {id:"stl", q:"Who racks up the most steals?", label:"Most steals", base:50, bonus:50,
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Lexie Hull", num:3, numLabel:"How many steals?"},
+  {id:"reb", q:"Who grabs the most rebounds?", label:"Most rebounds", base:50, bonus:50,
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Aliyah Boston", num:10, numLabel:"How many rebounds?"},
+  {id:"blk", q:"Who swats the most blocks?", label:"Most blocks", base:50, bonus:50,
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Aliyah Boston", num:2, numLabel:"How many blocks?"}
 ];
 /* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
    Every question is answerable by WATCHING the broadcast at the break — no lookups,
@@ -3813,8 +3832,8 @@ const SPORTS={
     step2h:"Answer at every quarter break",
     step2:"4 questions about what JUST happened — and not the ones you'd expect. Points rise: Q1 = 10 pts → Q4 = 40, so the last quarter is worth four times the first. A 20-second clock banks your unused seconds as ⚡ Speed points on correct answers.",
     step3:"The second the host reveals a quarter, your answers are scored for you — nothing to tap, even if your phone was in your pocket. Most points wins the night; ⚡ Speed breaks ties.",
-    rulePred:"Lock 3 picks before tip-off, 100 pts each: the winning team, the leading scorer and the leading rebounder. Three taps, no typing. Picks can't be changed after tip-off — and they're only 300 of the night, because the other 400 are won by watching.",
-    ruleLive:"At the end of each quarter, answer 4 questions about the quarter you just watched. They are not box-score trivia — they're the stuff you only catch if the game is actually on in front of you. Correct answers are worth 10 pts each in Q1, 20 in Q2, 30 in Q3, and 40 in Q4 — 400 points across the night, more than the pick sheet, and the fourth quarter alone is worth 160. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.",
+    rulePred:"Lock 6 picks before tip-off: winning team (100 pts) and the leader in points, assists, steals, rebounds & blocks (50 pts each). Nail the leader's exact stat total for a +50 bonus per category — so a category you fully nail is worth 100. Predictions can't be changed after tip-off.",
+    ruleLive:"At the end of each quarter, answer 4 questions about the quarter you just watched. They are not box-score trivia — they're the stuff you only catch if the game is actually on in front of you. Correct answers are worth 10 pts each in Q1, 20 in Q2, 30 in Q3, and 40 in Q4 — 400 points across the night, and the fourth quarter alone is worth 160 of them. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.",
     ruleScore:"When the host posts each quarter's answers (from the broadcast + official box score), your quarter scores itself on your phone — there is nothing for you to tap in. After the final buzzer the host settles the official stat leaders and your prediction sheet scores too."
   },
   soccer:{
@@ -11110,7 +11129,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-13-statstab.97';
+const STATS_BUILD='2026-08-13-statson.98';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
