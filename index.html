@@ -8606,6 +8606,13 @@ function ensureCiCard(){
        is earned; 'queued' is gold — your answers exist, just not there yet;
        'lost' is red and does not fade, because it is the one that needs a
        human. */
+    /* The copy affordance on every STATS card. Deliberately quiet — it is
+       an offer, not a call to action, and a loud button on eight cards
+       would be the loudest thing on the screen. */
+    '.stCopy{flex:0 0 auto;background:transparent;border:1px solid var(--line2,var(--line));'+
+      'color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;'+
+      'padding:5px 10px;border-radius:8px;cursor:pointer;margin-left:8px}'+
+    '.stCopy:active{background:var(--card2);color:var(--ink)}'+
     '#subRcpt{margin:10px 0 2px;padding:11px 13px;border-radius:12px;font-size:14px;'+
       'font-weight:700;display:flex;align-items:center;gap:9px;border:1px solid var(--line)}'+
     '#subRcpt .rdot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:var(--dim)}'+
@@ -11103,7 +11110,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-13-cuts.96';
+const STATS_BUILD='2026-08-13-statstab.97';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -11391,7 +11398,10 @@ try{ setInterval(function(){ try{
    it only fires when the horizontal movement clearly beats the vertical one,
    and it never fires while a live question is on screen — losing a round to
    a stray thumb would be a worse bug than the one this fixes. */
-var SWIPE_TABS=['gametime','stats','board'];
+/* Left to right, the order they sit in the nav — a swipe has to move the
+   way the eye expects or it feels like the app guessed. Home is off the
+   list on purpose: it is where you go deliberately, not by accident. */
+var SWIPE_TABS=['stats','gametime','board'];
 (function(){
   var x0=0,y0=0,t0=0,tracking=false;
   function start(e){
@@ -11417,11 +11427,12 @@ var SWIPE_TABS=['gametime','stats','board'];
       if(Date.now()-t0>700) return;
       if(Math.abs(dx)<60 || Math.abs(dx)<Math.abs(dy)*2) return;
       var dir = dx<0 ? 1 : -1;
-      // Inside Stats, swipe moves through the four panes before it leaves.
-      if(S.screen==='stats'){
-        var panes=['you','leaders','teams','deep'], i=panes.indexOf(STAB)+dir;
-        if(i>=0 && i<panes.length){ stGo(panes[i]); return; }
-      }
+      /* Stats used to swallow the first three swipes moving through its own
+         segmented control before it would let you leave. The tab has no
+         segments now — it is one scroll that changes with the phase of the
+         game — so a swipe there is a swipe between tabs like everywhere
+         else, and the row is short enough that the whole app is two
+         gestures wide. */
       var cur=SWIPE_TABS.indexOf(S.screen==='lobby'?'gametime':S.screen);
       if(cur<0) return;
       var nx=cur+dir; if(nx<0||nx>=SWIPE_TABS.length) return;
@@ -11457,9 +11468,10 @@ function menuRows(){
   try{ if(S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0) row('▶','Back to my game','resume'); }catch(_){}
   try{ if(S.screen==='final' || (S.mode==='demo' && S.pts>0)) row('🔁','Play again','restart'); }catch(_){}
   try{ if(S.screen==='final'){ row('😈','Post-game roast card','roast'); } }catch(_){}
-  R.push('<div class="mgrp">Coming soon</div>');
-  row('🏟️','Leagues','league','preview');
-  row('⭐','STATS+ season pass','plus','preview');
+  /* "COMING SOON" IS TWO ROWS OF VAPOUR. Leagues and STATS+ have no code
+     behind them, and a menu that advertises things that do not exist next
+     to things that do teaches a player to distrust the whole list. They go
+     back when they are real. */
   R.push('<div class="mgrp">Yours</div>');
   row('👤','Me &amp; my season','me');
   row('📬','Email me about game nights','join');
@@ -11473,7 +11485,11 @@ var MENU_GO={
   roast:function(){ try{ openRoast(); }catch(_){} },
   league:function(){ try{ openLeague(); }catch(_){ go('league'); } },
   plus:function(){ go('plus'); },
-  me:function(){ try{ navGo('me'); }catch(_){ go('me'); } },
+  /* The Me TAB is retired, so navGo refuses it — and the old fallback
+     never fired, because navGo returns quietly rather than throwing. This
+     row is now the only way in, which is the whole point of retiring the
+     tab, so it goes straight to the screen. */
+  me:function(){ try{ go('me'); renderMe(); }catch(_){} },
   join:function(){ try{ openJoin('menu'); }catch(_){} },
   signout:function(){ try{ doSignOut(); }catch(_){} }
 };
@@ -12925,11 +12941,14 @@ try{ window.shareCard=shareCard; }catch(_){}
    screen you are meant to glance at while a game is on. Now: a compact
    score line, your own number, and a segmented control with four panes.
    You choose what you are looking at; nothing is stacked on anything. */
+/* STAB and stGo were the segmented control on the old STATS tab — You,
+   Leaders, Teams, Deep cuts. The tab has no segments now; it is one scroll
+   that changes with the phase of the game, because the panes were never
+   the problem. Kept as no-ops for one release: `stGo` is referenced from a
+   handful of places that are cheaper to leave alone than to chase, and a
+   dead reference that throws would take the screen down with it. */
 var STAB='you';
-function stGo(t){
-  STAB=t; renderStats();
-  try{ var seg=document.getElementById('stSeg'); if(seg) seg.scrollIntoView({block:'start',behavior:'smooth'}); }catch(_){}
-}
+function stGo(){ try{ renderStats(); }catch(_){} }
 function stCard(title,inner,extra){
   return '<div class="card" style="padding:14px 16px;margin-top:12px'+(extra||'')+'">'
     + (title?'<div class="stHd">'+title+'</div>':'') + inner + '</div>';
@@ -12940,63 +12959,22 @@ function stEmpty(icon,head,sub){
     + '<p class="sub" style="font-size:14px;margin:7px 0 0">'+sub+'</p></div>';
 }
 
-function renderStats(){
-  var el=document.getElementById('stBody'); if(!el) return;
-  if(!GS.ok){
-    var dead=GS.fails>=2;
-    el.innerHTML='<div class="card center" style="padding:24px"><div style="font-size:26px">📈</div>'
-      +'<b style="font-size:15px">'+(dead?'Can’t reach the league feed':'Pulling the numbers…')+'</b>'
-      +'<p class="sub" style="font-size:14px;margin:8px 0 12px">'
-      +(dead?'Nothing here is ever typed in by hand, so rather than show you a made-up number this screen waits. Everything else in the app still works.':'Live from the league feed. One moment.')+'</p>'
-      +(dead?'<button type="button" id="stRetry" class="pdlock" style="max-width:260px;margin:0 auto;background:var(--card2);color:#93a0bd;font-size:14px;padding:13px">Try again</button>':'')
-      +'</div>';
-    var rb=document.getElementById('stRetry');
-    if(rb) rb.onclick=function(){ GS.fails=0; renderStats(); };
-    if(!dead && !GS.loading) loadGameStats().then(function(){ if(S.screen==='stats') renderStats(); });
-    return;
-  }
-  // The season table is what makes the Deep Cuts deep. Fetch once, lazily,
-  // and repaint when it lands rather than blocking the screen on it.
-  try{ if(!SEA.ok && !SEA.loading) loadSeason().then(function(){
-        if(S.screen==='stats') renderStats();
-        seaFillGaps().then(function(){ if(S.screen==='stats') renderStats(); });
-        loadLogs().then(function(){ if(S.screen==='stats') renderStats(); });
-      }); }catch(_){}
+/* ---- YOUR CARD, RACING THE REAL BOX SCORE --------------------------
+   Restored after being cut in the STATS rebuild, which was a mistake I
+   made and the gate caught. The founder was explicit about this one:
+   "before you would have your score next to the actual stat leader and it
+   was a good way to keep track."
 
-  var A=GS.teams[0], B=GS.teams[1], live=gsInGame(), out='';
+   It belongs here rather than on Gametime because it IS a stats view — the
+   question it answers is "where do my picks stand", which is a comparison,
+   not a score. Before tip it races season averages; once the ball goes up
+   the numbers become tonight's and nothing else about the row moves.
 
-  /* ---- the score, small. It is context here, not the headline; the
-     Gametime tab is where you go to watch it move. ------------------ */
-  out+='<div class="card" style="padding:11px 14px;display:flex;align-items:center;justify-content:space-between">'
-    + '<div style="flex:1;text-align:center"><div class="stTeam">'+esc(A.ab)+'</div><div style="font-size:22px;font-weight:900;color:#eef2fb;line-height:1.15">'+(A.score==null?'–':A.score)+'</div></div>'
-    + '<div style="flex:0 0 auto;padding:0 10px"><span class="pill" style="font-size:12px">'+esc(GS.detail||({pre:'Not started',live:'LIVE',final:'Final'}[phaseNow()]||(live?'LIVE':'Not started')))+'</span></div>'
-    + '<div style="flex:1;text-align:center"><div class="stTeam">'+esc(B.ab)+'</div><div style="font-size:22px;font-weight:900;color:#eef2fb;line-height:1.15">'+(B.score==null?'–':B.score)+'</div></div>'
-    + '</div>';
+   A number with nothing to beat is a receipt, not a race.              */
+function stYourCard(){
+  var out='', live=false;
+  try{ live=gsInGame(); }catch(_){}
 
-  /* ---- YOUR NUMBER. The engagement hook: whatever else is on this
-     screen, the first thing you see is how you are doing tonight. --- */
-  try{
-    var pts=Math.max(0,Math.round((S&&S.pts)||0));
-    var rank=null, fieldN=null;
-    try{ if(lastStand&&lastStand.length){ fieldN=lastStand.length;
-      lastStand.forEach(function(r,ix){ if(r.me) rank=ix+1; }); } }catch(_){}
-    var hit = (PCI.called>0) ? Math.round((PCI.hit/PCI.called)*100)+'%' : '—';
-    var tile=function(n,k,c){ return '<div class="stYouT"><div class="stYouN"'+(c?' style="color:'+c+'"':'')+'>'+n+'</div><div class="stYouK">'+k+'</div></div>'; };
-    out+='<div class="stYou">'
-      + tile(pts.toLocaleString(),'Points tonight')
-      + tile(rank?('#'+rank):'—', fieldN?('of '+fieldN+' tonight'):'Your rank')
-      + tile(hit,'Caught It hits', PCI.called>0&&PCI.hit/PCI.called>=0.6?'#2ee6a6':'')
-      + '</div>';
-  }catch(_){}
-
-  /* ---- the segmented control -------------------------------------- */
-  var TABS=[['you','You'],['leaders','Leaders'],['teams','Teams'],['deep','Deep cuts']];
-  out+='<div class="stSeg" id="stSeg">'+TABS.map(function(t){
-    return '<button type="button" data-stab="'+t[0]+'" class="'+(STAB===t[0]?'on':'')+'">'+t[1]+'</button>';
-  }).join('')+'</div>';
-
-  /* ================= PANE: YOU ====================================== */
-  if(STAB==='you'){
     var mine=[]; try{ mine=preds.filter(function(p){ return S.predChoices[p.id] && p.id!=='winner'; }); }catch(_){}
     if(!mine.length){
       out+=stEmpty('📋','Your card isn’t filled in yet','Once you lock a card, this is where you watch it race the real box score, category by category.');
@@ -13104,88 +13082,279 @@ function renderStats(){
           + '</div><div class="sub" style="font-size:12px;margin-top:5px">You have a pick on someone who isn’t playing.</div>', ';border-color:rgba(255,77,94,.35)');
       }catch(_){}
     }
-  }
+  
+  return out;
+}
 
-  /* ================= PANE: LEADERS ================================== */
-  if(STAB==='leaders'){
-    if(live){
-      var Bx=stBox();
-      var CATS=[['pts','Points'],['reb','Rebounds'],['ast','Assists'],['stl','Steals'],['blk','Blocks']];
-      var chips=CATS.map(function(c){
-        var f=Bx.filter(function(x){ return x[c[0]]!=null; }).sort(function(x,y){ return y[c[0]]-x[c[0]]; })[0];
-        if(!f||!f[c[0]]) return '';
-        return '<div class="stLead"><span class="stLeadN">'+c[1]+'</span><span class="stLeadV">'+esc(f.nm)+' <b style="color:#28e0d0">'+f[c[0]]+'</b></span></div>';
-      }).join('');
-      var three=stBox().filter(function(x){ return x.tp.m; }).sort(function(x,y){ return y.tp.m-x.tp.m; })[0];
-      if(three) chips+='<div class="stLead"><span class="stLeadN">Threes made</span><span class="stLeadV">'+esc(three.nm)+' <b style="color:#28e0d0">'+three.tp.m+'</b></span></div>';
-      out+=stCard('LEADING EACH CATEGORY, RIGHT NOW', chips||'<div class="sub">Nothing recorded yet.</div>');
-      var all=stBox().filter(function(x){ return x.pts!=null; }).sort(function(x,y){ return y.pts-x.pts; }).slice(0,8);
-      if(all.length) out+=stCard('TOP SCORERS TONIGHT', all.map(function(x){
-        return '<div class="stLead"><span class="stLeadN">'+esc(x.nm)+' <i>'+esc(x.team||'')+'</i></span>'
-          + '<span class="stLeadV">'+x.pts+' pts · '+(x.reb==null?0:x.reb)+' reb · '+(x.ast==null?0:x.ast)+' ast</span></div>';
-      }).join(''));
-    } else if(GS.leaders.length){
-      out+=GS.leaders.map(function(l){
-        if(!l.cats.length) return '';
-        return stCard(esc(l.ab)+' SEASON LEADERS', l.cats.map(function(c){
-          return '<div class="stLead"><span class="stLeadN">'+esc(c.label)+'</span><span class="stLeadV">'+esc(c.who)+' <b>'+esc(c.val)+'</b></span></div>';
-        }).join(''));
-      }).join('');
-      out+='<div class="sub center" style="font-size:12px;margin-top:12px">These are who the numbers say to pick.</div>';
-    } else out+=stEmpty('🏅','Leaders land at tip','Once the ball is up this shows who leads every category, live.');
-  }
+/* ====================================================================
+   THE STATS TAB
 
-  /* ================= PANE: TEAMS ==================================== */
-  if(STAB==='teams'){
-    var bars=gsRows().map(function(r){ return gsBar(r[1], A.stat(r[0]), B.stat(r[0]), r[2]); }).join('');
-    if(bars) out+=stCard((live?'THIS GAME':'THIS SEASON')+' · '+esc(A.ab)+' vs '+esc(B.ab), bars);
-    if(live){
-      var extra=[['Points in Paint','Points in the paint','hi'],['Fast Break Points','Fast break points','hi'],
-                 ['Offensive Rebounds','Offensive rebounds','hi'],['Blocks','Blocks','hi'],
-                 ['Fouls','Fouls','lo'],['Largest Lead','Largest lead','hi']]
-        .map(function(r){ return gsBar(r[1], stTeamStat(A,r[0]), stTeamStat(B,r[0]), r[2]); }).join('');
-      if(extra) out+=stCard('HOW THEY’RE GETTING IT', extra);
-    } else {
-      var form=[['Streak','Streak'],['Last Ten Games','Last 10']].map(function(r){
-        var a=A.stat(r[0]), b=B.stat(r[0]); if(a==null||b==null) return '';
-        return '<div class="stRow"><div class="stV">'+esc(String(a))+'</div><div class="stMid"><div class="stLbl">'+esc(r[1])+'</div></div><div class="stV">'+esc(String(b))+'</div></div>';
-      }).join('');
-      if(form) out+=stCard('FORM', form);
-    }
-    try{
-      var outs=(GS.inj||[]).filter(function(i){ return i.out; });
-      if(outs.length) out+=stCard('🚑 NOT PLAYING TONIGHT', outs.map(function(i){
-          return '<div class="stLead"><span class="stLeadN">'+esc(i.name)+' <i>'+esc(i.ab||'')+'</i></span>'
-            + '<span class="stLeadV" style="color:#ff8a94">'+esc(i.status||'OUT')+'</span></div>'; }).join(''),
-        ';border-color:rgba(255,77,94,.35)');
-    }catch(_){}
-  }
+   The old version of this screen was four segmented panes of tables and
+   nobody opened it during a game. That was never a content problem — the
+   numbers were good and most of them survive below. It was a TIMING
+   problem: it competed with the thing the player was actually doing.
 
-  /* ================= PANE: DEEP CUTS ================================ */
-  if(STAB==='deep'){
-    var cuts=[]; try{ cuts=deepCuts(); }catch(e){ cuts=[]; }
-    if(!live){
-      out+=stEmpty('💎','Deep cuts start at tip','Once there is a box score this fills with things no scoreboard shows you — hot hands, double-double watch, who the game swings on, and where tonight’s players rank in the league.');
-    } else if(!cuts.length){
-      out+=stEmpty('💎','Nothing worth telling you yet','Give it a few minutes of basketball. This only ever shows things that are actually true right now.');
-    } else {
-      out+=seaRetryHTML();
-      out+=stCard('DEEP CUTS'+seaNote(),
-        cuts.slice(0,14).map(function(c){
-          return '<div class="stFact"><div class="stFactI">'+c.i+'</div><div class="stFactB">'
-            + '<div class="stFactT">'+c.t+'</div>'
-            + (c.s?'<div class="stFactS">'+esc(c.s)+'</div>':'')
-            + '</div></div>';
-        }).join(''));
-      out+='<div class="sub center" style="font-size:12px;margin-top:10px">Every line is computed from the league feed and the full season table. Nothing here is typed in.</div>';
-    }
-  }
+   So it is organised by moment instead of by category, and it says a
+   different thing at each of the three:
 
-  out+='<div class="sub center" style="font-size:12px;margin-top:14px;opacity:.75">Live from the league feed · updated '+Math.max(1,Math.round((Date.now()-GS.at)/1000))+'s ago</div>';
-  el.innerHTML=out;
+     before tip   why tonight is interesting
+     during       the shape of it so far — the timeout read
+     after        what actually happened, and the one nobody else noticed
+
+   ONE RULE GOVERNS EVERY CARD: it has to be a sentence you would text
+   somebody. ESPN has the tables and always will; what they do not have is
+   the noticing. If a card cannot be read aloud in one breath it does not
+   belong here, and that test is why the score is not at the top of this
+   screen any more — there is one scoreboard in this app and it lives on
+   Gametime.
+
+   And every card copies itself. A stat worth reading is a stat worth
+   pasting into the group chat, and the person pasting it is not
+   recruiting anybody — they are winning an argument. The link rides along
+   for free, which makes this the only growth mechanism in the product
+   that does not require sending an email.
+   ================================================================== */
+
+/* Anything that ends up on a card registers its plain-text version here,
+   so the copy button never has to scrape the DOM and can never copy a
+   half-rendered string or a stray bit of markup. */
+var STX = {};
+function stTx(id, text){ STX[id] = String(text || '').replace(/\s+/g, ' ').trim(); return id; }
+function stCopy(id){
+  var t = STX[id]; if(!t) return;
+  var body = t + '\n— STATS GAMETIME · statsgametime.com';
+  var done = function(){
+    try{ toast('Copied — paste it in the group chat'); }catch(_){}
+    try{ if(navigator.vibrate) navigator.vibrate(12); }catch(_){}
+  };
   try{
-    Array.prototype.forEach.call(el.querySelectorAll('#stSeg button'), function(b){
-      b.onclick=function(){ stGo(b.getAttribute('data-stab')); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(body).then(done, function(){ stCopyFallback(body, done); });
+    } else stCopyFallback(body, done);
+  }catch(_){ stCopyFallback(body, done); }
+}
+/* iOS Safari refuses navigator.clipboard outside a few contexts and there
+   is no reliable way to know in advance, so this is not paranoia. */
+function stCopyFallback(body, done){
+  try{
+    var ta=document.createElement('textarea');
+    ta.value=body; ta.setAttribute('readonly','');
+    ta.style.cssText='position:fixed;top:-1000px;opacity:0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, body.length);
+    document.execCommand('copy'); document.body.removeChild(ta); done();
+  }catch(_){}
+}
+
+/* A card with a copy affordance. `text` is what gets copied; `inner` is
+   what gets drawn. They are separate arguments on purpose — the drawn
+   version carries markup and the copied version must not. */
+var _stN = 0;
+function stShareCard(kicker, text, inner, tone){
+  var id = 'stx' + (++_stN);
+  stTx(id, text);
+  var edge = tone === 'gold' ? 'var(--gold,#ffc54d)' : (tone === 'teal' ? 'var(--teal)' : 'var(--line)');
+  return '<div class="card" style="padding:14px 16px;margin-top:12px;border-color:' + edge + '">'
+    + (kicker ? '<div class="stHd" style="display:flex;align-items:center;justify-content:space-between">'
+        + '<span>' + kicker + '</span>'
+        + '<button type="button" class="stCopy" data-stcopy="' + id + '" aria-label="Copy this">Copy</button></div>' : '')
+    + inner + '</div>';
+}
+
+/* ---- THE BIGGEST RUN, AND WHEN IT HAPPENED -------------------------
+   The win-probability sparkline was the largest block on the Gametime
+   page and it said nothing: 157 readings of a near-flat line with no
+   axis. The information a person actually wants out of it is one
+   sentence — WHEN did this game turn — and that is computable from the
+   play-by-play without drawing anything at all. */
+function stBiggestRun(){
+  try{
+    var T = gtTeams(); if(!T) return null;
+    var sc = (GS.plays || []).filter(function(p){ return p.scoring && p.value > 0; });
+    if(sc.length < 6) return null;
+    var best = null, curAb = null, cur = 0, opp = 0, startAt = null;
+    sc.forEach(function(p){
+      if(p.ab !== curAb){
+        if(cur >= 8 && (!best || cur > best.pts)) best = { ab: curAb, pts: cur, opp: opp, at: startAt };
+        curAb = p.ab; cur = 0; opp = 0; startAt = p;
+      }
+      cur += p.value;
+    });
+    if(cur >= 8 && (!best || cur > best.pts)) best = { ab: curAb, pts: cur, opp: opp, at: startAt };
+    if(!best || !best.ab) return null;
+    var nm = best.ab === T.a.ab ? (T.a.name || T.a.ab) : (T.h.name || T.h.ab);
+    var when = '';
+    try{
+      var pr = best.at && best.at.period, ck = best.at && best.at.clock;
+      if(pr) when = ' in the ' + ord(Number(pr)) + (ck ? (' with ' + fmtClock(ck) + ' left') : '');
+    }catch(_){}
+    return { team: nm, pts: best.pts, when: when,
+             line: nm + ' scored ' + best.pts + ' in a row' + when + '.' };
+  }catch(_){ return null; }
+}
+
+/* ---- ONE SENTENCE ABOUT WHY TONIGHT MATTERS ------------------------ */
+function stStoryline(){
+  try{
+    var bits = [];
+    if(GS.seriesSummary) bits.push(String(GS.seriesSummary).replace(/\s+$/, '') + '.');
+    (GS.form || []).forEach(function(t){
+      var w = (t.games || []).filter(function(g){ return g.res === 'W'; }).length;
+      var n = (t.games || []).length;
+      if(n >= 4 && w >= n - 1) bits.push(t.ab + ' have won ' + w + ' of their last ' + n + '.');
+      if(n >= 4 && w <= 1)     bits.push(t.ab + ' have won ' + w + ' of their last ' + n + '.');
+    });
+    return bits.slice(0, 2).join(' ');
+  }catch(_){ return ''; }
+}
+
+/* ---- A CHECKABLE THING TO WATCH FOR -------------------------------
+   The house rule for these is that a player has to be able to settle it
+   themselves by watching. "Count them" is the tell that it passed. */
+function stWatchFor(){
+  try{
+    if(!SEA.ok) return '';
+    var best = null;
+    Object.keys(GS.box || {}).forEach(function(nm){
+      var s = seaOf(nm); if(!s) return;
+      [['tpm', 'threes a game', 1.8], ['pts', 'points a game', 15], ['reb', 'rebounds a game', 8], ['ast', 'assists a game', 4.5]]
+        .forEach(function(k){
+          var v = s[k[0]]; if(v == null || v < k[2]) return;
+          var r = s['rank_' + k[0]];
+          var score = (r ? (40 - Math.min(r, 40)) : 0) + v;
+          if(!best || score > best.score) best = { score: score, nm: nm, v: v, lab: k[1], rank: r };
+        });
+    });
+    if(!best) return '';
+    return best.nm + ' averages ' + best.v.toFixed(1) + ' ' + best.lab
+      + (best.rank ? (' — ' + ord(best.rank) + ' in the league') : '') + '. Count them.';
+  }catch(_){ return ''; }
+}
+
+function renderStats(){
+  var el = document.getElementById('stBody'); if(!el) return;
+
+  if(!GS.ok){
+    var dead = GS.fails >= 2;
+    el.innerHTML = '<div class="card center" style="padding:24px"><div style="font-size:26px">📈</div>'
+      + '<b style="font-size:15px">' + (dead ? 'Can’t reach the league feed' : 'Pulling the numbers…') + '</b>'
+      + '<p class="sub" style="font-size:14px;margin:8px 0 12px">'
+      + (dead ? 'Nothing here is ever typed in by hand, so rather than show you a made-up number this screen waits. Everything else in the app still works.'
+              : 'Live from the league feed. One moment.') + '</p>'
+      + (dead ? '<button type="button" id="stRetry" class="pdlock" style="max-width:260px;margin:0 auto;background:var(--card2);color:#93a0bd;font-size:14px;padding:13px">Try again</button>' : '')
+      + '</div>';
+    var rb = document.getElementById('stRetry');
+    if(rb) rb.onclick = function(){ GS.fails = 0; renderStats(); };
+    if(!dead && !GS.loading) loadGameStats().then(function(){ if(S.screen === 'stats') renderStats(); });
+    return;
+  }
+
+  // The season table is what makes the deep cuts deep. Fetch once, lazily,
+  // and repaint when it lands rather than blocking the screen on it.
+  try{
+    if(!SEA.ok && !SEA.loading) loadSeason().then(function(){
+      if(S.screen === 'stats') renderStats();
+      seaFillGaps().then(function(){ if(S.screen === 'stats') renderStats(); });
+      loadLogs().then(function(){ if(S.screen === 'stats') renderStats(); });
+    });
+  }catch(_){}
+
+  var ph = 'pre'; try{ ph = phaseNow(); }catch(_){}
+  var T = null; try{ T = gtTeams(); }catch(_){}
+  var AC = 'var(--away)', HC = 'var(--home)';
+  try{ if(T){ AC = T.a.color || AC; HC = T.h.color || HC; } }catch(_){}
+  _stN = 0; STX = {};
+  var out = '';
+
+  /* ================= BEFORE TIP ==================================== */
+  if(ph === 'pre'){
+    var story = stStoryline();
+    if(story){
+      out += stShareCard('Tonight', story,
+        '<div style="font-size:20px;font-weight:800;line-height:1.35;color:var(--ink)">' + esc(story) + '</div>', 'teal');
+    }
+    var watch = stWatchFor();
+    if(watch){
+      out += stShareCard('What to watch for', watch,
+        '<div style="font-size:17px;font-weight:700;line-height:1.4;color:var(--ink)">' + esc(watch) + '</div>');
+    }
+    try{ out += stYourCard(); }catch(_){}
+    if(!story && !watch){
+      out += stEmpty('📈', 'The numbers land at tip-off',
+        'Season form, the head-to-head and the league ranks fill this in as the feed wakes up. Nothing here is ever typed by hand.');
+    }
+  }
+
+  /* ================= DURING AND AFTER ============================== */
+  else {
+    var final = (ph === 'final');
+
+    /* THE ONE THING — after the buzzer this is the headline, and it has
+       to be something a recap would not lead with. */
+    var cuts = []; try{ cuts = deepCuts() || []; }catch(_){}
+    cuts.sort(function(a, b){ return (b.w || 0) - (a.w || 0); });
+    if(final && cuts.length){
+      var c0 = cuts[0];
+      out += stShareCard('The one thing', String(c0.t).replace(/<[^>]+>/g, ''),
+        '<div style="display:flex;gap:11px;align-items:flex-start">'
+        + '<div style="font-size:26px;line-height:1.1">' + (c0.i || '📈') + '</div>'
+        + '<div><div style="font-size:20px;font-weight:800;line-height:1.35;color:var(--ink)">' + c0.t + '</div>'
+        + (c0.s ? '<div class="sub" style="font-size:12px;margin-top:5px">' + c0.s + '</div>' : '')
+        + '</div></div>', 'gold');
+    }
+
+    /* THE TURN — the sentence, not the sparkline. */
+    var run = stBiggestRun();
+    if(run){
+      out += stShareCard(final ? 'Where it turned' : 'The run',
+        run.line,
+        '<div style="font-size:17px;font-weight:800;line-height:1.35;color:var(--ink)">' + esc(run.line) + '</div>'
+        + (GS.wp && GS.wp.length >= 12
+            ? '<div class="apane" style="margin-top:11px">' + gtSpark(GS.wp, AC, HC) + '</div>' : ''));
+    }
+
+    /* YOUR CARD, RACING THE BOX SCORE. High on the page during a game
+       because it is the only thing here that is about the player. */
+    try{ out += stYourCard(); }catch(_){}
+
+    /* WHERE THE POINTS COME FROM — the zone table survives unchanged
+       because it answers a real question in one glance. */
+    var zones = ''; try{ zones = gtShotZones() || ''; }catch(_){}
+    if(zones) out += '<div class="card" style="padding:14px 16px;margin-top:12px">' + zones + '</div>';
+
+    /* WHO FOUND WHO — already good, and it was in the wrong tab. */
+    var ast = ''; try{ ast = gtAssists() || ''; }catch(_){}
+    if(ast) out += '<div class="card" style="padding:14px 16px;margin-top:12px">' + ast + '</div>';
+
+    /* THREE DEEP CUTS. Three, not one per scroll position, and never the
+       headline repeated — on Game Night #7 the same cut appeared in three
+       places on one screen under a label reading "nobody else has looked
+       this up", which is a sentence you can only say once. */
+    var rest = cuts.slice(final ? 1 : 0, final ? 4 : 3);
+    if(rest.length){
+      out += '<div class="card" style="padding:14px 16px;margin-top:12px">'
+        + '<div class="stHd">Deep cuts</div>'
+        + rest.map(function(c){
+            var id = stTx('stx' + (++_stN), String(c.t).replace(/<[^>]+>/g, ''));
+            return '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)">'
+              + '<div style="font-size:20px;line-height:1.2">' + (c.i || '📈') + '</div>'
+              + '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;line-height:1.4;color:var(--ink)">' + c.t + '</div>'
+              + (c.s ? '<div class="sub" style="font-size:12px;margin-top:3px">' + c.s + '</div>' : '') + '</div>'
+              + '<button type="button" class="stCopy" data-stcopy="' + id + '" aria-label="Copy this">Copy</button>'
+              + '</div>';
+          }).join('')
+        + '</div>';
+    }
+
+    if(!run && !zones && !ast && !rest.length){
+      out += stEmpty('📈', 'Not enough has happened yet',
+        'Runs, shooting splits and the deep cuts need a few minutes of play behind them. This fills in as the game goes.');
+    }
+  }
+
+  el.innerHTML = out;
+  try{
+    el.querySelectorAll('[data-stcopy]').forEach(function(b){
+      b.onclick = function(ev){ ev.stopPropagation(); stCopy(b.getAttribute('data-stcopy')); };
     });
   }catch(_){}
 }
