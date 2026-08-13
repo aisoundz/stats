@@ -65,9 +65,9 @@
   /* A .btn is width:100% by design — it is a full-width block everywhere
      else in this dashboard. Inside a flex .row that base width made the
      LAST button claim the whole line and squeeze the first one down to
-     min-content, which is why "Post the score" rendered as a narrow pill
-     with the words stacked vertically on top of "Take it down". Buttons in
-     a row share the row. */
+     min-content, which is why the score panel's first button rendered as a
+     narrow pill with its words stacked vertically on top of the second one.
+     Buttons in a row share the row. */
   .row > button.btn{width:auto;flex:1 1 0;margin-top:0;white-space:nowrap}
   button.btn.red{background:var(--red)}
   button.btn.teal{background:var(--teal);color:#06222a}
@@ -2337,8 +2337,8 @@ async function closeQuarter(i){
       `1. Reveal these answers — every phone scores itself:\n` +
       r.key.map((k,x)=>`    ${x+1}. ${k}`).join('\n') + `\n\n` +
       (wantScore
-        ? `2. Post the scoreboard: ${cfg.away||'Away'} ${a} — ${cfg.home||'Home'} ${h}  (${label})\n\n`
-        : `2. No scoreboard — you left the score blank.\n\n`) +
+        ? `2. Show the score card: ${cfg.away||'Away'} ${a} — ${cfg.home||'Home'} ${h}  (${label})\n\n`
+        : `2. No score card — you left the score blank.\n\n`) +
       (last  ? `3. Nothing left to push. That's the game.`
      : canPush ? `3. ${nextTag} will NOT go out automatically — it's armed, and you push it with its own button the moment the next quarter is about to start. You control the timing.`
               : `3. ${nextTag} isn't written yet, so nothing gets pushed. Write it on tab 1 and push it yourself.`))) return;
