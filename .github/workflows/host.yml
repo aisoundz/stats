@@ -1,0 +1,61 @@
+# =====================================================================
+# STATS GAMETIME — the autonomous host
+# ---------------------------------------------------------------------
+# Runs a game night with nothing open on anybody's desk.
+#
+# WHY A LONG-RUNNING JOB RATHER THAN A CRON EVERY MINUTE. GitHub's
+# scheduler has a five-minute floor and, worse, real jitter — a job asked
+# for on the hour can start twenty minutes late when the fleet is busy.
+# Twenty minutes is three quarters of a quarter break, so a
+# tick-per-cron design would miss the exact moments it exists for.
+#
+# So the schedule only has to be roughly right ONCE: it starts the job
+# before tip and the job holds its own twenty-second loop for the length
+# of a game. Late by ten minutes is survivable; late by ten minutes on
+# every single tick is not.
+# =====================================================================
+name: Autonomous host
+
+on:
+  # Fridays, 23:00 UTC — 7:00pm ET, half an hour before a 7:30 tip. The
+  # half hour is the jitter budget.
+  schedule:
+    - cron: '0 23 * * 5'
+  # …and by hand, which is how it gets tested against a finished game.
+  workflow_dispatch:
+    inputs:
+      night:
+        description: 'Night id (e.g. gn8-2026-08-14-dal-ind)'
+        required: true
+      event:
+        description: 'ESPN event id (e.g. 401857143)'
+        required: true
+      minutes:
+        description: 'How long to stay up'
+        required: false
+        default: '240'
+
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    # A basketball night is about two and a half hours. Four gives room for
+    # a late tip and overtime; the job exits itself the moment the last
+    # quarter is scored, so this is a ceiling and not a duration.
+    timeout-minutes: 250
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install
+        run: npm install firebase-admin@12 --no-save --no-audit --no-fund
+
+      - name: Run the night
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          NIGHT_ID:   ${{ github.event.inputs.night   || vars.NIGHT_ID }}
+          ESPN_EVENT: ${{ github.event.inputs.event   || vars.ESPN_EVENT }}
+          RUN_MINUTES: ${{ github.event.inputs.minutes || '240' }}
+        run: node host/run.js
