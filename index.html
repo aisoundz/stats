@@ -8835,13 +8835,59 @@ function ciSettleWhenAnswered(live,q,maxMs){
   },250);
   setTimeout(function(){ clearInterval(watch); settle(); }, maxMs||22000);
 }
+/* ============ WHAT YOU MISSED ========================================
+   B-59 follow-up, GN8's real lesson. "We should have a way to save the
+   questions asked during the session in case people miss it, they can
+   answer it later" — with one deliberate change from what was asked:
+   this is a RECORD, not a second chance. Answering after the fact would
+   undercut the whole point of Caught It, which is that you had to be
+   watching when it happened. So this is read-only, on purpose: what was
+   asked, what the answer was, and whether this device was there for it.
+   SB.watchCallIt already hands back the full collection on every tick —
+   this just remembers the resolved ones instead of throwing them away
+   the moment a fresher question replaces them on screen. */
+var CI_RECAP = {};   // qid -> {prompt, options, answer, state, seq}
+function ciRecapCapture(qs){
+  (qs||[]).forEach(function(q){
+    if(!q || !q.qid) return;
+    if(q.state!=='resolved' && q.state!=='void') return;
+    CI_RECAP[q.qid] = { qid:q.qid, prompt:q.prompt, options:q.options||[], answer:q.answer, state:q.state, seq:q.seq||0 };
+  });
+}
 function onCallItQuestions(qs){
   if(!qs || !qs.length) return;
+  try{ ciRecapCapture(qs); }catch(_){}
   var q = qs[qs.length-1];              // newest
   PCI.active = q;
   renderCiCard(q);
 }
 function ciLabel(q,v){ var o=(q.options||[]).find(function(x){return String(x.v)===String(v);}); return o?o.k:String(v); }
+
+/* The Board's read-only recap of every resolved Caught It question this
+   device saw tonight — see the note above CI_RECAP for why it never
+   offers to score them. Renders nothing at all if the room never had
+   any, same "no fake content" rule as the rest of the Board. */
+function ciRecapCard(){
+  var keys = Object.keys(CI_RECAP);
+  if(!keys.length) return '';
+  var items = keys.map(function(k){ return CI_RECAP[k]; }).filter(function(q){ return q.state==='resolved'; });
+  if(!items.length) return '';
+  items.sort(function(a,b){ return (a.seq||0)-(b.seq||0); });
+  var out = items.map(function(q){
+    var picked = (PCI.picked && q.qid!=null) ? PCI.picked[q.qid] : null;
+    var status;
+    if(picked==null) status = '<span style="color:var(--muted)">— you weren’t there for this one</span>';
+    else if(String(picked)===String(q.answer)) status = '<span style="color:var(--teal2,#28e0d0)">✅ you had it</span>';
+    else status = '<span style="color:#ffc54d">✕ you had '+esc(ciLabel(q,picked))+'</span>';
+    return '<div style="padding:9px 0;border-top:1px solid var(--line)">'
+      + '<div style="font-size:13px;color:var(--ink)">'+esc(q.prompt||'')+'</div>'
+      + '<div style="font-size:12px;margin-top:3px">Answer: <b>'+esc(ciLabel(q,q.answer))+'</b> &middot; '+status+'</div>'
+      + '</div>';
+  }).join('');
+  return '<div class="card" style="padding:14px 16px;margin-top:12px"><div class="stHd">WHAT YOU MISSED — CAUGHT IT</div>'
+    + '<div class="sub" style="font-size:12px;margin:2px 0 4px">Every Caught It question tonight and the right answer. This is a record, not a retry — points only ever came from being there when it happened.</div>'
+    + out + '</div>';
+}
 
 function ensureCiCard(){
   if(document.getElementById('ciCard')) return;
@@ -11434,7 +11480,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-15-loud-reconnect.108';
+const STATS_BUILD='2026-08-15-recap-room.109';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -12654,6 +12700,7 @@ function renderBoard(){
       + (why?'<p class="sub" style="font-size:14px;margin:8px 0 0;color:#ffc54d">'+esc(why)+'</p>':'')
       + '<p class="sub" style="font-size:14px;margin:8px 0 0">Every right answer moves a row. Q4 is worth four times Q1, so it keeps moving to the buzzer.</p></div>';
   }
+  try{ out+=ciRecapCard(); }catch(_){}
   var ss=seasonStats();
   out+='<div class="card" style="padding:14px 16px;margin-top:12px"><div class="stHd">YOUR SEASON</div>'
     + '<div style="display:flex;text-align:center">'
@@ -13503,6 +13550,39 @@ function stShareCard(kicker, text, inner, tone){
     + inner + '</div>';
 }
 
+/* ---- THE ROOM'S OWN LEADERBOARD, ON THE STATS PAGE ------------------
+   Reuses SB.top(), the exact function the Board tab already trusts —
+   no new read path, no new failure mode. Lazy-loaded and cached like
+   the season table above it; repaints the Stats screen once the room
+   answers, and says nothing at all if it never does. */
+var ROOMSTAT = { ok:false, loading:false, list:null };
+function loadRoomStat(){
+  if(ROOMSTAT.loading || ROOMSTAT.ok || !window.SB || !SB.top || S.mode!=='live') return Promise.resolve();
+  ROOMSTAT.loading = true;
+  return SB.top(3).then(function(list){
+    ROOMSTAT.loading = false; ROOMSTAT.ok = true;
+    ROOMSTAT.list = (list && list.length) ? list : null;
+  }).catch(function(){ ROOMSTAT.loading = false; });
+}
+function stRoomCard(){
+  if(!ROOMSTAT.ok){
+    try{ loadRoomStat().then(function(){ if(S.screen==='stats') renderStats(); }); }catch(_){}
+    return '';
+  }
+  if(!ROOMSTAT.list || !ROOMSTAT.list.length) return '';
+  var rows = ROOMSTAT.list.map(function(p, i){
+    var nm = esc(String((p && p.name) || 'player'));
+    var pts = (p && typeof p.pts === 'number') ? p.pts : 0;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0'
+      + (i ? ';border-top:1px solid var(--line)' : '') + '">'
+      + '<span style="font-size:14px;color:var(--ink)">' + (i + 1) + '. ' + nm + '</span>'
+      + '<span style="font-size:14px;font-weight:800;color:var(--teal2,#28e0d0)">' + pts + ' pts</span></div>';
+  }).join('');
+  return '<div class="card" style="padding:14px 16px;margin-top:12px">'
+    + '<div class="stHd" style="display:flex;align-items:center;justify-content:space-between"><span>Your room tonight</span></div>'
+    + rows + '</div>';
+}
+
 /* ---- THE BIGGEST RUN, AND WHEN IT HAPPENED -------------------------
    The win-probability sparkline was the largest block on the Gametime
    page and it said nothing: 157 readings of a near-flat line with no
@@ -13658,6 +13738,14 @@ function renderStats(){
     /* YOUR CARD, RACING THE BOX SCORE. High on the page during a game
        because it is the only thing here that is about the player. */
     try{ out += stYourCard(); }catch(_){}
+
+    /* THE ROOM'S OWN POINTS, RIGHT NEXT TO THE LEAGUE'S. "We should also
+       add our points" — this page compares a pick against the league's
+       real leaders and stops there; it never says what tonight's actual
+       room looks like. Same rule as everywhere else on this screen: no
+       number until the server hands one over, never a guess — an empty
+       or unreachable room renders nothing here rather than a fake row. */
+    try{ out += stRoomCard(); }catch(_){}
 
     /* WHERE THE POINTS COME FROM — the zone table survives unchanged
        because it answers a real question in one glance. */
