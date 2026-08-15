@@ -1116,8 +1116,6 @@
         <button class="btn ghost" id="verifyBtn" onclick="sendVerify()">✉️ Use email instead</button>
         <p class="foot" id="verifyNote" style="margin:7px 0 0">Sign in to save your handle, your points and your card across phones. One tap with Google — or use your inbox.</p>
       </div>
-      <label class="fld">Favorite sport</label>
-      <div class="chips" id="sportPick"></div>
       <label class="fld">Pick your color</label>
       <div class="chips" id="colorPick"></div>
       <button class="btn" id="nameBtn" disabled onclick="startPredict()">Continue to my picks</button>
@@ -3678,18 +3676,18 @@ const COLORS=["#2f6bff","#19c3d6","#ff4d5e","#ffc54d","#2ee6a6","#b57cff","#ff92
    one. Anyone ruled out keeps their OUT flag; they stay pickable-adjacent
    so you can see for yourself who isn't available. */
 const BB_ROSTER={ // full names \u2014 used on the prediction sheet & final review
-  /* Pulled live from the ESPN roster endpoints (teams/5 Indiana, teams/3
-     Dallas) on Aug 13, ordered by who is most likely to be on the floor.
-     Players currently listed OUT stay on the list on purpose \u2014 a name that
-     simply vanishes reads as a bug, and seeing who is unavailable is part of
-     reading the game. */
-  home:["Caitlin Clark","Kelsey Mitchell","Aliyah Boston","Lexie Hull","Sophie Cunningham",
-        "Monique Billings","Makayla Timpson","Myisha Hines-Allen","Tyasha Harris",
-        "Mercedes Russell","Grace VanSlooten","Raven Johnson","Damiris Dantas",
-        "Bree Hall","Michelle Onyiah"],
-  away:["Paige Bueckers","Arike Ogunbowale","Maddy Siegrist","Alanna Smith","Awak Kuier",
-        "Odyssey Sims","Alysha Clark","Sug Sutton","Li Yueru","Aziaha James",
-        "Haley Jones","Azzi Fudd","Jessica Shepard","Costanza Verona"]
+  /* Pulled live from the ESPN roster endpoints (teams/14 Seattle, teams/132052
+     Portland) on Aug 14 for Game Night #9, ordered by who is most likely to be
+     on the floor. Players currently listed OUT stay on the list on purpose \u2014
+     a name that simply vanishes reads as a bug, and seeing who is unavailable
+     is part of reading the game. */
+  home:["Zia Cooke","Stefanie Dolson","Awa Fam","Natisha Hiedeman","Mackenzie Holmes",
+        "Jordan Horston","Ezi Magbegor","Dominique Malonga","Jade Melbourne",
+        "Katie Lou Samuelson","Taylor Thierry","Flau'jae Johnson","Taina Mair"],
+  away:["Frieda Buhner","Bridget Carleton","Megan DiLeo","Emily Engstler","Jordan Harrison",
+        "Carla Leite","Teja Oblak","Amy Okonkwo","Nyadiew Puoch","Karlie Samuelson",
+        "Serah Williams","Holly Winterburn","Sarah Ashlee Barker","Sania Feagin",
+        "Luisa Geiselsoder"]
 };
 const BB_GROUPS=[{ab:BB_GAME.homeAbbr,name:BB_GAME.homeName,names:BB_ROSTER.home},
                  {ab:BB_GAME.awayAbbr,name:BB_GAME.awayName,names:BB_ROSTER.away}];
@@ -3745,15 +3743,15 @@ const BB_PREDS=[
   // against — never a claim about the real game. They must always be names
   // that exist in the roster above, or practice grades against a ghost.
   {id:"pts", q:"Who scores the most points?", label:"Most points", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Caitlin Clark", num:22, numLabel:"How many pts?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Ezi Magbegor", num:22, numLabel:"How many pts?"},
   {id:"ast", q:"Who dishes the most assists?", label:"Most assists", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Caitlin Clark", num:8, numLabel:"How many assists?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Jordan Horston", num:8, numLabel:"How many assists?"},
   {id:"stl", q:"Who racks up the most steals?", label:"Most steals", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Lexie Hull", num:3, numLabel:"How many steals?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Katie Lou Samuelson", num:3, numLabel:"How many steals?"},
   {id:"reb", q:"Who grabs the most rebounds?", label:"Most rebounds", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Aliyah Boston", num:10, numLabel:"How many rebounds?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Ezi Magbegor", num:10, numLabel:"How many rebounds?"},
   {id:"blk", q:"Who swats the most blocks?", label:"Most blocks", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Aliyah Boston", num:2, numLabel:"How many blocks?"}
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Dominique Malonga", num:2, numLabel:"How many blocks?"}
 ];
 /* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
    Every question is answerable by WATCHING the broadcast at the break — no lookups,
