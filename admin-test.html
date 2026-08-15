@@ -368,9 +368,18 @@
 
            Leave it blank and no card appears on anybody's phone. A
            scoreboard that says 0-0 at halftime is worse than none. -->
-      <div class="card">
-        <h3>The score card <span class="chip" id="scState">not showing</span></h3>
-        <p class="sub"><b>You do not need this during a game.</b> Once the ball is up the host writes the score by
+      <!-- COLLAPSED, NOT DELETED. Its own first sentence is "You do not need
+           this during a game" — so it should not cost a screen and a half of
+           scrolling at a quarter break. But it is a real emergency tool for
+           the case it names (the automation is down), and every input in it
+           is bound by JS at load, so deleting the markup would throw rather
+           than tidy. One line until it is wanted. -->
+      <details class="card">
+        <summary style="cursor:pointer;font-weight:800;font-size:14px;list-style:none">
+          The score card <span class="chip" id="scState">not showing</span>
+          <span class="sub tip" style="font-weight:600"> — you do not need this during a game</span>
+        </summary>
+        <p class="sub" style="margin-top:8px">Once the ball is up the host writes the score by
           itself and keeps it within about twenty seconds of the broadcast. This panel is here for the two times
           that is not true: the automation is down, or something wrong is showing and you want it gone.</p>
         <div class="row" style="margin-top:10px;align-items:flex-end">
@@ -390,7 +399,7 @@
         <p class="sub tip" id="scNote2" style="margin-top:10px"><b>Nobody's points change either way.</b> These two
           buttons only decide whether a score card appears on the players' home screen. While a game is live the
           automatic host will overwrite whatever you type here on its next pass — that is it doing its job.</p>
-      </div>
+      </details>
 
       <div class="card">
         <h3>Push a round to every phone</h3>
@@ -513,7 +522,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-13-admin.46-tonight';
+window.ADMIN_BUILD='2026-08-13-admin.47-lean-run';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -2078,6 +2087,26 @@ function renderRun(){
     const pr = keyProgress(i);
     const keyReady = pr.total > 0 && pr.done >= pr.total;
     const subs = subCounts[roundDocId(i)];
+
+    /* ONLY SHOW A ROUND THAT HAS SOMETHING TO SAY.
+       These four cards used to render always, and in the state a host
+       actually opens this tab in — before tip — all four said a version of
+       "waiting its turn, nothing has been pushed yet". Four cards, a screen
+       and a half of scrolling, to tell you nothing has happened yet. The
+       TONIGHT tab now carries round state in four lines, so the only reason
+       for a card here is that this round NEEDS something: it is live, or it
+       cannot be pushed, or it has no questions in it.
+
+       That last case is why these cards are not simply deleted. An empty
+       round's "Load the app's questions" button is the fix for "Q3 in the
+       control room is wrong — there is nothing for me to add", and it
+       exists nowhere else in the product. A round that should never be
+       empty is exactly what B28 assumed too. */
+    const needsSaying = (state === 'live')
+                     || pIssues.length > 0
+                     || nightDraft(night).rounds[i].qs.length === 0;
+    if(!needsSaying) return;
+
     const c = document.createElement('div'); c.className='card';
     c.setAttribute('data-roundcard', i);
     c.innerHTML =
