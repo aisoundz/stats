@@ -5097,12 +5097,19 @@ function paintAccountRow(){
     wrap.style.display='';
   }
   // Already on the game-night list from the front door? Don't ask twice.
+  // The row used to just go inert — checked, disabled, still styled and
+  // cursored like a live tappable control. A player who tapped it (and
+  // nothing happened, because there is nothing left to opt into) read
+  // that as broken rather than as "already done". It now looks settled:
+  // no pointer cursor, no hover invitation, a plain confirmation line.
   try{
     const box=document.getElementById('gateConsent');
     if(box && !box.disabled && alreadySignedUp()){
       box.checked=true; box.disabled=true;
-      const lbl=box.parentElement && box.parentElement.querySelector('span');
-      if(lbl) lbl.textContent='You’re on the list for the next game night.';
+      const row=box.parentElement;
+      if(row) row.style.cursor='default';
+      const lbl=row && row.querySelector('span');
+      if(lbl) lbl.innerHTML='✓ You’re on the list for the next game night.';
     }
   }catch(_){}
 }
@@ -11496,7 +11503,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-15-recap-room.109';
+const STATS_BUILD='2026-08-15-qlead-fixes.110';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -12310,6 +12317,10 @@ async function loadGameStats(force){
   }catch(e){ GS.err=e.message||'feed unavailable'; GS.fails++; }
   GS.loading=false;
   try{ phaseSync('feed'); }catch(_){}
+  // Piggybacks on every successful feed refresh from anywhere in the app
+  // (Stats, Gametime, Board all already trigger this) rather than needing
+  // its own global timer — see checkQuarterLeadBonus() for why.
+  try{ if(typeof checkQuarterLeadBonus==='function') checkQuarterLeadBonus(); }catch(_){}
   try{ var _r=_resolve; GS._p=null; if(_r) _r(GS); }catch(_){}
   return GS;
 }
@@ -13480,6 +13491,19 @@ function stYourCard(){
           + need + '</div>';
       }).join('');
       out+=stCard('YOUR CARD, LIVE · '+winning+' of '+mine.length+' leading', rows);
+      // The quarter lead bonus, read straight back off the ledger it wrote —
+      // this card is a mirror of checkQuarterLeadBonus(), not a second
+      // opinion. Only shows once at least one quarter has actually settled.
+      try{
+        var L=ledger(), qEarned=0, qDone=0;
+        for(var qn=1; qn<=4; qn++){
+          if(S.qleadDone && S.qleadDone[qn]){ qDone++; qEarned += (L['qlead-q'+qn]||{}).p||0; }
+        }
+        if(qDone){
+          out+=stCard('', '<div style="font-size:14px;color:var(--ink);font-weight:800">⚡ +'+qEarned+' pts from leading at the quarter'+(qDone===1?'':'s')+'</div>'
+            + '<div class="sub" style="font-size:12px;margin-top:5px">'+qDone+' of 4 quarters settled so far — every category your pick was actually leading at that break paid out right then, on top of what the card pays at the final buzzer.</div>');
+        }
+      }catch(_){}
       // Your picks who aren't playing — the only injury news that matters to you.
       try{
         var hurt=(GS.inj||[]).filter(function(i){ return i.out && mine.some(function(p){ return String(S.predChoices[p.id])===i.name; }); });
@@ -13918,6 +13942,68 @@ function feedCardWatch(){
               meta: behind.length>1 ? (behind.length+' categories still to chase') : '',
               tag:'your card', big:true }];
   }catch(_){ return []; }
+}
+
+/* ---------------- QUARTER LEAD BONUS ----------------
+   User's idea, night of GN9: a pregame pick that's the box-score leader in
+   its category at the moment its quarter closes earns a small bonus right
+   then, on top of whatever the pick pays out at the final buzzer — "every
+   quarter if your person is leading you get points... it make it fun to
+   look for your points."
+
+   Reuses feedCardWatch()'s exact leader lookup above (same GS.box, same KEY
+   map) rather than a second copy of that logic. Worth scales with the
+   quarter, same philosophy as the live rounds: 2/4/6/8 per leading category
+   in Q1/Q2/Q3/Q4, so a max of +100 across all five categories over the
+   night — real, but nowhere near the 600 the pregame card itself pays out.
+
+   Written into the LEDGER as kind 'pred', not a new score lane. That was
+   the deliberate choice: predPts already flows through the one trusted,
+   already-rules-bounded path from phone to board (SB.push -> security
+   rules -> gradeAllScored's `t.pts = t.live + t.predPts + ...`). A brand
+   new field would need a matching change to firestore.rules, which isn't
+   reachable from here tonight, and an unrecognized field is exactly the
+   kind of write the rules are built to silently refuse.
+
+   Idempotent by construction, twice over: the ledger key is 'qlead-q'+N,
+   so recomputing it just overwrites that one line — but this also only
+   ever computes a quarter's line ONCE (S.qleadDone[N]), specifically so a
+   later quarter's cumulative box score can never drift an earlier
+   quarter's already-settled snapshot. Without that guard, checking Q1
+   again at Q3 would silently answer "were they leading in Q1" using Q3's
+   cumulative stats — a quiet, wrong answer, exactly the failure mode this
+   whole ledger system exists to rule out. */
+function checkQuarterLeadBonus(){
+  try{
+    if(S.mode!=='live') return;                 // nothing real to lead in Practice
+    if(!gsInGame()) return;
+    if(!S.qleadDone || typeof S.qleadDone!=='object' || Array.isArray(S.qleadDone)) S.qleadDone={};
+    var per=0;
+    (GS.plays||[]).forEach(function(p){ if(p.period!=null && p.period>per) per=p.period; });
+    var isFinal = String(GS.state||'')==='post';
+    // A quarter's box score is trustworthy once the game has moved past it:
+    // curQ-1 while a later quarter is live, or every quarter once final.
+    var settledThrough = isFinal ? 4 : Math.max(0, per-1);
+    if(settledThrough<1) return;
+    var cfg=sportCfg().box, KEY={pts:cfg.pts,reb:cfg.reb,ast:cfg.ast,stl:cfg.stl,blk:cfg.blk};
+    var changed=false;
+    for(var q=1; q<=Math.min(settledThrough,4); q++){
+      if(S.qleadDone[q]) continue;
+      var total=0;
+      preds.forEach(function(p){
+        var mine=S.predChoices[p.id]; if(!mine || p.id==='winner') return;
+        var k=KEY[p.id]; if(!k) return;
+        var row=GS.box[mine], val=row?gsNum(row[k]):null;
+        var bestV=-1;
+        Object.keys(GS.box).forEach(function(nm){ var v=gsNum(GS.box[nm][k]); if(v!=null&&v>bestV) bestV=v; });
+        if(bestV<0) return;
+        if(val!=null && val>=bestV) total += q*2;
+      });
+      ledgerSet('qlead-q'+q, total, 0, 'pred');
+      S.qleadDone[q]=true; changed=true;
+    }
+    if(changed){ try{ save(); }catch(_){} try{ pushScore(); }catch(_){} }
+  }catch(_){}
 }
 
 /* ==================== THE WARM-UP ===================================
