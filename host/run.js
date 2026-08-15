@@ -255,7 +255,79 @@ async function scoreRoom(db, FieldValue, AUTO){
   return n;
 }
 
-/* ---- 6. the loop ---------------------------------------------------- */
+/* ---- 6. the night, kept ---------------------------------------------
+   Eight nights have been played and the room's answers survive for none of
+   them: zero rounds, zero submissions, across gn5 through gn8. Only the
+   player rows are left, which is why a score from Wednesday is still
+   readable and the answers behind it are not.
+
+   The Control Room grew a save button this afternoon, and its reset now
+   copies everything before it wipes anything. Both of those are real fixes
+   and both of them still end in a person remembering. The founder named the
+   problem more precisely than that:
+
+     "me as the human might be pressing something wrong, or if its someone
+      else they might do it."
+
+   A safeguard that depends on nobody making a mistake is not a safeguard,
+   and the mistake does not have to be pressing the wrong button — it can
+   just as easily be pressing nothing at all and getting on with the night.
+   So the runner saves the night itself: after every quarter it keys, at the
+   buzzer, and again if the window closes on a game that never finished. No
+   tab, no laptop, nobody remembering.
+
+   Raw picks, not summaries. The question this data will be asked in six
+   months is not the question anyone would think to compute tonight, and a
+   tally cannot be un-tallied. */
+async function archiveNight(db, FieldValue, why){
+  const rounds = [], subs = {};
+  const rs = await db.collection(`nights/${NIGHT}/rounds`).get();
+  for(const d of rs.docs){
+    const r = d.data() || {};
+    rounds.push({ id: d.id, idx: r.idx == null ? null : r.idx, tag: r.tag || '',
+                  name: r.name || '', worth: r.worth == null ? null : r.worth,
+                  state: r.state || '', key: Array.isArray(r.key) ? r.key : null,
+                  questions: (r.questions || []).map(q => ({ t: q.t || '', o: q.o || [] })) });
+    const ss = await db.collection(`nights/${NIGHT}/rounds/${d.id}/subs`).get();
+    subs[d.id] = ss.docs.map(x => { const v = x.data() || {};
+      return { uid: x.id, picks: Array.isArray(v.picks) ? v.picks : [],
+               banks: Array.isArray(v.banks) ? v.banks : [] }; });
+  }
+
+  const players = [];
+  (await db.collection(`nights/${NIGHT}/players`).get()).forEach(d => { const v = d.data() || {};
+    players.push({ uid: d.id, name: v.name || '', pts: v.pts || 0, speed: v.speed || 0,
+                   predPts: v.predPts || 0, catchPts: v.catchPts || 0,
+                   caughtPts: v.caughtPts || 0, roundsDone: v.roundsDone || 0 }); });
+
+  const callit = [];
+  (await db.collection(`nights/${NIGHT}/callit`).get()).forEach(d => { const v = d.data() || {};
+    callit.push({ qid: d.id, text: v.text || v.q || '', ans: v.ans != null ? v.ans : null,
+                  state: v.state || '' }); });
+
+  const body = { night: NIGHT, why: why || 'runner', by: 'runner',
+                 counts: { rounds: rounds.length,
+                           subs: Object.keys(subs).reduce((a, k) => a + subs[k].length, 0),
+                           players: players.length, callit: callit.length },
+                 rounds, subs, players, callit };
+
+  /* A document has a megabyte in it and a night of four rounds is nowhere
+     near that, but a silent truncation would be worse than a refusal. */
+  const bytes = Buffer.byteLength(JSON.stringify(body));
+  if(bytes > 900000){
+    log('err', `archive is too large for one document (${bytes} bytes) — NOT saved, tell Claude`);
+    return null;
+  }
+
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  await db.doc(`nights/${NIGHT}/archive/${stamp}`).set(
+    Object.assign({ at: FieldValue.serverTimestamp() }, body));
+  log('save', `${body.counts.rounds} round(s), ${body.counts.subs} answer set(s), ` +
+              `${body.counts.players} player(s) — ${body.why}`);
+  return stamp;
+}
+
+/* ---- 7. the loop ---------------------------------------------------- */
 async function main(){
   if(!NIGHT) die('NIGHT_ID is not set');
   if(!EVENT) die('ESPN_EVENT is not set');
@@ -358,6 +430,10 @@ async function main(){
              undo a key that is already correct and posted. */
           try{ await scoreRoom(db, FieldValue, AUTO); }
           catch(e){ log('err', 'scoring failed after ' + R.tag + ': ' + ((e && e.message) || e)); }
+          /* And keep it. A runner that dies in the third quarter should
+             still leave two quarters of answers behind it. */
+          try{ await archiveNight(db, FieldValue, 'after-' + R.tag); }
+          catch(e){ log('err', 'archive after ' + R.tag + ' failed: ' + ((e && e.message) || e)); }
           continue;
         }
       }
@@ -380,6 +456,12 @@ async function main(){
              the night would end with the board quietly short. */
           try{ await scoreRoom(db, FieldValue, AUTO); }
           catch(e){ log('err', 'final scoring pass failed: ' + ((e && e.message) || e)); }
+          /* The copy that matters. Everything the room did tonight, in one
+             document, written before the runner walks away — so that what
+             happens to this night afterwards is somebody's choice rather
+             than somebody's mistake. */
+          try{ await archiveNight(db, FieldValue, 'final-buzzer'); }
+          catch(e){ log('err', 'archive at the buzzer failed: ' + ((e && e.message) || e)); }
           log('done', 'final buzzer, every quarter scored — the runner is finished');
           return;
         }
@@ -396,6 +478,12 @@ async function main(){
     }
     await new Promise(r => setTimeout(r, TICK_MS));
   }
+  /* The other way a night ends: not at a buzzer but at the edge of the
+     window, because the game ran long, the feed stalled, or a quarter was
+     never settled. That night's answers are worth exactly as much as a
+     tidy one's. */
+  try{ await archiveNight(db, FieldValue, 'window-closed'); }
+  catch(e){ log('err', 'archive at the window close failed: ' + ((e && e.message) || e)); }
   log('done', 'ran out of time — the window closed');
 }
 

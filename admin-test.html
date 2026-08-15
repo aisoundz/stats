@@ -26,20 +26,20 @@
   header{position:sticky;top:0;z-index:20;background:rgba(10,14,23,.94);
     backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
   .hrow{display:flex;align-items:center;gap:10px;padding:12px 0}
-  .logo{font-weight:900;font-size:19px;letter-spacing:-.04em}
+  .logo{font-weight:900;font-size:17px;letter-spacing:-.04em}
   .logo em{font-style:normal;color:var(--red)}
-  .tag{font-size:10px;font-weight:800;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+  .tag{font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
   .spacer{flex:1}
   .dot{width:9px;height:9px;border-radius:50%;background:var(--dim);flex:none}
   .dot.on{background:var(--green);box-shadow:0 0 9px var(--green)}
   .dot.err{background:var(--red)}
-  .who{font-size:11px;color:var(--muted);font-weight:700;max-width:150px;
+  .who{font-size:12px;color:var(--muted);font-weight:700;max-width:150px;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
   /* ---- tabs ---- */
   nav{display:flex;gap:6px;padding:0 0 10px}
   nav button{flex:1;background:var(--card);border:1px solid var(--line);color:var(--muted);
-    font:800 12px/1 inherit;letter-spacing:.06em;text-transform:uppercase;
+    font-weight:800;font-size:12px;line-height:1;letter-spacing:.06em;text-transform:uppercase;
     padding:11px 6px;border-radius:10px;cursor:pointer}
   nav button.on{background:var(--blue);border-color:var(--blue2);color:#fff}
 
@@ -48,43 +48,80 @@
     padding:14px;margin:0 0 12px}
   .card.tight{padding:11px}
   .card h3{font-size:14px;margin-bottom:4px}
-  .sub{color:var(--muted);font-size:12.5px;margin:4px 0 0}
-  .sub.tip{color:var(--dim);font-size:11.5px}
-  label{display:block;font-size:10.5px;font-weight:800;letter-spacing:.1em;
+  .sub{color:var(--muted);font-size:14px;margin:4px 0 0}
+  .sub.tip{color:var(--dim);font-size:12px}
+  label{display:block;font-size:12px;font-weight:800;letter-spacing:.1em;
     text-transform:uppercase;color:var(--dim);margin:12px 0 5px}
   input,select,textarea{width:100%;background:var(--bg2);border:1px solid var(--line2);
-    color:var(--ink);border-radius:10px;padding:11px 12px;font:600 14px/1.35 inherit}
+    color:var(--ink);border-radius:10px;padding:11px 12px;font-weight:600;font-size:14px;line-height:1.35}
   input:focus,select,textarea:focus{outline:2px solid var(--blue);outline-offset:-1px}
   textarea{resize:vertical;min-height:56px}
   .row{display:flex;gap:8px;align-items:center}
   .row>*{min-width:0}
 
   button.btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;
-    font:900 14.5px/1 inherit;letter-spacing:-.01em;cursor:pointer;
+    font-weight:900;font-size:15px;line-height:1;letter-spacing:-.01em;cursor:pointer;
     background:var(--blue);color:#fff;margin-top:10px}
+  /* A .btn is width:100% by design — it is a full-width block everywhere
+     else in this dashboard. Inside a flex .row that base width made the
+     LAST button claim the whole line and squeeze the first one down to
+     min-content, which is why the score panel's first button rendered as a
+     narrow pill with its words stacked vertically on top of the second one.
+     Buttons in a row share the row. */
+  .row > button.btn{width:auto;flex:1 1 0;margin-top:0;white-space:nowrap}
   button.btn.red{background:var(--red)}
   button.btn.teal{background:var(--teal);color:#06222a}
   button.btn.gold{background:var(--gold);color:#2a1f00}
   button.btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--muted)}
   button.btn:disabled{opacity:.34;cursor:not-allowed}
+  /* .btn.teal sets its own background, which beat the :disabled opacity
+     badly enough that a dead button looked like the brightest control on
+     the screen. The host pressed it, nothing happened, and the night
+     looked frozen. Disabled now reads as disabled at a glance. */
+  button.btn.teal:disabled{background:#1d2a3d;color:#5f6d8f;opacity:.6}
+  /* Blocked-but-actionable: the reason is fixable in two taps, so the
+     button stays alive and takes you to the fix instead of going dead. */
+  button.btn.needkey{background:rgba(255,197,77,.12);border:1px solid rgba(255,197,77,.55);color:#ffc54d}
+  @keyframes rkFlash{0%{box-shadow:0 0 0 4px rgba(255,197,77,.30)}100%{box-shadow:none}}
+  .rkflash{animation:rkFlash 1.1s ease-out;border-radius:12px}
   button.mini{background:var(--card2);border:1px solid var(--line2);color:var(--muted);
-    border-radius:9px;padding:7px 10px;font:800 11.5px/1 inherit;cursor:pointer;flex:none}
+    border-radius:9px;padding:7px 10px;font-weight:800;font-size:12px;line-height:1;cursor:pointer;flex:none}
   button.mini.danger{color:var(--red);border-color:#4a2430}
 
-  .chip{display:inline-block;font:800 10px/1 inherit;letter-spacing:.1em;text-transform:uppercase;
+  .chip{display:inline-block;font-weight:800;font-size:12px;line-height:1;letter-spacing:.1em;text-transform:uppercase;
     padding:6px 9px;border-radius:99px;background:var(--card2);color:var(--dim);border:1px solid var(--line)}
   .chip.live{background:#3a1220;color:#ff8b97;border-color:#5c1d2f}
   .chip.done{background:#0e3327;color:var(--green);border-color:#17513c}
   .chip.draft{background:#1a2340;color:var(--blue2);border-color:#2b3a63}
+/* ---- guided host mode ---- */
+.guide{border:1px solid #2b3a63;border-radius:16px;background:linear-gradient(180deg,#121a2c,#0e1420);
+  padding:16px 17px;margin-bottom:14px}
+.gsteps{display:flex;gap:6px;margin-bottom:14px}
+.gstep{flex:1;text-align:center;font-weight:800;font-size:12px;letter-spacing:.12em;
+  color:#4e5a75;text-transform:uppercase}
+.gstep i{display:block;height:4px;border-radius:99px;background:#222c44;margin-bottom:6px}
+.gstep.done{color:#6f7d99} .gstep.done i{background:#2ee6a6}
+.gstep.now{color:#eef2fb} .gstep.now i{background:linear-gradient(92deg,#28e0d0,#4d86ff)}
+.gnow{font-weight:900;font-size:12px;letter-spacing:.2em;color:#28e0d0;text-transform:uppercase;margin-bottom:7px}
+.ghead{font-weight:900;font-size:17px;line-height:1.25;color:#eef2fb;margin-bottom:6px}
+.gwhy{font-size:14px;line-height:1.5;color:#93a0bd;margin-bottom:13px}
+.gbtn{width:100%;border:none;border-radius:13px;padding:16px 16px;cursor:pointer;
+  font-weight:900;font-size:15px;line-height:1.25;
+  background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e}
+.gbtn:active{transform:scale(.99)}
+.gbtn.wait{background:#1a2233;color:#8d99b3;cursor:default}
+.gbtn.warn{background:linear-gradient(92deg,#ffc54d,#ff924d);color:#2a1c00}
+.gskip{display:block;width:100%;margin-top:9px;background:none;border:none;color:#5b6a8c;
+  font-weight:700;font-size:12px;cursor:pointer;text-decoration:underline}
 
   .qcard{background:var(--card2);border:1px solid var(--line);border-radius:12px;
     padding:11px;margin-top:10px}
   .qhead{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-  .qhead b{font-size:11px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
+  .qhead b{font-size:12px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
   .opt{display:flex;gap:8px;align-items:center;margin-top:6px}
-  .opt input[type=text]{flex:1;padding:9px 11px;font-size:13.5px}
+  .opt input[type=text]{flex:1;padding:9px 11px;font-size:14px}
   .keybtn{flex:none;width:38px;height:38px;border-radius:9px;border:1px solid var(--line2);
-    background:var(--bg2);color:var(--dim);font:900 15px/1 inherit;cursor:pointer}
+    background:var(--bg2);color:var(--dim);font-weight:900;font-size:15px;line-height:1;cursor:pointer}
   .keybtn.on{background:var(--green);border-color:var(--green);color:#04241a}
 
   /* ---- the inline answer key that lives on the RUN tab ----
@@ -93,20 +130,20 @@
   .rk{margin-top:12px}
   .rkq{border-top:1px solid var(--line);padding-top:11px;margin-top:11px}
   .rkq:first-child{border-top:0;padding-top:0;margin-top:0}
-  .rkq .qn{font:800 10.5px/1.3 inherit;letter-spacing:.09em;text-transform:uppercase;
+  .rkq .qn{font-weight:800;font-size:12px;line-height:1.3;letter-spacing:.09em;text-transform:uppercase;
     color:var(--dim);margin-bottom:3px}
-  .rkq .qt{font:800 14px/1.35 inherit;color:var(--ink);margin-bottom:8px}
+  .rkq .qt{font-weight:800;font-size:14px;line-height:1.35;color:var(--ink);margin-bottom:8px}
   .rko{display:flex;flex-wrap:wrap;gap:7px}
   .rko button{flex:1 1 44%;min-height:46px;text-align:left;padding:11px 12px;
     border-radius:11px;border:1px solid var(--line2);background:var(--bg2);
-    color:var(--muted);font:700 13.5px/1.25 inherit;cursor:pointer}
+    color:var(--muted);font-weight:700;font-size:14px;line-height:1.25;cursor:pointer}
   .rko button.on{background:var(--green);border-color:var(--green);color:#04241a;font-weight:900}
   .rko button.on::before{content:"\2713  "}
-  .keycount{font:800 12px/1 inherit;color:var(--dim);margin-top:12px;text-align:center}
+  .keycount{font-weight:800;font-size:12px;line-height:1;color:var(--dim);margin-top:12px;text-align:center}
   .keycount.ready{color:var(--green)}
 
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  th{text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;font-size:12px;letter-spacing:.1em;text-transform:uppercase;
     color:var(--dim);padding:6px 4px;border-bottom:1px solid var(--line)}
   td{padding:8px 4px;border-bottom:1px solid var(--line)}
   td.n{font-weight:900}
@@ -115,9 +152,9 @@
   .statrow .s{flex:1;background:var(--card2);border:1px solid var(--line);
     border-radius:12px;padding:12px;text-align:center}
   .statrow .s .v{font-size:26px;font-weight:900;letter-spacing:-.03em}
-  .statrow .s .k{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin-top:3px}
+  .statrow .s .k{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin-top:3px}
 
-  .banner{border-radius:12px;padding:12px 13px;font-size:13px;font-weight:700;margin:0 0 12px}
+  .banner{border-radius:12px;padding:12px 13px;font-size:14px;font-weight:700;margin:0 0 12px}
   .banner.warn{background:#3a2a0d;color:var(--gold);border:1px solid #5b4415}
   .banner.bad{background:#3a1220;color:#ff8b97;border:1px solid #5c1d2f}
   .banner.good{background:#0e3327;color:var(--green);border:1px solid #17513c}
@@ -125,7 +162,7 @@
 
   #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(120%);
     background:var(--card2);border:1px solid var(--line2);border-radius:12px;
-    padding:12px 16px;font-size:13px;font-weight:700;max-width:92vw;text-align:center;
+    padding:12px 16px;font-size:14px;font-weight:700;max-width:92vw;text-align:center;
     transition:transform .25s ease;z-index:60;box-shadow:0 14px 40px rgba(0,0,0,.6)}
   #toast.show{transform:translateX(-50%) translateY(0)}
   .hide{display:none !important}
@@ -134,7 +171,7 @@
      using to watch the game. It scrolls sideways, and the name column
      stays put — a row of ticks with no name attached is useless. */
   .gwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -13px;padding:0 13px}
-  table.grid{min-width:100%;font-size:12.5px}
+  table.grid{min-width:100%;font-size:14px}
   table.grid th,table.grid td{white-space:nowrap;padding:7px 8px}
   table.grid th.p,table.grid td.p{position:sticky;left:0;z-index:2;background:var(--card);
     box-shadow:1px 0 0 var(--line);max-width:132px;overflow:hidden;text-overflow:ellipsis}
@@ -146,7 +183,7 @@
   td.tot{font-weight:900;border-left:1px solid var(--line)}
   .pk{color:var(--muted);font-weight:700}
   .keyrow{display:flex;gap:8px;align-items:center;margin-top:8px}
-  .keyrow .kn{flex:none;width:22px;font:900 11px/1 inherit;color:var(--dim)}
+  .keyrow .kn{flex:none;width:22px;font-weight:900;font-size:12px;line-height:1;color:var(--dim)}
   .keyrow select{margin-top:0;flex:1}
   .keyrow input{margin-top:0;flex:none;width:96px}
   .keyq{font-size:12px;color:var(--muted);font-weight:700;margin:12px 0 0}
@@ -178,6 +215,9 @@
       <div class="spacer"></div>
       <span class="dot" id="beDot"></span>
       <span class="who" id="whoTxt">…</span>
+      <!-- The build, where the host can read it without devtools. Every
+           "did the fix land?" starts here. -->
+      <span class="chip" id="buildChip" title="Control Room build">…</span>
       <button class="mini" id="outBtn">Sign out</button>
     </div>
     <div class="wrap">
@@ -186,6 +226,7 @@
         <button data-tab="run">2 · Run</button>
         <button data-tab="grade">3 · Grade</button>
         <button data-tab="room">4 · Room</button>
+        <button data-tab="auto">5 · Auto</button>
       </nav>
     </div>
   </header>
@@ -223,6 +264,17 @@
             </div>
           </div>
         </div>
+        <!-- A newer question set shipped after this browser seeded its
+             draft. Untouched rounds update themselves; edited ones are
+             never overwritten silently, so they are named here with one
+             button that does it on request. -->
+        <div id="bankDriftBar" style="display:none;margin:12px 0 0;background:rgba(255,197,77,.10);
+             border:1px solid rgba(255,197,77,.4);border-radius:12px;padding:12px 13px">
+          <b style="font-size:14px;color:var(--gold)" id="bankDriftHd">A newer question set shipped for this night</b>
+          <p class="sub" id="bankDriftTxt" style="font-size:14px;margin:5px 0 10px"></p>
+          <button class="mini" id="bankDriftGo" onclick="reloadAllBank()">↺ Load the latest set</button>
+          <button class="mini" id="bankDriftUndo" style="display:none" onclick="undoBankLoad()">↩ Undo</button>
+        </div>
         <div id="qList"></div>
         <p class="sub tip" style="margin-top:12px">The app's questions for this round are already loaded — you only need to mark the answers. Tap the ✓ next to an option to mark it the right one. The answer never leaves this browser until you press Reveal; it isn't written to the round players can read.</p>
       </div>
@@ -238,7 +290,47 @@
 
     <!-- ---------- TAB 2: RUN ---------- -->
     <section id="t-run" class="hide">
-      <div id="runBanner"></div>
+      <!-- ================= AUTOPILOT ================================
+         Above the guided steps on purpose. The guided card is the manual
+         transmission — one step lit at a time, in the right order, for a
+         human who is going to drive. This is the offer to not drive at
+         all, and it has to be the first thing on the screen or the person
+         who wanted it will have already started pressing buttons. -->
+      <div class="card" style="margin-bottom:14px;border-color:var(--blue,#2f6bff)">
+        <h3 style="margin:0 0 4px;font-size:15px">🤖 Autopilot</h3>
+        <p class="sub" style="margin:0 0 12px;font-size:12px">
+          Opens each quarter when it ends, waits for the room, works out the answers
+          from the feed and posts the key. It never guesses.</p>
+        <div id="hostBody"></div>
+      </div>
+
+      <!-- ================= GUIDED HOST MODE ==========================
+         The Control Room works, but only if you already know the order:
+         push when the quarter ENDS, mark while the next one plays, reveal,
+         then push the following one yourself. That is tribal knowledge in
+         one person's head, and it is the reason a night cannot be handed
+         to anybody else — which is the reason this product has a ceiling
+         of one room.
+
+         This is the same controls, sequenced. One step lit at a time, one
+         button, and a plain sentence saying why. Everything below it stays
+         exactly where it was for the host who already knows the dance.
+         ============================================================= -->
+    <div id="guide" class="guide"></div>
+    <div id="runBanner"></div>
+      <!-- RESET. A dry run writes to the same night document a real game
+           uses, so a rehearsal leaves rounds pushed and revealed and the
+           real night cannot start. There was no way to undo that except
+           by hand in the Firebase console, which is not a thing anyone
+           should be doing forty minutes before tip. -->
+      <div id="resetBox" class="card" style="border-color:#4a2430;padding:12px 14px;margin-bottom:12px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between">
+          <div><b style="font-size:14px">Rehearsed on this night?</b>
+            <div class="sub" style="font-size:12px;margin-top:3px">Clears every pushed round, every saved answer and every Call It for <b id="resetNight"></b>, so tonight starts clean. Players and the room stay.</div></div>
+          <button class="btn ghost" id="archBtn" onclick="archiveNow()" style="flex:0 0 auto;white-space:nowrap">💾 Save tonight’s data</button>
+          <button class="btn ghost" id="resetBtn" onclick="resetNight()" style="flex:0 0 auto;color:var(--red);border-color:#4a2430;white-space:nowrap">🧹 Clear the test data</button>
+        </div>
+      </div>
 
       <!-- ---------- the live scoreboard ----------
            This is the answer to "the app goes dark for eleven minutes".
@@ -246,32 +338,37 @@
            that did nothing yet, and silence. Now it has the score of the
            game they are watching and where they stand in the room.
 
-           There is no play-by-play feed behind this and it does not
-           pretend there is. It is you, typing a number you can see on
-           your own television, and every phone in the room labels it
-           "posted by the host" with the minute you last touched it.
-           Slower than a feed, and honest, which is the trade we chose.
+           WHAT CHANGED, 13 Aug: the runner writes this document itself
+           every twenty seconds of a live game, so the hand-typed version
+           is now the fallback rather than the method. The copy says so
+           in as few words as it can, because a host who does not know
+           that will type a score, watch the automation replace it eight
+           seconds later, and reasonably conclude the panel is broken.
 
            Leave it blank and no card appears on anybody's phone. A
            scoreboard that says 0-0 at halftime is worse than none. -->
       <div class="card">
-        <h3>Live score <span class="chip" id="scState">not posted</span></h3>
-        <p class="sub">Type what's on your screen and press Post. Every phone waiting between rounds picks it up within about a minute. One line of text is optional — that's the bit people come back for.</p>
+        <h3>The score card <span class="chip" id="scState">not showing</span></h3>
+        <p class="sub"><b>You do not need this during a game.</b> Once the ball is up the host writes the score by
+          itself and keeps it within about twenty seconds of the broadcast. This panel is here for the two times
+          that is not true: the automation is down, or something wrong is showing and you want it gone.</p>
         <div class="row" style="margin-top:10px;align-items:flex-end">
           <div style="flex:1"><label for="scAway" id="scAwayLbl">Away</label>
             <input id="scAway" type="number" inputmode="numeric" min="0" max="300" step="1" placeholder="0"></div>
           <div style="flex:1"><label for="scHome" id="scHomeLbl">Home</label>
             <input id="scHome" type="number" inputmode="numeric" min="0" max="300" step="1" placeholder="0"></div>
         </div>
-        <label for="scPeriod" style="margin-top:10px;display:block">Where the game is</label>
+        <label for="scPeriod" style="margin-top:10px;display:block">What the card says under the score</label>
         <select id="scPeriod"></select>
         <label for="scNote" style="margin-top:10px;display:block">One line for the room (optional)</label>
         <input id="scNote" maxlength="90" placeholder="e.g. Fever on an 8-0 run — Clark has 14.">
         <div class="row" style="margin-top:12px">
-          <button class="btn" id="scPost" style="flex:1">Post the score</button>
-          <button class="btn ghost" id="scClear">Take it down</button>
+          <button class="btn" id="scPost" style="flex:1">Show this score</button>
+          <button class="btn ghost" id="scClear">Hide the card</button>
         </div>
-        <p class="sub tip" id="scNote2" style="margin-top:10px">Nothing here touches scoring. It is a number on a card — if you never post one, the night runs exactly as it does today.</p>
+        <p class="sub tip" id="scNote2" style="margin-top:10px"><b>Nobody's points change either way.</b> These two
+          buttons only decide whether a score card appears on the players' home screen. While a game is live the
+          automatic host will overwrite whatever you type here on its next pass — that is it doing its job.</p>
       </div>
 
       <div class="card">
@@ -356,12 +453,55 @@
       </div>
     </section>
 
+    <!-- ---------- TAB 5: AUTO ---------- -->
+    <section id="t-auto" class="hide">
+      <div class="card">
+        <h3>The robot host</h3>
+        <p class="sub">Every question in tonight's bank carries a <b>resolver</b> — a function that reads the answer straight out of the ESPN feed. This tab is where you check whether it agrees with you before you ever let it drive.</p>
+        <div class="statrow">
+          <div class="s"><div class="v" id="auEvent">—</div><div class="k">ESPN event</div></div>
+          <div class="s"><div class="v" id="auCover">—</div><div class="k">Questions with a resolver</div></div>
+          <div class="s"><div class="v" id="auState">—</div><div class="k">Feed says</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Dry run</h3>
+        <p class="sub">Point it at a game that has already finished, press the button, and read what it says. You know the answers; it does not know you know. Anything it gets wrong is a resolver that must be fixed or a question that must leave the bank — <b>a question with no reliable resolver does not belong in an automated night.</b></p>
+        <label for="auDryEvent">ESPN event id</label>
+        <input id="auDryEvent" spellcheck="false" autocapitalize="off" placeholder="401857132">
+        <p class="sub tip">Defaults to last night's game. Any finished WNBA event id works.</p>
+        <button class="btn" id="auDryBtn">Run the whole night against this game</button>
+        <div id="auDryOut"></div>
+      </div>
+
+      <div class="card">
+        <h3>Shadow mode — tonight</h3>
+        <p class="sub">While you run the night by hand, the robot runs it beside you and writes nothing. When you reveal a round, this compares its key to yours and says where you disagree. <b>One clean night of agreement is the price of admission before it touches a button.</b></p>
+        <button class="btn ghost" id="auShadowBtn">Start watching</button>
+        <div id="auShadowOut"></div>
+      </div>
+    </section>
+
   </div>
 </div>
 
 <div id="toast"></div>
 
 <script>
+/* Build stamp. The QA engine flags a file with no build id, because
+   without one there is no way to tell which Control Room is actually open
+   on game night — and "is your tab the new one?" is not a diagnosis. */
+window.ADMIN_BUILD='2026-08-13-admin.45-score-copy';
+try{ document.addEventListener('DOMContentLoaded', function(){
+  var c=document.getElementById('buildChip');
+  if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
+         c.title='Control Room '+window.ADMIN_BUILD;
+         c.style.cursor='pointer';
+         c.onclick=function(){ try{ navigator.clipboard.writeText(window.ADMIN_BUILD); }catch(e){}
+                               try{ toast('Control Room '+window.ADMIN_BUILD); }catch(e){ alert(window.ADMIN_BUILD); } }; }
+}); }catch(e){}
+
 /* =====================================================================
    STATS — Control Room
    ---------------------------------------------------------------------
@@ -404,8 +544,32 @@ window.STATS_FIREBASE = {
    minute before tip-off. */
 const NIGHTS = [
   // First in this list is the night the Control Room opens on, so the live
-  // fixture goes at the top. Past nights stay listed — Game Night #1 is not
-  // settled yet, and the picker is the only way back to its grading screen.
+  // fixture goes at the top.
+  /* `espn` is new and it is the hinge for the autonomous host: it is the
+     event id the resolvers read. A night without one can still be run by
+     hand, it just cannot be run by the robot. */
+  /* GAME NIGHT #8 — DALLAS AT INDIANA, and note the tip: 7:30 ET, not 8:00.
+     The last two nights were 8:00 and that is exactly the kind of fact that
+     gets copied forward by hand. Verified against the scoreboard feed for
+     2026-08-14: event 401857143, ION, Gainbridge Fieldhouse. Indiana are
+     home so they are drawn on the right. */
+  { id:'gn8-2026-08-14-dal-ind', label:'Game Night #8 — Wings @ Fever (Fri Aug 14, 7:30 ET · ION)',
+    away:'DAL', home:'IND', espn:'401857143',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[10,20,30,40] },
+  { id:'gn7-2026-08-12-tor-dal', label:'Game Night #7 — Tempo @ Wings (Wed Aug 12, 8:00 ET · USA Network)',
+    away:'TOR', home:'DAL', espn:'401857137',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[10,20,30,40] },
+  { id:'gn6-2026-08-11-ny-ind', espn:'401857132', label:'Game Night #6 — Liberty @ Fever (Tue Aug 11, 7:30 ET · ESPN)',
+    away:'NY', home:'IND',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[10,20,30,40] },
+  // Past nights stay listed — Game Night #1 is not settled yet, and the
+  // picker is the only way back to its grading screen.
   // away/home are the two short names on the live scoreboard in tab 2, in
   // that order — the app draws the road team on the left, so the order here
   // is not decorative. Everything else on this list is the round structure.
@@ -447,6 +611,150 @@ const NIGHTS = [
 // simulated results for a fake game, not claims about the real one. The host
 // marks the real answer at the break, then pushes.
 const BANK = {
+  /* Game #7 — Tempo @ Wings. The Game #6 spine, re-pointed, with one rule
+     applied that was not applied before: EVERY LINE HERE HAS A RESOLVER.
+     See RESOLVERS below — each question carries an `r` key naming the
+     function that can read the answer straight out of the ESPN feed, and a
+     question with no resolver does not belong in this bank any more. That
+     single constraint is what turns the Control Room from a thing a human
+     drives into a thing a human watches. */
+  /* GAME NIGHT #8. This is Game Night #7's bank with two words changed.
+
+     That is the point, and it is a deliberate refusal to be creative. All
+     sixteen of these resolved correctly on Wednesday — the autofill filled
+     twelve across three finished quarters, eleven at HIGH confidence and one
+     at MED, and the MED one was right too. A question bank that has survived
+     a real night is worth more than a better idea that has not, and Friday
+     is a night for proving the machinery rather than the questions.
+
+     Only the two team words move: Wings and Fever, Dallas away, Indiana
+     home. teamOpt() matches option text against the live team name and
+     abbreviation, so it does not care about the order, but a host reading
+     these out loud does. */
+  'gn8-2026-08-14-dal-ind': [
+    [
+      { t: 'The first points of the game — how did they come?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throws'], r:'firstScoreKind' },
+      { t: 'Which team made the first three-pointer of the game?', o: ['Fever', 'Wings', 'Neither made one in Q1'], r:'firstThreeTeam' },
+      { t: 'Threes made in Q1, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'threesBand' },
+      { t: 'The team that scored first — were they still ahead at the Q1 buzzer?', o: ['Yes', 'No', 'It was tied'], r:'firstScorerStillAhead' }
+    ],
+    [
+      { t: 'In Q2, both teams combined — were there more made field goals or made free throws?', o: ['Made field goals', 'Made free throws', 'Equal'], r:'fgVsFt' },
+      { t: 'How many times did the lead change hands in Q2? (a tie is not a lead change)', o: ['None', 'Once', 'Twice', 'Three or more'], r:'leadChanges' },
+      { t: 'Did either team score 10 or more unanswered points at any stage of Q2?', o: ['Yes', 'No'], r:'tenUnanswered' },
+      { t: 'The last shot attempt before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'], r:'lastShotOfPeriod' }
+    ],
+    [
+      { t: 'Which team scored the first points after halftime?', o: ['Fever', 'Wings'], r:'firstScoreTeam' },
+      { t: '24-second shot-clock violations tonight, both teams combined, Q1 through Q3 — how many?', o: ['None', '1', '2', '3 or more'], r:'shotClockCount' },
+      { t: 'In Q3, both teams combined — were there more threes made or turnovers?', o: ['Threes made', 'Turnovers', 'Equal'], r:'threesVsTurnovers' },
+      { t: 'Through three quarters, how many players have reached double figures in points, both teams combined?', o: ['None or one', 'Two', 'Three', 'Four or more'], r:'doubleFiguresBand' }
+    ],
+    [
+      { t: 'In the last two minutes, both teams combined — were there more free-throw attempts or field-goal attempts?', o: ['Free-throw attempts', 'Field-goal attempts', 'Equal'], r:'lastTwoFtVsFg' },
+      { t: 'Did any player on either team foul out?', o: ['Yes', 'No'], r:'anyFoulOut' },
+      { t: 'The last basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'], r:'lastBasketWorth' },
+      { t: 'The team that led at halftime — did they win the game?', o: ['Yes', 'No', 'It was tied at half'], r:'halftimeLeaderWon' }
+    ]
+  ],
+  'gn7-2026-08-12-tor-dal': [
+    [
+      { t: 'The first points of the game — how did they come?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throws'], r:'firstScoreKind' },
+      { t: 'Which team made the first three-pointer of the game?', o: ['Wings', 'Tempo', 'Neither made one in Q1'], r:'firstThreeTeam' },
+      { t: 'Threes made in Q1, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'threesBand' },
+      { t: 'The team that scored first — were they still ahead at the Q1 buzzer?', o: ['Yes', 'No', 'It was tied'], r:'firstScorerStillAhead' }
+    ],
+    [
+      { t: 'In Q2, both teams combined — were there more made field goals or made free throws?', o: ['Made field goals', 'Made free throws', 'Equal'], r:'fgVsFt' },
+      { t: 'How many times did the lead change hands in Q2? (a tie is not a lead change)', o: ['None', 'Once', 'Twice', 'Three or more'], r:'leadChanges' },
+      { t: 'Did either team score 10 or more unanswered points at any stage of Q2?', o: ['Yes', 'No'], r:'tenUnanswered' },
+      { t: 'The last shot attempt before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'], r:'lastShotOfPeriod' }
+    ],
+    [
+      { t: 'Which team scored the first points after halftime?', o: ['Wings', 'Tempo'], r:'firstScoreTeam' },
+      { t: '24-second shot-clock violations tonight, both teams combined, Q1 through Q3 — how many?', o: ['None', '1', '2', '3 or more'], r:'shotClockCount' },
+      { t: 'In Q3, both teams combined — were there more threes made or turnovers?', o: ['Threes made', 'Turnovers', 'Equal'], r:'threesVsTurnovers' },
+      { t: 'Through three quarters, how many players have reached double figures in points, both teams combined?', o: ['None or one', 'Two', 'Three', 'Four or more'], r:'doubleFiguresBand' }
+    ],
+    [
+      { t: 'In the last two minutes, both teams combined — were there more free-throw attempts or field-goal attempts?', o: ['Free-throw attempts', 'Field-goal attempts', 'Equal'], r:'lastTwoFtVsFg' },
+      { t: 'Did any player on either team foul out?', o: ['Yes', 'No'], r:'anyFoulOut' },
+      { t: 'The last basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'], r:'lastBasketWorth' },
+      { t: 'The team that led at halftime — did they win the game?', o: ['Yes', 'No', 'It was tied at half'], r:'halftimeLeaderWon' }
+    ]
+  ],
+  /* Game #6 — Liberty @ Fever. Same four-question spine as Game #5, which is
+     the version that finally got a room through four quarters: every line
+     resolves off the broadcast or the play-by-play, none of them need the box
+     score, and none of them depend on an announcer. Tip is 7:30 ET, not 8:00. */
+  'gn6-2026-08-11-ny-ind': [
+    /* ---- A NOTE ON WORDING, WHICH IS HALF THE JOB -------------------
+       "How many threes did BOTH teams make in Q1?" reads two ways: the
+       combined total, or how many each of them made. Two readings means
+       two defensible answers, and a host who marks one of them is marking
+       half the room wrong for being right — with no way for them to argue
+       it, because the question was never clear in the first place.
+
+       So every question that counts or compares states its scope out
+       loud: "both teams combined". It is four extra words and it is the
+       difference between a question and an argument. The only exemption
+       is an event that is inherently game-level — a lead change belongs
+       to the game, not to a team, so it needs no scope.
+
+       NO EMOJI. The interface is one stroked icon set now, and a row of
+       full-colour pictograms in front of the only words that actually
+       carry the game read as leftovers from a different product. The
+       question is the thing. Let it be the thing. */
+
+    /* ---- Q1 · 10 pts · DID YOU SEE THE START? ----------------------
+       Nobody has settled and the memory load has to be near zero. Each of
+       these resolves in the opening minutes or at the buzzer, and all you
+       had to do was look up. The fourth one quietly ties the start of the
+       quarter to the end of it, so it costs two glances instead of one. */
+    [
+      { t: 'The first points of the game — how did they come?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throws'] },
+      { t: 'Which team made the first three-pointer of the game?', o: ['Fever', 'Liberty', 'Neither made one in Q1'] },
+      { t: 'Threes made in Q1, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'] },
+      { t: 'The team that scored first — were they still ahead at the Q1 buzzer?', o: ['Yes', 'No', 'It was tied'] }
+    ],
+    /* ---- Q2 · 20 pts · TWO THINGS AT ONCE --------------------------
+       Comparisons rather than counts. None of these need an exact number
+       — they need a rough feel for two streams running at the same time,
+       which is a harder and more interesting kind of watching than
+       tallying one. */
+    [
+      { t: 'In Q2, both teams combined — were there more made field goals or made free throws?', o: ['Made field goals', 'Made free throws', 'Equal'] },
+      { t: 'How many times did the lead change hands in Q2? (a tie is not a lead change)', o: ['None', 'Once', 'Twice', 'Three or more'] },
+      { t: 'Did either team score 10 or more unanswered points at any stage of Q2?', o: ['Yes', 'No'] },
+      { t: 'The last shot attempt before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'] }
+    ],
+    /* ---- Q3 · 30 pts · THE QUARTER NOBODY WATCHES -------------------
+       Attention sags after the interval and a blowout kills it outright,
+       so Q3 gets the two cumulative questions. The shot-clock count has
+       out-performed everything else we have ever asked — nobody watches
+       the shot clock, so ask once and everybody watches it all night —
+       and the double-figures count works the same way on the box score.
+       Both reward the people who never looked away, which is the only
+       thing this game is actually for. */
+    [
+      { t: 'Which team scored the first points after halftime?', o: ['Fever', 'Liberty'] },
+      { t: '24-second shot-clock violations tonight, both teams combined, Q1 through Q3 — how many?', o: ['None', '1', '2', '3 or more'] },
+      { t: 'In Q3, both teams combined — were there more threes made or turnovers?', o: ['Threes made', 'Turnovers', 'Equal'] },
+      { t: 'Through three quarters, how many players have reached double figures in points, both teams combined?', o: ['None or one', 'Two', 'Three', 'Four or more'] }
+    ],
+    /* ---- Q4 · 40 pts · THE CLOSING STRETCH -------------------------
+       Worth four times Q1, so it is allowed to ask the most of you. The
+       first three resolve inside the closing minutes, which is exactly
+       when a phone comes out. The last one is the closer on purpose: only
+       somebody who was there at half AND at the buzzer can answer it, and
+       it hands the whole night a shape. */
+    [
+      { t: 'In the last two minutes, both teams combined — were there more free-throw attempts or field-goal attempts?', o: ['Free-throw attempts', 'Field-goal attempts', 'Equal'] },
+      { t: 'Did any player on either team foul out?', o: ['Yes', 'No'] },
+      { t: 'The last basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'] },
+      { t: 'The team that led at halftime — did they win the game?', o: ['Yes', 'No', 'It was tied at half'] }
+    ]
+  ],
   /* Game #5 — Tempo @ Dream. Every question here is AUTO-GRADABLE off the
      ESPN feed: the two that never were ("and-ones", "ref went to the
      monitor") are gone for good, replaced by Q2 threes and a Q3 lead-change
@@ -584,6 +892,175 @@ let subsUnsub = null;
 /* ---------------- tiny helpers ---------------- */
 const $ = id => document.getElementById(id);
 let toastT = null;
+/* Delete a collection the long way. Firestore has no client-side
+   "delete everything under here", and the subcollections matter: a round
+   document with orphaned subs still has the answers a rehearsal wrote. */
+async function wipeCol(pathParts){
+  const {F, db} = FB;
+  let n=0;
+  try{
+    const snap = await F.getDocs(F.collection(db, ...pathParts));
+    for(const d of snap.docs){ await F.deleteDoc(d.ref); n++; }
+  }catch(e){}
+  return n;
+}
+/* ---- B26: NOTHING LEAVES WITHOUT A COPY -----------------------------
+   Eight game nights were played and the room's answers survive for none of
+   them. Rounds, submissions, timing stamps and Caught It picks: zero across
+   gn5, gn6, gn7 and gn8. Only the player rows are left, which is why a
+   score from Wednesday is still readable and the answers behind it are not.
+
+   The cause is one button. `resetNight()` is aimed at rehearsals and says
+   so, but it lives on the same tab a host uses during a live night, and the
+   founder named the real problem exactly:
+
+     "me as the human might be pressing something wrong, or if its someone
+      else they might do it. We need to save all the data as we get this
+      right."
+
+   Right. A safeguard that depends on a person not pressing the wrong thing
+   is not a safeguard. And this is not ordinary data — what the room thought
+   would happen is the one thing this product knows that nobody else on
+   earth can know. It is the whole difference between a stats company and a
+   prediction company, and it was being deleted within days of being made.
+
+   So: everything is copied into ONE document before anything is deleted,
+   and the delete does not run if the copy fails. Derived facts are not
+   enough — store the raw picks, because the question you will want to ask
+   of this data in six months is not the question you would think to
+   compute today. */
+async function archiveNight(nid, why){
+  const { F, db } = FB;
+  const id = nid || night;
+  const rounds = [], subsBy = {};
+  const rs = await F.getDocs(F.collection(db, 'nights', id, 'rounds'));
+  for(const d of rs.docs){
+    const r = d.data() || {};
+    rounds.push({ id:d.id, idx:r.idx, tag:r.tag, name:r.name, worth:r.worth,
+                  state:r.state, key:r.key || null,
+                  questions:(r.questions||[]).map(q=>({ t:q.t, o:q.o })) });
+    const ss = await F.getDocs(F.collection(db, 'nights', id, 'rounds', d.id, 'subs'));
+    subsBy[d.id] = ss.docs.map(x=>{ const v=x.data()||{};
+      return { uid:x.id, picks:v.picks||[], banks:v.banks||[] }; });
+  }
+  const players = [];
+  (await F.getDocs(F.collection(db,'nights',id,'players'))).forEach(d=>{
+    const v = d.data() || {};
+    players.push({ uid:d.id, name:v.name||'', pts:v.pts||0, speed:v.speed||0,
+                   predPts:v.predPts||0, catchPts:v.catchPts||0,
+                   caughtPts:v.caughtPts||0, roundsDone:v.roundsDone||0 });
+  });
+  const callit = [];
+  (await F.getDocs(F.collection(db,'nights',id,'callit'))).forEach(d=>{
+    const v = d.data() || {};
+    callit.push({ qid:d.id, text:v.text||v.q||'', ans:v.ans!=null?v.ans:null, state:v.state||'' });
+  });
+
+  const doc = { night:id, why:why||'manual', at:F.serverTimestamp(),
+                by:(FB.auth.currentUser && FB.auth.currentUser.email) || 'host',
+                counts:{ rounds:rounds.length,
+                         subs:Object.keys(subsBy).reduce((a,k)=>a+subsBy[k].length,0),
+                         players:players.length, callit:callit.length },
+                rounds:rounds, subs:subsBy, players:players, callit:callit };
+
+  /* A 1MB document limit is a long way from a night of four rounds, but a
+     silent truncation would be worse than a refusal, so measure it. */
+  const bytes = new Blob([JSON.stringify(doc)]).size;
+  if(bytes > 900000) throw new Error('archive too large for one document ('+bytes+' bytes) — tell Claude before clearing anything');
+
+  const stamp = new Date().toISOString().replace(/[:.]/g,'-');
+  await F.setDoc(F.doc(db,'nights',id,'archive',stamp), doc);
+  return { stamp, bytes, counts:doc.counts };
+}
+
+/* The proactive half. Archiving should not require wanting to delete. */
+async function archiveNow(){
+  if(!FB || !user){ toast('Sign in first.'); return; }
+  const b = $('archBtn'); if(b){ b.disabled=true; b.textContent='Saving…'; }
+  try{
+    const r = await archiveNight(night, 'manual');
+    toast(`Saved ${r.counts.rounds} round(s), ${r.counts.subs} answer set(s), ${r.counts.players} player(s).`);
+  }catch(e){
+    toast('Archive failed: ' + ((e&&e.message)||e));
+  }
+  if(b){ b.disabled=false; b.textContent='💾 Save tonight\u2019s data'; }
+}
+
+async function resetNight(){
+  if(!FB || !user){ toast('Sign in first.'); return; }
+  const cfg = nightCfg(night);
+  if(!confirm(
+    `Clear the test data for ${night}?\n\n` +
+    `This deletes every pushed round, every answer players saved, every timing ` +
+    `stamp and every Call It question for this night.\n\n` +
+    `It does NOT touch players, the trash-talk room, or any other night.\n\n` +
+    `Do this only if you rehearsed on tonight's night id and want a clean start.`)) return;
+  const btn=$('resetBtn'); if(btn){ btn.disabled=true; btn.textContent='Clearing…'; }
+  try{
+    const {F, db} = FB;
+
+    /* B26 — TWO GATES, IN THIS ORDER.
+
+       First: a night that has been PLAYED does not get cleared on one tap.
+       A rehearsal has no scored rounds and no submissions, so this asks
+       nothing of the person who is doing the thing this button is for. A
+       real night makes you type its id, which is the difference between a
+       reflex and a decision.
+
+       Second: copy everything, and do not delete if the copy fails. The
+       order is the whole point — an archive written after a wipe is a
+       photograph of an empty room. */
+    let played = 0;
+    try{
+      const pre = await F.getDocs(F.collection(db,'nights',night,'rounds'));
+      for(const d of pre.docs){
+        const v = d.data() || {};
+        if(v.state === 'scored') played++;
+        const ss = await F.getDocs(F.collection(db,'nights',night,'rounds',d.id,'subs'));
+        played += ss.size;
+      }
+    }catch(e){}
+    if(played > 0){
+      const typed = prompt(
+        'This night has real data in it — ' + played + ' scored round(s) and answer set(s).\n\n' +
+        'Everything will be copied to the archive first, but clearing is still permanent for the live room.\n\n' +
+        'Type the night id to confirm:\n' + night);
+      if(String(typed||'').trim() !== night){
+        toast('Not cleared — the night id did not match.');
+        if(btn){ btn.disabled=false; btn.textContent='🧹 Clear the test data'; }
+        return;
+      }
+    }
+
+    let saved = null;
+    try{ saved = await archiveNight(night, 'before-reset'); }
+    catch(e){
+      toast('NOT cleared — the archive failed: ' + ((e&&e.message)||e));
+      if(btn){ btn.disabled=false; btn.textContent='🧹 Clear the test data'; }
+      return;
+    }
+
+    let rounds=0, subs=0, times=0, ci=0;
+    const rs = await F.getDocs(F.collection(db,'nights',night,'rounds'));
+    for(const d of rs.docs){
+      subs  += await wipeCol(['nights',night,'rounds',d.id,'subs']);
+      times += await wipeCol(['nights',night,'rounds',d.id,'times']);
+      await F.deleteDoc(d.ref); rounds++;
+    }
+    ci = await wipeCol(['nights',night,'callit']);
+    /* The live-round pointer lives on the night doc itself. Leaving it set
+       would keep the Control Room believing a quarter is still open. */
+    try{ await F.setDoc(F.doc(db,'nights',night), { live:F.deleteField(), liveIdx:F.deleteField() }, {merge:true}); }catch(e){}
+    try{ closingRound=null; }catch(e){}
+    toast(`Saved to archive, then cleared: ${rounds} round(s), ${subs} answer set(s), ${times} timing doc(s), ${ci} Call It.`);
+    try{ onNightChange(); }catch(e){}
+  }catch(e){
+    toast('Could not clear it all: ' + ((e&&e.message)||e) + ' — try once more.');
+  }
+  if(btn){ btn.disabled=false; btn.textContent='🧹 Clear the test data'; }
+}
+
+try{ setTimeout(function(){ try{ const rn=document.getElementById('resetNight'); if(rn && !rn.textContent) rn.textContent=night; }catch(_){ } }, 900); }catch(e){}
 function toast(msg){
   const t=$('toast'); t.textContent=msg; t.classList.add('show');
   clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'), 2800);
@@ -610,15 +1087,55 @@ function loadDraft(){
    every phone in the room. So the questions arrive ready and the answer
    arrives from the host, which is exactly the split that makes the number
    on the leaderboard mean something. */
+/* B11 — THE RESOLVER NEVER REACHED THE DRAFT.
+   This line copied the text, the options and the answer slot, and dropped
+   `r` on the floor. It did not matter for a year of nights, because the
+   only thing that used resolvers was the ESPN panel, and that reads BANK
+   directly. The moment the plan was published FROM THE DRAFT instead, all
+   sixteen resolvers vanished and the off-laptop runner would have opened
+   every round on time and then stalled on every single one — while the
+   Control Room said "automated".
+
+   One fact, many copies, again: BANK owns the resolver, the draft was a
+   copy of BANK, and the copy was lossy. Carry it. */
 function bankRound(id, i){
   const rs = BANK[id];
   if(!rs || !rs[i]) return [];
-  return rs[i].map(q => ({ t:String(q.t||''), o:(q.o||[]).map(String), k:null }));
+  return rs[i].map(q => ({ t:String(q.t||''), o:(q.o||[]).map(String), r:String(q.r||''), k:null }));
+}
+/* The fix above only helps a round seeded from now on. Every draft already
+   sitting in a host's localStorage was seeded by the lossy version and has
+   no `r` in it, and `seedRound` deliberately refuses to re-seed a round it
+   has already fed. So the plan publisher needs to be able to recover the
+   resolver from the bank.
+
+   MATCHED ON TEXT, NOT ON INDEX. Position alone would happily hand question
+   three's resolver to a question the host rewrote by hand, and a resolver
+   attached to the wrong question is exactly the confidently-wrong key this
+   whole design exists to prevent. If the text has changed, the question has
+   no resolver and Publish says so. */
+function resolverFor(id, i, x, q){
+  try{
+    if(q && q.r) return String(q.r);
+    var b = (BANK[id]||[])[i]||[];
+    var bq = b[x];
+    if(!bq || !bq.r) return '';
+    if(String(bq.t||'').trim() !== String((q&&q.t)||'').trim()) return '';
+    return String(bq.r);
+  }catch(_){ return ''; }
+}
+/* A fingerprint of a round's question TEXT. Options and answer keys are
+   deliberately excluded: the host marking an answer is not an edit to the
+   questions, and it must not stop a question-set update from landing. */
+function qsig(qs){
+  try{ return (qs||[]).map(function(q){ return String(q.t||'').trim(); }).join('¦'); }
+  catch(_){ return ''; }
 }
 function seedRound(id, i, force){
   const nd = draft[id];
   if(!nd || !nd.rounds[i]) return 0;
   if(!nd.fed) nd.fed = {};
+  if(!nd.sig) nd.sig = {};
   // Never clobber real work, and never re-fill a round the host deliberately
   // emptied. `fed` remembers that this round has already been offered the
   // bank once, so "delete all four and write my own" stays deleted.
@@ -627,8 +1144,90 @@ function seedRound(id, i, force){
   if(!seeded.length) return 0;
   nd.rounds[i].qs = seeded;
   nd.fed[i] = 1;
+  nd.sig[i] = qsig(seeded);   // remember exactly what we put there
   return seeded.length;
 }
+/* ==== WHEN THE SHIPPED QUESTION SET CHANGES AFTER SEEDING ============
+   The draft lives in THIS BROWSER's localStorage and a round is only ever
+   seeded once. So a host who opened the Control Room in the morning has
+   that morning's questions burned into their laptop — and a question set
+   rewritten at lunchtime never reaches them. They see the old set, assume
+   the change did not ship, and there is nothing on screen to tell them
+   otherwise. That happened.
+
+   The rule now: if a round is EXACTLY as we seeded it — the host has not
+   typed a character — a newer set replaces it silently, because there is
+   nothing of theirs to lose. If they HAVE edited it, we never touch it;
+   we say so, and offer the swap as a button they press. */
+function bankDrift(id){
+  const nd=draft[id]; const out={fresh:[], edited:[], legacy:[]};
+  if(!nd) return out;
+  for(var i=0;i<nd.rounds.length;i++){
+    var bank=bankRound(id,i); if(!bank.length) continue;
+    var now=qsig(nd.rounds[i].qs), bs=qsig(bank);
+    if(now===bs) continue;                       // already current
+    var seeded=(nd.sig&&nd.sig[i])||null;
+    if(!nd.rounds[i].qs.length) continue;        // deliberately emptied — leave it
+    if(seeded!==null && now===seeded){ out.fresh.push(i); continue; }
+    /* NO SIGNATURE IS NOT EVIDENCE OF AN EDIT. Signatures only started
+       being recorded in admin .26 — so every draft seeded before that has
+       an empty sig map, and the first version of this treated all of them
+       as hand-edited. On the morning of Game #6 that produced the exact
+       failure this whole mechanism was built to prevent: four rounds of
+       old questions, held back, under a banner telling the host they had
+       edited rounds they had never touched.
+       An unrecorded round is assumed UNEDITED, because a draft seeded by
+       an older build is overwhelmingly the common case — and the replaced
+       text is stashed, so being wrong costs one press of Undo instead of
+       somebody's writing. */
+    if(seeded===null) out.legacy.push(i);
+    else out.edited.push(i);
+  }
+  return out;
+}
+/* Everything the last load replaced, so it can be put back. */
+function undoBankDrift(id){
+  var nd=draft[id||night]; if(!nd || !nd.undo) return 0;
+  var n=0;
+  Object.keys(nd.undo).forEach(function(k){
+    var i=Number(k); if(!nd.rounds[i]) return;
+    nd.rounds[i].qs = nd.undo[k].qs;
+    if(!nd.sig) nd.sig={}; nd.sig[i]=nd.undo[k].sig;
+    n++;
+  });
+  nd.undo=null; if(n) saveDraft();
+  return n;
+}
+function applyBankDrift(id, includeEdited){
+  var nd=draft[id]; if(!nd) return 0;
+  var d=bankDrift(id);
+  /* Legacy rounds ride with the automatic pass. Rounds we can PROVE were
+     edited still wait to be asked for. */
+  var list=d.fresh.concat(d.legacy).concat(includeEdited?d.edited:[]), n=0;
+  var undo={};
+  list.forEach(function(i){
+    var bank=bankRound(id,i); if(!bank.length) return;
+    undo[i]={ qs: nd.rounds[i].qs, sig: (nd.sig&&nd.sig[i])||null };
+    nd.rounds[i].qs=bank; nd.fed[i]=1;
+    if(!nd.sig) nd.sig={}; nd.sig[i]=qsig(bank); n++;
+  });
+  if(n){ nd.undo=undo; saveDraft(); }
+  return n;
+}
+function undoBankLoad(){
+  var n=undoBankDrift(night);
+  if(!n){ toast('Nothing to put back.'); return; }
+  renderWrite();
+  toast('Put back the previous questions in '+n+' round'+(n>1?'s':'')+'.');
+}
+function reloadAllBank(){
+  var d=bankDrift(night);
+  var n=applyBankDrift(night, true);
+  if(!n){ toast('Already on the latest question set.'); return; }
+  renderWrite();
+  toast('Loaded the latest set into '+n+' round'+(n>1?'s':'')+' — mark the answers, then push.');
+}
+try{ window.reloadAllBank=reloadAllBank; }catch(_){}
 function nightDraft(id){
   const cfg = nightCfg(id);
   if(!draft[id]) draft[id] = { rounds: cfg.tags.map((t,i)=>({ worth: cfg.worth[i]||10, qs: [] })) };
@@ -653,6 +1252,9 @@ function nightDraft(id){
   let filled = 0;
   for(let i=0;i<draft[id].rounds.length;i++) filled += seedRound(id, i, false) ? 1 : 0;
   if(filled) { try{ localStorage.setItem(LS, JSON.stringify(draft)); }catch(e){} }
+  // A round nobody has touched gets the newest set automatically. An edited
+  // one is left alone and surfaced in the banner instead.
+  try{ applyBankDrift(id, false); }catch(e){}
   return draft[id];
 }
 // Explicit reload, for the host who cleared a round and wants it back. This
@@ -764,10 +1366,11 @@ function initUI(){
   document.querySelectorAll('nav button').forEach(b=>{
     b.onclick = () => {
       document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on', x===b));
-      ['write','run','grade','room'].forEach(t=>$('t-'+t).classList.toggle('hide', t!==b.dataset.tab));
+      ['write','run','grade','room','auto'].forEach(t=>$('t-'+t).classList.toggle('hide', t!==b.dataset.tab));
       if(b.dataset.tab==='run'){ renderRun(); loadScore(); }
       if(b.dataset.tab==='room') refreshRoom();
       if(b.dataset.tab==='grade'){ fillGradeSel(); watchGradeSubs(); renderGrade(); }
+      if(b.dataset.tab==='auto'){ try{ AUTO.render(); }catch(e){} }
     };
   });
 
@@ -820,6 +1423,12 @@ function initUI(){
 function onNightChange(){
   const cfg = nightCfg(night);
   nightDraft(night);
+  /* Wire the reset here rather than at boot: this runs on every night
+     switch, and the label has to name the night it will actually clear.
+     A destructive button that shows the wrong target is a trap. */
+  try{
+    const rn=$('resetNight'); if(rn) rn.textContent=night;
+  }catch(e){}
   roundIdx = 0;
   $('roundSel').innerHTML = cfg.tags.map((t,i)=>
     `<option value="${i}">${esc(cfg.tags[i])} — ${esc(cfg.names[i])}</option>`).join('');
@@ -848,6 +1457,37 @@ function onNightChange(){
 function renderWrite(){
   const cfg = nightCfg(night);
   const r = nightDraft(night).rounds[roundIdx];
+  /* SAY IT OUT LOUD. The failure this replaces was silent: the questions
+     changed, the host's laptop kept the old ones, and nothing on screen
+     suggested there was anything to know. */
+  try{
+    const d=bankDrift(night), bar=$('bankDriftBar');
+    const nd0=draft[night], undo=nd0&&nd0.undo?Object.keys(nd0.undo):[];
+    if(bar){
+      if(d.edited.length){
+        bar.style.display='block';
+        $('bankDriftHd').textContent='A newer question set shipped for this night';
+        $('bankDriftGo').style.display='';
+        $('bankDriftUndo').style.display = undo.length?'':'none';
+        $('bankDriftTxt').textContent =
+          'These rounds still have the older questions and were left alone because they have been edited in this browser: '
+          + d.edited.map(function(i){ return cfg.tags[i]; }).join(', ')
+          + '. Loading the latest set replaces them.';
+      } else if(undo.length){
+        /* Say what was done TO their draft, not just what is available.
+           A silent rewrite of the host's rounds is the other half of the
+           same trust problem. */
+        bar.style.display='block';
+        $('bankDriftHd').textContent='Updated to the latest question set';
+        $('bankDriftGo').style.display='none';
+        $('bankDriftUndo').style.display='';
+        $('bankDriftTxt').textContent =
+          undo.map(function(i){ return cfg.tags[Number(i)]; }).join(', ')
+          + (undo.length>1?' were':' was')
+          + ' still on an older set and have been brought up to date. Mark the answers before you push.';
+      } else bar.style.display='none';
+    }
+  }catch(e){}
   $('roundSel').value = roundIdx;
   $('worthIn').value = r.worth;
   $('qCountChip').textContent = r.qs.length + (r.qs.length===1?' question':' questions');
@@ -1041,6 +1681,29 @@ function runNextUp(){
 /* Repaint just the reveal button and its counter for one round, without
    rebuilding the list. Tapping an answer must not scroll the host back to
    the top of the page mid-quarter. */
+/* WHERE THE HOST HAS TO GO NEXT. A control that refuses has exactly one
+   job beyond refusing: put you in front of the thing that unblocks it.
+   Scrolls to the first unmarked question, flashes it, and says how many
+   are left — at 9:47pm with the game running, "the button turns on at 4"
+   in grey text under a bright button is not guidance. */
+function jumpToKey(i){
+  try{
+    const zone = document.querySelector(`[data-keyzone="${i}"]`);
+    if(!zone){ toast('Mark the answers on this card first.'); return; }
+    const r = nightDraft(night).rounds[i] || {qs:[]};
+    let firstBlank = -1;
+    (r.qs||[]).forEach((q,qi)=>{ if(firstBlank<0 && (q.k===null || q.k===undefined)) firstBlank=qi; });
+    const rows = zone.querySelectorAll('.rkq');
+    const target = (firstBlank>=0 && rows[firstBlank]) ? rows[firstBlank] : zone;
+    target.scrollIntoView({behavior:'smooth', block:'center'});
+    target.classList.remove('rkflash'); void target.offsetWidth; target.classList.add('rkflash');
+    const pr = keyProgress(i);
+    toast(firstBlank>=0
+      ? `Mark Q${firstBlank+1} — ${pr.total-pr.done} of ${pr.total} still to go.`
+      : 'Mark the answers, then press reveal.');
+  }catch(e){ try{ toast('Could not find the answers block — reload the Control Room.'); }catch(_){ } }
+}
+
 function syncRevealState(i){
   const card = document.querySelector(`[data-roundcard="${i}"]`); if(!card) return;
   const pr = keyProgress(i), ready = pr.total > 0 && pr.done >= pr.total;
@@ -1048,8 +1711,21 @@ function syncRevealState(i){
   const btn = card.querySelector('[data-revealbtn]');
   const btn2 = card.querySelector('[data-revealbtn2]');
   const cnt = card.querySelector('.keycount');
-  if(btn)  btn.disabled  = !ready || busy;
-  if(btn2) btn2.disabled = !ready || busy;
+  /* This repaints on every answer tap. It used to re-disable the button
+     using the old rule, silently undoing the state the renderer just set —
+     two places, two rules, one frozen Control Room. One rule now. */
+  if(btn){
+    btn.disabled = busy;
+    btn.classList.toggle('needkey', !ready && !busy);
+    if(!busy) btn.textContent = ready ? btn.getAttribute('data-readytext') || btn.textContent
+                                      : `⚠ Mark the ${pr.total} answers first — tap to jump there`;
+  }
+  if(btn2){
+    btn2.disabled = busy;
+    const tagNow=(nightCfg(night).tags||[])[i]||'';
+    btn2.textContent = ready ? (btn2.getAttribute('data-readytext') || btn2.textContent)
+                             : `Reveal ${tagNow} now — void the ${pr.total-pr.done} unanswered`;
+  }
   if(cnt){
     cnt.className = 'keycount' + (ready ? ' ready' : '');
     cnt.textContent = ready
@@ -1078,10 +1754,102 @@ function keyBlock(i){
      </div>`).join('') + '</div>';
 }
 
+/* ==================== GUIDED HOST MODE ==============================
+   One question, answered on screen: WHAT DO I DO RIGHT NOW.
+
+   The Control Room has always contained the answer — it was just spread
+   across four cards, a banner and a rule you had to have been taught. This
+   reads the same state everything else reads and turns it into one lit
+   button. It adds no new powers; a host who already knows the dance can
+   ignore it entirely and use the cards below exactly as before.
+   =================================================================== */
+function guideState(){
+  const cfg = nightCfg(night), tags = cfg.tags || [];
+  const liveIdx = tags.findIndex((t,i)=>{ const d=liveDocs[roundDocId(i)]; return d && d.state==='live'; });
+  const steps = tags.map((t,i)=>{
+    const d = liveDocs[roundDocId(i)];
+    return { tag:t, state: !d ? 'draft' : d.state };
+  });
+
+  if(liveIdx >= 0){
+    const pr = keyProgress(liveIdx), tag = tags[liveIdx];
+    const subs = subCounts[roundDocId(liveIdx)];
+    if(pr.total > 0 && pr.done >= pr.total){
+      return { steps, now:liveIdx,
+        kicker:'Step '+(liveIdx+1)+' of '+tags.length,
+        head:'Reveal '+tag,
+        why:'All '+pr.total+' answers are marked'+(subs!==undefined?(' and '+subs+' '+(subs===1?'player has':'players have')+' answered'):'')
+            +'. One press reveals, posts the score and grades everyone from what they saved.',
+        label:'✅ Reveal '+tag+' — score and grade the room',
+        run:function(){ closeQuarter(liveIdx); } };
+    }
+    return { steps, now:liveIdx,
+      kicker:'Step '+(liveIdx+1)+' of '+tags.length,
+      head:'Mark the answers for '+tag,
+      why:tag+' is live on every phone. Mark each answer as it settles — '+pr.done+' of '+pr.total
+          +' in. You do this while the NEXT quarter plays; there is no rush and the room is not waiting on you.',
+      label:'✍️ Take me to the '+(pr.total-pr.done)+' unmarked answer'+((pr.total-pr.done)===1?'':'s'),
+      run:function(){ jumpToKey(liveIdx); },
+      skip:{ label:'A question can’t be answered — reveal '+tag+' and void the rest',
+             run:function(){ closeQuarter(liveIdx); } } };
+  }
+
+  const next = tags.findIndex((t,i)=>{ const d=liveDocs[roundDocId(i)]; return !d || d.state==='draft'; });
+  if(next < 0){
+    return { steps, now:tags.length,
+      kicker:'Done', head:'Every round is scored',
+      why:'The night is complete. Tab 3 adds it up and the season points have banked themselves.',
+      label:'Nothing left to do', wait:true };
+  }
+  const iss = pushIssues(next);
+  if(iss.length){
+    return { steps, now:next,
+      kicker:'Step '+(next+1)+' of '+tags.length,
+      head:tags[next]+' isn’t ready',
+      why:iss[0]+'. Fix it on the Write tab and this turns into a push button.',
+      /* There is no showTab() in this app — clicking the real nav button
+         is both correct and the only thing that keeps the tab bar's own
+         highlight in sync. The gate caught this one before it shipped as
+         a dead button on the busiest screen of the night. */
+      label:'⚠ Fix it on the Write tab', warn:true,
+      run:function(){ try{ document.querySelector('nav button[data-tab="write"]').click(); }catch(_){ } } };
+  }
+  const first = next===0;
+  return { steps, now:next,
+    kicker:'Step '+(next+1)+' of '+tags.length,
+    head:'Push '+tags[next]+' when the quarter ends',
+    why:first
+      ? 'Wait for the first quarter to actually END on TV. '+tags[next]+'’s questions are about what happened IN '
+        +tags[next]+', so pushing early gives the room questions it cannot answer yet.'
+      : 'The moment '+tags[next]+' ends on the broadcast, press this. Every phone lights up and the 20-second clock starts.',
+    label:'🔴 Push '+tags[next]+' to every phone',
+    run:function(){ pushRound(next); } };
+}
+
+function renderGuide(){
+  const el = $('guide'); if(!el) return;
+  let g; try{ g = guideState(); }catch(e){ el.innerHTML=''; return; }
+  el.innerHTML =
+    '<div class="gsteps">' + g.steps.map(function(st,i){
+        const cls = st.state==='scored' ? 'done' : (i===g.now ? 'now' : '');
+        return '<div class="gstep '+cls+'"><i></i>'+esc(st.tag)+'</div>';
+      }).join('') + '</div>'
+    + '<div class="gnow">'+esc(g.kicker)+'</div>'
+    + '<div class="ghead">'+esc(g.head)+'</div>'
+    + '<div class="gwhy">'+esc(g.why)+'</div>'
+    + '<button class="gbtn'+(g.wait?' wait':'')+(g.warn?' warn':'')+'" id="gGo"'+(g.wait?' disabled':'')+'>'
+      +esc(g.label)+'</button>'
+    + (g.skip ? '<button class="gskip" id="gSkip">'+esc(g.skip.label)+'</button>' : '');
+  const b = $('gGo'); if(b && g.run) b.onclick = g.run;
+  const sk = $('gSkip'); if(sk && g.skip) sk.onclick = g.skip.run;
+}
+
 function renderRun(){
+  try{ renderHost(); }catch(_){}
   const cfg = nightCfg(night);
   const wrap = $('runList'); if(!wrap) return;
   wrap.innerHTML = '';
+  try{ renderGuide(); }catch(e){}
 
   const openLive = Object.values(liveDocs).find(d=>d.state==='live');
   const n = runNextUp();
@@ -1123,24 +1891,75 @@ function renderRun(){
     }
 
     if(state==='draft'){
-      const b = document.createElement('button');
-      b.className='btn red'; b.setAttribute('data-pushbtn','1');
-      b.textContent = `🔴 Push ${tag} to every phone`;
-      // The answers are deliberately NOT part of this condition any more.
-      b.disabled = pIssues.length>0 || (openLive && openLive.idx!==i);
-      b.onclick = ()=>pushRound(i);
-      a.appendChild(b);
+      /* ---- ONE PUSH PATH PER SITUATION -------------------------------
+         There used to be a full-width red "Push {tag} to every phone" on
+         every one of these cards, sitting under a step card at the top of
+         the same screen offering the identical action for the next round.
+         Two controls, one job:
+
+           "If I have the blue pull score, do I need the red? We need to
+            have the site cleaner and not redundant. It's how we get
+            mistakes."
+
+         And the mistake was specific, not aesthetic. Four independent red
+         buttons have no idea what order the game is in, so pushing Q3
+         before Q1 was one tap away on the busiest screen of the night.
+
+         So: the round the game is actually up to is pushed from the step
+         card, which knows the sequence — this card just says so. Any OTHER
+         round keeps a deliberately quieter control, because skipping a
+         quarter is a real thing a host sometimes has to do and removing it
+         would be a worse bug than the one being fixed. It just shouldn't
+         look like the normal way to run a night. */
+      const nextIdx = cfg.tags.findIndex((t,x)=>{
+        const d = liveDocs[roundDocId(x)];
+        return !d || d.state==='draft';
+      });
       const p = document.createElement('p'); p.className='sub tip'; p.style.marginTop='10px';
-      p.textContent = openLive && openLive.idx!==i
-        ? `${cfg.tags[openLive.idx]} is still live — reveal that one first, or its answers are lost.`
-        : keyReady
-          ? 'The answers are already marked, so this one is ready to reveal the second the quarter ends.'
-          : 'Push it now — you mark the answers on this same screen while the quarter plays.';
-      a.appendChild(p);
+
+      if(openLive && openLive.idx!==i){
+        p.textContent = `${cfg.tags[openLive.idx]} is still live — reveal that one first, or its answers are lost.`;
+        a.appendChild(p);
+      }else if(pIssues.length>0){
+        p.textContent = `Not ready to push — ${pIssues[0]}.`;
+        a.appendChild(p);
+      }else if(i === nextIdx){
+        p.textContent = keyReady
+          ? `This is the next round. Push it from the step at the top — the answers are already marked, so it can be revealed the second the quarter ends.`
+          : `This is the next round. Push it from the step at the top of this tab, which knows where the game is up to.`;
+        a.appendChild(p);
+      }else if(nextIdx === 0){
+        /* Nothing has been pushed yet, so there is no sequence to be out of.
+           "Skip Q1" before the game has started is not a recovery path, it
+           is three buttons offering something nobody can want — which is the
+           clutter this whole change was supposed to remove, just quieter.
+           An out-of-order push only becomes a real idea once the night has
+           actually begun. */
+        p.textContent = `Waiting its turn. Nothing has been pushed yet.`;
+        a.appendChild(p);
+      }else{
+        const skipped = cfg.tags.slice(nextIdx, i).join(', ');
+        const b = document.createElement('button');
+        b.className='btn ghost'; b.setAttribute('data-pushbtn','1');
+        b.style.fontSize='14px';
+        b.textContent = `Push ${tag} out of order`;
+        b.onclick = ()=>{
+          if(!confirm(
+            `Push ${tag} now and skip ${skipped}?\n\n` +
+            `${skipped} ${skipped.indexOf(',')>0?'have':'has'} not been pushed. Skipped rounds pay nobody, ` +
+            `so no player is advantaged — but this cannot be undone once the room sees ${tag}.`
+          )) return;
+          pushRound(i);
+        };
+        a.appendChild(b);
+        p.textContent = `Out of sequence — ${skipped} ${skipped.indexOf(',')>0?'are':'is'} still unpushed. Only use this if you have decided to skip ${skipped.indexOf(',')>0?'them':'it'}.`;
+        a.appendChild(p);
+      }
 
     }else if(state==='live'){
       /* The whole point of the rebuild: the answers, here, now. */
       const h = document.createElement('div');
+      h.setAttribute('data-keyzone', String(i));
       h.innerHTML = `<h3 style="margin-top:16px">What actually happened</h3>
         <p class="sub">Tap the right answer as each one settles. Nothing leaves this phone until you press reveal — players can't see these.</p>
         ${keyBlock(i)}`;
@@ -1182,17 +2001,28 @@ function renderRun(){
          with the game still going. */
       const b = document.createElement('button');
       b.className='btn teal'; b.setAttribute('data-revealbtn','1');
+      b.setAttribute('data-readytext', busy ? 'Working…'
+        : isLast  ? `🏁 End the game — reveal ${tag} & post the final`
+        : canPush ? `✅ End of ${tag} — reveal, score & grade (you push ${nextTag} yourself)`
+                  : `✅ End of ${tag} — reveal and post the score`);
       b.style.fontSize='15.5px'; b.style.padding='17px 18px'; b.style.lineHeight='1.3';
       b.textContent = busy ? 'Working…'
+        : !keyReady ? `⚠ Mark the ${pr.total} answers first — tap to jump there`
         : isLast  ? `🏁 End the game — reveal ${tag} & post the final`
         : canPush ? `✅ End of ${tag} — reveal, score & grade (you push ${nextTag} yourself)`
                   : `✅ End of ${tag} — reveal and post the score`;
-      b.disabled = !keyReady || busy;
-      b.onclick = ()=>closeQuarter(i);
+      /* ONLY 'busy' disables this. Missing answers is not a reason to go
+         dead — it is a reason to say what is missing and take the host to
+         it. Same rule the player's pick deck learned the hard way. */
+      b.disabled = busy;
+      if(!keyReady && !busy) b.classList.add('needkey');
+      b.onclick = ()=> keyReady ? closeQuarter(i) : jumpToKey(i);
       a.appendChild(b);
 
       const tip = document.createElement('p'); tip.className='sub tip'; tip.style.marginTop='10px';
-      tip.textContent = isLast
+      tip.textContent = !keyReady
+        ? `You can still close ${tag} without every answer — the button underneath reveals it now and voids the ones you could not mark. Nobody gains or loses a point on a voided question, so the night never has to stop here.`
+        : isLast
         ? 'Reveals the answers and posts the final score. Every phone gets an alert that its points landed.'
         : canPush
           ? `Reveals ${tag}, posts the score, and grades everyone from their saved answers. It does NOT auto-start ${nextTag} — push that yourself with its button when the next quarter is about to begin, so you keep the timing.`
@@ -1204,8 +2034,16 @@ function renderRun(){
          next round isn't ready, or the host wants to reveal and breathe. */
       const jr = document.createElement('button');
       jr.className='btn ghost'; jr.setAttribute('data-revealbtn2','1');
-      jr.textContent = `Just reveal ${tag} — nothing else`;
-      jr.disabled = !keyReady || busy;
+      jr.setAttribute('data-readytext', `Just reveal ${tag} — nothing else`);
+      /* THE WAY OUT. There must always be one. A quarter that cannot be
+         closed is a night that cannot be finished, and marking every answer
+         is not always possible — a question turns out to be unanswerable,
+         the feed never settles, the host misses a play. This closes the
+         quarter with whatever is marked and voids the rest. */
+      jr.textContent = keyReady
+        ? `Just reveal ${tag} — nothing else`
+        : `Reveal ${tag} now — void the ${pr.total-pr.done} unanswered`;
+      jr.disabled = busy;
       jr.onclick = ()=>revealRound(i);
       a.appendChild(jr);
 
@@ -1345,40 +2183,38 @@ async function gradeAllScored(){
 
   // 2) every player — so their prediction/catch points are preserved, not clobbered.
   const playersSnap = await F.getDocs(F.collection(db,'nights',night,'players'));
-  const tally = {};
+  const players = {};
   playersSnap.forEach(p=>{
     const d = p.data() || {};
-    tally[p.id] = { live:0, speed:0, rounds:0,
-      predPts:(typeof d.predPts==='number'?d.predPts:0),
-      catchPts:(typeof d.catchPts==='number'?d.catchPts:0) };
+    players[p.id] = { predPts:(typeof d.predPts==='number'?d.predPts:0),
+                      catchPts:(typeof d.catchPts==='number'?d.catchPts:0),
+                      caughtPts:(typeof d.caughtPts==='number'?d.caughtPts:0) };
   });
 
-  // 3) grade each scored round from its subs (pick text === key text).
+  // 3) every scored round's submissions, as plain data.
+  const subs = {};
   for(const rd of scored){
     const subsSnap = await F.getDocs(F.collection(db,'nights',night,'rounds',rd.id,'subs'));
+    subs[rd.id] = {};
     subsSnap.forEach(s=>{
-      const t = tally[s.id]; if(!t) return;      // a sub with no player doc — skip
       const sub = s.data() || {};
-      const picks = Array.isArray(sub.picks)?sub.picks:[];
-      const banks = Array.isArray(sub.banks)?sub.banks:[];
-      let correct = 0, sp = 0;
-      for(let i=0;i<rd.key.length;i++){
-        const pk = picks[i];
-        if(pk!=null && pk!=='' && String(pk)===String(rd.key[i])){ correct++; sp += Number(banks[i]||0); }
-      }
-      t.live  += correct * rd.worth;
-      t.speed += sp;
-      t.rounds += 1;                              // rounds this player actually answered
+      subs[rd.id][s.id] = { picks: Array.isArray(sub.picks)?sub.picks:[],
+                            banks: Array.isArray(sub.banks)?sub.banks:[] };
     });
   }
 
-  // 4) write each player's authoritative total. pts = live + their own
-  //    prediction/catch points, so nothing else on the doc is disturbed.
+  /* 4) the arithmetic itself lives in the @host-shared block, so the
+        off-laptop runner scores with THIS function rather than a second
+        copy of it. Fetching and writing stay here where the web SDK is;
+        only the maths is shared. */
+  const t3 = AUTO.tally(scored, players, subs);
+
+  // 5) write each player's authoritative total.
   let n = 0;
-  for(const uid in tally){
-    const t = tally[uid];
+  for(const uid in t3){
+    const t = t3[uid];
     await F.setDoc(F.doc(db,'nights',night,'players',uid), {
-      pts: t.live + t.predPts + t.catchPts,
+      pts: t.pts,
       speed: t.speed,
       roundsDone: t.rounds,
       lastScoredBy: 'host',
@@ -1438,8 +2274,31 @@ async function writeScore(a, h, period, note){
 async function closeQuarter(i){
   if(closingRound !== null) return;                 // a double-tap is not two closes
   const cfg = nightCfg(night), last = i >= cfg.tags.length - 1;
-  const iss = roundIssues(i);
+  /* THE DEADLOCK THIS REMOVES. This used to check roundIssues(), which
+     includes "every question has an answer marked". One question you could
+     not answer — a bad question, a play you missed, a feed that never
+     settled — and the reveal refused. And because the next quarter cannot
+     be pushed while this one is live, the whole night stopped at the end of
+     Q1. That is the bug that has ended every game night so far.
+
+     A missing answer is not a broken round. It is a VOID question, and the
+     grading layer has always handled it correctly — markOf() returns 'non'
+     for a question with no key, which pays nobody and penalises nobody.
+     The only thing standing in the way was this gate. So: structural
+     problems still block (no question text, no options — those would ship
+     nonsense to phones), missing answers now void with one confirmation. */
+  const iss = pushIssues(i);
   if(iss.length){ toast('Fix that round first: ' + iss[0]); return; }
+  const kIss = keyIssues(i);
+  if(kIss.length){
+    const pr0 = keyProgress(i);
+    if(!confirm(
+      `${cfg.tags[i]} has ${pr0.done} of ${pr0.total} answers marked.\n\n` +
+      kIss.map(s=>'• '+s).join('\n') +
+      `\n\nClosing now VOIDS those ${kIss.length} question(s): nobody gains a point and ` +
+      `nobody loses one, so no player is advantaged. The rest score normally.\n\n` +
+      `Void them and close ${cfg.tags[i]}?`)) return;
+  }
 
   /* Never score an empty quarter. In Game #2, Q2 was closed with ZERO answers
      in and it stuck every player on 0 for the night — the single worst bug of
@@ -1478,8 +2337,8 @@ async function closeQuarter(i){
       `1. Reveal these answers — every phone scores itself:\n` +
       r.key.map((k,x)=>`    ${x+1}. ${k}`).join('\n') + `\n\n` +
       (wantScore
-        ? `2. Post the scoreboard: ${cfg.away||'Away'} ${a} — ${cfg.home||'Home'} ${h}  (${label})\n\n`
-        : `2. No scoreboard — you left the score blank.\n\n`) +
+        ? `2. Show the score card: ${cfg.away||'Away'} ${a} — ${cfg.home||'Home'} ${h}  (${label})\n\n`
+        : `2. No score card — you left the score blank.\n\n`) +
       (last  ? `3. Nothing left to push. That's the game.`
      : canPush ? `3. ${nextTag} will NOT go out automatically — it's armed, and you push it with its own button the moment the next quarter is about to start. You control the timing.`
               : `3. ${nextTag} isn't written yet, so nothing gets pushed. Write it on tab 1 and push it yourself.`))) return;
@@ -1571,7 +2430,7 @@ function fillScoreUI(){
    the laptop mid-game does not show an empty box over a live card. */
 async function loadScore(){
   fillScoreUI();
-  $('scState').textContent = 'not posted';
+  $('scState').textContent = 'not showing';
   $('scState').className = 'chip draft';
   if(!FB || !night) return;
   try{
@@ -1601,20 +2460,25 @@ async function postScore(){
 }
 
 async function clearScore(){
-  if(!confirm('Take the scoreboard down?\n\nThe card disappears from every phone. Nothing that has been scored is affected.')) return;
+  if(!confirm('Hide the score card?\n\nIt disappears from every phone. Nobody\u2019s points change.')) return;
   try{
     const { F, db } = FB;
     await F.setDoc(F.doc(db,'nights',night), { score: F.deleteField() }, { merge: true });
-    $('scState').textContent = 'not posted';
+    $('scState').textContent = 'not showing';
     $('scState').className = 'chip draft';
-    toast('Scoreboard taken down.');
+    toast('Score card hidden.');
   }catch(e){ toast('Could not take it down: ' + ((e&&e.message)||e)); }
 }
 
 async function revealRound(i, again){
-  const issues = roundIssues(i);
+  const issues = pushIssues(i);
   if(issues.length){ toast('Fix that round first: ' + issues[0]); return; }
   const cfg = nightCfg(night), r = cleanRound(i);
+  const kIss2 = keyIssues(i);
+  if(kIss2.length && !confirm(
+      `${cfg.tags[i]} has ${kIss2.length} unanswered question(s).\n\n` +
+      kIss2.map(s=>'• '+s).join('\n') +
+      `\n\nThey will be voided — no points either way. Reveal anyway?`)) return;
   if(!confirm(
       `Reveal the answers for ${cfg.tags[i]}?\n\n` +
       r.key.map((k,n)=>`${n+1}. ${k}`).join('\n') +
@@ -1643,6 +2507,335 @@ function watchSubs(i){
       renderRun();
     }, ()=>{});
   }catch(e){}
+}
+
+/* =====================================================================
+   THE AUTONOMOUS HOST  (`B-55`)
+   ---------------------------------------------------------------------
+   "We've tried a bunch of times with me pressing the quarter is open and
+   then closing it. Our biggest problem is that it's not doing it
+   automatically."
+
+   Every piece needed to run a night without a human already existed and
+   none of them were joined up. The feed poll knew when a quarter ended.
+   The sixteen resolvers knew the answers — proved against Game Night #7's
+   finished game, where they agreed with the host's own key on fifteen of
+   sixteen and the one disagreement was the resolver being right about a
+   clock bug. writePush, writeReveal and writeScore were already pulled
+   apart into three single writes precisely so that something other than a
+   button could call them. What was missing was the thing that decides.
+
+   This is that thing. It is a loop, and it is deliberately dumb:
+
+     a quarter finishes            -> push that round
+     the room has answered, or
+       the window runs out         -> resolve all four from the feed
+     all four resolved confidently -> post the key, which scores everyone
+     any one of them did not       -> STOP, and say so
+
+   THE LAST LINE IS THE WHOLE DESIGN. An automatic host that guesses is
+   worse than no automatic host, because a wrong key is not a missing
+   score — it is a score that is confidently wrong, applied to everybody,
+   and nobody in the room can tell. So the robot may only act when every
+   answer in a round resolves. One unresolved question hands the entire
+   round back to a human, loudly, and the loop moves on.
+
+   WHERE THIS RUNS, AND WHY THAT IS STILL WRONG. In this browser tab. If
+   the laptop sleeps or the tab closes, the night stops being hosted — the
+   exact failure that put B-55 at the top of the list after Game Night #7.
+   Two things make that survivable rather than silent: the loop is
+   idempotent, so reopening the tab catches up on everything it missed in
+   one tick, and it writes a heartbeat the player app can read, so "the
+   host is offline" becomes a fact on the page instead of a room quietly
+   waiting. Moving the loop to a server is a change of address, not a
+   rewrite — that is why the deciding is separated from the doing here.
+   ================================================================== */
+var HOST = {
+  event: '',            // B12: the autopilot's own event id, never borrowed
+  on:false, tick:null, log:[], busy:false,
+  answerMs: 150000,        // 2m30 of answering, unless the room finishes early
+  graceMs:  20000,         // let the feed settle before trusting "period done"
+  seenDone: {},            // idx -> ms the quarter first read as finished
+  acted:    {}             // 'push0' / 'key0' -> true, so a tick can never repeat itself
+};
+
+function hostSay(kind, msg){
+  var t = new Date();
+  var hh = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+  HOST.log.unshift({ at:hh, kind:kind, msg:msg });
+  HOST.log = HOST.log.slice(0, 40);
+  try{ renderHost(); }catch(_){}
+}
+
+/* How many people are actually sitting in this night. The loop closes a
+   round early when everyone has answered, and "everyone" has to mean the
+   people in the room rather than the people who ever joined. */
+async function hostSeats(){
+  try{
+    var snap = await FB.F.getDocs(FB.F.collection(FB.db,'nights',night,'players'));
+    return snap.size;
+  }catch(_){ return 0; }
+}
+
+async function hostSubs(i){
+  try{
+    var snap = await FB.F.getDocs(FB.F.collection(FB.db,'nights',night,'rounds',roundDocId(i),'subs'));
+    return snap.size;
+  }catch(_){ return 0; }
+}
+
+/* Resolve every question in a round. Returns null the moment one of them
+   cannot be answered — no partial keys, ever. */
+function hostResolveRound(sum, i){
+  var nd = nightDraft(night), rd = nd.rounds[i];
+  if(!rd || !rd.qs || !rd.qs.length) return null;
+  var out = [], why = [];
+  for(var x=0; x<rd.qs.length; x++){
+    var q = rd.qs[x];
+    if(q.k != null){ out.push(q.k); why.push('already marked by hand'); continue; }
+    if(!q.r){ return { fail:'Q'+(x+1)+' has no resolver — it needs a human.' }; }
+    var res;
+    try{ res = AUTO.resolve(q.r, sum, i+1, q.o); }
+    catch(e){ return { fail:'Q'+(x+1)+' threw: ' + ((e&&e.message)||e) }; }
+    if(!res || !res.ok) return { fail:'Q'+(x+1)+' — ' + ((res&&res.why)||'no answer') };
+    var ix = q.o.indexOf(res.answer);
+    if(ix < 0) return { fail:'Q'+(x+1)+' resolved to "'+res.answer+'", which is not one of its options.' };
+    out.push(ix); why.push(res.answer);
+  }
+  return { marks:out, why:why };
+}
+
+async function hostCloseRound(sum, i){
+  var cfg = nightCfg(night);
+  var r = hostResolveRound(sum, i);
+  if(!r){ return; }
+  if(r.fail){
+    if(!HOST.acted['held'+i]){
+      HOST.acted['held'+i] = true;
+      hostSay('hold', cfg.tags[i] + ' needs you — ' + r.fail);
+    }
+    return;
+  }
+  // Write the marks into the draft, then post the key. Same two calls the
+  // buttons make; the robot is not allowed a private path to the database.
+  var nd = nightDraft(night);
+  r.marks.forEach(function(k, x){ nd.rounds[i].qs[x].k = k; });
+  saveDraft();
+  try{ renderRun(); }catch(_){}
+  try{ renderWrite(); }catch(_){}
+  await writeReveal(i);
+  try{ await gradeAllScored(); }catch(_){}   // the same call the Reveal button makes
+  HOST.acted['key'+i] = true;
+  hostSay('key', cfg.tags[i] + ' scored — ' + r.why.join(' · '));
+}
+
+async function hostTick(){
+  if(!HOST.on || HOST.busy) return;
+  HOST.busy = true;
+  try{
+    if(!FB || !FB.auth || !FB.auth.currentUser){ hostSay('stop','Signed out — the host cannot write. Stopping.'); hostStop(); return; }
+    if(typeof night === 'undefined' || !night){ return; }
+    var cfg = nightCfg(night);
+    /* B12 — this used to read `eventId`, which is declared inside the ESPN
+       panel's IIFE eleven hundred lines below and is invisible from here.
+       Not a subtle failure: every tick threw ReferenceError before it ever
+       reached the feed, so the autopilot had never once looked at a game.
+       The log said "Tick failed: eventId is not defined" every 20 seconds
+       and I had not read my own log.
+
+       HOST now owns its own copy, seeded from the thing that actually owns
+       the mapping — the night config, which carries `espn` — and only falls
+       back to a search when a night was configured without one. */
+    if(!HOST.event){
+      try{ if(cfg && cfg.espn) HOST.event = String(cfg.espn); }catch(_){}
+    }
+    if(!HOST.event){
+      try{
+        var _E = window.STATS_ESPN;
+        if(_E && _E.resolveEvent) HOST.event = await _E.resolveEvent(cfg, night);
+      }catch(_){}
+    }
+    if(!HOST.event){ hostSay('wait','Still looking for the game on ESPN.'); return; }
+
+    var sum; try{ sum = await AUTO.fetchFeed(HOST.event); }
+    catch(e){ hostSay('wait','Feed unreachable — will try again.'); return; }
+
+    /* The heartbeat. A room whose host has gone offline should be able to
+       say so rather than waiting in silence. */
+    try{
+      await FB.F.setDoc(FB.F.doc(FB.db,'nights',night),
+        { host:{ auto:true, at:FB.F.serverTimestamp() } }, { merge:true });
+    }catch(_){}
+
+    var now = Date.now();
+    var n = (cfg.tags||[]).length;
+    for(var i=0; i<n; i++){
+      var doc = liveDocs[roundDocId(i)] || null;
+      var done = false;
+      try{ done = AUTO.periodDone(sum, i+1); }catch(_){}
+
+      /* ---- OPEN ---------------------------------------------------- */
+      if(!doc && done){
+        /* A short grace period before believing the feed. ESPN posts the
+           end-of-period row a beat before the last plays of that period
+           land, and a round pushed inside that window is a round whose
+           questions are about plays the resolvers cannot see yet. */
+        if(!HOST.seenDone[i]){ HOST.seenDone[i] = now; continue; }
+        if(now - HOST.seenDone[i] < HOST.graceMs) continue;
+        if(HOST.acted['push'+i]) continue;
+        var issues = pushIssues(i);
+        if(issues.length){
+          if(!HOST.acted['badpush'+i]){ HOST.acted['badpush'+i]=true;
+            hostSay('hold', cfg.tags[i] + ' cannot be pushed — ' + issues[0]); }
+          continue;
+        }
+        HOST.acted['push'+i] = true;
+        await writePush(i);
+        hostSay('push', cfg.tags[i] + ' is live on every phone.');
+        continue;
+      }
+
+      /* ---- CLOSE --------------------------------------------------- */
+      if(doc && doc.state === 'live' && !HOST.acted['key'+i]){
+        var opened = 0;
+        try{ opened = doc.openedAt && doc.openedAt.toMillis ? doc.openedAt.toMillis() : 0; }catch(_){}
+        var waited = opened ? (now - opened) : 0;
+        var seats = await hostSeats(), subs = await hostSubs(i);
+        var everyoneIn = seats > 0 && subs >= seats;
+        if(!everyoneIn && waited < HOST.answerMs) continue;
+        if(everyoneIn) hostSay('room','Everyone has answered ' + cfg.tags[i] + ' — closing early.');
+        await hostCloseRound(sum, i);
+        continue;
+      }
+    }
+
+    /* ---- THE BUZZER ------------------------------------------------ */
+    var over = false;
+    try{ over = !!(((sum.header.competitions[0].status||{}).type||{}).completed); }catch(_){}
+    if(over && !HOST.acted.final){
+      var allScored = true;
+      for(var k=0;k<n;k++){ var d=liveDocs[roundDocId(k)]; if(!d || d.state!=='scored') allScored=false; }
+      if(allScored){
+        HOST.acted.final = true;
+        hostSay('done','Final buzzer. Every quarter is scored — the prediction cards settle on the phones.');
+      }
+    }
+  }catch(e){
+    hostSay('err','Tick failed: ' + ((e&&e.message)||e));
+  }finally{ HOST.busy = false; }
+}
+
+/* ---- PUBLISHING THE PLAN --------------------------------------------
+   The server runner refuses to start without this, and the refusal is the
+   feature. A runner carrying its own copy of the question bank could open
+   a round asking different questions from the ones the phones were shown —
+   which is not a hypothetical, it is exactly what cost a player his whole
+   night on Game Night #7, when one phone answered the built-in bank and
+   the host keyed a different list.
+
+   So there is one bank, it is the one in this Control Room, and it gets
+   written to the room before the runner is allowed to touch anything. */
+async function publishPlan(){
+  if(!FB || !FB.auth || !FB.auth.currentUser){ toast('Sign in first.'); return; }
+  if(typeof night==='undefined' || !night){ toast('Pick a night first.'); return; }
+  var cfg = nightCfg(night), nd = nightDraft(night);
+  var rounds = nd.rounds.map(function(rd,i){
+    return {
+      tag: cfg.tags[i], name: cfg.names[i], worth: rd.worth,
+      qs: rd.qs.map(function(q,x){
+        return { t:String(q.t||'').trim(),
+                 o:(q.o||[]).map(function(o){ return String(o).trim(); }).filter(Boolean),
+                 r:resolverFor(night, i, x, q),
+                 /* A mark the host has already set travels with the plan,
+                    and the runner uses it verbatim rather than resolving
+                    over the top of a human's decision. */
+                 k:(q.k==null ? null : String(q.o[q.k]==null?'':q.o[q.k]).trim()) };
+      })
+    };
+  });
+  var bad = [];
+  rounds.forEach(function(r,i){ r.qs.forEach(function(q,x){
+    if(!q.t) bad.push(cfg.tags[i]+' Q'+(x+1)+' has no question text');
+    if(q.o.length<2) bad.push(cfg.tags[i]+' Q'+(x+1)+' has fewer than two options');
+    if(!q.r && q.k==null) bad.push(cfg.tags[i]+' Q'+(x+1)+' has no resolver and no answer \u2014 the runner would stall on it');
+  }); });
+  try{
+    await FB.F.setDoc(FB.F.doc(FB.db,'nights',night,'plan','rounds'),
+      { rounds:rounds, at:FB.F.serverTimestamp(), by:(FB.auth.currentUser.email||'host') });
+    hostSay('key','Plan published \u2014 '+rounds.length+' rounds, '
+      + rounds.reduce(function(a,r){ return a+r.qs.length; },0) + ' questions.'
+      + (bad.length ? ' Heads up, ' + bad.length + ' will need you: ' + bad[0]
+                    : ' Every line has a resolver.'));
+    toast('Plan published. The runner can take it from here.');
+  }catch(e){ toast('Publish failed: ' + ((e&&e.message)||e)); }
+}
+
+function hostStart(){
+  if(HOST.on) return;
+  HOST.on = true;
+  HOST.acted = {}; HOST.seenDone = {};
+  /* Cleared on every start, not just declared once: a host who switches
+     nights and presses go again must not inherit the previous game's id. */
+  HOST.event = '';
+  hostSay('on','Autopilot on. Watching the feed — it will open each quarter when it ends and score it when the room is in.');
+  /* Same B12 scope bug as the tick, and worse for being inside a catch that
+     ate it: `ESPN` is private to the panel's IIFE, so this line has never
+     done anything. The autopilot claimed to be watching and left the live
+     scoreboard switched off, silently, every night. Reach for the global
+     the panel actually publishes. */
+  try{
+    var _E0 = window.STATS_ESPN;
+    if(_E0 && !_E0.liveOn && _E0.toggleLive) _E0.toggleLive();
+  }catch(_){}
+  HOST.tick = setInterval(hostTick, 20000);
+  hostTick();
+  try{ renderHost(); }catch(_){}
+}
+function hostStop(){
+  HOST.on = false;
+  if(HOST.tick){ clearInterval(HOST.tick); HOST.tick = null; }
+  hostSay('off','Autopilot off. Nothing will open or close on its own.');
+  try{ renderHost(); }catch(_){}
+}
+function hostToggle(){ HOST.on ? hostStop() : hostStart(); }
+
+/* The log is the product here. An automatic host you cannot watch is a
+   thing that either worked or did not, and you find out at the buzzer. */
+function renderHost(){
+  var el = document.getElementById('hostBody'); if(!el) return;
+  var ICON = { push:'▶', key:'✅', hold:'⚠️', room:'👥', on:'🟢', off:'⚪️',
+               wait:'⏳', err:'✕', done:'🏁', stop:'✕' };
+  el.innerHTML =
+    '<button type="button" id="hostBtn" class="' + (HOST.on ? 'danger' : 'primary') + '" '
+    + 'style="width:100%;padding:15px;font-size:15px;font-weight:800;border-radius:12px;border:0;cursor:pointer;'
+    + 'background:' + (HOST.on ? 'var(--red,#ff4d5e)' : 'var(--blue,#2f6bff)') + ';color:#fff">'
+    + (HOST.on ? 'Stop autopilot' : 'Run tonight on autopilot') + '</button>'
+    + '<div style="margin-top:10px;font-size:12px;color:var(--dim);line-height:1.5">'
+    + (HOST.on
+        ? 'Watching the feed every 20 seconds. A quarter opens the moment it ends, and closes when everyone has answered or after 2m30 — whichever comes first. Anything the resolvers cannot answer is handed back to you rather than guessed.'
+        : 'It opens each quarter when the feed says it ended, waits for the room, resolves the four questions and posts the key. It will not guess: one unresolved question stops that round and asks you.')
+    + '</div>'
+    + '<button type="button" id="hostPub" style="width:100%;margin-top:9px;padding:12px;font-size:14px;'
+    + 'font-weight:800;border-radius:11px;border:1px solid var(--line);background:var(--card2);color:var(--ink);cursor:pointer">'
+    + 'Publish tonight\u2019s plan to the server</button>'
+    + '<div style="margin-top:7px;font-size:12px;color:var(--dim);line-height:1.5">'
+    + 'The off-laptop runner will not start without this, and will not invent questions. '
+    + 'Press it once the bank is written \u2014 it sends the exact questions this room will ask.</div>'
+    + (HOST.log.length
+        ? '<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px">'
+          + HOST.log.map(function(r){
+              return '<div style="display:flex;gap:9px;padding:6px 0;font-size:12px;line-height:1.45">'
+                + '<span style="flex:0 0 auto;opacity:.55">' + r.at + '</span>'
+                + '<span style="flex:0 0 auto">' + (ICON[r.kind]||'·') + '</span>'
+                + '<span style="flex:1;min-width:0;color:' + (r.kind==='hold'||r.kind==='err' ? 'var(--gold,#ffc54d)' : 'var(--ink)') + '">'
+                + esc(r.msg) + '</span></div>';
+            }).join('')
+          + '</div>'
+        : '');
+  var b = document.getElementById('hostBtn');
+  if(b) b.onclick = hostToggle;
+  var pb = document.getElementById('hostPub');
+  if(pb) pb.onclick = publishPlan;
 }
 
 /* =====================================================================
@@ -1771,10 +2964,50 @@ function markOf(pick, ans){
   return pick === ans ? 'hit' : 'mis';
 }
 
+/* ====== SERVER-DERIVED SPEED ==========================================
+   `banks[n]` is what the PHONE says was left on its clock. Nice for a
+   friendly night, worthless the moment there is a prize — a tampered
+   client claims twenty every time and the leaderboard is fiction.
+
+   Each phone now writes two Firestore serverTimestamp() marks per
+   question: 'o{n}' when it appeared, 'a{n}' when it was locked. Both are
+   stamped by Google's server, not the device, so the gap between them is
+   the real answer time. Speed is derived from that gap here and the
+   phone's claim is ignored whenever the pair exists.
+
+   When it doesn't exist — an offline moment, a write that failed, a
+   player on an old build — we fall back to the claim and SAY SO in the
+   grid rather than silently pretending it was verified. A host who cannot
+   tell a measured number from an asserted one has no anti-cheat at all. */
+const GTIMES = { rid:null, byUid:{} };
+async function loadTimes(rid){
+  if(!FB || !user) return;
+  const { F, db } = FB;
+  try{
+    const snap = await F.getDocs(F.collection(db,'nights',night,'rounds',rid,'times'));
+    const m = {}; snap.forEach(d => { m[d.id] = d.data(); });
+    GTIMES.rid = rid; GTIMES.byUid = m;
+    if(rid === gradeRid) renderGrade();
+  }catch(e){ /* dashboard-only: never blocks grading */ }
+}
+function tms(v){ try{ return (v && v.toMillis) ? v.toMillis() : (typeof v==='number' ? v : null); }catch(_){ return null; } }
+/* Returns {bank, verified} for one question. Window is the answer clock the
+   phone runs (20s live). Anything outside it clamps rather than throwing —
+   a clock skew must degrade to zero speed, never to negative points. */
+function serverBank(uid, n, windowSec){
+  const t = (GTIMES.rid===gradeRid) ? GTIMES.byUid[uid] : null;
+  if(!t) return null;
+  const o = tms(t['o'+n]), a = tms(t['a'+n]);
+  if(o==null || a==null) return null;
+  const used = (a-o)/1000;
+  if(!isFinite(used) || used < 0) return null;
+  return Math.max(0, Math.min(windowSec, Math.round(windowSec - used)));
+}
+
 function scoreSub(sub, spec){
   const picks = sub.picks || [], nums = sub.nums || [], banks = sub.banks || [];
   const slot = keySlot(gradeRid);
-  let right = 0, pts = 0, speed = 0, answered = 0;
+  let right = 0, pts = 0, speed = 0, answered = 0, verified = 0, claimed = 0;
   const marks = spec.qs.map((q,n) => {
     const m = markOf(picks[n], spec.key[n]);
     if(picks[n]) answered++;
@@ -1795,12 +3028,15 @@ function scoreSub(sub, spec){
         if(official !== '' && official != null && String(nums[n]) === String(official))
           pts += spec.bons ? (Number(spec.bons[n]) || 0) : 0;
       }else{
-        speed += Number(banks[n]) || 0;
+        // Prefer the server's measurement; fall back to the phone's claim.
+        const sv = serverBank(sub.uid, n, 20);
+        if(sv!=null){ speed += sv; verified++; }
+        else { speed += Number(banks[n]) || 0; claimed++; }
       }
     }
     return m;
   });
-  return { marks, right, pts, speed, answered };
+  return { marks, right, pts, speed, answered, verified, claimed };
 }
 
 function watchGradeSubs(){
@@ -1816,6 +3052,7 @@ function watchGradeSubs(){
       snap.forEach(d => gradeSubs.push(Object.assign({ uid:d.id }, d.data())));
       gradeSubs.sort((a,z)=>String(a.name||'').localeCompare(String(z.name||'')));
       renderGrade();
+      loadTimes(rid);              // server clock, read once per snapshot
     }, err=>{
       $('gradeNote').textContent = 'Could not read the answers: ' + ((err&&err.message)||err) +
         '. That is a dashboard problem only — the players\' game is unaffected.';
@@ -2302,7 +3539,12 @@ boot();
   E.b = (c,i,ev)=>({index:i,confidence:c,evidence:ev});
   E.teamOpt = (opts,teamId,T)=>{ const isHome=teamId===T.homeId; const nm=isHome?(T.homeName+' '+T.homeAbbr):(T.awayName+' '+T.awayAbbr);
     let idx=opts.findIndex(o=>{try{return new RegExp(o,'i').test(nm)}catch(e){return false}});
-    if(idx<0)idx=isHome?opts.findIndex(o=>/lynx|home/i.test(o)):opts.findIndex(o=>/fever|away/i.test(o));
+    /* The old fallback hardcoded 'lynx'->home and 'fever'->away from a
+       fixture two games ago. Tonight the Fever ARE home, so a miss on the
+       exact match would have graded with the wrong team. */
+    if(idx<0){ const ab=(isHome?T.homeAbbr:T.awayAbbr)||'';
+      if(ab) idx=opts.findIndex(o=>new RegExp('\\b'+ab+'\\b','i').test(o)); }
+    if(idx<0)idx=opts.findIndex(o=>(isHome?/\bhome\b/i:/\baway\b/i).test(o));
     if(idx<0)idx=isHome?0:1; return idx; };
   E.periodDone = (sum,per)=>{ if(sum.header?.competitions?.[0]?.status?.type?.completed) return true;
     const plays=sum.plays||[]; if(plays.some(p=>p.period?.number===per && /End Period|End of Game/i.test(p.type?.text||''))) return true;
@@ -2337,7 +3579,125 @@ boot();
       const yes=changes>0;
       return E.b('high',o.findIndex(x=>(yes?/^yes/i:/^no/i).test(String(x))),'Q3 lead changes: '+changes);},
     q4_4(s,o,T){const pls=s.boxscore?.players||[];let nm='',mx=0;for(const tm of pls){const g=tm.statistics?.[0];if(!g)continue;const fi=(g.keys||[]).indexOf('fouls');if(fi<0)continue;for(const a of (g.athletes||[])){const f=+((a.stats||[])[fi]||0);if(f>mx){mx=f;nm=a.athlete?.displayName;}}}return E.b('high',mx>=6?0:1,'Most fouls: '+nm+' '+mx+(mx>=6?' (fouled out)':''));},
+/* ================= GAME #6 RESOLVERS ==============================
+       Written against the rewritten bank, one per question, each scoped to
+       its own quarter. The previous set was matched to questions by loose
+       regex, which survived exactly as long as the wording did: rewriting
+       the bank orphaned ten of sixteen questions and — far worse — matched
+       three of them to the WRONG rule. "The team that led at halftime, did
+       they win?" (Yes/No) picked up the rule for "who led at halftime",
+       which returns a TEAM. It would have marked a Yes/No question with a
+       team index, at high confidence, and the host would have had no
+       reason to look twice.
+       Matching is now by exact question text, not by pattern. A question
+       we do not recognise falls through to the host, which is the correct
+       failure. ================================================================ */
+    g6_first_points(s,o,T){ const p=(s.plays||[]).find(x=>x.scoringPlay); if(!p) return null;
+      let i; if(p.scoreValue===1) i=3; else if(p.scoreValue===3) i=2;
+      else i=/layup|dunk|putback|tip|reverse|driving/i.test(p.text||p.type?.text||'')?0:1;
+      return E.b('high',i,'First score: '+p.text); },
+
+    g6_first_three(s,o,T){ const q=E.pIn(s,1);
+      const p=q.find(x=>x.scoringPlay&&x.scoreValue===3);
+      if(!p){ const ni=o.findIndex(x=>/neither|none/i.test(x)); return ni<0?null:E.b('high',ni,'No three made in Q1'); }
+      return E.b('high',E.teamOpt(o,p.team?.id,T),'First three: '+p.text); },
+
+    g6_q1_threes(s,o,T){ const n=E.pIn(s,1).filter(p=>p.scoringPlay&&p.scoreValue===3).length;
+      const i = n<=1?0 : (n<=3?1 : (n<=5?2:3));
+      return E.b('high',i,'Q1 threes, both teams: '+n); },
+
+    g6_first_scorer_led(s,o,T){ const q=E.pIn(s,1);
+      const p=q.find(x=>x.scoringPlay); if(!p) return null;
+      let h=T.homeLine[0], a=T.awayLine[0];
+      if(typeof h!=='number'||typeof a!=='number'){            // lines can lag; fall back to the last play
+        const last=[...q].reverse().find(x=>typeof x.homeScore==='number');
+        if(!last) return null; h=last.homeScore; a=last.awayScore; }
+      if(h===a){ const ti=o.findIndex(x=>/tied/i.test(x)); return ti<0?null:E.b('high',ti,'Q1 ended level at '+a+'–'+h); }
+      const leader = h>a ? T.homeId : T.awayId;
+      const same = leader===p.team?.id;
+      const i=o.findIndex(x=>(same?/^yes/i:/^no/i).test(String(x)));
+      return i<0?null:E.b('high',i,'First score '+(p.team?.id===T.homeId?T.homeAbbr:T.awayAbbr)
+        +'; Q1 ended '+T.awayAbbr+' '+a+'–'+h+' '+T.homeAbbr); },
+
+    g6_q2_fg_v_ft(s,o,T){ const q=E.pIn(s,2);
+      const fg=q.filter(E.isMadeFG).length, ft=q.filter(E.isMadeFT).length;
+      return E.b('high', fg>ft?0:(ft>fg?1:2), 'Q2 made FG '+fg+' vs made FT '+ft); },
+
+    g6_q2_lead_changes(s,o,T){ const q=E.pIn(s,2); let changes=0, prev=null;
+      q.forEach(p=>{ if(typeof p.awayScore!=='number'||typeof p.homeScore!=='number') return;
+        const d=p.homeScore-p.awayScore, sgn=d>0?1:(d<0?-1:0);
+        if(sgn!==0){ if(prev!==null&&sgn!==prev) changes++; prev=sgn; } });
+      const i = changes<=0?0 : (changes===1?1 : (changes===2?2:3));
+      return E.b('high',i,'Q2 lead changes: '+changes); },
+
+    g6_q2_run(s,o,T){ const q=E.pIn(s,2).filter(p=>p.scoringPlay);
+      let run=0, who=null, best=0;
+      q.forEach(p=>{ const t=p.team?.id; const v=+p.scoreValue||0;
+        if(t===who){ run+=v; } else { who=t; run=v; }
+        if(run>best) best=run; });
+      const yes=best>=10;
+      const i=o.findIndex(x=>(yes?/^yes/i:/^no/i).test(String(x)));
+      return i<0?null:E.b('high',i,'Longest unanswered run in Q2: '+best+' points'); },
+
+    g6_q2_last_shot(s,o,T){ const q=E.pIn(s,2).filter(p=>p.shootingPlay);
+      const l=q[q.length-1];
+      if(!l){ const ni=o.findIndex(x=>/nobody/i.test(x)); return ni<0?null:E.b('med',ni,'No shot attempt logged in Q2'); }
+      return E.b('med', l.scoringPlay?0:1, 'Last Q2 shot ('+(l.clock?.displayValue||'')+'): '+l.text); },
+
+    g6_q3_first_points(s,o,T){ const p=E.pIn(s,3).find(x=>x.scoringPlay); if(!p) return null;
+      return E.b('high',E.teamOpt(o,p.team?.id,T),'First score after half: '+p.text); },
+
+    g6_shotclock_q1_q3(s,o,T){ const n=(s.plays||[])
+      .filter(p=>(p.period?.number||0)<=3 && /shot clock/i.test(p.type?.text||p.text||'')).length;
+      const i = n>=3?3:n;
+      return E.b('high',i,n+' shot-clock violation(s) through Q3'); },
+
+    g6_q3_threes_v_to(s,o,T){ const q=E.pIn(s,3);
+      const th=q.filter(p=>p.scoringPlay&&p.scoreValue===3).length, to=q.filter(E.isTO).length;
+      return E.b('high', th>to?0:(to>th?1:2), 'Q3 threes '+th+' vs turnovers '+to); },
+
+    g6_double_figures(s,o,T){ const pls=s.boxscore?.players||[]; let n=0, names=[];
+      for(const tm of pls){ const g=tm.statistics?.[0]; if(!g) continue;
+        const pi=(g.keys||[]).indexOf('points'); if(pi<0) continue;
+        for(const a of (g.athletes||[])){ const v=+((a.stats||[])[pi]||0);
+          if(v>=10){ n++; names.push((a.athlete?.displayName||'?')+' '+v); } } }
+      const i = n<=1?0 : (n===2?1 : (n===3?2:3));
+      /* The box score is cumulative and live, so this is only "through three
+         quarters" if it is pulled before Q4 has plays in it. Say so rather
+         than quietly answer a different question. */
+      const q4=(s.plays||[]).some(p=>(p.period?.number||0)>=4);
+      return E.b(q4?'low':'high', i, n+' in double figures'+(names.length?(' — '+names.slice(0,6).join(', ')):'')
+        +(q4?' · WARNING: Q4 has started, this box score is no longer "through three quarters"':'')); },
+
+    g6_q4_last2_ft_v_fg(s,o,T){ const per=Math.max(...(s.plays||[]).map(p=>p.period?.number||0));
+      const q=E.pIn(s,per).filter(p=>{const c=E.clockSec(p.clock); return c!==null&&c<=120;});
+      const fta=q.filter(E.isFT).length, fga=q.filter(E.isShotAttempt).length;
+      return E.b('med', fta>fga?0:(fga>fta?1:2), 'Last 2:00 — FT attempts '+fta+' vs FG attempts '+fga); },
+
+    g6_fouled_out(s,o,T){ const pls=s.boxscore?.players||[]; let nm='', mx=0;
+      for(const tm of pls){ const g=tm.statistics?.[0]; if(!g) continue;
+        const fi=(g.keys||[]).indexOf('fouls'); if(fi<0) continue;
+        for(const a of (g.athletes||[])){ const f=+((a.stats||[])[fi]||0);
+          if(f>mx){ mx=f; nm=a.athlete?.displayName; } } }
+      const yes=mx>=6; const i=o.findIndex(x=>(yes?/^yes/i:/^no/i).test(String(x)));
+      return i<0?null:E.b('high',i,'Most fouls: '+nm+' '+mx+(yes?' (fouled out)':'')); },
+
+    g6_last_basket(s,o,T){ const q=(s.plays||[]).filter(p=>(p.period?.number||0)>=4&&!E.NOISE.test(p.type?.text||''));
+      const l=q[q.length-1]; if(!l) return null;
+      let i; if(l.scoringPlay) i = l.scoreValue===1?0:(l.scoreValue===2?1:2); else i=3;
+      return E.b('med',i,'Last action: '+l.text); },
+
+    g6_half_leader_won(s,o,T){ const h=(T.homeLine[0]||0)+(T.homeLine[1]||0), a=(T.awayLine[0]||0)+(T.awayLine[1]||0);
+      if(h===a){ const ti=o.findIndex(x=>/tied/i.test(x)); return ti<0?null:E.b('high',ti,'Level at half, '+a+'–'+h); }
+      const leader = h>a ? T.homeId : T.awayId;
+      if(T.homeScore===T.awayScore) return null;                 // not final yet
+      const winner = T.homeScore>T.awayScore ? T.homeId : T.awayId;
+      const same = leader===winner;
+      const i=o.findIndex(x=>(same?/^yes/i:/^no/i).test(String(x)));
+      return i<0?null:E.b('high',i,'Half '+T.awayAbbr+' '+a+'–'+h+' '+T.homeAbbr
+        +' · Final '+T.awayAbbr+' '+T.awayScore+'–'+T.homeScore+' '+T.homeAbbr); },
   };
+
 
   /* Map a question to a rule by its wording (robust to reordering). The two
      that no feed can answer — and-ones, ref monitor visits — have no rule and
@@ -2360,7 +3720,44 @@ boot();
     {re:/last two minutes/i, id:'q4_3'},
     {re:/foul out/i, id:'q4_4'},
   ];
-  function ruleFor(t){ var m=RULES.find(function(r){return r.re.test(t||'');}); return m?m.id:null; }
+  /* ---- EXACT MATCHING, THEN THE LEGACY PATTERNS -------------------
+     The regex table below is kept only for the older nights whose banks
+     still use that wording. Tonight's questions are matched by their exact
+     text, because pattern-matching a question to a grader is precisely how
+     "did the halftime leader win?" got wired to a rule that answers with a
+     team name. A question we do not recognise gets no rule and goes to the
+     host — which is the right failure, and the only safe one. */
+  function qnorm(t){ return String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,''); }
+  var QMAP = {};
+  [
+    ['The first points of the game — how did they come?',                                                   'g6_first_points'],
+    ['Which team made the first three-pointer of the game?',                                                 'g6_first_three'],
+    ['Threes made in Q1, both teams combined — how many?',                                                   'g6_q1_threes'],
+    ['The team that scored first — were they still ahead at the Q1 buzzer?',                                 'g6_first_scorer_led'],
+    ['In Q2, both teams combined — were there more made field goals or made free throws?',                   'g6_q2_fg_v_ft'],
+    ['How many times did the lead change hands in Q2? (a tie is not a lead change)',                         'g6_q2_lead_changes'],
+    ['Did either team score 10 or more unanswered points at any stage of Q2?',                               'g6_q2_run'],
+    ['The last shot attempt before the halftime buzzer…',                                                    'g6_q2_last_shot'],
+    ['Which team scored the first points after halftime?',                                                   'g6_q3_first_points'],
+    ['24-second shot-clock violations tonight, both teams combined, Q1 through Q3 — how many?',              'g6_shotclock_q1_q3'],
+    ['In Q3, both teams combined — were there more threes made or turnovers?',                               'g6_q3_threes_v_to'],
+    ['Through three quarters, how many players have reached double figures in points, both teams combined?', 'g6_double_figures'],
+    ['In the last two minutes, both teams combined — were there more free-throw attempts or field-goal attempts?', 'g6_q4_last2_ft_v_fg'],
+    ['Did any player on either team foul out?',                                                              'g6_fouled_out'],
+    ['The last basket of the game was worth…',                                                               'g6_last_basket'],
+    ['The team that led at halftime — did they win the game?',                                               'g6_half_leader_won']
+  ].forEach(function(r){ QMAP[qnorm(r[0])] = r[1]; });
+
+  function ruleFor(t){
+    var exact = QMAP[qnorm(t)];
+    if(exact) return exact;
+    var m=RULES.find(function(r){return r.re.test(t||'');});
+    return m?m.id:null;
+  }
+  /* Debug hooks. They let the pre-game check run every resolver against a
+     real finished game instead of a fixture, which is the only way to know
+     the graders work before they are grading a live room. */
+  try{ ESPN.__ruleFor = ruleFor; ESPN.__QMAP = QMAP; ESPN.__E = E; ESPN.__API = API; }catch(e){}
 
   /* ---- ESPN fetch ---- */
   ESPN.summary = function(id){ return fetch(API+'/summary?event='+id+'&_='+Date.now()).then(function(r){return r.json();}); };
@@ -2380,8 +3777,8 @@ boot();
     var col = conf==='high'?'#2ee6a6':(conf==='manual'?'#93a0bd':'#ffc54d');
     var ans = idx==null ? (conf==='manual'?'mark by hand':'—') : esc(q.o[idx]);
     return '<div style="margin:5px 0"><b>'+tag+'·Q'+(x+1)+'</b> &rarr; <span style="color:'+col+';font-weight:700">'+ans+
-      '</span> <span style="color:'+col+';font-size:11px;text-transform:uppercase">['+conf+']</span>'+
-      (ev?'<br><span style="color:var(--dim);font-size:11.5px">'+esc(ev)+'</span>':'')+'</div>';
+      '</span> <span style="color:'+col+';font-size:12px;text-transform:uppercase">['+conf+']</span>'+
+      (ev?'<br><span style="color:var(--dim);font-size:12px">'+esc(ev)+'</span>':'')+'</div>';
   }
 
   /* ---- Pull: fill answer marks (draft q.k) for finished quarters ---- */
@@ -2404,6 +3801,14 @@ boot();
         if(!id){ rows.push(line(cfg.tags[i],x,q,null,'manual','No feed signal — mark this one by hand.')); return; }
         var res; try{ res = E.rules[id](sum,q.o,T); }catch(e){ res=null; }
         if(!res || res.index==null){ rows.push(line(cfg.tags[i],x,q,null,(res&&res.confidence)||'manual',(res&&res.evidence)||'Nothing to derive.')); return; }
+        /* A findIndex that missed returns -1, and -1 written into q.k is an
+           answer key pointing at nothing — the round would grade every
+           player wrong and look marked while doing it. A rule that produces
+           an index outside this question's options is a rule that was never
+           meant for this question, so refuse it and hand it back. */
+        if(!(res.index>=0 && res.index < q.o.length)){
+          rows.push(line(cfg.tags[i],x,q,null,'manual','Rule returned an option this question does not have — mark it by hand.'));
+          return; }
         if(q.k==null || q.k===undefined){ q.k=res.index; filled++; }   // never clobber a mark the host set
         rows.push(line(cfg.tags[i],x,q,q.k,res.confidence,res.evidence));
       });
@@ -2427,10 +3832,40 @@ boot();
     var T = E.teams(sum);
     var st = sum.header?.competitions?.[0]?.status || {};
     var per = st.period||0, state = st.type?.state;
-    var label = state==='post' ? 'Final' : (per>=1 && cfg.tags[per-1] ? cfg.tags[per-1]+' in progress' : cfg.tags[0]+' in progress');
+    /* B13 — THE SAME BUG I FIXED IN THE RUNNER AND LEFT SITTING HERE.
+       This line used to fall through to `cfg.tags[0]` for any state that
+       wasn't 'post', so a game that had not started reported period 0 as
+       "Q1 in progress" and this tick posted 0 — 0 into the room. It did
+       exactly that to Game Night #8 fifteen minutes before the runner's
+       first heartbeat: every phone opening the app the day before tip saw
+       the Fever and the Wings locked at nil-nil in the first quarter.
+
+       Found by the runner staying silent next to it. That contrast is the
+       whole argument for the shadow test — and the fact that I patched
+       run.js this morning and left the identical line here, on the same
+       day I kept saying every bug is one fact in two places, is the
+       argument for fixing BOTH copies or neither.
+
+       Empty label means say nothing, and saying nothing is correct until
+       the ball is up. Overtime is named too, rather than wrapping round to
+       "Q1 in progress" for the best five minutes of the night. */
+    var label = '';
+    if(state==='post') label = 'Final';
+    else if(state==='in'){
+      if(per > cfg.tags.length) label = (per-cfg.tags.length>1 ? 'OT'+(per-cfg.tags.length) : 'OT') + ' in progress';
+      else label = (per>=1 && cfg.tags[per-1] ? cfg.tags[per-1] : cfg.tags[0]) + ' in progress';
+    }
     if($('scAway')) $('scAway').value = T.awayScore;
     if($('scHome')) $('scHome').value = T.homeScore;
     var sel=$('scPeriod'); if(sel){ var opt=Array.prototype.find.call(sel.options,function(o){return o.value===label;}); if(opt) sel.value=label; }
+    if(!label){
+      /* Before tip there is nothing true to post. Say so on the host's own
+         screen rather than silently doing nothing, so the panel reading
+         "waiting" is a fact and not a symptom. */
+      setState('waiting for tip-off — nothing posted to the room yet');
+      try{ await CI.tick(sum, T); }catch(e){}
+      return;
+    }
     try{ await writeScore(T.awayScore, T.homeScore, label, ($('scNote')&&$('scNote').value)||''); }catch(e){}
     setState((state==='post'?'Final':'live')+' · '+cfg.away+' '+T.awayScore+' — '+cfg.home+' '+T.homeScore+' ('+(st.type?.shortDetail||label)+')');
     /* Call It rides this same tick — isolated, never touches the score above. */
@@ -2456,7 +3891,24 @@ boot();
      flips it on for the night, which also sets `config.callit` so phones
      know to watch. This is piece 1 (the host loop); the player card is
      piece 2. */
-  var CI = { on:false, seeded:false, lastSeq:0, openQid:null, lastOpenAt:0, lastPlayAt:0, countPer:{},
+/* B23 — ONE LOCK WINDOW. The document written to every phone said one
+   thing and the timer that publishes the answer said another:
+
+     locksMs: /^(saw|qtr)/.test(kind) ? 9000 : 6000     // what the phone obeys
+     locks:   kind.indexOf('saw')===0 ? 9000 : 6000     // what the host obeys
+
+   The `qtr` kinds — qtrFirst, qtrThrees, qtrMore — matched the first and
+   not the second, so the host released the answer at 7.2s while the card
+   on every phone stayed open until 9s. For 1.8 seconds the answer was
+   public and the question was still live: a player tapping in that window
+   had the card swap to the resolved view mid-tap, was graded as having sat
+   it out, and was shown the answer they were about to give.
+
+   One predicate, one owner. */
+function lockMsFor(kind){
+  return /^(saw|qtr)/.test(String(kind||'')) ? 9000 : 6000;
+}
+  var CI = { on:false, seeded:false, lastSeq:0, openQid:null, lastOpenAt:0, lastPlayAt:0, countPer:{}, pending:null, relT:null,
              pace:'normal', gapMs:80000, capPer:8 };
   /* The host's frequency dial. Chill for a blowout, Hype for a game people are
      screaming at. Timeouts always fire regardless of pace — that gap exists
@@ -2479,6 +3931,7 @@ boot();
     var b=$('ciBtn'); if(b){ b.textContent = CI.on?'⏸ Call It: ON':'▶ Call It: OFF'; b.className = CI.on?'btn':'btn ghost'; b.style.flex='0 0 auto'; }
     CI.setState(CI.on?'armed — watching the feed':'off');
     try{ await FB.F.setDoc(FB.F.doc(FB.db,'nights',night), { callit: CI.on }, {merge:true}); }catch(e){}
+    if(!CI.on){ try{ clearTimeout(CI.relT); }catch(e){} CI.pending=null; }
     if(!CI.on && CI.openQid){ try{ await CI.voidQ(CI.openQid,'host turned Call It off'); }catch(e){} CI.openQid=null; }
     if(CI.on){ CI.seeded=false; }   // re-seed so we don't fire on the backlog when switched on
   };
@@ -2486,27 +3939,145 @@ boot();
   /* Build a question from the live state. Prefers a basketball READ (a run)
      over a coin-flip, then rotates 2-or-3 and who-next. Returns null if
      there's nothing sensible to ask. */
+  /* ============ RETROSPECTIVE CALL IT ==============================
+     These questions used to ask what happens NEXT — who scores the next
+     bucket, deuce or a three. Three problems with that, all of which the
+     room felt:
+
+       1. It is a guess. A coin flip does not reward watching, which is the
+          entire promise of the product.
+       2. It cannot resolve until something else happens. A question fired
+          at 4:12 of Q3 sat on every phone reading "waiting on the play…"
+          until the next made field goal — sometimes ninety seconds.
+       3. It competes with the broadcast. You are asked to look down and
+          predict at exactly the moment there is something to watch.
+
+     Retrospective questions fix all three at once. The answer is already
+     known the instant we build the question, so it resolves the moment the
+     clock locks; the only way to have it right is to have been watching;
+     and it plays in the pause after a basket rather than over the next
+     possession. Every prompt is anchored to the score it produced, so
+     "that bucket" can never be ambiguous even if the feed lags.
+
+     The answer is computed here but deliberately NOT written to the doc
+     players can read — it is held in CI.pending until the lock expires.  */
+  CI.scorerName = function(p){
+    var t=String((p&&p.text)||'');
+    var m=t.match(/^(.+?)\s+(?:makes|made)\b/i);
+    return m ? m[1].trim() : '';
+  };
   CI.build = function(plays, T, per){
     var scoring = plays.filter(function(p){return p.scoringPlay;});
-    var last = scoring[scoring.length-1]; if(!last) return null;
+    var last = null;
+    for(var k=scoring.length-1;k>=0;k--){ if(E.isMadeFG(scoring[k])){ last=scoring[k]; break; } }
+    if(!last) return null;
     var runTeam=null, runLen=0;
     for(var i=scoring.length-1;i>=0;i--){ if(runTeam==null){ runTeam=scoring[i].team&&scoring[i].team.id; runLen=1; } else if(String(scoring[i].team&&scoring[i].team.id)===String(runTeam)){ runLen++; } else break; }
-    var clutch = (per>=4 && Math.abs((T.homeScore||0)-(T.awayScore||0))<=6);
     var seq = last.sequenceNumber || 0;
     var qid = 'ci_'+per+'_'+(CI.countPer[per]||0)+'_'+seq;
+    var lid = String(last.team&&last.team.id);
+    var at  = (last.awayScore!=null && last.homeScore!=null) ? (T.awayAbbr+' '+last.awayScore+'–'+last.homeScore+' '+T.homeAbbr) : '';
+    var anchor = at ? ('the one that made it '+at) : 'that last bucket';
+    var who = CI.scorerName(last);
+    var rot = (CI.countPer[per]||0) % 6;
+
+    /* ==== QUARTER-RETROSPECTIVE, rotations 3–5 =======================
+       "We need questions of what happened EARLIER in the quarter."
+
+       Rotations 0–2 below ask about the bucket that just went in. They
+       work, they have graded four nights correctly, and they are not
+       going anywhere. But they only ever reward the last ten seconds of
+       attention — look up at the right moment and you score.
+
+       These three reward the whole quarter. Every answer is computed
+       here, at build time, from the plays inside THIS period only, so
+       the host never has to know it and the room cannot disagree about
+       it. Each one returns null rather than guessing when the quarter is
+       too young to have an answer, and rotation falls through to the
+       bucket questions when it does. */
+    var qp = plays.filter(function(p){ return p.period && Number(p.period.number)===Number(per); });
+    var qs = qp.filter(function(p){ return p.scoringPlay && Number(p.scoreValue)>0; });
+
+    if(rot>=3 && qs.length>=5){
+      // 3. who opened the quarter
+      if(rot===3){
+        var f=qs[0], fid=String(f.team&&f.team.id);
+        return { qid:qid, kind:'qtrFirst', per:per, runTeam:null,
+          prompt:'⏪ Think back — who scored FIRST in this quarter?',
+          options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}],
+          ans:fid,
+          atext:(f.text||CI.teamName(fid,T)+' opened the quarter')+'.' };
+      }
+      // 4. how many threes have gone in since the quarter started
+      if(rot===4){
+        var n3=qs.filter(function(p){ return Number(p.scoreValue)===3; }).length;
+        return { qid:qid, kind:'qtrThrees', per:per, runTeam:null,
+          prompt:'⏪ How many threes have been made this quarter — both teams?',
+          options:[{k:'None or one',v:'a'},{k:'Two or three',v:'b'},{k:'Four or more',v:'c'}],
+          ans: n3<=1?'a':(n3<=3?'b':'c'),
+          atext:n3+' three'+(n3===1?'':'s')+' made in this quarter so far.' };
+      }
+      // 5. who has actually won the quarter to this point
+      if(rot===5){
+        var ph=0, pa=0;
+        qs.forEach(function(p){
+          var id=String(p.team&&p.team.id);
+          if(id===String(T.homeId)) ph+=Number(p.scoreValue);
+          else if(id===String(T.awayId)) pa+=Number(p.scoreValue);
+        });
+        if(ph!==pa) return { qid:qid, kind:'qtrMore', per:per, runTeam:null,
+          prompt:'⏪ Since this quarter started, which team has scored more?',
+          options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}],
+          ans: ph>pa?String(T.homeId):String(T.awayId),
+          atext:T.awayAbbr+' '+pa+', '+T.homeAbbr+' '+ph+' in this quarter.' };
+        // level on points is not a question with one right answer — fall through
+      }
+    }
+
+    // 1. Two or three — the purest "were you watching" question there is.
+    if(rot===0 || rot===4){
+      return { qid:qid, kind:'sawTwoOrThree', per:per, runTeam:null,
+        prompt:'👀 That bucket — '+anchor+'. Two or three?',
+        options:[{k:'2 · deuce',v:'2'},{k:'3 · triple',v:'3'}],
+        ans:String(last.scoreValue),
+        atext:CI.abbr(lid,T)+' · '+last.scoreValue+' points'+(last.text?(' · '+last.text):'') };
+    }
+    // 2. Which side put it up.
+    if(rot===1 || rot===3 || rot===5){
+      return { qid:qid, kind:'sawWho', per:per, runTeam:null,
+        prompt:'👀 Who scored '+anchor+'?',
+        options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}],
+        ans:lid,
+        atext:CI.abbr(lid,T)+(last.text?(' · '+last.text):'') };
+    }
+    // 3. Which player — needs a real decoy, so it degrades to #1 if we
+    //    cannot find one rather than inventing a name.
+    if(who){
+      var pool={}; scoring.forEach(function(p){ var n=CI.scorerName(p); if(n && n!==who) pool[n]=String(p.team&&p.team.id); });
+      var names=Object.keys(pool);
+      var same=names.filter(function(n){ return pool[n]===lid; });
+      var decoy = same.length ? same[same.length-1] : (names.length ? names[names.length-1] : '');
+      if(decoy){
+        var opts = Math.random()<0.5 ? [{k:who,v:'a'},{k:decoy,v:'b'}] : [{k:decoy,v:'b'},{k:who,v:'a'}];
+        return { qid:qid, kind:'sawScorer', per:per, runTeam:null,
+          prompt:'👀 Who put up '+anchor+'?',
+          options:opts, ans:'a',
+          atext:(last.text||(who+' scored '+last.scoreValue)) };
+      }
+    }
+    // Fallback: the run that just happened, which is also retrospective.
     if(runLen>=3){
-      return { qid:qid, kind:'runContinue', per:per, runTeam:String(runTeam),
-        prompt:'🔥 '+CI.teamName(runTeam,T)+' on a '+runLen+'-score run — do they score the NEXT bucket?',
-        options:[{k:'KEEP IT GOING',v:'Y'},{k:'RUN ENDS',v:'N'}] };
+      return { qid:qid, kind:'sawRun', per:per, runTeam:String(runTeam),
+        prompt:'🔥 Somebody just scored '+runLen+' in a row — who?',
+        options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}],
+        ans:String(runTeam),
+        atext:CI.teamName(runTeam,T)+' scored the last '+runLen+' buckets.' };
     }
-    if((CI.countPer[per]||0) % 2 === 0){
-      return { qid:qid, kind:'twoOrThree', per:per, runTeam:null,
-        prompt:(clutch?'⏱️ CLUTCH — ':'')+'Next field goal — deuce or a three?',
-        options:[{k:'2 · deuce',v:'2'},{k:'3 · triple',v:'3'}] };
-    }
-    return { qid:qid, kind:'whoNext', per:per, runTeam:null,
-      prompt:(clutch?'⏱️ CLUTCH — ':'')+'Who scores the NEXT bucket?',
-      options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}] };
+    return { qid:qid, kind:'sawTwoOrThree', per:per, runTeam:null,
+      prompt:'👀 That bucket — '+anchor+'. Two or three?',
+      options:[{k:'2 · deuce',v:'2'},{k:'3 · triple',v:'3'}],
+      ans:String(last.scoreValue),
+      atext:CI.abbr(lid,T)+' · '+last.scoreValue+' points'+(last.text?(' · '+last.text):'') };
   };
 
   CI.write = function(q){
@@ -2515,8 +4086,23 @@ boot();
       qid:q.qid, kind:q.kind, prompt:q.prompt, options:q.options,
       period:q.per, runTeam:q.runTeam||null,
       state:'open', answer:null, resolveText:null,
-      opensAt:F.serverTimestamp(), locksMs:6000, seq:Date.now()
+      // Retrospective questions need a beat longer to read than "next
+      // bucket?" did — they name a score and sometimes a player.
+      opensAt:F.serverTimestamp(), locksMs:lockMsFor(q.kind), seq:Date.now()
     }, {merge:true});
+  };
+  /* One writer for the held answer, used by both the timer and the tick. */
+  CI.releasePending = async function(){
+    var p=CI.pending; if(!p) return;
+    var F=FB.F, db=FB.db;
+    try{
+      var snap = await F.getDoc(F.doc(db,'nights',night,'callit',p.qid));
+      if(!snap.exists() || snap.data().state!=='open'){ CI.pending=null; CI.openQid=null; return; }
+      await F.setDoc(F.doc(db,'nights',night,'callit',p.qid),
+        { state:'resolved', answer:p.ans, resolveText:p.text, resolvedAt:F.serverTimestamp() }, {merge:true});
+      CI.setState('resolved · '+(p.text||p.ans));
+    }catch(e){ return; }            // leave pending set; the tick retries
+    CI.pending=null; CI.openQid=null;
   };
   CI.voidQ = function(qid,why){
     return FB.F.setDoc(FB.F.doc(FB.db,'nights',night,'callit',qid), { state:'void', voidReason:String(why||''), voidedAt:FB.F.serverTimestamp() }, {merge:true});
@@ -2549,7 +4135,18 @@ boot();
     var q = CI.build(plays, T, per); if(!q) return;
     q.moment = reason;
     await CI.write(q);
+    /* The answer is already known — held here, never written to the doc the
+       phones read, and released the moment the clock locks. */
+    CI.pending = (q.ans!=null) ? { qid:q.qid, ans:String(q.ans), text:q.atext||'', locks:lockMsFor(q.kind) } : null;
     CI.openQid=q.qid; CI.lastOpenAt=Date.now(); CI.countPer[per]=(CI.countPer[per]||0)+1;
+    /* Fire the release on its own timer. The feed poll is every 20 seconds,
+       and hanging a known answer on it would leave the room staring at a
+       locked card for most of a possession for no reason at all. The tick
+       path stays as a backstop if this timer is ever lost to a tab sleep. */
+    if(CI.pending){
+      clearTimeout(CI.relT);
+      CI.relT = setTimeout(function(){ try{ CI.releasePending(); }catch(e){} }, (CI.pending.locks||9000)+1200);
+    }
     CI.setState('OPEN'+(reason==='timeout'?' ⏸timeout':'')+' · '+q.prompt);
   };
 
@@ -2557,8 +4154,16 @@ boot();
     var F=FB.F, db=FB.db;
     var snap; try{ snap = await F.getDoc(F.doc(db,'nights',night,'callit',qid)); }catch(e){ return; }
     if(!snap.exists()){ CI.openQid=null; return; }
-    var Q=snap.data(); if(Q.state!=='open'){ CI.openQid=null; return; }
+    var Q=snap.data(); if(Q.state!=='open'){ CI.openQid=null; CI.pending=null; return; }
     var ans=null, text=null;
+    /* RETROSPECTIVE: nothing to wait for. Release the held answer as soon
+       as the lock window has passed plus a second of slack for the slowest
+       phone in the room. This is why these never sit on "waiting on the
+       play…" — there is no play to wait for. */
+    if(CI.pending && CI.pending.qid===qid){
+      if(Date.now()-CI.lastOpenAt < (CI.pending.locks||9000)+1200) return;
+      await CI.releasePending(); return;
+    }
     if(Q.kind==='whoNext' || Q.kind==='runContinue'){
       /* A BUCKET IS A FIELD GOAL. The shadow test against a live DAL@MIN feed
          caught this: matching any scoringPlay resolved "who scores the NEXT
@@ -2589,7 +4194,7 @@ boot();
     var opened = (Q.opensAt && Q.opensAt.toMillis) ? Q.opensAt.toMillis() : CI.lastOpenAt;
     var feedStalled = (Date.now()-CI.lastPlayAt) > 45000;
     var tooOld = (Date.now()-opened) > 120000;
-    if(feedStalled || tooOld){ await CI.voidQ(qid, feedStalled?'feed stalled':'no qualifying play in 2 min'); CI.openQid=null; CI.setState('voided ('+(feedStalled?'feed stall':'timeout')+')'); }
+    if(feedStalled || tooOld){ await CI.voidQ(qid, feedStalled?'feed stalled':'no qualifying play in 2 min'); CI.openQid=null; CI.pending=null; CI.setState('voided ('+(feedStalled?'feed stall':'timeout')+')'); }
   };
 
   /* Called from liveTick with the same summary the score uses. */
@@ -2640,6 +4245,631 @@ boot();
   var tries=0;
   var iv=setInterval(function(){ tries++; if(document.getElementById('t-run')){ ESPN.mount(); } if(document.getElementById('espnCard')||tries>40) clearInterval(iv); }, 200);
 })();
+
+/* ====================================================================
+   THE ROBOT HOST — resolvers, and the harness that proves them
+   ====================================================================
+
+   "Instead of the possibility of a human in the control room messing
+    everything up, we should figure out how to get it automated. I don't
+    want to do anything in the control room. Only start game, which I can
+    do hours ahead, and it does it on its own."
+
+   The whole idea sits on one rule:
+
+       A QUESTION IS A PAIR — the words, and a function that reads the
+       answer out of the feed. A question with no resolver does not go
+       in the bank.
+
+   Once that holds, the Control Room stops being a driver and becomes a
+   viewer, because everything the human does at a break — decide the
+   round is over, publish the questions, mark the answers — is something
+   the feed already knows.
+
+   THIS FILE DOES NOT DRIVE ANYTHING. It resolves, it compares, and it
+   reports. The manual path stays exactly as it was and stays the path
+   that runs tonight. The robot earns the buttons by agreeing with a
+   human for a whole night first, and there is no code here that could
+   take them even if it wanted to — see AUTO.armed.
+   ==================================================================== */
+/* @host-shared:start
+   ---------------------------------------------------------------------
+   EVERYTHING BETWEEN THESE TWO SENTINELS IS READ VERBATIM BY THE SERVER
+   RUNNER (host/run.js). It is not copied there — the runner checks this
+   file out of the same repo, slices it between these markers and
+   evaluates it, so there is exactly one copy of the resolver engine and
+   a change here is a change there.
+
+   That matters more than it looks. A second copy of sixteen resolvers is
+   sixteen chances for the browser and the server to answer the same
+   question differently on the same night, which is the failure this whole
+   product spent a week learning to fear. The clock bug found on Game
+   Night #7 was one fact stored twice; this is the same fact stored twice
+   with a network in between.
+
+   TWO RULES FOR ANYTHING ADDED IN HERE:
+     1. No `document`, no `window`, no DOM. It has to run in Node.
+     2. No dependency on anything defined outside the sentinels.
+   The runner asserts both by failing loudly at startup rather than
+   quietly resolving nothing.
+   ------------------------------------------------------------------ */
+var AUTO = (function(){
+
+  var SUM = 'https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/summary?event=';
+
+  /* Never wired to a button anywhere. It exists so that the day somebody
+     does wire it, they have to change a line that says this out loud. */
+  var armed = false;
+
+  async function fetchFeed(ev){
+    var r = await fetch(SUM + encodeURIComponent(ev) + '&_=' + Date.now());
+    if(!r.ok) throw new Error('feed ' + r.status);
+    return r.json();
+  }
+
+  /* ---- reading the feed -------------------------------------------
+     Everything below works off two lists and nothing else: the plays,
+     and the box score. No announcer, no human judgement, no lookups. */
+
+  function comp(j){ try{ return j.header.competitions[0]; }catch(_){ return null; } }
+  function sides(j){
+    var c = comp(j) || {}, cs = c.competitors || [];
+    var h = cs.find(function(x){ return x.homeAway==='home'; }) || {};
+    var a = cs.find(function(x){ return x.homeAway==='away'; }) || {};
+    return { home:h, away:a, homeId:String((h.team||{}).id||''), awayId:String((a.team||{}).id||'') };
+  }
+  function plays(j){ return Array.isArray(j.plays) ? j.plays : []; }
+  function inPeriod(j, p){
+    return plays(j).filter(function(x){ return Number(((x.period)||{}).number) === Number(p); });
+  }
+  function isScore(x){ return !!x.scoringPlay; }
+  function val(x){ return Number(x.scoreValue||0); }
+  function txt(x){ return String((x.text||'') + ' ' + (((x.type)||{}).text||'')).toLowerCase(); }
+  function teamId(x){ return String(((x.team)||{}).id||''); }
+  /* THE LAST MINUTE WAS INVISIBLE.
+
+     Found by replaying Game Night #7 against the keys the host actually
+     posted: the robot said the last two minutes had more field-goal
+     attempts than free throws. The host said free throws. The host was
+     right — 6 to 4 — and this function is why.
+
+     ESPN sends `mm:ss` for most of a period and then, inside the final
+     minute, drops the minutes and sends a bare decimal: "50.1", "46.5",
+     "25.7". The old pattern only matched `mm:ss`, returned null for those,
+     and every caller filters on `s !== null && s <= 120` — so null did not
+     mean "unknown", it meant EXCLUDED. "The last two minutes" was really
+     "the third and fourth-to-last minute", silently, and the one stretch
+     of a basketball game that is nothing but free throws was the exact
+     stretch being thrown away.
+
+     The player app has known this since Game Night #4 — see fmtClock() in
+     index.html, same fact, same feed. It never crossed over. One fact,
+     two copies, one of them stale, again.                              */
+  function clockSec(x){
+    var d = String((((x.clock)||{}).displayValue)||'').trim();
+    var m = d.match(/^(\d+):(\d+)/);
+    if(m) return Number(m[1])*60 + Number(m[2]);
+    if(/^\d+(\.\d+)?$/.test(d)) return Math.round(Number(d));
+    return null;
+  }
+
+  /* Map a team to whichever option string names it. The bank writes
+     "Wings" and "Tempo"; the feed says "Dallas Wings", "DAL", id 3. Match
+     on every name the feed offers rather than on a hand-kept table — a
+     hand-kept table is a thing that goes stale on the one night nobody
+     checks it. */
+  function optForTeam(j, id, opts){
+    var s = sides(j);
+    var t = (String(id)===s.homeId) ? (s.home.team||{}) : (s.away.team||{});
+    var names = [t.displayName, t.shortDisplayName, t.name, t.nickname, t.abbreviation, t.location]
+      .filter(Boolean).map(function(x){ return String(x).toLowerCase(); });
+    var hit = (opts||[]).find(function(o){
+      var lo = String(o).toLowerCase();
+      return names.some(function(n){ return n===lo || n.indexOf(lo)>=0 || lo.indexOf(n)>=0; });
+    });
+    return hit || null;
+  }
+
+  function band(n, cuts, opts){
+    for(var i=0;i<cuts.length;i++){ if(n<=cuts[i]) return opts[i]; }
+    return opts[opts.length-1];
+  }
+
+  /* ---- THE RESOLVERS ----------------------------------------------
+     Each takes (feed, period, options) and returns the option string it
+     believes is correct, or null for "I cannot read this". NULL IS A
+     LEGITIMATE ANSWER and it is the important one: a resolver that
+     guesses is worse than no resolver, because a guess is indistinguish-
+     able from knowledge right up until it costs somebody the night. */
+  var R = {};
+
+  R.firstScoreKind = function(j, p, o){
+    var f = inPeriod(j,p).filter(isScore)[0]; if(!f) return null;
+    var t = txt(f);
+    if(/free throw/.test(t)) return o.find(function(x){ return /free throw/i.test(x); }) || null;
+    if(val(f)===3)           return o.find(function(x){ return /three/i.test(x); }) || null;
+    if(/layup|dunk|tip shot|alley|putback|hook/.test(t))
+                             return o.find(function(x){ return /layup|dunk/i.test(x); }) || null;
+    return o.find(function(x){ return /mid-?range|jumper/i.test(x); }) || null;
+  };
+
+  R.firstScoreTeam = function(j, p, o){
+    var f = inPeriod(j,p).filter(isScore)[0]; if(!f) return null;
+    return optForTeam(j, teamId(f), o);
+  };
+
+  R.firstThreeTeam = function(j, p, o){
+    var f = inPeriod(j,p).filter(function(x){ return isScore(x) && val(x)===3; })[0];
+    if(!f) return o.find(function(x){ return /neither|none/i.test(x); }) || null;
+    return optForTeam(j, teamId(f), o);
+  };
+
+  R.threesBand = function(j, p, o){
+    var n = inPeriod(j,p).filter(function(x){ return isScore(x) && val(x)===3; }).length;
+    return band(n, [1,3,5], o);
+  };
+
+  R.firstScorerStillAhead = function(j, p, o){
+    var ps = inPeriod(j,p), f = ps.filter(isScore)[0]; if(!f) return null;
+    var last = ps[ps.length-1]; if(!last) return null;
+    var s = sides(j);
+    var h = Number(last.homeScore), a = Number(last.awayScore);
+    if(!isFinite(h) || !isFinite(a)) return null;
+    if(h===a) return o.find(function(x){ return /tied/i.test(x); }) || null;
+    var leaderIsHome = h > a;
+    var firstIsHome  = teamId(f) === s.homeId;
+    return (leaderIsHome===firstIsHome)
+      ? (o.find(function(x){ return /^yes/i.test(x); }) || null)
+      : (o.find(function(x){ return /^no/i.test(x); })  || null);
+  };
+
+  R.fgVsFt = function(j, p, o){
+    var ps = inPeriod(j,p).filter(isScore);
+    var ft = ps.filter(function(x){ return /free throw/.test(txt(x)); }).length;
+    var fg = ps.filter(function(x){ return !/free throw/.test(txt(x)); }).length;
+    if(fg===ft) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    return fg>ft ? (o.find(function(x){ return /field goal/i.test(x); }) || null)
+                 : (o.find(function(x){ return /free throw/i.test(x); }) || null);
+  };
+
+  R.leadChanges = function(j, p, o){
+    var ps = inPeriod(j,p), n = 0, prev = null;
+    /* the sign coming INTO the quarter is the baseline, so a lead taken
+       in the first minute counts as the change it obviously is */
+    var before = plays(j).filter(function(x){ return Number(((x.period)||{}).number) < Number(p); });
+    var b = before[before.length-1];
+    if(b){ var d0 = Number(b.homeScore)-Number(b.awayScore); prev = d0>0?1:(d0<0?-1:null); }
+    ps.forEach(function(x){
+      var d = Number(x.homeScore)-Number(x.awayScore);
+      if(!isFinite(d) || d===0) return;              // a tie is not a lead change
+      var sgn = d>0?1:-1;
+      if(prev!==null && sgn!==prev) n++;
+      prev = sgn;
+    });
+    return band(n, [0,1,2], o);
+  };
+
+  R.tenUnanswered = function(j, p, o){
+    var ps = inPeriod(j,p).filter(isScore);
+    var run = 0, who = null, hit = false;
+    ps.forEach(function(x){
+      var t = teamId(x);
+      if(t===who){ run += val(x); } else { who = t; run = val(x); }
+      if(run>=10) hit = true;
+    });
+    return hit ? (o.find(function(x){ return /^yes/i.test(x); }) || null)
+               : (o.find(function(x){ return /^no/i.test(x); })  || null);
+  };
+
+  R.lastShotOfPeriod = function(j, p, o){
+    var ps = inPeriod(j,p).filter(function(x){ return x.shootingPlay && !/free throw/.test(txt(x)); });
+    var l = ps[ps.length-1];
+    if(!l) return o.find(function(x){ return /nobody/i.test(x); }) || null;
+    return isScore(l) ? (o.find(function(x){ return /went in|made/i.test(x); }) || null)
+                      : (o.find(function(x){ return /miss/i.test(x); }) || null);
+  };
+
+  R.shotClockCount = function(j, p, o){
+    var n = plays(j).filter(function(x){
+      return Number(((x.period)||{}).number) <= Number(p) && /shot clock/.test(txt(x));
+    }).length;
+    return band(n, [0,1,2], o);
+  };
+
+  R.threesVsTurnovers = function(j, p, o){
+    var ps = inPeriod(j,p);
+    var th = ps.filter(function(x){ return isScore(x) && val(x)===3; }).length;
+    var to = ps.filter(function(x){ return /turnover/.test(txt(x)); }).length;
+    if(th===to) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    return th>to ? (o.find(function(x){ return /three/i.test(x); }) || null)
+                 : (o.find(function(x){ return /turnover/i.test(x); }) || null);
+  };
+
+  /* The box score is CUMULATIVE, so this is only true at the moment the
+     period ends — which is exactly when a resolver runs. Reading it an
+     hour later gives the wrong answer to the right question, and that is
+     a trap worth naming rather than a bug worth hiding. */
+  R.doubleFiguresBand = function(j, p, o){
+    /* AND THIS ONE REFUSES RATHER THAN LIES. "Through three quarters" is
+       a question about a moment, and the box score only holds the present
+       — read it during the fourth and it answers a different question
+       with total confidence. If the game has moved past the period being
+       asked about, say nothing. A resolver that knows when it is out of
+       date is the difference between automation and a rumour. */
+    try{
+      var st = j.header.competitions[0].status;
+      var cur = Number(st.period)||0;
+      var done = !!(st.type && st.type.completed);
+      if(cur > Number(p) || (done && Number(p) < 4)) return null;
+    }catch(_){}
+    var n = 0, seen = 0;
+    try{
+      (j.boxscore.players||[]).forEach(function(tm){
+        (tm.statistics||[]).forEach(function(st){
+          var keys = (st.names||st.labels||[]).map(function(x){ return String(x).toUpperCase(); });
+          var pi = keys.indexOf('PTS');
+          (st.athletes||[]).forEach(function(a){
+            var v = pi>=0 ? Number((a.stats||[])[pi]) : NaN;
+            if(isFinite(v)){ seen++; if(v>=10) n++; }
+          });
+        });
+      });
+    }catch(_){ return null; }
+    if(!seen) return null;
+    return band(n, [1,2,3], o);
+  };
+
+  R.lastTwoFtVsFg = function(j, p, o){
+    var ps = inPeriod(j,p).filter(function(x){ var s = clockSec(x); return s!==null && s<=120; });
+    var ft = ps.filter(function(x){ return /free throw/.test(txt(x)); }).length;
+    var fg = ps.filter(function(x){ return x.shootingPlay && !/free throw/.test(txt(x)); }).length;
+    if(!ps.length) return null;
+    if(ft===fg) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    return ft>fg ? (o.find(function(x){ return /free.throw/i.test(x); }) || null)
+                 : (o.find(function(x){ return /field.goal/i.test(x); }) || null);
+  };
+
+  R.anyFoulOut = function(j, p, o){
+    var byPlay = plays(j).some(function(x){ return /fouled out|disqualif/.test(txt(x)); });
+    if(byPlay) return o.find(function(x){ return /^yes/i.test(x); }) || null;
+    var out = false, seen = 0;
+    try{
+      (j.boxscore.players||[]).forEach(function(tm){
+        (tm.statistics||[]).forEach(function(st){
+          var keys = (st.names||st.labels||[]).map(function(x){ return String(x).toUpperCase(); });
+          var pi = keys.indexOf('PF'); if(pi<0) return;
+          (st.athletes||[]).forEach(function(a){
+            var v = Number((a.stats||[])[pi]);
+            if(isFinite(v)){ seen++; if(v>=6) out = true; }
+          });
+        });
+      });
+    }catch(_){ return null; }
+    if(!seen) return null;
+    return out ? (o.find(function(x){ return /^yes/i.test(x); }) || null)
+               : (o.find(function(x){ return /^no/i.test(x); })  || null);
+  };
+
+  /* CAUGHT BY THE DRY RUN, AND IT IS THE WHOLE ARGUMENT FOR HAVING ONE.
+     The first version read the LAST PLAY of the game. The last play of
+     every game ever played is the row "End of Game", which is not a
+     basket — so this returned "no basket" every single time. It happened
+     to be right on the game it was first tried against, because that game
+     really did end on a shot-clock turnover, and a resolver that is right
+     for the wrong reason is worth less than one that is honestly wrong:
+     it passes the only test anybody runs and then costs somebody a night.
+
+     Walk back past the administrative rows to the last thing that was
+     actually an attempt or a turnover, and answer about THAT. */
+  var ADMIN_PLAY = /^end of|official timeout|full timeout|short timeout|substitution|enters the game|start of|jump ball|delay of game|instant replay/;
+  R.lastBasketWorth = function(j, p, o){
+    var ps = plays(j);
+    for(var i=ps.length-1; i>=0; i--){
+      var x = ps[i], t = txt(x);
+      if(ADMIN_PLAY.test(t.trim())) continue;
+      if(!(x.shootingPlay || isScore(x) || /turnover/.test(t))) continue;
+      if(isScore(x)){
+        var v = String(val(x));
+        return o.find(function(y){ return String(y).trim()===v; }) || null;
+      }
+      return o.find(function(y){ return /no basket/i.test(y); }) || null;
+    }
+    return null;
+  };
+
+  R.halftimeLeaderWon = function(j, p, o){
+    var h2 = inPeriod(j,2); var last = h2[h2.length-1]; if(!last) return null;
+    var hh = Number(last.homeScore), ah = Number(last.awayScore);
+    if(!isFinite(hh)||!isFinite(ah)) return null;
+    if(hh===ah) return o.find(function(x){ return /tied/i.test(x); }) || null;
+    var s = sides(j);
+    var fh = Number((s.home||{}).score), fa = Number((s.away||{}).score);
+    if(!isFinite(fh)||!isFinite(fa)) return null;
+    if(fh===fa) return null;                       // no such thing, but do not guess
+    var halfHome = hh>ah, finalHome = fh>fa;
+    return (halfHome===finalHome)
+      ? (o.find(function(x){ return /^yes/i.test(x); }) || null)
+      : (o.find(function(x){ return /^no/i.test(x); })  || null);
+  };
+
+  /* ============ AN ABSENCE IS NOT AN ANSWER =========================
+     Caught in shadow mode forty minutes before Game Night #7 tipped, with
+     the feed reading "Scheduled, period 0" — no game, no plays, nothing:
+
+         Which team made the first three-pointer of the game?
+             robot says "Neither made one in Q1"
+         Threes made in Q1, both teams combined — how many?
+             robot says "None or one"
+
+     Both are false, and both are false in the worst possible way. The
+     resolvers counted made threes, found zero, and reported zero — which
+     is correct arithmetic and a lie about the world. There were no threes
+     because there was no basketball.
+
+     This is the same bug as the player-side pre-tip guard shipped in
+     `.87`, one layer down, and it is far more dangerous here: an armed
+     robot would have published an answer key for Q1 before tip and graded
+     the room against it.
+
+     THE RULE: a resolver may only speak about a period that has actually
+     FINISHED. Not started — finished. Every question in the bank is asked
+     at a break, so there is no case where an unfinished period should
+     produce an answer, and one guard in front of all sixteen is worth
+     more than sixteen guards that each have to remember.
+
+     It errs toward silence. If ESPN is slow to advance the period, the
+     robot says nothing for a few seconds longer. Silence costs a wait; a
+     confident wrong answer costs somebody the night. */
+  function periodDone(j, p){
+    var want = Number(p);
+    try{
+      var st = j.header.competitions[0].status;
+      if(st.type && st.type.completed) return true;         // whole game over
+      if(Number(st.period) > want) return true;             // the clock moved on
+    }catch(_){}
+    /* Belt and braces, and the more trustworthy of the two: the feed
+       writes an explicit "End of the Nth Quarter" row. If it is there,
+       that quarter is over whatever the header says. */
+    try{
+      return plays(j).some(function(x){
+        return Number(((x.period)||{}).number) === want
+            && /end of (the )?(1st|2nd|3rd|4th|\d)/i.test(String(x.text||''));
+      });
+    }catch(_){ return false; }
+  }
+
+  function resolve(name, j, p, opts){
+    var f = R[name];
+    if(typeof f !== 'function') return { ok:false, why:'no resolver named "'+name+'"' };
+    if(!periodDone(j, p)) return { ok:false, why:'that quarter has not finished yet' };
+    try{
+      var v = f(j, p, opts||[]);
+      if(v===null || v===undefined) return { ok:false, why:'the feed does not carry this yet' };
+      if((opts||[]).indexOf(v) < 0)  return { ok:false, why:'resolved to "'+v+'", which is not one of the options' };
+      return { ok:true, answer:v };
+    }catch(e){ return { ok:false, why:'threw: '+((e&&e.message)||e) }; }
+  }
+
+  /* ---- SCORING, AS ARITHMETIC ------------------------------------
+     Deliberately pure: no Firestore, no DOM, no clock. It takes what the
+     database already said and returns what every player is worth. The
+     caller does all the reading and all the writing.
+
+     That split is the whole point. The Control Room fetches with the web
+     SDK, the off-laptop runner fetches with the Admin SDK, and both hand
+     the same shapes to this one function — so a score cannot come out
+     differently depending on which machine happened to be awake. Two
+     scorers would be the same bug as two question banks, and that one
+     cost a player his entire night on Game Night #7.
+
+     `scored`  [{ id, key:[text], worth }]
+     `players` { uid: { predPts, catchPts } }
+     `subs`    { roundId: { uid: { picks:[text], banks:[number] } } }
+
+     Prediction and Caught It points are carried straight through from the
+     player document and NOT recomputed, because only the phone knows them.
+     That is a real limit on how much of this the server can own, and it is
+     written here rather than hidden: round points are unforgeable after
+     this change, the other two lanes are still reported by the client. */
+  function tally(scored, players, subs){
+    var out = {};
+    Object.keys(players||{}).forEach(function(uid){
+      var p = players[uid] || {};
+      out[uid] = { live:0, speed:0, rounds:0,
+                   predPts: (typeof p.predPts==='number' && isFinite(p.predPts)) ? p.predPts : 0,
+                   catchPts:(typeof p.catchPts==='number'&& isFinite(p.catchPts)) ? p.catchPts : 0,
+                   caughtPts:(typeof p.caughtPts==='number'&& isFinite(p.caughtPts)) ? p.caughtPts : 0 };
+    });
+    (scored||[]).forEach(function(rd){
+      var worth = (typeof rd.worth==='number' && rd.worth > 0) ? rd.worth : 1;
+      var key = rd.key || [];
+      var perRound = (subs||{})[rd.id] || {};
+      Object.keys(perRound).forEach(function(uid){
+        var t = out[uid]; if(!t) return;          // a sub with no player row
+        var sub = perRound[uid] || {};
+        var picks = sub.picks || [], banks = sub.banks || [];
+        var correct = 0, sp = 0;
+        for(var i=0;i<key.length;i++){
+          var pk = picks[i];
+          if(pk!==null && pk!==undefined && pk!=='' && String(pk)===String(key[i])){
+            correct++; sp += Number(banks[i]||0) || 0;
+          }
+        }
+        t.live  += correct * worth;
+        t.speed += sp;
+        t.rounds += 1;
+      });
+    });
+    Object.keys(out).forEach(function(uid){
+      var t = out[uid];
+      /* Four lanes, not three. The caught lane was missing here for as
+         long as this function has existed and nobody noticed, because the
+         phone was also writing the total and its version had all four. */
+      t.pts = t.live + t.predPts + t.catchPts + t.caughtPts;
+    });
+    return out;
+  }
+
+  return { fetchFeed:fetchFeed, resolve:resolve, periodDone:periodDone, R:R, sides:sides, plays:plays,
+           inPeriod:inPeriod, armed:armed, clockSec:clockSec, tally:tally };
+})();
+/* @host-shared:end */
+
+
+
+/* ---- THE AUTO TAB ------------------------------------------------
+   Three jobs and no fourth: say what coverage looks like, run the whole
+   night against a finished game so the resolvers can be judged, and sit
+   beside tonight's human and disagree out loud. */
+AUTO.ui = (function(){
+  function $a(id){ return document.getElementById(id); }
+  function cfgNow(){ try{ return nightCfg(night); }catch(_){ return null; } }
+  function bankNow(){ try{ return BANK[night] || null; }catch(_){ return null; } }
+
+  function coverage(){
+    var rs = bankNow(); if(!rs) return {n:0,total:0};
+    var n=0, total=0;
+    rs.forEach(function(r){ (r||[]).forEach(function(q){ total++; if(q && q.r && AUTO.R[q.r]) n++; }); });
+    return {n:n,total:total};
+  }
+
+  function render(){
+    var cfg = cfgNow(), cov = coverage();
+    if($a('auEvent')) $a('auEvent').textContent = (cfg && cfg.espn) ? cfg.espn : '—';
+    if($a('auCover')) $a('auCover').textContent = cov.total ? (cov.n+' / '+cov.total) : '—';
+    if($a('auState')) $a('auState').textContent = LASTSTATE || '—';
+    var d = $a('auDryEvent');
+    if(d && !d.value) d.value = '401857132';
+  }
+
+  var LASTSTATE = '';
+
+  /* ---- DRY RUN --------------------------------------------------
+     The whole night, resolved against a game whose answers you already
+     know. This is the only honest way to find out whether a resolver
+     works, and it is the reason this tab exists today rather than on
+     the night somebody trusts it. */
+  async function dryRun(){
+    var out = $a('auDryOut'); if(!out) return;
+    var ev = ($a('auDryEvent').value||'').trim();
+    if(!ev){ out.innerHTML = '<p class="sub">Give it an event id.</p>'; return; }
+    out.innerHTML = '<p class="sub">Reading the feed…</p>';
+    var j;
+    try{ j = await AUTO.fetchFeed(ev); }
+    catch(e){ out.innerHTML = '<p class="sub">Could not read that game: '+esc((e&&e.message)||e)+'</p>'; return; }
+
+    var st = ''; try{ st = j.header.competitions[0].status.type.description; }catch(_){}
+    LASTSTATE = st || '—';
+    if($a('auState')) $a('auState').textContent = LASTSTATE;
+
+    var rs = bankNow(), cfg = cfgNow();
+    if(!rs){ out.innerHTML = '<p class="sub">This night has no question bank to run.</p>'; return; }
+
+    var html = '<p class="sub">Feed says: <b>'+esc(st||'unknown')+'</b>. '
+             + 'Below is every question in tonight’s bank, answered by the robot off that game. '
+             + '<b>Read them against what actually happened.</b></p>';
+    var good=0, blank=0, none=0;
+
+    rs.forEach(function(round, i){
+      html += '<div style="margin-top:14px"><b>'+esc((cfg&&cfg.tags[i])||('R'+(i+1)))+'</b></div>';
+      (round||[]).forEach(function(q){
+        var r = q.r ? AUTO.resolve(q.r, j, i+1, q.o) : {ok:false, why:'no resolver on this question'};
+        if(!q.r) none++; else if(r.ok) good++; else blank++;
+        html += '<div style="border-top:1px solid rgba(255,255,255,.07);padding:9px 0">'
+             +  '<div style="font-size:14px;line-height:1.4">'+esc(q.t)+'</div>'
+             +  (r.ok
+                  ? '<div style="font-size:14px;font-weight:800;color:#2ee6a6;margin-top:4px">'+esc(r.answer)+'</div>'
+                  : '<div style="font-size:14px;color:#ffc54d;margin-top:4px">no answer — '+esc(r.why)+'</div>')
+             +  '<div style="font-size:12px;color:#93a0bd;margin-top:3px">'+esc((q.o||[]).join(' · '))+'</div>'
+             + '</div>';
+      });
+    });
+
+    html = '<div class="statrow" style="margin-top:10px">'
+         + '<div class="s"><div class="v">'+good+'</div><div class="k">Answered</div></div>'
+         + '<div class="s"><div class="v">'+blank+'</div><div class="k">Resolver came back empty</div></div>'
+         + '<div class="s"><div class="v">'+none+'</div><div class="k">No resolver at all</div></div>'
+         + '</div>' + html;
+    out.innerHTML = html;
+  }
+
+  /* ---- SHADOW ---------------------------------------------------
+     It watches. It writes nothing. When you reveal a round it prints
+     its own key beside yours and names every line you disagree on. */
+  var shadowTimer = null, shadowOn = false;
+
+  function keyFromBank(i){
+    try{ var r = (BANK[night]||[])[i]||[]; return r; }catch(_){ return []; }
+  }
+
+  async function shadowTick(){
+    var out = $a('auShadowOut'); if(!out) return;
+    var cfg = cfgNow();
+    if(!cfg || !cfg.espn){ out.innerHTML = '<p class="sub">This night has no ESPN event id, so there is nothing for the robot to read.</p>'; return; }
+    var j;
+    try{ j = await AUTO.fetchFeed(cfg.espn); }
+    catch(e){ out.innerHTML = '<p class="sub">Feed unreachable — '+esc((e&&e.message)||e)+'. Still watching.</p>'; return; }
+
+    var st='', per=0;
+    try{ var t=j.header.competitions[0].status; st=t.type.description; per=Number(t.period)||0; }catch(_){}
+    LASTSTATE = st || '—';
+    if($a('auState')) $a('auState').textContent = LASTSTATE;
+
+    var html = '<p class="sub">Feed says <b>'+esc(st)+'</b>, period <b>'+per+'</b>. '
+             + 'The robot is not touching anything.</p>';
+
+    /* what the human has published, from the draft this browser holds */
+    var nd = null; try{ nd = draft[night]; }catch(_){}
+    (cfg.tags||[]).forEach(function(tag, i){
+      var qs = keyFromBank(i);
+      if(!qs.length) return;
+      var mine = (nd && nd.rounds && nd.rounds[i] && nd.rounds[i].qs) || [];
+      var rows = '', agree = 0, differ = 0, quiet = 0;
+      qs.forEach(function(q, qi){
+        var r = q.r ? AUTO.resolve(q.r, j, i+1, q.o) : {ok:false, why:'no resolver'};
+        var human = (mine[qi] && mine[qi].k) || null;
+        var mark, colour;
+        if(!r.ok){ mark = 'robot has nothing yet'; colour = '#5d6883'; quiet++; }
+        else if(!human){ mark = 'robot says ' + r.answer + ' — you have not marked it'; colour = '#93a0bd'; }
+        else if(String(human).trim() === String(r.answer).trim()){ mark = 'agreed — ' + r.answer; colour = '#2ee6a6'; agree++; }
+        else { mark = 'DISAGREE — you: ' + human + ' · robot: ' + r.answer; colour = '#ff4d5e'; differ++; }
+        rows += '<div style="border-top:1px solid rgba(255,255,255,.07);padding:7px 0">'
+             +  '<div style="font-size:14px;line-height:1.35">'+esc(q.t)+'</div>'
+             +  '<div style="font-size:14px;font-weight:800;color:'+colour+';margin-top:3px">'+esc(mark)+'</div>'
+             + '</div>';
+      });
+      html += '<div style="margin-top:14px"><b>'+esc(tag)+'</b> '
+           +  '<span style="font-size:12px;color:#93a0bd">'+agree+' agreed · '+differ+' disagreed · '+quiet+' not readable yet</span></div>'
+           +  rows;
+    });
+    out.innerHTML = html;
+  }
+
+  function toggleShadow(){
+    var b = $a('auShadowBtn');
+    if(shadowOn){
+      clearInterval(shadowTimer); shadowTimer=null; shadowOn=false;
+      if(b) b.textContent = 'Start watching';
+      return;
+    }
+    shadowOn = true;
+    if(b) b.textContent = 'Stop watching';
+    shadowTick();
+    shadowTimer = setInterval(shadowTick, 30000);
+  }
+
+  function mount(){
+    var d = $a('auDryBtn'); if(d) d.onclick = dryRun;
+    var s2 = $a('auShadowBtn'); if(s2) s2.onclick = toggleShadow;
+    render();
+  }
+  try{ if(document.readyState!=='loading') setTimeout(mount, 400);
+       else document.addEventListener('DOMContentLoaded', function(){ setTimeout(mount,400); }); }catch(_){}
+
+  return { render:render, dryRun:dryRun, mount:mount };
+})();
+AUTO.render = function(){ try{ AUTO.ui.render(); }catch(_){} };
+
 </script>
 </body>
 </html>
