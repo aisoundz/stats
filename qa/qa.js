@@ -3678,10 +3678,23 @@ async function browserTests(){
       r.runIsASentence === true,
       'stBiggestRun() is missing — the win-probability line has no sentence attached',
       '157 readings of a near-flat line with no axis told a player nothing. "Dallas scored 13 in a row in the 3rd" is the same data and is the whole point');
-    check('statstab.every-card-can-be-copied',
-      r.copyButtons >= 1 && r.everyButtonHasText === true,
-      `${r.copyButtons} copy buttons, all with text: ${r.everyButtonHasText}`,
-      'a stat worth reading is a stat worth pasting into the group chat. This is the only growth mechanism in the product that does not require sending an email');
+    /* REVERSED 15 AUG, FOUNDER'S CALL. This asserted copyButtons >= 1 — a
+       stat worth reading is a stat worth pasting, and the tab spec called
+       it the only growth mechanism that does not require sending an email.
+       The founder removed it after seeing a grey Copy chip still sitting on
+       the Tonight card after the final score. The argument for the share
+       loop is on record in the spec and in the backlog; if it returns it
+       should return as a deliberate share affordance, not a button on every
+       card whether or not anyone wants one.
+
+       Now guards the opposite, so the removal cannot silently come undone:
+       no Copy chips on the STATS cards. The sibling check
+       statstab.copied-text-is-plain still guards the payload of the share
+       controls that remain on the final tally screen. */
+    check('statstab.no-copy-chip-on-the-cards',
+      r.copyButtons === 0,
+      `${r.copyButtons} copy button(s) still on the STATS cards`,
+      'the Copy chip was removed on 15 Aug — a grey button on every card, still there after the final score. See the backlog for the share-loop argument if it ever comes back');
     check('statstab.copied-text-is-plain',
       r.noMarkupInCopy === true,
       'a copy payload contains markup',

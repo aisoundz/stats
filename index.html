@@ -3683,12 +3683,28 @@ const BB_ROSTER={ // full names \u2014 used on the prediction sheet & final revi
      to be on the floor. Players currently listed OUT stay on the list on
      purpose \u2014 a name that simply vanishes reads as a bug, and seeing who
      is unavailable is part of reading the game. */
-  home:["Chelsea Gray","Ta'Niya Latson","Jewell Loyd","Justine Pissott","NaLyssa Smith",
-        "Stephanie Talbot","Brianna Turner","A'ja Wilson","Mai Yamamoto","Jackie Young",
+  /* ORDERED BY MINUTES PLAYED IN EACH TEAM'S LAST GAME, not alphabetically.
+     This list used to be ESPN's roster order — alphabetical by last name —
+     while the comment above claimed it was "ordered by who is most likely to
+     be on the floor". It was not, and the cost was real: A'ja Wilson, the
+     best player in the league, sat EIGHTH of thirteen on a pick sheet worth
+     600 of the night's 1,000 points, below three players who barely feature.
+     "Hard to find the star players on the bottom" — correct.
+
+     Derived, not guessed. ESPN's roster and team endpoints carry no starter
+     flag and no per-player stats, so the source is the box score of each
+     side's most recent completed game (LV 401857142, MIN 401857139), ranked
+     by minutes: Wilson and Young at 35, Miles 35, Collier 33. Players who
+     did not appear in that box score keep their place at the end.
+
+     Ruled-out players stay last on purpose — they are struck through and
+     unpickable, so they belong out of the way rather than gone. */
+  home:["A'ja Wilson","Jackie Young","NaLyssa Smith","Chelsea Gray","Jewell Loyd",
+        "Brianna Turner","Stephanie Talbot","Mai Yamamoto","Ta'Niya Latson","Justine Pissott",
         "Kierstan Bell","Dana Evans","Cheyenne Parker-Tyus"],
-  away:["Chloe Bibby","Elena Buenavida","Maya Caldwell","Nia Coffey","Napheesa Collier",
-        "Antonia Delaere","Natasha Howard","Eliska Joklova","Dorka Juhasz","Liatu King",
-        "Anastasiia Olairi Kosu","Kayla McBride","Olivia Miles","Courtney Williams"]
+  away:["Olivia Miles","Napheesa Collier","Kayla McBride","Courtney Williams","Natasha Howard",
+        "Nia Coffey","Maya Caldwell","Antonia Delaere","Dorka Juhasz","Eliska Joklova",
+        "Chloe Bibby","Anastasiia Olairi Kosu","Elena Buenavida","Liatu King"]
 };
 const BB_GROUPS=[{ab:BB_GAME.homeAbbr,name:BB_GAME.homeName,names:BB_ROSTER.home},
                  {ab:BB_GAME.awayAbbr,name:BB_GAME.awayName,names:BB_ROSTER.away}];
@@ -11578,7 +11594,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-15-winner-fix.112';
+const STATS_BUILD='2026-08-15-roster-order.113';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -13659,9 +13675,12 @@ function stShareCard(kicker, text, inner, tone){
   stTx(id, text);
   var edge = tone === 'gold' ? 'var(--gold,#ffc54d)' : (tone === 'teal' ? 'var(--teal)' : 'var(--line)');
   return '<div class="card" style="padding:14px 16px;margin-top:12px;border-color:' + edge + '">'
-    + (kicker ? '<div class="stHd" style="display:flex;align-items:center;justify-content:space-between">'
-        + '<span>' + kicker + '</span>'
-        + '<button type="button" class="stCopy" data-stcopy="' + id + '" aria-label="Copy this">Copy</button></div>' : '')
+    /* The Copy chip is gone from the STATS cards — founder's call, raised
+       when it was still sitting on the screen after the final score. It was
+       the share loop from the tab spec; if that distribution idea comes
+       back it should come back as a deliberate share affordance, not as a
+       small grey button on every card whether or not anyone wants it. */
+    + (kicker ? '<div class="stHd">' + kicker + '</div>' : '')
     + inner + '</div>';
 }
 
@@ -13885,7 +13904,6 @@ function renderStats(){
               + '<div style="font-size:20px;line-height:1.2">' + (c.i || '📈') + '</div>'
               + '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;line-height:1.4;color:var(--ink)">' + c.t + '</div>'
               + (c.s ? '<div class="sub" style="font-size:12px;margin-top:3px">' + c.s + '</div>' : '') + '</div>'
-              + '<button type="button" class="stCopy" data-stcopy="' + id + '" aria-label="Copy this">Copy</button>'
               + '</div>';
           }).join('')
         + '</div>';
