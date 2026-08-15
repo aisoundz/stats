@@ -2373,12 +2373,23 @@ window.STATS_FIREBASE = {
          we do not know whether a seat exists, and the only safe move is to
          write nothing at all and say so. A join that returns false costs a
          player a retry. A join that guesses costs them their night.     */
+      /* B-58, GN8. The single read above was the whole retry budget: one
+         shot, and a phone reconnecting right as its network came back —
+         which is EXACTLY when a reload happens, because that is what
+         prompted the reload — would lose that one shot to the same blip
+         it was trying to recover from. The fix stayed safe (still never
+         guesses, still never zeroes a score) and just stopped giving up
+         after a single attempt. Three tries, short gaps, quiet unless
+         every one of them fails. */
       var existing = null, readOk = false, readErr = '';
-      try { existing = await F.getDoc(meRef); readOk = true; }
-      catch (e) { readOk = false; readErr = (e && (e.code || e.message)) || 'read-failed'; }
+      for (var joinTry = 0; joinTry < 3 && !readOk; joinTry++) {
+        if (joinTry) { try { await new Promise(function(r){ setTimeout(r, 500 * joinTry); }); } catch (_) {} }
+        try { existing = await F.getDoc(meRef); readOk = true; }
+        catch (e) { readErr = (e && (e.code || e.message)) || 'read-failed'; }
+      }
       if (!readOk) {
         SB.lastJoinError = readErr;
-        try { console.error('[STATS] join aborted — could not read the seat (' + readErr + '). Refusing to write zeros over a score we cannot see.'); } catch (_) {}
+        try { console.error('[STATS] join aborted — could not read the seat after 3 tries (' + readErr + '). Refusing to write zeros over a score we cannot see.'); } catch (_) {}
         try { notifyOps('join', 'Couldn’t read your seat — not saving anything until we can.'); } catch (_) {}
         return false;
       }
@@ -8321,10 +8332,13 @@ function caughtWorth(streak){
 }
 
 function startCallItWatch(){
-  /* LEAN. Caught It scores properly now and it is tested, but it is still a
-     second scoring mechanic on a night whose whole purpose is proving the
-     first one. It is the first thing that comes back. */
-  if(lean()) return;
+  /* LEAN. Caught It scores properly now and it is tested, but it was kept
+     off as a second scoring mechanic while the first one proved itself —
+     it was slated to be "the first thing that comes back." Turned back on
+     GN8, 14 Aug, mid-game, by direct request: the host side (Control Room)
+     was firing and resolving questions correctly the whole time, but the
+     player app was never listening. Stats and Talk stay off — this flag
+     no longer gates Caught It, only those two. */
   if(PCI.unsub || S.mode!=='live' || !window.SB || !SB.watchCallIt) return;
   ensureCiCard();
   try{ PCI.unsub = SB.watchCallIt(onCallItQuestions) || null; }catch(e){}
