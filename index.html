@@ -4081,7 +4081,7 @@ function startLive(){
     if(S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0 && S.place!=='predict'){ returnToGame(); return; }
   }catch(_){}
   if(!signedInNow()){ promptSignIn('live'); return; }
-  S.mode="live";S.practice=false;go('name');prefillGate();
+  setMode("live");go('name');prefillGate();
 }
 /* ---- THE HOME CARD KNOWS WHERE YOU ARE ------------------------------
    "Why every time I go back to home it shows Play Game, if I have already
@@ -4298,7 +4298,7 @@ function startDemo(){
       return;
     }
   }catch(_){}
-  S.mode="demo";S.practice=true;try{Object.keys(demoCiFired).forEach(k=>delete demoCiFired[k]);PCI.muted=false;}catch(e){}go('name');prefillGate();}
+  setMode("demo");try{Object.keys(demoCiFired).forEach(k=>delete demoCiFired[k]);PCI.muted=false;}catch(e){}go('name');prefillGate();}
 
 /* ---------------- PERSISTENCE (Game Night only) ---------------- */
 const LS_KEY="stats_gamenight_v1_"+SPORT_KEY; // saves never cross sports
@@ -4498,6 +4498,51 @@ function ledgerServerFloor(sv){
   return true;
 }
 function ledgerClear(){ S.led={}; return recomputeScore(); }
+
+/* ============ CHANGING MODE MUST CHANGE THE SCOREBOARD WITH IT =========
+   B-63, GN10, found by the founder two hours before tip.
+
+   Practice and the live night shared ONE ledger. Lock a card in practice,
+   score 180, come back, and S.led still held those 180 — so the live game
+   opened reading "You're already in this one — 180 pts so far", a red
+   "Q4 is open — tap to answer" banner, and a graded question four, TWO AND
+   A HALF HOURS BEFORE TIP. Worse, S.mode was 'live' again by then, so
+   save() — which correctly refuses to write in demo — happily persisted
+   the practice score as the live one, and it survived reloads.
+
+   Nothing reached the server: pushScore() only ever sent points, and the
+   player rows were still 0. It was wrong on the only screen a player
+   actually looks at, which is its own kind of expensive.
+
+   THE CARD SURVIVES ON PURPOSE. predChoices are LOCAL ONLY — nothing
+   pushes them anywhere — so the tempting fix of routing Practice through
+   freshStart() (clear + reload, the path the in-progress button already
+   uses) would cost a player the 600-point sheet they just filled in.
+   Progress resets; the card does not.
+
+   One writer for the switch, called from all three places that change
+   mode, because three copies of this reset is how it comes back. */
+function setMode(mode){
+  var was = S.mode;
+  S.mode = mode;
+  S.practice = (mode === 'demo');
+  if(was === mode) return;
+  try{ ledgerClear(); }catch(_){}
+  try{
+    S.qi = 0; S.ni = 0; S.nextQ = 0; S.answered = false;
+    S.results = emptyRounds(); S.liveAnswers = emptyRounds();
+    S.streak = 0; S.tally = null;
+    S.catchChoices = {}; S.catchPts = null; S.catchesScored = false;
+    S.predSettled = false; S.predTruth = null; S.predTruthNum = null;
+    S.lifelineHalf1 = true; S.lifelineHalf2 = true; S.lifelineAt = null;
+    S.botScores = [];
+    /* The Caught It record is progress too — a practice streak must not
+       walk into the live night wearing the same numbers. */
+    if(typeof PCI === 'object'){ PCI.called=0; PCI.hit=0; PCI.streak=0; PCI.best=0; PCI.heat=0; PCI.pts=0; }
+    S.pci = null;
+  }catch(_){}
+  try{ recomputeScore(); }catch(_){}
+}
 /* Points that are NOT the prediction card and NOT catches — i.e. what the
    player earned during play. The final screen's breakdown needs this and
    used to get it by snapshotting S.pts before mutating it, which is
@@ -11490,7 +11535,7 @@ function portalSaveSignup(email){
    screen, but they get there knowing an account is required. */
 function portalEmailPath(){
   PENDING_AFTER='live';
-  S.mode='live'; S.practice=false; go('name'); prefillGate();
+  setMode('live'); go('name'); prefillGate();
   setTimeout(function(){
     try{ document.getElementById('verifyRow').scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){}
     toast('Add your email, then tap Verify — that link is your account.');
@@ -11594,7 +11639,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-15-roster-order.113';
+const STATS_BUILD='2026-08-15-practice-leak.114';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

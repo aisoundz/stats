@@ -683,6 +683,40 @@ async function browserTests(){
       try{ go('landing'); startPredict(); }catch(e){ return 'threw: '+e.message; }
       return S.screen;
     });
+    /* ---- B-63: PRACTICE MUST NOT SCORE THE LIVE NIGHT --------------
+       Found by the founder two hours before GN10. Practice and the live
+       game shared one ledger, so a practice run walked back into the live
+       night carrying its points: "You're already in this one — 180 pts",
+       a red "Q4 is open" banner and a graded question four, before tip.
+       save() then persisted it because S.mode was 'live' again by then.
+       The CARD must survive the switch — predChoices are local-only, so
+       clearing them to fix this would cost a player their 600-point sheet. */
+    const modeLeak = await p.evaluate(()=>{
+      const out={};
+      setMode('live');
+      S.predChoices={winner:'x',pts:'y'};
+      ledgerSet('r0q0',40,3,'live'); recomputeScore();
+      setMode('demo');
+      out.practiceStartsClean = (S.pts===0);
+      out.cardSurvivedIn = Object.keys(S.predChoices).length;
+      ledgerSet('r0q0',90,5,'live'); ledgerSet('r0q1',90,5,'live'); recomputeScore();
+      out.practiceScored = S.pts;
+      setMode('live');
+      out.liveComesBackClean = (S.pts===0);
+      out.cardSurvivedOut = Object.keys(S.predChoices).length;
+      try{ S.mode='demo'; ledgerClear(); recomputeScore(); S.predChoices={}; }catch(e){}
+      return out;
+    });
+    check(`state.practice-does-not-score-the-live-night.${vp.name}`,
+      modeLeak.practiceStartsClean===true && modeLeak.liveComesBackClean===true
+      && modeLeak.practiceScored>0,
+      `mode switch leaked: ${JSON.stringify(modeLeak)}`,
+      'B-63: practice and the live night shared one ledger, so a practice run put its score on the live scoreboard before tip — and save() persisted it');
+    check(`state.the-card-survives-a-practice-game.${vp.name}`,
+      modeLeak.cardSurvivedIn===2 && modeLeak.cardSurvivedOut===2,
+      `predChoices did not survive the mode switch: in=${modeLeak.cardSurvivedIn} out=${modeLeak.cardSurvivedOut}`,
+      'predChoices are LOCAL ONLY — nothing pushes them — so wiping them to isolate practice would cost a player the 600-point sheet they just filled in');
+
     check(`state.play-does-not-restart.${vp.name}`, playGuard==='lobby',
       `pressing Play mid-night went to "${playGuard}" instead of back to the game`,
       'REGRESSION: the Play button handed back a blank pick sheet for an already-locked card');
