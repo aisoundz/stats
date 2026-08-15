@@ -35,6 +35,13 @@ const vm = require('vm');
 const NIGHT = process.env.NIGHT_ID || '';
 const DRY   = process.argv.includes('--dry-run');
 const FORCE = process.argv.includes('--force');
+/* "Publish only if nobody has" — the launcher's mode. A plan that is already
+   there is a SUCCESS for that caller, not a failure: it means the Control
+   Room (or an earlier run) got there first, and its version wins. Without
+   this the launcher treated "already published" as fatal and refused to
+   start the runner, which would have turned publishing early into a night
+   that never began. */
+const IF_MISSING = process.argv.includes('--if-missing');
 /* Read a real night's config and bank, but write the plan somewhere else.
    The rehearsal SETUP.md asks for — a full night against a finished game —
    needs a night id no player is sitting in, and "point it at Wednesday's
@@ -166,7 +173,13 @@ async function main(){
   const existing = await ref.get();
   if(existing.exists && !FORCE){
     const d = existing.data() || {};
-    die(`a plan is already published for ${WRITE_AS} (${(d.rounds||[]).length} rounds, by ${d.by || 'unknown'}). ` +
+    const who = `${(d.rounds||[]).length} rounds, by ${d.by || 'unknown'}`;
+    if(IF_MISSING){
+      log('plan', `already published for ${WRITE_AS} (${who}) — leaving it alone, it wins`);
+      log('done', 'nothing to do');
+      return;
+    }
+    die(`a plan is already published for ${WRITE_AS} (${who}). ` +
         'It may contain Control Room edits this script cannot see. Use --force to overwrite it.');
   }
 

@@ -49,10 +49,13 @@ export FIREBASE_SERVICE_ACCOUNT="$(cat "$KEY")"
 export NIGHT_ID ESPN_EVENT RUN_MINUTES
 if [ "${SKIP_PUBLISH:-0}" != "1" ]; then
   echo "--- plan ---"
-  node host/publish.js 2>&1 | tail -8 || {
+  # --if-missing: a plan that already exists is a SUCCESS here, not a failure.
+  # Publishing early (to rehearse this exact command with hours to spare) must
+  # not be the reason the night refuses to start.
+  node host/publish.js --if-missing 2>&1 | tail -8 || {
     echo
-    echo "Publish did not succeed. If it says a plan already exists, that is fine —"
-    echo "the Control Room's version wins. Re-run with SKIP_PUBLISH=1 to go anyway."
+    echo "Publish failed for a real reason — read the message above."
+    echo "SKIP_PUBLISH=1 starts the runner anyway, but only if a plan already exists."
     exit 1
   }
   echo
