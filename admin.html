@@ -2764,6 +2764,25 @@ async function publishPlan(){
       })
     };
   });
+  /* HARD STOP \u2014 GN9, 2026-08-14. Rushed setup published "4 rounds, 0
+     questions" as a routine status line, the runner faithfully opened
+     every quarter with an empty `questions` array exactly as told, and
+     three real players sat looking at a live round with nothing to
+     answer. That was working as designed: publishPlan() only ever
+     validated individual questions, never noticed a round with NONE.
+     A round the runner opens and scores points for, with nothing in it
+     to earn those points from, is strictly worse than not opening it \u2014
+     it reads as broken rather than as absent. So this one is not a
+     warning the host can miss in a wall of green text; it refuses to
+     write the plan at all until every round has at least one question. */
+  var empty = [];
+  rounds.forEach(function(r,i){ if(!r.qs.length) empty.push(cfg.tags[i]); });
+  if(empty.length){
+    hostSay('err', 'Publish blocked \u2014 ' + empty.join(', ') + ' ' + (empty.length===1?'has':'have')
+      + ' zero questions written. The runner will not invent them; write at least one question per round, then publish again.');
+    toast('Publish blocked: ' + empty.join(', ') + ' ' + (empty.length===1?'has':'have') + ' no questions.');
+    return;
+  }
   var bad = [];
   rounds.forEach(function(r,i){ r.qs.forEach(function(q,x){
     if(!q.t) bad.push(cfg.tags[i]+' Q'+(x+1)+' has no question text');
@@ -4241,6 +4260,14 @@ function lockMsFor(kind){
         '<span class="chip" id="ciState">off</span>'+
         '<span class="sub" style="flex:1 1 200px;min-width:160px">Live in-game questions, resolved off the play-by-play — one at every media timeout, plus the moments in between. Isolated from the main score; needs Auto live score running.</span>'+
       '</div>'+
+      /* GN9, 2026-08-14. Rounds and score ran fine all night off the
+         off-laptop GitHub Actions runner (host/run.js) with nobody at a
+         laptop — but Call It got ZERO questions the entire game, because
+         Call It only ever runs from THIS button, in THIS tab, and nobody
+         knew that going in. run.js reads the callit collection; it has
+         never written to it. Say this loudly, right where the button is,
+         so the next rushed setup doesn't find out the hard way. */
+      '<div class="sub" style="margin-top:6px;color:#ffc54d">&#9888;&#65039; Call It only runs while this Control Room tab is open and this button is ON. The off-laptop runner (GitHub Actions) handles quarter rounds and the live score on its own, but it does NOT generate Call It questions — if you close this tab, Call It stops for the night no matter what the runner is doing.</div>'+
       '<div id="espnOut" class="sub" style="margin-top:12px"></div>';
     host.insertBefore(card, host.firstChild);
     document.getElementById('espnPull').onclick=ESPN.pull;

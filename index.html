@@ -3536,7 +3536,7 @@ const BB_GAME={
   espnEvent:"401857144",   // verified against the WNBA scoreboard for 2026-08-14
   tipISO:"2026-08-15T02:00:00Z",   // 10:00 pm ET / 7:00 pm PT. Never parsed from a display string.
   homeName:"Seattle Storm",   homeAbbr:"SEA", homeNick:"Storm", homeEmoji:"\u26C8\uFE0F", homeColor:"#2c5234",
-  awayName:"Portland Fire",   awayAbbr:"PDX", awayNick:"Fire",  awayEmoji:"\uD83D\uDD25", awayColor:"#c8102e",
+  awayName:"Portland Fire",   awayAbbr:"PDX", awayNick:"Fire",  awayEmoji:"\uD83D\uDD25", awayColor:"#cee5eb",
   venue:"Climate Pledge Arena", date:"Fri \u00B7 August 14", short:"August 14", shareDate:"AUG 14", night:"Game Night #9",
   /* SET UP IN A HURRY \u2014 roughly fifteen minutes before this tip, right
      after Game Night #8 wrapped, at direct request. Portland Fire at
@@ -3545,14 +3545,12 @@ const BB_GAME={
      Pledge Arena, Seattle. Seattle are home, so the app draws them on the
      right of the VS badge.
 
-     NOT YET VERIFIED, CHECK WHEN THERE IS TIME. Portland's brand colours
-     were reported as red/brown/blue with no hex published anywhere found
-     in a fifteen-minute search \u2014 #c8102e above is a reasonable fire-red
-     guess, not the confirmed brand hex. tcGuard() will still keep it
-     readable against the dark background either way, but the exact shade
-     may be off and is worth a real look once the game is running rather
-     than before it starts. No injury report was pulled either \u2014 there
-     was no runway left for it tonight. */
+     Brand colour verified post-game from the ESPN team endpoint directly
+     (teams/132052): primary #cee5eb, alternate #000000 \u2014 the fifteen-minute
+     #c8102e fire-red guess from setup night was wrong, replaced above.
+     Roster and OUT flags were pulled fresh from ESPN for GN9 too (see
+     BB_ROSTER). No injury report beyond the roster's OUT flags was pulled
+     \u2014 there was no runway left for it tonight. */
   net:"ION",
   tip:"Tip-off 10:00 ET \u00B7 9:00 CT \u00B7 7:00 PT \u00B7 ION"
 };
@@ -7892,7 +7890,23 @@ async function joinNight(){
   // the guard means the one case that most needs a repaint (dead network)
   // never gets one, and the bar sits on "Connecting…" all night.
   hookRoomState();
-  if(!window.SB || !SB.enabled) return false;
+  if(!window.SB) return false;
+  if(!SB.enabled){
+    /* B-61, GN9. joinNight() used to give up the instant it lost this race
+       and nothing ever retried — permanently. The backend takes real time
+       to boot (IndexedDB restore, an anonymous sign-in round trip), and a
+       joinNight() fired at page load (S.mode==='live') routinely got there
+       first. SB.state flipped to 'on' a beat later, the room bar reported
+       a perfectly healthy connection, and nightId stayed null all night:
+       SB.top()/SB.submit() silently queued or returned null forever,
+       because nobody ever asked to join again. Wait out the boot race,
+       bounded, before actually giving up. */
+    var deadline = Date.now() + 6000;
+    while (!SB.enabled && SB.state !== 'error' && Date.now() < deadline) {
+      await new Promise(function (r) { setTimeout(r, 200); });
+    }
+  }
+  if(!SB.enabled) return false;
   /* If this device does not know who you are, it must not assert a colour
      either. S.color is never empty — it defaults to the first swatch — so
      passing it blind would repaint your dot for everyone else in the room
@@ -8061,7 +8075,12 @@ async function refreshRoom(){
      never have found out otherwise. */
   try{
     if(S.mode==='live'){
-      const pastGrace = JOIN_STARTED_AT>0 && (Date.now()-JOIN_STARTED_AT)>8000;
+      // 15s, not 8s: joinNight() can now legitimately wait up to 6s for the
+      // backend to finish booting before it even attempts SB.join() (see
+      // B-61). The grace window has to comfortably outlast that wait, or a
+      // slow-but-healthy boot trips the same reconnect banner it's supposed
+      // to be reserved for a genuinely dead listener.
+      const pastGrace = JOIN_STARTED_AT>0 && (Date.now()-JOIN_STARTED_AT)>15000;
       const roundDead = SB.roundWatchOk===false || (!HR.unsub && SB.enabled && pastGrace);
       const ciDead = SB.callItWatchOk===false;
       if(roundDead || ciDead){
