@@ -528,9 +528,16 @@ async function main(){
             needsHuman: FieldValue.delete(),
             closedAt: FieldValue.serverTimestamp()
           }, { merge: true });
-          log('key', `${R.tag} scored — ${why.join(' · ')}`);
+          /* Logged BEFORE the key, deliberately. `score.the-runner-scores-
+             after-it-keys` asserts that log('key') and scoreRoom() stay
+             within 400 characters of each other — the invariant being that
+             a posted key becomes a score immediately, never a key sitting
+             on screen with nobody's total moved. Putting this line between
+             them pushed them apart and turned the check red. The check is
+             right; the line belongs here. */
           if(voided.length)
             log('void', `${R.tag} — ${voided.length} question(s) voided, nobody gains or loses: ${voided.join(' · ')}`);
+          log('key', `${R.tag} scored — ${why.join(' · ')}`);
           /* The key is worthless to a player until it is a number on their
              screen. Score immediately, and never let a scoring failure
              undo a key that is already correct and posted. */
