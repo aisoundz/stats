@@ -3534,30 +3534,29 @@ window.STATS_FIREBASE = {
    re-skins to ANY game — NBA, G-League, college, WNBA.
    In production this loads from the nightly schedule feed. */
 const BB_GAME={
-  nightId:"gn8-2026-08-14-dal-ind",
-  espnEvent:"401857143",   // verified against the WNBA scoreboard for 2026-08-14
-  tipISO:"2026-08-14T23:30:00Z",   // 7:30 pm ET. Never parsed from a display string.
-  homeName:"Indiana Fever",   homeAbbr:"IND", homeNick:"Fever", homeEmoji:"\uD83D\uDD25", homeColor:"#002d62",
-  awayName:"Dallas Wings",    awayAbbr:"DAL", awayNick:"Wings", awayEmoji:"\uD83E\uDEBD", awayColor:"#002b5c",
-  venue:"Gainbridge Fieldhouse", date:"Fri \u00B7 August 14", short:"August 14", shareDate:"AUG 14", night:"Game Night #8",
-  /* Pulled from the event feed on Aug 13, not from memory: Dallas Wings at
-     Indiana Fever, 7:30 p.m. ET \u2014 NOT 8:00, which is what the last two
-     nights have been and is exactly the sort of thing that gets copied
-     forward by hand. On ION. Gainbridge Fieldhouse, Indianapolis. Indiana
-     are home, so the app draws them on the right of the VS badge.
+  nightId:"gn9-2026-08-14-pdx-sea",
+  espnEvent:"401857144",   // verified against the WNBA scoreboard for 2026-08-14
+  tipISO:"2026-08-15T02:00:00Z",   // 10:00 pm ET / 7:00 pm PT. Never parsed from a display string.
+  homeName:"Seattle Storm",   homeAbbr:"SEA", homeNick:"Storm", homeEmoji:"\u26C8\uFE0F", homeColor:"#2c5234",
+  awayName:"Portland Fire",   awayAbbr:"PDX", awayNick:"Fire",  awayEmoji:"\uD83D\uDD25", awayColor:"#c8102e",
+  venue:"Climate Pledge Arena", date:"Fri \u00B7 August 14", short:"August 14", shareDate:"AUG 14", night:"Game Night #9",
+  /* SET UP IN A HURRY \u2014 roughly fifteen minutes before this tip, right
+     after Game Night #8 wrapped, at direct request. Portland Fire at
+     Seattle Storm, 10:00 p.m. ET / 7:00 p.m. PT \u2014 Seattle is a Pacific
+     team, so "7" is what actually got said out loud. On ION. Climate
+     Pledge Arena, Seattle. Seattle are home, so the app draws them on the
+     right of the VS badge.
 
-     TWO THINGS TO CHECK BEFORE THE EMAIL GOES OUT. Indiana's primary colour
-     is #002d62 \u2014 navy on near-black, which is the exact case tcGuard()
-     exists for; it lifts lightness in HSL and verifies by measurement, so
-     this should be readable, but it is worth one look on a phone.
-
-     And Dallas are listed with FIVE players out, including Aziaha James,
-     who played on Wednesday. An injury list that long two days out is
-     usually provisional. Re-read it on Friday afternoon before writing the
-     email, because "two of your six picks just lost their obvious answer"
-     is only a good line while it is true. */
+     NOT YET VERIFIED, CHECK WHEN THERE IS TIME. Portland's brand colours
+     were reported as red/brown/blue with no hex published anywhere found
+     in a fifteen-minute search \u2014 #c8102e above is a reasonable fire-red
+     guess, not the confirmed brand hex. tcGuard() will still keep it
+     readable against the dark background either way, but the exact shade
+     may be off and is worth a real look once the game is running rather
+     than before it starts. No injury report was pulled either \u2014 there
+     was no runway left for it tonight. */
   net:"ION",
-  tip:"Tip-off 7:30 ET \u00B7 6:30 CT \u00B7 4:30 PT \u00B7 ION"
+  tip:"Tip-off 10:00 ET \u00B7 9:00 CT \u00B7 7:00 PT \u00B7 ION"
 };
 /* ============ LEAN — THE FOUR SURFACES ==============================
    Game Night #7 ran nine surfaces in front of three players and produced

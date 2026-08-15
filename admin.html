@@ -548,6 +548,17 @@ const NIGHTS = [
   /* `espn` is new and it is the hinge for the autonomous host: it is the
      event id the resolvers read. A night without one can still be run by
      hand, it just cannot be run by the robot. */
+  /* GAME NIGHT #9 — PORTLAND AT SEATTLE, same Friday as #8, much later
+     tip: 10:00 ET / 7:00 PT — Seattle are a Pacific team, so "7" is the
+     number that actually got said out loud tonight. Verified against the
+     scoreboard feed for 2026-08-14: event 401857144, ION, Climate Pledge
+     Arena. Set up in a hurry, minutes before tip — if anything here reads
+     off, check it against the scoreboard before the first round opens. */
+  { id:'gn9-2026-08-14-pdx-sea', label:'Game Night #9 — Fire @ Storm (Fri Aug 14, 10:00 ET · ION)',
+    away:'PDX', home:'SEA', espn:'401857144',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[10,20,30,40] },
   /* GAME NIGHT #8 — DALLAS AT INDIANA, and note the tip: 7:30 ET, not 8:00.
      The last two nights were 8:00 and that is exactly the kind of fact that
      gets copied forward by hand. Verified against the scoreboard feed for
