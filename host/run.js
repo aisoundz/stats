@@ -54,6 +54,14 @@ const ANSWER_MS = Number(process.env.ANSWER_MS || 150000);   // 2m30
 const GRACE_MS  = Number(process.env.GRACE_MS  || 20000);
 const TICK_MS   = Number(process.env.TICK_MS   || 20000);
 
+/* The lease. Two hosts against one night both call AUTO.tally and race to
+   post keys — the worst failure this system has, and until now the only one
+   prevented by remembering rather than by code. The heartbeat was already
+   being written every tick; nothing ever read it. Now it is a claim. */
+const HOST_ID    = `${process.env.HOST_NAME || 'runner'}-${process.pid}-${Date.now().toString(36)}`;
+const LEASE_MS   = Number(process.env.LEASE_MS || 60000);
+const LEASE_FORCE = process.env.HOST_FORCE === '1';
+
 const log = (kind, msg) =>
   console.log(`${new Date().toISOString().slice(11,19)}  ${kind.padEnd(6)}  ${msg}`);
 const die = (msg) => { console.error('FATAL: ' + msg); process.exit(1); };
@@ -106,6 +114,36 @@ async function readPlan(db){
   const plan = snap.data();
   if(!Array.isArray(plan.rounds) || !plan.rounds.length) die('the published plan has no rounds in it');
   return plan;
+}
+
+/* ---- 3b. the lease --------------------------------------------------
+   Claimed at boot and renewed on every tick. A second runner started
+   against the same night exits at startup with the incumbent named,
+   rather than quietly doubling every write for the rest of the game.
+
+   A lease that cannot be broken is its own outage, so it expires: a host
+   that has not renewed for LEASE_MS is treated as dead and can be taken
+   over. That is the correct default, because the common case is a crashed
+   runner being restarted, not two live ones. HOST_FORCE=1 overrides for
+   the case where you know better. */
+async function claimLease(db, FieldValue){
+  const ref = db.doc(`nights/${NIGHT}`);
+  return db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    const h = (snap.exists && snap.data().host) || null;
+    if(h && h.id && h.id !== HOST_ID && !LEASE_FORCE){
+      const at = h.at && h.at.toMillis ? h.at.toMillis() : 0;
+      const age = at ? (Date.now() - at) : Infinity;
+      if(age < LEASE_MS)
+        throw new Error(
+          `another host holds this night: ${h.id} (${h.where || '?'}), last seen ` +
+          `${Math.round(age/1000)}s ago. Stop it before starting this one — two hosts ` +
+          `race on AUTO.tally and post conflicting keys. Override with HOST_FORCE=1.`);
+    }
+    tx.set(ref, { host: { auto:true, where:'runner', id:HOST_ID,
+                          at: FieldValue.serverTimestamp() } }, { merge:true });
+    return true;
+  });
 }
 
 /* ---- 4. the live score ----------------------------------------------
@@ -327,6 +365,66 @@ async function archiveNight(db, FieldValue, why){
   return stamp;
 }
 
+/* ---- 6b. resolving a round -------------------------------------------
+   ONE question that cannot be read must not cost the other three.
+
+   The Control Room has always known this. `closeQuarter()` voids the
+   unanswerable question, names it, and scores the rest — "nobody gains a
+   point and nobody loses one, so no player is advantaged. The rest score
+   normally." `markOf()` returns 'non' for a question with no key, which is
+   the encoding that makes an empty entry safe rather than wrong.
+
+   This function used to `break` on the first refusal and abandon the whole
+   round. That is incident #6 — the bug that ended every game night before
+   #5 — reintroduced on the server, where no human was watching to notice.
+   Measured against Game Nights #7 and #8: 15 of 16 questions resolve, and
+   the single refusal took a whole round down with it, both nights.
+
+   Voiding IS refusing to guess. Voiding three innocent questions alongside
+   the unreadable one is not extra caution; it is just a bigger loss. */
+function resolveRound(AUTO, R, sum, period, early){
+  const key = [], why = [], voided = [];
+  for(let x = 0; x < R.qs.length; x++){
+    const q = R.qs[x];
+    /* A human's decision travels with the plan and is never resolved over. */
+    if(q.k != null && q.k !== ''){ key.push(String(q.k)); why.push(String(q.k) + ' (by hand)'); continue; }
+    /* An answer captured at the buzzer beats one computed later. */
+    const e = early && early[x];
+    if(e != null && e !== ''){ key.push(String(e)); why.push(String(e) + ' (at the buzzer)'); continue; }
+    if(!q.r){ key.push(''); why.push('VOID'); voided.push(`Q${x+1} has no resolver`); continue; }
+    let res = null;
+    try{ res = AUTO.resolve(q.r, sum, period, q.o); }
+    catch(err){ key.push(''); why.push('VOID'); voided.push(`Q${x+1} threw: ${err.message}`); continue; }
+    if(!res || !res.ok){ key.push(''); why.push('VOID'); voided.push(`Q${x+1} — ${(res && res.why) || 'no answer'}`); continue; }
+    key.push(String(res.answer)); why.push(res.answer);
+  }
+  return { key, why, voided };
+}
+
+/* Resolve whatever can be read AT THE BUZZER and keep it.
+
+   "Through three quarters, how many players have reached double figures"
+   is a question about a MOMENT, and the box score only holds the present.
+   `doubleFiguresBand` knows this and refuses once the game has moved past
+   the period being asked about — correctly. But the round does not close
+   until 20s of grace plus up to 2m30 of answering have passed, by which
+   time the fourth quarter has started and the honest refusal is guaranteed.
+   The resolver was never wrong; the fact was being read 170 seconds after
+   it stopped being true.
+
+   So read it now, store it, reveal it at close. */
+function earlyAnswers(AUTO, R, sum, period){
+  const out = [];
+  for(let x = 0; x < R.qs.length; x++){
+    const q = R.qs[x];
+    if(!q.r || (q.k != null && q.k !== '')){ out.push(null); continue; }
+    let res = null;
+    try{ res = AUTO.resolve(q.r, sum, period, q.o); }catch(_){ res = null; }
+    out.push(res && res.ok ? String(res.answer) : null);
+  }
+  return out;
+}
+
 /* ---- 7. the loop ---------------------------------------------------- */
 async function main(){
   if(!NIGHT) die('NIGHT_ID is not set');
@@ -336,6 +434,10 @@ async function main(){
   const { db, FieldValue } = loadDb();
   const plan = await readPlan(db);
   const N = plan.rounds.length;
+
+  try{ await claimLease(db, FieldValue); }
+  catch(e){ die('cannot start — ' + ((e && e.message) || e)); }
+  log('boot', `lease held as ${HOST_ID}`);
   log('boot', `night ${NIGHT} · event ${EVENT} · ${N} rounds · running for up to ${MINUTES}m`);
 
   const acted = {}, seenDone = {};
@@ -346,17 +448,22 @@ async function main(){
     try{
       const sum = await AUTO.fetchFeed(EVENT);
 
-      /* The heartbeat. A room whose host has died should be able to say so
-         rather than waiting in silence for a quarter that is never coming. */
-      await db.doc(`nights/${NIGHT}`).set(
-        { host: { auto: true, where: 'runner', at: FieldValue.serverTimestamp() } },
-        { merge: true });
+      /* The heartbeat, which is also the lease renewal. A room whose host
+         has died should be able to say so rather than waiting in silence
+         for a quarter that is never coming — and a host that has been
+         taken over should stop writing rather than fight. */
+      try{ await claimLease(db, FieldValue); }
+      catch(e){ die('lost the lease — ' + ((e && e.message) || e)); }
 
       lastScoreSig = await writeLiveScore(db, FieldValue, sum, plan, lastScoreSig);
 
       const roundsSnap = await db.collection(`nights/${NIGHT}/rounds`).get();
       const live = {}; roundsSnap.forEach(d => { live[d.id] = d.data(); });
-      const seats = (await db.collection(`nights/${NIGHT}/players`).get()).size;
+      /* count() bills one read per thousand documents; .get().size billed
+         one per PLAYER, every twenty seconds, all night. At ten players
+         that was invisible; at a hundred it is ~47k reads and the night
+         dies of the free tier's daily cap mid-game. */
+      const seats = (await db.collection(`nights/${NIGHT}/players`).count().get()).data().count;
       const now = Date.now();
 
       for(let i = 0; i < N; i++){
@@ -374,13 +481,17 @@ async function main(){
           if(now - seenDone[i] < GRACE_MS) continue;
           if(acted['push' + i]) continue;
           acted['push' + i] = true;
+          const early = earlyAnswers(AUTO, R, sum, i + 1);
+          const earlyN = early.filter(v => v != null).length;
           await db.doc(`nights/${NIGHT}/rounds/${rid}`).set({
             seq: Date.now(), idx: i, tag: R.tag, name: R.name, worth: R.worth,
             state: 'live',
             questions: R.qs.map(q => ({ t: q.t, o: q.o })),
+            earlyKey: early,
             openedAt: FieldValue.serverTimestamp()
           }, { merge: true });
-          log('push', `${R.tag} is live on every phone`);
+          log('push', `${R.tag} is live on every phone` +
+                      (earlyN ? ` · ${earlyN}/${R.qs.length} already readable at the buzzer` : ''));
           continue;
         }
 
@@ -393,27 +504,19 @@ async function main(){
           if(!everyoneIn && waited < ANSWER_MS) continue;
           if(everyoneIn) log('room', `everyone has answered ${R.tag} — closing early`);
 
-          const key = [], why = [];
-          let fail = null;
-          for(let x = 0; x < R.qs.length; x++){
-            const q = R.qs[x];
-            if(q.k != null && q.k !== ''){ key.push(String(q.k)); why.push('set by hand'); continue; }
-            if(!q.r){ fail = `Q${x+1} has no resolver`; break; }
-            let res; try{ res = AUTO.resolve(q.r, sum, i + 1, q.o); }
-            catch(e){ fail = `Q${x+1} threw: ${e.message}`; break; }
-            if(!res || !res.ok){ fail = `Q${x+1} — ${(res && res.why) || 'no answer'}`; break; }
-            key.push(String(res.answer)); why.push(res.answer);
-          }
+          const { key, why, voided } = resolveRound(AUTO, R, sum, i + 1, doc.earlyKey);
 
-          if(fail){
-            /* NOT a failure of the night. The round stays open, the humans
-               can still settle it, and the room is told a person is needed
-               rather than being left to wonder. */
+          /* EVERY question voided is not a round, it is a feed that never
+             arrived. Scoring that would stick the whole room on zero for
+             the quarter — the Game #2 bug — so this one case still waits
+             for a person. Anything less than total still scores. */
+          if(voided.length === R.qs.length){
             if(!acted['held' + i]){
               acted['held' + i] = true;
               await db.doc(`nights/${NIGHT}/rounds/${rid}`).set(
-                { needsHuman: fail, needsHumanAt: FieldValue.serverTimestamp() }, { merge: true });
-              log('hold', `${R.tag} needs a human — ${fail}`);
+                { needsHuman: voided.join(' · '), needsHumanAt: FieldValue.serverTimestamp() },
+                { merge: true });
+              log('hold', `${R.tag} needs a human — nothing resolved · ${voided.join(' · ')}`);
             }
             continue;
           }
@@ -421,10 +524,13 @@ async function main(){
           acted['key' + i] = true;
           await db.doc(`nights/${NIGHT}/rounds/${rid}`).set({
             seq: Date.now(), state: 'scored', key,
+            voided: voided.length ? voided : FieldValue.delete(),
             needsHuman: FieldValue.delete(),
             closedAt: FieldValue.serverTimestamp()
           }, { merge: true });
           log('key', `${R.tag} scored — ${why.join(' · ')}`);
+          if(voided.length)
+            log('void', `${R.tag} — ${voided.length} question(s) voided, nobody gains or loses: ${voided.join(' · ')}`);
           /* The key is worthless to a player until it is a number on their
              screen. Score immediately, and never let a scoring failure
              undo a key that is already correct and posted. */
@@ -487,4 +593,9 @@ async function main(){
   log('done', 'ran out of time — the window closed');
 }
 
-main().catch(e => die((e && e.stack) || String(e)));
+/* Run as a program; import as a module. The gate and the shadow test need
+   to exercise resolveRound() itself rather than a copy of its logic — a
+   test that reimplements the thing it is testing is One Fact, Many Copies
+   wearing a lab coat. */
+if(require.main === module) main().catch(e => die((e && e.stack) || String(e)));
+else module.exports = { resolveRound, earlyAnswers, loadShared };

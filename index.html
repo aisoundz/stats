@@ -5426,7 +5426,7 @@ function startPredict(){
   }
   saveGateEmail();
   try{ rememberProfile(); }catch(_){}
-  if(S.mode==="live") joinNight();
+  if(S.mode==="live") ensureJoined();   // B-62: retries; joinNight() alone gave up after 6s
   buildPred();go('predict');
   try{ loadInactives(); }catch(e){}
 }
@@ -7944,6 +7944,64 @@ async function joinNight(){
   if(ok){ startRoomPolling(); startHostedWatch(); }
   return ok;
 }
+
+/* ============ B-62, GN10 — THE HALF OF B-61 THAT WAS STILL MISSING ===
+   B-61 bounded the boot race at six seconds and then gave up FOREVER, and
+   the one caller that matters — `if(S.mode==="live") joinNight();` at page
+   load — never looked at the result. Nothing retried.
+
+   Six seconds is generous on a laptop on wifi and tight on a phone on
+   cellular, which is the device every player actually uses: IndexedDB
+   restore plus an anonymous sign-in round trip on a cold radio. Miss it and
+   the app looks perfectly healthy — SB.state flips to 'on', the room bar
+   says connected — while nightId stays null all night. Answers queue
+   forever and rounds never open. That is exactly what players reported
+   after GN9, and it is why they reported BOTH symptoms at once: one cause.
+
+   The bounded wait was the right instinct aimed at the wrong question. The
+   question is not "has the backend booted" but "am I in the room", and
+   SB.seated() answers that directly — enabled && nightId && meRef, which is
+   false in precisely the failure state. So: keep asking, backing off, until
+   the answer is yes. A phone that loses signal in the third quarter then
+   recovers on its own instead of waiting to be noticed.
+
+   Bounded by S.mode==='live' rather than by attempts: retrying is only
+   correct while there is a night to be in. */
+var JOIN_RETRY_T = null, JOIN_TRIES = 0;
+function joinedNow(){
+  try{ return !!(window.SB && SB.seated && SB.seated()); }catch(_){ return false; }
+}
+function ensureJoined(){
+  if(joinedNow()){ JOIN_TRIES = 0; return; }
+  if(JOIN_RETRY_T) return;                 // one chain, however many callers
+  var schedule = function(){
+    JOIN_RETRY_T = null;
+    if(joinedNow() || S.mode !== 'live'){ JOIN_TRIES = 0; return; }
+    /* 2s · 4s · 8s · 16s · 30s, then every 30s. joinNight() itself may sit
+       for up to 6s inside each attempt, so this is gentler than it reads. */
+    var wait = Math.min(30000, 2000 * Math.pow(2, Math.min(JOIN_TRIES, 4)));
+    JOIN_RETRY_T = setTimeout(go, wait);
+  };
+  var go = function(){
+    JOIN_RETRY_T = null;
+    if(joinedNow() || S.mode !== 'live'){ JOIN_TRIES = 0; return; }
+    JOIN_TRIES++;
+    try{
+      joinNight().then(function(ok){
+        if(ok && joinedNow()){ JOIN_TRIES = 0; return; }
+        schedule();
+      }).catch(function(){ schedule(); });
+    }catch(_){ schedule(); }
+  };
+  go();                                    // first attempt immediately
+}
+try{ window.ensureJoined = ensureJoined; }catch(_){}
+/* A phone that was locked through a quarter break comes back here. */
+try{
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden && S && S.mode === 'live') ensureJoined();
+  });
+}catch(_){}
 
 /* ============ RECONNECT, ON PURPOSE ==================================
    B-59, GN8. The actual fix for a dead-but-quiet listener tonight was
@@ -11506,7 +11564,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-15-qlead-fixes.110';
+const STATS_BUILD='2026-08-15-joinretry.111';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
