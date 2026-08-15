@@ -39,6 +39,25 @@ python3 -c "import json,sys; json.load(open('$KEY'))" 2>/dev/null \
 cd "$REPO"
 node -e "require('firebase-admin')" || { echo "FATAL: firebase-admin will not load"; exit 1; }
 
+# --- publish the plan if nobody has ----------------------------------
+# host/run.js refuses to start without it, and that refusal is the feature.
+# publish.js reads the bank out of admin.html rather than carrying its own
+# copy, and it will NOT overwrite a plan the Control Room already wrote —
+# that one may contain host edits living in a browser's localStorage that
+# nothing here can see. So: publish only into silence.
+export FIREBASE_SERVICE_ACCOUNT="$(cat "$KEY")"
+export NIGHT_ID ESPN_EVENT RUN_MINUTES
+if [ "${SKIP_PUBLISH:-0}" != "1" ]; then
+  echo "--- plan ---"
+  node host/publish.js 2>&1 | tail -8 || {
+    echo
+    echo "Publish did not succeed. If it says a plan already exists, that is fine —"
+    echo "the Control Room's version wins. Re-run with SKIP_PUBLISH=1 to go anyway."
+    exit 1
+  }
+  echo
+fi
+
 LOG="$LOGDIR/$NIGHT_ID.log"
 echo "night   : $NIGHT_ID"
 echo "event   : $ESPN_EVENT"
@@ -47,9 +66,6 @@ echo "log     : $LOG"
 echo
 
 # --- launch, detached so an SSH drop cannot kill it -------------------
-export FIREBASE_SERVICE_ACCOUNT="$(cat "$KEY")"
-export NIGHT_ID ESPN_EVENT RUN_MINUTES
-
 setsid nohup node host/run.js >> "$LOG" 2>&1 < /dev/null &
 echo $! > "$PIDFILE"
 
