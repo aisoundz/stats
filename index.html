@@ -6713,7 +6713,21 @@ function settleFromFeed(){
     var winNames=[win.name, win.ab];
     try{ winNames.push((win.ab===GAME.homeAbbr)?GAME.homeName:GAME.awayName); }catch(_){}
     try{ winNames.push((win.ab===GAME.homeAbbr)?GAME.homeNick:GAME.awayNick); }catch(_){}
-    truth.winner = (function(){ try{ return (win.ab===GAME.homeAbbr)?GAME.homeName:GAME.awayName; }catch(_){ return win.name; } })();
+    /* "Not home" must not be assumed to mean "away". The feed's abbreviation
+       and GAME's are two independently maintained copies of one fact, and
+       this line used to resolve a mismatch by silently naming the OTHER
+       team as the winner — of a pick worth 100 points, the single line
+       every player in the room has an opinion about. An ESPN abbreviation
+       change or one typo in a night config was all it would have taken.
+       Match either side explicitly; if neither matches, the feed is the one
+       that watched the game, so use its name rather than guessing. */
+    truth.winner = (function(){
+      try{
+        if(win.ab===GAME.homeAbbr) return GAME.homeName;
+        if(win.ab===GAME.awayAbbr) return GAME.awayName;
+        return win.name;
+      }catch(_){ return win.name; }
+    })();
     tied.winner  = winNames.filter(Boolean).map(String);
     var cfg=sportCfg().box, KEY={pts:cfg.pts,reb:cfg.reb,ast:cfg.ast,stl:cfg.stl,blk:cfg.blk};
     Object.keys(KEY).forEach(function(id){
@@ -8964,7 +8978,7 @@ function ciRecapCard(){
     else if(String(picked)===String(q.answer)) status = '<span style="color:var(--teal2,#28e0d0)">✅ you had it</span>';
     else status = '<span style="color:#ffc54d">✕ you had '+esc(ciLabel(q,picked))+'</span>';
     return '<div style="padding:9px 0;border-top:1px solid var(--line)">'
-      + '<div style="font-size:13px;color:var(--ink)">'+esc(q.prompt||'')+'</div>'
+      + '<div style="font-size:14px;color:var(--ink)">'+esc(q.prompt||'')+'</div>'
       + '<div style="font-size:12px;margin-top:3px">Answer: <b>'+esc(ciLabel(q,q.answer))+'</b> &middot; '+status+'</div>'
       + '</div>';
   }).join('');

@@ -222,7 +222,8 @@
     </div>
     <div class="wrap">
       <nav>
-        <button data-tab="write" class="on">1 · Write</button>
+        <button data-tab="tonight" class="on">▶ Tonight</button>
+        <button data-tab="write">1 · Write</button>
         <button data-tab="run">2 · Run</button>
         <button data-tab="grade">3 · Grade</button>
         <button data-tab="room">4 · Room</button>
@@ -233,8 +234,28 @@
 
   <div class="wrap">
 
+    <!-- ---------- TAB 0: TONIGHT ----------
+         The only screen worth opening while a game is on. Everything here
+         already existed somewhere across tabs 2, 3 and 4 — the problem was
+         never that the Control Room lacked information, it was that a
+         quarter break is about two minutes long and you are also watching
+         a television. Three tabs to answer "is it working" is three tabs
+         too many.
+
+         It answers exactly two questions, in this order:
+           1. Is the robot alive, and is it saying the right things?
+           2. If it is not, what do I press?
+
+         Nothing here is new logic. The buttons call the same pushRound()
+         and closeQuarter() the RUN tab does, because a second way to push
+         a round is a second answer to "what did the room see" — which is
+         B2, the bug that cost a player his whole night. -->
+    <section id="t-tonight">
+      <div id="tonightBody"><p class="sub">Loading…</p></div>
+    </section>
+
     <!-- ---------- TAB 1: WRITE ---------- -->
-    <section id="t-write">
+    <section id="t-write" class="hide">
       <div class="card">
         <h3>Tonight's game</h3>
         <p class="sub">Everything below is written into this room. Players who opened a different night can't see it.</p>
@@ -492,7 +513,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-13-admin.45-score-copy';
+window.ADMIN_BUILD='2026-08-13-admin.46-tonight';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -1426,7 +1447,8 @@ function initUI(){
   document.querySelectorAll('nav button').forEach(b=>{
     b.onclick = () => {
       document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on', x===b));
-      ['write','run','grade','room','auto'].forEach(t=>$('t-'+t).classList.toggle('hide', t!==b.dataset.tab));
+      ['tonight','write','run','grade','room','auto'].forEach(t=>$('t-'+t).classList.toggle('hide', t!==b.dataset.tab));
+      if(b.dataset.tab==='tonight'){ watchTonight(); renderTonight(); }
       if(b.dataset.tab==='run'){ renderRun(); loadScore(); }
       if(b.dataset.tab==='room') refreshRoom();
       if(b.dataset.tab==='grade'){ fillGradeSel(); watchGradeSubs(); renderGrade(); }
@@ -1665,6 +1687,136 @@ function cleanRound(i){
   };
 }
 
+/* ---------------- TAB 0: TONIGHT ----------------
+   Two questions, in order: is the robot alive, and if not what do I press.
+
+   THE HEARTBEAT IS THE POINT. host/run.js has written
+   nights/{id}.host = {auto, where, id, at} on every twenty-second tick
+   since it shipped, and until now NOTHING READ IT. A room whose host has
+   died looked exactly like a room between quarters — you found out when a
+   quarter break came and went in silence. A stale heartbeat is the single
+   most useful fact in this product and it was already in the database. */
+let tonightDoc = null, tonightUnsub = null, tonightTimer = null, tonightSeats = null;
+
+function watchTonight(){
+  if(!FB || !user) return;
+  /* Never stack listeners — the same rule watchRounds() learned. */
+  if(tonightUnsub){ try{ tonightUnsub(); }catch(e){} tonightUnsub = null; }
+  const { F, db } = FB;
+  try{
+    tonightUnsub = F.onSnapshot(F.doc(db,'nights',night), s=>{
+      tonightDoc = (s && s.exists && s.exists()) ? s.data() : null;
+      renderTonight();
+    }, ()=>{});
+  }catch(e){}
+  /* Re-render on a timer as well as on change: "seen 40s ago" has to keep
+     counting up when nothing is arriving, because nothing arriving is
+     exactly the case this screen exists to show. */
+  if(tonightTimer) clearInterval(tonightTimer);
+  tonightTimer = setInterval(()=>{ tonightSeatCount(); renderTonight(); }, 15000);
+  tonightSeatCount();
+}
+
+async function tonightSeatCount(){
+  if(!FB || !user) return;
+  try{
+    const { F, db } = FB;
+    const c = await F.getCountFromServer(F.collection(db,'nights',night,'players'));
+    tonightSeats = c.data().count;
+  }catch(e){ tonightSeats = null; }
+}
+
+function tonightAgo(ms){
+  if(!isFinite(ms) || ms < 0) return '';
+  const s = Math.round(ms/1000);
+  if(s < 90) return s + 's ago';
+  return Math.round(s/60) + 'm ago';
+}
+
+function renderTonight(){
+  const el = $('tonightBody'); if(!el) return;
+  let html = '';
+  try{
+    const cfg = nightCfg(night);
+    const h   = (tonightDoc && tonightDoc.host)  || null;
+    const sc  = (tonightDoc && tonightDoc.score) || null;
+
+    /* ---- 1. is the robot alive ---------------------------------- */
+    const at   = (h && h.at && h.at.toMillis) ? h.at.toMillis() : 0;
+    const age  = at ? (Date.now() - at) : Infinity;
+    const live = age < 60000;                 // it ticks every 20s
+    const ever = !!at;
+    const dot  = !ever ? 'var(--dim)' : (live ? '#3ddc97' : '#ff6b6b');
+    const word = !ever ? 'NOT STARTED' : (live ? 'LIVE' : 'NOT RESPONDING');
+
+    html += '<div class="card"><div class="row" style="justify-content:space-between;align-items:baseline">'
+          + '<h3 style="margin:0">The robot host</h3>'
+          + '<span style="font-weight:800;font-size:12px;letter-spacing:.08em;color:'+dot+'">● '+word
+          + (ever ? ' · seen ' + esc(tonightAgo(age)) : '') + '</span></div>';
+
+    if(!ever){
+      html += '<p class="sub">Nothing has checked in for this night yet. That is normal before you start the runner, '
+            + 'and it is the thing to look at first if a quarter break passes in silence.</p>';
+    } else if(!live){
+      html += '<p class="sub" style="color:#ff6b6b"><b>The runner has stopped writing.</b> Push and key the rounds by hand '
+            + 'from the buttons below — every one of them still works, and nothing a player has done is lost.</p>';
+    }
+
+    html += '<div style="font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:8px">'
+          + (sc && sc.away != null ? esc(String(sc.away)) + ' — ' + esc(String(sc.home)) : '—')
+          + '</div><p class="sub" style="margin-top:2px">'
+          + (sc && sc.period ? esc(String(sc.period)) : 'no score posted yet')
+          + ' · ' + (tonightSeats == null ? '?' : tonightSeats) + ' in the room</p></div>';
+
+    /* ---- 2. anything waiting on a person -------------------------- */
+    const held = Object.values(liveDocs || {}).filter(d => d && d.needsHuman);
+    if(held.length){
+      html += '<div class="card" style="border-color:#ffb020">'
+            + '<h3 style="color:#ffb020">' + held.length + ' round(s) need you</h3>';
+      held.forEach(d=>{ html += '<p class="sub"><b>' + esc(d.tag || ('r'+d.idx)) + '</b> — ' + esc(String(d.needsHuman)) + '</p>'; });
+      html += '<p class="sub tip">Mark the answers on the GRADE tab, then key the round below. '
+            + 'A question nobody can settle is voided — it pays nobody and penalises nobody.</p></div>';
+    }
+
+    /* ---- 3. the four rounds, and the one button each needs -------- */
+    html += '<div class="card"><h3>The rounds</h3>';
+    (cfg.tags || []).forEach((tag,i)=>{
+      const d    = (liveDocs || {})['r'+i] || null;
+      const subs = subCounts[roundDocId(i)] || 0;
+      let state, colour, btn = '';
+      if(!d){            state = 'not pushed';  colour = 'var(--dim)';
+                         btn = '<button class="mini" data-tnpush="'+i+'">Push it now</button>'; }
+      else if(d.state === 'live'){
+                         state = 'LIVE · ' + subs + ' answered'; colour = '#3ddc97';
+                         btn = '<button class="mini" data-tnkey="'+i+'">Key it now</button>'; }
+      else if(d.state === 'scored'){
+                         state = 'scored'; colour = 'var(--muted)';
+                         if(Array.isArray(d.voided) && d.voided.length) state += ' · ' + d.voided.length + ' voided'; }
+      else {             state = esc(String(d.state || '?')); colour = 'var(--muted)'; }
+      html += '<div class="row" style="justify-content:space-between;padding:8px 0;border-top:1px solid var(--line)">'
+            + '<div><b>' + esc(tag) + '</b> <span style="color:'+colour+';font-size:14px">· ' + state + '</span></div>'
+            + '<div>' + btn + '</div></div>';
+    });
+    html += '<p class="sub tip">These are the same two actions the RUN tab has — one screen, so a quarter break '
+          + 'does not cost you three.</p></div>';
+  }catch(e){
+    html = '<div class="card"><h3>Tonight</h3><p class="sub">This screen could not draw: '
+         + esc((e && e.message) || String(e)) + '. The RUN tab still works.</p></div>';
+  }
+  el.innerHTML = html;
+
+  /* Delegated, and rebound every render on purpose: innerHTML replaces the
+     nodes, so a handler attached to the old ones is gone with them. */
+  el.onclick = async ev => {
+    const push = ev.target.closest('button[data-tnpush]');
+    const key  = ev.target.closest('button[data-tnkey]');
+    try{
+      if(push) await pushRound(+push.dataset.tnpush);
+      else if(key) await closeQuarter(+key.dataset.tnkey);
+    }catch(e){ try{ toast('That did not go through: ' + ((e && e.message) || e)); }catch(_){} }
+  };
+}
+
 /* ---------------- TAB 2: running the night ---------------- */
 let roundsUnsub = null;
 function watchRounds(){
@@ -1683,6 +1835,10 @@ function watchRounds(){
       const open = Object.values(liveDocs).find(d=>d.state==='live');
       if(open && subsWatching !== roundDocId(open.idx)) watchSubs(open.idx);
       renderRun();
+      /* Same data, second reader. TONIGHT shows round state too, and a
+         screen that goes stale the moment a quarter opens is worse than
+         no screen — it tells you the wrong thing confidently. */
+      try{ renderTonight(); }catch(_){}
     }, ()=>{});
   }catch(e){}
 }

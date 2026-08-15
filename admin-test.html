@@ -222,7 +222,8 @@
     </div>
     <div class="wrap">
       <nav>
-        <button data-tab="write" class="on">1 · Write</button>
+        <button data-tab="tonight" class="on">▶ Tonight</button>
+        <button data-tab="write">1 · Write</button>
         <button data-tab="run">2 · Run</button>
         <button data-tab="grade">3 · Grade</button>
         <button data-tab="room">4 · Room</button>
@@ -233,8 +234,28 @@
 
   <div class="wrap">
 
+    <!-- ---------- TAB 0: TONIGHT ----------
+         The only screen worth opening while a game is on. Everything here
+         already existed somewhere across tabs 2, 3 and 4 — the problem was
+         never that the Control Room lacked information, it was that a
+         quarter break is about two minutes long and you are also watching
+         a television. Three tabs to answer "is it working" is three tabs
+         too many.
+
+         It answers exactly two questions, in this order:
+           1. Is the robot alive, and is it saying the right things?
+           2. If it is not, what do I press?
+
+         Nothing here is new logic. The buttons call the same pushRound()
+         and closeQuarter() the RUN tab does, because a second way to push
+         a round is a second answer to "what did the room see" — which is
+         B2, the bug that cost a player his whole night. -->
+    <section id="t-tonight">
+      <div id="tonightBody"><p class="sub">Loading…</p></div>
+    </section>
+
     <!-- ---------- TAB 1: WRITE ---------- -->
-    <section id="t-write">
+    <section id="t-write" class="hide">
       <div class="card">
         <h3>Tonight's game</h3>
         <p class="sub">Everything below is written into this room. Players who opened a different night can't see it.</p>
@@ -492,7 +513,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-13-admin.45-score-copy';
+window.ADMIN_BUILD='2026-08-13-admin.46-tonight';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -548,6 +569,30 @@ const NIGHTS = [
   /* `espn` is new and it is the hinge for the autonomous host: it is the
      event id the resolvers read. A night without one can still be run by
      hand, it just cannot be run by the robot. */
+  /* GAME NIGHT #10 — MINNESOTA AT LAS VEGAS, Saturday, set up with real
+     lead time instead of fifteen rushed minutes — the whole point of doing
+     it this way after GN9. Tip: 8:00 ET / 5:00 PT, CBS/Paramount+. Verified
+     against the scoreboard feed for 2026-08-15: event 401857147, Michelob
+     ULTRA Arena. Las Vegas are home, drawn on the right.
+     Question bank for all four quarters is written and ready BEFORE
+     publish — see the RUN tab draft — specifically so "Publish tonight's
+     plan" never again reports 0 questions the way it did for GN9. */
+  { id:'gn10-2026-08-15-min-lv', label:'Game Night #10 — Lynx @ Aces (Sat Aug 15, 8:00 ET · CBS)',
+    away:'MIN', home:'LV', espn:'401857147',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[10,20,30,40] },
+  /* GAME NIGHT #9 — PORTLAND AT SEATTLE, same Friday as #8, much later
+     tip: 10:00 ET / 7:00 PT — Seattle are a Pacific team, so "7" is the
+     number that actually got said out loud tonight. Verified against the
+     scoreboard feed for 2026-08-14: event 401857144, ION, Climate Pledge
+     Arena. Set up in a hurry, minutes before tip — if anything here reads
+     off, check it against the scoreboard before the first round opens. */
+  { id:'gn9-2026-08-14-pdx-sea', label:'Game Night #9 — Fire @ Storm (Fri Aug 14, 10:00 ET · ION)',
+    away:'PDX', home:'SEA', espn:'401857144',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[10,20,30,40] },
   /* GAME NIGHT #8 — DALLAS AT INDIANA, and note the tip: 7:30 ET, not 8:00.
      The last two nights were 8:00 and that is exactly the kind of fact that
      gets copied forward by hand. Verified against the scoreboard feed for
@@ -611,6 +656,42 @@ const NIGHTS = [
 // simulated results for a fake game, not claims about the real one. The host
 // marks the real answer at the break, then pushes.
 const BANK = {
+  /* GAME NIGHT #10 — MINNESOTA AT LAS VEGAS. Set up with real lead time,
+     the whole point of doing it this way after GN9: this is GN8's bank
+     (all sixteen lines resolved correctly on a real night — eleven at
+     HIGH confidence, one at MED, and the MED one was right too), with
+     only the two team words moved: Lynx away, Aces home. Every question
+     is structurally team-agnostic ("both teams combined", "either team")
+     except the one line that names teams directly, updated below. This is
+     deliberately not new content — a bank that has survived a real night
+     is worth more than a fresh idea that has not, and tonight is for
+     making sure "Publish tonight's plan" never again reports 0 questions. */
+  'gn10-2026-08-15-min-lv': [
+    [
+      { t: 'The first points of the game — how did they come?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throws'], r:'firstScoreKind' },
+      { t: 'Which team made the first three-pointer of the game?', o: ['Aces', 'Lynx', 'Neither made one in Q1'], r:'firstThreeTeam' },
+      { t: 'Threes made in Q1, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'threesBand' },
+      { t: 'The team that scored first — were they still ahead at the Q1 buzzer?', o: ['Yes', 'No', 'It was tied'], r:'firstScorerStillAhead' }
+    ],
+    [
+      { t: 'In Q2, both teams combined — were there more made field goals or made free throws?', o: ['Made field goals', 'Made free throws', 'Equal'], r:'fgVsFt' },
+      { t: 'How many times did the lead change hands in Q2? (a tie is not a lead change)', o: ['None', 'Once', 'Twice', 'Three or more'], r:'leadChanges' },
+      { t: 'Did either team score 10 or more unanswered points at any stage of Q2?', o: ['Yes', 'No'], r:'tenUnanswered' },
+      { t: 'The last shot attempt before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'], r:'lastShotOfPeriod' }
+    ],
+    [
+      { t: 'Which team scored the first points after halftime?', o: ['Aces', 'Lynx'], r:'firstScoreTeam' },
+      { t: '24-second shot-clock violations tonight, both teams combined, Q1 through Q3 — how many?', o: ['None', '1', '2', '3 or more'], r:'shotClockCount' },
+      { t: 'In Q3, both teams combined — were there more threes made or turnovers?', o: ['Threes made', 'Turnovers', 'Equal'], r:'threesVsTurnovers' },
+      { t: 'Through three quarters, how many players have reached double figures in points, both teams combined?', o: ['None or one', 'Two', 'Three', 'Four or more'], r:'doubleFiguresBand' }
+    ],
+    [
+      { t: 'In the last two minutes, both teams combined — were there more free-throw attempts or field-goal attempts?', o: ['Free-throw attempts', 'Field-goal attempts', 'Equal'], r:'lastTwoFtVsFg' },
+      { t: 'Did any player on either team foul out?', o: ['Yes', 'No'], r:'anyFoulOut' },
+      { t: 'The last basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'], r:'lastBasketWorth' },
+      { t: 'The team that led at halftime — did they win the game?', o: ['Yes', 'No', 'It was tied at half'], r:'halftimeLeaderWon' }
+    ]
+  ],
   /* Game #7 — Tempo @ Wings. The Game #6 spine, re-pointed, with one rule
      applied that was not applied before: EVERY LINE HERE HAS A RESOLVER.
      See RESOLVERS below — each question carries an `r` key naming the
@@ -1366,7 +1447,8 @@ function initUI(){
   document.querySelectorAll('nav button').forEach(b=>{
     b.onclick = () => {
       document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on', x===b));
-      ['write','run','grade','room','auto'].forEach(t=>$('t-'+t).classList.toggle('hide', t!==b.dataset.tab));
+      ['tonight','write','run','grade','room','auto'].forEach(t=>$('t-'+t).classList.toggle('hide', t!==b.dataset.tab));
+      if(b.dataset.tab==='tonight'){ watchTonight(); renderTonight(); }
       if(b.dataset.tab==='run'){ renderRun(); loadScore(); }
       if(b.dataset.tab==='room') refreshRoom();
       if(b.dataset.tab==='grade'){ fillGradeSel(); watchGradeSubs(); renderGrade(); }
@@ -1605,6 +1687,136 @@ function cleanRound(i){
   };
 }
 
+/* ---------------- TAB 0: TONIGHT ----------------
+   Two questions, in order: is the robot alive, and if not what do I press.
+
+   THE HEARTBEAT IS THE POINT. host/run.js has written
+   nights/{id}.host = {auto, where, id, at} on every twenty-second tick
+   since it shipped, and until now NOTHING READ IT. A room whose host has
+   died looked exactly like a room between quarters — you found out when a
+   quarter break came and went in silence. A stale heartbeat is the single
+   most useful fact in this product and it was already in the database. */
+let tonightDoc = null, tonightUnsub = null, tonightTimer = null, tonightSeats = null;
+
+function watchTonight(){
+  if(!FB || !user) return;
+  /* Never stack listeners — the same rule watchRounds() learned. */
+  if(tonightUnsub){ try{ tonightUnsub(); }catch(e){} tonightUnsub = null; }
+  const { F, db } = FB;
+  try{
+    tonightUnsub = F.onSnapshot(F.doc(db,'nights',night), s=>{
+      tonightDoc = (s && s.exists && s.exists()) ? s.data() : null;
+      renderTonight();
+    }, ()=>{});
+  }catch(e){}
+  /* Re-render on a timer as well as on change: "seen 40s ago" has to keep
+     counting up when nothing is arriving, because nothing arriving is
+     exactly the case this screen exists to show. */
+  if(tonightTimer) clearInterval(tonightTimer);
+  tonightTimer = setInterval(()=>{ tonightSeatCount(); renderTonight(); }, 15000);
+  tonightSeatCount();
+}
+
+async function tonightSeatCount(){
+  if(!FB || !user) return;
+  try{
+    const { F, db } = FB;
+    const c = await F.getCountFromServer(F.collection(db,'nights',night,'players'));
+    tonightSeats = c.data().count;
+  }catch(e){ tonightSeats = null; }
+}
+
+function tonightAgo(ms){
+  if(!isFinite(ms) || ms < 0) return '';
+  const s = Math.round(ms/1000);
+  if(s < 90) return s + 's ago';
+  return Math.round(s/60) + 'm ago';
+}
+
+function renderTonight(){
+  const el = $('tonightBody'); if(!el) return;
+  let html = '';
+  try{
+    const cfg = nightCfg(night);
+    const h   = (tonightDoc && tonightDoc.host)  || null;
+    const sc  = (tonightDoc && tonightDoc.score) || null;
+
+    /* ---- 1. is the robot alive ---------------------------------- */
+    const at   = (h && h.at && h.at.toMillis) ? h.at.toMillis() : 0;
+    const age  = at ? (Date.now() - at) : Infinity;
+    const live = age < 60000;                 // it ticks every 20s
+    const ever = !!at;
+    const dot  = !ever ? 'var(--dim)' : (live ? '#3ddc97' : '#ff6b6b');
+    const word = !ever ? 'NOT STARTED' : (live ? 'LIVE' : 'NOT RESPONDING');
+
+    html += '<div class="card"><div class="row" style="justify-content:space-between;align-items:baseline">'
+          + '<h3 style="margin:0">The robot host</h3>'
+          + '<span style="font-weight:800;font-size:12px;letter-spacing:.08em;color:'+dot+'">● '+word
+          + (ever ? ' · seen ' + esc(tonightAgo(age)) : '') + '</span></div>';
+
+    if(!ever){
+      html += '<p class="sub">Nothing has checked in for this night yet. That is normal before you start the runner, '
+            + 'and it is the thing to look at first if a quarter break passes in silence.</p>';
+    } else if(!live){
+      html += '<p class="sub" style="color:#ff6b6b"><b>The runner has stopped writing.</b> Push and key the rounds by hand '
+            + 'from the buttons below — every one of them still works, and nothing a player has done is lost.</p>';
+    }
+
+    html += '<div style="font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:8px">'
+          + (sc && sc.away != null ? esc(String(sc.away)) + ' — ' + esc(String(sc.home)) : '—')
+          + '</div><p class="sub" style="margin-top:2px">'
+          + (sc && sc.period ? esc(String(sc.period)) : 'no score posted yet')
+          + ' · ' + (tonightSeats == null ? '?' : tonightSeats) + ' in the room</p></div>';
+
+    /* ---- 2. anything waiting on a person -------------------------- */
+    const held = Object.values(liveDocs || {}).filter(d => d && d.needsHuman);
+    if(held.length){
+      html += '<div class="card" style="border-color:#ffb020">'
+            + '<h3 style="color:#ffb020">' + held.length + ' round(s) need you</h3>';
+      held.forEach(d=>{ html += '<p class="sub"><b>' + esc(d.tag || ('r'+d.idx)) + '</b> — ' + esc(String(d.needsHuman)) + '</p>'; });
+      html += '<p class="sub tip">Mark the answers on the GRADE tab, then key the round below. '
+            + 'A question nobody can settle is voided — it pays nobody and penalises nobody.</p></div>';
+    }
+
+    /* ---- 3. the four rounds, and the one button each needs -------- */
+    html += '<div class="card"><h3>The rounds</h3>';
+    (cfg.tags || []).forEach((tag,i)=>{
+      const d    = (liveDocs || {})['r'+i] || null;
+      const subs = subCounts[roundDocId(i)] || 0;
+      let state, colour, btn = '';
+      if(!d){            state = 'not pushed';  colour = 'var(--dim)';
+                         btn = '<button class="mini" data-tnpush="'+i+'">Push it now</button>'; }
+      else if(d.state === 'live'){
+                         state = 'LIVE · ' + subs + ' answered'; colour = '#3ddc97';
+                         btn = '<button class="mini" data-tnkey="'+i+'">Key it now</button>'; }
+      else if(d.state === 'scored'){
+                         state = 'scored'; colour = 'var(--muted)';
+                         if(Array.isArray(d.voided) && d.voided.length) state += ' · ' + d.voided.length + ' voided'; }
+      else {             state = esc(String(d.state || '?')); colour = 'var(--muted)'; }
+      html += '<div class="row" style="justify-content:space-between;padding:8px 0;border-top:1px solid var(--line)">'
+            + '<div><b>' + esc(tag) + '</b> <span style="color:'+colour+';font-size:14px">· ' + state + '</span></div>'
+            + '<div>' + btn + '</div></div>';
+    });
+    html += '<p class="sub tip">These are the same two actions the RUN tab has — one screen, so a quarter break '
+          + 'does not cost you three.</p></div>';
+  }catch(e){
+    html = '<div class="card"><h3>Tonight</h3><p class="sub">This screen could not draw: '
+         + esc((e && e.message) || String(e)) + '. The RUN tab still works.</p></div>';
+  }
+  el.innerHTML = html;
+
+  /* Delegated, and rebound every render on purpose: innerHTML replaces the
+     nodes, so a handler attached to the old ones is gone with them. */
+  el.onclick = async ev => {
+    const push = ev.target.closest('button[data-tnpush]');
+    const key  = ev.target.closest('button[data-tnkey]');
+    try{
+      if(push) await pushRound(+push.dataset.tnpush);
+      else if(key) await closeQuarter(+key.dataset.tnkey);
+    }catch(e){ try{ toast('That did not go through: ' + ((e && e.message) || e)); }catch(_){} }
+  };
+}
+
 /* ---------------- TAB 2: running the night ---------------- */
 let roundsUnsub = null;
 function watchRounds(){
@@ -1623,6 +1835,10 @@ function watchRounds(){
       const open = Object.values(liveDocs).find(d=>d.state==='live');
       if(open && subsWatching !== roundDocId(open.idx)) watchSubs(open.idx);
       renderRun();
+      /* Same data, second reader. TONIGHT shows round state too, and a
+         screen that goes stale the moment a quarter opens is worse than
+         no screen — it tells you the wrong thing confidently. */
+      try{ renderTonight(); }catch(_){}
     }, ()=>{});
   }catch(e){}
 }
@@ -2753,6 +2969,25 @@ async function publishPlan(){
       })
     };
   });
+  /* HARD STOP \u2014 GN9, 2026-08-14. Rushed setup published "4 rounds, 0
+     questions" as a routine status line, the runner faithfully opened
+     every quarter with an empty `questions` array exactly as told, and
+     three real players sat looking at a live round with nothing to
+     answer. That was working as designed: publishPlan() only ever
+     validated individual questions, never noticed a round with NONE.
+     A round the runner opens and scores points for, with nothing in it
+     to earn those points from, is strictly worse than not opening it \u2014
+     it reads as broken rather than as absent. So this one is not a
+     warning the host can miss in a wall of green text; it refuses to
+     write the plan at all until every round has at least one question. */
+  var empty = [];
+  rounds.forEach(function(r,i){ if(!r.qs.length) empty.push(cfg.tags[i]); });
+  if(empty.length){
+    hostSay('err', 'Publish blocked \u2014 ' + empty.join(', ') + ' ' + (empty.length===1?'has':'have')
+      + ' zero questions written. The runner will not invent them; write at least one question per round, then publish again.');
+    toast('Publish blocked: ' + empty.join(', ') + ' ' + (empty.length===1?'has':'have') + ' no questions.');
+    return;
+  }
   var bad = [];
   rounds.forEach(function(r,i){ r.qs.forEach(function(q,x){
     if(!q.t) bad.push(cfg.tags[i]+' Q'+(x+1)+' has no question text');
@@ -4230,6 +4465,14 @@ function lockMsFor(kind){
         '<span class="chip" id="ciState">off</span>'+
         '<span class="sub" style="flex:1 1 200px;min-width:160px">Live in-game questions, resolved off the play-by-play — one at every media timeout, plus the moments in between. Isolated from the main score; needs Auto live score running.</span>'+
       '</div>'+
+      /* GN9, 2026-08-14. Rounds and score ran fine all night off the
+         off-laptop GitHub Actions runner (host/run.js) with nobody at a
+         laptop — but Call It got ZERO questions the entire game, because
+         Call It only ever runs from THIS button, in THIS tab, and nobody
+         knew that going in. run.js reads the callit collection; it has
+         never written to it. Say this loudly, right where the button is,
+         so the next rushed setup doesn't find out the hard way. */
+      '<div class="sub" style="margin-top:6px;color:#ffc54d">&#9888;&#65039; Call It only runs while this Control Room tab is open and this button is ON. The off-laptop runner (GitHub Actions) handles quarter rounds and the live score on its own, but it does NOT generate Call It questions — if you close this tab, Call It stops for the night no matter what the runner is doing.</div>'+
       '<div id="espnOut" class="sub" style="margin-top:12px"></div>';
     host.insertBefore(card, host.firstChild);
     document.getElementById('espnPull').onclick=ESPN.pull;

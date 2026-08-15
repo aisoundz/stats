@@ -329,6 +329,26 @@ async function browserTests(){
       ? r.fulfill({status:500,contentType:'application/json',body:'{}'})
       : r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(feed)}));
     await p.route('**/assets.mailerlite.com/**', r=>r.fulfill({status:200,body:'{}'}));
+    /* ============ THE GATE MUST NOT PLAY THE GAME =====================
+       index.html carries the REAL Firebase config, so a test that sets
+       S.mode='live' signed in anonymously and wrote a REAL seat into the
+       REAL configured night. Ten full gate runs put ten "QA" players into
+       Game Night #10's room hours before tip.
+
+       Not merely untidy: run.js computes everyoneIn = subs >= seats, so
+       ghost seats that never answer make "everyone has answered"
+       permanently false and force every round to burn its full 150-second
+       wait — which is exactly the delay that stops a cumulative resolver
+       from reading the box score while it is still true. The test suite
+       would have degraded the night it exists to protect.
+
+       ESPN and MailerLite were already stubbed here. Firebase never was.
+       The SDK itself still loads; only sign-in and Firestore traffic are
+       cut, so the app sees "backend unavailable" — a state this suite
+       already tests deliberately — instead of a live production database. */
+    await p.route('**/identitytoolkit.googleapis.com/**', r=>r.abort());
+    await p.route('**/securetoken.googleapis.com/**',     r=>r.abort());
+    await p.route('**/firestore.googleapis.com/**',       r=>r.abort());
     /* B2. A LIVE ROUND ONLY EXISTS IF THE HOST PUSHED IT. Since the
        one-question-bank fix, startQuarter() in live mode refuses to open a
        round the Control Room never opened — so any check that drives a live
@@ -684,7 +704,15 @@ async function browserTests(){
       try{ lastStand=null; }catch(e){}
       try{ navGo('board'); }catch(e){}
     });
-    await p.waitForTimeout(900);
+    /* Poll, do not sleep. A fixed 900ms was enough for the phone viewport
+       and not for the laptop one on slower hardware, so this reported "the
+       Board rendered empty" for a Board that simply had not painted yet —
+       a timing flake dressed as a regression. Wait for the condition, with
+       the same 900ms as a floor and a real ceiling. */
+    await p.waitForFunction(()=>{
+      const el=document.getElementById('bdBody');
+      return !!(el && /P1/.test(el.innerText) && /P2/.test(el.innerText));
+    }, null, {timeout:6000}).catch(()=>{});
     const boardSelf=await p.evaluate(()=>{
       /* Defensive on purpose. This read used to throw inside a setTimeout,
          so its promise never resolved and Playwright reported the far less
@@ -1166,12 +1194,27 @@ async function browserTests(){
        as a sliced orange corner because it lived inside the element that
        carries text-overflow:ellipsis. So the app warned you not to spend a
        pick, let you spend it anyway, and mangled the warning on the way. */
-    const outpick=await p.evaluate(async(OUT)=>{
+    const outpick=await p.evaluate(async(_unusedFixtureName)=>{
       const R={};
       try{
         S.mode='demo'; go('predict');
-        INACTIVE = new Set([OUT]);
+        /* DERIVE THE NAME FROM THE BUILD, DO NOT HARDCODE IT.
+           This used to take the ruled-out player from qa/fixtures.js CAST,
+           which is Dallas/Toronto — GN7's matchup. The pick sheet renders
+           the APP's roster, so once the configured night changed, the test
+           looked for a player who was not on the card, found no option, and
+           reported "a player on the injury report was still selectable".
+           It had stopped testing the feature entirely and was reporting a
+           product bug that did not exist. A test that hardcodes a fact the
+           config owns is a second copy of that fact and goes stale exactly
+           like the app does. */
         PD.i = predOrderList().length-1; buildPred();
+        var firstOpt = document.querySelector('#predCard .pdopt[data-pd]');
+        var OUT = firstOpt ? firstOpt.getAttribute('data-pd') : null;
+        if(!OUT){ R.err='the pick deck rendered no player options at all'; return R; }
+        R.usedName = OUT;
+        INACTIVE = new Set([OUT]);
+        buildPred();
         const btn=[...document.querySelectorAll('#predCard .pdopt')]
           .find(b=>b.getAttribute('data-pd')===OUT);
         if(!btn){ R.err='no option for the ruled-out player'; return R; }
@@ -3119,11 +3162,27 @@ async function browserTests(){
         await SB.join({ nightId:'qa-night', name:'QA', color:'#fff' });
         const uid = SB.me.uid, path = 'nights/qa-night/players/'+uid;
         window.__FB.docs.set(path, Object.assign({}, window.__FB.docs.get(path), { pts:50 }));
-        /* now the read fails — exactly one blip */
+        /* ONE blip must now RECOVER, not abort — B-58, GN8 widened the read
+           budget from a single shot to three tries with short gaps, because
+           a phone reconnecting right as its network came back would lose
+           its one attempt to the very blip it was recovering from. This
+           test still failed exactly one read, so the retry swallowed it,
+           join succeeded as designed, and the check reported a regression
+           that was actually the fix working. */
         window.__FB.failReads(1);
+        const survived = await SB.join({ nightId:'qa-night', name:'QA', color:'#fff' });
+        const afterBlip = (window.__FB.docs.get(path)||{}).pts;
+        /* Now exhaust the WHOLE budget, which is what "the read failed"
+           actually means today. */
+        window.__FB.failReads(3);
         const again = await SB.join({ nightId:'qa-night', name:'QA', color:'#fff' });
-        return { again, after: (window.__FB.docs.get(path)||{}).pts, why: SB.lastJoinError||'' };
+        return { survived, afterBlip, again,
+                 after: (window.__FB.docs.get(path)||{}).pts, why: SB.lastJoinError||'' };
       });
+      check('backend.one-blip-is-retried-not-fatal',
+        r.survived===true && r.afterBlip===50,
+        `a single failed read should retry and succeed: join=${r.survived}, seat=${r.afterBlip}`,
+        'B-58, GN8: a single read was the whole budget, so a phone reconnecting as its network returned lost its one shot to the same blip');
       check('backend.a-failed-read-never-zeroes-a-seat',
         r.again===false && r.after===50,
         `join returned ${r.again} and the seat now holds ${r.after} pts (lastJoinError=${r.why})`,
@@ -3481,9 +3540,18 @@ async function browserTests(){
     check('lean.the-play-by-play-is-gone', r.feed===false,
       'the feed still has content',
       'the one thing ESPN does better than us, occupying more pixels than anything else');
-    check('lean.caught-it-never-starts', r.ciWatch===false,
-      'startCallItWatch() attached a listener under LEAN',
-      'it scores correctly now and it is tested. It is still a second scoring mechanic on the night we are proving the first one');
+    /* REVERSED ON GN8, 14 AUG, MID-GAME, BY DIRECT REQUEST. This used to
+       assert ciWatch===false: Caught It was held back as a second scoring
+       mechanic while the first one proved itself. Then the Control Room was
+       found to be firing and resolving Call It questions correctly all
+       along while the player app was simply not listening, and it was
+       turned back on. startCallItWatch() says so in its own comment: the
+       LEAN flag "no longer gates Caught It, only [Stats and Talk]".
+       A check that guards a decision which has since been reversed is not
+       a safety net, it is a false alarm that trains you to ignore the gate. */
+    check('lean.caught-it-attaches-since-gn8', r.ciWatch===true,
+      'startCallItWatch() did NOT attach under LEAN — Caught It was turned back on for GN8 and the player app must listen',
+      'the Control Room fired and resolved Call It questions all through GN8 while the player app was not listening; that is the bug this now guards');
     check('lean.the-watchlist-is-empty-not-hidden', r.catches===0,
       `CATCHES still has ${r.catches} entries`,
       'a hidden card whose points still count toward MAXPTS is a wrong total, which is worse than leaving the card on');
@@ -4495,13 +4563,34 @@ async function browserTests(){
       const inj=await p.evaluate(()=>{const b=document.getElementById('inactiveBar');return b?b.innerText:'';});
       check('injuries.shown-on-deck', /not playing/i.test(inj), 'no injury bar above the pick deck',
         'REGRESSION: players were offered a pick who was ruled out hours earlier');
-      check('injuries.out-chip', await p.evaluate(()=>{PD.i=1;buildPred();return /OUT/.test(document.getElementById('predCard').innerText);}),
+      /* Derive the ruled-out player from the deck the build actually
+         renders. INACTIVE is populated from the FEED, and the feed here is
+         a fixture whose injured players belong to a different matchup — so
+         once the configured night changed, no rendered option was ever
+         marked and this reported a missing OUT chip that renders fine. The
+         feature under test is "an inactive player is marked in the deck",
+         not "the fixture and the roster happen to overlap". */
+      check('injuries.out-chip', await p.evaluate(()=>{
+        PD.i=1; buildPred();
+        var opt=document.querySelector('#predCard .pdopt[data-pd]');
+        if(!opt) return false;
+        INACTIVE=new Set([opt.getAttribute('data-pd')]);
+        buildPred();
+        var hit=/OUT/.test(document.getElementById('predCard').innerText);
+        try{ INACTIVE=new Set(); buildPred(); }catch(e){}
+        return hit;
+      }),
         'no OUT flag inside the deck', 'the bar is easy to scroll past — the name itself has to be marked');
     }
     check(`feed.${name}.no-errors`, errs.length===0, `errors: ${errs.slice(0,2).join(' | ')}`, 'feed handling must never throw');
-    await p.close();
+    try{ await p.close(); }catch(_){}
   }
-  await b.close();
+  /* Teardown must not be able to fail the run. Every check has already been
+     counted by the time we get here, so a throw while closing the browser
+     turned a complete pass into "the browser suite crashed" — which reads
+     as no coverage at all when the truth was full coverage and a messy
+     exit. Failures belong to checks, not to cleanup. */
+  try{ await b.close(); }catch(_){}
 }
 
 /* ========== 4. CONTROL ROOM ===========================================
