@@ -5189,6 +5189,30 @@ async function doSignOut(){
   try{ verifySent=''; }catch(_){}
   try{ paintAccountRow(); renderVerify(); checkName(); }catch(_){}
   try{ renderPortal(); }catch(_){}
+  /* ============ B-64: SIGNING OUT IS LEAVING THE GAME ==================
+     This used to clear WHO you are and nothing about WHERE you were. The
+     save survived, S.place stayed 'predict', and three separate symptoms
+     fell out of the one omission:
+
+       · the rail went on nagging a signed-out stranger to "finish" a card
+         they no longer had an account for — on the LANDING page, the one
+         screen someone arriving from the tip-off email actually sees;
+       · a refresh RESUMED that stranger straight into the pick sheet;
+       · and the top bar offered them a rank.
+
+     Same shape as B-63: a boundary that changes everything about a player
+     except their progress. The answer was already in this file — incident
+     #23, "leaving a game needs a reload, not surgery", which is why
+     freshStart() exists and why "This isn't my game — start over" uses it.
+     Signing out IS leaving. Unpicking S by hand here left ghosts, and I
+     wrote two of them before using the door that was already there.
+
+     This does mean signing out costs you an unlocked card. That is
+     already true today (predChoices are local-only; nothing pushes them),
+     and a signed-out stranger stuck inside someone's pick sheet is the
+     worse of the two. Making the card survive properly is a server-side
+     job with its own merge rules — see the backlog. */
+  try{ freshStart(''); return; }catch(_){}
   try{ go('landing'); }catch(_){}
   toast('Signed out. Your points are still on your account when you come back.');
 }
@@ -11639,7 +11663,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-15-practice-leak.114';
+const STATS_BUILD='2026-08-15-signout-leaves.115';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
