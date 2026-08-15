@@ -2809,22 +2809,50 @@ window.STATS_FIREBASE = {
      sits in an owner-only subcollection and is copied in at reveal. A
      player who opens the network tab mid-round finds questions and
      nothing else.                                                      */
+  /* B-59, GN8. Q3 and Q4 never reached a laptop that was, by every visible
+     sign, connected: SB.enabled true, no console error, a round genuinely
+     open in Firestore. The reason took hours to find because this function
+     hid it perfectly — the error callback below took the real Firestore
+     error as its argument and never looked at it, and the two early
+     returns (disabled, no nightId) said nothing either. "An error is no
+     round, never a fake one" was the right call for what the PLAYER sees;
+     it was the wrong call for what nobody could ever debug afterward.
+     Same fix as SB.myScore's B-44: keep the safe behaviour, stop discarding
+     the reason. SB.roundWatchOk / SB.lastRoundWatchError are read by the
+     Reconnect control and by anyone in DevTools who needs the fast answer
+     this took a whole game to get to. */
   SB.watchRound = function (cb) {
-    if (!SB.enabled || !nightId) return function () {};
+    if (!SB.enabled) { SB.lastRoundWatchError = 'disabled'; return function () {}; }
+    if (!nightId) { SB.lastRoundWatchError = 'no-night'; return function () {}; }
     try {
       var q = F.query(
         F.collection(db, 'nights', nightId, 'rounds'),
         F.orderBy('seq', 'desc'),
         F.limit(1)
       );
+      SB.roundWatchOk = null; SB.lastRoundWatchError = '';
       return F.onSnapshot(q, function (snap) {
+        SB.roundWatchOk = true; SB.lastRoundWatchAt = Date.now();
         if (snap.empty) { cb(null); return; }
         var d = snap.docs[0];
         var v = d.data() || {};
         v.id = d.id;
         cb(v);
-      }, function () { cb(null); });   // an error is "no round", never a fake one
-    } catch (e) { return function () {}; }
+      }, function (e) {
+        // an error still means "no round" to the player — never a fake one —
+        // but it is now a LOUD no-round, not a silent one.
+        var code = (e && (e.code || e.message)) || 'unknown';
+        SB.roundWatchOk = false; SB.lastRoundWatchError = code;
+        try { console.error('[STATS] round watch failed:', code, e && e.message); } catch (_) {}
+        try { notifyOps('round-watch-error', 'Lost the live connection for quarter questions (' + code + '). Reload or tap Reconnect.'); } catch (_) {}
+        cb(null);
+      });
+    } catch (e) {
+      var code2 = (e && (e.code || e.message)) || 'threw';
+      SB.roundWatchOk = false; SB.lastRoundWatchError = code2;
+      try { console.error('[STATS] round watch could not start:', code2); } catch (_) {}
+      return function () {};
+    }
   };
 
   /* ---- Caught It: the live in-game side-game (ISOLATED) ----------------
@@ -2833,15 +2861,29 @@ window.STATS_FIREBASE = {
      updated streak board. None of this touches pts, rounds, or the HR
      hosted-round flow — if it all failed, the main game is untouched. */
   SB.watchCallIt = function (cb) {
-    if (!SB.enabled || !nightId) return function () {};
+    if (!SB.enabled) { SB.lastCallItWatchError = 'disabled'; return function () {}; }
+    if (!nightId) { SB.lastCallItWatchError = 'no-night'; return function () {}; }
     try {
+      SB.callItWatchOk = null; SB.lastCallItWatchError = '';
       return F.onSnapshot(F.collection(db, 'nights', nightId, 'callit'), function (snap) {
+        SB.callItWatchOk = true; SB.lastCallItWatchAt = Date.now();
         var qs = [];
         snap.forEach(function (d) { var v = d.data() || {}; v.qid = v.qid || d.id; qs.push(v); });
         qs.sort(function (a, b) { return (a.seq || 0) - (b.seq || 0); });
         cb(qs);
-      }, function () { cb([]); });
-    } catch (e) { return function () {}; }
+      }, function (e) {
+        var code = (e && (e.code || e.message)) || 'unknown';
+        SB.callItWatchOk = false; SB.lastCallItWatchError = code;
+        try { console.error('[STATS] call-it watch failed:', code, e && e.message); } catch (_) {}
+        try { notifyOps('callit-watch-error', 'Lost the live connection for Caught It (' + code + '). Reload or tap Reconnect.'); } catch (_) {}
+        cb([]);
+      });
+    } catch (e) {
+      var code2 = (e && (e.code || e.message)) || 'threw';
+      SB.callItWatchOk = false; SB.lastCallItWatchError = code2;
+      try { console.error('[STATS] call-it watch could not start:', code2); } catch (_) {}
+      return function () {};
+    }
   };
   /* An answer, therefore the answer lane: counted, never refused, retried,
      and loud when it will not land. Same rule as SB.submit. */
@@ -7841,10 +7883,12 @@ async function submitJoin(){
    whole layer exists to prevent.
    ===================================================================== */
 let roomTimer=null, roomLast={count:null,joined:null,rank:null};
+let JOIN_STARTED_AT=0;   // grace window so "listener never attached" can't fire during normal startup
 
 function nightKey(){ return GAME.nightId || (SPORT.key+'-unscheduled'); }
 
 async function joinNight(){
+  JOIN_STARTED_AT=Date.now();
   try{ trkNow('night_join'); }catch(_){}
   // Subscribe first, unconditionally. `enabled` is false while the backend
   // is still booting and stays false if the boot fails — so hooking after
@@ -7880,6 +7924,29 @@ async function joinNight(){
   return ok;
 }
 
+/* ============ RECONNECT, ON PURPOSE ==================================
+   B-59, GN8. The actual fix for a dead-but-quiet listener tonight was
+   three console commands, typed by hand, mid-game: tear down the old
+   (broken) subscriptions, then rejoin. That should never have required
+   a laptop, a browser console, and forty-five minutes. This is that same
+   recovery, as a button. It does not guess whether anything is actually
+   wrong — refreshRoom() decides that, using the loud errors above — it
+   only does the fixing once asked. */
+function manualReconnect(){
+  try{ toast('🔄 Reconnecting…'); }catch(_){}
+  try{ if(typeof HR.unsub==='function') HR.unsub(); }catch(_){}
+  HR.unsub=null; HR.doc=null;
+  try{ if(typeof PCI.unsub==='function') PCI.unsub(); }catch(_){}
+  PCI.unsub=null;
+  joinNight().then(function(ok){
+    try{
+      if(ok){ toast('✅ Back online.'); if(typeof refreshRoom==='function') refreshRoom(); }
+      else{ toast('⚠️ Still couldn’t connect — check your signal and try again.'); }
+    }catch(_){}
+  });
+}
+try{ window.manualReconnect = manualReconnect; }catch(_){}
+
 async function pushScore(){
   if(!window.SB || !SB.enabled) return;
   await SB.push({
@@ -7914,7 +7981,8 @@ function startRoomPolling(){
    lane is worth one line and no alarm. Nothing here ever claims something
    is fine.                                                              */
 const OPS_TOAST={ 'write-queued':1, 'write-landed':1, 'write-lost':1,
-                  'budget-write':1, 'join':1, 'callit-unsaved':1 };
+                  'budget-write':1, 'join':1, 'callit-unsaved':1,
+                  'round-watch-error':1, 'callit-watch-error':1 };
 try{
   window.addEventListener('stats:ops', function(ev){
     try{
@@ -7982,10 +8050,29 @@ async function refreshRoom(){
   }catch(_){}
   if(!window.SB || SB.state==='off'){ setRoomBar(''); return; }
   if(SB.state==='connecting'){ setRoomBar('Connecting to tonight\'s room…'); return; }
+  const RECONNECT_LINK='<a href="#" onclick="manualReconnect();return false;" style="color:inherit;text-decoration:underline;font-weight:800;">tap to reconnect</a>';
   if(SB.state==='error'){
-    setRoomBar('Live count unavailable — your game is unaffected.');
+    setRoomBar('No connection — '+RECONNECT_LINK+'. Your points already earned are safe.');
     return;
   }
+  /* B-59. This is the check that would have caught tonight in seconds
+     instead of hours: SB.state can say 'on' — auth fine, Firestore fine —
+     while the specific listener that pushes quarter rounds or Caught It
+     questions has quietly died or never attached. That combination used
+     to render as a normal, silent "Q3 opens when the host pushes it" —
+     truthful about the round, silent about the fact that this phone could
+     never have found out otherwise. */
+  try{
+    if(S.mode==='live'){
+      const pastGrace = JOIN_STARTED_AT>0 && (Date.now()-JOIN_STARTED_AT)>8000;
+      const roundDead = SB.roundWatchOk===false || (!HR.unsub && SB.enabled && pastGrace);
+      const ciDead = SB.callItWatchOk===false;
+      if(roundDead || ciDead){
+        setRoomBar('No connection for live questions — '+RECONNECT_LINK+'.');
+        return;
+      }
+    }
+  }catch(_){}
   // joined() is newer than the rest of this contract, and the room bar is
   // not worth breaking over a backend that predates it. During a rolling
   // deploy a phone can hold an older bundle for a minute; an un-guarded call
@@ -11347,7 +11434,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-13-tighten.107';
+const STATS_BUILD='2026-08-15-loud-reconnect.108';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
