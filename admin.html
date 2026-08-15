@@ -548,6 +548,19 @@ const NIGHTS = [
   /* `espn` is new and it is the hinge for the autonomous host: it is the
      event id the resolvers read. A night without one can still be run by
      hand, it just cannot be run by the robot. */
+  /* GAME NIGHT #10 — MINNESOTA AT LAS VEGAS, Saturday, set up with real
+     lead time instead of fifteen rushed minutes — the whole point of doing
+     it this way after GN9. Tip: 8:00 ET / 5:00 PT, CBS/Paramount+. Verified
+     against the scoreboard feed for 2026-08-15: event 401857147, Michelob
+     ULTRA Arena. Las Vegas are home, drawn on the right.
+     Question bank for all four quarters is written and ready BEFORE
+     publish — see the RUN tab draft — specifically so "Publish tonight's
+     plan" never again reports 0 questions the way it did for GN9. */
+  { id:'gn10-2026-08-15-min-lv', label:'Game Night #10 — Lynx @ Aces (Sat Aug 15, 8:00 ET · CBS)',
+    away:'MIN', home:'LV', espn:'401857147',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[10,20,30,40] },
   /* GAME NIGHT #9 — PORTLAND AT SEATTLE, same Friday as #8, much later
      tip: 10:00 ET / 7:00 PT — Seattle are a Pacific team, so "7" is the
      number that actually got said out loud tonight. Verified against the
@@ -622,6 +635,42 @@ const NIGHTS = [
 // simulated results for a fake game, not claims about the real one. The host
 // marks the real answer at the break, then pushes.
 const BANK = {
+  /* GAME NIGHT #10 — MINNESOTA AT LAS VEGAS. Set up with real lead time,
+     the whole point of doing it this way after GN9: this is GN8's bank
+     (all sixteen lines resolved correctly on a real night — eleven at
+     HIGH confidence, one at MED, and the MED one was right too), with
+     only the two team words moved: Lynx away, Aces home. Every question
+     is structurally team-agnostic ("both teams combined", "either team")
+     except the one line that names teams directly, updated below. This is
+     deliberately not new content — a bank that has survived a real night
+     is worth more than a fresh idea that has not, and tonight is for
+     making sure "Publish tonight's plan" never again reports 0 questions. */
+  'gn10-2026-08-15-min-lv': [
+    [
+      { t: 'The first points of the game — how did they come?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throws'], r:'firstScoreKind' },
+      { t: 'Which team made the first three-pointer of the game?', o: ['Aces', 'Lynx', 'Neither made one in Q1'], r:'firstThreeTeam' },
+      { t: 'Threes made in Q1, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'threesBand' },
+      { t: 'The team that scored first — were they still ahead at the Q1 buzzer?', o: ['Yes', 'No', 'It was tied'], r:'firstScorerStillAhead' }
+    ],
+    [
+      { t: 'In Q2, both teams combined — were there more made field goals or made free throws?', o: ['Made field goals', 'Made free throws', 'Equal'], r:'fgVsFt' },
+      { t: 'How many times did the lead change hands in Q2? (a tie is not a lead change)', o: ['None', 'Once', 'Twice', 'Three or more'], r:'leadChanges' },
+      { t: 'Did either team score 10 or more unanswered points at any stage of Q2?', o: ['Yes', 'No'], r:'tenUnanswered' },
+      { t: 'The last shot attempt before the halftime buzzer…', o: ['Went in', 'Missed', 'Nobody got one off'], r:'lastShotOfPeriod' }
+    ],
+    [
+      { t: 'Which team scored the first points after halftime?', o: ['Aces', 'Lynx'], r:'firstScoreTeam' },
+      { t: '24-second shot-clock violations tonight, both teams combined, Q1 through Q3 — how many?', o: ['None', '1', '2', '3 or more'], r:'shotClockCount' },
+      { t: 'In Q3, both teams combined — were there more threes made or turnovers?', o: ['Threes made', 'Turnovers', 'Equal'], r:'threesVsTurnovers' },
+      { t: 'Through three quarters, how many players have reached double figures in points, both teams combined?', o: ['None or one', 'Two', 'Three', 'Four or more'], r:'doubleFiguresBand' }
+    ],
+    [
+      { t: 'In the last two minutes, both teams combined — were there more free-throw attempts or field-goal attempts?', o: ['Free-throw attempts', 'Field-goal attempts', 'Equal'], r:'lastTwoFtVsFg' },
+      { t: 'Did any player on either team foul out?', o: ['Yes', 'No'], r:'anyFoulOut' },
+      { t: 'The last basket of the game was worth…', o: ['1', '2', '3', 'No basket — it ended on a miss or a turnover'], r:'lastBasketWorth' },
+      { t: 'The team that led at halftime — did they win the game?', o: ['Yes', 'No', 'It was tied at half'], r:'halftimeLeaderWon' }
+    ]
+  ],
   /* Game #7 — Tempo @ Wings. The Game #6 spine, re-pointed, with one rule
      applied that was not applied before: EVERY LINE HERE HAS A RESOLVER.
      See RESOLVERS below — each question carries an `r` key naming the

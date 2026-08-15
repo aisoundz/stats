@@ -3532,27 +3532,31 @@ window.STATS_FIREBASE = {
    re-skins to ANY game — NBA, G-League, college, WNBA.
    In production this loads from the nightly schedule feed. */
 const BB_GAME={
-  nightId:"gn9-2026-08-14-pdx-sea",
-  espnEvent:"401857144",   // verified against the WNBA scoreboard for 2026-08-14
-  tipISO:"2026-08-15T02:00:00Z",   // 10:00 pm ET / 7:00 pm PT. Never parsed from a display string.
-  homeName:"Seattle Storm",   homeAbbr:"SEA", homeNick:"Storm", homeEmoji:"\u26C8\uFE0F", homeColor:"#2c5234",
-  awayName:"Portland Fire",   awayAbbr:"PDX", awayNick:"Fire",  awayEmoji:"\uD83D\uDD25", awayColor:"#cee5eb",
-  venue:"Climate Pledge Arena", date:"Fri \u00B7 August 14", short:"August 14", shareDate:"AUG 14", night:"Game Night #9",
-  /* SET UP IN A HURRY \u2014 roughly fifteen minutes before this tip, right
-     after Game Night #8 wrapped, at direct request. Portland Fire at
-     Seattle Storm, 10:00 p.m. ET / 7:00 p.m. PT \u2014 Seattle is a Pacific
-     team, so "7" is what actually got said out loud. On ION. Climate
-     Pledge Arena, Seattle. Seattle are home, so the app draws them on the
-     right of the VS badge.
+  nightId:"gn10-2026-08-15-min-lv",
+  espnEvent:"401857147",   // verified against the WNBA scoreboard for 2026-08-15
+  tipISO:"2026-08-16T00:00:00Z",   // 8:00 pm ET / 5:00 pm PT. Never parsed from a display string.
+  homeName:"Las Vegas Aces", homeAbbr:"LV",  homeNick:"Aces",  homeEmoji:"\u2660\uFE0F", homeColor:"#a7a8aa",
+  awayName:"Minnesota Lynx", awayAbbr:"MIN", awayNick:"Lynx",  awayEmoji:"\uD83D\uDC3E", awayColor:"#266092",
+  venue:"Michelob ULTRA Arena", date:"Sat \u00B7 August 15", short:"August 15", shareDate:"AUG 15", night:"Game Night #10",
+  /* SET UP WITH REAL LEAD TIME \u2014 the whole point of doing it this way
+     after GN9. Minnesota Lynx at Las Vegas Aces, 8:00 p.m. ET / 5:00 p.m.
+     PT, on CBS/Paramount+. Michelob ULTRA Arena, Las Vegas. Las Vegas are
+     home, so the app draws them on the right of the VS badge.
 
-     Brand colour verified post-game from the ESPN team endpoint directly
-     (teams/132052): primary #cee5eb, alternate #000000 \u2014 the fifteen-minute
-     #c8102e fire-red guess from setup night was wrong, replaced above.
-     Roster and OUT flags were pulled fresh from ESPN for GN9 too (see
-     BB_ROSTER). No injury report beyond the roster's OUT flags was pulled
-     \u2014 there was no runway left for it tonight. */
-  net:"ION",
-  tip:"Tip-off 10:00 ET \u00B7 9:00 CT \u00B7 7:00 PT \u00B7 ION"
+     Everything below was pulled fresh and directly, not guessed:
+       - espnEvent confirmed against the scoreboard for 2026-08-15 itself,
+         not carried over or assumed.
+       - Both brand colours from the ESPN team endpoints directly
+         (teams/17 Las Vegas, teams/8 Minnesota) \u2014 homeColor #a7a8aa,
+         awayColor #266092.
+       - Both full rosters pulled fresh from the same endpoints, OUT flags
+         included (see BB_ROSTER) \u2014 Las Vegas is missing three: Kierstan
+         Bell, Dana Evans, Cheyenne Parker-Tyus. Minnesota has nobody
+         flagged OUT as of setup.
+     Still true either way: tcGuard() keeps both colours readable against
+     the dark background regardless. */
+  net:"CBS",
+  tip:"Tip-off 8:00 ET \u00B7 7:00 CT \u00B7 5:00 PT \u00B7 CBS"
 };
 /* ============ LEAN — THE FOUR SURFACES ==============================
    Game Night #7 ran nine surfaces in front of three players and produced
@@ -3674,18 +3678,17 @@ const COLORS=["#2f6bff","#19c3d6","#ff4d5e","#ffc54d","#2ee6a6","#b57cff","#ff92
    one. Anyone ruled out keeps their OUT flag; they stay pickable-adjacent
    so you can see for yourself who isn't available. */
 const BB_ROSTER={ // full names \u2014 used on the prediction sheet & final review
-  /* Pulled live from the ESPN roster endpoints (teams/14 Seattle, teams/132052
-     Portland) on Aug 14 for Game Night #9, ordered by who is most likely to be
-     on the floor. Players currently listed OUT stay on the list on purpose \u2014
-     a name that simply vanishes reads as a bug, and seeing who is unavailable
-     is part of reading the game. */
-  home:["Zia Cooke","Stefanie Dolson","Awa Fam","Natisha Hiedeman","Mackenzie Holmes",
-        "Jordan Horston","Ezi Magbegor","Dominique Malonga","Jade Melbourne",
-        "Katie Lou Samuelson","Taylor Thierry","Flau'jae Johnson","Taina Mair"],
-  away:["Frieda Buhner","Bridget Carleton","Megan DiLeo","Emily Engstler","Jordan Harrison",
-        "Carla Leite","Teja Oblak","Amy Okonkwo","Nyadiew Puoch","Karlie Samuelson",
-        "Serah Williams","Holly Winterburn","Sarah Ashlee Barker","Sania Feagin",
-        "Luisa Geiselsoder"]
+  /* Pulled live from the ESPN roster endpoints (teams/17 Las Vegas, teams/8
+     Minnesota) on Aug 15 for Game Night #10, ordered by who is most likely
+     to be on the floor. Players currently listed OUT stay on the list on
+     purpose \u2014 a name that simply vanishes reads as a bug, and seeing who
+     is unavailable is part of reading the game. */
+  home:["Chelsea Gray","Ta'Niya Latson","Jewell Loyd","Justine Pissott","NaLyssa Smith",
+        "Stephanie Talbot","Brianna Turner","A'ja Wilson","Mai Yamamoto","Jackie Young",
+        "Kierstan Bell","Dana Evans","Cheyenne Parker-Tyus"],
+  away:["Chloe Bibby","Elena Buenavida","Maya Caldwell","Nia Coffey","Napheesa Collier",
+        "Antonia Delaere","Natasha Howard","Eliska Joklova","Dorka Juhasz","Liatu King",
+        "Anastasiia Olairi Kosu","Kayla McBride","Olivia Miles","Courtney Williams"]
 };
 const BB_GROUPS=[{ab:BB_GAME.homeAbbr,name:BB_GAME.homeName,names:BB_ROSTER.home},
                  {ab:BB_GAME.awayAbbr,name:BB_GAME.awayName,names:BB_ROSTER.away}];
@@ -3741,15 +3744,15 @@ const BB_PREDS=[
   // against — never a claim about the real game. They must always be names
   // that exist in the roster above, or practice grades against a ghost.
   {id:"pts", q:"Who scores the most points?", label:"Most points", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Ezi Magbegor", num:22, numLabel:"How many pts?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"A'ja Wilson", num:25, numLabel:"How many pts?"},
   {id:"ast", q:"Who dishes the most assists?", label:"Most assists", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Jordan Horston", num:8, numLabel:"How many assists?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Chelsea Gray", num:7, numLabel:"How many assists?"},
   {id:"stl", q:"Who racks up the most steals?", label:"Most steals", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Katie Lou Samuelson", num:3, numLabel:"How many steals?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Jackie Young", num:3, numLabel:"How many steals?"},
   {id:"reb", q:"Who grabs the most rebounds?", label:"Most rebounds", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Ezi Magbegor", num:10, numLabel:"How many rebounds?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"A'ja Wilson", num:11, numLabel:"How many rebounds?"},
   {id:"blk", q:"Who swats the most blocks?", label:"Most blocks", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Dominique Malonga", num:2, numLabel:"How many blocks?"}
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Brianna Turner", num:2, numLabel:"How many blocks?"}
 ];
 /* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
    Every question is answerable by WATCHING the broadcast at the break — no lookups,
