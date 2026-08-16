@@ -11757,7 +11757,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-16-gn11-setup.117';
+const STATS_BUILD='2026-08-16-nav-speaks.118';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -11952,7 +11952,35 @@ function navGo(tab){
       if(S.mode==='live'){ try{ refreshRoom(); }catch(_){} try{ boardRefresh(); }catch(_){} } }
     else if(tab==='crew'){ try{ openTalk(); }catch(_){ toast('The room opens on game night.'); } }
     else if(tab==='me'){ renderMe(); go('me'); }
-  }catch(e){}
+  }catch(e){
+    /* ============ B-67: THE NAV USED TO LIE ==========================
+       This was a bare `catch(e){}` with paintNav(tab) OUTSIDE it. So when
+       any render in this block threw — renderStats, renderGametime,
+       renderBoard, loadGameStats — the screen did not change, nothing was
+       logged, nothing was shown, and the nav still lit up the tab you had
+       just tapped. The button worked; the render died; the catch ate it;
+       the nav lied about all three.
+
+       That is what "the buttons became unresponsive" and "I click another
+       page and go back and it doesn't work" actually were, on the iPad and
+       the laptop both. It is A6 — an operation fails and nobody is told —
+       the sentence this product's whole incident catalogue is built on,
+       sitting unnoticed in the middle of the navigation.
+
+       Swallowing it also meant nobody could ever diagnose it: four game
+       nights of "it gets stuck" with no error to look at. Now the console
+       carries the real throw, the room bar tells the player in words they
+       can act on, and telemetry records which tab died. */
+    try{ console.error('[STATS] navGo("'+tab+'") threw AFTER go() — you are on that tab with a stale or empty body:', e); }catch(_){}
+    try{ if(window.SB && SB.notifyOps) SB.notifyOps('nav', 'That tab didn\u2019t open. Tap it again, or pull down to refresh \u2014 nothing you have scored is lost.'); }catch(_){}
+    try{ trk('nav_failed',{tab:tab, err:String((e&&e.message)||e).slice(0,120)}); }catch(_){}
+  }
+  /* paintNav runs either way, and that is deliberate. go() fires BEFORE
+     the render in every branch, so a throw leaves you standing ON the new
+     tab with a stale or empty body — which is what "it didn't work" looked
+     like. Withholding the highlight there would only add a second lie: a
+     nav that disagrees with the screen you can see. The bug was never the
+     highlight, it was the silence, and the silence is what got fixed. */
   paintNav(tab);
 }
 /* ============ THE RETURN BAR ==========================================
