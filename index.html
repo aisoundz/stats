@@ -2736,46 +2736,72 @@ window.STATS_FIREBASE = {
      Single-field orderBy only, so Firestore's automatic index covers it
      and the user never has to create a composite index by hand.
      Speed is the documented tiebreaker, applied client-side.          */
+  /* ============ ONE SCORE, ONE OWNER ================================
+     B-65, Game Night #10. The same player saw 254 on his card, 236 on the
+     board eight pixels below it, 478 on his phone at the buzzer, 291 on
+     his laptop, and the server held 836. Every surface was computing its
+     own total from its own LOCAL ledger, and the server's numbers — the
+     only ones graded from the submissions — were never displayed at all.
+
+     A night is worth 1,000: 400 in live rounds, 600 on the prediction
+     card, plus the Caught It cap. `pts` on a player row is LIVE ONLY —
+     the runner writes it from AUTO.tally. The other three lanes are
+     client-reported and bounded by the rules. The night total is the sum,
+     and until now NOTHING added them up on the way to a screen.
+
+     nightTotal() is that sum, in one place, so a fifth number cannot be
+     invented by a sixth surface. */
+  function nightTotal(v) {
+    v = v || {};
+    return (Number(v.pts) || 0) + (Number(v.predPts) || 0)
+         + (Number(v.catchPts) || 0) + (Number(v.caughtPts) || 0);
+  }
+  SB.nightTotal = nightTotal;
+
+  /* One read of the room, every lane, ranked by what a player actually
+     scored. Both top() and rank() come through here — two readers with
+     two different ideas of "winning" is how everybody ended up #1. */
+  async function readRoom() {
+    var all = await F.getDocs(F.collection(db, 'nights', nightId, 'players'));
+    var rows = [];
+    all.forEach(function (d) {
+      var v = d.data() || {};
+      rows.push({
+        name: v.name || 'player', color: v.color || '#888',
+        pts: Number(v.pts) || 0, speed: Number(v.speed) || 0,
+        predPts: Number(v.predPts) || 0, catchPts: Number(v.catchPts) || 0,
+        caughtPts: Number(v.caughtPts) || 0,
+        total: nightTotal(v),
+        me: d.id === uid()
+      });
+    });
+    /* Ranked on the TOTAL, not on `pts`. Ordering by pts alone decided the
+       night on 400 of its 1,000 points — a player who read the card
+       perfectly and the quarters badly was placed below one who did the
+       reverse. It happened to come out the same on GN10; that was luck. */
+    rows.sort(function (a, b) { return (b.total - a.total) || (b.speed - a.speed); });
+    return rows;
+  }
+  SB.readRoom = readRoom;
+
   SB.top = async function (n) {
     if (!SB.enabled || !nightId || !budgetRead('top')) return null;
     try {
-      var q = F.query(
-        F.collection(db, 'nights', nightId, 'players'),
-        F.orderBy('pts', 'desc'),
-        F.limit(Math.min(n || TOP_N, 25))
-      );
-      var snap = await F.getDocs(q);
-      var out = [];
-      snap.forEach(function (d) {
-        var v = d.data();
-        out.push({
-          name: v.name || 'player', color: v.color || '#888',
-          pts: v.pts || 0, speed: v.speed || 0,
-          me: d.id === uid()
-        });
-      });
-      out.sort(function (a, b) { return (b.pts - a.pts) || (b.speed - a.speed); });
+      /* Read the room whole and sort in memory. orderBy('total') is not
+         available — `total` is derived, not stored — and a server-side
+         orderBy('pts') with a limit would drop exactly the player this fix
+         exists for. Fine to 25 players; past that, store the total. */
+      var out = await readRoom();
+      out = out.slice(0, Math.min(n || TOP_N, 25));
       /* orderBy('pts') silently DROPS any player document that has no `pts`
          field at all — a Firestore rule people learn the hard way, usually
          while staring at an empty leaderboard with players plainly in the
          database. If the ordered read looks short, read the room plainly
          and sort in memory instead. */
-      if (out.length < 2) {
-        try {
-          var all = await F.getDocs(F.collection(db, 'nights', nightId, 'players'));
-          var raw = [];
-          all.forEach(function (d) {
-            var v = d.data() || {};
-            raw.push({ name: v.name || 'player', color: v.color || '#888',
-                       pts: Number(v.pts) || 0, speed: Number(v.speed) || 0,
-                       me: d.id === uid() });
-          });
-          if (raw.length > out.length) {
-            raw.sort(function (a, b) { return (b.pts - a.pts) || (b.speed - a.speed); });
-            return raw.slice(0, Math.min(n || TOP_N, 25));
-          }
-        } catch (e2) {}
-      }
+      /* The old orderBy-with-limit query silently dropped any player
+         document with no `pts` field, which is why a fallback re-read
+         existed here. readRoom() reads the collection plainly, so there is
+         nothing left to fall back from. */
       return out;
     } catch (e) { return null; }
   };
@@ -2786,12 +2812,14 @@ window.STATS_FIREBASE = {
   SB.rank = async function () {
     if (!SB.enabled || !nightId || !budgetRead('rank')) return null;
     try {
-      var q = F.query(
-        F.collection(db, 'nights', nightId, 'players'),
-        F.where('pts', '>', mine.pts)
-      );
-      var snap = await F.getCountFromServer(q);
-      return snap.data().count + 1;
+      /* This used to count players whose SERVER `pts` beat the CLIENT's
+         local `mine.pts`. Those are different quantities: mine.pts is the
+         phone's all-lanes running total, pts on a row is live only. The
+         local number is always the bigger one, so the query matched nobody
+         and every device reported "#1 of 4" to its own player. */
+      var rows = await readRoom();
+      for (var i = 0; i < rows.length; i++) if (rows[i].me) return i + 1;
+      return null;
     } catch (e) { return null; }
   };
 
@@ -4498,6 +4526,49 @@ function ledgerServerFloor(sv){
   return true;
 }
 function ledgerClear(){ S.led={}; return recomputeScore(); }
+
+/* ============ THE SERVER'S NUMBER OUTRANKS THE PREVIEW ================
+   B-65, GN10. `S.pts` is this device's running total, summed from a ledger
+   only this device has seen. It is a PREVIEW — B15 kept it deliberately,
+   so the number moves the instant you answer instead of waiting on a
+   round trip. What was missing is the other half: nothing ever replaced
+   the preview with the confirmed figure.
+
+   The cost, measured on one player in one night: 254 on his card, 236 on
+   the board eight pixels below it, 478 on his phone at the buzzer, 291 on
+   his laptop — and 836 on the server, which was the only one grading from
+   the submissions. A player cannot be asked to believe a number that
+   disagrees with itself on one screen.
+
+   So: the server's row wins whenever there is one, and the preview only
+   fills the gap before the first confirmation arrives. */
+function myServerRow(){
+  try{
+    if(S.mode!=='live') return null;
+    var list=(typeof lastStand!=='undefined')?lastStand:null;
+    if(!Array.isArray(list)) return null;
+    for(var i=0;i<list.length;i++) if(list[i] && list[i].me) return list[i];
+  }catch(_){}
+  return null;
+}
+/* The night total, from the server if it has spoken. Practice never has a
+   server row, so it keeps its local number and always will. */
+function shownTotal(){
+  var r=myServerRow();
+  if(r && typeof r.total==='number' && isFinite(r.total)) return Math.max(0,Math.round(r.total));
+  return Math.max(0,Math.round(Number(S.pts)||0));
+}
+/* Rank comes from the same ordered list the board draws, so "you're #2"
+   and the row you are standing on can never disagree. SB.rank() used to
+   compare the server's live-only pts against this device's all-lanes
+   total, which no player could ever clear — every phone said #1 of 4. */
+function shownRank(){
+  try{
+    var list=(typeof lastStand!=='undefined')?lastStand:null;
+    if(Array.isArray(list)) for(var i=0;i<list.length;i++) if(list[i] && list[i].me) return i+1;
+  }catch(_){}
+  return null;
+}
 
 /* ============ CHANGING MODE MUST CHANGE THE SCOREBOARD WITH IT =========
    B-63, GN10, found by the founder two hours before tip.
@@ -7072,8 +7143,13 @@ function showFinal(){
   // Counted up rather than printed. The ring, the number and the award are
   // three separate beats and they are the whole reason this screen feels
   // like an ending instead of a receipt.
-  countUp($f('finalPts'), S.pts, 900);
-  paintRing(S.pts, MAXPTS);
+  /* The ending must show the confirmed total, not this device's preview.
+     Both players' final cards on GN10 printed exactly their live-only
+     figure against a 1,000 ceiling that includes the 600-point card —
+     under-reporting At by 358 and Moon by 181. */
+  var _final = shownTotal();
+  countUp($f('finalPts'), _final, 900);
+  paintRing(_final, MAXPTS);
   renderBreakdown(livePts);
   renderPending();
   renderBestCall();
@@ -9554,8 +9630,19 @@ function renderCiCard(q){
       paid = (isFinite(_before) && isFinite(_after)) ? Math.max(0, _after - _before)
                                                     : caughtWorth(PCI.streak);
     }
+    /* B-66, GN10. B24 stopped the card announcing points it had not paid.
+       It did not cover the case underneath: a player who is RIGHT and has
+       already reached the 100-point nightly ceiling is paid nothing, so
+       the card read "Nice call \u00B7 +0" next to a green tick. Correct,
+       and it reads as the app being broken — the founder logged it as
+       "I got the right answer and wasn't rewarded any points".
+
+       A ceiling you hit is an achievement, not a malfunction. Say which
+       one it is. */
+    var capped = right && paid===0 && (Number(PCI.pts)||0) >= CAUGHT_NIGHT_CAP;
     var head = pk==null ? 'You sat this one out'
-             : (right ? ('Nice call \u00B7 +'+paid) : 'Not this time');
+             : (right ? (capped ? 'Nice call \u00B7 maxed out' : 'Nice call \u00B7 +'+paid)
+                      : 'Not this time');
     var icon = pk==null ? '—' : (right?'✅':'✕');
     var run  = (pk!=null && right && PCI.streak>1)
       ? '<div class="cirun">🔥 <b>'+PCI.streak+' in a row</b>'+(PCI.streak>=3?' — you’re on a run':'')+'</div>'
@@ -9563,7 +9650,9 @@ function renderCiCard(q){
     ciShow('<div class="cihead">'+ico('live')+' Caught It · resolved</div>'+
            '<div class="cires'+(right?' ok':(pk==null?'':' no'))+'"><span class="ciresi">'+icon+'</span>'+
              '<div><div class="ciresh">'+esc(head)+'</div>'+
-             (pk!=null?('<div class="ciresp">You said '+esc(ciLabel(q,pk))+'</div>'):'')+'</div></div>'+
+             (pk!=null?('<div class="ciresp">You said '+esc(ciLabel(q,pk))+
+               (capped?' \u00B7 you have all '+CAUGHT_NIGHT_CAP+' Caught It points tonight — the rest is for the streak':'')+
+               '</div>'):'')+'</div></div>'+
            run+
            '<div class="cireveal">'+esc(q.resolveText||'')+'</div>');
     /* THE REWARD LANDS ON THE SCOREBOARD. A correct call flashes the block
@@ -11663,7 +11752,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-15-signout-leaves.115';
+const STATS_BUILD='2026-08-16-one-score.116';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -14905,9 +14994,9 @@ function gtLine(){
 function gtYourNight(){
   try{
     if(!S) return '';
-    var pts=Math.max(0, Math.round(Number(S.pts)||0));
+    var pts=shownTotal();
     var spd=Math.max(0, Math.round(Number(S.speed)||0));
-    var rank=null; try{ rank=liveRank(); }catch(_){}
+    var rank=null; try{ rank=shownRank(); if(rank==null) rank=liveRank(); }catch(_){}
     var of=null;  try{ of=(typeof roomLast!=='undefined'&&roomLast)?roomLast.joined:null; }catch(_){}
     // What has not settled yet. Before the buzzer the card is the biggest
     // number on the board and nobody can see it anywhere in the app.

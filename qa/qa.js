@@ -717,6 +717,40 @@ async function browserTests(){
       `predChoices did not survive the mode switch: in=${modeLeak.cardSurvivedIn} out=${modeLeak.cardSurvivedOut}`,
       'predChoices are LOCAL ONLY — nothing pushes them — so wiping them to isolate practice would cost a player the 600-point sheet they just filled in');
 
+    /* ---- B-65: ONE SCORE, ONE OWNER --------------------------------
+       GN10. The same player saw 254 on his card, 236 on the board eight
+       pixels below, 478 on his phone at the buzzer, 291 on his laptop, and
+       the server held 836. Every surface totalled its own local ledger and
+       the server's graded numbers were never shown. The night is 1,000:
+       live + the 600-point card + Caught It. */
+    const oneScore = await p.evaluate(()=>{
+      const out={};
+      setMode('live');
+      ledgerSet('r0q0',478,94,'live'); recomputeScore();
+      out.preview = S.pts;                       // this device only ever saw live
+      lastStand = [
+        {name:'Me',  me:true,  pts:478, predPts:258, catchPts:0, caughtPts:100, total:836, speed:94},
+        {name:'Two', me:false, pts:400, predPts:100, catchPts:0, caughtPts:100, total:600, speed:113}
+      ];
+      out.shown = shownTotal();
+      out.rank  = shownRank();
+      const keep=lastStand; lastStand=null;
+      out.fallback = shownTotal();               // before the server speaks
+      lastStand=keep;
+      setMode('demo'); ledgerSet('r0q0',150,5,'live'); recomputeScore();
+      out.practice = shownTotal();               // practice has no server row, ever
+      try{ setMode('live'); ledgerClear(); recomputeScore(); lastStand=null; }catch(e){}
+      return out;
+    });
+    check(`score.one-number-and-it-is-the-servers.${vp.name}`,
+      oneScore.shown===836 && oneScore.fallback===oneScore.preview && oneScore.practice===150,
+      `totals disagree: ${JSON.stringify(oneScore)}`,
+      'B-65: the final card printed this device\u2019s live-only preview against a 1,000 ceiling that includes the 600-point card, under-reporting one player by 358');
+    check(`score.rank-comes-from-the-board.${vp.name}`,
+      oneScore.rank===1,
+      `rank was ${oneScore.rank}, expected 1 from the ordered board`,
+      'SB.rank() compared the server\u2019s live-only pts against this device\u2019s all-lanes total, which no player could clear \u2014 every phone reported "#1 of 4"');
+
     check(`state.play-does-not-restart.${vp.name}`, playGuard==='lobby',
       `pressing Play mid-night went to "${playGuard}" instead of back to the game`,
       'REGRESSION: the Play button handed back a blank pick sheet for an already-locked card');
