@@ -3560,31 +3560,34 @@ window.STATS_FIREBASE = {
    re-skins to ANY game — NBA, G-League, college, WNBA.
    In production this loads from the nightly schedule feed. */
 const BB_GAME={
-  nightId:"gn10-2026-08-15-min-lv",
-  espnEvent:"401857147",   // verified against the WNBA scoreboard for 2026-08-15
-  tipISO:"2026-08-16T00:00:00Z",   // 8:00 pm ET / 5:00 pm PT. Never parsed from a display string.
-  homeName:"Las Vegas Aces", homeAbbr:"LV",  homeNick:"Aces",  homeEmoji:"\u2660\uFE0F", homeColor:"#a7a8aa",
-  awayName:"Minnesota Lynx", awayAbbr:"MIN", awayNick:"Lynx",  awayEmoji:"\uD83D\uDC3E", awayColor:"#266092",
-  venue:"Michelob ULTRA Arena", date:"Sat \u00B7 August 15", short:"August 15", shareDate:"AUG 15", night:"Game Night #10",
-  /* SET UP WITH REAL LEAD TIME \u2014 the whole point of doing it this way
-     after GN9. Minnesota Lynx at Las Vegas Aces, 8:00 p.m. ET / 5:00 p.m.
-     PT, on CBS/Paramount+. Michelob ULTRA Arena, Las Vegas. Las Vegas are
-     home, so the app draws them on the right of the VS badge.
+  nightId:"gn11-2026-08-16-ind-atl",
+  espnEvent:"401857150",   // verified against the WNBA scoreboard for 2026-08-16
+  tipISO:"2026-08-16T21:00:00Z",   // 5:00 pm ET / 2:00 pm PT \u2014 THREE HOURS EARLIER than GN10. Never parsed from a display string.
+  homeName:"Atlanta Dream", homeAbbr:"ATL", homeNick:"Dream", homeEmoji:"\uD83D\uDD25", homeColor:"#e31837",
+  awayName:"Indiana Fever", awayAbbr:"IND", awayNick:"Fever", awayEmoji:"\uD83C\uDFC0", awayColor:"#002d62",
+  venue:"State Farm Arena", date:"Sun \u00B7 August 16", short:"August 16", shareDate:"AUG 16", night:"Game Night #11",
+  /* GAME NIGHT #11 \u2014 INDIANA AT ATLANTA. Set up the night after GN10,
+     which is the first night that ran itself start to finish.
 
-     Everything below was pulled fresh and directly, not guessed:
-       - espnEvent confirmed against the scoreboard for 2026-08-15 itself,
-         not carried over or assumed.
-       - Both brand colours from the ESPN team endpoints directly
-         (teams/17 Las Vegas, teams/8 Minnesota) \u2014 homeColor #a7a8aa,
-         awayColor #266092.
-       - Both full rosters pulled fresh from the same endpoints, OUT flags
-         included (see BB_ROSTER) \u2014 Las Vegas is missing three: Kierstan
-         Bell, Dana Evans, Cheyenne Parker-Tyus. Minnesota has nobody
-         flagged OUT as of setup.
-     Still true either way: tcGuard() keeps both colours readable against
-     the dark background regardless. */
-  net:"CBS",
-  tip:"Tip-off 8:00 ET \u00B7 7:00 CT \u00B7 5:00 PT \u00B7 CBS"
+     WATCH THE CLOCK ON THIS ONE. Tip is 5:00 pm ET / 2:00 pm PT \u2014 three
+     hours earlier than GN10. The cron that starts the runner has to move
+     with it or the night begins without a host.
+
+     Everything below was pulled fresh from ESPN, not carried over:
+       - espnEvent confirmed against the scoreboard for 2026-08-16 itself.
+       - Both brand colours from the team endpoints (teams/20 Atlanta,
+         teams/5 Indiana) \u2014 #e31837 red against #002d62 navy, which are
+         far enough apart that tcGuard() has an easy job for once.
+       - Rosters ORDERED BY MINUTES PLAYED in each side's most recent
+         completed game (ATL 401857140, IND 401857143), because ESPN's own
+         roster order is alphabetical and buries the stars \u2014 that was the
+         GN10 complaint. Ruled-out players sit last.
+       - Injury report: Atlanta are without Te-Hina Paopao and Brionna
+         Jones; Indiana without Damiris Dantas. Caitlin Clark, Aliyah
+         Boston and Jordin Canada are all listed day-to-day, so the deck
+         may need a second look nearer tip. */
+  net:"ESPN",
+  tip:"Tip-off 5:00 ET \u00B7 4:00 CT \u00B7 2:00 PT \u00B7 ESPN"
 };
 /* ============ LEAN — THE FOUR SURFACES ==============================
    Game Night #7 ran nine surfaces in front of three players and produced
@@ -3687,13 +3690,26 @@ function leanStripTabs(){
   try{
     document.querySelectorAll('button').forEach(function(b){
       if(!/talk trash/i.test(b.textContent||'')) return;
-      if(lean()){ b.dataset.leanHid='1'; b.style.display='none'; }
-      else if(b.dataset.leanHid){ delete b.dataset.leanHid; b.style.display=''; }
+      /* A CLASS, NOT AN INLINE STYLE. This used to set style.display
+         ='none' — and revTalkBtn is SHOWN by the review screen afterwards
+         with its own inline write, which beats ours every time. That is
+         why a "Talk trash" button reappeared after answering Q2, on a tab
+         that no longer exists. An inline display cannot beat !important in
+         a stylesheet, so the strip now holds through any later render.
+         Still toggles both ways: a one-way strip is a deletion wearing a
+         flag. */
+      if(lean()){ b.dataset.leanHid='1'; b.classList.add('leanHidden'); }
+      else if(b.dataset.leanHid){ delete b.dataset.leanHid; b.classList.remove('leanHidden'); }
     });
   }catch(_){}
 }
 try{ document.addEventListener('DOMContentLoaded', leanStripTabs); setTimeout(leanStripTabs, 0); }catch(_){}
 
+try{
+  var _lh=document.createElement('style');
+  _lh.textContent='.leanHidden{display:none !important}';
+  document.head.appendChild(_lh);
+}catch(_){}
 const COLORS=["#2f6bff","#19c3d6","#ff4d5e","#ffc54d","#2ee6a6","#b57cff","#ff924d","#4dd0ff"];
 /* THE WHOLE BENCH. Six a side was a deliberate cap for five game nights and
    it was the wrong call: "if I think a rookie might do good I can't vote for
@@ -3706,33 +3722,19 @@ const COLORS=["#2f6bff","#19c3d6","#ff4d5e","#ffc54d","#2ee6a6","#b57cff","#ff92
    one. Anyone ruled out keeps their OUT flag; they stay pickable-adjacent
    so you can see for yourself who isn't available. */
 const BB_ROSTER={ // full names \u2014 used on the prediction sheet & final review
-  /* Pulled live from the ESPN roster endpoints (teams/17 Las Vegas, teams/8
-     Minnesota) on Aug 15 for Game Night #10, ordered by who is most likely
-     to be on the floor. Players currently listed OUT stay on the list on
-     purpose \u2014 a name that simply vanishes reads as a bug, and seeing who
-     is unavailable is part of reading the game. */
-  /* ORDERED BY MINUTES PLAYED IN EACH TEAM'S LAST GAME, not alphabetically.
-     This list used to be ESPN's roster order — alphabetical by last name —
-     while the comment above claimed it was "ordered by who is most likely to
-     be on the floor". It was not, and the cost was real: A'ja Wilson, the
-     best player in the league, sat EIGHTH of thirteen on a pick sheet worth
-     600 of the night's 1,000 points, below three players who barely feature.
-     "Hard to find the star players on the bottom" — correct.
-
-     Derived, not guessed. ESPN's roster and team endpoints carry no starter
-     flag and no per-player stats, so the source is the box score of each
-     side's most recent completed game (LV 401857142, MIN 401857139), ranked
-     by minutes: Wilson and Young at 35, Miles 35, Collier 33. Players who
-     did not appear in that box score keep their place at the end.
-
-     Ruled-out players stay last on purpose — they are struck through and
-     unpickable, so they belong out of the way rather than gone. */
-  home:["A'ja Wilson","Jackie Young","NaLyssa Smith","Chelsea Gray","Jewell Loyd",
-        "Brianna Turner","Stephanie Talbot","Mai Yamamoto","Ta'Niya Latson","Justine Pissott",
-        "Kierstan Bell","Dana Evans","Cheyenne Parker-Tyus"],
-  away:["Olivia Miles","Napheesa Collier","Kayla McBride","Courtney Williams","Natasha Howard",
-        "Nia Coffey","Maya Caldwell","Antonia Delaere","Dorka Juhasz","Eliska Joklova",
-        "Chloe Bibby","Anastasiia Olairi Kosu","Elena Buenavida","Liatu King"]
+  /* ORDERED BY MINUTES PLAYED IN EACH SIDE'S LAST GAME, not alphabetically.
+     ESPN's roster endpoint has no starter flag and no per-player stats, so
+     the source is the box score of the most recent completed game
+     (ATL 401857140, IND 401857143). Howard/Reese/Gray led Atlanta at 29/28/28;
+     Mitchell/Clark/Boston led Indiana at 36/34/29.
+     Players who did not appear in that box score keep their place at the end,
+     and ruled-out players sit last where they are struck through. */
+  home:["Rhyne Howard","Angel Reese","Allisha Gray","Jordin Canada","Naz Hillmon",
+        "Madina Okot","Jaylyn Sherrod","Isobel Borlase","Aaliyah Nye","Sika Kone",
+        "Shatori Walker-Kimbrough","Indya Nivar","Brionna Jones","Te-Hina Paopao"],
+  away:["Kelsey Mitchell","Caitlin Clark","Aliyah Boston","Makayla Timpson","Sophie Cunningham",
+        "Tyasha Harris","Monique Billings","Lexie Hull","Myisha Hines-Allen","Grace VanSlooten",
+        "Raven Johnson","Mercedes Russell","Bree Hall","Michelle Onyiah","Damiris Dantas"]
 };
 const BB_GROUPS=[{ab:BB_GAME.homeAbbr,name:BB_GAME.homeName,names:BB_ROSTER.home},
                  {ab:BB_GAME.awayAbbr,name:BB_GAME.awayName,names:BB_ROSTER.away}];
@@ -3788,15 +3790,15 @@ const BB_PREDS=[
   // against — never a claim about the real game. They must always be names
   // that exist in the roster above, or practice grades against a ghost.
   {id:"pts", q:"Who scores the most points?", label:"Most points", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"A'ja Wilson", num:25, numLabel:"How many pts?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Kelsey Mitchell", num:24, numLabel:"How many pts?"},
   {id:"ast", q:"Who dishes the most assists?", label:"Most assists", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Chelsea Gray", num:7, numLabel:"How many assists?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Caitlin Clark", num:9, numLabel:"How many assists?"},
   {id:"stl", q:"Who racks up the most steals?", label:"Most steals", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Jackie Young", num:3, numLabel:"How many steals?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Allisha Gray", num:3, numLabel:"How many steals?"},
   {id:"reb", q:"Who grabs the most rebounds?", label:"Most rebounds", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"A'ja Wilson", num:11, numLabel:"How many rebounds?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Angel Reese", num:13, numLabel:"How many rebounds?"},
   {id:"blk", q:"Who swats the most blocks?", label:"Most blocks", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Brianna Turner", num:2, numLabel:"How many blocks?"}
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Aliyah Boston", num:2, numLabel:"How many blocks?"}
 ];
 /* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
    Every question is answerable by WATCHING the broadcast at the break — no lookups,
@@ -9647,7 +9649,10 @@ function renderCiCard(q){
     var run  = (pk!=null && right && PCI.streak>1)
       ? '<div class="cirun">🔥 <b>'+PCI.streak+' in a row</b>'+(PCI.streak>=3?' — you’re on a run':'')+'</div>'
       : (pk!=null && !right && PCI.best>1 ? '<div class="cirun cimiss">streak reset · your best is '+PCI.best+'</div>' : '');
-    ciShow('<div class="cihead">'+ico('live')+' Caught It · resolved</div>'+
+    /* "resolved" was the machine's word, not the player's. The card only
+       ever appears once the answer is in, so the state was never news —
+       it just made the headline longer than the result underneath it. */
+    ciShow('<div class="cihead">'+ico('live')+' Caught It</div>'+
            '<div class="cires'+(right?' ok':(pk==null?'':' no'))+'"><span class="ciresi">'+icon+'</span>'+
              '<div><div class="ciresh">'+esc(head)+'</div>'+
              (pk!=null?('<div class="ciresp">You said '+esc(ciLabel(q,pk))+
@@ -11752,7 +11757,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-16-one-score.116';
+const STATS_BUILD='2026-08-16-gn11-setup.117';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -12976,7 +12981,12 @@ function renderBoard(){
       + (why?'<p class="sub" style="font-size:14px;margin:8px 0 0;color:#ffc54d">'+esc(why)+'</p>':'')
       + '<p class="sub" style="font-size:14px;margin:8px 0 0">Every right answer moves a row. Q4 is worth four times Q1, so it keeps moving to the buzzer.</p></div>';
   }
-  try{ out+=ciRecapCard(); }catch(_){}
+  /* The Caught It recap is deliberately NOT on the board. Founder's call
+     after GN10: "we don't need to add the past caught it questions to the
+     board — you either get it or you don't." He is right; the mechanic is
+     a moment, and a list of expired moments is a scoreboard for something
+     that already finished. ciRecapCard() is left intact for the post-game
+     screens, where looking back is the point. */
   var ss=seasonStats();
   out+='<div class="card" style="padding:14px 16px;margin-top:12px"><div class="stHd">YOUR SEASON</div>'
     + '<div style="display:flex;text-align:center">'
