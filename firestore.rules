@@ -274,6 +274,24 @@ service cloud.firestore {
     // impossible to work around, and it is what makes the row evidence
     // rather than an assertion. Under TCPA the burden of proving consent is
     // ours — so the database refuses to store a contact without it.
+    /* TONIGHT'S GAME — readable by anybody, writable by nobody but the host.
+       This is the matchup, the rosters and the pick sheet: exactly what the
+       landing page already shows a signed-out stranger, so there is nothing
+       here to protect from a reader. It is public on purpose, because a
+       player who is not signed in still has to see which game is on.
+
+       Writes are another matter — this document decides which game the whole
+       room plays. host/publish-night.js writes it with the Admin SDK and
+       bypasses rules entirely; this clause is what stops anyone else.
+
+       `current` is the pointer that names tonight's night, and it lives in
+       the same collection under the same rule, which is why the pattern
+       matches any {id} rather than a night-shaped one. */
+    match /schedule/{id} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
     match /signups/{uid} {
       allow read: if isOwner();
 

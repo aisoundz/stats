@@ -2258,6 +2258,13 @@ window.STATS_FIREBASE = {
         fsMod.connectFirestoreEmulator(db, EMU.host, EMU.firestorePort);
       }
 
+      /* TONIGHT'S GAME, FROM THE DATABASE. First point in this file where
+         `db` exists. Deliberately not awaited into the critical path of
+         sign-in below: a slow read must delay the game showing up, never
+         the player getting into their account. It fails safe on its own —
+         see hydrateNight(). */
+      try{ loadNightConfig(db, fsMod); }catch(_){}
+
       /* ---- IDENTITY, AND WHY IT IS WATCHED AND NOT SNAPSHOTTED -------
          This used to be one line: sign in anonymously, read the uid once,
          keep it forever. That is wrong, and it is the bug that ate Game
@@ -4037,6 +4044,126 @@ const GAME=SPORT.game, roster=SPORT.roster, preds=SPORT.preds, rounds=SPORT.roun
 
    One line, and it is a net again. Everything downstream already worked.   */
 try{ window.GAME = GAME; }catch(_){}
+
+/* ============ THE NIGHT COMES FROM THE DATABASE =====================
+   Tonight's game has always lived in three consts above — BB_GAME,
+   BB_ROSTER and BB_PREDS — so every game night has been a deploy, and
+   keeping the three in step has been discipline rather than code. That is
+   B26, and Game Night #9 is what it cost: the matchup was updated, the
+   roster was not, and the app ran perfectly on the wrong players.
+
+   WHY THE CONSTS STAY. `GAME`, `roster` and `preds` are const bindings
+   resolved when this file evaluates, so nothing arriving later can replace
+   them. The objects, however, can be filled in — and 84 of the 84 places
+   that read `GAME.something` read it at call time, so they pick up new
+   values for free. What does NOT come free is anything that captured a
+   VALUE at load: there are exactly four, they are listed in hydrateNight()
+   below, and each is rebuilt by hand.
+
+   WHY IT DOES NOT GATE FIRST PAINT. `body.booted` is added at the end of
+   this script, synchronously, long before boot()'s Firebase imports
+   resolve. Holding the first paint until a network read came back would
+   trade a wrong-night flash for a blank screen on a bad connection, which
+   is a worse deal on a phone in an arena. So the baked-in night paints —
+   it is a real night, not a placeholder — and hydration corrects it and
+   repaints. When the published config IS the baked-in night, which is the
+   normal case, nothing visibly changes at all.
+
+   IT FAILS SAFE AND IT FAILS LOUD. No document, a malformed one, or a read
+   that throws all leave the constants exactly as they are, and say so.
+   Silence here would be the app quietly playing the wrong game, which is
+   the one outcome worse than the deploy-per-night it replaces.            */
+var NIGHT_CFG_SOURCE = 'built-in';
+
+function hydrateNight(cfg){
+  if(!cfg || typeof cfg !== 'object') return false;
+  var g = cfg.game, r = cfg.roster, p = cfg.preds;
+  /* Refuse a config that is not a whole night. A half-applied night is
+     precisely B26 with a network in the middle. */
+  if(!g || !g.nightId || !g.espnEvent) return false;
+  if(!r || !(r.home||[]).length || !(r.away||[]).length) return false;
+  if(!Array.isArray(p) || !p.length) return false;
+
+  try{
+    /* 1. the matchup — fill the object, never rebind it */
+    Object.keys(g).forEach(function(k){ BB_GAME[k] = g[k]; });
+
+    /* 2. the rosters — SPLICE, do not reassign. BB_GROUPS holds references
+          to these very arrays, so replacing them would leave the pick
+          sheet pointing at the old ones. */
+    BB_ROSTER.home.length = 0; Array.prototype.push.apply(BB_ROSTER.home, r.home);
+    BB_ROSTER.away.length = 0; Array.prototype.push.apply(BB_ROSTER.away, r.away);
+
+    /* 3. BB_GROUPS captured abbreviations and names as VALUES at load. */
+    try{
+      BB_GROUPS[0].ab = BB_GAME.homeAbbr; BB_GROUPS[0].name = BB_GAME.homeName;
+      BB_GROUPS[1].ab = BB_GAME.awayAbbr; BB_GROUPS[1].name = BB_GAME.awayName;
+    }catch(_){}
+
+    /* 4. the pick sheet — each entry's `opts` is a NEW array built at load
+          from the old roster, so it has to be rebuilt, not just refreshed. */
+    BB_PREDS.length = 0;
+    p.forEach(function(q){
+      var copy = {};
+      Object.keys(q).forEach(function(k){ copy[k] = q[k]; });
+      BB_PREDS.push(copy);
+    });
+
+    /* 5. the landing line is a template string baked at load. */
+    try{
+      SPORTS.basketball.landing =
+        '<b style="color:var(--ink)">' + BB_GAME.awayName + ' @ ' + BB_GAME.homeName + '</b>';
+    }catch(_){}
+
+    try{ window.GAME = BB_GAME; }catch(_){}
+    NIGHT_CFG_SOURCE = 'database';
+    return true;
+  }catch(e){
+    try{ console.error('hydrateNight failed, keeping the built-in night:', e); }catch(_){}
+    return false;
+  }
+}
+
+/* Repaint whatever is currently showing game data. Deliberately narrow and
+   wrapped: a repaint that throws must not take the night with it. */
+function repaintAfterHydrate(){
+  ['renderPortal','paintNav','renderStats','renderGametime','renderBoard','buildPred']
+    .forEach(function(fn){ try{ if(typeof window[fn]==='function') window[fn](); }catch(_){} });
+  try{ if(typeof trk==='function') trk('night_cfg', {source:NIGHT_CFG_SOURCE, night:BB_GAME.nightId}); }catch(_){}
+}
+
+/* Read tonight's config. `schedule/current` is a pointer so a night can be
+   changed without a deploy at all; falling back to the baked-in nightId
+   keeps today working while that pointer does not exist yet. */
+async function loadNightConfig(db, F){
+  if(!db || !F) return false;
+  try{
+    var id = null;
+    try{
+      var cur = await F.getDoc(F.doc(db,'schedule','current'));
+      if(cur.exists()) id = (cur.data()||{}).nightId || null;
+    }catch(_){}
+    if(!id) id = BB_GAME.nightId;
+    if(!id) return false;
+    var snap = await F.getDoc(F.doc(db,'schedule',id));
+    if(!snap.exists()){
+      try{ console.info('no published config for '+id+' — using the built-in night'); }catch(_){}
+      return false;
+    }
+    var ok = hydrateNight(snap.data());
+    if(!ok){
+      try{ console.error('published config for '+id+' was not a whole night — using the built-in one'); }catch(_){}
+      try{ if(window.SB && SB.notifyOps) SB.notifyOps('night', 'Tonight’s published setup looked incomplete, so the built-in game is being used.'); }catch(_){}
+      return false;
+    }
+    repaintAfterHydrate();
+    return true;
+  }catch(e){
+    try{ console.error('could not read tonight’s config, using the built-in night:', e); }catch(_){}
+    return false;
+  }
+}
+try{ window.hydrateNight = hydrateNight; window.loadNightConfig = loadNightConfig; }catch(_){}
 const NR=rounds.length;                               // number of scoring rounds
 // A pushed round can be worth something other than the built-in schedule —
 // the host decides on the night. Empty until a round is actually pushed, so
