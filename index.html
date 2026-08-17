@@ -3923,17 +3923,24 @@ const SC_GAME={
   tip:"Kickoff TBD — swap this when the Leagues Cup draw lands"
 };
 // 10 picks × 5 pts = 50. Every one of them always resolves.
+/* SIX PICKS AT 100, LIKE EVERY OTHER SPORT — rebuilt 17 Aug 2026.
+   This was ten picks at base:50, which is 500 points, while the comment
+   above it said "10 picks x 5 pts = 50" and the rules copy on screen said
+   "5 pts each". Three different numbers for one fact, live on
+   ?sport=soccer, and a player who read the rules and then did the maths
+   would have concluded the app was broken — correctly.
+
+   The lesson the codebase already wrote down is to DERIVE THE PROSE FROM
+   THE CONFIG, so rulePred below now states the number these entries
+   actually carry. Six at 100 also lines soccer up with basketball,
+   baseball, football and hockey: 600 of a 1,000-point night, everywhere. */
 const SC_PREDS=[
-  {id:"result",  label:"Result",                      base:50, opts:[SC_GAME.homeName,"Draw",SC_GAME.awayName], answer:SC_GAME.homeName},
-  {id:"goals",   label:"Total goals",                 base:50, opts:["Under 2.5","Over 2.5"], answer:"Over 2.5"},
-  {id:"first",   label:"First goal comes from",       base:50, opts:[SC_GAME.homeName,SC_GAME.awayName,"No goals"], answer:SC_GAME.awayName},
-  {id:"btts",    label:"Both teams to score?",        base:50, opts:["Yes","No"], answer:"Yes"},
-  {id:"bighalf", label:"Higher-scoring half",         base:50, opts:["1st half","2nd half","Equal"], answer:"2nd half"},
-  {id:"corner",  label:"First corner",                base:50, opts:[SC_GAME.homeName,SC_GAME.awayName], answer:SC_GAME.awayName},
-  {id:"card",    label:"First yellow card",           base:50, opts:[SC_GAME.homeName,SC_GAME.awayName], answer:SC_GAME.homeName},
-  {id:"stopgoal",label:"Goal in added time?",         base:50, opts:["Yes","No"], answer:"Yes"},
-  {id:"sot",     label:"More shots on target",        base:50, opts:[SC_GAME.homeName,SC_GAME.awayName,"Equal"], answer:SC_GAME.homeName},
-  {id:"margin",  label:"Winning margin",              base:50, opts:["Draw","By 1","By 2+"], answer:"By 1"}
+  {id:"result", q:"How does it finish?",        label:"Result",          base:100, opts:[SC_GAME.awayName,"Draw",SC_GAME.homeName], answer:SC_GAME.homeName},
+  {id:"goals",  q:"Total goals, both sides?",   label:"Total goals",     base:100, opts:["Under 2.5","Over 2.5"], answer:"Over 2.5"},
+  {id:"first",  q:"Who scores first?",          label:"First goal",      base:100, opts:[SC_GAME.awayName,SC_GAME.homeName,"No goals"], answer:SC_GAME.awayName},
+  {id:"btts",   q:"Do both teams score?",       label:"Both to score",   base:100, opts:["Yes","No"], answer:"Yes"},
+  {id:"corner", q:"Who wins more corners?",     label:"More corners",    base:100, opts:[SC_GAME.awayName,SC_GAME.homeName], answer:SC_GAME.awayName},
+  {id:"card",   q:"Who picks up more cards?",   label:"More cards",      base:100, opts:[SC_GAME.awayName,SC_GAME.homeName], answer:SC_GAME.homeName}
 ];
 /* LIVE CATCHES — the soccer-native mechanic, 6 × 1 pt.
    You set these before kickoff and then you do NOTHING. They flip themselves
@@ -3969,6 +3976,160 @@ const SOCCER_ROUNDS=[
    downstream hardcodes "quarter" or the number 4 any more.
    Add a sport by adding a key. Pick one with ?sport=soccer in the URL.
    ------------------------------------------------------------------------ */
+
+/* ============ MLB — Three rounds — after the 3rd, the 6th and the 9th. =============================
+   Practice replays a REAL finished game: every answer below is what the
+   live resolver returned against ARI @ ATL, so practice
+   teaches exactly the game the night grades. 12 questions.
+   The matchup is a sample until a night is published to schedule/ — see
+   hydrateNight(). It is labelled as one rather than pretending. */
+const BA_GAME={
+  nightId:null,
+  sport:"baseball", league:"mlb",
+  homeName:"Atlanta Braves", homeAbbr:"ATL", homeNick:"Braves", homeColor:"#0c2340",
+  awayName:"Arizona Diamondbacks", awayAbbr:"ARI", awayNick:"Diamondbacks", awayColor:"#aa182c",
+  venue:"Sample fixture", date:"No night scheduled", short:"Sample", shareDate:"SAMPLE",
+  night:"MLB (sample)",
+  tip:"No MLB night scheduled yet — this is a practice fixture"
+};
+const BA_ROUNDS=[
+  {home:1,away:0, q:[
+    {t:"First hit of the game — what was it?", o:["Single","Double","Triple","Home run"], a:"Single"},
+    {t:"How many strikeouts through three?", o:["0–2","3–4","5–6","7 or more"], a:"7 or more"},
+    {t:"Hardest pitch so far — how fast?", o:["93 or under","94–96","97–98","99 and up"], a:"94–96"},
+    {t:"Who got on the board first?", o:["Arizona Diamondbacks","Atlanta Braves"], a:"Atlanta Braves"}
+  ]},
+  {home:2,away:1, q:[
+    {t:"Runs scored in the fourth, fifth and sixth?", o:["None","1–2","3–4","5 or more"], a:"1–2"},
+    {t:"More strikeouts or more hits in those three?", o:["Strikeouts","Hits","Dead even"], a:"Hits"},
+    {t:"Any home runs in there?", o:["None","One","Two","Three or more"], a:"One"},
+    {t:"Was there a one-two-three inning?", o:["Yes","No"], a:"Yes"}
+  ]},
+  {home:5,away:3, q:[
+    {t:"Who leads after nine?", o:["Arizona Diamondbacks","Atlanta Braves","Tied"], a:"Atlanta Braves"},
+    {t:"Runs in the last three innings?", o:["None","1–2","3–4","5 or more"], a:"5 or more"},
+    {t:"Bases stolen late?", o:["None","One","Two","Three or more"], a:"None"},
+    {t:"Strikeouts in the last three?", o:["0–2","3–4","5–6","7 or more"], a:"5–6"}
+  ]}
+];
+
+/* ============ NFL — Four rounds, one at every quarter break. =============================
+   Practice replays a REAL finished game: every answer below is what the
+   live resolver returned against DEN @ ATL, so practice
+   teaches exactly the game the night grades. 16 questions.
+   The matchup is a sample until a night is published to schedule/ — see
+   hydrateNight(). It is labelled as one rather than pretending. */
+const FO_GAME={
+  nightId:null,
+  sport:"football", league:"nfl",
+  homeName:"Atlanta Falcons", homeAbbr:"ATL", homeNick:"Falcons", homeColor:"#a71930",
+  awayName:"Denver Broncos", awayAbbr:"DEN", awayNick:"Broncos", awayColor:"#0a2343",
+  venue:"Sample fixture", date:"No night scheduled", short:"Sample", shareDate:"SAMPLE",
+  night:"NFL (sample)",
+  tip:"No NFL night scheduled yet — this is a practice fixture"
+};
+const FO_ROUNDS=[
+  {home:7,away:3, q:[
+    {t:"How did the opening drive end?", o:["Touchdown","Field goal","Punt","Turnover","Downs","Missed FG"], a:"Touchdown"},
+    {t:"Punts in the first?", o:["0–1","Two","Three","Four or more"], a:"Three"},
+    {t:"More runs or more passes?", o:["Rush","Pass","Dead even"], a:"Dead even"},
+    {t:"First points of the game came how?", o:["Touchdown","Field goal","Safety","Nobody scored"], a:"Touchdown"}
+  ]},
+  {home:14,away:10, q:[
+    {t:"Touchdowns in the second?", o:["None","One","Two","Three or more"], a:"Two"},
+    {t:"Flags thrown in the second?", o:["0–1","2–3","4–5","Six or more"], a:"4–5"},
+    {t:"Longest drive of the quarter?", o:["Under 20 yards","21–45","46–70","71 or more"], a:"46–70"},
+    {t:"Who leads at the half?", o:["Denver Broncos","Atlanta Falcons","Tied"], a:"Denver Broncos"}
+  ]},
+  {home:17,away:17, q:[
+    {t:"Turnovers in the third?", o:["None","One","Two","Three or more"], a:"One"},
+    {t:"Drives that ended in points?", o:["None","One","Two","Three or more"], a:"One"},
+    {t:"How did the first drive of the half end?", o:["Touchdown","Field goal","Punt","Turnover","Downs","Missed FG"], a:"Punt"},
+    {t:"More runs or more passes in the third?", o:["Rush","Pass","Dead even"], a:"Rush"}
+  ]},
+  {home:24,away:20, q:[
+    {t:"Touchdowns in the fourth?", o:["None","One","Two","Three or more"], a:"None"},
+    {t:"Who moved the ball further tonight?", o:["Denver Broncos","Atlanta Falcons","Dead even"], a:"Denver Broncos"},
+    {t:"Who picked up more first downs?", o:["Denver Broncos","Atlanta Falcons","Dead even"], a:"Denver Broncos"},
+    {t:"Who leads after four?", o:["Denver Broncos","Atlanta Falcons","Tied"], a:"Denver Broncos"}
+  ]}
+];
+
+/* ============ NHL — Three rounds, one at the end of every period. =============================
+   Practice replays a REAL finished game: every answer below is what the
+   live resolver returned against VGK @ CAR, so practice
+   teaches exactly the game the night grades. 12 questions.
+   The matchup is a sample until a night is published to schedule/ — see
+   hydrateNight(). It is labelled as one rather than pretending. */
+const HO_GAME={
+  nightId:null,
+  sport:"hockey", league:"nhl",
+  homeName:"Carolina Hurricanes", homeAbbr:"CAR", homeNick:"Hurricanes", homeColor:"#e30426",
+  awayName:"Vegas Golden Knights", awayAbbr:"VGK", awayNick:"Golden Knights", awayColor:"#344043",
+  venue:"Sample fixture", date:"No night scheduled", short:"Sample", shareDate:"SAMPLE",
+  night:"NHL (sample)",
+  tip:"No NHL night scheduled yet — this is a practice fixture"
+};
+const HO_ROUNDS=[
+  {home:1,away:0, q:[
+    {t:"Who scored first?", o:["Vegas Golden Knights","Carolina Hurricanes","Still scoreless"], a:"Vegas Golden Knights"},
+    {t:"Shots on goal in the first?", o:["0–8","9–12","13–16","17 or more"], a:"9–12"},
+    {t:"How many hits landed?", o:["0–12","13–20","21–28","29 or more"], a:"21–28"},
+    {t:"Goals in the opening period?", o:["None","One","Two","Three or more"], a:"One"}
+  ]},
+  {home:2,away:1, q:[
+    {t:"Shots blocked in the second?", o:["0–4","5–8","9–12","13 or more"], a:"13 or more"},
+    {t:"Pucks given away?", o:["0–4","5–8","9–12","13 or more"], a:"9–12"},
+    {t:"Goals in the middle period?", o:["None","One","Two","Three or more"], a:"One"},
+    {t:"Who leads after two?", o:["Vegas Golden Knights","Carolina Hurricanes","Tied"], a:"Vegas Golden Knights"}
+  ]},
+  {home:3,away:2, q:[
+    {t:"Who threw more at the net tonight?", o:["Vegas Golden Knights","Carolina Hurricanes","Dead even"], a:"Dead even"},
+    {t:"Who won more faceoffs?", o:["Vegas Golden Knights","Carolina Hurricanes","Dead even"], a:"Carolina Hurricanes"},
+    {t:"Penalties called all game?", o:["0–2","3–4","5–7","Eight or more"], a:"Eight or more"},
+    {t:"Who was the more physical side?", o:["Vegas Golden Knights","Carolina Hurricanes","Dead even"], a:"Carolina Hurricanes"}
+  ]}
+];
+
+/* ---- PREDICTION SHEETS FOR THE NEW SPORTS -------------------------
+   TEAM AND EVENT SHAPED, NOT PLAYER SHAPED, and that is a decision rather
+   than a shortcut. Basketball's six picks name PLAYERS, which works because
+   its roster is twelve names typed by hand. A baseball roster is twenty-six
+   and a football roster fifty-three, so hand-typing them per night is not a
+   discipline problem, it is arithmetic — and MLS has no per-player box
+   score AT ALL, so a player pick there could never settle. Soccer already
+   proved the team/event shape works.
+
+   Player-leader picks come back when rosters arrive from the feed. Until
+   then these settle from things the feed always carries.
+
+   Six picks at 100 each = 600, which keeps the thousand-point night intact
+   and matches basketball's ceiling exactly. */
+const BA_PREDS=[
+  {id:"winner", q:"Who takes it?",              label:"Winner",         base:100, opts:[BA_GAME.awayName,BA_GAME.homeName], answer:BA_GAME.homeName},
+  {id:"runs",   q:"Total runs, both teams?",    label:"Total runs",     base:100, opts:["Under 8.5","Over 8.5"], answer:"Under 8.5"},
+  {id:"first",  q:"Who scores first?",          label:"First to score", base:100, opts:[BA_GAME.awayName,BA_GAME.homeName], answer:BA_GAME.homeName},
+  {id:"hr",     q:"Home runs in the game?",     label:"Home runs",      base:100, opts:["None","One","Two","Three or more"], answer:"Two"},
+  {id:"ks",     q:"Which staff strikes out more?", label:"More strikeouts", base:100, opts:[BA_GAME.awayName,BA_GAME.homeName], answer:BA_GAME.homeName},
+  {id:"extras", q:"Does it go past nine?",      label:"Extra innings",  base:100, opts:["Yes","No"], answer:"No"}
+];
+const FO_PREDS=[
+  {id:"winner", q:"Who takes it?",              label:"Winner",         base:100, opts:[FO_GAME.awayName,FO_GAME.homeName], answer:FO_GAME.awayName},
+  {id:"points", q:"Total points, both teams?",  label:"Total points",   base:100, opts:["Under 44.5","Over 44.5"], answer:"Over 44.5"},
+  {id:"first",  q:"First points come how?",     label:"First score",    base:100, opts:["Touchdown","Field goal","Safety"], answer:"Touchdown"},
+  {id:"ground", q:"Who runs it better?",        label:"More rush yards",base:100, opts:[FO_GAME.awayName,FO_GAME.homeName], answer:FO_GAME.awayName},
+  {id:"to",     q:"Turnovers in the game?",     label:"Turnovers",      base:100, opts:["None","One","Two","Three or more"], answer:"Three or more"},
+  {id:"lead",   q:"Does the lead change hands?",label:"Lead changes",   base:100, opts:["Yes","No"], answer:"Yes"}
+];
+const HO_PREDS=[
+  {id:"winner", q:"Who takes it?",              label:"Winner",         base:100, opts:[HO_GAME.awayName,HO_GAME.homeName], answer:HO_GAME.awayName},
+  {id:"goals",  q:"Total goals, both teams?",   label:"Total goals",    base:100, opts:["Under 5.5","Over 5.5"], answer:"Under 5.5"},
+  {id:"first",  q:"Who scores first?",          label:"First goal",     base:100, opts:[HO_GAME.awayName,HO_GAME.homeName], answer:HO_GAME.awayName},
+  {id:"shots",  q:"Who puts more on net?",      label:"More shots",     base:100, opts:[HO_GAME.awayName,HO_GAME.homeName], answer:HO_GAME.homeName},
+  {id:"hits",   q:"Who plays it heavier?",      label:"More hits",      base:100, opts:[HO_GAME.awayName,HO_GAME.homeName], answer:HO_GAME.homeName},
+  {id:"ot",     q:"Does it need overtime?",     label:"Overtime",       base:100, opts:["Yes","No"], answer:"Yes"}
+];
+
 const SPORTS={
   basketball:{
     key:"basketball", emoji:"🏀", word:"basketball",
@@ -4009,15 +4170,75 @@ const SPORTS={
         league:"Leagues Cup", cadence:"2 halves" },
     startLbl:"{n} questions ▶", lifelineNote:"the break is long enough",
     landing:"<b style=\"color:var(--ink)\">MLS v LIGA MX</b> — Aug 4 to Sep 6",
-    step1:"Ten picks before kickoff — result, goals, first corner, first card, added time. All of them always resolve. Worth up to 50 pts.",
+    step1:"Six picks before kickoff — result, goals, first scorer, corners and cards. All of them always resolve. Worth 600 of the night\u2019s 1,000.",
     step2h:"Set your 6-item watchlist, then just watch",
     step2:"First corner, first card, first sub, first offside. You set them before kickoff and they flip themselves as the match happens — no tapping, no phone during a counter-attack. 1 pt each.",
     step3:"Two question rounds only — halftime (3 pts each) and full time (5 pts each). Most points wins the night; ⚡ Speed breaks ties.",
-    rulePred:"Lock 10 picks before kickoff, 5 pts each: result, total goals, first goal, both teams to score, higher-scoring half, first corner, first yellow, added-time goal, shots on target and winning margin. Every one of them resolves — there are no dead picks. Locked at kickoff.",
+    rulePred:"Six picks before kickoff, 100 points each: result, total goals, first goal, both teams to score, who wins more corners and who picks up more cards. Every one of them resolves — there are no dead picks. Locked at kickoff.",
     ruleLive:"Two rounds only, because soccer only gives you two breaks. At halftime, 3 questions about the first 45 (3 pts each). At the final whistle, 3 questions about the whole match (5 pts each). 20 seconds per question, no lookups.",
     ruleScore:"When the host posts the halftime and full-time answers (from the broadcast + official match stats), your half scores itself — nothing for you to tap in. At the final whistle the host settles your pre-match sheet and your watchlist too."
   }
 };
+
+/* ---- THE NEW SPORTS, IN THE REGISTRY -------------------------------
+   Same shape basketball and soccer already use. Each carries its own
+   language, because "quarter" on a hockey card is a screen that lies, and
+   its own cadence, because a sport's rounds belong to the sport. */
+SPORTS.baseball={
+  key:"baseball", emoji:"\u26BE\uFE0F", word:"baseball",
+  game:BA_GAME, roster:null, preds:BA_PREDS, rounds:BA_ROUNDS, catches:[],
+  worth:[30,50,70], tags:["1st-3rd","4th-6th","7th-9th"],
+  names:["Innings 1\u20133","Innings 4\u20136","Innings 7\u20139"],
+  L:{ start:"first pitch", Start:"First pitch", starting:"Warming up",
+      end:"final out", End:"Final out", unit:"game", Unit:"Game",
+      period:"stretch", Period:"Stretch", league:"MLB", cadence:"3 rounds" },
+  startLbl:"Start {n} \u25B6", lifelineNote:"like a mound visit",
+  landing:"<b style=\"color:var(--ink)\">"+BA_GAME.awayName+" @ "+BA_GAME.homeName+"</b>",
+  step1:"Lock six picks before first pitch \u2014 winner, total runs, who scores first and more. Worth 600 of the night\u2019s 1,000.",
+  step2h:"Answer after the 3rd, 6th and 9th",
+  step2:"Three rounds, not nine \u2014 baseball gives you time to breathe, and a round every eighteen minutes is a notification, not a game. Four questions each about the innings you just watched.",
+  step3:"Rounds score themselves the moment the innings close. Most points wins; Speed breaks ties.",
+  rulePred:"Six picks before first pitch, 100 points each: winner, total runs, first to score, home runs, which staff strikes out more, and whether it goes past nine. Locked at first pitch.",
+  ruleLive:"Three rounds \u2014 after the 3rd, the 6th and the 9th. Four questions each, worth 30, 50 and 70 points, about the innings that just happened. Twenty seconds each, no lookups.",
+  ruleScore:"Every round settles from the official play-by-play as soon as the inning closes. Nothing for you to tap."
+};
+SPORTS.football={
+  key:"football", emoji:"\uD83C\uDFC8", word:"football",
+  game:FO_GAME, roster:null, preds:FO_PREDS, rounds:FO_ROUNDS, catches:[],
+  worth:[10,20,30,40], tags:["Q1","Q2","Q3","Q4"],
+  names:["Quarter 1","Quarter 2","Quarter 3","Quarter 4"],
+  L:{ start:"kickoff", Start:"Kickoff", starting:"Kicking off",
+      end:"final whistle", End:"Final whistle", unit:"game", Unit:"Game",
+      period:"quarter", Period:"Quarter", league:"NFL", cadence:"4 quarters" },
+  startLbl:"Start {n} \u25B6", lifelineNote:"like a coach\u2019s challenge",
+  landing:"<b style=\"color:var(--ink)\">"+FO_GAME.awayName+" @ "+FO_GAME.homeName+"</b>",
+  step1:"Lock six picks before kickoff \u2014 winner, total points, how the first score comes and more. Worth 600 of the night\u2019s 1,000.",
+  step2h:"Answer at every quarter break",
+  step2:"Four questions a quarter about the drives you just watched. Points climb: 10 in the first, 40 in the fourth. Twenty seconds each.",
+  step3:"The drive is the unit, and a drive tells you how it ended \u2014 so your quarter scores itself the moment the quarter does.",
+  rulePred:"Six picks before kickoff, 100 points each: winner, total points, how the first score comes, who runs it better, turnovers, and whether the lead changes hands. Locked at kickoff.",
+  ruleLive:"Four rounds, one a quarter, four questions each. Worth 10, 20, 30 and 40 points \u2014 the fourth quarter is worth four times the first. Twenty seconds a question, no lookups.",
+  ruleScore:"Every question settles from the drive chart the moment the quarter ends. Nothing for you to tap."
+};
+SPORTS.hockey={
+  key:"hockey", emoji:"\uD83C\uDFD2", word:"hockey",
+  game:HO_GAME, roster:null, preds:HO_PREDS, rounds:HO_ROUNDS, catches:[],
+  worth:[15,30,45], tags:["1st","2nd","3rd"],
+  names:["1st period","2nd period","3rd period"],
+  L:{ start:"puck drop", Start:"Puck drop", starting:"Dropping the puck",
+      end:"final horn", End:"Final horn", unit:"game", Unit:"Game",
+      period:"period", Period:"Period", league:"NHL", cadence:"3 periods" },
+  startLbl:"Start {n} \u25B6", lifelineNote:"like a TV timeout",
+  landing:"<b style=\"color:var(--ink)\">"+HO_GAME.awayName+" @ "+HO_GAME.homeName+"</b>",
+  step1:"Lock six picks before puck drop \u2014 winner, total goals, who scores first and more. Worth 600 of the night\u2019s 1,000.",
+  step2h:"Answer at every intermission",
+  step2:"Four questions a period about what you just watched \u2014 not only the goals. Hits, blocks and giveaways all count, because that is most of a hockey game.",
+  step3:"Rounds settle from the official play-by-play at the horn. Most points wins; Speed breaks ties.",
+  rulePred:"Six picks before puck drop, 100 points each: winner, total goals, first goal, who puts more on net, who plays it heavier, and whether it needs overtime. Locked at puck drop.",
+  ruleLive:"Three rounds, one an intermission, four questions each, worth 15, 30 and 45 points. Twenty seconds a question, no lookups.",
+  ruleScore:"Every question settles from the play-by-play at the end of the period. Nothing for you to tap."
+};
+
 const SPORT_KEY=(()=>{try{return (new URLSearchParams(location.search).get('sport')||'basketball').toLowerCase();}catch(e){return 'basketball';}})();
 const SPORT=SPORTS[SPORT_KEY]||SPORTS.basketball;
 const L=SPORT.L;
