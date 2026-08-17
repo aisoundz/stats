@@ -475,9 +475,33 @@ async function browserTests(){
     const up=await p.evaluate(()=>{const c=document.getElementById('ciCard');return c&&c.style.display==='block';});
     if(up){
       await p.click('#ciCard .ciopt'); await p.waitForTimeout(3200);
-      const resolved=await p.evaluate(()=>/resolved/i.test(document.getElementById('ciInner').innerText));
-      check(`callit.resolves-on-answer.${vp.name}`, resolved, 'still not resolved 3s after answering',
-        'REGRESSION: answered cards hung on "waiting on the play…" indefinitely');
+      /* WAS RED SINCE 137ba32 AND THE PRODUCT WAS NEVER BROKEN.
+         This used to assert /resolved/i against the card's innerText. That
+         word was deliberately taken OUT of the copy in GN11's commit, and
+         the code says why in its own comment: "resolved was the machine's
+         word, not the player's — the card only ever appears once the answer
+         is in, so the state was never news." The card now says "Nice call ·
+         +15" or "Not this time" or "You sat this one out". So the check was
+         a second copy of a fact the product owns, went stale the moment the
+         copy improved, and sat red through eleven game nights next to three
+         real failures — which is exactly how a gate stops being read.
+
+         Assert the SUBSTANCE instead: the question reached the resolved
+         state, the card put a result block on screen, and that block has a
+         headline a player can read. All three are true of any wording. */
+      const res=await p.evaluate(()=>{
+        const inner=document.getElementById('ciInner');
+        const q=(window.PCI&&PCI.active)||null;
+        const h=inner?inner.querySelector('.ciresh'):null;
+        return { state:q?(q.state||null):null,
+                 graded:!!(q&&window.PCI&&PCI.graded&&PCI.graded[q.qid]),
+                 hasResult:!!(inner&&inner.querySelector('.cires')),
+                 head:h?String(h.innerText||'').trim():'' };
+      });
+      check(`callit.resolves-on-answer.${vp.name}`,
+        res.state==='resolved' && res.hasResult && res.head.length>0,
+        `3s after answering: state=${res.state} graded=${res.graded} resultBlock=${res.hasResult} headline="${res.head}"`,
+        'REGRESSION: answered cards hung on "waiting on the play…" indefinitely. Asserts the resolved STATE and a readable result, never one particular word — the word changed once already');
       await p.waitForTimeout(12500);
       check(`callit.auto-hides.${vp.name}`,
         (await p.evaluate(()=>document.getElementById('ciCard').style.display))==='none',
@@ -3581,10 +3605,53 @@ async function browserTests(){
          what is left visible. The final screen is the one that leaked. */
       try{ showFinal(); }catch(e){}
       try{ paintNav(); }catch(e){}
+      /* COUNT WHAT A PLAYER CAN TAP, NOT AN ATTRIBUTE.
+         This used to read b.style.display — the INLINE style. leanStripTabs()
+         deliberately stopped writing inline styles: revTalkBtn is shown again
+         by the review screen with its own inline write, which beat ours every
+         time, so the strip moved to a .leanHidden class backed by
+         display:none !important. The buttons have been correctly hidden ever
+         since and this check has been reporting three of them visible,
+         because it was looking at the one property that no longer carries the
+         answer. Same shape as the sticky lesson in the incident catalogue: a
+         getComputedStyle assertion passed while sticky was disabled, and the
+         fix was to measure the effect rather than the declaration.
+         Computed display + real box size catches an inline style, a class, a
+         visibility flip and a zero-height collapse alike. */
+      /* AND THE FIRST REWRITE OF THIS WAS ITSELF A FALSE GREEN, which is
+         the more useful half of the story. It added `width>0 && height>0`
+         on the theory that "tappable" is what matters. But these buttons
+         live on sections that are themselves hidden — review, break, the
+         final screen — so they are never laid out and their box is 0x0
+         whatever their own display says. Sabotaging leanStripTabs to strip
+         NOTHING left the count at zero and the check green: the size
+         condition threw away the only signal that was working. Computed
+         display on the button is the thing that actually moved (0 -> 3).
+         Measure that. */
       out.talkButtonsVisible = Array.prototype.filter.call(
         document.querySelectorAll('button'),
-        function(b){ return /talk trash/i.test(b.textContent||'') && b.style.display!=='none'; }
+        function(b){
+          if(!/talk trash/i.test(b.textContent||'')) return false;
+          var cs = getComputedStyle(b);
+          return cs.display!=='none' && cs.visibility!=='hidden';
+        }
       ).length;
+      /* THE STRIP HAS TO SURVIVE A LATER INLINE WRITE, which is the whole
+         reason it uses a class with !important instead of style.display.
+         revTalkBtn is shown again by the review screen with its own inline
+         write; an inline display beats a plain stylesheet rule and loses to
+         !important. Simulate exactly that and confirm the button stays
+         shut, because without this the !important can be dropped and
+         nothing notices until a screenshot finds four live Talk buttons. */
+      out.talkSurvivesInlineWrite = (function(){
+        var b = document.getElementById('revTalkBtn');
+        if(!b) return null;
+        var before = b.style.display;
+        b.style.display = 'block';
+        var held = getComputedStyle(b).display === 'none';
+        b.style.display = before;
+        return held;
+      })();
       navGo('stats'); out.screenAfterStats = S.screen;
       navGo('crew');  out.screenAfterTalk  = S.screen;
       navGo('board'); out.boardReachable   = S.screen==='board';
@@ -3623,9 +3690,13 @@ async function browserTests(){
     check('lean.the-watchlist-is-empty-not-hidden', r.catches===0,
       `CATCHES still has ${r.catches} entries`,
       'a hidden card whose points still count toward MAXPTS is a wrong total, which is worse than leaving the card on');
+    check('lean.the-talk-strip-survives-a-later-inline-write',
+      r.talkSurvivesInlineWrite!==false,
+      `revTalkBtn was re-shown by an inline display write (held=${r.talkSurvivesInlineWrite})`,
+      'the strip uses .leanHidden with !important precisely because the review screen shows revTalkBtn again with its own inline style; drop the !important and the button comes back');
     check('lean.every-talk-door-is-shut',
       r.talkButtonsVisible===0,
-      `${r.talkButtonsVisible} "Talk trash" button(s) still visible under LEAN`,
+      `${r.talkButtonsVisible} "Talk trash" button(s) still visible under LEAN (computed display)`,
       'removing the tab does not remove Talk. There are four other buttons that open it \u2014 review, Gametime, break and the FINAL screen \u2014 and the first version of LEAN shipped with all four live. A player screenshot found it');
     check('lean.stats-is-reachable-and-lean-still-holds',
       r.statsBtn!=='none' && r.screenAfterStats==='stats'
