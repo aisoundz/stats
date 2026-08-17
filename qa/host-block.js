@@ -89,6 +89,30 @@ if (expect && names.length < Number(expect)) {
   bad++;
 }
 
+/* THE TWO ADMIN FILES MUST CARRY THE SAME ENGINE.
+   admin.html is what host/run.js reads; admin-test.html is what the
+   "build on test, then promote" ritual copies OVER it. They drifted to 84
+   resolvers against 32, which means the next promotion would have deleted
+   52 resolvers and left the runner unable to answer four sports — a
+   destructive edit disguised as a routine one. Same fact, two files, and
+   the copy direction points at production. */
+if (args.includes('--twin')) {
+  const twin = FILE === 'admin.html' ? 'admin-test.html' : 'admin.html';
+  const tsrc = fs.readFileSync(path.join(ROOT, twin), 'utf8');
+  const ta = tsrc.indexOf(START), tb = tsrc.indexOf(END);
+  if (ta < 0 || tb < 0) { console.error(`FAIL: ${twin} has no @host-shared sentinels`); bad++; }
+  else {
+    const tblock = tsrc.slice(ta, tb + END.length);
+    if (tblock === block) console.log(`\ntwin: ${twin} carries an identical @host-shared block`);
+    else {
+      console.error(`\nFAIL: ${FILE} and ${twin} carry DIFFERENT @host-shared blocks ` +
+                    `(${block.length} vs ${tblock.length} chars). Promoting one over the other ` +
+                    `would change the resolver engine the runner reads.`);
+      bad++;
+    }
+  }
+}
+
 if (args.includes('--write-baseline')) {
   const out = argOf('--write-baseline');
   fs.writeFileSync(out, JSON.stringify(names, null, 0));

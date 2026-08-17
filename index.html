@@ -12401,7 +12401,7 @@ function buildStampHTML(){
    becomes an NFL night, only SPORT_CFG and the parser change; the Stats
    tab, the card tracker and the question bank keep working.            */
 var SPORT_CFG={
-  wnba:{ path:'basketball/wnba', unit:'pts',
+  wnba:{ family:'basketball', minutes:10, path:'basketball/wnba', unit:'pts',
          pre:[['Points Per Game','Points a game','hi'],['Points Against','Points allowed','lo'],
               ['Field Goal %','Field goal %','hi'],['Three Point %','Three-point %','hi'],
               ['Rebounds Per Game','Rebounds a game','hi'],['Assists Per Game','Assists a game','hi'],
@@ -12410,14 +12410,42 @@ var SPORT_CFG={
                ['Rebounds','Rebounds','hi'],['Assists','Assists','hi'],
                ['Steals','Steals','hi'],['Turnovers','Turnovers','lo']],
          box:{pts:'PTS',reb:'REB',ast:'AST',stl:'STL',blk:'BLK'} },
-  nba:{ path:'basketball/nba', unit:'pts', pre:null, live:null, box:{pts:'PTS',reb:'REB',ast:'AST',stl:'STL',blk:'BLK'} },
-  nfl:{ path:'football/nfl', unit:'pts', pre:null, live:null, box:{} }
+  /* NBA shares every stat category basketball already reads, so it is the
+     one league that may legitimately borrow WNBA's comparable-stat rows.
+     Quarters are 12 minutes rather than 10 — nothing here is clock-derived,
+     but anything that becomes clock-derived must read `minutes`. */
+  nba:{ family:'basketball', path:'basketball/nba', unit:'pts', minutes:12,
+        pre:null, live:null, box:{pts:'PTS',reb:'REB',ast:'AST',stl:'STL',blk:'BLK'} },
+  /* The roadmap sports. Paths are probed and correct; comparable-stat rows
+     and the box mapping are deliberately EMPTY rather than guessed, because
+     a football sheet has no rebounds and a baseball sheet has no assists.
+     Empty means the block hides itself, which is the house rule. */
+  nfl:{ family:'football', path:'football/nfl',   unit:'pts', minutes:15, pre:[], live:[], box:{} },
+  mlb:{ family:'baseball', path:'baseball/mlb',   unit:'runs', minutes:0, pre:[], live:[], box:{} },
+  nhl:{ family:'hockey',   path:'hockey/nhl',     unit:'goals', minutes:20, pre:[], live:[], box:{} },
+  mls:{ family:'soccer',   path:'soccer/usa.1',   unit:'goals', minutes:45, pre:[], live:[], box:{} }
 };
+/* INHERIT ONLY INSIDE A FAMILY — fixed 17 Aug 2026.
+   This used to fall back to SPORT_CFG.wnba for ANY league with no rows of
+   its own, which is right for the NBA and wrong for everything else: it
+   would have put "Rebounds a game" and "Three-point %" on a football
+   scouting sheet, sourced from a feed that has no such fields. Inventing a
+   stat CATEGORY is the same sin as inventing a number.
+
+   A league with no rows and no same-family donor gets empty rows, and
+   gsRows() already returns []||[] so the block hides itself rather than
+   rendering a guess. */
 function sportCfg(){
   var k='wnba'; try{ k=(GAME&&GAME.sport)||'wnba'; }catch(_){}
   var c=SPORT_CFG[k]||SPORT_CFG.wnba;
-  if(!c.pre) c=Object.assign({},SPORT_CFG.wnba,{path:c.path,box:c.box});
-  return c;
+  if(c.pre && c.pre.length) return c;
+  var fam=c.family||'basketball', donor=null;
+  for(var key in SPORT_CFG){
+    var d=SPORT_CFG[key];
+    if(d && d.family===fam && d.pre && d.pre.length){ donor=d; break; }
+  }
+  if(donor) return Object.assign({}, donor, {path:c.path, box:c.box, family:fam, minutes:c.minutes});
+  return Object.assign({}, c, {pre:c.pre||[], live:c.live||[]});
 }
 /* `fails` and `lastTry` exist because the first version of this screen would
    re-render on every failed fetch and immediately fetch again — a hot retry

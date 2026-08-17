@@ -319,11 +319,98 @@ async function handlersCallable(page, file){
 /* ========== 3. BROWSER ================================================ */
 async function browserTests(){
   const {chromium}=require('playwright');
-  const b=await chromium.launch((require('fs').existsSync('/opt/pw-browsers/chromium')?{executablePath:'/opt/pw-browsers/chromium'}:{}));
+  /* ONE CHROMIUM FOR ~40 HEAVY PAGES WAS THE WHOLE BUG.
+     The suite died near the end with "Failed to create browser context",
+     which is resource exhaustion, not logic — and because browserTests()
+     had one try/catch at the call site, it surfaced as the single opaque
+     failure "the browser suite crashed" while two entire feed states went
+     unexercised behind it.
+
+     Measured before fixing: 70 lightweight pages open and close with
+     contexts pinned at 1 and no failure, so page churn is not the problem
+     and neither is this box (43Gi free). The real pages are far heavier —
+     each loads an 885KB document, pulls a fixture feed, renders the Stats
+     tab and runs quarters — and roughly forty of those in one browser is
+     what runs it out. Nothing here needs a single long-lived browser, so
+     it gets recycled instead.
+
+     Recycling only happens when NOTHING is open, so it can never pull a
+     page out from under a group that is mid-check. */
+  const launch=()=>chromium.launch((require('fs').existsSync('/opt/pw-browsers/chromium')?{executablePath:'/opt/pw-browsers/chromium'}:{}));
+  let b=await launch();
+  let pagesMade=0;
+  const RECYCLE_EVERY=12;
+  /* The feed-state groups are the last and heaviest in the suite, and the
+     browser has already served ~35 pages by the time they start. Recycling
+     on a page COUNT does not help them, because the count boundary lands
+     wherever it lands. Give them an explicit fresh browser instead: at a
+     group boundary nothing is open, so this is always safe. */
+  const forceRecycle=async()=>{
+    const open=b.contexts().reduce((n,c)=>n+c.pages().length,0);
+    if(open!==0) return;
+    const old=b;
+    b=await launch();
+    pagesMade=0;
+    Promise.race([old.close().catch(()=>{}), new Promise(r=>setTimeout(r,5000))]).catch(()=>{});
+  };
+  const mkPage=async(vp)=>{
+    if(pagesMade && pagesMade%RECYCLE_EVERY===0){
+      const open=b.contexts().reduce((n,c)=>n+c.pages().length,0);
+      if(open===0){
+        /* NEVER BLOCK ON CLOSING A BROWSER YOU ARE THROWING AWAY.
+           The first version did `await b.close()` here and that is what
+           wedged the live feed group for 180 seconds. Proof it was not the
+           group's own work: every operation that group performs runs in
+           1.9s total in isolation, with zero page errors — the wedge was
+           positional, landing on whichever group happened to fall on a
+           recycle boundary. Closing a degraded chromium can hang forever,
+           and awaiting it hands that hang to the caller.
+
+           So: launch the replacement FIRST, then let the old one go without
+           waiting on it. A browser being discarded owes us nothing, and if
+           it refuses to die the OS reaps it when the run ends. */
+        const old=b;
+        b=await launch();
+        Promise.race([
+          old.close().catch(()=>{}),
+          new Promise(r=>setTimeout(r,5000))
+        ]).catch(()=>{});
+      }
+    }
+    pagesMade++;
+    const pg=await b.newPage({viewport:vp});
+    /* browser.newPage() makes its own context and Playwright disposes it
+       with the page — but only if close() is actually reached. A check that
+       throws first leaks both, so close() is wrapped to take the context
+       down explicitly and to never throw during teardown. */
+    const _close=pg.close.bind(pg);
+    pg.close=async()=>{
+      const c=pg.context();
+      try{ await _close(); }catch(_){}
+      try{ await c.close(); }catch(_){}
+    };
+    return pg;
+  };
+  /* A GATE MUST NEVER HANG. Measured: the live feed group blocked for
+     twenty minutes at 0% CPU with ten chromium processes alive — a wedged
+     protocol call, not a busy loop. Every Playwright call has its own
+     timeout, but a wedged transport outlives all of them, and a suite that
+     hangs is strictly worse than one that fails: nobody learns anything and
+     the run never reports. So each group gets a hard ceiling, and blowing
+     it is a normal named failure that costs that group and nothing else. */
+  const withTimeout=(work, ms, label)=>Promise.race([
+    work,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error(`${label} exceeded ${Math.round(ms/1000)}s — treated as wedged`)), ms))
+  ]);
+
   const url='file://'+path.join(ROOT,PLAYER);
 
   const newPage=async(vp,feed)=>{
-    const p=await b.newPage({viewport:vp});
+    const p=await mkPage(vp);
+    /* Default is 30s per operation; nothing in this suite legitimately
+       waits that long, and a lower ceiling turns a wedge into a fast,
+       localised failure instead of a slow mystery. */
+    try{ p.setDefaultTimeout(15000); }catch(_){}
     const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
     await p.route('**/site.api.espn.com/**', r=> feed==='down'
       ? r.fulfill({status:500,contentType:'application/json',body:'{}'})
@@ -1944,7 +2031,7 @@ async function browserTests(){
   // ---- Control Room handlers must survive being pressed
   group('BROWSER — Control Room handlers');
   {
-    const p=await b.newPage({viewport:{width:1440,height:900}});
+    const p=await mkPage({width:1440,height:900});
     const errs=[]; p.on('pageerror',e=>errs.push(String(e).slice(0,90)));
     p.on('dialog',async d=>{ try{ await d.dismiss(); }catch(e){} });
     await p.goto('file://'+path.join(ROOT,ADMIN),{waitUntil:'domcontentloaded'});
@@ -3135,7 +3222,7 @@ async function browserTests(){
     {name:'no-push-after-tip',    feed:F.LIVE,  offset:+5*60e3,   blocked:true,  host:false, why:'no-host'},
     {name:'no-push-feed-down',    feed:'down',  offset:+5*60e3,   blocked:true,  host:false, why:'no-host'}
   ]){
-    const pg = await b.newPage({viewport:{width:393,height:852}});
+    const pg = await mkPage({width:393,height:852});
     const perrs=[]; pg.on('pageerror',e=>perrs.push(String(e)));
     /* This group builds its own page rather than going through newPage(),
        so it installs the host-round stand-in itself. Found the hard way:
@@ -3212,7 +3299,7 @@ async function browserTests(){
   {
     const FAKE = require('./fakebase.js');
     const mk = async () => {
-      const pg = await b.newPage({viewport:{width:393,height:852}});
+      const pg = await mkPage({width:393,height:852});
       const es = []; pg.on('pageerror',e=>es.push(String(e)));
       await FAKE.install(pg, {});
       await pg.route('**/site.api.espn.com/**', r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(F.LIVE)}));
@@ -3905,7 +3992,7 @@ async function browserTests(){
      able to tell, is the end of the product.                            */
   group('BROWSER — the autonomous host');
   {
-    const pg = await b.newPage({viewport:{width:1440,height:900}});
+    const pg = await mkPage({width:1440,height:900});
     await pg.goto('file://'+path.join(ROOT,ADMIN),{waitUntil:'domcontentloaded'});
     await pg.waitForTimeout(900);
     const r = await pg.evaluate(()=>{
@@ -4226,7 +4313,7 @@ async function browserTests(){
      entirely free throws was the exact stretch being deleted.            */
   group('BROWSER — the Control Room clock');
   {
-    const pg = await b.newPage({viewport:{width:1440,height:900}});
+    const pg = await mkPage({width:1440,height:900});
     await pg.goto('file://'+path.join(ROOT,ADMIN),{waitUntil:'domcontentloaded'});
     await pg.waitForTimeout(900);
     const r = await pg.evaluate(()=>{
@@ -4313,8 +4400,29 @@ async function browserTests(){
       try{ lockPredictions(); }catch(e){}
       startQuarter(0);
       await new Promise(r=>setTimeout(r,350));
+      /* SCROLL, THEN WAIT FOR THE PAGE TO STOP GROWING, THEN SCROLL AGAIN.
+         This was scroll -> sleep 250ms -> measure, and it went red roughly
+         one run in four while passing on untouched HEAD — a flake, which
+         costs a gate more than a steady failure does, because people learn
+         to re-run it. The cause is ordinary: blocks on this screen render
+         after the first paint, so scrollHeight grows AFTER the scroll and
+         the 4px tolerance is measured against a target that has moved. The
+         same lesson is already written into the feed group above — wait for
+         the condition, not the clock. Settle the height first (up to ~2s),
+         then scroll to the real bottom and measure that. */
+      const settle=async()=>{
+        let last=-1, stable=0;
+        for(let i=0;i<40 && stable<3;i++){
+          const h=document.documentElement.scrollHeight;
+          stable = (h===last) ? stable+1 : 0;
+          last=h;
+          await new Promise(r=>setTimeout(r,50));
+        }
+      };
       window.scrollTo(0,999999);
-      await new Promise(r=>setTimeout(r,250));
+      await settle();
+      window.scrollTo(0, document.documentElement.scrollHeight);
+      await new Promise(r=>setTimeout(r,120));
       const doc=document.documentElement;
       const gs=document.getElementById('gtSticky');
       // the LAST thing on the page must be reachable and not covered
@@ -4479,7 +4587,21 @@ async function browserTests(){
   }
 
   group('BROWSER — feed states');
+  /* ONE CRASH USED TO COST EVERY REMAINING CHECK.
+     browserTests() was one long function inside a single try/catch at the
+     call site, so the first throw anywhere aborted the rest of the browser
+     layer and reported it as the single failure "the browser suite crashed".
+     In the run that exposed this, the `pre` pass completed and then `live`
+     and `down` never ran at all — losing stats.renders.live,
+     callit.quarter-questions, stats.feed-down-degrades and the retry-storm
+     guard, silently, behind one red line. Lost coverage that reads as one
+     failure is worse than a failure, because the gate looks 99% green while
+     a whole feed state went unexercised. A crash now costs its own
+     iteration and says so. */
   for(const [name,feed] of [['pre',F.PRE],['live',F.LIVE],['down','down']]){
+   try{
+    await forceRecycle();
+    await withTimeout((async()=>{
     const {p,errs}=await newPage({width:390,height:800},feed);
     await p.evaluate(()=>{ startDemo(); S.name='QA'; navGo('stats'); });
     /* WAIT FOR THE CONDITION, NOT THE CLOCK. This was a fixed 2.5s sleep,
@@ -4736,6 +4858,13 @@ async function browserTests(){
     }
     check(`feed.${name}.no-errors`, errs.length===0, `errors: ${errs.slice(0,2).join(' | ')}`, 'feed handling must never throw');
     try{ await p.close(); }catch(_){}
+    })(), 180000, `the ${name} feed group`);
+   }catch(e){
+    bad(`feed.${name}.group-crashed`, `the ${name} feed group threw: ${(e&&e.message)||e}`,
+        'a group that dies takes its own checks with it and nothing else — every other feed state still runs');
+    console.log('\x1b[31m    ── where ──\x1b[0m');
+    console.log(String((e&&e.stack)||e).split('\n').slice(0,8).map(l=>'    '+l).join('\n'));
+   }
   }
   /* Teardown must not be able to fail the run. Every check has already been
      counted by the time we get here, so a throw while closing the browser
@@ -4967,7 +5096,25 @@ function controlRoomStatic(){
   staticChecks(ADMIN);
   unitTests();
   controlRoomStatic();
-  if(!QUICK){ try{ await browserTests(); }catch(e){ bad('browser.suite','the browser suite crashed: '+e.message,'a crashed suite is a failed suite, never a passed one'); } }
+  if(!QUICK){ try{
+    /* A CEILING ON THE WHOLE BROWSER LAYER. The feed groups have their own,
+       but any of the twenty-odd other groups could wedge the same way, and a
+       run that never returns teaches nobody anything. Twenty-five minutes is
+       generous — a healthy full run is well under fifteen — and blowing it
+       reports as a failure with everything counted up to that point. */
+    await Promise.race([
+      browserTests(),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('the browser layer exceeded 25m — wedged, not slow')), 25*60*1000))
+    ]);
+  }catch(e){
+    /* PRINT WHERE IT DIED. "the browser suite crashed" with no location is
+       a dead end — this failure sat in every run for days precisely because
+       nobody could tell which group threw. A crashed suite is still a
+       failed suite; it just has to say where. */
+    bad('browser.suite','the browser suite crashed: '+e.message,'a crashed suite is a failed suite, never a passed one');
+    console.log('\x1b[31m  ── where it crashed ──\x1b[0m');
+    console.log(String((e&&e.stack)||e).split('\n').slice(0,12).map(l=>'  '+l).join('\n'));
+  } }
 
   console.log(`\n\x1b[1m${'─'.repeat(58)}\x1b[0m`);
   if(FAIL===0){

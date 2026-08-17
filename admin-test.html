@@ -4660,16 +4660,53 @@ function lockMsFor(kind){
    ------------------------------------------------------------------ */
 var AUTO = (function(){
 
-  var SUM = 'https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/summary?event=';
+  /* THE FEED PATH IS A PARAMETER, NOT A CONSTANT — changed 17 Aug 2026.
+     It was hardcoded to basketball/wnba here, while the SAME FACT also
+     lived in SPORT_CFG[sport].path in index.html. Two copies of one fact,
+     and the second sport was going to be the day they disagreed.
+
+     Worse, host/run.js already declared `SPORT_PATH` and never used it, so
+     setting SPORT_PATH=baseball/mlb would have been accepted in silence and
+     then fetched a WNBA game anyway — a wrong-sport night that looks like a
+     feed carrying nothing rather than like a misconfiguration. */
+  var SPORT_DEFAULT = 'basketball/wnba';
+  function sumUrl(sportPath){
+    return 'https://site.api.espn.com/apis/site/v2/sports/'
+         + (sportPath || SPORT_DEFAULT) + '/summary?event=';
+  }
 
   /* Never wired to a button anywhere. It exists so that the day somebody
      does wire it, they have to change a line that says this out loud. */
   var armed = false;
 
-  async function fetchFeed(ev){
-    var r = await fetch(SUM + encodeURIComponent(ev) + '&_=' + Date.now());
+  async function fetchFeed(ev, sportPath){
+    var r = await fetch(sumUrl(sportPath) + encodeURIComponent(ev) + '&_=' + Date.now());
     if(!r.ok) throw new Error('feed ' + r.status);
     return r.json();
+  }
+
+  /* WHICH SPORT IS THIS? ASK THE FEED, NOT A CONFIG.
+     `meta.gp_topic` reads gp-<sport>-<league>-<eventId> on every payload
+     probed: gp-basketball-wnba-401857150, gp-baseball-mlb-401816547,
+     gp-soccer-usa.1-761712. So the feed already knows what it is, which
+     makes it the owner of this fact and means no per-sport table has to be
+     kept in step with anything. header.league.slug is the fallback.
+     Returns '' when it cannot tell, and every caller treats '' as
+     basketball for backward compatibility — the WNBA is what runs today. */
+  function sportOf(j){
+    try{
+      var t = String(((j.meta)||{}).gp_topic||'');
+      var m = t.match(/^gp-([a-z]+)-/);
+      if(m) return m[1];
+    }catch(_){}
+    try{
+      var slug = String((((j.header)||{}).league||{}).slug||'').toLowerCase();
+      if(slug === 'mlb') return 'baseball';
+      if(slug === 'nfl') return 'football';
+      if(/^usa\.\d|^mls$/.test(slug)) return 'soccer';
+      if(/^wnba$|^nba$/.test(slug)) return 'basketball';
+    }catch(_){}
+    return '';
   }
 
   /* ---- reading the feed -------------------------------------------
@@ -5133,7 +5170,880 @@ var AUTO = (function(){
      It errs toward silence. If ESPN is slow to advance the period, the
      robot says nothing for a few seconds longer. Silence costs a wait; a
      confident wrong answer costs somebody the night. */
-  function periodDone(j, p){
+  /* ===================================================================
+     MLB + MLS RESOLVERS — installed 17 Aug 2026.
+
+     Written against real finished games and validated before install:
+       MLB  401816547 ARI@ATL + 4 more games
+       MLS  761712 RBNY@ATL   + 3 more matches
+     Shadow test: 41 answered / 1 correctly silent / 0 invalid / 0 threw.
+     Cross-game: 122 agree / 0 disagree, truth computed independently of
+     the resolvers rather than by asking them to check themselves.
+     Period gates sabotaged in BOTH directions (too loose and too tight).
+     Full write-up: references/multisport/PROBE-MLB-MLS-2026-08-16.md
+
+     Same contract as the basketball resolvers above: (feed, period,
+     options) -> an option string, or null. NULL IS A LEGITIMATE ANSWER.
+     ================================================================ */
+
+  /* ============================ MLB ================================= */
+
+  /* Innings covered by round p. Three rounds of three innings is the plan
+     (after the 3rd, 6th and 9th) — NOT nine rounds. Nine would be a round
+     every ~18 minutes, which is a notification cadence, not a game. */
+  function mlbSpan(p){ var hi = Number(p)||0; return { lo: hi-2, hi: hi }; }
+
+  function mlbInSpan(j, p){
+    var s = mlbSpan(p);
+    return plays(j).filter(function(x){
+      var n = Number(((x.period)||{}).number);
+      return n >= s.lo && n <= s.hi;
+    });
+  }
+  function mlbInInning(j, n){
+    return plays(j).filter(function(x){ return Number(((x.period)||{}).number) === Number(n); });
+  }
+  function mlbType(x){ return String((((x.type)||{}).text)||''); }
+  function mlbText(x){ return String((x.text)||'').toLowerCase(); }
+
+  /* THE END-OF-INNING MARKER IS EXPLICIT AND THAT IS A GIFT.
+     Basketball has to regex "End of the 3rd" out of play text. Baseball's
+     period object carries a `type` of Top | Bottom | Mid | End, where Mid is
+     between halves and End closes the whole inning. Read the field. */
+  function mlbInningDone(j, n){
+    try{
+      var st = j.header.competitions[0].status;
+      if(st.type && st.type.completed) return true;
+      if(Number(st.period) > Number(n)) return true;
+    }catch(_){}
+    try{
+      return plays(j).some(function(x){
+        var pd = (x.period)||{};
+        return Number(pd.number) === Number(n) && String(pd.type||'') === 'End';
+      });
+    }catch(_){ return false; }
+  }
+
+  /* Hits are a play TYPE, cleanly. Do not parse them out of prose when the
+     feed names them: Single, Double, Triple, Home Run, Bunt Single. */
+  var MLB_HIT = /^(single|double|triple|home run|bunt single|infield single)$/i;
+
+  /* STRIKEOUTS ARE NOT A PLAY TYPE — this one nearly went wrong.
+     The 25 distinct type.text values on a full game include "Strike Looking"
+     and "Strike Swinging", but those are PITCHES, not outcomes: 37 and 30 of
+     them in a game with 9 actual strikeouts. Counting them would have
+     inflated every strikeout question by ~7x while looking perfectly
+     reasonable. The at-bat outcome lands in a "Play Result" row whose text
+     reads "Acuna Jr. struck out swinging." Match the outcome, not the pitch. */
+  function mlbIsStrikeout(x){
+    return mlbType(x) === 'Play Result' && /struck out/.test(mlbText(x));
+  }
+
+  R.mlbFirstHitKind = function(j, p, o){
+    var h = mlbInSpan(j,p).find(function(x){ return MLB_HIT.test(mlbType(x)); });
+    if(!h) return null;
+    var t = mlbType(h).toLowerCase();
+    if(/home run/.test(t)) return o.find(function(x){ return /home run|homer|hr/i.test(x); }) || null;
+    if(/triple/.test(t))   return o.find(function(x){ return /triple/i.test(x); }) || null;
+    if(/double/.test(t))   return o.find(function(x){ return /double/i.test(x); }) || null;
+    return o.find(function(x){ return /single/i.test(x); }) || null;
+  };
+
+  R.mlbFirstScoringTeam = function(j, p, o){
+    var s = mlbInSpan(j,p).find(function(x){ return !!x.scoringPlay; });
+    if(!s) return null;
+    return optForTeam(j, String(((s.team)||{}).id||''), o);
+  };
+
+  /* Runs in the round, read off the scoreboard carried on every play rather
+     than by summing scoreValue — scoreValue is 0 on most scoring rows here
+     (6 scoringPlay rows in a 5-run game). Take the score before the span and
+     the score at its end and subtract. DERIVE FROM THE OWNER. */
+  function mlbScoreAt(j, n, which){
+    var upto = plays(j).filter(function(x){ return Number(((x.period)||{}).number) <= Number(n); });
+    var last = upto[upto.length-1];
+    if(!last) return null;
+    return Number(which === 'home' ? last.homeScore : last.awayScore);
+  }
+  R.mlbRunsBand = function(j, p, o){
+    var s = mlbSpan(p);
+    var endA = mlbScoreAt(j, s.hi, 'away'), endH = mlbScoreAt(j, s.hi, 'home');
+    if(endA === null || endH === null) return null;
+    var preA = s.lo > 1 ? mlbScoreAt(j, s.lo-1, 'away') : 0;
+    var preH = s.lo > 1 ? mlbScoreAt(j, s.lo-1, 'home') : 0;
+    if(preA === null || preH === null) return null;
+    var runs = (endA-preA) + (endH-preH);
+    if(!isFinite(runs) || runs < 0) return null;
+    return band(runs, [0,2,4], o);
+  };
+
+  R.mlbHomeRunsBand = function(j, p, o){
+    var n = mlbInSpan(j,p).filter(function(x){ return /^home run$/i.test(mlbType(x)); }).length;
+    return band(n, [0,1,2], o);
+  };
+
+  R.mlbStrikeoutsBand = function(j, p, o){
+    var n = mlbInSpan(j,p).filter(mlbIsStrikeout).length;
+    return band(n, [2,4,6], o);
+  };
+
+  R.mlbMoreKsOrHits = function(j, p, o){
+    var sp = mlbInSpan(j,p);
+    var k = sp.filter(mlbIsStrikeout).length;
+    var h = sp.filter(function(x){ return MLB_HIT.test(mlbType(x)); }).length;
+    if(k === h) return o.find(function(x){ return /tie|same|equal/i.test(x); }) || null;
+    return (k > h) ? (o.find(function(x){ return /strikeout|\bk\b/i.test(x); }) || null)
+                   : (o.find(function(x){ return /hit/i.test(x); }) || null);
+  };
+
+  /* pitchVelocity is on 252 of 513 rows — every actual pitch, absent on the
+     structural rows (Start/End Batter, Start/End Inning). Filter, never
+     coerce: Number(undefined) is NaN but Number(null) is 0, and a 0 mph
+     fastball would win "hardest pitch" forever. */
+  R.mlbFastestPitchBand = function(j, p, o){
+    var v = mlbInSpan(j,p).map(function(x){ return Number(x.pitchVelocity); })
+                          .filter(function(n){ return isFinite(n) && n > 0; });
+    if(!v.length) return null;
+    return band(Math.max.apply(null, v), [93,96,98], o);
+  };
+
+  R.mlbFirstPitchType = function(j, p, o){
+    var s = mlbSpan(p);
+    var f = mlbInInning(j, s.lo).find(function(x){ return x.pitchType && x.pitchType.text; });
+    if(!f) return null;
+    var t = String(f.pitchType.text);
+    return o.find(function(x){ return String(x).toLowerCase() === t.toLowerCase(); })
+        || o.find(function(x){ return t.toLowerCase().indexOf(String(x).toLowerCase()) >= 0; })
+        || null;
+  };
+
+  R.mlbMostCommonPitchType = function(j, p, o){
+    var c = {};
+    mlbInSpan(j,p).forEach(function(x){
+      if(x.pitchType && x.pitchType.text) c[x.pitchType.text] = (c[x.pitchType.text]||0) + 1;
+    });
+    var keys = Object.keys(c);
+    if(!keys.length) return null;
+    keys.sort(function(a,b){ return c[b]-c[a]; });
+    /* A TIE AT THE TOP IS NOT AN ANSWER. Two pitch types thrown 14 times
+       each has no "most common", and picking the first is picking whichever
+       the feed happened to list first. Refuse. */
+    if(keys.length > 1 && c[keys[0]] === c[keys[1]]) return null;
+    var t = keys[0];
+    return o.find(function(x){ return String(x).toLowerCase() === t.toLowerCase(); }) || null;
+  };
+
+  R.mlbLeadAfter = function(j, p, o){
+    var a = mlbScoreAt(j, Number(p), 'away'), h = mlbScoreAt(j, Number(p), 'home');
+    if(a === null || h === null) return null;
+    if(a === h) return o.find(function(x){ return /tie|level|even/i.test(x); }) || null;
+    var s = sides(j);
+    return optForTeam(j, (h > a) ? s.homeId : s.awayId, o);
+  };
+
+  R.mlbStolenBasesBand = function(j, p, o){
+    var n = mlbInSpan(j,p).filter(function(x){ return /^stolen base$/i.test(mlbType(x)); }).length;
+    return band(n, [0,1,2], o);
+  };
+
+  /* A 1-2-3 inning: three outs and exactly three batters faced. `outs` is on
+     every row (513/513), and a new batter is an explicit "Start Batter/
+     Pitcher" row, so both halves of this are countable rather than inferred. */
+  R.mlbOneTwoThreeInning = function(j, p, o){
+    var s = mlbSpan(p), found = false;
+    for(var n = s.lo; n <= s.hi; n++){
+      var rows = mlbInInning(j, n);
+      ['Top','Bottom'].forEach(function(half){
+        var h = rows.filter(function(x){ return String(((x.period)||{}).type||'') === half; });
+        if(!h.length) return;
+        var batters = h.filter(function(x){ return mlbType(x) === 'Start Batter/Pitcher'; }).length;
+        if(batters === 3) found = true;
+      });
+    }
+    return found ? (o.find(function(x){ return /^yes/i.test(x); }) || null)
+                 : (o.find(function(x){ return /^no/i.test(x); })  || null);
+  };
+
+  R.mlbBusiestInning = function(j, p, o){
+    var s = mlbSpan(p), best = null, bestN = -1, tie = false;
+    for(var n = s.lo; n <= s.hi; n++){
+      var c = mlbInInning(j, n).filter(function(x){ return x.pitchType || /^(ball|strike|foul)/i.test(mlbType(x)); }).length;
+      if(c > bestN){ bestN = c; best = n; tie = false; }
+      else if(c === bestN){ tie = true; }
+    }
+    if(best === null || tie || bestN <= 0) return null;
+    return o.find(function(x){ return String(x).indexOf(String(best)) >= 0; }) || null;
+  };
+
+  /* ============================ MLS ================================= */
+
+  /* SOCCER HAS NO `plays` ARRAY. Not thin — absent. Verified on a finished
+     match: plays = 0, keyEvents = 29, boxscore.teams[].statistics = 28.
+     Every resolver below reads keyEvents or the box score. Any soccer
+     resolver that calls plays(j) is reading an empty list and will return
+     null forever while looking like it works. */
+  function mlsEvents(j){ return Array.isArray(j.keyEvents) ? j.keyEvents : []; }
+  function mlsInPeriod(j, p){
+    return mlsEvents(j).filter(function(e){ return Number(((e.period)||{}).number) === Number(p); });
+  }
+  function mlsEvType(e){ return String((((e.type)||{}).text)||''); }
+
+  /* The box score carries no per-player rows at all — boxscore.teams only.
+     So soccer questions are TEAM questions. Anything player-shaped has to
+     come off keyEvents (goals and cards name their participants) or the
+     pre-match `leaders` block. */
+  function mlsTeamStat(j, teamIdx, name){
+    try{
+      var t = j.boxscore.teams[teamIdx];
+      var groups = t.statistics || [];
+      /* Soccer's statistics is a FLAT list of {name,displayValue}, unlike
+         baseball's list of named groups each holding a .stats array. Handle
+         the flat shape and do not assume baseball's nesting. */
+      var hit = groups.find(function(s){ return s && s.name === name; });
+      if(hit) return Number(hit.displayValue !== undefined ? hit.displayValue : hit.value);
+      return null;
+    }catch(_){ return null; }
+  }
+  function mlsSideIdx(j){
+    try{
+      var ts = j.boxscore.teams || [];
+      var home = ts.findIndex(function(t){ return t.homeAway === 'home'; });
+      var away = ts.findIndex(function(t){ return t.homeAway === 'away'; });
+      return { home: home, away: away };
+    }catch(_){ return { home:-1, away:-1 }; }
+  }
+
+  /* HALFTIME IS THE ONLY MOMENT THE BOX SCORE MEANS "THE FIRST HALF".
+     The box is a running cumulative total, so at halftime it IS the first
+     half, and at full time it is the WHOLE MATCH — never the second half.
+     That is why every box-score resolver here is worded "in the match" at
+     p=2 and "in the first half" at p=1, and why none of them asks about the
+     second half in isolation. Asking that needs a halftime snapshot stored
+     somewhere, which is a new layer nobody has built. Do not add a
+     second-half box question until it exists. */
+  function mlsPeriodDone(j, p){
+    try{
+      var st = j.header.competitions[0].status;
+      if(st.type && st.type.completed) return true;
+    }catch(_){}
+    var want = Number(p) === 1 ? /^halftime$/i : /^end regular time$/i;
+    return mlsEvents(j).some(function(e){ return want.test(mlsEvType(e)); });
+  }
+
+  var MLS_GOAL = /^goal/i;                    // Goal, Goal - Header, Goal - Penalty
+  var MLS_CARD = /card$/i;                    // Yellow Card, Red Card
+
+  R.mlsFirstGoalTeam = function(j, p, o){
+    var g = mlsInPeriod(j,p).find(function(e){ return MLS_GOAL.test(mlsEvType(e)); });
+    if(!g) return o.find(function(x){ return /no goal|nobody|neither|none/i.test(x); }) || null;
+    return optForTeam(j, String(((g.team)||{}).id||''), o);
+  };
+
+  R.mlsGoalsBand = function(j, p, o){
+    var n = mlsInPeriod(j,p).filter(function(e){ return MLS_GOAL.test(mlsEvType(e)); }).length;
+    return band(n, [0,1,2], o);
+  };
+
+  R.mlsFirstGoalKind = function(j, p, o){
+    var g = mlsInPeriod(j,p).find(function(e){ return MLS_GOAL.test(mlsEvType(e)); });
+    if(!g) return null;
+    var t = mlsEvType(g).toLowerCase(), tx = String(g.text||'').toLowerCase();
+    if(/penalty/.test(t) || /penalty/.test(tx)) return o.find(function(x){ return /penalty/i.test(x); }) || null;
+    if(/header/.test(t)  || /header/.test(tx))  return o.find(function(x){ return /header/i.test(x); }) || null;
+    if(/right footed/.test(tx)) return o.find(function(x){ return /right/i.test(x); }) || null;
+    if(/left footed/.test(tx))  return o.find(function(x){ return /left/i.test(x); }) || null;
+    return null;
+  };
+
+  /* clock.value is SECONDS as a float (316.0 = 6th minute) and displayValue
+     is already "6'". Use the number; never parse the apostrophe string. */
+  R.mlsFirstGoalWindow = function(j, p, o){
+    var g = mlsInPeriod(j,p).find(function(e){ return MLS_GOAL.test(mlsEvType(e)); });
+    if(!g) return null;
+    var sec = Number((((g.clock)||{}).value));
+    if(!isFinite(sec) || sec <= 0) return null;
+    return band(Math.floor(sec/60), [15,30,45], o);
+  };
+
+  R.mlsFirstCardTeam = function(j, p, o){
+    var c = mlsInPeriod(j,p).find(function(e){ return MLS_CARD.test(mlsEvType(e)); });
+    if(!c) return o.find(function(x){ return /no card|nobody|neither|none/i.test(x); }) || null;
+    return optForTeam(j, String(((c.team)||{}).id||''), o);
+  };
+
+  R.mlsCardsBand = function(j, p, o){
+    var n = mlsInPeriod(j,p).filter(function(e){ return MLS_CARD.test(mlsEvType(e)); }).length;
+    return band(n, [0,1,3], o);
+  };
+
+  R.mlsSubsBand = function(j, p, o){
+    var n = mlsInPeriod(j,p).filter(function(e){ return /^substitution$/i.test(mlsEvType(e)); }).length;
+    return band(n, [0,2,5], o);
+  };
+
+  /* ---- box-score resolvers: cumulative, see the note above ---------- */
+  function mlsCompare(j, o, stat){
+    var ix = mlsSideIdx(j);
+    if(ix.home < 0 || ix.away < 0) return null;
+    var h = mlsTeamStat(j, ix.home, stat), a = mlsTeamStat(j, ix.away, stat);
+    if(h === null || a === null || !isFinite(h) || !isFinite(a)) return null;
+    if(h === a) return o.find(function(x){ return /tie|level|even|same/i.test(x); }) || null;
+    var s = sides(j);
+    return optForTeam(j, (h > a) ? s.homeId : s.awayId, o);
+  }
+  function mlsTotal(j, stat){
+    var ix = mlsSideIdx(j);
+    if(ix.home < 0 || ix.away < 0) return null;
+    var h = mlsTeamStat(j, ix.home, stat), a = mlsTeamStat(j, ix.away, stat);
+    if(h === null || a === null || !isFinite(h) || !isFinite(a)) return null;
+    return h + a;
+  }
+
+  R.mlsMorePossession    = function(j,p,o){ return mlsCompare(j, o, 'possessionPct'); };
+  R.mlsMoreShots         = function(j,p,o){ return mlsCompare(j, o, 'totalShots'); };
+  R.mlsMoreCorners       = function(j,p,o){ return mlsCompare(j, o, 'wonCorners'); };
+  R.mlsMoreFouls         = function(j,p,o){ return mlsCompare(j, o, 'foulsCommitted'); };
+
+  R.mlsCornersBand = function(j,p,o){
+    var n = mlsTotal(j, 'wonCorners'); if(n === null) return null;
+    return band(n, [3,6,9], o);
+  };
+  R.mlsShotsOnTargetBand = function(j,p,o){
+    var n = mlsTotal(j, 'shotsOnTarget'); if(n === null) return null;
+    return band(n, [3,6,9], o);
+  };
+  R.mlsOffsidesBand = function(j,p,o){
+    var n = mlsTotal(j, 'offsides'); if(n === null) return null;
+    return band(n, [1,3,5], o);
+  };
+
+  R.mlsScoreline = function(j, p, o){
+    var g = mlsInPeriod(j, 1).filter(function(e){ return MLS_GOAL.test(mlsEvType(e)); });
+    if(Number(p) === 2) g = g.concat(mlsInPeriod(j, 2).filter(function(e){ return MLS_GOAL.test(mlsEvType(e)); }));
+    var s = sides(j), h = 0, a = 0;
+    g.forEach(function(e){
+      var id = String(((e.team)||{}).id||'');
+      if(id === s.homeId) h++; else if(id === s.awayId) a++;
+    });
+    if(h === a) return o.find(function(x){ return /draw|tie|level/i.test(x); }) || null;
+    return optForTeam(j, (h > a) ? s.homeId : s.awayId, o);
+  };
+
+  /* ===================================================================
+     THE SPORT TABLE, plus NFL and NHL — installed 17 Aug 2026.
+     All six roadmap sports (WNBA NBA MLB NFL NHL MLS) probed against real
+     finished games first. One row per family and one per league; adding a
+     seventh sport is a row, not an edit in five functions.
+     Full write-up: references/multisport/PROBE-MLB-MLS-2026-08-16.md
+     ================================================================ */
+
+  /* ---- where the plays live, per family -------------------------------
+     THREE DIFFERENT ANSWERS, AND TWO OF THEM ARE NOT "j.plays".
+     Basketball, baseball and hockey put plays at the top level. Soccer has
+     none at all. Football nests them inside drives.previous[].plays and has
+     no top-level array — so anything calling plays(j) on a football feed gets
+     [] and returns null forever while looking like it works. That is the
+     exact failure mode soccer already has, and it is silent in both. */
+  function rawPlays(j){ return Array.isArray(j.plays) ? j.plays : []; }
+  function noPlays(){ return []; }
+  function nflPlays(j){
+    try{
+      var prev = ((j.drives)||{}).previous;
+      if(!Array.isArray(prev)) return [];
+      var out = [];
+      for(var i=0;i<prev.length;i++){
+        var ps = prev[i].plays;
+        if(Array.isArray(ps)) out = out.concat(ps);
+      }
+      return out;
+    }catch(_){ return []; }
+  }
+  function nflDrives(j){
+    try{ var p = ((j.drives)||{}).previous; return Array.isArray(p) ? p : []; }catch(_){ return []; }
+  }
+
+  /* ---- the period gates that did not exist yet ------------------------ */
+
+  /* Hockey writes "Period End" with text "End of 1st Period" — and for
+     overtime, "End of OT", which carries period number 4 and no digit in the
+     text at all. The basketball regex would match the numbered three and
+     silently miss OT, which is the one period most worth a round. */
+  function nhlPeriodDone(j, p){
+    var want = Number(p);
+    try{
+      var st = j.header.competitions[0].status;
+      if(st.type && st.type.completed) return true;
+      if(Number(st.period) > want) return true;
+    }catch(_){}
+    try{
+      return rawPlays(j).some(function(x){
+        var t = String((((x.type)||{}).text)||'');
+        if(t !== 'Period End' && t !== 'End of Game') return false;
+        return Number(((x.period)||{}).number) === want;
+      });
+    }catch(_){ return false; }
+  }
+
+  /* Football's end-of-quarter rows live inside the drives, not at the top
+     level, so this has to flatten first. "End Period" for quarters, plus
+     "End of Half" and "End of Game" which are the two that close 2 and 4. */
+  function nflPeriodDone(j, p){
+    var want = Number(p);
+    try{
+      var st = j.header.competitions[0].status;
+      if(st.type && st.type.completed) return true;
+      if(Number(st.period) > want) return true;
+    }catch(_){}
+    try{
+      return nflPlays(j).some(function(x){
+        var t = String((((x.type)||{}).text)||'');
+        if(!/^(End Period|End of Half|End of Game)$/.test(t)) return false;
+        return Number(((x.period)||{}).number) === want;
+      });
+    }catch(_){ return false; }
+  }
+
+  /* ---- THE TABLE ------------------------------------------------------
+     `rounds` is the round plan where the sport has settled on one. Absent
+     means one round per period, which is what basketball and hockey do.
+     `otFrom` is the first period number that counts as overtime — the thing
+     that ran off the end of the plan on GN11 and would do it again in a 10th
+     inning, so it is written down per sport rather than assumed to be 5. */
+  var FAMILY = {
+    basketball: { periods:4, otFrom:5,  word:'quarter', Word:'Quarter', plays:rawPlays, done:bballPeriodDone },
+    baseball:   { periods:9, otFrom:10, word:'inning',  Word:'Inning',  plays:rawPlays, done:mlbInningDone, rounds:[3,6,9] },
+    football:   { periods:4, otFrom:5,  word:'quarter', Word:'Quarter', plays:nflPlays, done:nflPeriodDone },
+    hockey:     { periods:3, otFrom:4,  word:'period',  Word:'Period',  plays:rawPlays, done:nhlPeriodDone },
+    soccer:     { periods:2, otFrom:0,  word:'half',    Word:'Half',    plays:noPlays,  done:mlsPeriodDone, rounds:[1,2] }
+  };
+
+  /* One row per LEAGUE. The path is a league fact, not a family fact — and
+     `minutes` is here because it is the only thing that differs between two
+     leagues sharing every resolver: WNBA quarters are 10 minutes and NBA
+     quarters are 12. Any resolver that reasons about time remaining rather
+     than about counts has to read this rather than assume ten. */
+  var LEAGUE = {
+    'basketball/wnba': { family:'basketball', label:'WNBA', minutes:10 },
+    'basketball/nba':  { family:'basketball', label:'NBA',  minutes:12 },
+    'baseball/mlb':    { family:'baseball',   label:'MLB',  minutes:0  },
+    'football/nfl':    { family:'football',   label:'NFL',  minutes:15 },
+    'hockey/nhl':      { family:'hockey',     label:'NHL',  minutes:20 },
+    'soccer/usa.1':    { family:'soccer',     label:'MLS',  minutes:45 }
+  };
+
+  function familyOf(j){ return FAMILY[sportOf(j)] ? sportOf(j) : 'basketball'; }
+  function famCfg(j){ return FAMILY[familyOf(j)]; }
+
+  /* The one accessor every new resolver should use. `plays(j)` is left alone
+     because 32 basketball resolvers already call it and it is correct for
+     them — but it is WRONG for football, so anything cross-sport reads this. */
+  function feedPlays(j){
+    try{ return famCfg(j).plays(j); }catch(_){ return rawPlays(j); }
+  }
+
+  /* Is period p overtime for this sport? Basketball 5+, hockey 4+, baseball
+     10+, football 5+, soccer never (extra time is its own animal and MLS
+     regular season does not play it). */
+  function isOvertime(j, p){
+    var f = famCfg(j);
+    return !!(f && f.otFrom && Number(p) >= f.otFrom);
+  }
+
+  /* ---- one box-score reader for every sport ---------------------------
+     FIVE OF THE SIX ARE A FLAT LIST of {name, displayValue}. Baseball is the
+     odd one: its statistics is a list of NAMED GROUPS (batting, pitching,
+     fielding, records) each holding its own .stats array. A reader that
+     assumed either shape would silently return null for the other, and null
+     here means a resolver goes quiet rather than wrong — survivable, but it
+     would have looked like a missing field rather than a wrong reader. */
+  function teamStat(j, idx, name){
+    try{
+      var t = j.boxscore.teams[idx];
+      var list = t.statistics || [];
+      for(var i=0;i<list.length;i++){
+        var s = list[i];
+        if(s && s.name === name && s.displayValue !== undefined) return Number(s.displayValue);
+        if(s && Array.isArray(s.stats)){                       // baseball's groups
+          for(var k=0;k<s.stats.length;k++){
+            var g = s.stats[k];
+            if(g && g.name === name) return Number(g.displayValue !== undefined ? g.displayValue : g.value);
+          }
+        }
+      }
+      return null;
+    }catch(_){ return null; }
+  }
+  function boxIdx(j){
+    try{
+      var ts = j.boxscore.teams || [];
+      return { home: ts.findIndex(function(t){ return t.homeAway==='home'; }),
+               away: ts.findIndex(function(t){ return t.homeAway==='away'; }) };
+    }catch(_){ return { home:-1, away:-1 }; }
+  }
+  function boxCompare(j, o, stat){
+    var ix = boxIdx(j); if(ix.home<0 || ix.away<0) return null;
+    var h = teamStat(j, ix.home, stat), a = teamStat(j, ix.away, stat);
+    if(h===null || a===null || !isFinite(h) || !isFinite(a)) return null;
+    if(h===a) return o.find(function(x){ return /tie|level|even|same/i.test(x); }) || null;
+    var s = sides(j);
+    return optForTeam(j, (h>a) ? s.homeId : s.awayId, o);
+  }
+  function boxTotal(j, stat){
+    var ix = boxIdx(j); if(ix.home<0 || ix.away<0) return null;
+    var h = teamStat(j, ix.home, stat), a = teamStat(j, ix.away, stat);
+    if(h===null || a===null || !isFinite(h) || !isFinite(a)) return null;
+    return h + a;
+  }
+
+  /* Score at the end of period p, off the running scoreboard every play
+     carries. Shared by football and hockey; baseball has its own because its
+     rounds span three innings. */
+  function scoreThrough(j, p, which){
+    var upto = feedPlays(j).filter(function(x){ return Number(((x.period)||{}).number) <= Number(p); });
+    var last = upto[upto.length-1];
+    if(!last) return null;
+    var v = Number(which==='home' ? last.homeScore : last.awayScore);
+    return isFinite(v) ? v : null;
+  }
+  function leadAfterPeriod(j, p, o){
+    var a = scoreThrough(j, p, 'away'), h = scoreThrough(j, p, 'home');
+    if(a===null || h===null) return null;
+    if(a===h) return o.find(function(x){ return /tie|level|even|draw/i.test(x); }) || null;
+    var s = sides(j);
+    return optForTeam(j, (h>a) ? s.homeId : s.awayId, o);
+  }
+
+  /* ============================ NFL =================================
+     THE DRIVE IS THE UNIT, and it grades itself. Every drive carries
+     `displayResult` as a clean enum — Touchdown, Punt, Field Goal,
+     Interception, Interception Touchdown, Downs, Fumble, Missed FG, End of
+     Game — plus `yards`, `offensivePlays` and `isScore`. That is why football
+     is the cheapest question bank of the six: no interpretation, one field.
+     23 drives on the probed game, 186 nested plays, isPenalty on 17 and
+     isTurnover on 3. */
+
+  function nflDrivesIn(j, p){
+    return nflDrives(j).filter(function(d){
+      try{ return Number(d.start.period.number) === Number(p); }catch(_){ return false; }
+    });
+  }
+  function nflPlaysIn(j, p){
+    return nflPlays(j).filter(function(x){ return Number(((x.period)||{}).number) === Number(p); });
+  }
+  function nflResult(d){ return String(d.displayResult || d.result || ''); }
+
+  R.nflFirstDriveResult = function(j, p, o){
+    var d = nflDrivesIn(j, p)[0]; if(!d) return null;
+    var r = nflResult(d).toLowerCase();
+    if(/touchdown/.test(r))      return o.find(function(x){ return /touchdown|^td$/i.test(x); }) || null;
+    if(/field goal/.test(r) && !/miss/.test(r))
+                                 return o.find(function(x){ return /field goal|^fg$/i.test(x) && !/miss/i.test(x); }) || null;
+    if(/punt/.test(r))           return o.find(function(x){ return /punt/i.test(x); }) || null;
+    if(/interception|fumble/.test(r))
+                                 return o.find(function(x){ return /turnover|interception|fumble/i.test(x); }) || null;
+    if(/downs/.test(r))          return o.find(function(x){ return /downs|turned over/i.test(x); }) || null;
+    if(/miss/.test(r))           return o.find(function(x){ return /miss/i.test(x); }) || null;
+    return null;
+  };
+
+  R.nflTouchdownsBand = function(j, p, o){
+    var n = nflDrivesIn(j, p).filter(function(d){ return /touchdown/i.test(nflResult(d)); }).length;
+    return band(n, [0,1,2], o);
+  };
+
+  R.nflPuntsBand = function(j, p, o){
+    var n = nflDrivesIn(j, p).filter(function(d){ return /punt/i.test(nflResult(d)); }).length;
+    return band(n, [1,2,3], o);
+  };
+
+  /* isTurnover is a flag on the play, which is better than reading the drive
+     result — a drive can end in a turnover that the result string names
+     differently ("Downs" is not a turnover, "Interception Touchdown" is). */
+  R.nflTurnoversBand = function(j, p, o){
+    var n = nflPlaysIn(j, p).filter(function(x){ return !!x.isTurnover; }).length;
+    return band(n, [0,1,2], o);
+  };
+
+  R.nflPenaltiesBand = function(j, p, o){
+    var n = nflPlaysIn(j, p).filter(function(x){ return !!x.isPenalty; }).length;
+    return band(n, [1,3,5], o);
+  };
+
+  R.nflFirstScoreKind = function(j, p, o){
+    var s = nflPlaysIn(j, p).find(function(x){ return !!x.scoringPlay; });
+    if(!s) return o.find(function(x){ return /no score|nobody|none/i.test(x); }) || null;
+    var t = String((((s.type)||{}).text)||'').toLowerCase();
+    if(/touchdown/.test(t)) return o.find(function(x){ return /touchdown|^td$/i.test(x); }) || null;
+    if(/field goal/.test(t)) return o.find(function(x){ return /field goal|^fg$/i.test(x); }) || null;
+    if(/safety/.test(t))     return o.find(function(x){ return /safety/i.test(x); }) || null;
+    return null;
+  };
+
+  R.nflLongestDriveBand = function(j, p, o){
+    var y = nflDrivesIn(j, p).map(function(d){ return Number(d.yards); })
+                             .filter(function(n){ return isFinite(n); });
+    if(!y.length) return null;
+    return band(Math.max.apply(null, y), [20,45,70], o);
+  };
+
+  R.nflMoreRushOrPass = function(j, p, o){
+    var ps = nflPlaysIn(j, p);
+    var rush = ps.filter(function(x){ return /^rush/i.test(String((((x.type)||{}).text)||'')); }).length;
+    var pass = ps.filter(function(x){ return /^pass/i.test(String((((x.type)||{}).text)||'')); }).length;
+    if(rush === pass) return o.find(function(x){ return /tie|same|equal/i.test(x); }) || null;
+    return (rush > pass) ? (o.find(function(x){ return /rush|run/i.test(x); }) || null)
+                         : (o.find(function(x){ return /pass/i.test(x); }) || null);
+  };
+
+  R.nflScoringDrivesBand = function(j, p, o){
+    var n = nflDrivesIn(j, p).filter(function(d){ return !!d.isScore; }).length;
+    return band(n, [0,1,2], o);
+  };
+
+  R.nflLeadAfter = function(j, p, o){ return leadAfterPeriod(j, p, o); };
+
+  R.nflMoreFirstDowns  = function(j, p, o){ return boxCompare(j, o, 'firstDowns'); };
+  R.nflMoreTotalYards  = function(j, p, o){ return boxCompare(j, o, 'totalYards'); };
+
+  /* ============================ NHL =================================
+     356 plays, 18 types, coordinates on 337 of them — structurally the
+     closest sport to basketball there is, which is why it is cheap once the
+     engine exists. Goals additionally carry `strength` and `shotInfo`.
+
+     ONE TRAP, AND IT IS NOT OBVIOUS: penalties are NOT a "Penalty" play type
+     the way football's are. Each infraction is its OWN type.text — Tripping,
+     Interference, Roughing, Holding, Slashing on the probed game, and the
+     real NHL list runs to twenty-odd. Matching a hand-kept list of infraction
+     names is a table that goes stale the first time somebody gets called for
+     something new, so penalty COUNTS come off the box score (`penalties`,
+     `penaltyMinutes`), which is authoritative and complete. */
+
+  function nhlIn(j, p){
+    return rawPlays(j).filter(function(x){ return Number(((x.period)||{}).number) === Number(p); });
+  }
+  function nhlType(x){ return String((((x.type)||{}).text)||''); }
+
+  R.nhlFirstGoalTeam = function(j, p, o){
+    var g = nhlIn(j, p).find(function(x){ return nhlType(x) === 'Goal'; });
+    if(!g) return o.find(function(x){ return /no goal|nobody|neither|none|scoreless/i.test(x); }) || null;
+    return optForTeam(j, String(((g.team)||{}).id||''), o);
+  };
+
+  R.nhlGoalsBand = function(j, p, o){
+    var n = nhlIn(j, p).filter(function(x){ return nhlType(x) === 'Goal'; }).length;
+    return band(n, [0,1,2], o);
+  };
+
+  R.nhlShotsBand = function(j, p, o){
+    /* "Shot" is a shot ON GOAL that the keeper handled. Missed and Blocked are
+       their own types, deliberately not counted here — the question has to say
+       "on goal" and mean it. */
+    var n = nhlIn(j, p).filter(function(x){ return nhlType(x) === 'Shot'; }).length;
+    return band(n, [8,12,16], o);
+  };
+
+  R.nhlHitsBand = function(j, p, o){
+    var n = nhlIn(j, p).filter(function(x){ return nhlType(x) === 'Hit'; }).length;
+    return band(n, [12,20,28], o);
+  };
+
+  R.nhlBlockedBand = function(j, p, o){
+    var n = nhlIn(j, p).filter(function(x){ return nhlType(x) === 'Blocked'; }).length;
+    return band(n, [4,8,12], o);
+  };
+
+  R.nhlGiveawaysBand = function(j, p, o){
+    var n = nhlIn(j, p).filter(function(x){ return nhlType(x) === 'Giveaway'; }).length;
+    return band(n, [4,8,12], o);
+  };
+
+  R.nhlFirstGoalStrength = function(j, p, o){
+    var g = nhlIn(j, p).find(function(x){ return nhlType(x) === 'Goal'; });
+    if(!g) return null;
+    var s = String(((g.strength)||{}).abbreviation || ((g.strength)||{}).text || '').toLowerCase();
+    if(!s) return null;
+    if(/pp|power/.test(s))          return o.find(function(x){ return /power play/i.test(x); }) || null;
+    if(/sh|short/.test(s))          return o.find(function(x){ return /short.?handed/i.test(x); }) || null;
+    if(/ev|even/.test(s))           return o.find(function(x){ return /even/i.test(x); }) || null;
+    return null;
+  };
+
+  R.nhlMoreShots      = function(j, p, o){ return boxCompare(j, o, 'shotsTotal'); };
+  R.nhlMoreHits       = function(j, p, o){ return boxCompare(j, o, 'hits'); };
+  R.nhlMoreFaceoffs   = function(j, p, o){ return boxCompare(j, o, 'faceoffsWon'); };
+  R.nhlPenaltiesBand  = function(j, p, o){
+    var n = boxTotal(j, 'penalties'); if(n === null) return null;
+    return band(n, [2,4,7], o);
+  };
+  R.nhlLeadAfter      = function(j, p, o){ return leadAfterPeriod(j, p, o); };
+
+  /* ===================================================================
+     OVERTIME ROUNDS — installed 17 Aug 2026.
+     Founder's call: every OT period gets its own full round, same shape and
+     scaling as regulation, repeating for OT2/OT3 — extending the GN11
+     decision to all six sports. The plan carries ONE authored `ot` template
+     and the runner instantiates it per overtime period, so nothing is
+     invented and a regulation game never pays for it.
+     ================================================================ */
+
+  /* How many periods regulation has, for this feed's sport. */
+  function regulationPeriods(j){
+    var f = famCfg(j);
+    return (f && f.periods) || 4;
+  }
+
+  /* Which overtime is period p? 1 for the first, 2 for the second, 0 if p is
+     still regulation. Baseball counts from the 9th, hockey from the 3rd —
+     read from the table rather than assuming basketball's 4. */
+  function otIndexOf(j, p){
+    var f = famCfg(j);
+    if(!f || !f.otFrom) return 0;                 // soccer: no overtime here
+    var n = Number(p) - (f.otFrom - 1);
+    return n > 0 ? n : 0;
+  }
+
+  /* THE TAG A PLAYER SEES. Every sport names its own periods and getting this
+     wrong is not cosmetic — the tag is what the phone shows above the
+     question, so "Q1" over a hockey overtime is a screen that lies.
+     `p` is the round's TERMINAL period: for baseball a round spans three
+     innings and is named for the span. */
+  function roundTagFor(j, p){
+    var fam = familyOf(j), n = Number(p), ot = otIndexOf(j, n);
+    if(fam === 'soccer')  return n === 1 ? '1H' : 'FT';
+    if(ot > 0)            return ot > 1 ? ('OT' + ot) : 'OT';
+    if(fam === 'baseball'){
+      var ord = function(k){
+        var s = ['th','st','nd','rd'], v = k % 100;
+        return k + (s[(v-20)%10] || s[v] || s[0]);
+      };
+      return ord(n - 2) + '-' + ord(n);           // 1st-3rd, 4th-6th, 7th-9th
+    }
+    if(fam === 'hockey')  return ['1st','2nd','3rd'][n-1] || ('P' + n);
+    return 'Q' + n;                               // basketball, football
+  }
+
+  /* The human name, for the round document's `name` field. */
+  function roundNameFor(j, p){
+    var fam = familyOf(j), n = Number(p), ot = otIndexOf(j, n);
+    var f = famCfg(j);
+    if(fam === 'soccer')  return n === 1 ? '1st half' : 'Full time';
+    if(ot > 0)            return ot > 1 ? ('Overtime ' + ot) : 'Overtime';
+    if(fam === 'baseball') return 'Innings ' + (n-2) + '–' + n;
+    return ((f && f.Word) || 'Period') + ' ' + n;
+  }
+
+  /* THE ROUND PLAN, given what the feed actually shows.
+     Returns the terminal period of every round that SHOULD exist — the
+     regulation rounds from the table, then one per overtime period the feed
+     has reached. `maxPeriod` comes from the feed, never from a constant, so a
+     fourth overtime needs no code change. */
+  function roundPeriodsFor(j, maxPeriod){
+    var f = famCfg(j);
+    var reg = (f && f.rounds) ? f.rounds.slice() : [];
+    if(!reg.length){ for(var i = 1; i <= regulationPeriods(j); i++) reg.push(i); }
+    var out = reg.slice();
+    var mx = Number(maxPeriod) || 0;
+    if(f && f.otFrom){
+      for(var p = f.otFrom; p <= mx; p++) out.push(p);
+    }
+    return out;
+  }
+
+  /* The highest period the feed has reached — the header first, because it is
+     current during a live game, then the plays as a floor. Deliberately does
+     NOT trust one alone: the header can lag a period boundary, and on a
+     football feed the plays live inside drives so a naive read finds none. */
+  function maxPeriodIn(j){
+    var hi = 0;
+    try{
+      var st = j.header.competitions[0].status;
+      var p = Number(st.period);
+      if(isFinite(p) && p > hi) hi = p;
+    }catch(_){}
+    try{
+      feedPlays(j).forEach(function(x){
+        var n = Number(((x.period)||{}).number);
+        if(isFinite(n) && n > hi) hi = n;
+      });
+    }catch(_){}
+    return hi;
+  }
+
+  /* Did this game go to overtime at all? Used to decide whether the runner
+     should be looking for an OT template in the first place. */
+  function wentToOvertime(j){
+    var f = famCfg(j);
+    if(!f || !f.otFrom) return false;
+    return maxPeriodIn(j) >= f.otFrom;
+  }
+
+  /* WHAT AN OVERTIME ROUND IS WORTH, and this is a SCORING decision, so it is
+     written down loudly rather than buried.
+
+     Regulation ramps 10/20/30/40 across four quarters — the last quarter is
+     worth four times the first because that is when it matters. Overtime is
+     later than the last quarter, so the ramp continues: OT pays one step
+     beyond the final regulation round, and OT2 one beyond that.
+
+     An authored value in the published template ALWAYS WINS. This is only the
+     fallback for a template that did not say.
+
+     THE CONSEQUENCE, stated on purpose: this raises the per-night ceiling for
+     any game that goes to overtime, so a night with OT is not comparable to a
+     night without one on raw points. Rankings within a night are unaffected —
+     everyone in the room plays the same overtime. Same class of change as the
+     20s→24s answer clock in the backlog, and it should be described the same
+     way rather than slipped in. */
+  function otWorthFor(j, p, regWorths){
+    var ot = otIndexOf(j, p);
+    if(ot <= 0) return null;
+    var ws = (regWorths || []).map(Number).filter(function(n){ return isFinite(n) && n > 0; });
+    if(!ws.length) return 10 * (regulationPeriods(j) + ot);
+    var last = ws[ws.length - 1];
+    var step = ws.length > 1 ? (last - ws[ws.length - 2]) : last;
+    if(!(step > 0)) step = last;
+    return last + step * ot;
+  }
+
+  /* ---- AN OVERTIME ROUND IS AUTHORED LIKE ANY OTHER -----------------
+     Added 17 Aug 2026 to wire the `ot` template into both publishers.
+
+     THE AUTHORING SURFACE ALREADY EXISTS AND THAT IS THE POINT. Give a
+     night a fifth tag — tags:['Q1','Q2','Q3','Q4','OT'] — and the Write
+     tab renders a fifth round to write questions into, with no new UI at
+     all. What must NOT happen is publishing that round as rounds[4], a
+     regulation round pinned to period 5: it would cover the first overtime
+     and nothing else, so a double overtime would be back to having no
+     round. Split it out as the TEMPLATE instead and one authored set covers
+     OT, OT2 and OT3 alike.
+
+     Tag convention rather than position, because position is what breaks
+     the day a sport has a different number of periods — and baseball's
+     three rounds already do not map one-to-one onto its nine innings.
+
+     BOTH PUBLISHERS CALL THIS ONE FUNCTION. publishPlan() in this file and
+     host/publish.js, which reaches it through run.js's loadShared(). Two
+     copies of this predicate is two chances for the Control Room and the
+     script to disagree about which round is overtime, on a night nobody is
+     watching closely — the exact shape of B2. */
+  function isOtTag(tag){ return /^ot\s*\d*$/i.test(String(tag == null ? '' : tag).trim()); }
+
+  /* Returns { rounds, ot } — regulation rounds in order, and the first
+     overtime round found as a bare { worth, qs } template. Deliberately
+     drops the OT round's tag and name: they are re-derived per period by
+     roundTagFor()/roundNameFor(), so a template labelled "OT" cannot leak
+     that label onto the second overtime. */
+  function splitOtRound(rounds){
+    var reg = [], ot = null;
+    (rounds || []).forEach(function(r){
+      if(isOtTag(r && r.tag)){
+        if(!ot && r && (r.qs || []).length) ot = { worth: Number(r.worth) || 0, qs: r.qs };
+      } else reg.push(r);
+    });
+    return { rounds: reg, ot: ot };
+  }
+
+  function bballPeriodDone(j, p){
     var want = Number(p);
     try{
       var st = j.header.competitions[0].status;
@@ -5149,6 +6059,27 @@ var AUTO = (function(){
             && /end of (the )?(1st|2nd|3rd|4th|\d)/i.test(String(x.text||''));
       });
     }catch(_){ return false; }
+  }
+
+  /* ONE GATE PER SPORT, DISPATCHED OFF THE FEED — added 17 Aug 2026.
+     The basketball gate above regexes "End of the 3rd" out of play text.
+     That is fine for basketball and wrong twice over elsewhere: baseball
+     carries an explicit period.type==='End' row (read the field, do not
+     parse prose), and soccer has NO plays array at all, so the fallback can
+     never fire and the gate would silently rest entirely on the header.
+
+     A gate that cannot tell "not finished" from "cannot tell" is the whole
+     problem — it either opens a round early or never opens it. Routing here
+     keeps each sport's answer next to the feed that justifies it. */
+  function periodDone(j, p){
+    /* A TABLE LOOKUP, NOT A CHAIN — 17 Aug 2026. This was an if/else per
+       sport, which is fine at two and unreadable at six, and every branch
+       added was another place to forget a sport. FAMILY owns the gate now,
+       so a new sport arrives as a row. Falls back to basketball when the
+       feed will not say what it is, because the WNBA is what runs today. */
+    var f = famCfg(j);
+    var fn = f && f.done;
+    return (typeof fn === 'function') ? fn(j, p) : bballPeriodDone(j, p);
   }
 
   function resolve(name, j, p, opts){
@@ -5223,8 +6154,34 @@ var AUTO = (function(){
     return out;
   }
 
+  /* sportOf and sumUrl are exported because the runner needs both to fetch
+     the right feed at all, and the three per-sport gates are exported so the
+     dispatch is auditable from outside — qa/host-sports.js asserts that
+     periodDone() still answers exactly what bballPeriodDone() answers on a
+     basketball feed, which is the guard that a refactor here did not quietly
+     change the behaviour of a night that is already on the calendar. */
   return { fetchFeed:fetchFeed, resolve:resolve, periodDone:periodDone, R:R, sides:sides, plays:plays,
-           inPeriod:inPeriod, armed:armed, clockSec:clockSec, tally:tally };
+           inPeriod:inPeriod, armed:armed, clockSec:clockSec, tally:tally,
+           sportOf:sportOf, sumUrl:sumUrl,
+           bballPeriodDone:bballPeriodDone, mlbInningDone:mlbInningDone, mlsPeriodDone:mlsPeriodDone,
+           nflPeriodDone:nflPeriodDone, nhlPeriodDone:nhlPeriodDone,
+           /* The multi-sport surface. feedPlays is the one every cross-sport
+              caller must use instead of plays() — football keeps its plays
+              inside drives and soccer has none, so plays() is silently empty
+              for two of the six. FAMILY/LEAGUE are exported so the runner and
+              the Control Room read the round plan and the feed path from the
+              same table the resolvers do, rather than keeping their own. */
+           feedPlays:feedPlays, isOvertime:isOvertime, familyOf:familyOf,
+           FAMILY:FAMILY, LEAGUE:LEAGUE, teamStat:teamStat, nflDrives:nflDrives,
+           /* Overtime. run.js reads all of these: it walks roundPeriodsFor()
+              instead of a fixed plan length, names each round with
+              roundTagFor()/roundNameFor(), and prices an overtime round with
+              otWorthFor() when the published template did not say. */
+           regulationPeriods:regulationPeriods, otIndexOf:otIndexOf,
+           roundTagFor:roundTagFor, roundNameFor:roundNameFor,
+           roundPeriodsFor:roundPeriodsFor, maxPeriodIn:maxPeriodIn,
+           wentToOvertime:wentToOvertime, otWorthFor:otWorthFor,
+           isOtTag:isOtTag, splitOtRound:splitOtRound };
 })();
 /* @host-shared:end */
 
