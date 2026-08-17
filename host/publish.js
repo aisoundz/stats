@@ -115,11 +115,23 @@ function buildPlan(NIGHTS, BANK){
     return { tag, name: (cfg.names || [])[i] || tag, worth: (cfg.worth || [])[i] || 10, qs };
   });
 
-  return { cfg, rounds };
+  /* THE OVERTIME ROUND IS A TEMPLATE, NOT A REGULATION ROUND.
+     Same split the Control Room's publishPlan() makes, through the SAME
+     function — reached out of the shared block via run.js's loadShared()
+     rather than re-implemented here. A second copy of "which round is
+     overtime" is two chances for this script and the Control Room to
+     disagree on a night nobody is watching closely, which is B2 with a
+     different hat on. */
+  const { loadShared } = require('./run.js');
+  const AUTO = loadShared();
+  const split = AUTO.splitOtRound(rounds);
+  const otConfigured = rounds.filter(r => AUTO.isOtTag(r.tag));
+
+  return { cfg, rounds: split.rounds, ot: split.ot, otConfigured };
 }
 
 /* ---- 3. the same refusals the Control Room makes ------------------- */
-function validate(cfg, rounds){
+function validate(cfg, rounds, ot){
   /* B28, GN9. publishPlan() validated individual questions and never
      noticed a round with NONE, so "4 rounds, 0 questions" published as a
      routine status line and three real players sat looking at a live round
@@ -132,7 +144,11 @@ function validate(cfg, rounds){
         'The runner will not invent them.');
 
   const fatal = [], warn = [];
-  rounds.forEach(r => r.qs.forEach((q, x) => {
+  /* The overtime template is held to the same per-question rules as any
+     round — it just does not hard-stop for being absent. Without this it was
+     the one set of questions nobody checked. */
+  const toCheck = ot ? rounds.concat([{ tag: 'OT', qs: ot.qs }]) : rounds;
+  toCheck.forEach(r => r.qs.forEach((q, x) => {
     if(!q.t)            fatal.push(`${r.tag} Q${x+1} has no question text`);
     if(q.o.length < 2)  fatal.push(`${r.tag} Q${x+1} has fewer than two options`);
     if(!q.r && q.k == null)
@@ -146,8 +162,8 @@ function validate(cfg, rounds){
 async function main(){
   if(!NIGHT) die('NIGHT_ID is not set');
   const { NIGHTS, BANK } = loadConstants();
-  const { cfg, rounds } = buildPlan(NIGHTS, BANK);
-  const warn = validate(cfg, rounds);
+  const { cfg, rounds, ot, otConfigured } = buildPlan(NIGHTS, BANK);
+  const warn = validate(cfg, rounds, ot);
 
   const nq = rounds.reduce((a, r) => a + r.qs.length, 0);
   log('plan', `${cfg.label || NIGHT}`);
@@ -157,7 +173,18 @@ async function main(){
   });
   warn.forEach(w => log('warn', w));
 
-  if(DRY){ log('dry', `would publish ${rounds.length} rounds, ${nq} questions — nothing written`); return; }
+  if(ot){
+    log('ot', `overtime template — ${ot.qs.length} question(s), worth ${ot.worth || 'auto'} · covers OT, OT2 and OT3`);
+  } else if(otConfigured.length){
+    log('warn', 'an overtime round is configured but has NO questions, so no template will be published. ' +
+                'An overtime tonight would open nothing and be flagged for a human.');
+  } else {
+    log('warn', `no overtime round configured for ${NIGHT}. Add 'OT' to this night's tags in NIGHTS ` +
+                'and write questions for it, or an overtime is played with nothing to answer.');
+  }
+  if(DRY){ log('dry', `would publish ${rounds.length} rounds, ${nq} questions` +
+                      (ot ? ` + an overtime template of ${ot.qs.length}` : ' and NO overtime template') +
+                      ' — nothing written'); return; }
 
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
   if(!raw) die('FIREBASE_SERVICE_ACCOUNT is not set. See host/MACHINE-SETUP.md.');
@@ -183,12 +210,18 @@ async function main(){
         'It may contain Control Room edits this script cannot see. Use --force to overwrite it.');
   }
 
-  await ref.set({
+  const planDoc = {
     rounds,
     at: admin.firestore.FieldValue.serverTimestamp(),
     by: 'publish.js · ' + (creds.client_email || 'service account')
-  });
+  };
+  /* Absent is a legitimate value. A night with no overtime questions simply
+     has no template, and run.js writes needsHuman if overtime then happens
+     rather than opening an empty round or skipping it in silence. */
+  if(ot) planDoc.ot = ot;
+  await ref.set(planDoc);
   log('key', `plan published — ${rounds.length} rounds, ${nq} questions` +
+             (ot ? ` + overtime template (${ot.qs.length})` : ' · NO overtime template') +
              (warn.length ? ` · ${warn.length} will need a human` : ' · every line has a resolver'));
   log('done', 'the runner can take it from here');
 }

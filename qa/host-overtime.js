@@ -1,0 +1,250 @@
+#!/usr/bin/env node
+/* =====================================================================
+   Every overtime period gets its own round — does it?
+   ---------------------------------------------------------------------
+   Founder's call 17 Aug 2026, extending the GN11 decision to all six
+   sports. Overtime was structurally invisible to the runner's round loop
+   for eleven game nights, and the failure was silent: the scoreboard said
+   "OT in progress" while there was nothing to answer.
+
+   Checks the tag a player would SEE (a "Q1" over a hockey overtime is a
+   screen that lies), the round plan the runner walks, and the overtime
+   price. Real feeds where available, synthetic period numbers for the
+   overtimes no cached fixture happens to contain.
+
+       node qa/host-overtime.js /path/to/fixtures
+   ================================================================== */
+const fs = require('fs'), vm = require('vm'), path = require('path');
+const ROOT = path.resolve(__dirname, '..');
+const DIR = process.argv[2] || process.env.SPORT_FIXTURES || '';
+if (!DIR || !fs.existsSync(DIR)) { console.log('no fixtures dir — skipping.'); process.exit(0); }
+
+const src = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+const S = '/* @host-shared:start', E = '/* @host-shared:end */';
+const ctx = vm.createContext({ console, fetch: () => { throw new Error('no net'); } });
+vm.runInContext(src.slice(src.indexOf(S), src.indexOf(E) + E.length), ctx, { filename: 'hs' });
+const A = ctx.AUTO;
+
+let fail = 0;
+const ok = id => console.log(`  \x1b[32m✓\x1b[0m ${id}`);
+const bad = (id, why) => { fail++; console.log(`  \x1b[31m✗ ${id}\x1b[0m — ${why}`); };
+const eq = (id, got, want) => got === want ? ok(id) : bad(id, `got ${JSON.stringify(got)}, wanted ${JSON.stringify(want)}`);
+const same = (id, got, want) => JSON.stringify(got) === JSON.stringify(want) ? ok(id) : bad(id, `got ${JSON.stringify(got)}, wanted ${JSON.stringify(want)}`);
+const load = f => { const p = path.join(DIR, f); return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null; };
+
+/* ---- the tag a player sees, per sport ------------------------------- */
+console.log('\nthe tag on the card');
+const tagCases = [
+  ['wnba.json', 1, 'Q1'], ['wnba.json', 4, 'Q4'], ['wnba.json', 5, 'OT'], ['wnba.json', 6, 'OT2'], ['wnba.json', 7, 'OT3'],
+  ['nba.json',  4, 'Q4'], ['nba.json',  5, 'OT'],
+  ['nfl.json',  4, 'Q4'], ['nfl.json',  5, 'OT'],
+  ['nhl.json',  1, '1st'], ['nhl.json', 3, '3rd'], ['nhl.json', 4, 'OT'], ['nhl.json', 5, 'OT2'],
+  ['mlb.json',  3, '1st-3rd'], ['mlb.json', 6, '4th-6th'], ['mlb.json', 9, '7th-9th'],
+  ['mlb.json', 10, 'OT'], ['mlb.json', 11, 'OT2'],
+  ['mls.json',  1, '1H'], ['mls.json', 2, 'FT'],
+];
+for (const [f, p, want] of tagCases) {
+  const j = load(f);
+  if (!j) { console.log(`  – ${f} absent`); continue; }
+  eq(`tag.${f.replace('.json','')}.p${p}`, A.roundTagFor(j, p), want);
+}
+
+/* ---- overtime is counted from the right period, per sport ----------- */
+console.log('\novertime starts where the sport says, not at 5');
+for (const [f, reg, firstOT] of [['wnba.json',4,5], ['nba.json',4,5], ['nfl.json',4,5], ['nhl.json',3,4], ['mlb.json',9,10]]) {
+  const j = load(f); if (!j) { console.log(`  – ${f} absent`); continue; }
+  eq(`ot.${f.replace('.json','')}.regulation-is-${reg}`, A.regulationPeriods(j), reg);
+  eq(`ot.${f.replace('.json','')}.p${reg}-is-not-overtime`, A.otIndexOf(j, reg), 0);
+  eq(`ot.${f.replace('.json','')}.p${firstOT}-is-first-overtime`, A.otIndexOf(j, firstOT), 1);
+}
+{
+  const j = load('mls.json');
+  if (j) {
+    /* MLS regular season plays no extra time. A sport with otFrom 0 must
+       never report an overtime, or the runner would look for a template
+       that should not exist. */
+    eq('ot.mls.never-has-overtime', A.otIndexOf(j, 3), 0);
+    eq('ot.mls.wentToOvertime-false', A.wentToOvertime(j), false);
+  }
+}
+
+/* ---- the round plan the runner walks ------------------------------- */
+console.log('\nthe round plan grows with the game');
+{
+  const w = load('wnba.json');
+  if (w) {
+    same('plan.basketball.regulation', A.roundPeriodsFor(w, 4), [1,2,3,4]);
+    same('plan.basketball.one-ot',     A.roundPeriodsFor(w, 5), [1,2,3,4,5]);
+    same('plan.basketball.triple-ot',  A.roundPeriodsFor(w, 7), [1,2,3,4,5,6,7]);
+  }
+  const m = load('mlb.json');
+  if (m) {
+    /* Baseball's rounds are the 3rd, 6th and 9th — NOT one per inning. Extra
+       innings then get one round each, which is the founder's call applied
+       to a sport whose regulation rounds already span three periods. */
+    same('plan.baseball.regulation',   A.roundPeriodsFor(m, 9),  [3,6,9]);
+    same('plan.baseball.tenth-inning', A.roundPeriodsFor(m, 10), [3,6,9,10]);
+    same('plan.baseball.twelfth',      A.roundPeriodsFor(m, 12), [3,6,9,10,11,12]);
+  }
+  const h = load('nhl.json');
+  if (h) {
+    same('plan.hockey.regulation', A.roundPeriodsFor(h, 3), [1,2,3]);
+    same('plan.hockey.one-ot',     A.roundPeriodsFor(h, 4), [1,2,3,4]);
+  }
+  const s = load('mls.json');
+  if (s) same('plan.soccer.two-rounds-and-no-more', A.roundPeriodsFor(s, 5), [1,2]);
+}
+
+/* ---- real feeds: the games that actually went past regulation ------- */
+console.log('\nreal games that went past regulation');
+{
+  const h = load('nhl.json');
+  if (h) {
+    const mx = A.maxPeriodIn(h);
+    eq('real.nhl.reached-period-4', mx, 4);
+    eq('real.nhl.wentToOvertime', A.wentToOvertime(h), true);
+    same('real.nhl.plan-includes-ot', A.roundPeriodsFor(h, mx), [1,2,3,4]);
+    eq('real.nhl.ot-round-is-tagged-OT', A.roundTagFor(h, 4), 'OT');
+    /* And the gate must agree that the OT period finished, or a round would
+       open and never close. This is the "End of OT" row, which carries no
+       digit and is invisible to the basketball regex. */
+    eq('real.nhl.ot-period-reads-done', A.periodDone(h, 4), true);
+  }
+  /* Football's plays are nested in drives, so maxPeriodIn has to go through
+     feedPlays() — a naive j.plays read finds nothing and would report period
+     0, which would silently mean "no rounds at all". */
+  const n = load('nfl.json');
+  if (n) eq('real.nfl.maxPeriod-sees-through-drives', A.maxPeriodIn(n) >= 4, true);
+}
+
+/* ---- what an overtime round is worth ------------------------------- */
+console.log('\novertime price continues the regulation ramp');
+{
+  const w = load('wnba.json');
+  if (w) {
+    eq('worth.ot-continues-10-20-30-40', A.otWorthFor(w, 5, [10,20,30,40]), 50);
+    eq('worth.ot2-one-step-further',     A.otWorthFor(w, 6, [10,20,30,40]), 60);
+    eq('worth.regulation-has-no-ot-price', A.otWorthFor(w, 4, [10,20,30,40]), null);
+    /* A flat regulation ramp has no step to continue; fall back to the last
+       value rather than returning 0, which would make overtime free. */
+    eq('worth.flat-ramp-does-not-make-ot-free', A.otWorthFor(w, 5, [25,25]), 50);
+    eq('worth.no-ramp-given-still-prices-it', A.otWorthFor(w, 5, []) > 0, true);
+  }
+  const m = load('mlb.json');
+  if (m) eq('worth.baseball.tenth-inning-priced', A.otWorthFor(m, 10, [30,50,70]) > 70, true);
+}
+
+
+/* =====================================================================
+   The RUNNER's own round list — exercising run.js's roundSlots(), not a
+   copy of it. run.js exports it precisely so this test cannot drift from
+   the thing it tests.
+   ================================================================== */
+const { roundSlots } = require(path.join(ROOT, 'host/run.js'));
+
+console.log('\nthe runner walks a round list that grows');
+{
+  const w = load('wnba.json');
+  if (w) {
+    const plan4 = { rounds: [ {tag:'Q1',name:'Quarter 1',worth:10,qs:[{t:'a',o:['x']}]},
+                              {tag:'Q2',name:'Quarter 2',worth:20,qs:[{t:'a',o:['x']}]},
+                              {tag:'Q3',name:'Quarter 3',worth:30,qs:[{t:'a',o:['x']}]},
+                              {tag:'Q4',name:'Quarter 4',worth:40,qs:[{t:'a',o:['x']}]} ] };
+    /* THE WNBA FIXTURE IS GAME NIGHT 11, WHICH WENT TO OVERTIME — and that
+       is the whole point, so it gets asserted rather than worked around.
+       GN11 is the night that exposed this gap: it ran fully unattended
+       through an overtime that had no round behind it. The same feed now
+       produces a fifth slot tagged OT. The first version of this test
+       expected four slots and failed; the expectation was wrong, not the
+       code. */
+    eq('runner.gn11-really-went-to-overtime', A.wentToOvertime(w), true);
+    const gn11 = roundSlots(A, w, Object.assign({ ot: { qs: [{t:'q',o:['x']}] } }, plan4));
+    eq('runner.gn11-now-has-a-fifth-round', gn11.length, 5);
+    eq('runner.gn11-fifth-round-is-tagged-OT', gn11[4].def.tag, 'OT');
+    eq('runner.gn11-fifth-round-is-overtime-1', gn11[4].ot, 1);
+
+    /* Regulation only, forced to period 4: four slots, each its own period. */
+    const regFeed = JSON.parse(JSON.stringify(w));
+    regFeed.plays = (w.plays || []).filter(p => Number((p.period || {}).number) <= 4);
+    regFeed.header.competitions[0].status = { period: 4, type: { completed: true } };
+    const reg = roundSlots(A, regFeed, plan4);
+    eq('runner.regulation-slot-count', reg.length, 4);
+    same('runner.regulation-periods', reg.map(s => s.per), [1,2,3,4]);
+    eq('runner.regulation-has-no-ot', reg.every(s => s.ot === 0), true);
+
+    /* Overtime with NO template: the slot still exists, so the runner can
+       see it and complain, but it carries no questions and must never be
+       opened. A missing slot would be a silent skip. */
+    const otFeed = JSON.parse(JSON.stringify(w));
+    otFeed.header.competitions[0].status = { period: 6, type: { completed: true } };
+    const noTpl = roundSlots(A, otFeed, plan4);
+    eq('runner.two-overtimes-appear-as-slots', noTpl.length, 6);
+    eq('runner.ot-without-a-template-has-no-questions', noTpl[4].def, null);
+    eq('runner.ot-slot-knows-which-overtime-it-is', noTpl[5].ot, 2);
+
+    /* Overtime WITH a template: instantiated per period, tagged OT / OT2,
+       and priced by continuing the regulation ramp. */
+    const withTpl = roundSlots(A, otFeed, Object.assign({ ot: { qs: [{t:'q',o:['x','y']}] } }, plan4));
+    eq('runner.ot1-is-tagged-OT',  withTpl[4].def.tag, 'OT');
+    eq('runner.ot2-is-tagged-OT2', withTpl[5].def.tag, 'OT2');
+    eq('runner.ot1-priced-past-Q4', withTpl[4].def.worth, 50);
+    eq('runner.ot2-priced-past-OT1', withTpl[5].def.worth, 60);
+    eq('runner.ot-reuses-the-published-questions', withTpl[4].def.qs.length, 1);
+    /* An authored worth in the template always beats the computed ramp. */
+    const authored = roundSlots(A, otFeed, Object.assign({ ot: { worth: 15, qs: [{t:'q',o:['x']}] } }, plan4));
+    eq('runner.authored-ot-worth-wins', authored[4].def.worth, 15);
+  }
+
+  /* BASEBALL IS THE ONE THAT CAUGHT A REAL BUG. The loop used to call the
+     gate with `i + 1`, so round 0 asked whether the FIRST inning was over.
+     Baseball's rounds are the 3rd, 6th and 9th. */
+  const m = load('mlb.json');
+  if (m) {
+    const plan3 = { rounds: [ {tag:'1st-3rd',worth:30,qs:[{t:'a',o:['x']}]},
+                              {tag:'4th-6th',worth:50,qs:[{t:'a',o:['x']}]},
+                              {tag:'7th-9th',worth:70,qs:[{t:'a',o:['x']}]} ] };
+    const bs = roundSlots(A, m, plan3);
+    same('runner.baseball-rounds-map-to-innings-3-6-9', bs.map(s => s.per), [3,6,9]);
+    const ext = JSON.parse(JSON.stringify(m));
+    ext.header.competitions[0].status = { period: 11, type: { completed: true } };
+    const be = roundSlots(A, ext, Object.assign({ ot: { qs: [{t:'q',o:['x']}] } }, plan3));
+    same('runner.eleven-innings-adds-two-rounds', be.map(s => s.per), [3,6,9,10,11]);
+    eq('runner.tenth-inning-tagged-OT', be[3].def.tag, 'OT');
+  }
+
+  /* AUTHORED OVERTIME AND THE TEMPLATE MUST NOT BOTH FIRE.
+     A night config may list five tags (Q1..Q4, OT), which the existing Write
+     tab renders and publishPlan publishes as rounds[4] on period 5. The
+     template used to append a SECOND round for period 5 — same overtime,
+     two rounds, both scoring, paid twice. Authored wins; the template fills
+     only the periods nothing covers. */
+  if (w) {
+    const q = [{t:'a',o:['x']}];
+    const plan5 = { rounds: [ {tag:'Q1',worth:10,qs:q}, {tag:'Q2',worth:20,qs:q},
+                              {tag:'Q3',worth:30,qs:q}, {tag:'Q4',worth:40,qs:q},
+                              {tag:'OT',worth:50,qs:q} ], ot: { qs: q } };
+    const five = roundSlots(A, w, plan5);
+    eq('runner.authored-ot-is-not-duplicated', five.length, 5);
+    same('runner.authored-ot-periods', five.map(s => s.per), [1,2,3,4,5]);
+    eq('runner.authored-ot-keeps-its-own-worth', five[4].def.worth, 50);
+    /* ...and a SECOND overtime still gets one from the template. */
+    const ot2 = JSON.parse(JSON.stringify(w));
+    ot2.header.competitions[0].status = { period: 6, type: { completed: true } };
+    const six = roundSlots(A, ot2, plan5);
+    eq('runner.template-fills-only-the-gap', six.length, 6);
+    eq('runner.gap-filled-round-is-OT2', six[5].def.tag, 'OT2');
+  }
+
+  /* Soccer must never grow a third round however the feed reads. */
+  const s = load('mls.json');
+  if (s) {
+    const plan2 = { rounds: [ {tag:'1H',worth:30,qs:[{t:'a',o:['x']}]},
+                              {tag:'FT',worth:50,qs:[{t:'a',o:['x']}]} ] };
+    const sf = JSON.parse(JSON.stringify(s));
+    sf.header.competitions[0].status = { period: 4, type: { completed: true } };
+    eq('runner.soccer-never-grows-a-third-round', roundSlots(A, sf, plan2).length, 2);
+  }
+}
+
+console.log(fail ? `\n${fail} FAILED` : '\nall good');
+process.exit(fail ? 1 : 0);

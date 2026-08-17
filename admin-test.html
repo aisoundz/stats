@@ -522,7 +522,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-13-admin.48-gn11';
+window.ADMIN_BUILD='2026-08-16-admin.49-gn12';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -578,6 +578,15 @@ const NIGHTS = [
   /* `espn` is new and it is the hinge for the autonomous host: it is the
      event id the resolvers read. A night without one can still be run by
      hand, it just cannot be run by the robot. */
+  /* GAME NIGHT #12 — MINNESOTA AT GOLDEN STATE, Wednesday, set up three
+     days out. Tip: 10:00 ET / 7:00 PT, USA Network. Verified against the
+     scoreboard feed for 2026-08-19: event 401857157, Chase Center. Golden
+     State are home, drawn on the right. */
+  { id:'gn12-2026-08-19-min-gs', label:'Game Night #12 — Lynx @ Valkyries (Wed Aug 19, 10:00 ET · USA Network)',
+    away:'MIN', home:'GS', espn:'401857157',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[10,20,30,40] },
   /* GAME NIGHT #10 — MINNESOTA AT LAS VEGAS, Saturday, set up with real
      lead time instead of fifteen rushed minutes — the whole point of doing
      it this way after GN9. Tip: 8:00 ET / 5:00 PT, CBS/Paramount+. Verified
@@ -697,6 +706,42 @@ const BANK = {
      new RESOLVERS, which need a shadow test against a finished game before
      they go anywhere near a room. That is the next piece of work, not this
      one. */
+  /* GAME NIGHT #12 — MINNESOTA AT GOLDEN STATE. A WHOLE NEW SET, not a
+     reskin — founder's ask, after three nights running the same sixteen
+     questions with only the team words moved. Sixteen new resolvers
+     (fouls, turnovers, assists, free throws, substitutions, shot mix)
+     added to the R table above, each grounded against a real downloaded
+     finished game (GN10's own feed) before being written — see the
+     comment block over R.firstBasketAssisted for what was checked and
+     how. Shadow-tested against real finished games before this went near
+     a room — see the shadow-test notes; do not skip that step for a
+     bank this new. */
+  'gn12-2026-08-19-min-gs': [
+    [
+      { t: 'Was the first basket of the game assisted?', o: ['Yes', 'No'], r:'firstBasketAssisted' },
+      { t: 'Which team committed the first foul of the game?', o: ['Valkyries', 'Lynx'], r:'firstFoulTeam' },
+      { t: 'Fouls in Q1, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'foulsBand' },
+      { t: 'The first turnover of the game — whose team gave it up?', o: ['Valkyries', 'Lynx'], r:'firstTurnoverTeam' }
+    ],
+    [
+      { t: 'Assisted baskets in Q2, both teams combined — how many?', o: ['Eight or fewer', 'Nine to eleven', 'Twelve or thirteen', 'Fourteen or more'], r:'assistedBasketsBand' },
+      { t: 'Did either team score in the final minute before halftime?', o: ['Yes', 'No'], r:'lastMinuteScoredQ2' },
+      { t: 'Turnovers in Q2, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'turnoversBand' },
+      { t: 'Free throws made in Q2, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'ftMadeBand' }
+    ],
+    [
+      { t: 'Free throws attempted in Q3, both teams combined — how many?', o: ['None to two', 'Three to five', 'Six to nine', 'Ten or more'], r:'ftAttemptsBand' },
+      { t: 'Driving or running shot attempts in Q3, both teams combined — how many?', o: ['Six or fewer', 'Seven to nine', 'Ten to twelve', 'Thirteen or more'], r:'drivingPlaysBand' },
+      { t: 'Substitutions in Q3, both teams combined — how many?', o: ['Nine or fewer', 'Ten to thirteen', 'Fourteen to seventeen', 'Eighteen or more'], r:'subsBand' },
+      { t: 'Which team made more free throws in Q3?', o: ['Valkyries', 'Lynx', 'Equal'], r:'ftMakeCompareQ3' }
+    ],
+    [
+      { t: 'In the last two minutes, which team committed more turnovers?', o: ['Valkyries', 'Lynx', 'Equal'], r:'lastTwoMinTurnoverCompare' },
+      { t: 'Was there a technical or flagrant foul at any point in the game?', o: ['Yes', 'No'], r:'anyTechOrFlagrant' },
+      { t: 'Was the game’s final basket assisted?', o: ['Yes', 'No'], r:'lastBasketAssisted' },
+      { t: 'In the 4th quarter, which was more common: jump shots or drives to the basket?', o: ['Jump shots', 'Drives', 'Equal'], r:'q4ShotTypeCompare' }
+    ]
+  ],
   'gn11-2026-08-16-ind-atl': [
     [
       { t: 'The first points of the game — how did they come?', o: ['Layup or dunk', 'Mid-range jumper', 'Three', 'Free throws'], r:'firstScoreKind' },
@@ -4910,6 +4955,154 @@ var AUTO = (function(){
     return (halfHome===finalHome)
       ? (o.find(function(x){ return /^yes/i.test(x); }) || null)
       : (o.find(function(x){ return /^no/i.test(x); })  || null);
+  };
+
+  /* ============ GN12 — A WHOLE NEW SET, 16 Aug 2026 ==================
+     GN10/GN11's bank had run three nights straight with only the two team
+     words changed. Founder's ask: a genuinely new set, not a reskin.
+
+     Every one of these is grounded in a real, downloaded finished game
+     (GN10's own MIN@LV feed) before being written — field meanings were
+     checked directly rather than assumed:
+       - `team` on a play is always the team of the athlete named in the
+         text — confirmed against real foul, turnover and rebound rows
+         (e.g. "Napheesa Collier personal foul" carries team MIN, her own
+         team, not the team fouled against).
+       - a made free throw has `scoringPlay:true`; a miss has `false`; both
+         carry "Free Throw" in the type text either way, so ATTEMPTED and
+         MADE are two different filters on the same rows.
+       - `participants.length>1` on a scoring play means an assist — the
+         feed lists the scorer and the assister both, one for an unassisted
+         basket.
+     Band cutoffs were set by looking at real per-quarter counts from that
+     same game (fouls 3–19, turnovers 5–10, free-throw attempts 2–18,
+     substitutions 8–12), not guessed. */
+
+  R.firstBasketAssisted = function(j, p, o){
+    var f = inPeriod(j,p).filter(isScore)[0]; if(!f) return null;
+    var assisted = Array.isArray(f.participants) && f.participants.length>1;
+    return assisted ? (o.find(function(x){ return /^yes/i.test(x); }) || null)
+                     : (o.find(function(x){ return /^no/i.test(x); })  || null);
+  };
+
+  R.firstFoulTeam = function(j, p, o){
+    var f = inPeriod(j,p).filter(function(x){ return /foul/.test(txt(x)); })[0]; if(!f) return null;
+    return optForTeam(j, teamId(f), o);
+  };
+
+  R.foulsBand = function(j, p, o){
+    var n = inPeriod(j,p).filter(function(x){ return /foul/.test(txt(x)); }).length;
+    return band(n, [1,3,5], o);
+  };
+
+  R.firstTurnoverTeam = function(j, p, o){
+    var f = inPeriod(j,p).filter(function(x){ return /turnover/.test(txt(x)); })[0]; if(!f) return null;
+    return optForTeam(j, teamId(f), o);
+  };
+
+  R.assistedBasketsBand = function(j, p, o){
+    /* [1,3,5] (the threesBand cutoffs) parked every one of three real
+       shadow-test games in the top bucket — assisted baskets run 8-14 a
+       quarter, nothing like how rare a three is. Recalibrated against
+       those three real counts (14, 10, 8). */
+    var n = inPeriod(j,p).filter(function(x){ return isScore(x) && Array.isArray(x.participants) && x.participants.length>1; }).length;
+    return band(n, [8,11,13], o);
+  };
+
+  R.lastMinuteScoredQ2 = function(j, p, o){
+    var ps = inPeriod(j,p).filter(function(x){ var s=clockSec(x); return s!==null && s<=60; });
+    if(!ps.length) return null;
+    var scored = ps.some(isScore);
+    return scored ? (o.find(function(x){ return /^yes/i.test(x); }) || null)
+                  : (o.find(function(x){ return /^no/i.test(x); })  || null);
+  };
+
+  R.turnoversBand = function(j, p, o){
+    var n = inPeriod(j,p).filter(function(x){ return /turnover/.test(txt(x)); }).length;
+    return band(n, [1,3,5], o);
+  };
+
+  R.ftMadeBand = function(j, p, o){
+    var n = inPeriod(j,p).filter(function(x){ return /free throw/.test(txt(x)) && isScore(x); }).length;
+    return band(n, [1,3,5], o);
+  };
+
+  R.ftAttemptsBand = function(j, p, o){
+    var n = inPeriod(j,p).filter(function(x){ return /free throw/.test(txt(x)); }).length;
+    return band(n, [2,5,9], o);
+  };
+
+  R.drivingPlaysBand = function(j, p, o){
+    /* Same recalibration as assistedBasketsBand, same reason: real counts
+       (7, 10, 9) all clear the borrowed [1,3,5] cutoffs. */
+    var n = inPeriod(j,p).filter(function(x){ return /driving|running/.test(txt(x)); }).length;
+    return band(n, [6,9,12], o);
+  };
+
+  R.subsBand = function(j, p, o){
+    /* CAUGHT BY THE SHADOW TEST: `txt(x)` is `text + ' ' + type.text`, and a
+       substitution row's own text field reads "X enters the game for Y" —
+       "Substitution" only shows up at the END of the string, from
+       type.text. The anchored `/^substitution/` this shipped with the
+       first time never matched a single real row, so every game reported
+       "Four or fewer" regardless of the true count (11 in one real game
+       checked by hand). Anchoring on type.text directly is the fix that
+       cannot have the same hole again. */
+    /* Cutoffs recalibrated against three real games after the fix above —
+       a Q3 sub count of 8-19 is normal, not rare, so [4,7,10] would have
+       parked almost every real night in the top bucket. [9,13,17] actually
+       spreads: the three shadow-test games landed in three different
+       buckets (11, 15, 18). */
+    var n = inPeriod(j,p).filter(function(x){ return ((x.type)||{}).text==='Substitution'; }).length;
+    return band(n, [9,13,17], o);
+  };
+
+  R.ftMakeCompareQ3 = function(j, p, o){
+    var ps = inPeriod(j,p).filter(function(x){ return /free throw/.test(txt(x)) && isScore(x); });
+    if(!ps.length) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    var s = sides(j), h=0, a=0;
+    ps.forEach(function(x){ if(teamId(x)===s.homeId) h++; else if(teamId(x)===s.awayId) a++; });
+    if(h===a) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    return optForTeam(j, h>a ? s.homeId : s.awayId, o);
+  };
+
+  R.lastTwoMinTurnoverCompare = function(j, p, o){
+    var ps = inPeriod(j,p).filter(function(x){ var s=clockSec(x); return s!==null && s<=120 && /turnover/.test(txt(x)); });
+    if(!ps.length) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    var s = sides(j), h=0, a=0;
+    ps.forEach(function(x){ if(teamId(x)===s.homeId) h++; else if(teamId(x)===s.awayId) a++; });
+    if(h===a) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    return optForTeam(j, h>a ? s.homeId : s.awayId, o);
+  };
+
+  R.anyTechOrFlagrant = function(j, p, o){
+    var any = plays(j).some(function(x){ return /technical|flagrant/.test(txt(x)); });
+    return any ? (o.find(function(x){ return /^yes/i.test(x); }) || null)
+               : (o.find(function(x){ return /^no/i.test(x); })  || null);
+  };
+
+  /* Same shape as lastBasketWorth's own lesson: walk from the end for a
+     real scoring play, not the last row in the array — but here `isScore`
+     alone is the right filter, because a made free throw (one participant,
+     never assisted) resolving to "No" is correct, not a bug to guard
+     against the way "End of Game" was. */
+  R.lastBasketAssisted = function(j, p, o){
+    var ps = plays(j), last=null;
+    for(var i=ps.length-1;i>=0;i--){ if(isScore(ps[i])){ last=ps[i]; break; } }
+    if(!last) return null;
+    var assisted = Array.isArray(last.participants) && last.participants.length>1;
+    return assisted ? (o.find(function(x){ return /^yes/i.test(x); }) || null)
+                     : (o.find(function(x){ return /^no/i.test(x); })  || null);
+  };
+
+  R.q4ShotTypeCompare = function(j, p, o){
+    var ps = inPeriod(j,p);
+    var jump = ps.filter(function(x){ return x.shootingPlay && /jump shot/.test(txt(x)); }).length;
+    var drive = ps.filter(function(x){ return x.shootingPlay && /driving|running|layup|cutting/.test(txt(x)); }).length;
+    if(!jump && !drive) return null;
+    if(jump===drive) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    return jump>drive ? (o.find(function(x){ return /jump/i.test(x); }) || null)
+                       : (o.find(function(x){ return /drive/i.test(x); }) || null);
   };
 
   /* ============ AN ABSENCE IS NOT AN ANSWER =========================

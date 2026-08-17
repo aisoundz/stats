@@ -3560,34 +3560,34 @@ window.STATS_FIREBASE = {
    re-skins to ANY game — NBA, G-League, college, WNBA.
    In production this loads from the nightly schedule feed. */
 const BB_GAME={
-  nightId:"gn11-2026-08-16-ind-atl",
-  espnEvent:"401857150",   // verified against the WNBA scoreboard for 2026-08-16
-  tipISO:"2026-08-16T21:00:00Z",   // 5:00 pm ET / 2:00 pm PT \u2014 THREE HOURS EARLIER than GN10. Never parsed from a display string.
-  homeName:"Atlanta Dream", homeAbbr:"ATL", homeNick:"Dream", homeEmoji:"\uD83D\uDD25", homeColor:"#e31837",
-  awayName:"Indiana Fever", awayAbbr:"IND", awayNick:"Fever", awayEmoji:"\uD83C\uDFC0", awayColor:"#002d62",
-  venue:"State Farm Arena", date:"Sun \u00B7 August 16", short:"August 16", shareDate:"AUG 16", night:"Game Night #11",
-  /* GAME NIGHT #11 \u2014 INDIANA AT ATLANTA. Set up the night after GN10,
-     which is the first night that ran itself start to finish.
-
-     WATCH THE CLOCK ON THIS ONE. Tip is 5:00 pm ET / 2:00 pm PT \u2014 three
-     hours earlier than GN10. The cron that starts the runner has to move
-     with it or the night begins without a host.
+  nightId:"gn12-2026-08-19-min-gs",
+  espnEvent:"401857157",   // verified against the WNBA scoreboard for 2026-08-19
+  tipISO:"2026-08-20T02:00:00Z",   // 10:00 pm ET / 7:00 pm PT. Never parsed from a display string.
+  homeName:"Golden State Valkyries", homeAbbr:"GS", homeNick:"Valkyries", homeEmoji:"\u2694\uFE0F", homeColor:"#b38fcf",
+  awayName:"Minnesota Lynx", awayAbbr:"MIN", awayNick:"Lynx", awayEmoji:"\uD83D\uDC3E", awayColor:"#266092",
+  venue:"Chase Center", date:"Wed \u00B7 August 19", short:"August 19", shareDate:"AUG 19", night:"Game Night #12",
+  /* GAME NIGHT #12 \u2014 MINNESOTA AT GOLDEN STATE. Set up three days out,
+     the same lead time discipline as GN10 and GN11.
 
      Everything below was pulled fresh from ESPN, not carried over:
-       - espnEvent confirmed against the scoreboard for 2026-08-16 itself.
-       - Both brand colours from the team endpoints (teams/20 Atlanta,
-         teams/5 Indiana) \u2014 #e31837 red against #002d62 navy, which are
-         far enough apart that tcGuard() has an easy job for once.
+       - espnEvent confirmed against the scoreboard for 2026-08-19 itself
+         (401857157) \u2014 Golden State are home at Chase Center, national
+         broadcast on USA Network.
+       - Both brand colours from the team endpoints (teams/129689 Golden
+         State, teams/8 Minnesota) \u2014 #b38fcf lavender against #266092
+         blue.
        - Rosters ORDERED BY MINUTES PLAYED in each side's most recent
-         completed game (ATL 401857140, IND 401857143), because ESPN's own
-         roster order is alphabetical and buries the stars \u2014 that was the
-         GN10 complaint. Ruled-out players sit last.
-       - Injury report: Atlanta are without Te-Hina Paopao and Brionna
-         Jones; Indiana without Damiris Dantas. Caitlin Clark, Aliyah
-         Boston and Jordin Canada are all listed day-to-day, so the deck
-         may need a second look nearer tip. */
-  net:"ESPN",
-  tip:"Tip-off 5:00 ET \u00B7 4:00 CT \u00B7 2:00 PT \u00B7 ESPN"
+         completed game (GS 401857138 vs Chicago, MIN 401857147 vs Las
+         Vegas \u2014 GN10's own game). Zandalasini/Burton/Charles led Golden
+         State at 30/26/25; Howard/Miles/McBride led Minnesota at 36/34/33.
+         Players who did not appear in that box score keep their place at
+         the end; ruled-out players sit last, struck through.
+       - Injury report, checked three days out: Golden State are without
+         Iliana Rupert (Out) and Janelle Salaun (Day-To-Day \u2014 worth a
+         second look nearer tip). Minnesota are without Liatu King and
+         Elena Buenavida (both Out). */
+  net:"USA Network",
+  tip:"Tip-off 10:00 ET \u00B7 9:00 CT \u00B7 7:00 PT \u00B7 USA Network"
 };
 /* ============ LEAN — THE FOUR SURFACES ==============================
    Game Night #7 ran nine surfaces in front of three players and produced
@@ -3725,16 +3725,17 @@ const BB_ROSTER={ // full names \u2014 used on the prediction sheet & final revi
   /* ORDERED BY MINUTES PLAYED IN EACH SIDE'S LAST GAME, not alphabetically.
      ESPN's roster endpoint has no starter flag and no per-player stats, so
      the source is the box score of the most recent completed game
-     (ATL 401857140, IND 401857143). Howard/Reese/Gray led Atlanta at 29/28/28;
-     Mitchell/Clark/Boston led Indiana at 36/34/29.
+     (GS 401857138 vs Chicago, MIN 401857147 vs Las Vegas \u2014 GN10's game).
+     Zandalasini/Burton/Charles led Golden State at 30/26/25;
+     Howard/Miles/McBride led Minnesota at 36/34/33.
      Players who did not appear in that box score keep their place at the end,
      and ruled-out players sit last where they are struck through. */
-  home:["Rhyne Howard","Angel Reese","Allisha Gray","Jordin Canada","Naz Hillmon",
-        "Madina Okot","Jaylyn Sherrod","Isobel Borlase","Aaliyah Nye","Sika Kone",
-        "Shatori Walker-Kimbrough","Indya Nivar","Brionna Jones","Te-Hina Paopao"],
-  away:["Kelsey Mitchell","Caitlin Clark","Aliyah Boston","Makayla Timpson","Sophie Cunningham",
-        "Tyasha Harris","Monique Billings","Lexie Hull","Myisha Hines-Allen","Grace VanSlooten",
-        "Raven Johnson","Mercedes Russell","Bree Hall","Michelle Onyiah","Damiris Dantas"]
+  home:["Cecilia Zandalasini","Veronica Burton","Kaila Charles","Gabby Williams","Kaitlyn Chen",
+        "Kayla Thornton","Ashten Prechtel","Tiffany Hayes","Laeticia Amihere","Nadia Fingall",
+        "Juste Jocyte","Janelle Salaun","Miela Sowah","Kiah Stokes","Iliana Rupert"],
+  away:["Natasha Howard","Olivia Miles","Kayla McBride","Courtney Williams","Nia Coffey",
+        "Napheesa Collier","Maya Caldwell","Dorka Juhasz","Chloe Bibby","Antonia Delaere",
+        "Anastasiia Olairi Kosu","Eliska Joklova","Liatu King","Elena Buenavida"]
 };
 const BB_GROUPS=[{ab:BB_GAME.homeAbbr,name:BB_GAME.homeName,names:BB_ROSTER.home},
                  {ab:BB_GAME.awayAbbr,name:BB_GAME.awayName,names:BB_ROSTER.away}];
@@ -3790,15 +3791,15 @@ const BB_PREDS=[
   // against — never a claim about the real game. They must always be names
   // that exist in the roster above, or practice grades against a ghost.
   {id:"pts", q:"Who scores the most points?", label:"Most points", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Kelsey Mitchell", num:24, numLabel:"How many pts?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Napheesa Collier", num:22, numLabel:"How many pts?"},
   {id:"ast", q:"Who dishes the most assists?", label:"Most assists", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Caitlin Clark", num:9, numLabel:"How many assists?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Olivia Miles", num:8, numLabel:"How many assists?"},
   {id:"stl", q:"Who racks up the most steals?", label:"Most steals", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Allisha Gray", num:3, numLabel:"How many steals?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Veronica Burton", num:2, numLabel:"How many steals?"},
   {id:"reb", q:"Who grabs the most rebounds?", label:"Most rebounds", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Angel Reese", num:13, numLabel:"How many rebounds?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Natasha Howard", num:10, numLabel:"How many rebounds?"},
   {id:"blk", q:"Who swats the most blocks?", label:"Most blocks", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Aliyah Boston", num:2, numLabel:"How many blocks?"}
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Kiah Stokes", num:2, numLabel:"How many blocks?"}
 ];
 /* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
    Every question is answerable by WATCHING the broadcast at the break — no lookups,
@@ -4284,6 +4285,21 @@ function finishPendingTrip(){
   var mem = PENDING_AFTER, tab = PENDING_TAB;
   if(!mem && !tab){ var o = pendRead(); if(o){ mem = o.what; tab = o.tab; } }
   PENDING_AFTER = null; PENDING_TAB = null; pendClear();
+  /* B-68, GN11: "sign out, sign back in, the point board is gone." No
+     pending trip was ever recorded here — PENDING_AFTER only gets set when
+     a LOCKED tab or Play Game Night bounces someone to the sign-in card
+     first. Sign out (B-64) reloads to Home with a clean slate, and a
+     player who then taps the portal's sign-in directly — never having been
+     bounced — has no trip on file, even though a night is live and they
+     were already in it minutes ago. Their points were never gone (server-
+     owned), but landing back on Home with no sign of them reads exactly
+     like they were. If nothing was pending, a live night in progress IS
+     the pending trip. */
+  if(!mem && !tab){
+    try{
+      if(phaseNow()==='live' && GAME_SCREENS.indexOf(S.place||'')<0){ mem='live'; }
+    }catch(_){}
+  }
   if(mem==='live'){ setTimeout(function(){ try{ startLive(); }catch(_){} }, 350); return true; }
   if(mem==='demo'){ setTimeout(function(){ try{ startDemo(); }catch(_){} }, 350); return true; }
   if(tab){ setTimeout(function(){ try{ navGo(tab); }catch(_){} }, 350); return true; }
@@ -9491,7 +9507,16 @@ function ciGrade(q){
   if(PCI.graded[q.qid]) return;
   PCI.graded[q.qid]=true;
   var pick=PCI.picked[q.qid];
-  if(pick==null) return;                 // sat it out — no effect on streak
+  if(pick==null){
+    /* GN11: "it says two in a row even when I didn't get them in a row."
+       A sit-out used to leave the streak untouched — right, sit out, right
+       still read as "2 in a row" on screen, which is a claim about
+       consecutive ANSWERS, not consecutive attempts. It does not count
+       against accuracy (called/hit stay put — not answering isn't a miss),
+       but "in a row" has to mean what it says. */
+    PCI.streak=0;
+    return;
+  }
   // A rehearsal fired from the Gametime tab shows you right/wrong but must
   // never touch a real night's record. In practice mode there is no real
   // record to protect, so it counts there.
@@ -11757,7 +11782,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-16-nav-speaks.118';
+const STATS_BUILD='2026-08-16-gn12-setup.119';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

@@ -84,7 +84,7 @@ function loadShared(){
   const AUTO = sandbox.AUTO;
   if(!AUTO || typeof AUTO.resolve !== 'function' || typeof AUTO.periodDone !== 'function')
     die('the shared block evaluated but produced no usable AUTO');
-  log('boot', `resolver engine loaded from admin.html (${Object.keys(AUTO.R || {}).length} resolvers)`);
+  log('boot', `resolver engine loaded from admin.html (${Object.keys(AUTO.R || {}).length} resolvers) — sport ${SPORT}`);
   return AUTO;
 }
 
@@ -426,6 +426,63 @@ function earlyAnswers(AUTO, R, sum, period){
 }
 
 /* ---- 7. the loop ---------------------------------------------------- */
+/* ---- THE ROUND LIST IS NOT A CONSTANT — 17 Aug 2026 -----------------
+   Two things were wrong here and both were silent.
+
+   ONE: overtime had no round. The loop was `for(i = 0; i < N; i++)` with N
+   fixed at the published length, so a fifth period could not be reached by
+   it at all. periodLabel() has always said "OT in progress" on the
+   scoreboard and its own comment admits the gap — "There is no fifth round
+   to play." Founder's call, extending the GN11 decision to all six sports:
+   every overtime period gets its own full round.
+
+   TWO, and this one would have bitten baseball on its first night: the gate
+   was called as `AUTO.periodDone(sum, i + 1)`, which assumes round index
+   equals period number. That holds for basketball, hockey, football and
+   soccer. It is FALSE for baseball, whose three rounds span nine innings —
+   round 0 is the 3rd inning, not the 1st. Baseball would have opened round
+   one after a single inning and asked about two innings nobody had watched.
+   The period a round belongs to now comes from the sport table.
+
+   Overtime questions come from ONE authored `plan.ot` template, reused per
+   overtime period. The runner still invents nothing (B2, B28) — a template
+   published before tip is not an invention, and a game ending in regulation
+   never opens it. */
+function roundSlots(AUTO, sum, plan){
+  const regPer = AUTO.roundPeriodsFor(sum, 0);          // regulation only
+  const slots = plan.rounds.map((def, i) => ({
+    i, per: regPer[i] || (i + 1), def, ot: 0
+  }));
+  const mx = AUTO.maxPeriodIn(sum);
+  const regWorths = plan.rounds.map(r => r && r.worth);
+  /* DO NOT APPEND A ROUND FOR A PERIOD THE PLAN ALREADY COVERS.
+     A night config may list five tags — Q1..Q4 plus OT — in which case the
+     existing Write tab already renders a fifth round to author and the plan
+     publishes it as rounds[4], mapped to period 5. Appending a template
+     round for period 5 on top of that gave the same overtime TWO rounds:
+     both open, both score, and the overtime is paid twice. A duplicate
+     round is worse than a missing one, because a missing one is at least
+     visible as an absence. Authored wins; the template only fills gaps. */
+  const covered = {};
+  slots.forEach(sl => { covered[sl.per] = true; });
+  for(let per = 1; per <= mx; per++){
+    const ot = AUTO.otIndexOf(sum, per);
+    if(ot <= 0) continue;
+    if(covered[per]) continue;
+    const tpl = plan.ot;
+    slots.push({
+      i: slots.length, per, ot,
+      def: (tpl && Array.isArray(tpl.qs) && tpl.qs.length) ? {
+        tag:   AUTO.roundTagFor(sum, per),
+        name:  AUTO.roundNameFor(sum, per),
+        worth: Number(tpl.worth) || AUTO.otWorthFor(sum, per, regWorths),
+        qs:    tpl.qs
+      } : null
+    });
+  }
+  return slots;
+}
+
 async function main(){
   if(!NIGHT) die('NIGHT_ID is not set');
   if(!EVENT) die('ESPN_EVENT is not set');
@@ -446,7 +503,13 @@ async function main(){
 
   while(Date.now() < until){
     try{
-      const sum = await AUTO.fetchFeed(EVENT);
+      /* SPORT is passed, not ignored — fixed 17 Aug 2026. It was declared
+         at the top of this file and never used, while AUTO.fetchFeed had the
+         WNBA path hardcoded. So SPORT_PATH=baseball/mlb was accepted in
+         silence and then fetched a basketball game anyway: a wrong-sport
+         night that reads on every screen like a feed carrying nothing, which
+         is the most expensive kind of wrong there is here. */
+      const sum = await AUTO.fetchFeed(EVENT, SPORT);
 
       /* The heartbeat, which is also the lease renewal. A room whose host
          has died should be able to say so rather than waiting in silence
@@ -466,10 +529,28 @@ async function main(){
       const seats = (await db.collection(`nights/${NIGHT}/players`).count().get()).data().count;
       const now = Date.now();
 
-      for(let i = 0; i < N; i++){
-        const rid = 'r' + i, doc = live[rid] || null, R = plan.rounds[i];
+      const slots = roundSlots(AUTO, sum, plan);
+      /* AN OVERTIME NOBODY CAN ANSWER MUST SAY SO. Silently skipping it is
+         this codebase's own A6 — an operation fails and nobody is told —
+         and it is exactly how overtime went missing for eleven nights. */
+      for(const sl of slots){
+        if(sl.ot > 0 && !sl.def && !acted['otwarn' + sl.per]){
+          acted['otwarn' + sl.per] = true;
+          const why = `${AUTO.roundTagFor(sum, sl.per)} has no questions — publish an "ot" template in the plan`;
+          log('err', why);
+          try{
+            await db.doc(`nights/${NIGHT}`).set(
+              { needsHuman: why, needsHumanAt: FieldValue.serverTimestamp() }, { merge: true });
+          }catch(_){}
+        }
+      }
+
+      for(const sl of slots){
+        const i = sl.i;
+        const rid = 'r' + i, doc = live[rid] || null, R = sl.def;
+        if(!R) continue;                       // overtime with no template
         let done = false;
-        try{ done = AUTO.periodDone(sum, i + 1); }catch(_){}
+        try{ done = AUTO.periodDone(sum, sl.per); }catch(_){}
 
         /* ---- OPEN ---------------------------------------------------
            The grace period is not caution for its own sake: ESPN posts the
@@ -555,7 +636,11 @@ async function main(){
       let over = false;
       try{ over = !!sum.header.competitions[0].status.type.completed; }catch(_){}
       if(over){
-        const allScored = plan.rounds.every((_, k) => (live['r' + k] || {}).state === 'scored');
+        /* Every round that exists, not every round that was PUBLISHED —
+           otherwise a game that went to overtime would be declared finished
+           with its overtime round still open. */
+        const allSlots = roundSlots(AUTO, sum, plan).filter(sl => !!sl.def);
+        const allScored = allSlots.every(sl => (live['r' + sl.i] || {}).state === 'scored');
         if(allScored){
           await db.doc(`nights/${NIGHT}`).set(
             { host: { auto: true, where: 'runner', finishedAt: FieldValue.serverTimestamp() } },
@@ -605,4 +690,4 @@ async function main(){
    test that reimplements the thing it is testing is One Fact, Many Copies
    wearing a lab coat. */
 if(require.main === module) main().catch(e => die((e && e.stack) || String(e)));
-else module.exports = { resolveRound, earlyAnswers, loadShared };
+else module.exports = { resolveRound, earlyAnswers, loadShared, roundSlots };
