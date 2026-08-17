@@ -654,10 +654,44 @@ async function main(){
              the night would end with the board quietly short. */
           try{ await scoreRoom(db, FieldValue, AUTO); }
           catch(e){ log('err', 'final scoring pass failed: ' + ((e && e.message) || e)); }
+
+          /* THEN WAIT, AND SCORE ONE MORE TIME.
+             GN11, found by debriefing the archive: John Smalls finished on
+             320 points and the board showed him 165. His prediction card —
+             worth 600 of the night's 1,000 — settled on his PHONE at
+             23:34:2x, and the pass above had already run at 23:34:14. The
+             runner then archived and walked away, so nothing ever
+             recomputed his total. Three other players settled before that
+             pass and reconcile to the point; he was the only one who landed
+             inside the window, and he lost 155 points to it permanently.
+
+             The cause is structural, not a one-off: `pts` is a stored total
+             whose inputs keep moving after it is written. predPts, catchPts
+             and caughtPts settle on the device — the server cannot derive
+             them — so the last server pass is a snapshot of numbers that are
+             still changing. Any player whose card settles in the seconds
+             after it loses the difference, on every night, silently.
+
+             This closes the window rather than the hole. The hole is that
+             the board trusts a cached total at all; deriving it from the
+             lanes at render time is the real fix and is a player-app change.
+             Until that lands, waiting out the settle and recomputing costs
+             ninety seconds of runner time and buys back whole prediction
+             cards. Idempotent, like every other pass — running it twice
+             cannot double anybody. */
+          const SETTLE_MS = Number(process.env.SETTLE_MS || 90000);
+          log('hold', `waiting ${Math.round(SETTLE_MS/1000)}s for prediction cards to settle on the phones, then scoring once more`);
+          await new Promise(r => setTimeout(r, SETTLE_MS));
+          try{
+            await scoreRoom(db, FieldValue, AUTO);
+            log('key', 'post-settle scoring pass done — late prediction cards are now in the totals');
+          }catch(e){ log('err', 'post-settle scoring pass failed: ' + ((e && e.message) || e)); }
+
           /* The copy that matters. Everything the room did tonight, in one
              document, written before the runner walks away — so that what
              happens to this night afterwards is somebody's choice rather
-             than somebody's mistake. */
+             than somebody's mistake. Archived AFTER the settle pass, so the
+             archive records the totals players actually finished on. */
           try{ await archiveNight(db, FieldValue, 'final-buzzer'); }
           catch(e){ log('err', 'archive at the buzzer failed: ' + ((e && e.message) || e)); }
           log('done', 'final buzzer, every quarter scored — the runner is finished');
