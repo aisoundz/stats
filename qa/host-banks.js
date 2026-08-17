@@ -1,0 +1,113 @@
+#!/usr/bin/env node
+/* =====================================================================
+   Does every question in every bank actually resolve?
+   ---------------------------------------------------------------------
+   A question is not finished when it reads well. It is finished when it has
+   been run through its named resolver against a real finished game and
+   produced one of its own options.
+
+   The failure this prevents is Game Night #9: sixteen questions published
+   with nothing behind them, every quarter opening onto something nobody
+   could score. The runner will not invent an answer — correctly — so an
+   unresolvable question is a round that sits there.
+
+   Three ways a line can be wrong, and all three are checked:
+     1. the resolver does not exist               -> the round stalls
+     2. it exists but returns null on a real game -> the round voids
+     3. it returns a string that is not in its own option list -> refused
+
+   A little silence is healthy: a resolver that refuses is doing its job.
+   A bank that is mostly silent is a round that mostly voids, which pays
+   and costs nobody and makes the night feel broken. The floor below is
+   deliberately a floor, not a target.
+
+       node qa/host-banks.js [fixtures-dir]
+   ================================================================== */
+const fs = require('fs'), vm = require('vm'), path = require('path');
+const ROOT = path.resolve(__dirname, '..');
+const DIR = process.argv[2] ||
+  path.join(ROOT, '..', '.claude/skills/stats-gametime/references/multisport/fixtures');
+const BANKS_FILE = path.join(ROOT, '..', '.claude/skills/stats-gametime/references/multisport/question-banks.js');
+
+if (!fs.existsSync(DIR)) { console.log('no fixtures dir — skipping.'); process.exit(0); }
+if (!fs.existsSync(BANKS_FILE)) { console.log('no question-banks.js — skipping.'); process.exit(0); }
+const { BANKS, fillTeams } = require(BANKS_FILE);
+
+const src = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+const S = '/* @host-shared:start', E = '/* @host-shared:end */';
+const ctx = vm.createContext({ console, fetch: () => { throw new Error('no net'); } });
+vm.runInContext(src.slice(src.indexOf(S), src.indexOf(E) + E.length), ctx, { filename: 'hs' });
+const AUTO = ctx.AUTO;
+
+/* Which period each round asks about. Baseball's rounds span three innings
+   and are named for the LAST of them, which is why this is a table rather
+   than an index+1. Getting it wrong here would resolve every question
+   against the wrong part of the game and still look fine. */
+const PERIODS = { mlb: [3, 6, 9], nfl: [1, 2, 3, 4], nhl: [1, 2, 3], mls: [1, 2] };
+const FIXTURE = { mlb: 'mlb.json', nfl: 'nfl.json', nhl: 'nhl.json', mls: 'mls.json' };
+
+let answered = 0, silent = 0, missing = 0, illegal = 0, threw = 0;
+const problems = [];
+
+for (const league of Object.keys(BANKS)) {
+  const f = path.join(DIR, FIXTURE[league]);
+  if (!fs.existsSync(f)) { console.log(`\n${league.toUpperCase()}: fixture absent, skipped`); continue; }
+  const j = JSON.parse(fs.readFileSync(f, 'utf8'));
+  const cs = j.header.competitions[0].competitors;
+  const home = cs.find(c => c.homeAway === 'home').team.displayName;
+  const away = cs.find(c => c.homeAway === 'away').team.displayName;
+  const bank = fillTeams(BANKS[league], home, away);
+
+  console.log(`\n${league.toUpperCase()}  ${away} @ ${home}`);
+  let lAns = 0, lSil = 0;
+
+  bank.rounds.forEach((round, ri) => {
+    const period = PERIODS[league][ri];
+    console.log(`  ${bank.tags[ri]} (period ${period}, worth ${bank.worth[ri]})`);
+    round.forEach(q => {
+      const fn = AUTO.R[q.r];
+      if (typeof fn !== 'function') {
+        missing++; problems.push(`${league} ${bank.tags[ri]}: no resolver named "${q.r}"`);
+        console.log(`    \x1b[31m✗\x1b[0m ${q.t}  [${q.r}] NO SUCH RESOLVER`);
+        return;
+      }
+      let v, err = null;
+      try { v = fn(j, period, q.o); } catch (e) { err = e.message; }
+      if (err) {
+        threw++; problems.push(`${league} ${bank.tags[ri]} [${q.r}] threw: ${err}`);
+        console.log(`    \x1b[31m✗\x1b[0m ${q.t}  [${q.r}] THREW ${err}`);
+      } else if (v === null || v === undefined) {
+        silent++; lSil++;
+        console.log(`    \x1b[33m~\x1b[0m ${q.t}  [${q.r}] refused — would void`);
+      } else if (q.o.indexOf(v) < 0) {
+        illegal++; problems.push(`${league} ${bank.tags[ri]} [${q.r}] answered "${v}", not one of its own options`);
+        console.log(`    \x1b[31m✗\x1b[0m ${q.t}  [${q.r}] ILLEGAL "${v}"`);
+      } else {
+        answered++; lAns++;
+        console.log(`    \x1b[32m✓\x1b[0m ${q.t}  →  \x1b[1m${v}\x1b[0m`);
+      }
+    });
+  });
+  const total = lAns + lSil;
+  const pct = total ? Math.round(100 * lAns / total) : 0;
+  console.log(`  → ${lAns} of ${total} answered (${pct}%)`);
+  if (pct < 60) problems.push(`${league}: only ${pct}% of the bank resolves on a real game — that round would mostly void`);
+}
+
+/* A DROP IN COVERAGE MUST FAIL, NOT JUST PRINT.
+   Sabotaging tieOpt down to /tie/ alone took this from 50 answered to 48 —
+   two questions silently became voids — and the run still exited zero,
+   because refusals are legitimate on their own and both leagues stayed
+   above the percentage floor. A refusal is fine; LOSING one that used to
+   answer is a regression, and it is invisible unless the number is pinned.
+   Raise EXPECT when questions are added; never lower it to make a run
+   pass. */
+const EXPECT = Number(process.argv.find(a => /^--expect=/.test(a))?.split('=')[1] || 50);
+if (answered < EXPECT)
+  problems.push(`coverage dropped: ${answered} questions answer, expected at least ${EXPECT} — a resolver got narrower or a fixture changed`);
+
+console.log(`\n${'─'.repeat(58)}`);
+console.log(`answered ${answered}   refused ${silent}   MISSING ${missing}   ILLEGAL ${illegal}   THREW ${threw}   (floor ${EXPECT})`);
+if (problems.length) { console.log('\nproblems:'); problems.forEach(p => console.log('  • ' + p)); }
+else console.log('every question in every bank resolves to one of its own options.');
+process.exit(missing + illegal + threw + problems.length ? 1 : 0);

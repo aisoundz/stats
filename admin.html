@@ -4803,6 +4803,25 @@ var AUTO = (function(){
     return hit || null;
   }
 
+  /* WHICH OPTION MEANS "NEITHER"? ONE ANSWER, NOT FIVE.
+     Found 17 Aug 2026 by running the real question banks through the real
+     resolvers: five comparison resolvers each carried their own regex for
+     the tie option — /tie|same|equal/, /tie|level|even|same/,
+     /tie|level|even|draw/ — so the option "Dead even" resolved in three of
+     them and silently REFUSED in the other two. Same word, same shape of
+     question, different answer depending on which resolver happened to be
+     behind it, and the failure mode is a voided question rather than a
+     wrong one, so nobody would ever have reported it.
+
+     That is one fact stored five times, which is this codebase's whole
+     disease. Any option a writer would reasonably use for "neither side"
+     belongs here, once. */
+  function tieOpt(o){
+    return (o || []).find(function(x){
+      return /\b(tie|tied|level|even|same|equal|draw|drawn|split|neither|dead heat)\b/i.test(String(x));
+    }) || null;
+  }
+
   function band(n, cuts, opts){
     for(var i=0;i<cuts.length;i++){ if(n<=cuts[i]) return opts[i]; }
     return opts[opts.length-1];
@@ -4848,7 +4867,7 @@ var AUTO = (function(){
     var s = sides(j);
     var h = Number(last.homeScore), a = Number(last.awayScore);
     if(!isFinite(h) || !isFinite(a)) return null;
-    if(h===a) return o.find(function(x){ return /tied/i.test(x); }) || null;
+    if(h===a) return tieOpt(o);
     var leaderIsHome = h > a;
     var firstIsHome  = teamId(f) === s.homeId;
     return (leaderIsHome===firstIsHome)
@@ -4860,7 +4879,7 @@ var AUTO = (function(){
     var ps = inPeriod(j,p).filter(isScore);
     var ft = ps.filter(function(x){ return /free throw/.test(txt(x)); }).length;
     var fg = ps.filter(function(x){ return !/free throw/.test(txt(x)); }).length;
-    if(fg===ft) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    if(fg===ft) return tieOpt(o);
     return fg>ft ? (o.find(function(x){ return /field goal/i.test(x); }) || null)
                  : (o.find(function(x){ return /free throw/i.test(x); }) || null);
   };
@@ -4913,7 +4932,7 @@ var AUTO = (function(){
     var ps = inPeriod(j,p);
     var th = ps.filter(function(x){ return isScore(x) && val(x)===3; }).length;
     var to = ps.filter(function(x){ return /turnover/.test(txt(x)); }).length;
-    if(th===to) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    if(th===to) return tieOpt(o);
     return th>to ? (o.find(function(x){ return /three/i.test(x); }) || null)
                  : (o.find(function(x){ return /turnover/i.test(x); }) || null);
   };
@@ -4957,7 +4976,7 @@ var AUTO = (function(){
     var ft = ps.filter(function(x){ return /free throw/.test(txt(x)); }).length;
     var fg = ps.filter(function(x){ return x.shootingPlay && !/free throw/.test(txt(x)); }).length;
     if(!ps.length) return null;
-    if(ft===fg) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    if(ft===fg) return tieOpt(o);
     return ft>fg ? (o.find(function(x){ return /free.throw/i.test(x); }) || null)
                  : (o.find(function(x){ return /field.goal/i.test(x); }) || null);
   };
@@ -5014,7 +5033,7 @@ var AUTO = (function(){
     var h2 = inPeriod(j,2); var last = h2[h2.length-1]; if(!last) return null;
     var hh = Number(last.homeScore), ah = Number(last.awayScore);
     if(!isFinite(hh)||!isFinite(ah)) return null;
-    if(hh===ah) return o.find(function(x){ return /tied/i.test(x); }) || null;
+    if(hh===ah) return tieOpt(o);
     var s = sides(j);
     var fh = Number((s.home||{}).score), fa = Number((s.away||{}).score);
     if(!isFinite(fh)||!isFinite(fa)) return null;
@@ -5127,19 +5146,19 @@ var AUTO = (function(){
 
   R.ftMakeCompareQ3 = function(j, p, o){
     var ps = inPeriod(j,p).filter(function(x){ return /free throw/.test(txt(x)) && isScore(x); });
-    if(!ps.length) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    if(!ps.length) return tieOpt(o);
     var s = sides(j), h=0, a=0;
     ps.forEach(function(x){ if(teamId(x)===s.homeId) h++; else if(teamId(x)===s.awayId) a++; });
-    if(h===a) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    if(h===a) return tieOpt(o);
     return optForTeam(j, h>a ? s.homeId : s.awayId, o);
   };
 
   R.lastTwoMinTurnoverCompare = function(j, p, o){
     var ps = inPeriod(j,p).filter(function(x){ var s=clockSec(x); return s!==null && s<=120 && /turnover/.test(txt(x)); });
-    if(!ps.length) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    if(!ps.length) return tieOpt(o);
     var s = sides(j), h=0, a=0;
     ps.forEach(function(x){ if(teamId(x)===s.homeId) h++; else if(teamId(x)===s.awayId) a++; });
-    if(h===a) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    if(h===a) return tieOpt(o);
     return optForTeam(j, h>a ? s.homeId : s.awayId, o);
   };
 
@@ -5168,7 +5187,7 @@ var AUTO = (function(){
     var jump = ps.filter(function(x){ return x.shootingPlay && /jump shot/.test(txt(x)); }).length;
     var drive = ps.filter(function(x){ return x.shootingPlay && /driving|running|layup|cutting/.test(txt(x)); }).length;
     if(!jump && !drive) return null;
-    if(jump===drive) return o.find(function(x){ return /equal/i.test(x); }) || null;
+    if(jump===drive) return tieOpt(o);
     return jump>drive ? (o.find(function(x){ return /jump/i.test(x); }) || null)
                        : (o.find(function(x){ return /drive/i.test(x); }) || null);
   };
@@ -5322,7 +5341,7 @@ var AUTO = (function(){
     var sp = mlbInSpan(j,p);
     var k = sp.filter(mlbIsStrikeout).length;
     var h = sp.filter(function(x){ return MLB_HIT.test(mlbType(x)); }).length;
-    if(k === h) return o.find(function(x){ return /tie|same|equal/i.test(x); }) || null;
+    if(k === h) return tieOpt(o);
     return (k > h) ? (o.find(function(x){ return /strikeout|\bk\b/i.test(x); }) || null)
                    : (o.find(function(x){ return /hit/i.test(x); }) || null);
   };
@@ -5367,7 +5386,7 @@ var AUTO = (function(){
   R.mlbLeadAfter = function(j, p, o){
     var a = mlbScoreAt(j, Number(p), 'away'), h = mlbScoreAt(j, Number(p), 'home');
     if(a === null || h === null) return null;
-    if(a === h) return o.find(function(x){ return /tie|level|even/i.test(x); }) || null;
+    if(a === h) return tieOpt(o);
     var s = sides(j);
     return optForTeam(j, (h > a) ? s.homeId : s.awayId, o);
   };
@@ -5518,7 +5537,7 @@ var AUTO = (function(){
     if(ix.home < 0 || ix.away < 0) return null;
     var h = mlsTeamStat(j, ix.home, stat), a = mlsTeamStat(j, ix.away, stat);
     if(h === null || a === null || !isFinite(h) || !isFinite(a)) return null;
-    if(h === a) return o.find(function(x){ return /tie|level|even|same/i.test(x); }) || null;
+    if(h === a) return tieOpt(o);
     var s = sides(j);
     return optForTeam(j, (h > a) ? s.homeId : s.awayId, o);
   }
@@ -5715,7 +5734,7 @@ var AUTO = (function(){
     var ix = boxIdx(j); if(ix.home<0 || ix.away<0) return null;
     var h = teamStat(j, ix.home, stat), a = teamStat(j, ix.away, stat);
     if(h===null || a===null || !isFinite(h) || !isFinite(a)) return null;
-    if(h===a) return o.find(function(x){ return /tie|level|even|same/i.test(x); }) || null;
+    if(h===a) return tieOpt(o);
     var s = sides(j);
     return optForTeam(j, (h>a) ? s.homeId : s.awayId, o);
   }
@@ -5739,7 +5758,7 @@ var AUTO = (function(){
   function leadAfterPeriod(j, p, o){
     var a = scoreThrough(j, p, 'away'), h = scoreThrough(j, p, 'home');
     if(a===null || h===null) return null;
-    if(a===h) return o.find(function(x){ return /tie|level|even|draw/i.test(x); }) || null;
+    if(a===h) return tieOpt(o);
     var s = sides(j);
     return optForTeam(j, (h>a) ? s.homeId : s.awayId, o);
   }
@@ -5821,7 +5840,7 @@ var AUTO = (function(){
     var ps = nflPlaysIn(j, p);
     var rush = ps.filter(function(x){ return /^rush/i.test(String((((x.type)||{}).text)||'')); }).length;
     var pass = ps.filter(function(x){ return /^pass/i.test(String((((x.type)||{}).text)||'')); }).length;
-    if(rush === pass) return o.find(function(x){ return /tie|same|equal/i.test(x); }) || null;
+    if(rush === pass) return tieOpt(o);
     return (rush > pass) ? (o.find(function(x){ return /rush|run/i.test(x); }) || null)
                          : (o.find(function(x){ return /pass/i.test(x); }) || null);
   };
