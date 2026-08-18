@@ -5132,8 +5132,24 @@ function doResume(){
   // whole of "my streak is gone".
   try{
     if(S.pci && typeof PCI==='object'){
-      ['called','hit','streak','best','heat'].forEach(function(k){
-        if(typeof S.pci[k]==='number') PCI[k]=S.pci[k];
+      /* B33 — A REFRESH MID-GAME USED TO DELETE CAUGHT IT POINTS, and on
+         GN12 it did: one player's caught lane fell from about 61 to 20
+         between scoring passes, and the corrupted total went on to be
+         trusted by AUTO.tally.
+
+         The save wrote SIX fields and this list restored FIVE. The one it
+         dropped was `pts`, which is the running total, and which is written
+         into the ledger as an ABSOLUTE value — so after a refresh it came
+         back as 0 and the next catch overwrote a real score with a smaller
+         one. Points a player had earned, gone, silently.
+
+         The fix is not to add 'pts' to the list. A hand-kept list of fields
+         beside a hand-kept save is one fact in two places, and it will
+         drift again the next time a field is added — which is exactly how
+         this happened. Restore whatever was SAVED, bounded by the keys the
+         object actually owns, so the two can never disagree again. */
+      Object.keys(S.pci).forEach(function(k){
+        if(typeof S.pci[k]==='number' && typeof PCI[k]==='number') PCI[k]=S.pci[k];
       });
     }
   }catch(_){}
@@ -10796,7 +10812,23 @@ function ciGrade(q){
        and so that recomputing never double-pays a card that grades twice. */
     PCI.ptsBefore = Number(PCI.pts)||0;
     PCI.pts = Math.min(CAUGHT_NIGHT_CAP, PCI.ptsBefore + caughtWorth(PCI.streak));
-    try{ ledgerSet('caught', PCI.pts, 0, 'caught'); save(); }catch(_){}
+    /* AND A FLOOR, because the restore fix alone is not enough. This writes
+       an ABSOLUTE into the ledger, so ANY future path that resets PCI.pts —
+       a restore that misses a field, a reload, a bug not yet written —
+       silently deletes points that were already earned.
+
+       Within a night this lane only ever grows. Clearing it is a job for
+       setMode(), which wipes the whole ledger at a mode boundary on
+       purpose. So take the higher of the two and let a wrong value fail in
+       the direction that costs a player nothing. Same principle as
+       ledgerMigrate(), which may RAISE a score to meet a total it finds and
+       never lower it. */
+    try{
+      var _prevCaught = 0;
+      try{ var _lc = ledger()['caught']; _prevCaught = _lc ? (Math.max(0, Number(_lc.p)||0)) : 0; }catch(_){}
+      if(_prevCaught > PCI.pts) PCI.pts = Math.min(CAUGHT_NIGHT_CAP, _prevCaught);
+      ledgerSet('caught', PCI.pts, 0, 'caught'); save();
+    }catch(_){}
     try{ flashEnergy('hit',1800); }catch(_){} }
   else { PCI.streak=0; PCI.heat=Math.max(0,PCI.heat-1); try{ flashEnergy('miss',1400); }catch(_){} }
   try{ if(window.SB&&SB.pushCallItBoard) SB.pushCallItBoard({called:PCI.called,hit:PCI.hit,streak:PCI.streak,best:PCI.best,heat:PCI.heat}); }catch(e){}
@@ -13050,7 +13082,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-gn13-scoring.127';
+const STATS_BUILD='2026-08-18-lanes.128';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -15608,11 +15640,52 @@ function feedCardWatch(){
    again at Q3 would silently answer "were they leading in Q1" using Q3's
    cumulative stats — a quiet, wrong answer, exactly the failure mode this
    whole ledger system exists to rule out. */
+/* B35 — THE QUARTER LEAD BONUS PAID A QUARTER FROM A LATER QUARTER'S
+   NUMBERS. `GS.box` is the CUMULATIVE game box score as of whenever this
+   phone last polled. This function used it to answer "was your player
+   leading at the end of quarter q" for every settled quarter at once — so
+   a phone that looked during Q3 computed Q1's bonus from Q3's totals, and
+   a phone that looked promptly computed it from Q1's.
+
+   Two players with identical picks, different points, decided by nothing
+   but polling luck. That is the worst kind of scoring bug: invisible,
+   unequal, and impossible for the player to argue with.
+
+   The value we actually want is the cumulative box AT THE MOMENT quarter q
+   SETTLED — which is a real thing, but only if somebody wrote it down at
+   the time. So now we write it down. When a quarter settles, its box is
+   snapshotted; the bonus is paid from that snapshot and from nothing else.
+
+   AND IF THE SNAPSHOT IS MISSING — a phone asleep through the break, a
+   player who joined at half time — IT REFUSES. It pays zero for that
+   quarter and records why, rather than paying a number derived from the
+   wrong moment. A missing bonus is a disappointment; a wrong one that
+   another player can disprove is the end of being believed. Same rule as
+   the runner: it does not guess.
+
+   THE REAL FIX IS SERVER-SIDE. The runner sees every quarter boundary from
+   the feed and no phone has to be awake for it. This is the honest interim
+   and it should be replaced, not extended. */
+function qleadSnap(q){
+  try{
+    if(!S.qleadBox || typeof S.qleadBox!=='object' || Array.isArray(S.qleadBox)) S.qleadBox={};
+    if(S.qleadBox[q]) return;                      // written once, never revised
+    var cfg=sportCfg().box, keys=[cfg.pts,cfg.reb,cfg.ast,cfg.stl,cfg.blk];
+    var snap={};
+    Object.keys(GS.box||{}).forEach(function(nm){
+      var row=GS.box[nm], out={};
+      keys.forEach(function(k){ if(k) out[k]=row[k]; });
+      snap[nm]=out;
+    });
+    if(Object.keys(snap).length) S.qleadBox[q]=snap;
+  }catch(_){}
+}
 function checkQuarterLeadBonus(){
   try{
     if(S.mode!=='live') return;                 // nothing real to lead in Practice
     if(!gsInGame()) return;
     if(!S.qleadDone || typeof S.qleadDone!=='object' || Array.isArray(S.qleadDone)) S.qleadDone={};
+    if(!S.qleadMissed || typeof S.qleadMissed!=='object' || Array.isArray(S.qleadMissed)) S.qleadMissed={};
     var per=0;
     (GS.plays||[]).forEach(function(p){ if(p.period!=null && p.period>per) per=p.period; });
     var isFinal = String(GS.state||'')==='post';
@@ -15620,17 +15693,32 @@ function checkQuarterLeadBonus(){
     // curQ-1 while a later quarter is live, or every quarter once final.
     var settledThrough = isFinal ? 4 : Math.max(0, per-1);
     if(settledThrough<1) return;
+
+    /* Write down the newest settled quarter WHILE IT IS THE NEWEST. This is
+       the only moment the cumulative box means "through quarter q". */
+    qleadSnap(Math.min(settledThrough,4));
+
     var cfg=sportCfg().box, KEY={pts:cfg.pts,reb:cfg.reb,ast:cfg.ast,stl:cfg.stl,blk:cfg.blk};
     var changed=false;
     for(var q=1; q<=Math.min(settledThrough,4); q++){
       if(S.qleadDone[q]) continue;
+      var box=null;
+      try{ box = (S.qleadBox && S.qleadBox[q]) ? S.qleadBox[q] : null; }catch(_){}
+      if(!box){
+        /* We were not looking when this quarter settled and there is no
+           honest way to reconstruct it. Pay nothing, say so, move on. */
+        S.qleadDone[q]=true; S.qleadMissed[q]=true; changed=true;
+        try{ ledgerSet('qlead-q'+q, 0, 0, 'pred'); }catch(_){}
+        try{ trk('qlead_missed',{q:q}); }catch(_){}
+        continue;
+      }
       var total=0;
       preds.forEach(function(p){
         var mine=S.predChoices[p.id]; if(!mine || p.id==='winner') return;
         var k=KEY[p.id]; if(!k) return;
-        var row=GS.box[mine], val=row?gsNum(row[k]):null;
+        var row=box[mine], val=row?gsNum(row[k]):null;
         var bestV=-1;
-        Object.keys(GS.box).forEach(function(nm){ var v=gsNum(GS.box[nm][k]); if(v!=null&&v>bestV) bestV=v; });
+        Object.keys(box).forEach(function(nm){ var v=gsNum(box[nm][k]); if(v!=null&&v>bestV) bestV=v; });
         if(bestV<0) return;
         if(val!=null && val>=bestV) total += q*2;
       });

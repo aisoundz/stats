@@ -522,7 +522,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-16-admin.49-gn12';
+window.ADMIN_BUILD='2026-08-18-admin.50-gn13';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -3203,8 +3203,10 @@ async function publishPlan(){
       hostSay('warn', 'An overtime round is configured but has NO questions written, so no template was published. '
         + 'If tonight goes to overtime the runner will open nothing and flag it for a human. Write at least one OT question to close that.');
     } else {
-      hostSay('warn', 'No overtime round is configured for this night. Add \u2018OT\u2019 to this night\u2019s tags in NIGHTS '
-        + 'and write questions for it \u2014 otherwise an overtime is played with nothing to answer.');
+      hostSay('warn', 'No overtime round is configured for this night, so an overtime would be played with nothing to answer. '
+        + 'Do NOT fix this by adding \u2018OT\u2019 to this night\u2019s tags on its own \u2014 the PLAYER app cannot receive a fifth round yet '
+        + '(onHostedRound drops any round index past the four it knows about), so the round would open, score, and reach nobody\u2019s phone. '
+        + 'Overtime needs the player build first. Tracked, not forgotten.');
     }
     hostSay('key','Plan published \u2014 '+rounds.length+' rounds, '
       + rounds.reduce(function(a,r){ return a+r.qs.length; },0) + ' questions.'
