@@ -11,8 +11,8 @@
 export PATH="/home/higherthan7/.nvm/versions/node/v20.20.2/bin:/usr/local/bin:/usr/bin:/bin"
 export HOME="/home/higherthan7"
 
-NIGHT_ID="${NIGHT_ID:-gn12-2026-08-17-dal-gs}"
-ESPN_EVENT="${ESPN_EVENT:-401857151}"
+NIGHT_ID="${NIGHT_ID:-gn13-2026-08-19-min-gs}"
+ESPN_EVENT="${ESPN_EVENT:-401857157}"
 RUN_MINUTES="${RUN_MINUTES:-240}"
 export NIGHT_ID ESPN_EVENT RUN_MINUTES
 

@@ -5101,6 +5101,19 @@ function boardStatic(){
   {
     const src=read(PLAYER);
     const nt=(src.match(/function nightTotal\(v\) \{[\s\S]*?\n  \}/)||[''])[0];
+    /* THE TIME AND THE CHANNEL SURVIVE A REDESIGN. THE MARQUEE hid
+       #landingTip on a good argument — the countdown owns "when" — and
+       took "which channel" off the page entirely with it. A countdown
+       answers HOW LONG; it never answers WHAT TIME or WHERE, and it stops
+       answering anything once the game is live. The existing
+       home.the-game-is-on-the-first-screen only asserts the matchup is
+       above the fold, which is why this got through. */
+    check('home.the-time-and-the-channel-survive',
+      !/#s-landing\.mq #landingTip\{[^}]*display:\s*none/.test(src)
+        && /#s-landing\.mq #landingTip\{[^}]*display:block !important/.test(src),
+      'the landing page hides the tip-off line again',
+      'the ordering rule is four things — a game tonight, these two teams, THIS TIME, THIS CHANNEL');
+
     check('board.the-total-is-composed-not-double-counted',
       !!nt && /v\.livePts/.test(nt) && /if \(live === null\) return Number\(v\.pts\) \|\| 0;/.test(nt),
       'nightTotal adds the client lanes on top of pts again',
