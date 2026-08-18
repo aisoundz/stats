@@ -78,19 +78,85 @@ function loadConstants(){
   const src = fs.readFileSync(file, 'utf8');
   const NIGHTS = sliceConst(src, 'const NIGHTS = [', 'NIGHTS');
   const BANK   = sliceConst(src, 'const BANK = {',   'BANK');
+  const TEMPLATES = sliceConst(src, 'const TEMPLATES = {', 'TEMPLATES');
   if(!Array.isArray(NIGHTS) || !NIGHTS.length) die('NIGHTS did not evaluate to a list');
   if(!BANK || typeof BANK !== 'object') die('BANK did not evaluate to an object');
-  return { NIGHTS, BANK };
+  if(!TEMPLATES || typeof TEMPLATES !== 'object') die('TEMPLATES did not evaluate to an object');
+  return { NIGHTS, BANK, TEMPLATES };
 }
 
-/* ---- 2. build the plan, in the Control Room's exact shape ---------- */
-function buildPlan(NIGHTS, BANK){
-  const cfg = NIGHTS.find(n => n.id === NIGHT);
-  if(!cfg) die(`no night called "${NIGHT}" in admin.html's NIGHTS. Known: ` +
-               NIGHTS.slice(0,4).map(n => n.id).join(', ') + ' …');
-  const bank = BANK[NIGHT];
-  if(!bank) die(`no question bank for "${NIGHT}" in admin.html's BANK. ` +
-                'The Control Room would have nothing to seed from either.');
+/* ---- 2. build the plan, in the Control Room's exact shape ----------
+
+   TWO KINDS OF NIGHT NOW.
+
+   A FLAGSHIP night is written by hand: it has an entry in NIGHTS and a
+   bank in BANK, a human chose the questions, and nothing below changes for
+   it. That path is byte-for-byte what it was.
+
+   A SLATE night is one of the other games being played tonight. Nobody
+   writes it a bank, because writing a bank is exactly the bottleneck that
+   kept this product to one room a night while the runner sat idle. It
+   takes the per-sport TEMPLATE and substitutes the two team words.
+
+   THE REFUSAL THAT MATTERS: if a {TOKEN} survives substitution it is a
+   fatal error, not a warning. An option reading "{HOME}" reaching a
+   player's phone is worse than no night at all, and the resolver would
+   silently fail to match it — a voided question nobody would report. */
+function nickSubst(bank, home, away){
+  const swap = (v) => String(v).replace(/\{HOME\}/g, home).replace(/\{AWAY\}/g, away);
+  return bank.map(rd => rd.map(q => {
+    const c = Object.assign({}, q);
+    c.t = swap(c.t);
+    c.o = (c.o || []).map(swap);
+    return c;
+  }));
+}
+
+function templateCfg(TEMPLATES){
+  const sport = process.env.SPORT || 'basketball';
+  const T = TEMPLATES[sport];
+  if(!T) die(`no template for sport "${sport}". Known: ` + Object.keys(TEMPLATES).join(', '));
+  const home = (process.env.HOME_NICK || '').trim();
+  const away = (process.env.AWAY_NICK || '').trim();
+  if(!home || !away)
+    die(`"${NIGHT}" is not in admin.html's NIGHTS, so it is being built from the ` +
+        `${sport} template — which needs HOME_NICK and AWAY_NICK to name the two sides. ` +
+        'Neither was set. host/build-slate.js sets both from the scoreboard feed.');
+  const cfg = {
+    id: NIGHT, away: away, home: home, espn: process.env.ESPN_EVENT || '',
+    label: `${away} @ ${home} — from the ${sport} template`,
+    tags: T.tags.slice(), names: T.names.slice(), worth: T.worth.slice(),
+    fromTemplate: sport
+  };
+  return { cfg, bank: nickSubst(T.rounds, home, away) };
+}
+
+function buildPlan(NIGHTS, BANK, TEMPLATES){
+  let cfg  = NIGHTS.find(n => n.id === NIGHT);
+  let bank = cfg ? BANK[NIGHT] : null;
+
+  if(!cfg || !bank){
+    /* A night named in NIGHTS but with no bank is NOT a slate night — it is
+       a flagship somebody half-set-up, and quietly templating over it would
+       hide the mistake. Say which case this is. */
+    if(cfg && !bank)
+      log('note', `"${NIGHT}" is in NIGHTS but has no bank — building it from the template instead. ` +
+                  'If this was meant to be a hand-written night, that bank is missing.');
+    const t = templateCfg(TEMPLATES);
+    cfg  = cfg || t.cfg;
+    bank = t.bank;
+    log('tmpl', `built from the ${t.cfg.fromTemplate} template — ${bank.reduce((a,r)=>a+r.length,0)} questions, ` +
+                `home "${t.cfg.home}", away "${t.cfg.away}"`);
+  }
+
+  /* No token may survive. */
+  const left = [];
+  bank.forEach((rd, i) => rd.forEach((q, x) => {
+    const hay = [q.t].concat(q.o || []).join(' | ');
+    if(/\{[A-Z]+\}/.test(hay)) left.push(`round ${i+1} Q${x+1}: ${hay}`);
+  }));
+  if(left.length)
+    die('publish blocked — a template token was never substituted:\n  ' + left.join('\n  '));
 
   const rounds = (cfg.tags || []).map((tag, i) => {
     const qs = (bank[i] || []).map(q => {
@@ -161,8 +227,8 @@ function validate(cfg, rounds, ot){
 /* ---- 4. write it -------------------------------------------------- */
 async function main(){
   if(!NIGHT) die('NIGHT_ID is not set');
-  const { NIGHTS, BANK } = loadConstants();
-  const { cfg, rounds, ot, otConfigured } = buildPlan(NIGHTS, BANK);
+  const { NIGHTS, BANK, TEMPLATES } = loadConstants();
+  const { cfg, rounds, ot, otConfigured } = buildPlan(NIGHTS, BANK, TEMPLATES);
   const warn = validate(cfg, rounds, ot);
 
   const nq = rounds.reduce((a, r) => a + r.qs.length, 0);

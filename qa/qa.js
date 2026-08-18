@@ -36,7 +36,14 @@ const PICKS=()=>({winner:F.CAST.home.name, pts:F.CAST.home.top, reb:F.CAST.home.
                   ast:F.CAST.home.dime, stl:F.CAST.home.dime, blk:F.CAST.away.blk2});
 const group=(t)=>console.log(`\n\x1b[1m${t}\x1b[0m`);
 
-const read=(f)=>fs.readFileSync(path.join(ROOT,f),'utf8');
+/* AN ABSOLUTE PATH IS ALREADY A PATH. path.join(ROOT, '/tmp/x') yields
+   ~/stats/tmp/x, so `--file` with an absolute path died on ENOENT inside
+   a fs stack trace — which reads like the gate is broken rather than like
+   a path was mangled. Same trap qa/voice-wiring.js hit from the other
+   direction, and the cost is the same: time spent on the wrong layer.
+   Sabotage-testing a check means pointing the gate at a copy somewhere
+   else, so this path has to work or the discipline cannot be practised. */
+const read=(f)=>fs.readFileSync(path.isAbsolute(f)?f:path.join(ROOT,f),'utf8');
 const scripts=(h)=>[...h.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
 
 /* ========== 1. STATIC ================================================= */
@@ -2959,13 +2966,13 @@ async function browserTests(){
         R.locked[t]=where().sec;
       });
       R.pendingTab = (typeof PENDING_TAB!=='undefined') ? PENDING_TAB : 'undeclared';
-      /* --- practice does NOT open the app any more (B14) --------------- */
+      /* --- practice opens the app again (B14 reversed, 18 Aug) --------- */
       S.mode='demo'; S.practice=true; S.place='lobby'; S.qi=0; S.nextQ=0;
       try{ navGo('gametime'); }catch(e){}
       R.practice = where().sec;
       try{ navGo('stats'); }catch(e){}
       R.practiceStats = where().sec;
-      /* --- and tapping Practice itself asks for a seat, then resumes --- */
+      /* --- and tapping Practice starts one, no account asked ---------- */
       S.mode='demo'; S.practice=false; S.place=''; go('landing');
       try{ PENDING_AFTER=null; }catch(e){}
       try{ startDemo(); }catch(e){}
@@ -2994,30 +3001,36 @@ async function browserTests(){
       d.pendingTab==='board',
       `PENDING_TAB after a blocked tap was ${JSON.stringify(d.pendingTab)}`,
       'a door that forgets the destination makes the player navigate twice; signing in has to finish the trip');
-    /* REVERSED ON PURPOSE, 13 Aug. This check used to assert the opposite —
-       that practice reached Gametime and Stats without an account — and it
-       was right for the product that existed then. The founder's call:
+    /* REVERSED TWICE, AND THE SECOND ONE IS THE INTERESTING ONE.
 
-         "Lock everything until sign-in."
+       13 Aug this check was flipped to assert that practice was LOCKED,
+       on the founder's call "lock everything until sign-in". The argument
+       was sound for the product that existed: there were no strangers
+       arriving, so an open door bought three more surfaces that could be
+       wrong and a half-state with no seat, no score and no room. That
+       version said it was kept as a named check rather than deleted, so
+       that whoever wanted the demo back would have to read why it went.
 
-       The old argument was don't put a signup wall in front of someone
-       evaluating your thing. True for a product trying to grow, and this
-       one is deliberately not: there are no strangers arriving during a
-       test phase, so the open door bought three more surfaces that could
-       be wrong and a half-state with no seat, no saved score and no room.
-       The front-door copy changed in the same build, because a promise the
-       app no longer keeps is worse than either door.
+       18 Aug, they read it. The numbers underneath the decision had moved:
+       thirteen people have ever taken a seat, six have ever left an email,
+       and the plan is now to run every game of the slate — which is a bet
+       ENTIRELY on strangers arriving. "There are no strangers arriving"
+       had quietly stopped being a reason for the lock and started being a
+       result of it.
 
-       Kept as a named check rather than deleted, so the next person to
-       "restore the demo" has to read why it went. */
-    check('door.practice-also-needs-an-account',
-      d.practice==='s-landing' && d.practiceStats==='s-landing',
+       So the door is open again for practice, and the check asserts that
+       again. What does NOT move, and what the next reversal has to leave
+       alone: a live night still needs an account, because a seat and a
+       score need an identity the rules will accept. That is the check
+       directly above this one, and it has never flipped. */
+    check('door.practice-opens-the-app',
+      d.practice==='s-gametime' && d.practiceStats==='s-stats',
       `practice reached ${d.practice} / ${d.practiceStats}`,
-      'B14. Practice used to unlock every tab. It does not any more — no account, no app — and the landing copy no longer promises otherwise');
-    check('door.tapping-practice-asks-for-a-seat-and-remembers',
-      d.practiceTap==='s-landing' && d.practicePending==='demo',
-      `Practice tap landed on ${d.practiceTap}, PENDING_AFTER=${JSON.stringify(d.practicePending)}`,
-      'B14. Bounced, not refused: promptSignIn owns PENDING_AFTER, so setting it separately before calling promptSignIn silently overwrites it and the player signs in and lands nowhere. That bug existed for ten minutes in this build');
+      'B14 reversed. Somebody who has never heard of us has to be able to see the thing work before deciding — that is the whole bet behind running every game of the slate');
+    check('door.tapping-practice-starts-a-game',
+      d.practiceTap==='s-name',
+      `Practice tap landed on ${d.practiceTap}`,
+      'B14 reversed. Tapping Practice starts a practice; it does not ask for an account first');
     check('door.a-game-in-progress-is-never-locked-out',
       d.staleSave==='s-board',
       `a live save with no verified account reached ${d.staleSave}`,
@@ -5096,6 +5109,99 @@ function controlRoomStatic(){
    qa/board-order.js against that night's real rows; these are the
    structural guarantees that keep the sort key and the printed number
    from drifting apart again. */
+/* THE NIGHT CONFIG — added with B39. The arithmetic-free version of the
+   bug: hydrateNight() named a league, so the schedule-in-the-database
+   path only ever worked for the league it named. The real proof runs in
+   a browser (qa/night-config.js) because a static read cannot tell you
+   which object a const binding points at. These two keep the PROPERTY
+   from being quietly reverted afterwards. */
+/* THE SLATE. The behaviour is proved in a browser by qa/slate.js; these
+   are the structural guarantees that keep it from being quietly undone. */
+function slateStatic(){
+  group('THE SLATE — every game gets a room');
+  {
+    const src=read(PLAYER);
+    const code=src.replace(/\/\*[\s\S]*?\*\//g,' ').replace(/(^|[^:])\/\/[^\n]*/g,'$1 ');
+    /* A PICK OUTRANKS THE POINTER. schedule/current names the game we are
+       PROMOTING; the pick names the game they are WATCHING, and only one of
+       those two is in the room with them. If this order ever flips, a
+       player who chose a game gets dragged back to the flagship on every
+       boot — and would have no way to say so except "it keeps changing". */
+    const load=(code.match(/async function loadNightConfig\(db, F\)\{[\s\S]*?\n\}/)||[''])[0];
+    const pickAt=load.indexOf('slatePick()');
+    const ptrAt =load.indexOf("'schedule','current'");
+    check('slate.a-choice-is-read-before-the-pointer',
+      pickAt>0 && ptrAt>0 && pickAt<ptrAt,
+      `pick at ${pickAt}, pointer at ${ptrAt} — the promoted game must not override the chosen one`);
+    check('slate.a-stale-choice-cannot-survive-the-night',
+      /if\(p && !slateGame\(p\)\)/.test(code),
+      'loadSlate no longer drops a remembered pick that is not on tonight\'s slate — last night\'s room would follow the player into tonight');
+    check('slate.the-picker-hides-when-there-is-no-choice',
+      /gs\.length < 2/.test(code),
+      'paintSlate would render a picker with one option, which is a question with one answer');
+  }
+  {
+    /* build-slate.js must never rebuild a game a hand-written night owns.
+       Two rooms for one game splits an audience of thirteen into two of
+       six, and the flagship is the one with the email behind it. */
+    const b=read('host/build-slate.js');
+    check('slate.never-rebuilds-the-flagships-game',
+      /claimed\.get\(String\(e\.id\)\)/.test(b) && /if\(owner\)\{/.test(b),
+      'build-slate no longer checks whether a hand-written night already claims the event');
+    check('slate.still-offers-the-flagship-in-the-picker',
+      /flagship: !!owner/.test(b),
+      'the flagship would be missing from the picker — the person who came because of the email would arrive and not find the game it was about');
+  }
+}
+
+function nightConfigStatic(){
+  group('THE NIGHT CONFIG — one hydration path, every league');
+  {
+    const src=read(PLAYER);
+    /* STRIP THE PROSE ONCE, FOR EVERY CHECK IN THIS GROUP. Twice now a
+       check in here has gone red on the comment that EXPLAINS the bug it
+       guards. Comments must stay free to name the thing that went wrong,
+       so the searching is done against code. The `//` rule spares `https://`. */
+    const nocomment=(t)=>t.replace(/\/\*[\s\S]*?\*\//g,' ')
+                          .replace(/(^|[^:])\/\/[^\n]*/g,'$1 ');
+    const code=nocomment(src);
+    const raw=(src.match(/function hydrateNight\(cfg\)\{[\s\S]*?\n\}/)||[''])[0];
+    /* READ THE CODE, NOT THE PROSE. The first version of this check banned
+       the token anywhere in the function and went red on the comment that
+       EXPLAINS B39 — which is the voice.answers-through-the-same-door
+       mistake again: ban a string and you catch the sentence that describes
+       the bug alongside the bug. Comments are where the reasoning lives and
+       they must stay free to name the thing that went wrong. */
+    const body=nocomment(raw);
+    /* THE GUARANTEE IS "HYDRATION DOES NOT NAME A LEAGUE" — not "line 4632
+       says GAME". Any BB_ token in here is the same bug wearing a new
+       variable name, so the check bans the prefix rather than blessing one
+       spelling of the fix. */
+    check('night.hydration-names-no-league',
+      body.length>200 && !/\bBB_[A-Z]/.test(body),
+      'hydrateNight() mentions '+((body.match(/\bBB_[A-Z_]+/)||[])[0]||'a basketball constant')+
+      ' — it writes into one league instead of the one being played (B39)');
+    /* SABOTAGE FOUND THIS ONE DEAD. The first version searched for the
+       strings `g.sport` and `SPORT.key` anywhere in the body — and
+       replacing the whole guard with `if(false){` left both strings
+       sitting in the console.error INSIDE it, so the check stayed green
+       over a guard that could never fire. Assert the COMPARISON. */
+    check('night.hydration-checks-the-sport',
+      /g\.sport\s*&&\s*String\(g\.sport\)\s*!==\s*SPORT\.key/.test(body),
+      'a published config can be applied to a different league than the page is showing');
+    /* A league with roster:null has nowhere to put a published roster, so
+       its bank can never name a player — the ceiling B39 removed. */
+    /* AND THIS ONE. The region was cut with a non-greedy match to the
+       first `\n};`, which lands inside the FIRST sport's entry — so four
+       of the five leagues were never looked at, and setting baseball back
+       to roster:null passed the gate. The property is about the whole
+       file, so read the whole file. */
+    check('night.every-league-has-somewhere-to-put-a-roster',
+      !/roster\s*:\s*null/.test(code),
+      'a sport still has roster:null — a published roster would be dropped on the floor');
+  }
+}
+
 function boardStatic(){
   group('THE BOARD — it ranks on the number it prints');
   {
@@ -5294,6 +5400,8 @@ function voiceStatic(){
   controlRoomStatic();
   boardStatic();
   voiceStatic();
+  nightConfigStatic();
+  slateStatic();
   if(!QUICK){ try{
     /* A CEILING ON THE WHOLE BROWSER LAYER. The feed groups have their own,
        but any of the twenty-odd other groups could wedge the same way, and a

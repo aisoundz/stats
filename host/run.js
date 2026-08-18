@@ -53,6 +53,37 @@ const SPORT   = process.env.SPORT_PATH || 'basketball/wnba';
 const ANSWER_MS = Number(process.env.ANSWER_MS || 150000);   // 2m30
 const GRACE_MS  = Number(process.env.GRACE_MS  || 20000);
 const TICK_MS   = Number(process.env.TICK_MS   || 20000);
+/* ---- THE EMPTY ROOM, AND WHY IT HAS TO BE ALLOWED TO END -----------
+   Running every game of the slate means most rooms will have nobody in
+   them, especially in beta. An empty room is not free: it holds a node
+   process, renews a lease, fetches a feed and writes a score line every
+   twenty seconds for four hours, to an audience of zero. Sixteen of those
+   on an NFL Sunday is how a free tier turns into a bill.
+
+   So a SLATE room stands down if nobody has arrived by the time it would
+   matter. It does not archive — there is nothing to archive — and it does
+   not delete anything: schedule/{id} and the plan stay published, so a
+   runner can be started again the moment a person actually shows up.
+
+   OFF BY DEFAULT. The flagship night has an email behind it and a founder
+   who may join at half-time; a flagship that stood itself down because the
+   room was empty at 7:05 would be the worst bug in this file. It is opt-in,
+   and only the slate launcher opts in.                                  */
+const IDLE_EXIT_MIN = Number(process.env.IDLE_EXIT_MIN || 0);
+const IDLE_EXIT_MS  = IDLE_EXIT_MIN > 0 ? IDLE_EXIT_MIN * 60000 : 0;
+const STARTED_AT    = Date.now();
+/* MEASURED FROM TIP, NOT FROM STARTUP — and getting this wrong would have
+   been the whole feature's worst bug. A slate runner is started before its
+   game, and the games on a slate tip hours apart. Counting an idle window
+   from when the PROCESS began means a room for a 10pm game, started at 4pm
+   with the rest of the slate, stands itself down at 4:45 — hours before
+   the first person could possibly have arrived, on a game that had not
+   started. The window has to begin when there is something to be late to. */
+const TIP_MS = (function(){
+  var t = Date.parse(process.env.TIP_ISO || '');
+  return isFinite(t) ? t : 0;
+})();
+const IDLE_FROM = () => Math.max(STARTED_AT, TIP_MS || 0);
 
 /* The lease. Two hosts against one night both call AUTO.tally and race to
    post keys — the worst failure this system has, and until now the only one
@@ -532,6 +563,16 @@ async function main(){
          dies of the free tier's daily cap mid-game. */
       const seats = (await db.collection(`nights/${NIGHT}/players`).count().get()).data().count;
       const now = Date.now();
+
+      /* Stand down on an empty slate room. Checked AFTER the seat count so
+         a person who joined one tick ago keeps their night. */
+      if(IDLE_EXIT_MS && seats === 0 && (now - IDLE_FROM()) >= IDLE_EXIT_MS){
+        log('done', `nobody joined in the ${IDLE_EXIT_MIN} minutes since ` +
+                    (TIP_MS ? 'tip-off' : 'this runner started') +
+                    ' — standing down. Nothing is archived because nothing happened, and ' +
+                    'the room stays published, so this can be started again if someone arrives.');
+        return;
+      }
 
       const slots = roundSlots(AUTO, sum, plan);
       /* AN OVERTIME NOBODY CAN ANSWER MUST SAY SO. Silently skipping it is

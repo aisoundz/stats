@@ -304,15 +304,42 @@
     text-transform:uppercase;color:var(--muted);font-weight:700;
     margin:0 0 14px;line-height:1.35}
 
-  /* the two codes ARE the headline */
+  /* ── THE FIGHT CARD. The marquee put two three-letter CODES side by
+        side at 52px — which reads as a scoreboard, and a scoreboard is
+        something you check rather than something you want to be at. A
+        poster names the teams. "DAL at GS" is information; "WINGS / at /
+        VALKYRIES" is an event.
+
+        Stacked and centred rather than left and right, because the two
+        sides of a fixture are not a hierarchy and reading them as a column
+        is how every fight card and every match poster has ever done it.
+
+        The clock used to be the biggest thing on this screen. It is a
+        strip now: a countdown is a detail ABOUT a game, and leading with
+        it makes the page about waiting. ── */
   .mq-vs{display:none}
-  #s-landing.mq .mq-vs{display:flex;align-items:center;gap:12px}
-  .mq-code{font-size:52px;font-weight:900;line-height:.84;letter-spacing:-.03em;
-    font-variant-numeric:tabular-nums}
-  .mq-code.mq-a{color:var(--away)}
-  .mq-code.mq-h{color:var(--home)}
-  .mq-at{font-size:17px;font-weight:600;color:var(--dim);padding-bottom:6px}
-  @media (max-width:340px){ .mq-code{font-size:46px} }
+  #s-landing.mq .mq-vs{display:block;text-align:center;margin:2px 0 0}
+  .mq-side{display:block}
+  .mq-code{display:block;font-size:12px;font-weight:800;letter-spacing:.18em;
+    line-height:1;opacity:.72;margin-bottom:5px;font-variant-numeric:tabular-nums}
+  .mq-a .mq-code{color:var(--away)}
+  .mq-h .mq-code{color:var(--home)}
+  .mq-nick{display:block;font-size:40px;font-weight:900;line-height:.9;
+    letter-spacing:-.02em;color:var(--ink);text-transform:uppercase;
+    text-wrap:balance}
+  /* The at-rule, not an at-word floating between two columns. */
+  .mq-at{display:flex;align-items:center;gap:11px;max-width:14rem;
+    margin:13px auto;font-size:12px;font-weight:700;letter-spacing:.3em;
+    text-transform:uppercase;color:var(--dim)}
+  .mq-at::before,.mq-at::after{content:"";flex:1;height:1px;
+    background:linear-gradient(90deg,transparent,var(--line2),transparent)}
+  @media (max-width:340px){ .mq-nick{font-size:34px} }
+  /* The two teams light the card, so the hero reads as one lit room rather
+     than a dark box with coloured text in it. One hairline, both colours. */
+  #s-landing.mq #tonightCard{position:relative;overflow:hidden}
+  #s-landing.mq #tonightCard::after{content:"";position:absolute;top:0;left:0;right:0;
+    height:2px;background:linear-gradient(90deg,var(--away),var(--home));
+    pointer-events:none}
 
   /* The codes carry the matchup now, so the full names are a caption. The
      !important is fighting an inline style: SPORT.landing writes its own
@@ -357,8 +384,9 @@
   .mq-clock{display:none;align-items:baseline;gap:9px;margin-top:16px;
     padding-top:15px;border-top:1px solid var(--line)}
   .mq-clab{font-size:12px;letter-spacing:.16em;text-transform:uppercase;
-    color:var(--muted);font-weight:700;white-space:nowrap}
-  .mq-cbig{font-size:30px;font-weight:900;letter-spacing:-.01em;
+    color:var(--dim);font-weight:700;white-space:nowrap}
+  /* Was 30px and the loudest thing on the page. See the fight-card note. */
+  .mq-cbig{font-size:20px;font-weight:800;letter-spacing:-.005em;
     font-variant-numeric:tabular-nums;line-height:1;color:var(--gold)}
   .mq-clock.live .mq-cbig{color:var(--red)}
   .mq-clock.final .mq-cbig{color:var(--ink)}
@@ -616,6 +644,31 @@
   .foot{font-size:12px;color:var(--dim);text-align:center;line-height:1.5;margin-top:14px}
   a.link{color:var(--teal2);text-decoration:none}
 
+  /* ---- THE SLATE PICKER ---------------------------------------------
+     Rows, not a dropdown. A dropdown hides the options behind a tap, and
+     the options ARE the pitch here: the point of the screen is that the
+     game you already have on is one of them. */
+  .slateHead{font-size:14px;font-weight:800;color:var(--ink);margin:0 0 10px;
+    letter-spacing:.01em}
+  .slateList{display:flex;flex-direction:column;gap:7px}
+  .slateRow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+    padding:11px 12px;border-radius:var(--r3);cursor:pointer;
+    background:var(--glass);border:1px solid var(--line);color:var(--body);
+    font-family:inherit;font-size:14px;transition:border-color .15s,background .15s}
+  .slateRow:hover{border-color:var(--line2);background:var(--glass2)}
+  .slateRow.on{border-color:var(--teal);background:rgba(40,224,208,.09)}
+  .slateRow:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  .slateRow[disabled]{opacity:.55;cursor:default}
+  .slateDots{display:flex;flex-direction:column;gap:3px;flex:none}
+  .slateDots i{width:9px;height:9px;border-radius:50%;display:block}
+  .slateWho{flex:1;min-width:0;font-size:14px;line-height:1.35}
+  .slateWho b{color:var(--ink);font-weight:700}
+  .slateNet{display:block;font-size:12px;color:var(--dim);margin-top:2px}
+  .slateStar{color:var(--gold);font-size:14px;flex:none}
+  .slateGo{flex:none;font-size:12px;font-weight:800;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--teal)}
+  .slateRow.on .slateGo{color:var(--muted)}
+  .slateFoot{font-size:12px;color:var(--dim);margin:10px 0 0}
   .chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
   .chip{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:8px;padding:7px 11px}
   /* selectable version of the same chip, used by the signup screen */
@@ -1083,9 +1136,9 @@
            paintTeamColours(), which lifts a near-black team hex and splits
            a two-navy matchup before either one reaches this line. -->
       <div class="mq-vs">
-        <span class="mq-code mq-a" id="mqAway">DAL</span>
+        <span class="mq-side mq-a"><span class="mq-code" id="mqAway">DAL</span><span class="mq-nick" id="mqAwayNick">Wings</span></span>
         <span class="mq-at">at</span>
-        <span class="mq-code mq-h" id="mqHome">GS</span>
+        <span class="mq-side mq-h"><span class="mq-code" id="mqHome">GS</span><span class="mq-nick" id="mqHomeNick">Valkyries</span></span>
       </div>
       <!-- THE MATCHUP IS THE HEADLINE, not a footnote under the times. It
            used to trail a sentence explaining the game for the third time
@@ -1107,6 +1160,12 @@
         <span class="chip" id="landingChip3">4 quarters</span>
       </div>
     </div>
+
+    <!-- THE SLATE. Empty and hidden on a one-game night, which is every
+         night this product has ever run — so on those nights the page is
+         exactly what it was. It fills itself in from slate/{date} when
+         there is more than one game to choose between. -->
+    <div id="slateCard" style="display:none"></div>
 
     <!-- THE ONLY PITCH ON THE PAGE. It used to be here AND in a three-step
          card further down AND in a "can't play tonight" card below that —
@@ -2528,7 +2587,29 @@ window.STATS_FIREBASE = {
          sign-in below: a slow read must delay the game showing up, never
          the player getting into their account. It fails safe on its own —
          see hydrateNight(). */
-      try{ loadNightConfig(db, fsMod); }catch(_){}
+      /* The picker needs these two to switch rooms, and this is the only
+         scope they have ever existed in. Exposed rather than threaded
+         through six call sites — and read-only handles to a database the
+         security rules already govern, so this grants nothing. */
+      try{ window.__SB_DB = db; window.__SB_FS = fsMod; }catch(_){}
+
+      /* THE SLATE FIRST, THEN THE NIGHT — and it has to be that order.
+         loadNightConfig() checks a remembered pick against tonight's slate
+         before honouring it, so reading the slate afterwards would mean the
+         first boot of every evening honours yesterday's choice and then
+         corrects itself a moment later. One flash of the wrong game is the
+         same bug as the wrong game; it is just shorter.
+
+         Still not awaited into sign-in: a slow read may delay the game
+         appearing, never a player reaching their account. */
+      try{
+        loadSlate(db, fsMod)
+          .catch(function(){ return false; })
+          .then(function(){ try{ paintSlate(); }catch(_){}
+                            return loadNightConfig(db, fsMod); })
+          .then(function(){ try{ paintSlate(); }catch(_){} })
+          .catch(function(){});
+      }catch(_){ try{ loadNightConfig(db, fsMod); }catch(_){} }
 
       /* ---- IDENTITY, AND WHY IT IS WATCHED AND NOT SNAPSHOTTED -------
          This used to be one line: sign in anonymously, read the uid once,
@@ -4452,10 +4533,32 @@ const HO_PREDS=[
   {id:"ot",     q:"Does it need overtime?",     label:"Overtime",       base:100, opts:["Yes","No"], answer:"Yes"}
 ];
 
+/* ============ EVERY SPORT GETS A ROSTER, EVEN THE EMPTY ONES =========
+   Basketball built BB_ROSTER and BB_GROUPS by hand because its pick sheet
+   names players. The other four sports had `roster:null`, which meant
+   hydrateNight() had nowhere to put a roster -- so a published night for
+   those leagues could never carry one, and their banks could never ask
+   "who leads this category tonight".
+
+   An EMPTY roster is a valid roster. It means this sheet picks teams, not
+   people. What matters is that the shape is the same everywhere, so one
+   hydration path serves every league.
+
+   `groups` holds references to the very arrays in `roster`, so hydration
+   splices those arrays and never reassigns them -- B26's lesson, kept. */
+function sportRoster(g){
+  var r = {home:[], away:[]};
+  r.groups = [{ab:g.homeAbbr, name:g.homeName, names:r.home},
+              {ab:g.awayAbbr, name:g.awayName, names:r.away}];
+  return r;
+}
+const SC_ROSTER=sportRoster(SC_GAME), BA_ROSTER=sportRoster(BA_GAME),
+      FO_ROSTER=sportRoster(FO_GAME), HO_ROSTER=sportRoster(HO_GAME);
+
 const SPORTS={
   basketball:{
     key:"basketball", emoji:"🏀", word:"basketball",
-    game:BB_GAME, roster:BB_ROSTER, preds:BB_PREDS, rounds:BBALL_ROUNDS, catches:[],
+    game:BB_GAME, roster:BB_ROSTER, groups:BB_GROUPS, landingFromGame:true, preds:BB_PREDS, rounds:BBALL_ROUNDS, catches:[],
     // 4 questions a quarter × these weights = 40+80+120+160 = 400 live pts.
     // (The old comment here said 30. It was wrong the day it was written.)
     worth:[10,20,30,40],                              // Q1=10 … Q4=40  → 400 pts
@@ -4482,7 +4585,7 @@ const SPORTS={
   },
   soccer:{
     key:"soccer", emoji:"⚽️", word:"soccer",
-    game:SC_GAME, roster:null, preds:SC_PREDS, rounds:SOCCER_ROUNDS, catches:SC_CATCHES,
+    game:SC_GAME, roster:SC_ROSTER, groups:SC_ROSTER.groups, preds:SC_PREDS, rounds:SOCCER_ROUNDS, catches:SC_CATCHES,
     worth:[30,50],                                    // halftime=30, full-time=50 → 240 pts
     tags:["1H","FT"],
     names:["1st half","Full time"],
@@ -4508,7 +4611,7 @@ const SPORTS={
    its own cadence, because a sport's rounds belong to the sport. */
 SPORTS.baseball={
   key:"baseball", emoji:"\u26BE\uFE0F", word:"baseball",
-  game:BA_GAME, roster:null, preds:BA_PREDS, rounds:BA_ROUNDS, catches:[],
+  game:BA_GAME, roster:BA_ROSTER, groups:BA_ROSTER.groups, landingFromGame:true, preds:BA_PREDS, rounds:BA_ROUNDS, catches:[],
   worth:[30,50,70], tags:["1st-3rd","4th-6th","7th-9th"],
   names:["Innings 1\u20133","Innings 4\u20136","Innings 7\u20139"],
   L:{ start:"first pitch", Start:"First pitch", starting:"Warming up",
@@ -4526,7 +4629,7 @@ SPORTS.baseball={
 };
 SPORTS.football={
   key:"football", emoji:"\uD83C\uDFC8", word:"football",
-  game:FO_GAME, roster:null, preds:FO_PREDS, rounds:FO_ROUNDS, catches:[],
+  game:FO_GAME, roster:FO_ROSTER, groups:FO_ROSTER.groups, landingFromGame:true, preds:FO_PREDS, rounds:FO_ROUNDS, catches:[],
   worth:[10,20,30,40], tags:["Q1","Q2","Q3","Q4"],
   names:["Quarter 1","Quarter 2","Quarter 3","Quarter 4"],
   L:{ start:"kickoff", Start:"Kickoff", starting:"Kicking off",
@@ -4544,7 +4647,7 @@ SPORTS.football={
 };
 SPORTS.hockey={
   key:"hockey", emoji:"\uD83C\uDFD2", word:"hockey",
-  game:HO_GAME, roster:null, preds:HO_PREDS, rounds:HO_ROUNDS, catches:[],
+  game:HO_GAME, roster:HO_ROSTER, groups:HO_ROSTER.groups, landingFromGame:true, preds:HO_PREDS, rounds:HO_ROUNDS, catches:[],
   worth:[15,30,45], tags:["1st","2nd","3rd"],
   names:["1st period","2nd period","3rd period"],
   L:{ start:"puck drop", Start:"Puck drop", starting:"Dropping the puck",
@@ -4587,6 +4690,13 @@ const GAME=SPORT.game, roster=SPORT.roster, preds=SPORT.preds, rounds=SPORT.roun
 
    One line, and it is a net again. Everything downstream already worked.   */
 try{ window.GAME = GAME; }catch(_){}
+/* The registry, and the entry this page is playing. Both are read-only
+   data that is already fully visible in this file's source, so exposing
+   them gives away nothing — and without them a test cannot ask the one
+   question that matters about hydration: did it write into the league it
+   was handed, and did it leave every OTHER league alone? A fix nobody can
+   check from outside is a fix on trust. */
+try{ window.SPORTS = SPORTS; window.SPORT = SPORT; }catch(_){}
 
 /* ============ THE NIGHT COMES FROM THE DATABASE =====================
    Tonight's game has always lived in three consts above — BB_GAME,
@@ -4624,41 +4734,71 @@ function hydrateNight(cfg){
   /* Refuse a config that is not a whole night. A half-applied night is
      precisely B26 with a network in the middle. */
   if(!g || !g.nightId || !g.espnEvent) return false;
-  if(!r || !(r.home||[]).length || !(r.away||[]).length) return false;
   if(!Array.isArray(p) || !p.length) return false;
 
-  try{
-    /* 1. the matchup — fill the object, never rebind it */
-    Object.keys(g).forEach(function(k){ BB_GAME[k] = g[k]; });
+  /* B39-a: THE NIGHT NAMES ITS SPORT, OR IT DOES NOT TRAVEL.
+     The sport comes from the URL and the night comes from the database --
+     two copies of one fact, which is how this product breaks. A config
+     that names a different sport than the page is showing is refused
+     rather than half-applied over the wrong league. Older configs carry
+     no `sport` and are accepted as before. */
+  if(g.sport && String(g.sport) !== SPORT.key){
+    try{ console.error('published config is for '+g.sport+', this page is '+SPORT.key+' — keeping the built-in night'); }catch(_){}
+    return false;
+  }
 
-    /* 2. the rosters — SPLICE, do not reassign. BB_GROUPS holds references
+  /* B39-b: A ROSTER IS REQUIRED ONLY WHERE THE SHEET NAMES PEOPLE.
+     Basketball picks players, so a rosterless basketball night is broken
+     and must be refused. Baseball's sheet picks teams and outcomes, so
+     demanding a roster there would refuse every valid baseball night --
+     which is what the old unconditional check did. */
+  var picksPeople = !!(roster && ((roster.home||[]).length || (roster.away||[]).length));
+  if(picksPeople && (!r || !(r.home||[]).length || !(r.away||[]).length)) return false;
+
+  try{
+    /* 1. the matchup — fill the object, never rebind it.
+          GAME is the ACTIVE sport's game object. Writing BB_GAME here was
+          right for basketball by accident and wrong for everything else. */
+    Object.keys(g).forEach(function(k){ GAME[k] = g[k]; });
+
+    /* 2. the rosters — SPLICE, do not reassign. `groups` holds references
           to these very arrays, so replacing them would leave the pick
           sheet pointing at the old ones. */
-    BB_ROSTER.home.length = 0; Array.prototype.push.apply(BB_ROSTER.home, r.home);
-    BB_ROSTER.away.length = 0; Array.prototype.push.apply(BB_ROSTER.away, r.away);
+    if(r && roster){
+      if(Array.isArray(r.home)){ roster.home.length = 0; Array.prototype.push.apply(roster.home, r.home); }
+      if(Array.isArray(r.away)){ roster.away.length = 0; Array.prototype.push.apply(roster.away, r.away); }
+    }
 
-    /* 3. BB_GROUPS captured abbreviations and names as VALUES at load. */
+    /* 3. groups captured abbreviations and names as VALUES at load. */
     try{
-      BB_GROUPS[0].ab = BB_GAME.homeAbbr; BB_GROUPS[0].name = BB_GAME.homeName;
-      BB_GROUPS[1].ab = BB_GAME.awayAbbr; BB_GROUPS[1].name = BB_GAME.awayName;
+      var GR = SPORT.groups;
+      if(GR && GR.length >= 2){
+        GR[0].ab = GAME.homeAbbr; GR[0].name = GAME.homeName;
+        GR[1].ab = GAME.awayAbbr; GR[1].name = GAME.awayName;
+      }
     }catch(_){}
 
     /* 4. the pick sheet — each entry's `opts` is a NEW array built at load
           from the old roster, so it has to be rebuilt, not just refreshed. */
-    BB_PREDS.length = 0;
+    preds.length = 0;
     p.forEach(function(q){
       var copy = {};
       Object.keys(q).forEach(function(k){ copy[k] = q[k]; });
-      BB_PREDS.push(copy);
+      preds.push(copy);
     });
 
-    /* 5. the landing line is a template string baked at load. */
+    /* 5. the landing line is a template string baked at load — but only
+          for the sports whose landing line IS the matchup. Soccer's is a
+          tournament window, and rebuilding it from a placeholder fixture
+          would replace something true with something wrong. */
     try{
-      SPORTS.basketball.landing =
-        '<b style="color:var(--ink)">' + BB_GAME.awayName + ' @ ' + BB_GAME.homeName + '</b>';
+      if(SPORT.landingFromGame && GAME.awayName && GAME.homeName){
+        SPORT.landing =
+          '<b style="color:var(--ink)">' + GAME.awayName + ' @ ' + GAME.homeName + '</b>';
+      }
     }catch(_){}
 
-    try{ window.GAME = BB_GAME; }catch(_){}
+    try{ window.GAME = GAME; }catch(_){}
     NIGHT_CFG_SOURCE = 'database';
     return true;
   }catch(e){
@@ -4672,21 +4812,164 @@ function hydrateNight(cfg){
 function repaintAfterHydrate(){
   ['renderPortal','paintNav','renderStats','renderGametime','renderBoard','buildPred']
     .forEach(function(fn){ try{ if(typeof window[fn]==='function') window[fn](); }catch(_){} });
-  try{ if(typeof trk==='function') trk('night_cfg', {source:NIGHT_CFG_SOURCE, night:BB_GAME.nightId}); }catch(_){}
+  try{ if(typeof trk==='function') trk('night_cfg', {source:NIGHT_CFG_SOURCE, night:GAME.nightId}); }catch(_){}
 }
 
 /* Read tonight's config. `schedule/current` is a pointer so a night can be
    changed without a deploy at all; falling back to the baked-in nightId
    keeps today working while that pointer does not exist yet. */
+/* ============ THE SLATE — TONIGHT HAS MORE THAN ONE GAME ============
+   For twelve game nights "tonight" meant one game, so the app never had to
+   ask which one. That was never a product decision; it was a consequence of
+   a bank needing a human to write it. Now every game on the slate gets a
+   room, and the question "which game are you watching?" is the first one
+   worth asking — because the answer is the whole pitch. Nobody has to be
+   talked into being at our event at seven. They are already watching
+   something.
+
+   ONE POINTER, READ NOT DERIVED. `slate/current` names tonight's date. The
+   app must not work that date out for itself: a 10pm ET tip is already
+   tomorrow in UTC, and a phone's clock is in whatever zone its owner is
+   standing in. The thing that built the slate is the thing that knows.
+
+   A PICK IS ONLY GOOD FOR TONIGHT. The chosen game is remembered locally so
+   a refresh does not drop you out of your room — but it is checked against
+   tonight's slate every boot, and dropped if it is not on it. Last night's
+   choice quietly surviving into tonight is exactly the shape of bug this
+   codebase keeps having: one fact, two copies, one of them stale. */
+var SLATE = { date:null, league:null, games:[], loaded:false };
+var SLATE_PICK_KEY = 'stats_slate_pick_v1';
+
+function slatePick(){
+  try{ return localStorage.getItem(SLATE_PICK_KEY) || null; }catch(_){ return null; }
+}
+function slatePickSet(id){
+  try{ if(id) localStorage.setItem(SLATE_PICK_KEY, id); else localStorage.removeItem(SLATE_PICK_KEY); }catch(_){}
+}
+function slateGame(id){
+  return (SLATE.games || []).filter(function(g){ return g && g.nightId === id; })[0] || null;
+}
+
+/* THE PICKER. Deliberately a list of GAMES, not a list of rooms: the
+   player is choosing what they are watching, and the room is a consequence
+   of that. The two teams are drawn in their own colours because that is the
+   fastest way for somebody to find the game already on their television.
+
+   It hides itself when there is nothing to choose. A picker offering one
+   option is a question with one answer, which is not a question. */
+function paintSlate(){
+  var el = document.getElementById('slateCard');
+  if(!el) return;
+  var gs = (SLATE.games || []);
+  if(gs.length < 2){ el.style.display='none'; el.innerHTML=''; return; }
+
+  var cur = (typeof GAME!=='undefined' && GAME) ? GAME.nightId : null;
+  var rows = gs.map(function(g){
+    var on = (g.nightId === cur);
+    return '<button type="button" class="slateRow'+(on?' on':'')+'" data-slate="'+esc(g.nightId)+'"'
+      + (on?' aria-current="true"':'') + '>'
+      + '<span class="slateDots" aria-hidden="true">'
+      +   '<i style="background:'+esc(g.awayColor||'#666')+'"></i>'
+      +   '<i style="background:'+esc(g.homeColor||'#666')+'"></i>'
+      + '</span>'
+      + '<span class="slateWho"><b>'+esc(g.away||g.awayAbbr||'')+'</b> at <b>'+esc(g.home||g.homeAbbr||'')+'</b>'
+      +   (g.net ? '<span class="slateNet">'+esc(String(g.net).split('·')[0].trim())+'</span>' : '')
+      + '</span>'
+      + (g.flagship ? '<span class="slateStar" title="Tonight’s featured game">★</span>' : '')
+      + '<span class="slateGo">'+(on?'Playing':'Play')+'</span>'
+      + '</button>';
+  }).join('');
+
+  el.innerHTML =
+      '<div class="card" style="margin-top:12px">'
+    +   '<div class="slateHead">Which game are you watching?</div>'
+    +   '<div class="slateList">'+rows+'</div>'
+    +   '<p class="slateFoot">Every game tonight has a room. Pick the one that is on.</p>'
+    + '</div>';
+  el.style.display='';
+}
+try{ window.paintSlate = paintSlate; }catch(_){}
+
+/* One listener, delegated, bound once — a listener added inside the painter
+   would be added again on every repaint and fire N times on the Nth tap. */
+try{
+  document.addEventListener('click', function(e){
+    var b = e.target && e.target.closest ? e.target.closest('[data-slate]') : null;
+    if(!b) return;
+    e.preventDefault();
+    var id = b.getAttribute('data-slate');
+    if(!id || !window.__SB_DB || !window.__SB_FS) return;
+    b.disabled = true;
+    chooseGame(window.__SB_DB, window.__SB_FS, id).then(function(){
+      try{ paintSlate(); }catch(_){}
+      try{ b.disabled = false; }catch(_){}
+    }).catch(function(){ try{ b.disabled=false; }catch(_){} });
+  }, false);
+}catch(_){}
+
+async function loadSlate(db, F){
+  if(!db || !F) return false;
+  try{
+    var cur = await F.getDoc(F.doc(db,'slate','current'));
+    if(!cur.exists()) return false;
+    var date = (cur.data()||{}).nightDate || (cur.data()||{}).date || null;
+    if(!date) return false;
+    var snap = await F.getDoc(F.doc(db,'slate',date));
+    if(!snap.exists()) return false;
+    var d = snap.data() || {};
+    SLATE.date   = date;
+    SLATE.league = d.league || null;
+    SLATE.games  = Array.isArray(d.games) ? d.games.filter(function(g){ return g && g.nightId; }) : [];
+    SLATE.loaded = true;
+
+    /* Drop a pick that is not on tonight's slate. */
+    var p = slatePick();
+    if(p && !slateGame(p)){
+      try{ console.info('the remembered game ('+p+') is not on tonight\'s slate — forgetting it'); }catch(_){}
+      slatePickSet(null);
+    }
+    return SLATE.games.length > 0;
+  }catch(e){
+    try{ console.error('could not read tonight\'s slate:', e); }catch(_){}
+    return false;
+  }
+}
+
+/* Switch rooms. Everything downstream already knows how to be handed a new
+   night — that is what hydrateNight() is — so this is a read, a hydrate and
+   a repaint, and deliberately nothing else. */
+async function chooseGame(db, F, nightId){
+  if(!nightId) return false;
+  var g = slateGame(nightId);
+  if(!g){ try{ console.error('not a game on tonight\'s slate: '+nightId); }catch(_){} return false; }
+  slatePickSet(nightId);
+  var ok = await loadNightConfig(db, F);
+  try{ if(typeof trk==='function') trk('slate_pick', {night:nightId, flagship:!!g.flagship}); }catch(_){}
+  return ok;
+}
+try{ window.loadSlate = loadSlate; window.chooseGame = chooseGame;
+     window.SLATE = SLATE; window.slatePick = slatePick; }catch(_){}
+
 async function loadNightConfig(db, F){
   if(!db || !F) return false;
   try{
+    /* THE ORDER OF PRECEDENCE, and it is the whole of the slate feature:
+         1. the game this person CHOSE tonight
+         2. the pointer, which names the flagship
+         3. the night baked into this build
+       A choice outranks a pointer because the pointer is about what we are
+       promoting and the choice is about what they are watching, and only
+       one of those two is in the room with them. */
     var id = null;
-    try{
-      var cur = await F.getDoc(F.doc(db,'schedule','current'));
-      if(cur.exists()) id = (cur.data()||{}).nightId || null;
-    }catch(_){}
-    if(!id) id = BB_GAME.nightId;
+    var picked = slatePick();
+    if(picked && (!SLATE.loaded || slateGame(picked))) id = picked;
+    if(!id){
+      try{
+        var cur = await F.getDoc(F.doc(db,'schedule','current'));
+        if(cur.exists()) id = (cur.data()||{}).nightId || null;
+      }catch(_){}
+    }
+    if(!id) id = GAME.nightId;
     if(!id) return false;
     var snap = await F.getDoc(F.doc(db,'schedule',id));
     if(!snap.exists()){
@@ -5129,23 +5412,25 @@ function startDemo(){
      "Continue tonight's game · waiting on Q4, 110 pts". Pressing Practice
      is an explicit choice to not be in that game. */
   try{ resumeData=null; var rb=document.getElementById('resumeBar'); if(rb) rb.style.display='none'; }catch(_){}
-  /* B14 — practice is behind the door now too. Bounced rather than
-     refused: the address is remembered and the trip finishes itself the
-     moment they sign in, the same courtesy a locked tab already got. */
-  try{
-    if(!signedInNow()){
-      try{ trk('practice_locked',{}); }catch(_){}
-      try{ go('landing'); }catch(_){}
-      /* promptSignIn OWNS PENDING_AFTER — it does `PENDING_AFTER = after ||
-         'live'` on the way in. Setting it here first and then calling this
-         would silently overwrite it and the trip would never finish: they
-         would sign in and land on the home page wondering what happened.
-         One writer. I wrote that bug into this function ten minutes ago
-         and it is the same shape as everything else today. */
-      try{ promptSignIn('demo'); }catch(_){}
-      return;
-    }
-  }catch(_){}
+  /* B14, REVERSED 18 Aug 2026 — and this is the second reversal of the
+     same decision, so the reasoning matters more than the code.
+
+     13 Aug, founder: "Lock everything until sign-in." Correct then. The
+     argument was that there were no strangers arriving, so an open door
+     bought three more surfaces that could be wrong and a half-state with
+     no seat and no score.
+
+     18 Aug, founder, after reading the numbers: thirteen people have ever
+     played this, six have ever given an email, and the plan is now every
+     game of the slate — which only works if somebody who has never heard
+     of us can arrive on a Tuesday, watch the thing work, and decide.
+     "There are no strangers arriving" stopped being a description and
+     became a consequence.
+
+     WHAT DOES NOT CHANGE: a LIVE night still needs an account, and that is
+     not a gate — it is physics. A seat, a saved score and a room all
+     require an identity the rules will accept, and the rules refuse
+     anonymous writes. Practice is the part that never needed one.        */
   setMode("demo");try{Object.keys(demoCiFired).forEach(k=>delete demoCiFired[k]);PCI.muted=false;}catch(e){}go('name');prefillGate();}
 
 /* ---------------- PERSISTENCE (Game Night only) ---------------- */
@@ -13670,6 +13955,11 @@ function applySport(){
   try{ paintSurface(); }catch(_){}
   set('mqAway',(GAME.awayAbbr||''));
   set('mqHome',(GAME.homeAbbr||''));
+  /* The nickname is what a person calls the team out loud. Falls back to
+     the full name and then to the code, so a feed that ships no nickname
+     leaves a poster with a smaller word on it rather than an empty one. */
+  set('mqAwayNick',(GAME.awayNick||GAME.awayName||GAME.awayAbbr||''));
+  set('mqHomeNick',(GAME.homeNick||GAME.homeName||GAME.homeAbbr||''));
   set('landingBtn',`Play ${GAME.night}`);
   set('landingDemoBtn',`Practice with a simulated ${L.unit}`);
   set('step1h',`Predict before ${L.start}`);
@@ -14067,7 +14357,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-measured.139';
+const STATS_BUILD='2026-08-18-slate.140';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -14223,7 +14513,13 @@ var TAB_LOCKED={gametime:'Gametime',stats:'Stats',board:'the Board',crew:'Talk',
 function tabsUnlocked(){
   try{ if(signedInNow()) return true; }catch(_){}
   try{
-    if(S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0) return true;
+    /* ANY game in progress, not just a live one. The `S.mode==='live'`
+       clause that used to be here is the whole of B14: it meant a person
+       midway through a practice quarter could not open the Board to see
+       what a board even looks like. A visitor standing on the landing with
+       nothing started is still bounced — S.place is empty then — so the
+       door still exists; it is just no longer in front of the demo. */
+    if(GAME_SCREENS.indexOf(S.place||'') >= 0) return true;
   }catch(_){}
   return false;
 }
@@ -16104,7 +16400,7 @@ function stYourCard(){
            anything tonight either. */
         var bestN='', bestV=-1;
         try{
-          var field=[].concat(BB_ROSTER.home||[], BB_ROSTER.away||[]);
+          var field=[].concat((roster&&roster.home)||[], (roster&&roster.away)||[]);
           field.forEach(function(nm){
             try{ if(INACTIVE && INACTIVE.has && INACTIVE.has(nm)) return; }catch(_){}
             var r=null; try{ r=seaOf(nm); }catch(_){}

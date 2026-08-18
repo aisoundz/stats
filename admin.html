@@ -712,6 +712,73 @@ const NIGHTS = [
 // deliberately left unmarked, because the built-in answers in the app are
 // simulated results for a fake game, not claims about the real one. The host
 // marks the real answer at the break, then pushes.
+/* ============ THE TEMPLATE — ONE BANK, EVERY GAME ON THE SLATE =======
+   Until now a game night needed a human to write it a bank, which is why
+   there has only ever been ONE room a night: the questions were the
+   bottleneck, not the machine. The runner can host any number of games at
+   once and never has, because nobody had written question seventeen.
+
+   The way out was already sitting in the bank. Of GN13's nineteen
+   questions, THIRTEEN name no team at all — "both teams combined", "either
+   team", "was the final basket assisted". Only six name sides, and they
+   name them only as options. So a bank is not really per-night; it is
+   per-SPORT, with two words moved.
+
+   {HOME} and {AWAY} are those two words. publish.js substitutes the real
+   nicknames from the feed. optForTeam() matches an option against every
+   name the feed offers — displayName, nickname, abbreviation, location —
+   so whatever the scoreboard calls a team will resolve.
+
+   THIS IS GN13'S BANK, NOT A NEW ONE. Sixteen questions plus a
+   three-question overtime, every resolver grounded against a real finished
+   game and shadow-tested before it went near a room. A bank that has
+   survived a real night is worth more than a fresh idea that has not, and
+   that argument gets STRONGER, not weaker, when the bank is about to run
+   on every game of the slate instead of one.                            */
+const TEMPLATES = {
+  basketball: {
+    league: 'wnba',
+    tags:  ['Q1','Q2','Q3','Q4','OT'],
+    names: ['Quarter 1','Quarter 2','Quarter 3','Quarter 4','Overtime'],
+    worth: [10,20,30,40,40],
+    rounds: [
+      [
+        { t: 'Was the first basket of the game assisted?', o: ['Yes', 'No'], r:'firstBasketAssisted' },
+        { t: 'Which team committed the first foul of the game?', o: ['{HOME}', '{AWAY}'], r:'firstFoulTeam' },
+        { t: 'Fouls in Q1, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'foulsBand' },
+        { t: 'The first turnover of the game — whose team gave it up?', o: ['{HOME}', '{AWAY}'], r:'firstTurnoverTeam' }
+      ],
+      [
+        { t: 'Assisted baskets in Q2, both teams combined — how many?', o: ['Eight or fewer', 'Nine to eleven', 'Twelve or thirteen', 'Fourteen or more'], r:'assistedBasketsBand' },
+        { t: 'Did either team score in the final minute before halftime?', o: ['Yes', 'No'], r:'lastMinuteScoredQ2' },
+        { t: 'Turnovers in Q2, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'turnoversBand' },
+        { t: 'Free throws made in Q2, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'ftMadeBand' }
+      ],
+      [
+        { t: 'Free throws attempted in Q3, both teams combined — how many?', o: ['None to two', 'Three to five', 'Six to nine', 'Ten or more'], r:'ftAttemptsBand' },
+        { t: 'Driving or running shot attempts in Q3, both teams combined — how many?', o: ['Six or fewer', 'Seven to nine', 'Ten to twelve', 'Thirteen or more'], r:'drivingPlaysBand' },
+        { t: 'Substitutions in Q3, both teams combined — how many?', o: ['Nine or fewer', 'Ten to thirteen', 'Fourteen to seventeen', 'Eighteen or more'], r:'subsBand' },
+        { t: 'Which team made more free throws in Q3?', o: ['{HOME}', '{AWAY}', 'Equal'], r:'ftMakeCompareQ3' }
+      ],
+      [
+        { t: 'In the last two minutes, which team committed more turnovers?', o: ['{HOME}', '{AWAY}', 'Equal'], r:'lastTwoMinTurnoverCompare' },
+        { t: 'Was there a technical or flagrant foul at any point in the game?', o: ['Yes', 'No'], r:'anyTechOrFlagrant' },
+        { t: 'Was the game’s final basket assisted?', o: ['Yes', 'No'], r:'lastBasketAssisted' },
+        { t: 'In the 4th quarter, which was more common: jump shots or drives to the basket?', o: ['Jump shots', 'Drives', 'Equal'], r:'q4ShotTypeCompare' }
+      ],
+      /* OVERTIME. Three questions, not four — an overtime is five minutes
+         and a bank sized for a quarter would outlast the period it asks
+         about. Every resolver here reads inPeriod(j, p), so it answers
+         about the overtime being played rather than the game so far. */
+      [
+        { t: 'Which team scored the first points of overtime?', o: ['{HOME}', '{AWAY}'], r:'firstScoreTeam' },
+        { t: 'Free throws made in overtime, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'ftMadeBand' },
+        { t: 'Which team committed the first foul of overtime?', o: ['{HOME}', '{AWAY}'], r:'firstFoulTeam' }
+      ]
+    ]
+  }
+};
+
 const BANK = {
   /* GAME NIGHT #10 — MINNESOTA AT LAS VEGAS. Set up with real lead time,
      the whole point of doing it this way after GN9: this is GN8's bank
