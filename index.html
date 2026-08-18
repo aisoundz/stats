@@ -228,8 +228,43 @@
      old value restored below for the non-mq case so nothing changes if the
      class is ever taken off. */
   #s-landing .logo{font-size:26px}
+  /* THE GRADIENT COMES BACK. THE SIZE DOES NOT.
+
+     Founder, comparing the two landings side by side: "the new one is
+     missing something on the page that doesn't give it the same feel and
+     color." He is right, and the diagnosis is that this redesign changed
+     TWO things about the wordmark when only one of them needed changing.
+
+     DEMOTING IT WAS CORRECT. It was the biggest thing on the page and the
+     matchup — the one fact that makes anybody open the app — was set at
+     17px underneath it. That fix stands and the size stays at 14px.
+
+     STRIPPING ITS COLOUR WAS NOT. teal2 -> blue2 across the wordmark is
+     the brand's own signature; it is the same gradient the app uses for
+     the player's own number, and it was the single most colourful thing on
+     a very dark page. Removing it left the top third of the screen flat
+     black, which is exactly the "feel and color" he is missing. Small and
+     coloured is not a compromise between the two versions — it is what
+     each of them was individually right about. */
   #s-landing.mq .logo{font-size:14px;letter-spacing:.17em;font-weight:800;
-    background:none;-webkit-text-fill-color:var(--ink);color:var(--ink)}
+    background:linear-gradient(90deg,var(--teal2),var(--blue2));
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;color:transparent}
+  /* AND LIGHT AT THE TOP OF THE PAGE. The old landing carried the arena
+     glow behind the wordmark, so the whole top third had colour in it.
+     This redesign moved every lit thing into the hero card and left the
+     header on flat black — the second half of what "missing something"
+     meant. One ambient wash, behind everything, in the two team colours
+     the feed already owns, so it is the GAME lighting the page rather than
+     a decoration. It never touches the matchup: it has faded out before
+     the hero begins. */
+  #s-landing.mq{position:relative;isolation:isolate}
+  #s-landing.mq::before{content:'';position:absolute;left:-20%;right:-20%;top:-90px;height:340px;
+    z-index:-2;pointer-events:none;
+    background:radial-gradient(60% 55% at 30% 40%, var(--away) 0%, transparent 62%),
+               radial-gradient(58% 55% at 78% 26%, var(--home) 0%, transparent 60%);
+    opacity:.14;filter:blur(34px)}
+
   #s-landing.mq .tag{font-size:12px;letter-spacing:.18em;text-transform:uppercase;
     color:var(--dim);text-align:left;margin:0;font-weight:700}
   /* The pill STAYS VISIBLE. The first cut of this hid it — the rail was
@@ -13934,7 +13969,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-catchvoice.136';
+const STATS_BUILD='2026-08-18-brandcolour.137';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

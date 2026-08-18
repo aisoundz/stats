@@ -5137,6 +5137,23 @@ function boardStatic(){
        showcase a new sport we should have the sport image behind in the
        same style." THE MARQUEE had parked it for a colour glow, which says
        neither sport nor which one. */
+    /* THE BRAND KEEPS ITS COLOUR EVEN WHEN IT LOSES ITS SIZE. The redesign
+       demoted the wordmark (right — it was bigger than the matchup) AND
+       stripped its teal→blue gradient (wrong, and a separate decision that
+       nobody needed to make). The founder, comparing the two landings:
+       "the new one is missing something that doesn't give it the same feel
+       and color." Small and coloured is not a compromise between the two
+       versions; it is what each was individually right about. */
+    check('home.the-wordmark-keeps-the-brand-gradient',
+      /#s-landing\.mq \.logo\{[^}]*background:linear-gradient\(90deg,var\(--teal2\),var\(--blue2\)\)/.test(src)
+        && !/#s-landing\.mq \.logo\{[^}]*background:none/.test(src),
+      'the landing wordmark has been flattened to a solid colour again',
+      'teal2 to blue2 across the wordmark is the brand signature and the most colourful thing on a very dark page');
+    check('home.the-top-of-the-page-is-not-dead-black',
+      /#s-landing\.mq::before\{[^}]*radial-gradient/.test(src),
+      'the landing header has no light behind it',
+      'every lit thing moved into the hero card and left the top third flat — half of what "missing something" meant');
+
     check('home.the-playing-surface-is-behind-the-hero',
       /id="landingSurface"/.test(src) && /function paintSurface\(\)/.test(src)
         && /#s-landing\.mq #landingSurface\{position:absolute/.test(src),
