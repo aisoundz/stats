@@ -165,7 +165,11 @@
   .logo{font-weight:900;letter-spacing:3px;font-size:30px;
     background:linear-gradient(90deg,var(--teal2),var(--blue2));
     -webkit-background-clip:text;background-clip:text;color:transparent}
-  .tag{color:var(--muted);font-size:14px;text-align:center;margin:2px 0 0;font-weight:500}
+  /* Sat at --muted over a lit ground and lost. It is the one line that says
+     what this product IS, so it gets contrast that does not depend on what
+     colour the two teams happen to be tonight. */
+  .tag{color:var(--body);font-size:14px;text-align:center;margin:2px 0 0;font-weight:600;
+    text-shadow:0 1px 10px rgba(5,8,14,.85)}
   .pill{display:inline-block;font-size:12px;font-weight:800;letter-spacing:1.5px;
     text-transform:uppercase;padding:6px 12px;border-radius:var(--pill);
     background:rgba(40,224,208,.10);color:var(--teal);border:1px solid rgba(40,224,208,.30)}
@@ -236,11 +240,19 @@
     z-index:-2;pointer-events:none;overflow:hidden;
     -webkit-mask-image:linear-gradient(180deg,#000 40%,rgba(0,0,0,.45) 70%,transparent 94%);
     mask-image:linear-gradient(180deg,#000 40%,rgba(0,0,0,.45) 70%,transparent 94%)}
-  #arenaLight .flr{position:absolute;inset:0;transition:background .6s cubic-bezier(.22,.61,.36,1);
+  #arenaLight .flr{position:absolute;left:0;right:0;top:120px;bottom:0;
+    transition:background .6s cubic-bezier(.22,.61,.36,1);
     background:
-      radial-gradient(120% 80% at 50% 8%, color-mix(in srgb,var(--surface,#c8823c) 30%, transparent), transparent 64%),
-      linear-gradient(180deg, color-mix(in srgb,var(--surface,#c8823c) 14%, transparent), transparent 68%)}
-  #arenaLight .lmp{position:absolute;left:-26%;right:-26%;top:14px;height:300px;
+      radial-gradient(120% 80% at 50% 6%, color-mix(in srgb,var(--surface,#c8823c) 26%, transparent), transparent 62%),
+      linear-gradient(180deg, color-mix(in srgb,var(--surface,#c8823c) 12%, transparent), transparent 66%)}
+  /* THE LIGHT BELONGS ON THE MATCHUP, NOT ON THE WORDMARK. The first cut
+     started the lamps at the very top, so a dark navy and a red washed
+     straight across "STATS GAMETIME" and the tagline and left them
+     unreadable — founder, looking at the live page: "look at the text you
+     cant even read it." A lamp that makes copy harder to read is not
+     atmosphere, it is a bug. They start below the wordmark now and light
+     the two names, which is the thing worth lighting. */
+  #arenaLight .lmp{position:absolute;left:-26%;right:-26%;top:150px;height:270px;
     background:
       radial-gradient(56% 72% at 13% 24%, color-mix(in srgb,var(--away) 92%,transparent), transparent 70%),
       radial-gradient(56% 72% at 87% 18%, color-mix(in srgb,var(--home) 92%,transparent), transparent 70%);
@@ -300,8 +312,15 @@
                radial-gradient(58% 55% at 78% 26%, var(--home) 0%, transparent 60%);
     opacity:.14;filter:blur(34px)}
 
+  /* --dim over a LIT ground is unreadable, and this rule is the one that
+     wins — the base .tag never had a chance. Founder, on the live page:
+     "look at the text you cant even read it." It is the one line that says
+     what this product is; it does not get to be the faintest thing on the
+     page, and its contrast must not depend on which two colours the teams
+     happen to wear tonight. */
   #s-landing.mq .tag{font-size:12px;letter-spacing:.18em;text-transform:uppercase;
-    color:var(--dim);text-align:left;margin:0;font-weight:700}
+    color:var(--body);text-align:left;margin:0;font-weight:700;
+    text-shadow:0 1px 10px rgba(5,8,14,.9)}
   /* The pill STAYS VISIBLE. The first cut of this hid it — the rail was
      going to say "free · no wager" instead — and the gate caught it:
      home.stranger-gets-the-pitch requires every .strangers block on the
@@ -14905,7 +14924,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-arena.146';
+const STATS_BUILD='2026-08-18-readable.147';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
