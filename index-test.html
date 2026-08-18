@@ -170,6 +170,165 @@
     text-transform:uppercase;padding:6px 12px;border-radius:var(--pill);
     background:rgba(40,224,208,.10);color:var(--teal);border:1px solid rgba(40,224,208,.30)}
 
+  /* ═══════════════ THE MARQUEE — the landing hero ═══════════════════
+     "We can keep everything else the same, but I think the landing page
+     can be more modern."
+
+     The page's ORDER was already right — tonight's game, then the door,
+     then the pitch, won in the .84 pass and defended by four gate checks.
+     What was wrong was the WEIGHT: six identical rounded boxes at one
+     width, nothing on the page above 26px, and the matchup — the single
+     fact that makes anybody open this app — set at 17px inside a card,
+     underneath an emoji.
+
+     So nothing below moves an element or removes one. It is a class on
+     the section (#s-landing.mq) and a set of mq- prefixed rules, which
+     means the old page is one class away at any time and every id an
+     existing function writes into is still exactly where it was.       */
+  #s-landing.mq{padding-top:10px}
+  /* The court SVG is PARKED, not deleted. The hero paints its own glow
+     out of the two team colours now — the same job done with the game's
+     own material instead of with a drawing of a court. */
+  #s-landing.mq #landingCourt{display:none}
+
+  /* ── the rail. The wordmark stops being the biggest thing on the page,
+        and the vertical space it was taking goes to the game. The right
+        slot carries the positioning statement that used to live in a 12px
+        footer under the fold: free and no wager is a compliance posture,
+        not a footnote. ── */
+  #s-landing.mq .brand{justify-content:flex-start;margin:0 0 12px;
+    padding-bottom:12px;border-bottom:1px solid var(--line)}
+  /* The inline font-size on this span is why the wordmark stayed 26px
+     through the first build of the rail — an inline style beats any class
+     selector. The markup drops the inline size and this owns it, with the
+     old value restored below for the non-mq case so nothing changes if the
+     class is ever taken off. */
+  #s-landing .logo{font-size:26px}
+  #s-landing.mq .logo{font-size:14px;letter-spacing:.17em;font-weight:800;
+    background:none;-webkit-text-fill-color:var(--ink);color:var(--ink)}
+  #s-landing.mq .tag{font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--dim);text-align:left;margin:0;font-weight:700}
+  /* The pill STAYS VISIBLE. The first cut of this hid it — the rail was
+     going to say "free · no wager" instead — and the gate caught it:
+     home.stranger-gets-the-pitch requires every .strangers block on the
+     landing to be visible signed out, and hiding one is precisely the
+     regression it exists to stop. It is also the better answer on the
+     merits, because "free to enter" is a compliance posture and it should
+     be on the page in its own right rather than folded into decoration. */
+  #s-landing.mq #landingPill{text-align:left;margin:10px 0 18px}
+
+  /* ── the hero. #tonightCard keeps its id and every child id; it just
+        stops being a card. Full-bleed past the section's 16px padding. ── */
+  #s-landing.mq #tonightCard{background:none;border:0;box-shadow:none;
+    border-radius:0;margin:0 -16px;padding:20px 16px 18px;
+    position:relative;overflow:hidden;overflow:clip}
+  /* This also overrides .card::before, the top hairline — a full-bleed
+     hero has no card edge to draw. */
+  #s-landing.mq #tonightCard::before{content:'';position:absolute;
+    inset:-58% -26% auto -26%;height:340px;pointer-events:none;opacity:.20;
+    background:radial-gradient(ellipse at 26% 0%,var(--away),transparent 62%),
+               radial-gradient(ellipse at 86% 14%,var(--home),transparent 60%)}
+  #s-landing.mq #tonightCard > *{position:relative}
+
+  /* the eyebrow is #landingHead, still written by applySport() */
+  #s-landing.mq #landingHead{font-size:12px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--muted);font-weight:700;
+    margin:0 0 14px;line-height:1.35}
+
+  /* the two codes ARE the headline */
+  .mq-vs{display:none}
+  #s-landing.mq .mq-vs{display:flex;align-items:center;gap:12px}
+  .mq-code{font-size:52px;font-weight:900;line-height:.84;letter-spacing:-.03em;
+    font-variant-numeric:tabular-nums}
+  .mq-code.mq-a{color:var(--away)}
+  .mq-code.mq-h{color:var(--home)}
+  .mq-at{font-size:17px;font-weight:600;color:var(--dim);padding-bottom:6px}
+  @media (max-width:340px){ .mq-code{font-size:46px} }
+
+  /* The codes carry the matchup now, so the full names are a caption. The
+     !important is fighting an inline style: SPORT.landing writes its own
+     <b style="color:var(--ink)">, and that colour was chosen when this line
+     WAS the headline. Overriding it here is cheaper and safer than editing
+     a string that five other sports share. */
+  #s-landing #landingMatch{font-size:17px}
+  #s-landing.mq #landingMatch{font-size:12px;margin:11px 0 0;color:var(--muted);
+    font-weight:600;line-height:1.45;letter-spacing:.02em}
+  #s-landing.mq #landingMatch b{color:var(--muted) !important;font-weight:600}
+  /* One sentence on this page about when the game is. #landingTip said
+     "Tip-off 10:00 ET" two inches under a strip that said "Tips in 1h 34m":
+     two elements, two functions, one fact. The clock below is the owner
+     now; the old line stays in the DOM, parked, and is right there if the
+     mq class is ever taken off. */
+  /* ...BUT THE COUNTDOWN NEVER CARRIED THE CHANNEL, and hiding this line
+     took "where do I watch it" off the page entirely — verified, not
+     assumed: no "USA Network" anywhere in the rendered landing section.
+     A countdown answers HOW LONG. It does not answer WHAT TIME or WHICH
+     CHANNEL, and it stops answering anything at all the moment the game
+     is live or final, which is exactly when a latecomer arrives.
+     The founder's own ordering rule for this page is: there is a game
+     tonight, THESE TWO TEAMS, THIS TIME, THIS CHANNEL. Two of the four
+     were missing.
+     So the ribbon keeps "how long" and this keeps "what time, where" —
+     one fact each, no overlap — demoted to supporting weight so it reads
+     under the clock instead of competing with it.
+
+     THE !important IS NOT LAZINESS. #landingTip carries an inline
+     style="font-size:14px;font-weight:800;color:var(--gold)" written into
+     the markup, and an inline declaration beats any stylesheet selector
+     however specific. Without this the line comes back in bold gold at the
+     same weight as the countdown and the two compete — which is the exact
+     failure this rule exists to prevent. Same idiom as #landingMatch b
+     directly above. */
+  #s-landing.mq #landingTip{display:block !important;font-weight:600 !important;
+    color:var(--muted) !important;margin:9px 0 0 !important;letter-spacing:.01em}
+  #s-landing.mq .chips{margin-top:14px}
+
+  /* ── the clock. This is #heroRibbon, moved inside the hero and painted
+        by the same paintHeroRibbon() that always painted it. ── */
+  .mq-clock{display:none;align-items:baseline;gap:9px;margin-top:16px;
+    padding-top:15px;border-top:1px solid var(--line)}
+  .mq-clab{font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);font-weight:700;white-space:nowrap}
+  .mq-cbig{font-size:30px;font-weight:900;letter-spacing:-.01em;
+    font-variant-numeric:tabular-nums;line-height:1;color:var(--gold)}
+  .mq-clock.live .mq-cbig{color:var(--red)}
+  .mq-clock.final .mq-cbig{color:var(--ink)}
+
+  /* ── THE REST STATE, and why it takes the whole hero and not just this
+        line. The first cut painted "No game tonight" underneath DAL at GS,
+        still 52px, still shouting — two facts disagreeing on one screen,
+        which is the disease this codebase is organised against. If there
+        is no game, the hero has nothing to shout, and saying so quietly is
+        the honest version. The class is written by paintHeroRibbon(), which
+        is the one thing that decides the state. ── */
+  #s-landing.mq #tonightCard.mq-rest{padding-bottom:6px}
+  #s-landing.mq #tonightCard.mq-rest::before{opacity:.07}
+  #s-landing.mq #tonightCard.mq-rest .mq-vs,
+  #s-landing.mq #tonightCard.mq-rest #landingHead,
+  #s-landing.mq #tonightCard.mq-rest #landingMatch,
+  #s-landing.mq #tonightCard.mq-rest .chips{display:none}
+  #s-landing.mq #tonightCard.mq-rest .mq-clock{display:block;border-top:0;
+    margin-top:0;padding-top:0}
+  .mq-clock.rest .mq-cbig{font-size:34px;color:var(--ink);display:block}
+  .mq-rsub{display:block;font-size:14px;color:var(--muted);font-weight:600;
+    margin-top:9px;line-height:1.45}
+  .mq-cdet{font-size:12px;font-weight:700;color:var(--muted);margin-left:auto;
+    white-space:nowrap}
+  .mq-dot{width:8px;height:8px;border-radius:50%;background:var(--red);
+    align-self:center;animation:ribPulse 1.4s infinite;flex:0 0 auto}
+
+  /* ── the three beats. Same sequence, same numbering — a real sequence,
+        so the numerals earn their place — but hairlines instead of three
+        more rounded boxes on a page that already had six. ── */
+  #s-landing.mq #howBlock{margin-top:22px;border-top:1px solid var(--line)}
+  .mq-beat{display:flex;gap:14px;align-items:baseline;padding:15px 0;
+    border-bottom:1px solid var(--line)}
+  .mq-bn{flex:0 0 20px;font-size:12px;font-weight:700;color:var(--teal);
+    font-variant-numeric:tabular-nums}
+  .mq-bt{font-size:14px;line-height:1.45;color:var(--ink)}
+  .mq-bt span{color:var(--muted)}
+
+
   h1{font-size:26px;margin:16px 0 6px;font-weight:900;line-height:1.12;
      letter-spacing:-.6px;color:var(--ink)}
   h2{font-size:17px;margin:0 0 4px;font-weight:800}
@@ -763,7 +922,7 @@
   <button class="backbtn" id="backBtn" onclick="goBack()">←</button>
 
   <!-- 1. LANDING -->
-  <section class="screen active" id="s-landing" style="position:relative;isolation:isolate">
+  <section class="screen active mq" id="s-landing" style="position:relative;isolation:isolate">
     <!-- Court + arena backdrop — original SVG, no external image. Hardwood,
          spotlights, a crowd line and court markings behind the wordmark. -->
     <!-- The arena art dissolves into the page instead of stopping at a
@@ -771,7 +930,7 @@
          enough the same colour that the hard bottom edge did not read; on
          the darker base it was a visible seam straight across the hero. A
          mask costs nothing and there is no seam to notice. -->
-    <div aria-hidden="true" style="position:absolute;left:0;right:0;top:0;height:196px;overflow:hidden;pointer-events:none;z-index:-1;
+    <div id="landingCourt" aria-hidden="true" style="position:absolute;left:0;right:0;top:0;height:196px;overflow:hidden;pointer-events:none;z-index:-1;
          -webkit-mask-image:linear-gradient(180deg,#000 46%,rgba(0,0,0,.55) 72%,transparent 100%);
          mask-image:linear-gradient(180deg,#000 46%,rgba(0,0,0,.55) 72%,transparent 100%)">
       <svg width="100%" height="100%" viewBox="0 0 430 172" preserveAspectRatio="xMidYMid slice" style="display:block">
@@ -810,9 +969,9 @@
       <button class="btn teal sm" onclick="doResume()">Resume my game</button>
       <button class="btn ghost sm" style="margin-top:8px" onclick="dismissResume()">Start a new game</button>
     </div>
-    <div class="brand"><span class="logo" style="letter-spacing:1.5px;font-size:26px">STATS GAMETIME</span></div>
+    <div class="brand"><span class="logo" style="letter-spacing:1.5px">STATS GAMETIME</span></div>
     <p class="tag strangers">The game that pays to pay attention</p>
-    <div class="center strangers" style="margin-top:8px"><span class="pill">Play from home • Free to enter</span></div>
+    <div class="center strangers" id="landingPill" style="margin-top:8px"><span class="pill">Play from home • Free to enter</span></div>
 
     <!-- THE FRONT DOOR — sign in before anything else. Hidden the moment the
          account is real; replaced by the welcome strip below. -->
@@ -832,18 +991,35 @@
     <!-- THE MOMENT RIBBON — what's true right now: a countdown before tip,
          the real score while live, the final after. Painted from the ESPN
          feed; hides entirely if the feed can't be reached. -->
-    <div id="heroRibbon" style="display:none;align-items:center;gap:7px;margin-top:12px;background:var(--card);border:1px solid var(--line,var(--line));border-radius:12px;padding:11px 13px;font-size:14px;font-weight:700;color:var(--ink,#eef2fb)"></div>
     <div class="card" id="tonightCard" style="margin-top:14px">
-      <!-- These three are overwritten from BB_GAME on load; they are here only
-           so the first paint is not blank. Keep them in sync with the fixture
+      <!-- These are overwritten from BB_GAME on load; they are here only so
+           the first paint is not blank. Keep them in sync with the fixture
            anyway — a stale flash of last week's game is still a stale flash. -->
-      <h2 id="landingHead">🔴 Game Night #2 · Sun · August 2</h2>
+      <!-- #landingHead is the eyebrow now, not the headline. The emoji came
+           off it: the design system already bans emoji in the interface,
+           because they render at a different size on every platform and
+           that is most of why a screen reads homemade. -->
+      <h2 id="landingHead">Game Night #2 · Sun · August 2</h2>
+      <!-- THE MATCHUP IS THE PAGE. Two codes, 52px, in the two colours the
+           feed already owns — --away and --home, whose only writer is
+           paintTeamColours(), which lifts a near-black team hex and splits
+           a two-navy matchup before either one reaches this line. -->
+      <div class="mq-vs">
+        <span class="mq-code mq-a" id="mqAway">DAL</span>
+        <span class="mq-at">at</span>
+        <span class="mq-code mq-h" id="mqHome">GS</span>
+      </div>
       <!-- THE MATCHUP IS THE HEADLINE, not a footnote under the times. It
            used to trail a sentence explaining the game for the third time
            on one page ("watch the broadcast, play from your couch, predict
            before tip-off, answer at every quarter break…"). Two teams and
            a time is the whole message. -->
-      <p class="sub" id="landingMatch" style="font-size:17px;margin:4px 0 2px"><b style="color:var(--ink)">Indiana Fever @ Minnesota Lynx</b></p>
+      <p class="sub" id="landingMatch" style="margin:4px 0 2px"><b style="color:var(--ink)">Indiana Fever @ Minnesota Lynx</b></p>
+      <!-- THE CLOCK. Same element, same painter, promoted out of a
+           bordered 14px strip above the wordmark and into the hero, where
+           a countdown is the most persuasive thing a live product can put
+           in front of a stranger. -->
+      <div id="heroRibbon" class="mq-clock"></div>
       <p style="font-size:14px;font-weight:800;color:var(--gold);margin:0 0 8px" id="landingTip">🕐 Tip-off 1:00 ET · 12:00 CT · 10:00 PT · ABC</p>
       <!-- "1,000 points" came out: it is the theoretical maximum, not a
            fact about tonight, and it was the chip that pushed the row onto
@@ -905,17 +1081,28 @@
          the first screen to explain a game the pill above already sums up
          in five words. Signed-out only; a member already knows. -->
     <div id="howBlock" class="strangers" style="display:none;margin-top:16px">
-      <div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:11px">
-        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:var(--card2);border:1px solid var(--line2);color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">1</span>
-        <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Predict before tip.</b> <span style="color:var(--muted,#93a0bd)">Winner, stat leaders, the numbers.</span></div>
+      <!-- The numbering stays: this is a real sequence, so the numerals
+           are carrying information rather than decorating. What goes is
+           the rounded tile around each one — three more boxes on a page
+           that already had six. "Caught it live" was also a live copy
+           error; the feature is Caught It and the instruction is catch.
+
+           Beat 01 keeps the word PREDICT deliberately. The first cut of
+           this read "Fill your card before tip", which is nicer copy and
+           turned home.stranger-gets-the-pitch red — the check greps the
+           pitch for the verb, because a pitch that never says what the
+           game is has stopped being a pitch. The check was right. -->
+      <div class="mq-beat">
+        <span class="mq-bn">01</span>
+        <div class="mq-bt"><b>Predict before tip.</b> <span>Winner, stat leaders, the numbers.</span></div>
       </div>
-      <div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:11px">
-        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:var(--card2);border:1px solid var(--line2);color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">2</span>
-        <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Caught it live.</b> <span style="color:var(--muted,#93a0bd)">One-tap reads during the game as it happens.</span></div>
+      <div class="mq-beat">
+        <span class="mq-bn">02</span>
+        <div class="mq-bt"><b>Catch it live.</b> <span>One tap on what just happened, while it is happening.</span></div>
       </div>
-      <div style="display:flex;gap:11px;align-items:flex-start">
-        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:var(--card2);border:1px solid var(--line2);color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">3</span>
-        <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Climb the board.</b> <span style="color:var(--muted,#93a0bd)">Sharpest, fastest fan wins the night.</span></div>
+      <div class="mq-beat">
+        <span class="mq-bn">03</span>
+        <div class="mq-bt"><b>Climb the board.</b> <span>Sharpest and fastest wins the night.</span></div>
       </div>
     </div>
 
@@ -2541,6 +2728,25 @@ window.STATS_FIREBASE = {
       TRK.flushT = setTimeout(function(){ TRK.flushT = null; trkFlush(); }, 45000);
     }catch(_){}
   }
+  /* WHERE THEY CAME FROM. With posts driving traffic, an Instagram
+     visitor and a group-chat invite were indistinguishable in the data,
+     which is the one thing a media funnel has to be able to tell. Read
+     ONCE, at boot: read later and it is the referrer of whatever
+     navigation has happened since, which is usually our own page. */
+  var TRK_SRC = (function(){
+    try{
+      var q = new URLSearchParams(location.search || '');
+      var u = q.get('utm_source') || q.get('src') || q.get('ref') || '';
+      if(u) return String(u).slice(0, 40);
+      var r = String(document.referrer || '');
+      if(!r) return 'direct';
+      var host = ''; try{ host = new URL(r).hostname.replace(/^www\./, ''); }catch(_){}
+      if(!host) return 'direct';
+      if(host === location.hostname) return 'internal';
+      return host.slice(0, 40);
+    }catch(_){ return ''; }
+  })();
+
   async function trkFlush(force){
     try{
       if (!TRK.dirty && !force) return false;
@@ -2550,6 +2756,7 @@ window.STATS_FIREBASE = {
         night: trkNight(),
         name: (function(){ try{ return S.name || ''; }catch(_){ return ''; } })(),
         started: TRK.t0,
+        src: TRK_SRC,
         mins: Math.round((Date.now() - TRK.t0) / 60000),
         screen: (function(){ try{ return (window.screen && screen.width) ? (screen.width + 'x' + screen.height) : ''; }catch(_){ return ''; } })(),
         events: TRK.buf.slice(-TRK_MAX)
@@ -8511,9 +8718,20 @@ function showFinal(){
     renderLeaderboard('finalLb',6);
   }
   renderSignup();
-  /* BANK THE NIGHT. Idempotent by night id, so a refresh on this screen
-     cannot double-count. Practice never banks — a season built out of
-     simulated nights is a season that means nothing. */
+  bankNight();
+  go('final');
+}
+
+/* BANKING AND SHOWING ARE TWO DIFFERENT THINGS, and B36 conflated them.
+   This used to live inside showFinal(), which made "record the night" and
+   "put the results screen in front of the player" the same act — so the
+   only way to bank was to hijack the screen. Pulled out and given one
+   owner, so a night can be recorded without anybody being sent anywhere.
+
+   Idempotent by night id, so a refresh cannot double-count. Practice never
+   banks: a season built out of simulated nights is a season that means
+   nothing. */
+function bankNight(){
   try{
     if(S.mode==='live'){
       var nid=(typeof GAME!=='undefined'&&GAME.nightId)||('night-'+new Date().toISOString().slice(0,10));
@@ -8521,7 +8739,6 @@ function showFinal(){
       seasonRecord(nid, S.pts||0, rk);
     }
   }catch(_){}
-  go('final');
 }
 
 /* One writer for the two tiles. They used to be set by
@@ -12859,6 +13076,12 @@ function applySport(){
   set('landingHead',`${GAME.night} · ${GAME.date}`.replace(' · ·',' ·'));
   set('landingChip1',SPORT.L.league);
   set('landingChip3',SPORT.L.cadence);
+  /* The two codes are the headline now. Their COLOUR is not set here and
+     must not be: --away/--home have exactly one writer, paintTeamColours(),
+     which reads the feed and already lifts a near-black team hex and splits
+     a two-navy matchup. The :root defaults hold until it lands. */
+  set('mqAway',(GAME.awayAbbr||''));
+  set('mqHome',(GAME.homeAbbr||''));
   set('landingBtn',`Play ${GAME.night}`);
   set('landingDemoBtn',`Practice with a simulated ${L.unit}`);
   set('step1h',`Predict before ${L.start}`);
@@ -13091,44 +13314,156 @@ async function portalGoogle(){
    about the third one, which is the player's own. So the ribbon has no eyes
    any more. It reads GS, like everything else, and if GS has nothing it
    says nothing rather than going to find its own answer.                */
-async function paintHeroRibbon(){
-  const el=document.getElementById('heroRibbon'); if(!el) return;
-  const ev=(typeof GAME!=='undefined')&&GAME.espnEvent; if(!ev){ el.style.display='none'; return; }
-  try{
-    /* The one read. Unforced — loadGameStats() has its own 25s cache and a
-       backoff, so this rides whatever the rest of the app already fetched
-       instead of adding a request per surface. */
-    try{ await loadGameStats(); }catch(_){}
-    if(!GS.ok || !GS.teams || GS.teams.length<2){ el.style.display='none'; return; }
-    const home=GS.teams.find(t=>t.home)||GS.teams[1]||{},
-          away=GS.teams.find(t=>!t.home)||GS.teams[0]||{};
-    const hA=home.ab||'', aA=away.ab||'';
-    /* phaseNow() is the app's single answer to "where are we in this game".
-       Reading `st.state` here was a fourth opinion on the same question. */
-    let ph=''; try{ ph=phaseNow(); }catch(_){ ph=''; }
-    const st={ state: (ph==='live'?'in':(ph==='final'?'post':'pre')),
-               shortDetail: String(GS.detail||'') };
-    if(st.state==='in'){
-      el.innerHTML='<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red,#ff4d5e);animation:ribPulse 1.4s infinite"></span>'
-        +'<b style="color:var(--red,#ff4d5e)">LIVE</b><span style="color:var(--muted)">·</span> '
-        +esc(aA)+' <b>'+esc(away.score==null?'–':String(away.score))+'</b> — <b>'+esc(home.score==null?'–':String(home.score))+'</b> '+esc(hA)
-        +' <span style="color:var(--muted);font-weight:600;margin-left:auto">'+esc(st.shortDetail||'')+'</span>';
-      el.style.display='flex';
-    } else if(st.state==='post'){
-      el.innerHTML='🏁 <b>Final</b><span style="color:var(--muted)">·</span> '
-        +esc(aA)+' <b>'+esc(away.score==null?'–':String(away.score))+'</b> — <b>'+esc(home.score==null?'–':String(home.score))+'</b> '+esc(hA);
-      el.style.display='flex';
-    } else {
-      const d=new Date((GS.info&&GS.info.date)||(GAME&&GAME.tipISO)||''); const ms=d-Date.now();
-      if(isFinite(ms)&&ms>0){
-        const h=Math.floor(ms/3.6e6), m=Math.max(1,Math.round((ms%3.6e6)/6e4));
-        el.innerHTML='⏱ Tips in <b style="color:var(--gold,#ffc54d)">'+(h>0?(h+'h '):'')+m+'m</b>'
-          +'<span style="color:var(--muted);font-weight:600;margin-left:auto">'+esc(aA)+' @ '+esc(hA)+'</span>';
-        el.style.display='flex';
-      } else { el.style.display='none'; }
-    }
-  }catch(e){ el.style.display='none'; }
+/* THE HERO CLOCK — one line, four states, one source.
+
+   THE FOURTH STATE IS THE ONE THAT DID NOT EXIST, AND IT IS THE ONE MOST
+   VISITORS WILL ACTUALLY MEET. BB_GAME is a baked-in constant, so from the
+   final buzzer until somebody edits the file and deploys, this page went on
+   presenting a finished game as tonight's headline — B6 with a longer fuse,
+   and it only ever looked right because the person checking was the person
+   who had just set the night up. `rest` is what the page says when the only
+   night it knows about is over: no countdown, no score, and no invented
+   next game, because there is no feed anywhere that has been asked.
+
+   Six hours is the line, not zero, because a game that has ended is still
+   tonight's game to somebody opening the app on the way home from it. */
+var REST_AFTER_MS = 6 * 3600 * 1000;
+
+function heroTipMs(){
+  var d = NaN;
+  try{ d = Date.parse((GS.info && GS.info.date) || (typeof GAME!=='undefined' && GAME.tipISO) || ''); }catch(_){}
+  if(!isFinite(d)){ try{ d = Date.parse((typeof GAME!=='undefined' && GAME.tipISO) || ''); }catch(_2){} }
+  return isFinite(d) ? (d - Date.now()) : NaN;
 }
+
+/* phaseNow() stays the one answer to "where are we in this game". This adds
+   the one thing it cannot know, which is whether the CONFIG is stale. */
+function heroState(){
+  var ph = ''; try{ ph = phaseNow(); }catch(_){}
+  if(ph === 'live') return 'live';
+  var ms = heroTipMs();
+  if(!isFinite(ms)) return (ph === 'final') ? 'final' : 'pre';
+  var since = -ms;                                 /* how long since tip */
+  if(ph === 'final') return since > REST_AFTER_MS ? 'rest' : 'final';
+  /* No phase, and the tip is hours gone: that is a stale config, not a late
+     game. Say nothing rather than count down to a time that has passed. */
+  if(since > REST_AFTER_MS) return 'rest';
+  return 'pre';
+}
+
+function heroCountdown(ms){
+  var s = Math.max(0, Math.floor(ms / 1000));
+  var d = Math.floor(s / 86400); s -= d * 86400;
+  var hh = Math.floor(s / 3600);  s -= hh * 3600;
+  var mm = Math.floor(s / 60);    s -= mm * 60;
+  var p = function(n){ return (n < 10 ? '0' : '') + n; };
+  return (d > 0 ? (d + 'd ') : '') + p(hh) + ':' + p(mm) + ':' + p(s);
+}
+
+/* THE ONE READ COMES FIRST, and it is not a style preference.
+
+   score.the-ribbon-reads-the-shared-feed asserts loadGameStats() appears
+   within 900 characters of this function's opening — because the ribbon
+   USED to have its own fetch on its own timer, and Game Night #7 put its
+   answer and the rail's answer on one screen 47 seconds apart. A rewrite
+   that pushed the read down past a block of helper functions turned that
+   check red while the code was still correct. The check was still doing
+   its job: distance from the top is a decent proxy for "is this the first
+   thing the function does", and the first thing it should do is read the
+   one feed everything else reads. So the helpers moved down instead.    */
+async function paintHeroRibbon(){
+  const el = document.getElementById('heroRibbon'); if(!el) return;
+  try{
+    const ev = (typeof GAME !== 'undefined') && GAME.espnEvent;
+    /* Unforced — loadGameStats() has its own 25s cache and a backoff, so
+       this rides whatever the rest of the app already fetched instead of
+       adding a request per surface. */
+    if(ev){ try{ await loadGameStats(); }catch(_){} }
+
+    var home = null, away = null;
+    try{
+      if(GS.ok && GS.teams && GS.teams.length >= 2){
+        home = GS.teams.find(function(t){ return  t.home; }) || GS.teams[1];
+        away = GS.teams.find(function(t){ return !t.home; }) || GS.teams[0];
+      }
+    }catch(_){}
+
+    /* The hero learns the state too, because `rest` is not a different
+       sentence on the same hero — it is a different hero. One writer. */
+    const put = function(html, cls){
+      el.className = 'mq-clock' + (cls ? (' ' + cls) : '');
+      el.innerHTML = html;
+      /* Set here rather than in CSS because this line writes the inline
+         display, and an inline value beats the stylesheet every time —
+         the trap that kept the wordmark at 26px through a whole build. */
+      el.style.display = (cls === 'rest') ? 'block' : 'flex';
+      try{
+        var card = document.getElementById('tonightCard');
+        if(card) card.classList.toggle('mq-rest', cls === 'rest');
+      }catch(_){}
+    };
+    const lab = function(t){ return '<span class="mq-clab">' + t + '</span>'; };
+
+    var st = heroState();
+    if(st === 'rest'){
+      /* No feed has been asked about a next game and none has been
+         configured, so this says what is true and stops. Naming a date we
+         do not have would be the one thing this app never does. */
+      put('<b class="mq-cbig">No game tonight</b>'
+        + '<span class="mq-rsub">The next game night lands here. Practice is open — no account needed.</span>',
+        'rest');
+      return;
+    }
+
+    if(st === 'live' || st === 'final'){
+      /* No feed means no score, and a score is the one thing this line is
+         not allowed to guess. Fall back to the state, never to a number. */
+      if(!home || !away || home.score == null || away.score == null){
+        put((st === 'live' ? '<i class="mq-dot"></i>' : '') + lab(st === 'live' ? 'Live now' : 'Final')
+            + '<b class="mq-cbig">' + esc(String((typeof GAME!=='undefined' && GAME.awayAbbr) || '')) + ' at '
+            + esc(String((typeof GAME!=='undefined' && GAME.homeAbbr) || '')) + '</b>', st);
+        return;
+      }
+      var det = ''; try{ det = String(GS.detail || ''); }catch(_){}
+      put((st === 'live' ? '<i class="mq-dot"></i>' : '') + lab(st === 'live' ? 'Live' : 'Final')
+          + '<b class="mq-cbig">' + esc(String(away.score)) + ' – ' + esc(String(home.score)) + '</b>'
+          + (det ? ('<span class="mq-cdet">' + esc(det) + '</span>') : ''), st);
+      return;
+    }
+
+    var ms = heroTipMs();
+    if(!isFinite(ms) || ms <= 0){ el.style.display = 'none'; return; }
+    put(lab('Tips in') + '<b class="mq-cbig">' + heroCountdown(ms) + '</b>', 'pre');
+  }catch(e){ try{ el.style.display = 'none'; }catch(_){} }
+}
+
+/* ONE ticker, and it does no work unless the landing is the screen you are
+   actually looking at. A second poller is how Caught It ended up with two. */
+var HERO_T = null, HERO_LAST = '';
+function heroTick(){
+  try{
+    var sec = document.getElementById('s-landing');
+    if(!sec || !sec.classList.contains('active')) return;
+    if(document.hidden) return;
+    var st = heroState();
+    /* A REPAINT HAPPENS ON A STATE CHANGE, NEVER ON A TICK. The first cut
+       of this called paintHeroRibbon() whenever the countdown ran out,
+       which is a once-a-second repaint — each one awaiting loadGameStats()
+       — for as long as the page sat in that state. Comparing against the
+       last painted state does the same job once, and it makes the clock
+       carry itself across pre → live → final → rest with nothing else
+       having to remember to call it. */
+    if(st !== HERO_LAST){ HERO_LAST = st; paintHeroRibbon(); return; }
+    if(st !== 'pre') return;                  /* only the countdown moves per second */
+    var el = document.getElementById('heroRibbon');
+    var big = el && el.querySelector('.mq-cbig');
+    if(!big) return;
+    var ms = heroTipMs();
+    if(!isFinite(ms) || ms <= 0) return;      /* the state change above takes it from here */
+    big.textContent = heroCountdown(ms);
+  }catch(_){}
+}
+try{ if(!HERO_T) HERO_T = setInterval(heroTick, 1000); }catch(_){}
 if(!document.getElementById('ribCss')){
   const st=document.createElement('style'); st.id='ribCss';
   st.textContent='@keyframes ribPulse{0%{box-shadow:0 0 0 0 rgba(255,77,94,.5)}70%{box-shadow:0 0 0 8px rgba(255,77,94,0)}100%{box-shadow:0 0 0 0 rgba(255,77,94,0)}}';
@@ -13144,7 +13479,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-overtime.129';
+const STATS_BUILD='2026-08-18-marquee.130';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -14127,8 +14462,29 @@ function finishNightFromFeed(){
     var locked=false; try{ locked=!!(S.predChoices && Object.keys(S.predChoices).length); }catch(_){}
     FINALISED=true;
     if(!locked){
-      try{ toast('🏁 Final buzzer — that is the night.'); }catch(_){}
-      try{ showFinal(); }catch(_){ FINALISED=false; }
+      /* B36, AND THE TWO WRONG VERSIONS OF THIS FIX BEFORE THIS ONE.
+
+         The bug: this returned early with no locked card, and it is the only
+         automatic route to showFinal(), which is where the season is banked.
+         Somebody who answered every quarter but skipped the pre-game sheet
+         reached the buzzer with their night unrecorded.
+
+         Wrong fix #1 — send them to the final screen. The gate caught it
+         within the hour: `arena.post.feed-is-reachable` went to 0px, because
+         a player reading Gametime after the buzzer was yanked to a results
+         page and the whole feed became unreachable.
+
+         Wrong fix #2 — send them only if they scored something. Same hijack,
+         narrower. The gate caught that too, because the harness has points.
+
+         What is actually owed to a player with no card is that their night is
+         RECORDED. Being moved off the screen they chose is owed to nobody —
+         there is nothing to settle, which is the entire reason this branch
+         exists. Bank it, say so, leave them where they are. `arena.post`
+         is a deliberate, named guarantee that the feed survives the buzzer,
+         and it outranks my idea about where somebody should be standing. */
+      try{ bankNight(); }catch(_){}
+      try{ toast('🏁 Final buzzer — your night is banked.'); }catch(_){}
       return;
     }
     try{ toast('🏁 Final buzzer — settling your card.'); }catch(_){}
