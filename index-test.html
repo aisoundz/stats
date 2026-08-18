@@ -4422,7 +4422,55 @@ async function loadNightConfig(db, F){
   }
 }
 try{ window.hydrateNight = hydrateNight; window.loadNightConfig = loadNightConfig; }catch(_){}
-const NR=rounds.length;                               // number of scoring rounds
+/* NR IS REGULATION, AND IT NEVER MOVES. Four quarters, two halves, three
+   periods, nine innings — whatever this sport plays before overtime.
+   Awards, the lifeline split and "you scored in all four quarters" all
+   mean regulation and must keep meaning it when a game runs long.
+
+   OVERTIME IS NOT A FIFTH ROUND IN THE CONFIG. It cannot be: a round that
+   exists before the game does would hang off every night that ends in
+   regulation, and `gtStartRow` would offer "OT ended? Answer now" after
+   every normal game. The founder's instinct to add 'OT' to the tags was
+   right about the goal and would have produced exactly that.
+
+   So overtime ROUNDS ARE GROWN, once, at the moment the host pushes one —
+   which only happens if the game actually went there. Regulation nights
+   never allocate it and never see it. */
+const NR=rounds.length;                               // REGULATION rounds
+const MAX_OT=3;                                       // OT, OT2, OT3 — beyond that, say nothing
+function liveRounds(){ try{ return rounds.length; }catch(_){ return NR; } }
+/* The label a player sees over an overtime question. "Q1" printed over a
+   hockey overtime is a screen that lies, and the shared resolver block
+   already names them this way, so both sides agree. */
+function otLabelFor(idx){
+  var n = idx - NR + 1;
+  return { tag: (n>1 ? ('OT'+n) : 'OT'),
+           name:(n>1 ? ('Overtime '+n) : 'Overtime') };
+}
+/* Grow the round arrays to reach `idx`. Idempotent, and it refuses to run
+   away — a malformed idx must not allocate a thousand rounds. */
+function ensureRound(idx, tag, name, worth){
+  try{
+    idx=Number(idx);
+    if(!isFinite(idx) || idx<0 || idx>=NR+MAX_OT) return false;
+    while(rounds.length<=idx){
+      var n=rounds.length, lab=otLabelFor(n);
+      rounds.push({q:[]});
+      SPORT.tags[n]  = lab.tag;
+      SPORT.names[n] = lab.name;
+      /* An overtime is worth what the last regulation round was worth. It
+         is the same length of attention for a shorter period, and inventing
+         a new number here would be a number nobody agreed. */
+      SPORT.worth[n] = SPORT.worth[NR-1] || 10;
+      if(!Array.isArray(S.results[n]))     S.results[n]=[];
+      if(!Array.isArray(S.liveAnswers[n])) S.liveAnswers[n]=[];
+    }
+    if(tag)  SPORT.tags[idx]=String(tag);
+    if(name) SPORT.names[idx]=String(name);
+    if(typeof worth==='number' && worth>0 && worth<=200) SPORT.worth[idx]=worth;
+    return true;
+  }catch(_){ return false; }
+}
 // A pushed round can be worth something other than the built-in schedule —
 // the host decides on the night. Empty until a round is actually pushed, so
 // with no dashboard running this is exactly SPORT.worth[i] and nothing else.
@@ -4431,7 +4479,10 @@ function roundWorth(i){return (HOSTW[i]!=null?HOSTW[i]:SPORT.worth[i]);}
 function roundTag(i){return SPORT.tags[i];}
 function roundName(i){return SPORT.names[i];}
 function startLabel(i){return (SPORT.startLbl||"Start {n} ▶").replace("{n}",roundName(i));}
-function isLastRound(i){return i>=NR-1;}
+/* The last round that EXISTS, not the last one regulation has. Otherwise
+   "Lock it in — wait for answers" fires at the end of Q4 while an overtime
+   round is open behind it. */
+function isLastRound(i){return i>=liveRounds()-1;}
 // Lifeline is "one per half of the contest" in every sport: quarters 1–2 vs 3–4,
 // or the 1st half vs the 2nd.
 function lifelineKey(i){return i < Math.ceil(NR/2) ? 'lifelineHalf1' : 'lifelineHalf2';}
@@ -11062,7 +11113,18 @@ function onHostedRound(r){
   if(S.mode!=="live") return;              // practice mode is never hijacked
   if(!r || !r.id) return;                  // no round pushed: nothing changes
   const idx = (typeof r.idx==='number') ? r.idx : -1;
-  if(idx<0 || idx>=NR) return;             // a round this build doesn't have
+  if(idx<0) return;
+  /* OVERTIME ARRIVES HERE OR NOWHERE. Regulation rounds are already
+     allocated; anything past them is an overtime the host has pushed,
+     which only happens when the game actually went to one. It has to name
+     itself as overtime — an out-of-range index with no OT tag is a bug on
+     the other end, not a round, and must be dropped exactly as before. */
+  if(idx>=NR){
+    var otTag=String((r && r.tag) || '');
+    if(!/^OT/i.test(otTag)) return;                 // not an overtime: drop it
+    if(!ensureRound(idx, otTag, r.name, r.worth)) return;
+  }
+  if(idx>=rounds.length) return;           // a round this build doesn't have
   r.idx = idx;
   HR.doc = r;
 
@@ -11595,8 +11657,8 @@ function ttFacts(){
   f.hits=f.rounds.reduce((a,r)=>a+r.hits,0);
   f.asked=f.rounds.reduce((a,r)=>a+r.done,0);
   f.perfect=f.rounds.filter(r=>r.done===r.n&&r.hits===r.n);
-  f.curTag=roundTag(Math.min(S.qi,NR-1));
-  f.nextName=(S.qi+1<NR)?roundName(S.qi+1):null;
+  f.curTag=roundTag(Math.min(S.qi,liveRounds()-1));
+  f.nextName=(S.qi+1<liveRounds())?roundName(S.qi+1):null;
   // predictions only become material once the truth is actually known
   f.predHits=[];f.predMiss=[];f.exact=[];f.predTotal=preds.length;
   const T=S.predTruth,TN=S.predTruthNum||{};
@@ -13082,7 +13144,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-lanes.128';
+const STATS_BUILD='2026-08-18-overtime.129';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -16205,7 +16267,7 @@ function renderGametime(){
      not announce itself is the one thing this product must never ship. */
   try{
     if(S && S.mode==='demo'){
-      var qi=Math.max(0,Math.min(NR-1, S.qi||0));
+      var qi=Math.max(0,Math.min(liveRounds()-1, S.qi||0));
       var r0=rounds[qi]||{};
       var ph=(S.screen==='final') ? 'PRACTICE · FINAL' : ('PRACTICE · '+roundTag(qi));
       head.innerHTML='<div class="card gtBoard" style="padding:15px 16px 14px">'
@@ -16557,11 +16619,14 @@ function gtStartRow(){
        quarter, which is the only way most people ever see this app. */
     if(S.mode!=='live'){
       var dq = (S.nextQ!=null ? S.nextQ : S.qi) || 0;
-      if(dq>=NR) return '';
+      if(dq>=NR) return '';                 // practice never goes to overtime
       return '<button class="btn" style="margin-top:11px" onclick="startQuarter('+dq+')">'+esc(startLabel(dq))+'</button>';
     }
     var qi = (S.nextQ!=null ? S.nextQ : S.qi) || 0;
-    if(qi>=NR) return '';
+    /* liveRounds(), not NR — after Q4 is scored this is 4, and it only
+       becomes 5 if an overtime round was actually pushed. A regulation
+       night therefore still shows nothing here, which is the whole point. */
+    if(qi>=liveRounds()) return '';
     /* Before tip the button is not a button. Saying "Q1 ended? Answer now"
        at four in the afternoon is the app asking somebody to make something
        up. */

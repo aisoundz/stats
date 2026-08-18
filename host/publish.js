@@ -179,8 +179,14 @@ async function main(){
     log('warn', 'an overtime round is configured but has NO questions, so no template will be published. ' +
                 'An overtime tonight would open nothing and be flagged for a human.');
   } else {
-    log('warn', `no overtime round configured for ${NIGHT}. Add 'OT' to this night's tags in NIGHTS ` +
-                'and write questions for it, or an overtime is played with nothing to answer.');
+    /* THE SAME SENTENCE LIVES IN admin.html's publishPlan(). Two copies of
+       one piece of advice, and when the advice changed only one of them
+       knew — which is this codebase's whole disease, reproduced inside a
+       warning about a different bug. Both now say the same thing. */
+    log('warn', `no overtime round configured for ${NIGHT}, so an overtime would be played with nothing ` +
+                `to answer. Adding 'OT' to this night's tags is now safe and is the fix — but only on ` +
+                'player build .129 or later, which is the first one that can receive a fifth round. ' +
+                'On anything earlier the round opens, scores, and reaches nobody.');
   }
   if(DRY){ log('dry', `would publish ${rounds.length} rounds, ${nq} questions` +
                       (ot ? ` + an overtime template of ${ot.qs.length}` : ' and NO overtime template') +

@@ -588,11 +588,18 @@ const NIGHTS = [
      Room opens on, so the next fixture leads and finished nights stay
      listed below — the picker is the only way back to a past night's
      grading screen. */
+  /* OVERTIME IS A TEMPLATE, NOT A FIFTH ROUND. publishPlan() splits any
+     OT-tagged round out of the regulation list and publishes it separately,
+     so a night that ends in regulation pays exactly nothing for this — no
+     round opens, no button appears. The player app only grows a fifth round
+     if the host actually pushes one, which it can now receive as of .129.
+     Before that build the round would have opened, scored, and reached
+     nobody's phone, which is why this was not here sooner. */
   { id:'gn13-2026-08-19-min-gs', label:'Game Night #13 — Lynx @ Valkyries (Wed Aug 19, 10:00 ET · USA Network)',
     away:'MIN', home:'GS', espn:'401857157',
-    tags:['Q1','Q2','Q3','Q4'],
-    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
-    worth:[10,20,30,40] },
+    tags:['Q1','Q2','Q3','Q4','OT'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4','Overtime'],
+    worth:[10,20,30,40,40] },
   /* GAME NIGHT #10 — MINNESOTA AT LAS VEGAS, Saturday, set up with real
      lead time instead of fifteen rushed minutes — the whole point of doing
      it this way after GN9. Tip: 8:00 ET / 5:00 PT, CBS/Paramount+. Verified
@@ -795,6 +802,15 @@ const BANK = {
       { t: 'Was there a technical or flagrant foul at any point in the game?', o: ['Yes', 'No'], r:'anyTechOrFlagrant' },
       { t: 'Was the game’s final basket assisted?', o: ['Yes', 'No'], r:'lastBasketAssisted' },
       { t: 'In the 4th quarter, which was more common: jump shots or drives to the basket?', o: ['Jump shots', 'Drives', 'Equal'], r:'q4ShotTypeCompare' }
+    ],
+    /* OVERTIME. Three questions, not four — an overtime is five minutes and
+       a bank sized for a quarter would outlast the period it asks about.
+       Every resolver here reads inPeriod(j, p), verified, so it answers
+       about the overtime being played rather than the game so far. */
+    [
+      { t: 'Which team scored the first points of overtime?', o: ['Valkyries', 'Lynx'], r:'firstScoreTeam' },
+      { t: 'Free throws made in overtime, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'ftMadeBand' },
+      { t: 'Which team committed the first foul of overtime?', o: ['Valkyries', 'Lynx'], r:'firstFoulTeam' }
     ]
   ],
   'gn11-2026-08-16-ind-atl': [
