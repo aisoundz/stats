@@ -597,6 +597,24 @@ async function main(){
         let done = false;
         try{ done = AUTO.periodDone(sum, sl.per); }catch(_){}
 
+        /* ============ WHICH PERIOD IS THIS ROUND ABOUT ================
+           ONE answer, used by both the open path and the close path. They
+           used to compute it separately: close said `R.p ?? i+1` and open
+           said `i + 1` flat. Identical in basketball, football, hockey and
+           soccer — the sports where the Nth round IS the Nth period — and
+           silently wrong in baseball, whose rounds cover innings 3, 6 and
+           9. The early answers were read at innings 1, 2 and 3, stored as
+           `earlyKey`, and resolveRound PREFERS a stored early answer, so
+           the wrong reading won. Measured on two finished games: 5 of 12
+           and 9 of 12 questions keyed wrong, with no void, no warning and
+           no exception. A confident wrong answer is worse than a blank.
+
+           R.p first, because publish.js writes it from cfg.periods and it
+           is the only thing that knows an inning from a quarter; sl.per
+           behind it, which is right for an appended overtime round and for
+           every hand-written night. */
+        const period = (R.p != null && isFinite(R.p)) ? Number(R.p) : sl.per;
+
         /* ---- OPEN ---------------------------------------------------
            The grace period is not caution for its own sake: ESPN posts the
            end-of-period row a beat before the last plays of that period
@@ -607,7 +625,7 @@ async function main(){
           if(now - seenDone[i] < GRACE_MS) continue;
           if(acted['push' + i]) continue;
           acted['push' + i] = true;
-          const early = earlyAnswers(AUTO, R, sum, i + 1);
+          const early = earlyAnswers(AUTO, R, sum, period);
           const earlyN = early.filter(v => v != null).length;
           await db.doc(`nights/${NIGHT}/rounds/${rid}`).set({
             seq: Date.now(), idx: i, tag: R.tag, name: R.name, worth: R.worth,
@@ -630,9 +648,6 @@ async function main(){
           if(!everyoneIn && waited < ANSWER_MS) continue;
           if(everyoneIn) log('room', `everyone has answered ${R.tag} — closing early`);
 
-          /* R.p when the plan names it — see publish.js. Absent on every
-             hand-written night, so basketball keeps index+1 exactly. */
-          const period = (R.p != null && isFinite(R.p)) ? Number(R.p) : (i + 1);
           const { key, why, voided } = resolveRound(AUTO, R, sum, period, doc.earlyKey);
 
           /* EVERY question voided is not a round, it is a feed that never

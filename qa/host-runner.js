@@ -72,5 +72,32 @@ if (branch) {
     'the runner waits ninety seconds in silence; a log that goes quiet at the buzzer reads as a crash');
 }
 
+/* ===================================================================
+   ONE PERIOD PER ROUND, READ THE SAME WAY TWICE.
+   The open path stored early answers read at period `i+1` while the close
+   path resolved at `R.p ?? i+1`. In basketball those are the same number,
+   so it never showed; in baseball a round covers innings 3, 6 and 9, and
+   the early reading — taken at innings 1, 2 and 3 — is the one
+   resolveRound PREFERS. 5 of 12 and 9 of 12 questions keyed wrong on two
+   real games, silently. The guarantee is not "the fix is present"; it is
+   that the two paths cannot drift apart again. */
+{
+  const loop = src.slice(src.indexOf('for(const sl of slots){', src.indexOf('const slots = roundSlots')),
+                         src.indexOf('/* ---- ARCHIVE') > 0 ? src.indexOf('/* ---- ARCHIVE') : src.length);
+  const decls = (loop.match(/const period\s*=/g) || []).length;
+  check('runner.the-round-knows-its-period-once',
+    decls === 1,
+    `the round loop declares "period" ${decls} time(s) — two declarations is two answers to one question`);
+  check('runner.the-early-read-uses-that-period',
+    /earlyAnswers\(AUTO, R, sum, period\)/.test(loop),
+    'earlyAnswers is called with something other than the round\'s period — in baseball that reads innings 1/2/3 for rounds covering 3/6/9, and the wrong reading wins because resolveRound prefers a stored early answer');
+  check('runner.the-close-uses-that-same-period',
+    /resolveRound\(AUTO, R, sum, period,/.test(loop),
+    'resolveRound is passed a different period from the one the early read used');
+  check('runner.the-period-prefers-the-published-plan',
+    /const period = \(R\.p != null && isFinite\(R\.p\)\) \? Number\(R\.p\) : sl\.per;/.test(loop),
+    'R.p is what publish.js writes from cfg.periods and the only thing that tells an inning from a quarter; sl.per behind it covers overtime and hand-written nights');
+}
+
 console.log(fail ? `\n${fail} FAILED` : '\nall good');
 process.exit(fail ? 1 : 0);

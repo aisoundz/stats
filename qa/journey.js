@@ -26,14 +26,51 @@
      node qa/journey.js --url https://statsgametime.com/
      node qa/journey.js --headed                     # watch it
    ================================================================== */
-const {chromium}=require('playwright'); const path=require('path');
+const PW=require('playwright'); const path=require('path');
 const F=require('./fixtures.js');
 const ARG=(k,d)=>{const i=process.argv.indexOf('--'+k); return i>=0?process.argv[i+1]:d;};
 const URL_=ARG('url', 'file://'+path.resolve(__dirname,'..','index-test.html'));
 const LIVE=/^https?:/.test(URL_);
 const HEADED=process.argv.includes('--headed');
+/* WEBKIT IS NOT OPTIONAL HERE. The switching bug the founder hit on his
+   phone passed in every Chromium run, including Chromium's own iPhone
+   emulation, and failed only in WebKit — a tap inside a horizontally
+   scrollable strip does not reliably become a click there. A path suite
+   that only ever runs one engine would ship that class of bug again. */
+const ENGINE=ARG('engine','chromium');
+const BROWSER=PW[ENGINE]; if(!BROWSER){ console.error('unknown engine: '+ENGINE); process.exit(2); }
+const PHONE=process.argv.includes('--phone');
 
 let pass=0, fail=0; const bad=[], trace=[];
+/* THE RAIL MUST NOT LIE. The tile marked aria-current is the app telling
+   the player which room they are standing in; GAME.nightId is which room
+   the app is actually holding. When a config read failed, the first version
+   moved the highlight anyway and left GAME behind — a rail saying Lynx over
+   a screen full of Mystics. That is B26 wearing a new coat, so it is
+   asserted after EVERY step of the path, not once at the end. */
+const railAgrees=(s)=>{
+  const cur=(s.tiles||[]).filter(t=>t.current).map(t=>t.id);
+  if(cur.length>1) return {ok:false, why:cur.length+' tiles marked current: '+cur.join(', ')};
+  if(!s.night) return {ok:true};
+  if(!cur.length) return {ok:false, why:'in '+s.night+' but no tile is marked current'};
+  return cur[0]===s.night
+    ? {ok:true}
+    : {ok:false, why:'rail says '+cur[0]+', app is holding '+s.night};
+};
+const railOk=(where,s)=>{ const r=railAgrees(s);
+  ok('journey.the-rail-never-lies-about-where-you-are ('+where+')', r.ok, r.why); };
+
+/* THE NETWORK LAYER MUST MOVE WITH THE PLAYER. SB binds a night for reads
+   and writes; it used to bind once and never rebind, which was invisible
+   while switching reloaded the page and became a live bug the moment it
+   did not — board, submissions and minutes all filed under the room the
+   player had left. Only asserted when Firestore is actually up: a local
+   run cuts the data channel on purpose, and SB is then correctly bound to
+   nothing at all. */
+const sbOk=(where,s)=>{ if(!s.sbEnabled) return;
+  ok('journey.the-network-layer-follows-you ('+where+')', s.sbRoom===s.night,
+     'SB is in '+s.sbRoom+', the app is in '+s.night); };
+
 const ok=(n,c,d)=>{ if(c){pass++; trace.push('  ok   '+n);} else {fail++; bad.push(n+(d?'  — '+d:'')); trace.push('  FAIL '+n);} };
 const cb=()=> (URL_.includes('?')?'&':'?')+'cb='+Date.now();
 
@@ -47,17 +84,35 @@ const FAKE_SLATE=[
 ];
 
 (async()=>{
-  const b=await chromium.launch({headless:!HEADED});
-  const ctx=await b.newContext({viewport:{width:393,height:852}});
+  const b=await BROWSER.launch({headless:!HEADED});
+  const ctx=await b.newContext(PHONE
+    ? Object.assign({}, PW.devices['iPhone 13'], {hasTouch:true})
+    : {viewport:{width:393,height:852}});
   const p=await ctx.newPage();
-  const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
+  /* WebKit refuses a fetch() of a file:// URL outright, so the build
+     self-check — which asks the server for its own bytes and is meaningful
+     only over http — reports a CORS error on every local WebKit run. That
+     is the harness, not the product: drop it locally, keep it on --url. */
+  const errs=[]; p.on('pageerror',e=>{ const m=String(e);
+    if(!LIVE && /Fetch API cannot load file:/.test(m)) return;
+    errs.push(m); });
   if(!LIVE) await p.route('**/site.api.espn.com/**', r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(F.PRE)}));
+
+  /* A LOCAL RUN MUST NOT RACE THE REAL SLATE. The Jetson has a network, so
+     the page really did reach Firestore, really did read tomorrow's slate,
+     and repainted the rail out from under a click that was already in
+     flight — the suite failed on a build where switching worked. Cut the
+     data channel so a local run tests the seeded two games and nothing
+     else. A --url run keeps the real one, which is the point of it. */
+  if(!LIVE) await p.route(/firestore\.googleapis\.com|firebaseio\.com/, r=>r.abort());
 
   const state=()=>p.evaluate(()=>({
     screen:(typeof S!=='undefined')?S.screen:null,
     night:(window.GAME||{}).nightId,
     home:(window.GAME||{}).homeName,
     picks:(typeof S!=='undefined')?Object.keys(S.predChoices||{}).filter(k=>!/_num$/.test(k)).length:0,
+    sbRoom:(()=>{ try{ return (window.SB&&SB.room)?SB.room():undefined; }catch(_){ return undefined; } })(),
+    sbEnabled:(()=>{ try{ return !!(window.SB&&SB.enabled); }catch(_){ return false; } })(),
     tiles:[...document.querySelectorAll('#gameRail [data-slate]')].map(t=>({
       id:t.getAttribute('data-slate'), current:t.getAttribute('aria-current')==='true'})),
     railVisible:(()=>{const e=document.getElementById('gameRail');
@@ -65,13 +120,36 @@ const FAKE_SLATE=[
       return getComputedStyle(e).display!=='none' && r.bottom>0 && r.top<window.innerHeight;})()
   }));
 
+  /* A room a phone can actually ENTER. In production build-slate.js writes
+     schedule/{nightId} for every game on the slate, so a tile always has a
+     config behind it. Seeding only SLATE.games faked the shelf and not the
+     room, and then asserted the player could walk in — which is why this
+     suite failed against a build where switching genuinely worked. Stub
+     what production guarantees; test what production does. */
+  const cfgFor=(g)=>({
+    game:{nightId:g.nightId, espnEvent:'40185'+g.nightId.length, sport:'basketball',
+          awayName:g.away, homeName:g.home, awayAbbr:g.awayAbbr, homeAbbr:g.homeAbbr,
+          awayColor:g.awayColor, homeColor:g.homeColor, tipISO:g.tipISO},
+    roster:{home:[g.home+' One', g.home+' Two'], away:[g.away+' One', g.away+' Two']},
+    preds:[{id:'winner', q:'Who takes it?', label:'Winner', base:100,
+            opts:[g.away, g.home], answer:g.home},
+           {id:'margin', q:'How close?', label:'Margin', base:100,
+            opts:['1-5','6-12','13+'], answer:'6-12'}]
+  });
+
   const seed=async()=>{ if(LIVE) return;
     await p.evaluate((games)=>{ window.SLATE.games=games; window.SLATE.loaded=true;
       window.SLATE.date='2026-08-19'; paintGameRail(); }, FAKE_SLATE); };
 
+  const seedConfigs=async()=>{ if(LIVE) return;
+    await p.evaluate((cfgs)=>{ cfgs.forEach(c=>{
+      try{ localStorage.setItem('stats_night_cfg_'+c.game.nightId, JSON.stringify(c)); }catch(_){}
+    }); }, FAKE_SLATE.map(cfgFor)); };
+
   await p.goto(URL_+cb(),{waitUntil:'domcontentloaded'});
   await p.waitForFunction(()=>typeof window.paintGameRail==='function',{timeout:20000});
   await p.waitForTimeout(LIVE?5000:1800);
+  await seedConfigs();
   await seed();
 
   /* ---- 1. two games are offered, and the rail is reachable ---------- */
@@ -88,6 +166,8 @@ const FAKE_SLATE=[
   s=await state();
   ok('journey.choosing-a-game-lands-you-in-it', s.night===A.id,
      `asked for ${A.id}, GAME.nightId is ${s.night}`);
+  railOk('first choice', s);
+  sbOk('first choice', s);
 
   /* ---- 3. open the pick sheet and enter picks ----------------------- */
   await seed();
@@ -96,9 +176,10 @@ const FAKE_SLATE=[
       startDemo(); S.name='QA';
       try{ await loadGameStats(true); }catch(e){}
       startPredict(); await new Promise(r=>setTimeout(r,700));
-      const o=document.querySelector('#predCard .pdopt'); if(!o) return {err:'no options'};
-      o.click(); await new Promise(r=>setTimeout(r,400));
-      return {picks:Object.keys(S.predChoices||{}).filter(k=>!/_num$/.test(k)).length, screen:S.screen};
+      const o=document.querySelectorAll('#predCard .pdopt'); if(!o.length) return {err:'no options'};
+      o[0].click(); await new Promise(r=>setTimeout(r,400));
+      return {picks:Object.keys(S.predChoices||{}).filter(k=>!/_num$/.test(k)).length, screen:S.screen,
+              choices:JSON.stringify(S.predChoices||{})};
     }catch(e){ return {err:String(e.message)}; }
   });
   ok('journey.the-pick-sheet-opens', !entered.err && entered.screen==='predict', entered.err||`screen=${entered.screen}`);
@@ -116,6 +197,8 @@ const FAKE_SLATE=[
   s=await state();
   ok('journey.switching-mid-pick-actually-switches', s.night===B.id,
      `asked for ${B.id}, GAME.nightId is ${s.night}`);
+  railOk('in B', s);
+  sbOk('in B', s);
   ok('journey.the-other-game-starts-clean', s.picks===0,
      `${s.picks} pick(s) carried into the other room`);
 
@@ -125,9 +208,15 @@ const FAKE_SLATE=[
       startDemo(); S.name='QA';
       try{ await loadGameStats(true); }catch(e){}
       startPredict(); await new Promise(r=>setTimeout(r,700));
-      const o=document.querySelector('#predCard .pdopt'); if(!o) return {err:'no options'};
-      o.click(); await new Promise(r=>setTimeout(r,400));
-      return {picks:Object.keys(S.predChoices||{}).filter(k=>!/_num$/.test(k)).length};
+      /* A DIFFERENT OPTION FROM THE ONE ROOM A CHOSE. Picking the same one
+         made the come-back check pass even with the room store ripped out:
+         if nothing is ever restored, A's card simply never left, and a
+         count of 1 looks identical to a card that came home. Two rooms must
+         hold two DISTINGUISHABLE cards or this path proves nothing. */
+      const o=document.querySelectorAll('#predCard .pdopt'); if(!o.length) return {err:'no options'};
+      o[o.length>1?1:0].click(); await new Promise(r=>setTimeout(r,400));
+      return {picks:Object.keys(S.predChoices||{}).filter(k=>!/_num$/.test(k)).length,
+              choices:JSON.stringify(S.predChoices||{})};
     }catch(e){ return {err:String(e.message)}; }
   });
   ok('journey.you-can-pick-in-the-second-game', (enteredB.picks||0)>=1,
@@ -140,21 +229,42 @@ const FAKE_SLATE=[
   s=await state();
   ok('journey.you-can-get-back-to-the-first-game', s.night===A.id,
      `asked for ${A.id}, GAME.nightId is ${s.night}`);
+  railOk('back in A', s);
+  sbOk('back in A', s);
+  /* THE ONE THE FOUNDER ASKED FOR: walk back in, is the card still there.
+     This used to read localStorage — but save() deliberately writes nothing
+     in practice mode, so it was asserting a disk write that correctly never
+     happens and saying nothing about what the player sees. The room store
+     holds a card in MEMORY; the visible card is the guarantee. Disk is a
+     separate promise, checked separately below for a live room. */
+  const backA=await p.evaluate(()=>JSON.stringify(S.predChoices||{}));
+  ok('journey.the-room-you-left-kept-your-card',
+     (s.picks||0)>=1 && backA===entered.choices,
+     `back in ${A.id} with ${s.picks} pick(s); expected ${entered.choices}, got ${backA}`);
+  ok('journey.the-two-rooms-held-different-cards', entered.choices!==enteredB.choices,
+     'both rooms recorded the same answer — this path cannot tell a restore from a leak');
+
+  /* And for a real (live) room, the card must also survive a reload, which
+     is a different mechanism — per-night localStorage, not the store. */
   const kept=await p.evaluate((id)=>{
-    const raw=localStorage.getItem('stats_gamenight_v1_basketball_'+id);
-    if(!raw) return {saved:false};
-    try{ const v=JSON.parse(raw);
-      return {saved:true, nid:v.nid, picks:Object.keys(v.predChoices||{}).filter(k=>!/_num$/.test(k)).length}; }
-    catch(e){ return {saved:false, err:'unparseable'}; }
+    try{
+      const was=S.mode; S.mode='live'; save(); S.mode=was;
+      const raw=localStorage.getItem('stats_gamenight_v1_basketball_'+id);
+      if(!raw) return {saved:false};
+      const v=JSON.parse(raw);
+      return {saved:true, nid:v.nid,
+              picks:Object.keys(v.predChoices||{}).filter(k=>!/_num$/.test(k)).length};
+    }catch(e){ return {saved:false, err:String(e.message)}; }
   }, A.id);
-  ok('journey.the-room-you-left-kept-your-card', kept.saved===true && (kept.picks||0)>=1,
-     `save for ${A.id}: ${JSON.stringify(kept)} — leaving a room must not lose the card`);
+  ok('journey.a-live-room-saves-under-its-own-night',
+     kept.saved===true && kept.nid===A.id && (kept.picks||0)>=1,
+     kept.err||`saved=${kept.saved} nid=${kept.nid} picks=${kept.picks} — a reload would lose it`);
 
   ok('journey.no-page-errors-anywhere', errs.length===0, errs.slice(0,2).join(' | '));
 
   await b.close();
   if(process.argv.includes('--trace')) trace.forEach(t=>console.log(t));
   bad.forEach(x=>console.log('  FAIL  '+x));
-  console.log((fail?'RED':'GREEN')+'   '+pass+' passed, '+fail+' failed   ('+(LIVE?'LIVE ':'')+URL_.replace(/\?.*/,'')+')');
+  console.log((fail?'RED':'GREEN')+'   '+pass+' passed, '+fail+' failed   ['+ENGINE+(PHONE?'/iPhone':'')+']   ('+(LIVE?'LIVE ':'')+URL_.replace(/\?.*/,'')+')');
   process.exit(fail?1:0);
 })().catch(e=>{ console.error('JOURNEY CRASHED:', e.message); process.exit(2); });

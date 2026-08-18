@@ -527,12 +527,23 @@ async function browserTests(){
     if(skipped.done<skipped.total){
       await p.click('#pdLock'); await p.waitForTimeout(800);
       const rec=await p.evaluate(()=>{
-        const r=document.getElementById('predCard').getBoundingClientRect();
-        return {onBlank:!S.predChoices[predOrderList()[PD.i].id], inView:r.top>-5&&r.top<window.innerHeight*0.6};
+        /* Same correction as deck.next-question-comes-to-you: the guarantee
+           is that the blank card is READABLE and ANSWERABLE, not that its
+           box happens to start near the top. */
+        const c=document.getElementById('predCard');
+        const q=c.querySelector('.pdq');
+        const bar=document.getElementById('pdBar').getBoundingClientRect();
+        const qt=q?q.getBoundingClientRect().top:null;
+        const hidden=[...c.querySelectorAll('.pdopt')]
+          .filter(o=>{const g=o.getBoundingClientRect(); return g.bottom>bar.top+1 && g.top<bar.bottom;}).length;
+        return {onBlank:!S.predChoices[predOrderList()[PD.i].id],
+                inView: qt!==null && qt>0 && qt<window.innerHeight*0.6,
+                qt: qt===null?null:Math.round(qt), hidden};
       });
       check(`deck.recovery-jumps.${vp.name}`, rec.onBlank, 'the finish button did not land on the blank card',
             'REGRESSION: the recovery button worked but scrolled nowhere, so it read as a dead button');
-      check(`deck.recovery-scrolls.${vp.name}`, rec.inView, 'jumped to the blank card but left it off screen',
+      check(`deck.recovery-scrolls.${vp.name}`, rec.inView,
+            `jumped to the blank card but left it unusable — question at ${rec.qt}px, ${rec.hidden} option(s) behind the bar`,
             'REGRESSION: on a laptop the deck was above the fold — the tap looked like nothing happened');
       await p.click('#predCard .pdopt'); await p.waitForTimeout(500);
     }
@@ -1358,16 +1369,36 @@ async function browserTests(){
         R.scrolledAgain = Math.round(window.scrollY);
         predGo(1);
         await new Promise(r=>setTimeout(r,200));
+        /* WHAT THE PLAYER CAN SEE, NOT WHERE THE BOX IS. This measured the
+           CARD's top and wanted it near the top of the screen. That was a
+           fair proxy while predFocus was dead code — its scroll was being
+           wiped by go()'s scrollTo(0,0) a line later, so nothing ever
+           moved. With it working, a short phone deliberately scrolls the
+           card's header (progress bar, dots) off the top so the last
+           OPTION clears the fixed bar: card top -129px, question and every
+           option perfectly in view. The old proxy called that a failure.
+           Ask the two things a player actually needs instead. */
         const card=document.getElementById('predCard');
-        const top=card.getBoundingClientRect().top;
-        R.cardTop = Math.round(top);
-        R.questionIsVisible = (top > -40 && top < 240);
+        R.cardTop = Math.round(card.getBoundingClientRect().top);
+        const q=card.querySelector('.pdq');
+        const qt=q?Math.round(q.getBoundingClientRect().top):null;
+        R.questionTop=qt;
+        const barR=document.getElementById('pdBar').getBoundingClientRect();
+        R.optionsUnderBar=[...card.querySelectorAll('.pdopt')]
+          .filter(o=>{const g=o.getBoundingClientRect(); return g.bottom>barR.top+1 && g.top<barR.bottom;}).length;
+        /* THE QUESTION, at the top of the screen. Not "every option also
+           clears the bar" — a six-option question on a 390px phone cannot
+           fit entirely above it, and predFocus deliberately stops nudging
+           rather than push the question itself off the top. Options being
+           reachable at FIRST PAINT is a different guarantee and it has its
+           own check: deck.the-bar-does-not-sit-on-the-card. */
+        R.questionIsVisible = (qt!==null && qt > 0 && qt < 240);
       }catch(e){ R.err=e.message; }
       try{ S.predChoices={}; PD.i=0; }catch(e){}
       return R;
     });
     check(`deck.next-question-comes-to-you.${vp.name}`, deck.questionIsVisible===true,
-      `after changing question from a scroll of ${deck.scrolledAgain}, the card sits at ${deck.cardTop}px`,
+      `after changing question from a scroll of ${deck.scrolledAgain}: question at ${deck.questionTop}px, ${deck.optionsUnderBar} option(s) behind the bar (card box at ${deck.cardTop}px)`,
       'REGRESSION: the deck advanced but never scrolled, so every one of six picks cost a scroll up to read and a scroll back down to answer');
     /* AND IT CAME BACK, SO THE CHECK CAME BACK. This was retired for
        exactly one build, while the exact-number field was cut from the

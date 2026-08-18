@@ -121,7 +121,7 @@ if [ "$MODE" = "build" ] || [ "$MODE" = "dry" ]; then
 
   # Publish each bank now, in the morning, so a failure is found in daylight
   # rather than four minutes before a tip nobody is watching.
-  while IFS=$'\t' read -r LG NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT; do
+  while IFS=$'\t' read -r LG NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT SPATH; do
     [ -n "$NIGHT_ID" ] || continue
     if NIGHT_ID="$NIGHT_ID" HOME_NICK="$HOME_NICK" AWAY_NICK="$AWAY_NICK" \
        ESPN_EVENT="$ESPN_EVENT" SPORT="$SPORT" \
@@ -150,10 +150,16 @@ NOW_EPOCH=$(date +%s)
 # while something HOLDS it, so ask: flock -n fails exactly when it is held.
 # pgrep is not usable here — a pattern matching "run.js" also matches the
 # shell running the check, which is how this was miscounted the first time.
+# A ROOM, NOT EVERYTHING THAT HOLDS A LOCK. host/watch-start.sh keeps
+# watch-$DATE.lock in this same directory and holds it for six and a half
+# hours, so the watchdog was being counted as a room: switch the watcher on
+# with MAX_ROOMS=2 and the slate silently got ONE room, blaming a cap that
+# was never reached. The watcher watches rooms; it is not one.
 live_rooms(){
   local n=0 f
   for f in "$LOGDIR"/*.lock; do
     [ -e "$f" ] || continue
+    case "$(basename "$f")" in watch-*) continue ;; esac
     if ! flock -n "$f" true 2>/dev/null; then n=$((n+1)); fi
   done
   echo "$n"
@@ -164,7 +170,7 @@ echo "--- running: [$RUN_LEAGUES]  $(live_rooms) room(s) already up${MAX_ROOMS:+
 STARTED_COUNT=""   # one char per started room, per league, counted with ${#}
 
 # ---- 2. publish a plan and start a runner for each --------------------
-while IFS=$'\t' read -r LG NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT; do
+while IFS=$'\t' read -r LG NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT SPATH; do
   [ -n "$NIGHT_ID" ] || continue
   LOG="$LOGDIR/$NIGHT_ID.log"
 
@@ -173,18 +179,13 @@ while IFS=$'\t' read -r LG NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT; do
   # leagues most of the time and should not fill the log.
   case " $RUN_LEAGUES " in *" $LG "*) ;; *) continue ;; esac
 
-  # Start small. A cap is per league per run, and a room that is skipped for
-  # the cap is SAID OUT LOUD — a silent truncation reads as "we covered
-  # everything" when we did not.
-  if [ "$MAX_ROOMS" -gt 0 ]; then
-    RUNNING=$(live_rooms)
-    if [ "$RUNNING" -ge "$MAX_ROOMS" ]; then
-      echo "  CAP  $NIGHT_ID — $RUNNING room(s) already up, cap is $MAX_ROOMS"
-      continue
-    fi
-  fi
-
-  # Is this game due? A room opens LEAD_MIN before its own tip and not before.
+  # IS THIS GAME DUE — asked BEFORE the cap, and the order is the point. A
+  # room opens LEAD_MIN before its own tip and not before. Charging the cap
+  # first meant a game hours away was refused with "CAP" and the slot it
+  # was refused for belonged to a room that had not started either. On a
+  # Saturday where preseason football runs at midday and the WNBA tips in
+  # the evening, that is how the only league that has ever run a real night
+  # gets zero rooms.
   TIP_EPOCH=$(date -d "$TIP" +%s 2>/dev/null || echo 0)
   if [ "$TIP_EPOCH" -gt 0 ]; then
     DUE=$(( TIP_EPOCH - LEAD_MIN * 60 ))
@@ -200,6 +201,30 @@ while IFS=$'\t' read -r LG NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT; do
     fi
   fi
 
+  # Start small, and only DUE games spend the cap — see the note above the
+  # due check. A room skipped for the cap is SAID OUT LOUD: a silent
+  # truncation reads as "we covered everything" when we did not.
+  if [ "$MAX_ROOMS" -gt 0 ]; then
+    RUNNING=$(live_rooms)
+    if [ "$RUNNING" -ge "$MAX_ROOMS" ]; then
+      echo "  CAP  $NIGHT_ID — $RUNNING room(s) already up, cap is $MAX_ROOMS"
+      continue
+    fi
+  fi
+
+  # A MANIFEST WITHOUT A FEED PATH CANNOT HOST A ROOM. `basketball` is a
+  # family and `basketball/wnba` is a path; handing the runner the family
+  # 404s every fetch, and run.js answers a 404 by logging once and sleeping
+  # — so the room stays published and NO ROUND EVER OPENS, for four hours,
+  # in silence. A manifest built before this column existed has an empty
+  # $SPATH, and defaulting it back to the family would quietly recreate
+  # exactly that. Refuse the room and say why: a skipped room that names
+  # its reason is worth ten rooms that are up and mute.
+  if [ -z "$SPATH" ]; then
+    echo "  SKIP $NIGHT_ID — no feed path in the manifest (built before the path column). Re-run --build."
+    continue
+  fi
+
   # --if-missing: a plan somebody already published outranks the template.
   if ! NIGHT_ID="$NIGHT_ID" HOME_NICK="$HOME_NICK" AWAY_NICK="$AWAY_NICK" \
        ESPN_EVENT="$ESPN_EVENT" SPORT="$SPORT" \
@@ -211,7 +236,7 @@ while IFS=$'\t' read -r LG NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT; do
   # One runner per night, enforced by the filesystem rather than by memory.
   (
     flock -n 9 || { echo "  SKIP $NIGHT_ID — a runner already holds its lock"; exit 0; }
-    NIGHT_ID="$NIGHT_ID" ESPN_EVENT="$ESPN_EVENT" SPORT_PATH="$SPORT" TIP_ISO="$TIP" \
+    NIGHT_ID="$NIGHT_ID" ESPN_EVENT="$ESPN_EVENT" SPORT_PATH="$SPATH" TIP_ISO="$TIP" \
     RUN_MINUTES="$RUN_MINUTES" TICK_MS="$TICK_MS" IDLE_EXIT_MIN="$IDLE_EXIT_MIN" \
     FIREBASE_SERVICE_ACCOUNT="$FIREBASE_SERVICE_ACCOUNT" \
     nohup node host/run.js >> "$LOG" 2>&1 &

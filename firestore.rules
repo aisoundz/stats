@@ -51,6 +51,30 @@ service cloud.firestore {
         allow update, delete: if false;
       }
     }
+    // ---- telemetry: how long a person actually watched ----------------
+    // MINUTES WITH THE APP OPEN is the metric this product is built on —
+    // it is what "the game pays you to pay attention" means in numbers.
+    // index.html has been writing one doc per player per night since before
+    // Game Night #11 and EVERY WRITE WAS DENIED, because this block did not
+    // exist. SB.trkWrite catches the failure and returns false, so eleven
+    // game nights produced exactly zero measurements in total silence —
+    // the same shape as the `slate` collection having no rule, which made
+    // the game picker invisible on the live site while every test passed.
+    //
+    // A person may only write their OWN row, and only the fields below;
+    // nobody may read the collection from a phone, because one player's
+    // attention is not another player's business. The reader is
+    // host/minutes.js, which uses the Admin SDK and ignores rules.
+    match /nights/{nightId}/telemetry/{uid} {
+      allow read:           if isOwner();
+      allow create, update: if signedIn() && request.auth.uid == uid
+                            && request.resource.data.uid == uid
+                            && request.resource.data.mins is number
+                            && request.resource.data.mins >= 0
+                            && request.resource.data.mins <= 1440;
+      allow delete:         if isOwner();
+    }
+
     match /nights/{nightId}/callitboard/{uid} {
       allow read:           if true;
       allow create, update: if signedIn() && request.auth.uid == uid;

@@ -3022,6 +3022,61 @@ window.STATS_FIREBASE = {
     }catch(_){}
   }
   function trkNight(){ try{ return (typeof GAME!=='undefined' && GAME.nightId) || 'no-night'; }catch(_){ return 'no-night'; } }
+
+  /* ============ MINUTES ARE PER NIGHT, NOT PER PAGE LOAD =============
+     `mins` was (now - t0), and t0 is when this page loaded. The telemetry
+     doc is written with merge, so every flush OVERWROTE the field with the
+     current session's length: refresh once and a player's whole night
+     silently became however long they had been back. It understated
+     exactly the people who care most — the ones who reload, background the
+     app at halftime and come back.
+
+     Minutes-with-the-app-open is the number this product lives or dies by,
+     so it accumulates per night, on the device, across sessions. Kept in
+     its own key rather than inside the event buffer, because the buffer is
+     capped and rolls. */
+  var TRK_MK = 'stats_trk_mins_v1';
+  var TRK_M = { night: null, base: 0, sessions: 1, t0: Date.now() };
+
+  /* RESOLVED WHEN THE NIGHT IS KNOWN, NOT AT BOOT. The first version read
+     the stored total inside an init function that runs while this module
+     is being defined — before GAME exists. trkNight() threw, was caught,
+     returned 'no-night', and the comparison against the stored night never
+     matched, so every load started from zero and then SAVED that zero over
+     the real total. A measurement that destroys the thing it measures.
+
+     So it syncs lazily: the first time anybody asks for minutes after the
+     night is real, the stored total for THAT night is adopted and the
+     session counter ticks once. Called from both the reader and the
+     writer, so there is no path that saves before it has loaded. */
+  function trkSync(){
+    var n = trkNight();
+    if (n === 'no-night' || n === TRK_M.night) return;
+    var r = null;
+    try{ r = JSON.parse(localStorage.getItem(TRK_MK) || 'null'); }catch(_){}
+    var carry = (r && r.night === n && Number(r.mins) >= 0) ? Number(r.mins) : 0;
+    var sess  = (r && r.night === n && Number(r.sessions) > 0) ? Number(r.sessions) : 0;
+    TRK_M.night    = n;
+    TRK_M.base     = carry;
+    TRK_M.sessions = sess + 1;
+    TRK_M.t0       = Date.now();          // this session's clock starts here
+  }
+  function trkMins(){
+    trkSync();
+    if (TRK_M.night === null) return Math.round((Date.now() - TRK.t0) / 60000);
+    return TRK_M.base + Math.round((Date.now() - TRK_M.t0) / 60000);
+  }
+  function trkSessionMins(){
+    trkSync();
+    var from = (TRK_M.night === null) ? TRK.t0 : TRK_M.t0;
+    return Math.round((Date.now() - from) / 60000);
+  }
+  function trkMinsSave(){
+    trkSync();
+    if (TRK_M.night === null) return;      // never write a total for no night
+    try{ localStorage.setItem(TRK_MK, JSON.stringify(
+      { night: TRK_M.night, mins: trkMins(), sessions: TRK_M.sessions })); }catch(_){}
+  }
   function trkSave(){
     try{ localStorage.setItem(TRK_KEY, JSON.stringify({ night: trkNight(), buf: TRK.buf.slice(-TRK_MAX) })); }catch(_){}
   }
@@ -3085,11 +3140,13 @@ window.STATS_FIREBASE = {
         name: (function(){ try{ return S.name || ''; }catch(_){ return ''; } })(),
         started: TRK.t0,
         src: TRK_SRC,
-        mins: Math.round((Date.now() - TRK.t0) / 60000),
+        mins: trkMins(),                 // this NIGHT, not this page load
+        sessions: (function(){ try{ trkSync(); return TRK_M.sessions; }catch(_){ return 1; } })(),
+        sessionMins: trkSessionMins(),
         screen: (function(){ try{ return (window.screen && screen.width) ? (screen.width + 'x' + screen.height) : ''; }catch(_){ return ''; } })(),
         events: TRK.buf.slice(-TRK_MAX)
       });
-      if (ok){ TRK.dirty = false; TRK.sent++; }
+      if (ok){ TRK.dirty = false; TRK.sent++; try{ trkMinsSave(); }catch(_){} }
       return ok;
     }catch(_){ return false; }
   }
@@ -3101,7 +3158,7 @@ window.STATS_FIREBASE = {
      iOS where `beforeunload` does not. */
   try{
     document.addEventListener('visibilitychange', function(){
-      if (document.hidden){ trk('hide', { mins: Math.round((Date.now() - TRK.t0) / 60000) }); trkFlush(true); }
+      if (document.hidden){ try{ trkMinsSave(); }catch(_){} trk('hide', { mins: trkMins() }); trkFlush(true); }
       else trk('show');
     });
     window.addEventListener('pagehide', function(){ try{ trkFlush(true); }catch(_){} });
@@ -3112,7 +3169,10 @@ window.STATS_FIREBASE = {
     var counts = {};
     TRK.buf.forEach(function(e){ counts[e.n] = (counts[e.n] || 0) + 1; });
     var out = {
-      night: trkNight(), minutes: Math.round((Date.now() - TRK.t0) / 60000),
+      night: trkNight(),
+      minutes: trkMins(),                                        // this night, all sessions
+      thisSession: trkSessionMins(),
+      sessions: (function(){ try{ trkSync(); return TRK_M.sessions; }catch(_){ return 1; } })(),
       events: TRK.buf.length, flushes: TRK.sent, counts: counts,
       funnel: ['app_open','sign_in','night_join','card_start','card_lock',
                'round_open','round_answer','night_complete']
@@ -4050,6 +4110,35 @@ window.STATS_FIREBASE = {
   SB.observe = function (nid) {
     if (!SB.enabled || !nid) return false;
     if (!nightId) nightId = nid;
+    return true;
+  };
+
+  /* ============ CHANGING ROOMS, ON THE NETWORK SIDE ==================
+     `observe` binds the night ONCE and refuses to move — correct while a
+     room change reloaded the page, and wrong the moment it stopped. With
+     the room store, switching games is a state swap, so this layer kept
+     reading and writing the room the player had LEFT: their board, their
+     submissions and their telemetry all filed under the wrong game. The
+     switch was fixed and this was left behind — one fact, two copies, the
+     copy being the room the network layer thought it was in.
+
+     A seat is per-room and lives server-side, so moving rooms means: point
+     at the new night, and forget the seat, because we do not hold one here
+     yet. Walking back into a room they already joined re-seats them and
+     their player document — points and all — is still sitting there. */
+  /* Read-only: WHICH ROOM does the network layer think it is in. Exposed
+     so the guarantee above can be asserted from a test rather than taken
+     on trust — a closure variable nobody can see is a closure variable
+     nobody can check. */
+  SB.room = function () { return nightId || null; };
+
+  SB.setRoom = function (nid) {
+    if (!SB.enabled || !nid) return false;
+    if (nightId === nid) return true;
+    try { budgetReset(); } catch (_) {}      // a new night is a new allowance
+    nightId    = nid;
+    meRef      = null;                        // no seat in this room yet
+    SB.joinedAs = null;                       // stale from the last room is a lie
     return true;
   };
 
@@ -5290,58 +5379,106 @@ async function chooseGame(db, F, nightId){
   if(!nightId) return false;
   var g = slateGame(nightId);
   if(!g){ try{ console.error('not a game on tonight\'s slate: '+nightId); }catch(_){} return false; }
-  var here=''; try{ here=(GAME&&GAME.nightId)||''; }catch(_){}
+  var here = ACTIVE_ROOM;
+  if(!here){ try{ here=(GAME&&GAME.nightId)||''; }catch(_){} }
   if(nightId === here){ try{ paintSlate(); }catch(_){} return true; }
 
-  /* ============ SWITCH IN PLACE WHEN THERE IS NOTHING TO LOSE ========
-     A reload is the only thing CERTAIN to leave nothing of the old room
-     behind, and mid-game that is worth it. But most switches happen while
-     somebody is on the landing deciding what to watch, and reloading there
-     is a white flash for nothing — founder: "at the top its not having a
-     smooth transition."
+  /* ============ SWITCHING ROOMS IS A STATE SWAP, NOT A RELOAD =========
+     This used to reload the page, because with one global S there was no
+     other way to be sure nothing of the old room came with you. That is
+     what made switching feel broken: a white flash, a rail that vanished
+     for six seconds, and a cache to paper over it.
 
-     Mid-game reloads. Browsing swaps in place. GAME_SCREENS is the same
-     list that decides whether the tabs unlock, because it is the same
-     question: is this person INSIDE a game, or looking at one. */
-  var inGame=false;
-  try{ inGame = GAME_SCREENS.indexOf(S.place||'')>=0; }catch(_){}
-  if(!inGame && db && F){
+     With a room store there is nothing to be unsure about. Park this room,
+     bring the other one up, repaint. Your card in the room you left is
+     exactly where you left it when you come back — in memory, not through
+     localStorage and not through a reload.
+
+     The URL is rewritten so the link is still shareable, and the pick is
+     still remembered so a genuine reload lands in the same place. */
+  /* ============ A GAME IN ANOTHER SPORT IS ANOTHER PAGE ==============
+     SPORT_KEY is read from ?sport= once, at load, and GAME / roster /
+     preds are bound to that sport's objects. So tapping an MLB tile on a
+     basketball page used to set ?game= and nothing else: hydrateNight saw
+     a config for baseball, correctly refused to half-apply it over
+     basketball, logged to a console nobody has open — and left the player
+     looking at the WNBA night while the runner hosted the ballgame. Every
+     answer graded against a game they were not being shown.
+
+     Until the sport can be swapped in place (the same fill-in-place trick
+     the room store uses, and the next thing on this list), a cross-sport
+     pick reloads with the sport named. It is a page load rather than a
+     swap, which is worse than switching inside a sport and far better than
+     silently being in the wrong room. */
+  var wantSport = String((g.sport || '') || '').toLowerCase();
+  if(wantSport && wantSport !== String(SPORT.key || '').toLowerCase()){
+    try{ save(); }catch(_){}
     slatePickSet(nightId);
-    try{ if(typeof trk==='function') trk('slate_pick',{night:nightId, from:here, mode:'in-place'}); }catch(_){}
-    var okNow = await loadNightConfig(db, F);
-    try{ paintSlate(); }catch(_){}
     try{
-      var u2=new URL(location.href); u2.searchParams.set('game', nightId);
-      history.replaceState(null,'',u2.toString());   // the link stays shareable
+      var u3 = new URL(location.href);
+      u3.searchParams.set('sport', wantSport);
+      u3.searchParams.set('game', nightId);
+      location.replace(u3.toString());
     }catch(_){}
-    return okNow;
+    return true;
   }
 
-  /* ============ CHANGING ROOMS IS A CHANGE OF EVERYTHING ==============
-     Hydrating in place swaps the CONFIG and leaves the in-memory game
-     exactly where it was — mid-quarter, with a locked card, a score and a
-     question about the other game's teams. The night before GN13 that is
-     precisely what happened: the resume bar offered "Continue tonight's
-     game · Q1 is open" for a room he had just left, and the question under
-     it named the wrong two teams.
-
-     Park this room's card under its own key, remember the choice, and
-     reload. A reload is the only thing that is CERTAIN to leave nothing of
-     the old room behind — every module, timer, listener and cached render
-     starts again — and on the way back up loadSlate() reads the pick,
-     hydration fetches the right night, and checkResume() runs its per-night
-     guard against the room you actually chose. One tap, one second, and no
-     class of stale state survives it. */
-  try{ save(); }catch(_){}
+  try{ roomSnapshot(here); }catch(_){}
+  try{ save(); }catch(_){}                 // and on disk, for a real reload
   slatePickSet(nightId);
-  try{ if(typeof trk==='function') trk('slate_pick', {night:nightId, flagship:!!g.flagship, from:here}); }catch(_){}
-  try{ toast('Switching to ' + (g.away||'') + ' at ' + (g.home||'') + '…'); }catch(_){}
+  try{ if(typeof trk==='function') trk('slate_pick',{night:nightId, from:here}); }catch(_){}
+
+  /* ENTER THE ROOM, OR DO NOT CLAIM IT.
+     Live read first; the cache this phone already holds second. If BOTH
+     fail we are not in that room, so we put the player back where they
+     were rather than showing them a rail that says one game over a screen
+     that holds another. Saying "you are in B" while GAME still says A is
+     the whole disease this codebase is named after. */
+  var okNow = false;
   try{
-    var u=new URL(location.href);
-    u.searchParams.set('game', nightId);
-    location.replace(u.toString());
-    return true;
-  }catch(_){ try{ location.reload(); }catch(__){} return true; }
+    if(db && F) okNow = await loadNightConfig(db, F);
+    else if(window.__SB_DB && window.__SB_FS) okNow = await loadNightConfig(window.__SB_DB, window.__SB_FS);
+  }catch(_){}
+  if(!okNow || (GAME && GAME.nightId !== nightId)){
+    try{ okNow = hydrateFromCache(nightId); }catch(_){ okNow = false; }
+  }
+  var landed = false;
+  try{ landed = !!(GAME && GAME.nightId === nightId); }catch(_){}
+  if(!landed){
+    slatePickSet(here || null);
+    try{ roomRestore(here); }catch(_){}
+    try{ paintSlate(); }catch(_){}
+    try{ toast("Couldn't load that game — still on "+((GAME&&GAME.awayAbbr)||'this one')); }catch(_){}
+    return false;
+  }
+
+  /* AFTER the config lands, so a restored room is restored over the right
+     game rather than the one being left. */
+  try{ roomRestore(nightId); }catch(_){}
+  ACTIVE_ROOM = nightId;
+
+  /* And move the network layer with us, or the board, the submissions and
+     the minutes all keep filing under the room we just walked out of. */
+  try{ if(window.SB && SB.setRoom) SB.setRoom(nightId); }catch(_){}
+  try{ if(S.mode === 'live') ensureJoined(); }catch(_){}
+
+  /* Put the player somewhere that exists in the new room. A person mid
+     pick-sheet in one game has no pick sheet in another until they open
+     one, and leaving them on that screen is how you get a card that says
+     the wrong teams. */
+  try{
+    if(GAME_SCREENS.indexOf(S.place||'') >= 0 && !ROOMS[nightId]) { S.place=''; S.screen='landing'; }
+    go(S.screen || 'landing');
+  }catch(_){}
+
+  try{ paintSlate(); }catch(_){}
+  try{ applySport(); }catch(_){}
+  try{
+    var u2=new URL(location.href); u2.searchParams.set('game', nightId);
+    history.replaceState(null,'',u2.toString());
+  }catch(_){}
+  try{ toast((g.away||'')+' at '+(g.home||'')); }catch(_){}
+  return okNow;
 }
 try{ window.loadSlate = loadSlate; window.chooseGame = chooseGame;
      window.SLATE = SLATE; window.slatePick = slatePick; }catch(_){}
@@ -5465,11 +5602,66 @@ const bots=[
 ];
 
 /* ---------------- STATE ---------------- */
-let S={mode:"demo",practice:false,screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},predOrder:[],qi:0,ni:0,nextQ:0,answered:false,
-  lifelineHalf1:true,lifelineHalf2:true,botScores:[],totalPlayers:1204,
-  results:emptyRounds(), liveAnswers:emptyRounds(), streak:0, seasonPts:0,
-  catchChoices:{}, catchPts:null, catchesScored:false, led:{}, predSettled:false,
-  predTruth:null, predTruthNum:null, lifelineAt:null, tally:null, sport:'', a2hs:null};
+/* ============ ONE STATE SHAPE, ONE PLACE ============================
+   S was written when a night meant one game, and every bug the founder hit
+   on GN13 came from that: switching rooms could not swap state, so it
+   reloaded; the reload lost the rail, so it needed a cache; the cache had
+   races. Five patches, one cause.
+
+   freshS() is now the single definition of what a room's state IS — used
+   for the first room and for every room opened after. Duplicating these
+   defaults would be this codebase's own disease with a new name. */
+function freshS(){
+  return {mode:"demo",practice:false,screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,
+    predChoices:{},predOrder:[],qi:0,ni:0,nextQ:0,answered:false,
+    lifelineHalf1:true,lifelineHalf2:true,botScores:[],totalPlayers:1204,
+    results:emptyRounds(), liveAnswers:emptyRounds(), streak:0, seasonPts:0,
+    catchChoices:{}, catchPts:null, catchesScored:false, led:{}, predSettled:false,
+    predTruth:null, predTruthNum:null, lifelineAt:null, tally:null, sport:'', a2hs:null};
+}
+let S=freshS();
+
+/* ============ A ROOM STORE, AND WHY IT IS FILL-IN-PLACE =============
+   Every screen in this file reads S.something at call time — S.mode alone
+   appears a hundred times. Rebinding S to a different object would mean
+   touching every one of those, which is a rewrite nobody can review.
+
+   So the store holds a SNAPSHOT per room and the swap empties S and
+   refills it. The object identity never changes, so nothing downstream can
+   tell the difference, and switching rooms stops needing a page reload —
+   which is what "seamless" actually means here.
+
+   WHAT DOES NOT MOVE BETWEEN ROOMS: who you are. A handle, a colour and a
+   season total belong to the person, not to the game they happen to be
+   watching, and carrying a fresh room's blank name over them would look
+   exactly like being signed out. */
+var ROOMS = {};
+var SESSION_KEYS = ['name','color','seasonPts','sport','totalPlayers','streak'];
+
+/* WHICH ROOM AM I IN — TRACKED, NOT DERIVED. The first version keyed the
+   store on GAME.nightId, which only changes when hydration SUCCEEDS. On a
+   slow network, an unpublished room or a failed read, every snapshot went
+   to the same key and a card came back empty — measured: switch away, come
+   back, one pick became zero. The room you are in is a fact this app
+   decides, so it stores it rather than inferring it from something that
+   might not have happened yet. */
+var ACTIVE_ROOM = null;
+try{ ACTIVE_ROOM = (typeof GAME!=='undefined' && GAME) ? GAME.nightId : null; }catch(_){}
+
+function roomSnapshot(id){
+  if(!id) return;
+  try{ ROOMS[id] = JSON.parse(JSON.stringify(S)); }catch(_){}
+}
+function roomRestore(id){
+  var keep = {};
+  SESSION_KEYS.forEach(function(k){ keep[k] = S[k]; });
+  var next;
+  try{ next = ROOMS[id] ? JSON.parse(JSON.stringify(ROOMS[id])) : freshS(); }
+  catch(_){ next = freshS(); }
+  Object.keys(S).forEach(function(k){ delete S[k]; });
+  Object.assign(S, next, keep);
+}
+try{ window.ROOMS = ROOMS; window.roomSnapshot = roomSnapshot; window.roomRestore = roomRestore; }catch(_){}
 let secondsLeft=0, timerDur=15;
 // Set when the 20s clock expires on a question that is still open. It kills
 // the ⚡ bank without killing the question - see answer(null).
@@ -7477,8 +7669,18 @@ function buildPred(){
       return; }
     lockPredictions();
   };
-  /* A new question is a new screen: put it under the player's eyes. */
-  try{ if(PD.i!==PD_SHOWN){ PD_SHOWN=PD.i; predFocus(); } }catch(_){}
+  /* A new question is a new screen: put it under the player's eyes.
+
+     ON THE NEXT FRAME, and that is the whole fix. startPredict() calls
+     buildPred() and then go('predict'), and go() ends with
+     window.scrollTo(0,0). So this ran, measured a card on a screen that
+     was not active yet, scrolled — and was then wiped a line later. The
+     nudge below it has been correct code that never once took effect,
+     which is why deck.the-bar-does-not-sit-on-the-card stayed red at
+     390x664 through every attempt to fix the CSS. Nothing was wrong with
+     the layout; the scroll was being undone. */
+  try{ if(PD.i!==PD_SHOWN){ PD_SHOWN=PD.i;
+    requestAnimationFrame(function(){ try{ predFocus(); }catch(_){} }); } }catch(_){}
   const nb=c.querySelector('.pdbonus input');
   if(nb) nb.oninput=function(){ S.predChoices[p.id+'_num']=nb.value;
     const t=c.querySelector('.pdpts'); if(t) t.textContent=predRidingPts()+' pts riding'; };
@@ -14641,16 +14843,29 @@ function applySport(){
    It cannot show a game that is not tonight's: loadSlate() drops a pick
    that is not on the slate, and loadNightConfig() overwrites this with the
    real document a moment later either way. */
+/* THE LAST CONFIG THIS PHONE SAW FOR A ROOM, replayed from disk.
+   Used twice, which is why it is a function and not two copies: once at
+   boot to kill the wrong-game flash, and once when SWITCHING rooms on a
+   connection that just failed. That second caller is the one that matters
+   in a stadium. Without it a failed read left the player looking at the
+   rail highlighting the room they asked for while GAME still described the
+   room they left — the same one-fact-two-copies shape as B26. */
+window.hydrateFromCache = function(want){
+  if(!want) return false;
+  var raw=null; try{ raw=localStorage.getItem('stats_night_cfg_'+want); }catch(_){ return false; }
+  if(!raw) return false;
+  var cfg=null; try{ cfg=JSON.parse(raw); }catch(_){ return false; }
+  if(!cfg || !hydrateNight(cfg)) return false;
+  NIGHT_CFG_SOURCE='cache';
+  return true;
+};
+
 try{
   (function(){
     var want=null;
     try{ want=new URLSearchParams(location.search).get('game'); }catch(_){}
     if(!want){ try{ want=localStorage.getItem('stats_slate_pick_v1'); }catch(_){} }
-    if(!want) return;
-    var raw=null; try{ raw=localStorage.getItem('stats_night_cfg_'+want); }catch(_){}
-    if(!raw) return;
-    var cfg=null; try{ cfg=JSON.parse(raw); }catch(_){ return; }
-    if(cfg && hydrateNight(cfg)) NIGHT_CFG_SOURCE='cache';
+    hydrateFromCache(want);
   })();
 }catch(e){ try{ console.error('cached night replay failed', e); }catch(_){} }
 try{applySport();}catch(e){console.error('applySport',e);}
@@ -15037,7 +15252,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-touch.150';
+const STATS_BUILD='2026-08-18-rooms.151';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

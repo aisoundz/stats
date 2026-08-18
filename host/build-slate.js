@@ -271,7 +271,16 @@ function prettyDate(iso){
       venue: (c.venue || {}).fullName || '', net,
       date: pd.long, short: pd.short, shareDate: pd.share,
       night: `${A.team.name} @ ${H.team.name}`,
-      sport: L.sport, league: LEAGUE, slate: DATE
+      /* TWO DIFFERENT WORDS, AND THEY ARE NOT INTERCHANGEABLE.
+         `sport` is the FAMILY (basketball) — it picks the question bank and
+         the pick sheet. `path` is what ESPN answers to
+         (basketball/wnba) — it fetches the feed. They were one column, so
+         the runner was handed a family and asked ESPN for
+         /sports/basketball/summary, which 404s for every league in every
+         sport. The runner caught it, logged, slept 30s and opened no round
+         — for four hours, in silence. Both come off PATHS above, so this
+         is one fact with two names, not two facts. */
+      sport: L.sport, path: L.path, league: LEAGUE, slate: DATE
     };
 
     /* Every game is OFFERED, whoever owns it. */
@@ -328,7 +337,8 @@ function prettyDate(iso){
     /* stderr carries the human log above; stdout carries only the manifest,
        so `node build-slate.js --manifest 2>/dev/null` is safe to read. */
     games.forEach(x => process.stdout.write(
-      [x.g.nightId, x.g.espnEvent, x.g.homeNick, x.g.awayNick, x.g.tipISO, x.g.sport].join('\t') + '\n'));
+      [x.g.nightId, x.g.espnEvent, x.g.homeNick, x.g.awayNick, x.g.tipISO,
+       x.g.sport, x.g.path].join('\t') + '\n'));
   }
 
   /* THE SLATE DOCUMENT is what the app reads to offer a choice. It carries

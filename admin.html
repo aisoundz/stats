@@ -5,49 +5,145 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <title>STATS GAMETIME · Control Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Saira:wght@300;400;500;600;700&display=swap">
 <style>
   :root{
-    --bg:#0a0e17; --bg2:#111726; --card:#161d2e; --card2:#1c2438;
-    --line:#26304a; --line2:#333f5e;
-    --ink:#eef2fb; --muted:#93a0bd; --dim:#5f6d8c;
-    --blue:#2f6bff; --blue2:#4d86ff; --teal:#19c3d6; --teal2:#28e0d0;
-    --red:#ff4d5e; --gold:#ffc54d; --green:#2ee6a6;
-    --r:14px;
+    /* ============ THE CONTROL ROOM WEARS THE SAME WORLD =============
+       Same palette and the same two faces as the player app, because they
+       are one product and a host who switches between them should not feel
+       it. What it does NOT get is the arena: no team wash, no lit floor,
+       no drama. The player app is a building you stand in; this is the box
+       you watch it from, and every pixel here is a number or the state of
+       a machine. */
+    --bg:#05070d; --bg2:#080c15; --card:#0d1320; --card2:#131b2b;
+    --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.15);
+    --ink:#ffffff; --muted:#7e8ba4; --dim:#55617a;
+    --blue:#2f6bff; --blue2:#4d86ff; --teal:#3be8d8; --teal2:#3be8d8;
+    --red:#ff5468; --gold:#ffc54d; --green:#38e8a0;
+    --d:"Saira Condensed",Oswald,Impact,sans-serif;
+    --f:Saira,-apple-system,system-ui,"Segoe UI",Helvetica,Arial,sans-serif;
+    --r:13px;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{margin:0;background:var(--bg);color:var(--ink);
-    font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    padding-bottom:60px}
-  h1,h2,h3{margin:0;letter-spacing:-.02em}
+    font:15px/1.5 var(--f);
+    -webkit-font-smoothing:antialiased;padding-bottom:60px}
+  h1,h2,h3{margin:0;letter-spacing:0;font-family:var(--d);font-weight:700}
   a{color:var(--teal2)}
-  .wrap{max-width:860px;margin:0 auto;padding:0 14px}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 16px}
+  .tabnum{font-variant-numeric:tabular-nums}
 
   /* ---- header ---- */
-  header{position:sticky;top:0;z-index:20;background:rgba(10,14,23,.94);
-    backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  header{position:sticky;top:0;z-index:20;background:rgba(8,12,21,.92);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line)}
   .hrow{display:flex;align-items:center;gap:10px;padding:12px 0}
-  .logo{font-weight:900;font-size:17px;letter-spacing:-.04em}
-  .logo em{font-style:normal;color:var(--red)}
-  .tag{font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+  .logo{font-family:var(--d);font-weight:800;font-size:20px;letter-spacing:.09em;
+    text-transform:uppercase}
+  .logo em{font-style:normal;color:var(--teal)}
+  .tag{font-family:var(--d);font-size:12px;font-weight:600;letter-spacing:.2em;
+    color:var(--dim);text-transform:uppercase}
   .spacer{flex:1}
   .dot{width:9px;height:9px;border-radius:50%;background:var(--dim);flex:none}
-  .dot.on{background:var(--green);box-shadow:0 0 9px var(--green)}
+  .dot.on{background:var(--green);box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 22%,transparent);
+    animation:beat 2.4s ease-in-out infinite}
+  @keyframes beat{0%,100%{opacity:1}50%{opacity:.4}}
   .dot.err{background:var(--red)}
   .who{font-size:12px;color:var(--muted);font-weight:700;max-width:150px;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
   /* ---- tabs ---- */
-  nav{display:flex;gap:6px;padding:0 0 10px}
-  nav button{flex:1;background:var(--card);border:1px solid var(--line);color:var(--muted);
-    font-weight:800;font-size:12px;line-height:1;letter-spacing:.06em;text-transform:uppercase;
-    padding:11px 6px;border-radius:10px;cursor:pointer}
-  nav button.on{background:var(--blue);border-color:var(--blue2);color:#fff}
+  nav{display:flex;gap:5px;padding:0 0 12px;overflow-x:auto;scrollbar-width:none}
+  nav::-webkit-scrollbar{display:none}
+  nav button{flex:1 0 auto;background:transparent;border:1px solid var(--line);color:var(--muted);
+    font-family:var(--d);font-weight:700;font-size:12px;line-height:1;letter-spacing:.12em;
+    text-transform:uppercase;padding:11px 15px;border-radius:999px;cursor:pointer;
+    transition:color .2s,border-color .2s,background .2s;white-space:nowrap}
+  nav button:hover{color:var(--ink);border-color:var(--line2)}
+  nav button.on{background:var(--teal);border-color:var(--teal);color:#04120f}
+  nav button:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
+
+  /* ---- analytics ---- */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;
+    background:var(--line);border-radius:10px;overflow:hidden}
+  .kpi{background:var(--bg2);padding:12px}
+  .kpi b{display:block;font-family:var(--d);font-weight:800;font-size:30px;line-height:1;
+    color:var(--ink);font-variant-numeric:tabular-nums}
+  .kpi span{display:block;font-size:12px;color:var(--muted);margin-top:6px}
+  .bars{display:flex;align-items:flex-end;gap:7px;overflow-x:auto;padding-bottom:4px}
+  .bcol{flex:0 0 auto;width:46px;text-align:center;display:flex;flex-direction:column;
+    align-items:center;justify-content:flex-end}
+  .bcol i{display:block;width:100%;border-radius:3px 3px 0 0;font-style:normal}
+  .bcol b{font-family:var(--d);font-weight:700;font-size:14px;color:var(--ink);margin-top:5px;
+    font-variant-numeric:tabular-nums}
+  .bcol s{text-decoration:none;font-size:12px;color:var(--dim);letter-spacing:.06em}
+
+  /* ---- the day strip ---- */
+  .daystrip{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
+  .daystrip::-webkit-scrollbar{display:none}
+  .daybtn{flex:0 0 auto;min-width:64px;text-align:center;cursor:pointer;padding:8px 11px;
+    border-radius:11px;background:var(--bg2);border:1px solid var(--line);color:var(--muted);
+    font-family:inherit;transition:border-color .18s,color .18s,background .18s}
+  .daybtn:hover{border-color:var(--line2);color:var(--ink)}
+  .daybtn.on{background:var(--teal);border-color:var(--teal);color:#04120f}
+  .daybtn.has{border-color:var(--line2)}
+  .daybtn b{display:block;font-family:var(--d);font-weight:700;font-size:12px;letter-spacing:.12em;
+    text-transform:uppercase}
+  .daybtn s{text-decoration:none;display:block;font-family:var(--d);font-weight:800;font-size:17px;
+    margin-top:2px;font-variant-numeric:tabular-nums}
+  .daybtn i{display:block;font-style:normal;font-size:12px;margin-top:3px;opacity:.75}
+  .daygames{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:8px}
+  .gamebtn{text-align:left;cursor:pointer;padding:11px 12px;border-radius:11px;background:var(--bg2);
+    border:1px solid var(--line);color:var(--ink);font-family:inherit;
+    transition:border-color .18s,background .18s}
+  .gamebtn:hover{border-color:var(--line2)}
+  .gamebtn.on{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 10%,var(--bg2))}
+  .gamebtn .gl{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    font-family:var(--d);font-weight:700;font-size:12px;letter-spacing:.14em;color:var(--dim)}
+  .gamebtn .gn{display:block;font-family:var(--d);font-weight:700;font-size:17px;margin-top:4px}
+  .gamebtn .gn s{text-decoration:none;color:var(--dim);font-weight:600;font-size:14px}
+  .gamebtn .gt{display:block;font-size:12px;color:var(--muted);margin-top:3px}
+  .gamebtn .star{color:var(--gold)}
+  .adv{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  .adv summary{cursor:pointer;font-size:14px;color:var(--dim);list-style:none}
+  .adv summary::-webkit-details-marker{display:none}
+  .adv summary:before{content:"▸ ";color:var(--dim)}
+  .adv[open] summary:before{content:"▾ "}
+
+  /* ---- the rooms board ---- */
+  .roomsgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:9px}
+  .roomcard{text-align:left;cursor:pointer;padding:12px;border-radius:12px;
+    background:var(--bg2);border:1px solid var(--line);color:var(--ink);
+    font-family:inherit;font-size:14px;display:block;width:100%;
+    transition:border-color .18s,background .18s}
+  .roomcard:hover{border-color:var(--line2)}
+  .roomcard.on{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 9%,var(--bg2))}
+  .roomcard:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  .rc-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+  .rc-lg{font-family:var(--d);font-weight:700;font-size:12px;letter-spacing:.16em;color:var(--dim)}
+  .rc-chip{font-family:var(--d);font-weight:700;font-size:12px;letter-spacing:.1em;
+    text-transform:uppercase;padding:2px 8px;border-radius:999px;white-space:nowrap;
+    border:1px solid var(--line2);color:var(--muted)}
+  .rc-chip.live{background:var(--red);border-color:var(--red);color:#fff}
+  .rc-chip.err{color:var(--red);border-color:color-mix(in srgb,var(--red) 50%,transparent)}
+  .rc-name{display:block;font-family:var(--d);font-weight:700;font-size:17px;color:var(--ink)}
+  .rc-name s{text-decoration:none;color:var(--dim);font-weight:600;font-size:14px}
+  .rc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+    border-radius:9px;overflow:hidden;margin-top:10px}
+  .rc-grid b{background:var(--card);padding:8px 4px;text-align:center;display:block;
+    font-family:var(--d);font-weight:700;font-size:15px;color:var(--ink);
+    font-variant-numeric:tabular-nums}
+  .rc-grid i{display:block;font-style:normal;font-family:var(--f);font-weight:400;
+    font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-top:3px}
 
   /* ---- blocks ---- */
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
-    padding:14px;margin:0 0 12px}
+    padding:15px;margin:0 0 11px}
   .card.tight{padding:11px}
-  .card h3{font-size:14px;margin-bottom:4px}
+  .card h3{font-family:var(--d);font-size:12px;font-weight:700;letter-spacing:.15em;
+    text-transform:uppercase;color:var(--dim);margin-bottom:6px}
   .sub{color:var(--muted);font-size:14px;margin:4px 0 0}
   .sub.tip{color:var(--dim);font-size:12px}
   label{display:block;font-size:12px;font-weight:800;letter-spacing:.1em;
@@ -228,6 +324,7 @@
         <button data-tab="grade">3 · Grade</button>
         <button data-tab="room">4 · Room</button>
         <button data-tab="auto">5 · Auto</button>
+        <button data-tab="stats">◷ Analytics</button>
       </nav>
     </div>
   </header>
@@ -255,15 +352,47 @@
     </section>
 
     <!-- ---------- TAB 1: WRITE ---------- -->
+    <!-- ---------- ANALYTICS ----------
+         Counted on demand, never guessed. Everything here is read from
+         Firestore when you open it — roughly fifty reads for the whole
+         history — and a number the system does not measure is shown as
+         absent rather than as a plausible figure. A control room that
+         guesses is worse than one that admits a gap. -->
+    <section id="t-stats" class="hide">
+      <div class="card">
+        <h3>The history</h3>
+        <p class="sub tip" style="margin:0 0 10px">Counted from the rooms themselves. Nothing here is estimated.</p>
+        <button class="btn" id="statsLoad">Count it</button>
+      </div>
+      <div id="statsBody"></div>
+    </section>
+
     <section id="t-write" class="hide">
       <div class="card">
         <h3>Tonight's game</h3>
         <p class="sub">Everything below is written into this room. Players who opened a different night can't see it.</p>
         <label for="nightSel">Night</label>
-        <select id="nightSel"></select>
-        <label for="nightId">Night ID (must match the app exactly)</label>
-        <input id="nightId" spellcheck="false" autocapitalize="off">
-        <p class="sub tip">The app sends players to this ID automatically. Only change it if you know you changed it in the app too.</p>
+        <!-- ============ PICK A DAY, THEN A GAME =====================
+             A <select> was right when there was one game a week. It is the
+             wrong control for a list that grows every night: fifteen
+             entries today, hundreds by November, and tonight at the bottom
+             of a scroll. Founder: "maybe now we add a calendar that has the
+             games from each day."
+
+             So: a strip of days, then the games on that day as cards. The
+             raw night id stops being a form field with a warning attached —
+             a host should never have to read or type
+             `slate-2026-08-19-tor-wsh` — and moves behind Advanced, where
+             it is still there for the one night somebody needs it. -->
+        <div id="dayStrip" class="daystrip"></div>
+        <div id="dayGames" class="daygames"></div>
+        <select id="nightSel" class="hide" aria-hidden="true"></select>
+        <details class="adv">
+          <summary>Advanced · the raw night id</summary>
+          <label for="nightId">Night ID (must match the app exactly)</label>
+          <input id="nightId" spellcheck="false" autocapitalize="off">
+          <p class="sub tip">The app sends players to this ID automatically. Only change it if you know you changed it in the app too.</p>
+        </details>
       </div>
 
       <div class="card">
@@ -522,7 +651,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-18-admin.50-gn13';
+window.ADMIN_BUILD='2026-08-18-admin.51-slate';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -1597,7 +1726,138 @@ function toast(msg){
   const t=$('toast'); t.textContent=msg; t.classList.add('show');
   clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'), 2800);
 }
-function nightCfg(id){ return NIGHTS.find(n=>n.id===id) || NIGHTS[0]; }
+/* ============ THE CONTROL ROOM SEES EVERY ROOM, NOT ONE NIGHT =======
+   NIGHTS is a hand-written list in this file, so the Control Room could
+   only ever reach a night somebody had typed here. From this week the
+   runner creates a room for every game on the slate — and the night the
+   founder needed to reach by hand was one of those, which meant the one
+   tool for taking over a room could not see the room.
+
+   Slate rooms are merged into the SAME list, in the SAME shape, so every
+   tab that already works — Write, Run, Grade, Room, Auto — works on them
+   with no further change. A hand-written night always wins on id: it has a
+   human's questions in it and a template does not. */
+let SLATE_ROOMS = [];
+
+function slateToNight(g){
+  const T = TEMPLATES[g.sport] || TEMPLATES.basketball;
+  return {
+    id: g.nightId,
+    label: `${g.away} @ ${g.home} — ${String(g.league||'').toUpperCase()} · from the slate`,
+    away: g.awayAbbr || g.away, home: g.homeAbbr || g.home,
+    espn: String(g.espnEvent||''),
+    tags: (T.tags||[]).slice(), names: (T.names||[]).slice(), worth: (T.worth||[]).slice(),
+    periods: (T.periods||[]).slice(),
+    fromSlate: true, tipISO: g.tipISO || '', league: g.league || '', sport: g.sport || 'basketball',
+    /* The nicknames, kept because a template bank substitutes them — the
+       same two words publish.js puts in. Without these the Write and Grade
+       tabs would show {HOME} to a host. */
+    homeNick: g.home || g.homeAbbr || '', awayNick: g.away || g.awayAbbr || ''
+  };
+}
+
+/* ============ THE DAY STRIP ========================================
+   A night has a DATE, and every id in this product carries it — gn13-
+   2026-08-19-min-gs, slate-2026-08-19-tor-wsh. So the date is already the
+   organising fact; the dropdown just never used it. */
+function nightDate(n){
+  const m = String(n.id||'').match(/(\d{4}-\d{2}-\d{2})/);
+  if(m) return m[1];
+  if(n.tipISO) return String(n.tipISO).slice(0,10);
+  return '';
+}
+let DAY_SEL = null;
+
+function paintDayStrip(){
+  const strip = $('dayStrip'), grid = $('dayGames');
+  if(!strip || !grid) return;
+  const all = allNights();
+  const byDay = {};
+  all.forEach(n=>{ const d=nightDate(n); if(!d) return; (byDay[d]=byDay[d]||[]).push(n); });
+
+  /* The days worth offering: everything that has a game, plus today and
+     tomorrow even when empty, because "nothing on" is an answer a host
+     needs and an absent button cannot give it. */
+  const today = new Date().toLocaleDateString('en-CA');
+  const tomorrow = new Date(Date.now()+86400000).toLocaleDateString('en-CA');
+  const days = [...new Set(Object.keys(byDay).concat([today, tomorrow]))].sort();
+
+  if(!DAY_SEL){
+    const cur = nightDate(nightCfg(night));
+    DAY_SEL = (cur && days.includes(cur)) ? cur : (byDay[today] ? today : (days.find(d=>d>=today) || days[days.length-1]));
+  }
+
+  const D=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  strip.innerHTML = days.map(d=>{
+    const dt = new Date(d+'T12:00:00');
+    const n = (byDay[d]||[]).length;
+    const label = d===today ? 'Today' : (d===tomorrow ? 'Tomorrow' : D[dt.getDay()]);
+    return '<button type="button" class="daybtn'+(d===DAY_SEL?' on':'')+(n?' has':'')+'" data-day="'+esc(d)+'">'
+      + '<b>'+esc(label)+'</b><s>'+dt.getDate()+'</s>'
+      + '<i>'+(n? n+(n===1?' game':' games') : '—')+'</i></button>';
+  }).join('');
+
+  const games = (byDay[DAY_SEL]||[]);
+  grid.innerHTML = games.length
+    ? games.map(n=>{
+        const flag = !n.fromSlate;
+        const gn = String(n.id||'').match(/^gn(\d+)/i);
+        return '<button type="button" class="gamebtn'+(n.id===night?' on':'')+'" data-night="'+esc(n.id)+'">'
+          + '<span class="gl"><span>'+esc(String(n.league||'wnba').toUpperCase())+'</span>'
+          +   (gn ? '<span class="star">Game Night #'+gn[1]+'</span>' : '') + '</span>'
+          + '<span class="gn">'+esc(n.away||'')+' <s>at</s> '+esc(n.home||'')+'</span>'
+          + '<span class="gt">'+(flag ? 'hand-written bank' : 'from the slate · template bank')+'</span>'
+          + '</button>';
+      }).join('')
+    : '<p class="sub tip" style="margin:0">No games built for this day. The slate is built each morning at 08:10.</p>';
+}
+try{
+  document.addEventListener('click', function(e){
+    const d = e.target && e.target.closest ? e.target.closest('[data-day]') : null;
+    if(d){ DAY_SEL = d.getAttribute('data-day'); paintDayStrip(); return; }
+    const g = e.target && e.target.closest ? e.target.closest('[data-night]') : null;
+    if(!g) return;
+    const id = g.getAttribute('data-night');
+    if(!id || id===night) return;
+    night = id;
+    try{ const ns=$('nightSel'); if(ns) ns.value=id; }catch(_){}
+    try{ const ni=$('nightId'); if(ni) ni.value=id; }catch(_){}
+    onNightChange();
+    paintDayStrip();
+  }, false);
+}catch(_){}
+
+/* Every room the Control Room can act on tonight. */
+function allNights(){
+  const have = new Set(NIGHTS.map(n=>n.id));
+  return NIGHTS.concat(SLATE_ROOMS.filter(r=>!have.has(r.id)));
+}
+
+async function loadSlateRooms(){
+  try{
+    /* F AND db ARE NOT GLOBALS IN THIS FILE. They live on FB — every other
+       Firestore caller here starts with `var F=FB.F, db=FB.db;` and I did
+       not, so this threw ReferenceError on every boot, caught its own
+       error, returned false, and the slate rooms silently never appeared in
+       the picker. The founder looked at a one-game dropdown three times
+       while being told it had two. Nothing but running it would have
+       shown this. */
+    const F = FB.F, db = FB.db;
+    const cur = await F.getDoc(F.doc(db,'slate','current'));
+    if(!cur.exists()) return false;
+    const date = (cur.data()||{}).date; if(!date) return false;
+    const snap = await F.getDoc(F.doc(db,'slate',date));
+    if(!snap.exists()) return false;
+    const games = (snap.data()||{}).games || [];
+    SLATE_ROOMS = games.filter(g=>g&&g.nightId).map(slateToNight);
+    return SLATE_ROOMS.length > 0;
+  }catch(e){
+    try{ console.error('could not read tonight\'s slate:', e); }catch(_){}
+    return false;
+  }
+}
+
+function nightCfg(id){ return allNights().find(n=>n.id===id) || NIGHTS[0]; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function saveDraft(){ try{ localStorage.setItem(LS, JSON.stringify(draft)); }catch(e){} }
 function loadDraft(){
@@ -1631,7 +1891,29 @@ function loadDraft(){
    One fact, many copies, again: BANK owns the resolver, the draft was a
    copy of BANK, and the copy was lossy. Carry it. */
 function bankRound(id, i){
-  const rs = BANK[id];
+  let rs = BANK[id];
+  /* ============ A SLATE ROOM HAS A BANK, JUST NOT IN HERE ============
+     BANK is hand-written and keyed by night id, so a room the runner
+     created had no entry — and Write and Grade showed "0 QUESTIONS" over a
+     room with sixteen questions and an overtime template already published
+     to it. A host who needed to grade that room by hand would have found an
+     empty screen and no reason for it.
+
+     Fall back to the sport's TEMPLATE and substitute the two team words,
+     which is exactly what publish.js does. Same source, same questions —
+     not a second copy, which is the bug this codebase is organised
+     against. */
+  if(!rs){
+    const cfg = (typeof SLATE_ROOMS!=='undefined') ? SLATE_ROOMS.find(r=>r.id===id) : null;
+    if(cfg){
+      const T = TEMPLATES[cfg.sport] || TEMPLATES.basketball;
+      if(T && T.rounds){
+        const swap = v => String(v).replace(/\{HOME\}/g, cfg.homeNick||cfg.home||'Home')
+                                   .replace(/\{AWAY\}/g, cfg.awayNick||cfg.away||'Away');
+        rs = T.rounds.map(rd => rd.map(q => ({ t:swap(q.t), o:(q.o||[]).map(swap), r:q.r })));
+      }
+    }
+  }
   if(!rs || !rs[i]) return [];
   return rs[i].map(q => ({ t:String(q.t||''), o:(q.o||[]).map(String), r:String(q.r||''), k:null }));
 }
@@ -1649,13 +1931,29 @@ function bankRound(id, i){
 function resolverFor(id, i, x, q){
   try{
     if(q && q.r) return String(q.r);
-    var b = (BANK[id]||[])[i]||[];
+    /* Same fallback as bankRound — a template round whose resolver could
+       not be recovered would publish and then void every question. */
+    var b = (BANK[id] || bankRoundSource(id) || [])[i] || [];
     var bq = b[x];
     if(!bq || !bq.r) return '';
     if(String(bq.t||'').trim() !== String((q&&q.t)||'').trim()) return '';
     return String(bq.r);
   }catch(_){ return ''; }
 }
+/* The template rounds for a slate room, in BANK's shape. One place, used
+   by both bankRound() and resolverFor(). */
+function bankRoundSource(id){
+  try{
+    const cfg = (typeof SLATE_ROOMS!=='undefined') ? SLATE_ROOMS.find(r=>r.id===id) : null;
+    if(!cfg) return null;
+    const T = TEMPLATES[cfg.sport] || TEMPLATES.basketball;
+    if(!T || !T.rounds) return null;
+    const swap = v => String(v).replace(/\{HOME\}/g, cfg.homeNick||cfg.home||'Home')
+                               .replace(/\{AWAY\}/g, cfg.awayNick||cfg.away||'Away');
+    return T.rounds.map(rd => rd.map(q => ({ t:swap(q.t), o:(q.o||[]).map(swap), r:q.r })));
+  }catch(_){ return null; }
+}
+
 /* A fingerprint of a round's question TEXT. Options and answer keys are
    deliberately excluded: the host marking an answer is not an edit to the
    questions, and it must not stop a question-set update from landing. */
@@ -1870,6 +2168,24 @@ function onAuth(u){
   $('whoTxt').textContent = u.email;
   $('beDot').className = 'dot on';
   initUI();
+  /* The extra rooms arrive a moment later and repaint the picker. */
+  loadSlateIntoPicker();
+  try{
+    const sb = $('statsLoad');
+    if(sb) sb.onclick = async () => {
+      sb.disabled = true; sb.textContent = 'Counting…';
+      try{ STATS_CACHE = await countHistory(); renderStatsTab(); sb.textContent = 'Count it again'; }
+      catch(e){ toast('Could not count: '+e.message); sb.textContent = 'Count it'; }
+      sb.disabled = false;
+    };
+  }catch(_){}
+  /* Poll every room's state while this screen exists. Twenty seconds is the
+     runner's own tick; faster tells you nothing new and costs reads. */
+  try{
+    pollRooms();
+    if(roomPollT) clearInterval(roomPollT);
+    roomPollT = setInterval(function(){ try{ pollRooms(); }catch(_){} }, 20000);
+  }catch(_){}
 }
 
 $('signinBtn').onclick = async () => {
@@ -1890,7 +2206,16 @@ function initUI(){
   uiReady = true;
 
   const ns = $('nightSel');
-  ns.innerHTML = NIGHTS.map(n=>`<option value="${esc(n.id)}">${esc(n.label)}</option>`).join('');
+  /* Rendered from allNights() and repainted once the slate lands, because
+     the slate is a network read and this runs before it. */
+  const paintNightSel = () => {
+    const keep = ns.value || night;
+    ns.innerHTML = allNights().map(n=>`<option value="${esc(n.id)}">${esc(n.label)}</option>`).join('');
+    if(keep && allNights().some(n=>n.id===keep)) ns.value = keep;
+  };
+  window.paintNightSel = paintNightSel;
+  paintNightSel();
+  try{ paintDayStrip(); }catch(_){}
   ns.onchange = () => { night = ns.value; $('nightId').value = night; onNightChange(); };
   $('nightId').value = night;
   $('nightId').onchange = () => { night = $('nightId').value.trim() || night; onNightChange(); };
@@ -1953,7 +2278,103 @@ function initUI(){
   onNightChange();
 }
 
+/* Read the slate as soon as the database is up, then repaint the picker.
+   Deliberately not awaited into boot's critical path: a slow read must
+   delay the extra rooms appearing, never the Control Room opening. */
+function loadSlateIntoPicker(){
+  try{
+    loadSlateRooms().then(function(ok){
+      if(!ok) return;
+      try{ window.paintNightSel && window.paintNightSel(); }catch(_){}
+      try{ DAY_SEL=null; paintDayStrip(); }catch(_){}
+      try{ toast(SLATE_ROOMS.length + ' room(s) from tonight\'s slate are in the picker'); }catch(_){}
+    }).catch(function(){});
+  }catch(_){}
+}
+
+/* One delegated listener, bound once. */
+try{
+  document.addEventListener('click', function(e){
+    const b = e.target && e.target.closest ? e.target.closest('[data-room]') : null;
+    if(!b) return;
+    const id = b.getAttribute('data-room');
+    if(!id || id === night) return;
+    night = id;
+    try{ const ns=$('nightSel'); if(ns) ns.value=id; }catch(_){}
+    try{ const ni=$('nightId'); if(ni) ni.value=id; }catch(_){}
+    onNightChange();
+  }, false);
+}catch(_){}
+
+/* ============ ANALYTICS, COUNTED ====================================
+   Reads every night's players subcollection once. ~50 reads for the whole
+   history, on a button, because a screen that costs reads every time
+   somebody glances at it is a screen that gets switched off. */
+let STATS_CACHE = null;
+
+async function countHistory(){
+  const F = FB.F, db = FB.db;
+  const nights = await F.getDocs(F.collection(db,'nights'));
+  const rows = [], everyone = new Map();
+  for(const n of nights.docs){
+    const pl = await F.getDocs(F.collection(db,'nights',n.id,'players'));
+    pl.forEach(d=>{ everyone.set(d.id, (everyone.get(d.id)||0)+1); });
+    rows.push({ id:n.id, seats:pl.size });
+  }
+  let signups = 0;
+  try{ signups = (await F.getCountFromServer(F.collection(db,'signups'))).data().count; }catch(_){}
+  rows.sort((a,b)=>a.id.localeCompare(b.id, undefined, {numeric:true}));
+  const seatTotal = rows.reduce((a,r)=>a+r.seats,0);
+  const humans = everyone.size;
+  const repeat = [...everyone.values()].filter(v=>v>1).length;
+  const loyal  = [...everyone.values()].filter(v=>v>=5).length;
+  return { rows, humans, seatTotal, signups, repeat, loyal,
+           perHuman: humans ? (seatTotal/humans) : 0 };
+}
+
+function renderStatsTab(){
+  const el = $('statsBody'); if(!el) return;
+  const S = STATS_CACHE;
+  if(!S){ el.innerHTML = ''; return; }
+  const max = Math.max(1, ...S.rows.map(r=>r.seats));
+  const bars = S.rows.map(r=>{
+    const h = Math.round(96 * r.seats / max);
+    const peak = r.seats === max;
+    return '<span class="bcol" title="'+esc(r.id)+' · '+r.seats+' seats">'
+      + '<i style="height:'+h+'px;background:'+(peak?'var(--gold)':'var(--blue2)')+'"></i>'
+      + '<b>'+r.seats+'</b><s>'+esc(r.id.split('-')[0].toUpperCase())+'</s></span>';
+  }).join('');
+
+  el.innerHTML =
+    '<div class="card"><h3>What is counted</h3>'
+    + '<div class="kpis">'
+    +   '<div class="kpi"><b>'+S.humans+'</b><span>humans, ever</span></div>'
+    +   '<div class="kpi"><b>'+S.perHuman.toFixed(1)+'</b><span>nights per human</span></div>'
+    +   '<div class="kpi"><b>'+S.loyal+'</b><span>played five or more</span></div>'
+    +   '<div class="kpi"><b>'+S.signups+'</b><span>emails, ever</span></div>'
+    + '</div>'
+    + '<p class="sub" style="margin-top:11px">'+S.seatTotal+' seats across '+S.rows.length
+    +   ' recorded nights. <b>'+S.repeat+' of '+S.humans+' came back for a second night</b> — with no '
+    +   'reminders, no streaks and no notifications. That is the half that is hard to buy.</p></div>'
+
+    + '<div class="card"><h3>Seats per night</h3>'
+    + '<p class="sub tip" style="margin:0 0 12px">The line that has never moved. Round completion went '
+    +   'from 42% to 100% across the same period.</p>'
+    + '<div class="bars">'+bars+'</div></div>'
+
+    + '<div class="card"><h3>Measured nowhere</h3>'
+    + '<p class="sub"><b>Minutes with the app open</b> — the metric this product\u2019s whole positioning '
+    +   'rests on — is not instrumented. Neither is follower count. They are absent here rather than '
+    +   'estimated, because a control room that shows a plausible number is lying.</p></div>';
+}
+
+/* Hand Caught It back before anything else re-points at the new room. */
+const _onNightChange_pre = function(newNight){
+  try{ if(typeof CI!=='undefined' && CI.handOver) CI.handOver(newNight); }catch(_){}
+};
+
 function onNightChange(){
+  try{ _onNightChange_pre(night); }catch(_){}
   const cfg = nightCfg(night);
   nightDraft(night);
   /* Wire the reset here rather than at boot: this runs on every night
@@ -2184,9 +2605,102 @@ function tonightAgo(ms){
   return Math.round(s/60) + 'm ago';
 }
 
+/* ============ THE ROOMS BOARD =======================================
+   Tonight used to answer "is the robot alive" about ONE night, because a
+   night was one game. It is now every game the league is playing, and the
+   first question a host has is not about a room — it is WHICH ROOM.
+
+   So the board goes on top: every room on tonight's slate, its state, its
+   seats and how far through it is. Clicking one selects it, and everything
+   below — and every other tab — follows. Deliberately five facts per room
+   and no buttons: the buttons live under the room you have selected, so
+   there is exactly one place to press anything.
+
+   State is polled, not watched. Six live listeners for a screen nobody has
+   open most of the night is a cost with no reader; one read per room every
+   twenty seconds is not. */
+let ROOM_STATE = {};
+let roomPollT = null;
+
+async function pollRooms(){
+  const F = FB.F, db = FB.db;
+  if(!F || !db) return;
+  const rooms = tonightRooms();
+  for(const r of rooms){
+    try{
+      const nd = await F.getDoc(F.doc(db,'nights',r.id));
+      if(!nd.exists()){ ROOM_STATE[r.id] = {exists:false}; continue; }
+      const d = nd.data() || {};
+      const sc = d.score || {};
+      const at = (d.host && d.host.at && d.host.at.toMillis) ? d.host.at.toMillis() : 0;
+      const [pl, rd] = await Promise.all([
+        F.getCountFromServer(F.collection(db,'nights',r.id,'players')),
+        F.getDocs(F.collection(db,'nights',r.id,'rounds'))
+      ]);
+      let scored=0, live=0;
+      rd.forEach(x=>{ const v=x.data()||{}; if(v.state==='scored') scored++; if(v.state==='live') live++; });
+      ROOM_STATE[r.id] = { exists:true, seats:pl.data().count, scored, live, total:rd.size,
+                           beat: at ? Date.now()-at : null,
+                           period: sc.period || '', away: sc.away, home: sc.home };
+    }catch(e){ ROOM_STATE[r.id] = {err:String(e.message).slice(0,40)}; }
+  }
+  try{ renderTonight(); }catch(_){}
+}
+
+/* Every room playable tonight: the slate, plus the hand-written night the
+   Control Room opened on if it is not already in it. */
+function tonightRooms(){
+  const out = SLATE_ROOMS.slice();
+  if(!out.some(r=>r.id===night)){
+    const c = nightCfg(night);
+    /* A hand-written NIGHTS entry carries no league field — every one so
+       far has been WNBA — so fall back to the sport's template rather than
+       printing an empty chip. */
+    if(c) out.unshift({ id:c.id, label:c.label, away:c.away, home:c.home,
+                        league: c.league || (TEMPLATES[c.sport||'basketball']||{}).league || 'wnba',
+                        flagship:true });
+  }
+  return out;
+}
+
+function roomsBoard(){
+  const rooms = tonightRooms();
+  if(rooms.length < 2) return '';       // one room is not a board
+  const cards = rooms.map(r=>{
+    const st = ROOM_STATE[r.id] || {};
+    const on = (r.id === night);
+    let chip='idle', word='not started';
+    /* A FINISHED NIGHT IS NOT A BROKEN ONE. The runner stops beating at the
+       buzzer, on purpose — so "no heartbeat" means an alarm only while the
+       night still has rounds to score. Getting this order wrong would put a
+       red RUNNER SILENT on every room that completed perfectly, which is
+       the fastest way to teach a host to ignore the colour. */
+    const done = st.exists && st.total>0 && st.scored>=st.total;
+    if(st.err){ chip='err'; word='read failed'; }
+    else if(!st.exists){ chip='idle'; word='not created'; }
+    else if(done){ chip='idle'; word='final · ' + st.scored + ' scored'; }
+    else if(st.beat!=null && st.beat < 90000){ chip='live'; word = st.period || 'hosting'; }
+    else if(st.beat!=null){ chip='err'; word='runner silent'; }
+    const seats = st.exists ? st.seats : '—';
+    const rounds = st.exists ? (st.scored + '/' + (st.total||0) + (st.live?' open':'')) : '—';
+    const score = (st.away!=null && st.home!=null) ? (st.away+'–'+st.home) : '';
+    return '<button type="button" class="roomcard'+(on?' on':'')+'" data-room="'+esc(r.id)+'">'
+      + '<span class="rc-top"><span class="rc-lg">'+esc(String(r.league||'').toUpperCase())+'</span>'
+      +   '<span class="rc-chip '+chip+'">'+esc(word)+'</span></span>'
+      + '<span class="rc-name">'+esc(r.away||'')+' <s>at</s> '+esc(r.home||'')+'</span>'
+      + '<span class="rc-grid"><b>'+esc(String(seats))+'<i>seats</i></b>'
+      +   '<b>'+esc(String(rounds))+'<i>rounds</i></b>'
+      +   '<b>'+esc(score||'—')+'<i>score</i></b></span>'
+      + '</button>';
+  }).join('');
+  return '<div class="card"><h3>Tonight\u2019s rooms</h3>'
+       + '<p class="sub tip" style="margin:0 0 10px">Pick one. Every tab, and every button below, follows it.</p>'
+       + '<div class="roomsgrid">'+cards+'</div></div>';
+}
+
 function renderTonight(){
   const el = $('tonightBody'); if(!el) return;
-  let html = '';
+  let html = roomsBoard();
   try{
     const cfg = nightCfg(night);
     const h   = (tonightDoc && tonightDoc.host)  || null;
@@ -4666,8 +5180,37 @@ function lockMsFor(kind){
   CI.teamName = function(id,T){ return String(id)===String(T.homeId)?T.homeName:(String(id)===String(T.awayId)?T.awayName:'They'); };
   CI.curPeriod = function(plays){ var m=1; plays.forEach(function(p){ var n=(p.period&&p.period.number)||0; if(n>m)m=n; }); return m; };
 
+  /* ============ CAUGHT IT BELONGS TO ONE ROOM AT A TIME ==============
+     CI.on is a single boolean and CI.tick rides the single ESPN poll for
+     the SELECTED night, so one Control Room tab can only ever host Caught
+     It for one room. That is a real limit and it is fine — what is not
+     fine is what used to happen when you switched rooms with it on:
+     `callit:true` stayed written on the room you left, so every phone in
+     it kept watching for questions that were never coming again, while
+     CI.on quietly started firing into the new room instead.
+
+     So switching rooms now hands it over properly: off for the room you
+     left, and told plainly. Running BOTH rooms at once needs either a
+     second browser tab on the other night, or Caught It moved into the
+     runner — which is the Thursday job. */
+  CI.owner = null;             // the night Caught It is actually hosting
+
+  CI.handOver = async function(newNight){
+    if(!CI.on || !CI.owner || CI.owner === newNight) { CI.owner = CI.on ? newNight : null; return; }
+    const leaving = CI.owner;
+    try{ if(CI.openQid) await CI.voidQ(CI.openQid, 'the host moved to another room'); }catch(e){}
+    CI.openQid = null; CI.pending = null;
+    try{ clearTimeout(CI.relT); }catch(e){}
+    try{ await FB.F.setDoc(FB.F.doc(FB.db,'nights',leaving), { callit:false }, {merge:true}); }catch(e){}
+    CI.on = false; CI.owner = null;
+    try{ const b=$('ciBtn'); if(b){ b.textContent='▶ Call It: OFF'; b.className='btn ghost'; } }catch(e){}
+    try{ CI.setState('off — handed back when you left that room'); }catch(e){}
+    try{ toast('Caught It was switched off for the room you left. Turn it on here to host it in this one.'); }catch(e){}
+  };
+
   CI.setOn = async function(on){
     CI.on = !!on;
+    CI.owner = CI.on ? night : null;
     var b=$('ciBtn'); if(b){ b.textContent = CI.on?'⏸ Call It: ON':'▶ Call It: OFF'; b.className = CI.on?'btn':'btn ghost'; b.style.flex='0 0 auto'; }
     CI.setState(CI.on?'armed — watching the feed':'off');
     try{ await FB.F.setDoc(FB.F.doc(FB.db,'nights',night), { callit: CI.on }, {merge:true}); }catch(e){}
