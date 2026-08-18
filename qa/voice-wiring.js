@@ -20,7 +20,13 @@
        node qa/voice-wiring.js [index.html]
    ================================================================== */
 const {chromium}=require('playwright'); const path=require('path');
-const TARGET=process.argv[2]||path.resolve(__dirname,'..','index.html');
+/* RESOLVE IT. A bare filename ("index-marquee.html") became
+   file://index-marquee.html/ — a HOST, not a path — and Playwright threw
+   something that reads like a browser fault rather than a typo. Caught by
+   the other session running this against its own build. A tool that only
+   works when you happen to type an absolute path is a tool with a trap in
+   it, and the person who trips it wastes their time on the wrong layer. */
+const TARGET=path.resolve(process.argv[2]||path.join(__dirname,'..','index.html'));
 const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=function(){}; this.abort=function(){}; }`;
 (async()=>{
   const b=await chromium.launch(); const p=await b.newPage();

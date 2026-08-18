@@ -9,7 +9,7 @@ const P=require('path');
    report the OLD matcher's results against the NEW test cases — eleven
    red lines describing code that had already been replaced. Two files,
    one fact, and the suite testing the stale copy. */
-const TARGET=process.argv[2]||P.resolve(__dirname,'..','index.html');
+const TARGET=P.resolve(process.argv[2]||P.join(__dirname,'..','index.html'));  // bare names too
 const src=fs.readFileSync(TARGET,'utf8');
 const a=src.indexOf('var VX=(function(){'), b=src.indexOf('try{ window.VX=VX; }catch(_){}');
 if(a<0||b<0) throw new Error('VX block not found in '+TARGET);
