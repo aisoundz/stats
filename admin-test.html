@@ -2246,7 +2246,13 @@ function renderStatsTab(){
     +   'estimated, because a control room that shows a plausible number is lying.</p></div>';
 }
 
+/* Hand Caught It back before anything else re-points at the new room. */
+const _onNightChange_pre = function(newNight){
+  try{ if(typeof CI!=='undefined' && CI.handOver) CI.handOver(newNight); }catch(_){}
+};
+
 function onNightChange(){
+  try{ _onNightChange_pre(night); }catch(_){}
   const cfg = nightCfg(night);
   nightDraft(night);
   /* Wire the reset here rather than at boot: this runs on every night
@@ -5052,8 +5058,37 @@ function lockMsFor(kind){
   CI.teamName = function(id,T){ return String(id)===String(T.homeId)?T.homeName:(String(id)===String(T.awayId)?T.awayName:'They'); };
   CI.curPeriod = function(plays){ var m=1; plays.forEach(function(p){ var n=(p.period&&p.period.number)||0; if(n>m)m=n; }); return m; };
 
+  /* ============ CAUGHT IT BELONGS TO ONE ROOM AT A TIME ==============
+     CI.on is a single boolean and CI.tick rides the single ESPN poll for
+     the SELECTED night, so one Control Room tab can only ever host Caught
+     It for one room. That is a real limit and it is fine — what is not
+     fine is what used to happen when you switched rooms with it on:
+     `callit:true` stayed written on the room you left, so every phone in
+     it kept watching for questions that were never coming again, while
+     CI.on quietly started firing into the new room instead.
+
+     So switching rooms now hands it over properly: off for the room you
+     left, and told plainly. Running BOTH rooms at once needs either a
+     second browser tab on the other night, or Caught It moved into the
+     runner — which is the Thursday job. */
+  CI.owner = null;             // the night Caught It is actually hosting
+
+  CI.handOver = async function(newNight){
+    if(!CI.on || !CI.owner || CI.owner === newNight) { CI.owner = CI.on ? newNight : null; return; }
+    const leaving = CI.owner;
+    try{ if(CI.openQid) await CI.voidQ(CI.openQid, 'the host moved to another room'); }catch(e){}
+    CI.openQid = null; CI.pending = null;
+    try{ clearTimeout(CI.relT); }catch(e){}
+    try{ await FB.F.setDoc(FB.F.doc(FB.db,'nights',leaving), { callit:false }, {merge:true}); }catch(e){}
+    CI.on = false; CI.owner = null;
+    try{ const b=$('ciBtn'); if(b){ b.textContent='▶ Call It: OFF'; b.className='btn ghost'; } }catch(e){}
+    try{ CI.setState('off — handed back when you left that room'); }catch(e){}
+    try{ toast('Caught It was switched off for the room you left. Turn it on here to host it in this one.'); }catch(e){}
+  };
+
   CI.setOn = async function(on){
     CI.on = !!on;
+    CI.owner = CI.on ? night : null;
     var b=$('ciBtn'); if(b){ b.textContent = CI.on?'⏸ Call It: ON':'▶ Call It: OFF'; b.className = CI.on?'btn':'btn ghost'; b.style.flex='0 0 auto'; }
     CI.setState(CI.on?'armed — watching the feed':'off');
     try{ await FB.F.setDoc(FB.F.doc(FB.db,'nights',night), { callit: CI.on }, {merge:true}); }catch(e){}
