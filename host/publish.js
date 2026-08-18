@@ -126,6 +126,7 @@ function templateCfg(TEMPLATES){
     id: NIGHT, away: away, home: home, espn: process.env.ESPN_EVENT || '',
     label: `${away} @ ${home} — from the ${sport} template`,
     tags: T.tags.slice(), names: T.names.slice(), worth: T.worth.slice(),
+    periods: (T.periods || []).slice(),
     fromTemplate: sport
   };
   return { cfg, bank: nickSubst(T.rounds, home, away) };
@@ -178,7 +179,23 @@ function buildPlan(NIGHTS, BANK, TEMPLATES){
         k
       };
     });
-    return { tag, name: (cfg.names || [])[i] || tag, worth: (cfg.worth || [])[i] || 10, qs };
+    /* WHICH PERIOD DOES THIS ROUND ASK ABOUT?
+       For basketball the answer is boring and always has been: round 1 is
+       Q1, so the runner passes the round index plus one and nobody ever had
+       to think about it. Baseball breaks that flat. A round there covers
+       THREE innings — after the 3rd, the 6th and the 9th — and mlbSpan(p)
+       reads p as the LAST inning of the span. Hand round one a period of 1
+       and it resolves against innings -1 to 1: a confident answer about the
+       first inning to a question asked about the first three.
+
+       So the period stops being derivable from position and becomes a fact
+       the sport declares. It travels ON the round, and run.js falls back to
+       index+1 when it is absent — which is every hand-written night, so
+       nothing about basketball changes. */
+    const r = { tag, name: (cfg.names || [])[i] || tag, worth: (cfg.worth || [])[i] || 10, qs };
+    const per = (cfg.periods || [])[i];
+    if(per != null) r.p = Number(per);
+    return r;
   });
 
   /* THE OVERTIME ROUND IS A TEMPLATE, NOT A REGULATION ROUND.
@@ -249,10 +266,27 @@ async function main(){
        one piece of advice, and when the advice changed only one of them
        knew — which is this codebase's whole disease, reproduced inside a
        warning about a different bug. Both now say the same thing. */
-    log('warn', `no overtime round configured for ${NIGHT}, so an overtime would be played with nothing ` +
-                `to answer. Adding 'OT' to this night's tags is now safe and is the fix — but only on ` +
-                'player build .129 or later, which is the first one that can receive a fifth round. ' +
-                'On anything earlier the round opens, scores, and reaches nobody.');
+    /* THE ADVICE HAS TO FIT THE SPORT. This sentence told every night to
+       add an 'OT' tag — correct for basketball, and wrong the moment
+       baseball started publishing fifteen nights a day, because extras are
+       not an overtime round and AUTO.isOtTag does not match 'EXTRAS'. A
+       warning that tells you to do something that will not work is worse
+       than no warning: it is a confident wrong answer about your own
+       build, which is the same failure mode this whole codebase is
+       organised against. */
+    const otKnown = { basketball:true, hockey:true, soccer:true };
+    const sport = cfg.fromTemplate || 'basketball';
+    if(otKnown[sport]){
+      log('warn', `no overtime round configured for ${NIGHT}, so an overtime would be played with nothing ` +
+                  `to answer. Adding 'OT' to this night's tags is now safe and is the fix — but only on ` +
+                  'player build .129 or later, which is the first one that can receive a fifth round. ' +
+                  'On anything earlier the round opens, scores, and reaches nobody.');
+    } else {
+      log('note', `no extra-period round for ${NIGHT}. ${sport} does not have an OT-tagged template yet — ` +
+                  'a game that runs past regulation simply has nothing more to answer, which is honest. ' +
+                  'Do not add one by tagging a round "EXTRAS": AUTO.isOtTag would not match it and it ' +
+                  'would publish as regulation and open on every game.');
+    }
   }
   if(DRY){ log('dry', `would publish ${rounds.length} rounds, ${nq} questions` +
                       (ot ? ` + an overtime template of ${ot.qs.length}` : ' and NO overtime template') +

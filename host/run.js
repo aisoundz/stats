@@ -630,7 +630,10 @@ async function main(){
           if(!everyoneIn && waited < ANSWER_MS) continue;
           if(everyoneIn) log('room', `everyone has answered ${R.tag} — closing early`);
 
-          const { key, why, voided } = resolveRound(AUTO, R, sum, i + 1, doc.earlyKey);
+          /* R.p when the plan names it — see publish.js. Absent on every
+             hand-written night, so basketball keeps index+1 exactly. */
+          const period = (R.p != null && isFinite(R.p)) ? Number(R.p) : (i + 1);
+          const { key, why, voided } = resolveRound(AUTO, R, sum, period, doc.earlyKey);
 
           /* EVERY question voided is not a round, it is a feed that never
              arrived. Scoring that would stick the whole room on zero for

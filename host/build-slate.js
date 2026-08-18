@@ -103,13 +103,18 @@ async function rosterFor(teamId){
 }
 
 /* ---- the pick sheet, generated ------------------------------------- */
-/* The six basketball categories, the same ones BB_PREDS has always had.
-   `answer` is what Practice mode pretends happened; it is not a claim about
-   a real game, and for a slate night nothing ever reads it. It is filled
-   with a real name from the sheet only so the shape matches a hand-built
-   night exactly — a config with a different SHAPE would be a second kind of
-   night, and two kinds of night is how this codebase breaks. */
-function predsFor(g, roster){
+/* `answer` is what Practice mode pretends happened. It is not a claim about
+   a real game and a slate night never reads it; it is filled only so the
+   shape matches a hand-built night exactly, because two SHAPES of night is
+   how this codebase breaks.
+
+   ONE SHEET PER SPORT, and the difference is not cosmetic. Basketball's six
+   picks name PEOPLE, which is why it needs both rosters and the grouping
+   that keeps twenty-eight names off one scroll. Baseball's name none: who
+   wins, how many runs, does it go extras. Generating "who scores the most
+   points" for a baseball game would be a pick sheet that cannot be answered
+   and a roster fetch nobody needed. */
+function predsForBasketball(g, roster){
   const field = roster.home.concat(roster.away);
   const groups = [
     { ab:g.homeAbbr, name:g.homeName, names:roster.home.slice() },
@@ -129,6 +134,90 @@ function predsFor(g, roster){
     player('blk', 'Who protects the rim most?',   'Most blocks',    2, 'How many blocks?')
   ];
 }
+
+/* Mirrors BA_PREDS in index.html: six calls, none of them a person. */
+function predsForBaseball(g){
+  return [
+    { id:'winner', q:'Who takes it?',                 label:'Winner',         base:100,
+      opts:[g.awayName, g.homeName], answer:g.homeName },
+    { id:'runs',   q:'Total runs, both teams?',       label:'Total runs',     base:100,
+      opts:['Under 8.5','Over 8.5'], answer:'Under 8.5' },
+    { id:'first',  q:'Who scores first?',             label:'First to score', base:100,
+      opts:[g.awayName, g.homeName], answer:g.homeName },
+    { id:'hr',     q:'Home runs in the game?',        label:'Home runs',      base:100,
+      opts:['None','One','Two','Three or more'], answer:'Two' },
+    { id:'ks',     q:'Which staff strikes out more?', label:'More strikeouts',base:100,
+      opts:[g.awayName, g.homeName], answer:g.homeName },
+    { id:'extras', q:'Does it go past nine?',         label:'Extra innings',  base:100,
+      opts:['Yes','No'], answer:'No' }
+  ];
+}
+
+/* Which sports need a roster at all. A sport whose sheet names nobody does
+   not get two roster fetches it will never read — and, more importantly,
+   an empty roster stops being a reason to refuse the night. */
+/* Mirrors FO_PREDS in index.html: six calls, none of them a person. */
+function predsForFootball(g){
+  return [
+    { id:'winner', q:'Who takes it?',               label:'Winner',          base:100,
+      opts:[g.awayName, g.homeName], answer:g.awayName },
+    { id:'points', q:'Total points, both teams?',   label:'Total points',    base:100,
+      opts:['Under 44.5','Over 44.5'], answer:'Over 44.5' },
+    { id:'first',  q:'First points come how?',      label:'First score',     base:100,
+      opts:['Touchdown','Field goal','Safety'], answer:'Touchdown' },
+    { id:'ground', q:'Who runs it better?',         label:'More rush yards', base:100,
+      opts:[g.awayName, g.homeName], answer:g.awayName },
+    { id:'to',     q:'Turnovers in the game?',      label:'Turnovers',       base:100,
+      opts:['None','One','Two','Three or more'], answer:'Two' },
+    { id:'lead',   q:'Does the lead change hands?', label:'Lead changes',    base:100,
+      opts:['Yes','No'], answer:'Yes' }
+  ];
+}
+
+/* Soccer's box score carries NO per-player rows at all — boxscore.teams
+   only — so soccer picks are team picks by force, not by choice. */
+function predsForSoccer(g){
+  return [
+    { id:'winner', q:'Who takes it?',                  label:'Winner',        base:100,
+      opts:[g.awayName, g.homeName, 'Draw'], answer:g.homeName },
+    { id:'goals',  q:'Total goals, both teams?',       label:'Total goals',   base:100,
+      opts:['Under 2.5','Over 2.5'], answer:'Over 2.5' },
+    { id:'first',  q:'Who scores first?',              label:'First goal',    base:100,
+      opts:[g.awayName, g.homeName, 'Nobody'], answer:g.homeName },
+    { id:'cards',  q:'Cards shown in the match?',      label:'Cards',         base:100,
+      opts:['None','One','Two or three','Four or more'], answer:'Two or three' },
+    { id:'poss',   q:'Who keeps more of the ball?',    label:'Possession',    base:100,
+      opts:[g.awayName, g.homeName], answer:g.homeName },
+    { id:'clean',  q:'Does either side keep a clean sheet?', label:'Clean sheet', base:100,
+      opts:['Yes','No'], answer:'No' }
+  ];
+}
+
+/* Mirrors HO_PREDS in index.html. */
+function predsForHockey(g){
+  return [
+    { id:'winner', q:'Who takes it?',            label:'Winner',      base:100,
+      opts:[g.awayName, g.homeName], answer:g.awayName },
+    { id:'goals',  q:'Total goals, both teams?', label:'Total goals', base:100,
+      opts:['Under 5.5','Over 5.5'], answer:'Under 5.5' },
+    { id:'first',  q:'Who scores first?',        label:'First goal',  base:100,
+      opts:[g.awayName, g.homeName], answer:g.awayName },
+    { id:'shots',  q:'Who puts more on net?',    label:'More shots',  base:100,
+      opts:[g.awayName, g.homeName], answer:g.homeName },
+    { id:'hits',   q:'Who plays it heavier?',    label:'More hits',   base:100,
+      opts:[g.awayName, g.homeName], answer:g.homeName },
+    { id:'ot',     q:'Does it need overtime?',   label:'Overtime',    base:100,
+      opts:['Yes','No'], answer:'No' }
+  ];
+}
+
+const SHEETS = {
+  basketball: { needsRoster:true,  build: predsForBasketball },
+  baseball:   { needsRoster:false, build: predsForBaseball },
+  football:   { needsRoster:false, build: predsForFootball },
+  soccer:     { needsRoster:false, build: predsForSoccer },
+  hockey:     { needsRoster:false, build: predsForHockey }
+};
 
 const two = (n) => String(n).padStart(2, '0');
 function prettyDate(iso){
@@ -203,16 +292,27 @@ function prettyDate(iso){
       continue;
     }
 
-    const roster = { home: await rosterFor(H.team.id), away: await rosterFor(A.team.id) };
-    if(!roster.home.length || !roster.away.length){
-      skipped.push(`${A.team.abbreviation} @ ${H.team.abbreviation} — a roster came back empty, refusing to build a half night`);
+    const sheet = SHEETS[L.sport];
+    if(!sheet){
+      skipped.push(`${A.team.abbreviation} @ ${H.team.abbreviation} — no pick sheet is written for ${L.sport} yet`);
       offered.pop();
       continue;
     }
 
-    games.push({ g, roster, preds: predsFor(g, roster) });
+    let roster = { home:[], away:[] };
+    if(sheet.needsRoster){
+      roster = { home: await rosterFor(H.team.id), away: await rosterFor(A.team.id) };
+      if(!roster.home.length || !roster.away.length){
+        skipped.push(`${A.team.abbreviation} @ ${H.team.abbreviation} — a roster came back empty and this sheet names players, refusing to build a half night`);
+        offered.pop();
+        continue;
+      }
+    }
+
+    games.push({ g, roster, preds: sheet.build(g, roster) });
     log('game', `${nightId}  ${A.team.name} @ ${H.team.name}  ` +
-                `${roster.away.length}+${roster.home.length} players  ${net || '(no tv)'}`);
+                (sheet.needsRoster ? `${roster.away.length}+${roster.home.length} players  ` : 'team picks  ') +
+                (net || '(no tv)'));
   }
 
   skipped.forEach(s => log('skip', s));

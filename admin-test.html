@@ -712,6 +712,284 @@ const NIGHTS = [
 // deliberately left unmarked, because the built-in answers in the app are
 // simulated results for a fake game, not claims about the real one. The host
 // marks the real answer at the break, then pushes.
+/* ============ THE TEMPLATE — ONE BANK, EVERY GAME ON THE SLATE =======
+   Until now a game night needed a human to write it a bank, which is why
+   there has only ever been ONE room a night: the questions were the
+   bottleneck, not the machine. The runner can host any number of games at
+   once and never has, because nobody had written question seventeen.
+
+   The way out was already sitting in the bank. Of GN13's nineteen
+   questions, THIRTEEN name no team at all — "both teams combined", "either
+   team", "was the final basket assisted". Only six name sides, and they
+   name them only as options. So a bank is not really per-night; it is
+   per-SPORT, with two words moved.
+
+   {HOME} and {AWAY} are those two words. publish.js substitutes the real
+   nicknames from the feed. optForTeam() matches an option against every
+   name the feed offers — displayName, nickname, abbreviation, location —
+   so whatever the scoreboard calls a team will resolve.
+
+   THIS IS GN13'S BANK, NOT A NEW ONE. Sixteen questions plus a
+   three-question overtime, every resolver grounded against a real finished
+   game and shadow-tested before it went near a room. A bank that has
+   survived a real night is worth more than a fresh idea that has not, and
+   that argument gets STRONGER, not weaker, when the bank is about to run
+   on every game of the slate instead of one.                            */
+const TEMPLATES = {
+  basketball: {
+    league: 'wnba',
+    tags:  ['Q1','Q2','Q3','Q4','OT'],
+    names: ['Quarter 1','Quarter 2','Quarter 3','Quarter 4','Overtime'],
+    worth: [10,20,30,40,40],
+    rounds: [
+      [
+        { t: 'Was the first basket of the game assisted?', o: ['Yes', 'No'], r:'firstBasketAssisted' },
+        { t: 'Which team committed the first foul of the game?', o: ['{HOME}', '{AWAY}'], r:'firstFoulTeam' },
+        { t: 'Fouls in Q1, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'foulsBand' },
+        { t: 'The first turnover of the game — whose team gave it up?', o: ['{HOME}', '{AWAY}'], r:'firstTurnoverTeam' }
+      ],
+      [
+        { t: 'Assisted baskets in Q2, both teams combined — how many?', o: ['Eight or fewer', 'Nine to eleven', 'Twelve or thirteen', 'Fourteen or more'], r:'assistedBasketsBand' },
+        { t: 'Did either team score in the final minute before halftime?', o: ['Yes', 'No'], r:'lastMinuteScoredQ2' },
+        { t: 'Turnovers in Q2, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'turnoversBand' },
+        { t: 'Free throws made in Q2, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'ftMadeBand' }
+      ],
+      [
+        { t: 'Free throws attempted in Q3, both teams combined — how many?', o: ['None to two', 'Three to five', 'Six to nine', 'Ten or more'], r:'ftAttemptsBand' },
+        { t: 'Driving or running shot attempts in Q3, both teams combined — how many?', o: ['Six or fewer', 'Seven to nine', 'Ten to twelve', 'Thirteen or more'], r:'drivingPlaysBand' },
+        { t: 'Substitutions in Q3, both teams combined — how many?', o: ['Nine or fewer', 'Ten to thirteen', 'Fourteen to seventeen', 'Eighteen or more'], r:'subsBand' },
+        { t: 'Which team made more free throws in Q3?', o: ['{HOME}', '{AWAY}', 'Equal'], r:'ftMakeCompareQ3' }
+      ],
+      [
+        { t: 'In the last two minutes, which team committed more turnovers?', o: ['{HOME}', '{AWAY}', 'Equal'], r:'lastTwoMinTurnoverCompare' },
+        { t: 'Was there a technical or flagrant foul at any point in the game?', o: ['Yes', 'No'], r:'anyTechOrFlagrant' },
+        { t: 'Was the game’s final basket assisted?', o: ['Yes', 'No'], r:'lastBasketAssisted' },
+        { t: 'In the 4th quarter, which was more common: jump shots or drives to the basket?', o: ['Jump shots', 'Drives', 'Equal'], r:'q4ShotTypeCompare' }
+      ],
+      /* OVERTIME. Three questions, not four — an overtime is five minutes
+         and a bank sized for a quarter would outlast the period it asks
+         about. Every resolver here reads inPeriod(j, p), so it answers
+         about the overtime being played rather than the game so far. */
+      [
+        { t: 'Which team scored the first points of overtime?', o: ['{HOME}', '{AWAY}'], r:'firstScoreTeam' },
+        { t: 'Free throws made in overtime, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'ftMadeBand' },
+        { t: 'Which team committed the first foul of overtime?', o: ['{HOME}', '{AWAY}'], r:'firstFoulTeam' }
+      ]
+    ]
+  },
+
+  /* ============================ BASEBALL ============================
+     THE PERIOD IS NOT THE ROUND NUMBER HERE, and that is the whole reason
+     `periods` exists. A baseball round covers THREE innings — after the
+     3rd, the 6th and the 9th — and every mlb* resolver reads p as the LAST
+     inning of its span (mlbSpan: lo = hi-2). Hand round one a period of 1,
+     the way basketball's index+1 would, and mlbSpan returns innings -1 to
+     1: a confident answer about the first inning to a question asked about
+     the first three. Nobody would report that, because it answers.
+
+     WRITTEN AGAINST RESOLVERS THAT ALREADY EXIST AND WERE ALREADY
+     VALIDATED — the 17 Aug MLB set, shadow-tested at 41 answered / 1
+     correctly silent / 0 invalid / 0 threw across five finished games. No
+     new resolver is introduced here, deliberately: a new bank on proven
+     resolvers is one risk, and a new bank on new resolvers is two.
+
+     OPTION SHAPES ARE PART OF THE CONTRACT. band(n,cuts,opts) returns the
+     first opts[i] where n <= cuts[i], so the words below are not decorative
+     — they are the cutoffs spelled out:
+       mlbRunsBand       [0,2,4]    none / 1-2 / 3-4 / 5+
+       mlbStrikeoutsBand [2,4,6]    <=2 / 3-4 / 5-6 / 7+
+       mlbHomeRunsBand   [0,1,2]    none / 1 / 2 / 3+
+       mlbStolenBasesBand[0,1,2]    none / 1 / 2 / 3+
+       mlbFastestPitchBand [93,96,98]
+     mlbBusiestInning matches an option by finding the inning NUMBER inside
+     the option text, so its options must name the innings of THAT round.
+     mlbLeadAfter and the compare resolvers need a tie word tieOpt() knows.  */
+  baseball: {
+    league: 'mlb',
+    tags:   ['1st-3rd','4th-6th','7th-9th'],
+    names:  ['Innings 1–3','Innings 4–6','Innings 7–9'],
+    worth:  [30,50,70],
+    periods:[3,6,9],
+    rounds: [
+      [
+        { t: 'The first hit of the game — what was it?', o: ['Single','Double','Triple','Home run'], r:'mlbFirstHitKind' },
+        { t: 'Runs through three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand' },
+        { t: 'Strikeouts through three, both staffs combined — how many?', o: ['Two or fewer','Three or four','Five or six','Seven or more'], r:'mlbStrikeoutsBand' },
+        { t: 'Who leads after three?', o: ['{HOME}','{AWAY}','Level'], r:'mlbLeadAfter' }
+      ],
+      [
+        { t: 'Runs in the middle three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand' },
+        { t: 'Home runs in the middle three — how many?', o: ['None','One','Two','Three or more'], r:'mlbHomeRunsBand' },
+        { t: 'The fastest pitch of the middle three — how hard?', o: ['93 or under','94 to 96','97 or 98','99 or more'], r:'mlbFastestPitchBand' },
+        { t: 'Which of these was the busiest inning?', o: ['The 4th','The 5th','The 6th'], r:'mlbBusiestInning' }
+      ],
+      [
+        { t: 'Runs in the last three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand' },
+        { t: 'Strikeouts in the last three, both staffs combined — how many?', o: ['Two or fewer','Three or four','Five or six','Seven or more'], r:'mlbStrikeoutsBand' },
+        { t: 'Stolen bases in the last three — how many?', o: ['None','One','Two','Three or more'], r:'mlbStolenBasesBand' },
+        /* WAS mlbMoreKsOrHits, AND THE SHADOW TEST KILLED IT. Eight
+           finished games, eight answers of "Strikeouts" — over three
+           innings of modern baseball, strikeouts beat hits essentially
+           always. It resolved perfectly and it was not a question.
+           mlbOneTwoThreeInning failed the same way: eight "Yes".
+           A resolver being correct is not the same as a question being
+           worth asking, and only a spread check tells you which you have. */
+        { t: 'Home runs in the last three — how many?', o: ['None','One','Two','Three or more'], r:'mlbHomeRunsBand' }
+      ]
+    ]
+    /* NO EXTRA-INNINGS TEMPLATE YET. run.js splits an overtime round out by
+       AUTO.isOtTag(), which matches OT-shaped tags; 'EXTRAS' is not one, so
+       adding a fourth round here would publish it as regulation and open it
+       on every ninth-inning game. Extras need the tag question settled
+       first — see the overtime work — and until then a game that goes past
+       nine simply has nothing more to answer, which is honest. */
+  },
+
+  /* ============================ FOOTBALL ============================
+     NO `periods` HERE, AND THAT IS DELIBERATE. Every nfl* resolver reads p
+     as the quarter number, which is exactly index+1 — the same mapping
+     basketball has always used. Declaring [1,2,3,4] would be a second copy
+     of a fact that is already correct by default, and a second copy is how
+     this codebase breaks. Baseball declares periods because baseball needs
+     to; football does not.
+
+     THE DRIVE IS THE UNIT AND IT GRADES ITSELF. `displayResult` is a clean
+     enum on every drive — Touchdown, Punt, Field Goal, Interception, Downs,
+     Missed FG — which makes this the cheapest bank of the six: no
+     interpretation, one field.
+
+     Band cutoffs, spelled out because band(n,cuts,opts) takes the first
+     opts[i] where n <= cuts[i]:
+       nflPuntsBand        [1,2,3]     <=1 / 2 / 3 / 4+
+       nflTouchdownsBand   [0,1,2]     none / 1 / 2 / 3+
+       nflTurnoversBand    [0,1,2]     none / 1 / 2 / 3+
+       nflScoringDrivesBand[0,1,2]     none / 1 / 2 / 3+
+       nflPenaltiesBand    [1,3,5]     <=1 / 2-3 / 4-5 / 6+
+       nflLongestDriveBand [20,45,70]  yards
+
+     TWO OF THESE READ THE BOX, NOT THE QUARTER. nflMoreFirstDowns and
+     nflMoreTotalYards compare season-style box totals, so they answer
+     "who has more SO FAR". They sit in Q4, where so-far and the whole game
+     are the same sentence. Do not move them to Q1 without changing the
+     wording, or the question will be right and the words will be wrong. */
+  football: {
+    league: 'nfl',
+    tags:   ['Q1','Q2','Q3','Q4'],
+    names:  ['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:  [10,20,30,40],
+    rounds: [
+      [
+        { t: 'How did the opening drive end?', o: ['Touchdown','Field goal','Punt','Turnover','Downs','Missed FG'], r:'nflFirstDriveResult' },
+        { t: 'The first points of the game came how?', o: ['Touchdown','Field goal','Safety','Nobody scored yet'], r:'nflFirstScoreKind' },
+        { t: 'Punts in the first quarter, both teams — how many?', o: ['One or fewer','Two','Three','Four or more'], r:'nflPuntsBand' },
+        { t: 'Who leads after one?', o: ['{HOME}','{AWAY}','Level'], r:'nflLeadAfter' }
+      ],
+      [
+        { t: 'Touchdowns in the second, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nflTouchdownsBand' },
+        { t: 'The longest drive of the second — how far?', o: ['20 yards or fewer','21 to 45','46 to 70','71 or more'], r:'nflLongestDriveBand' },
+        { t: 'Turnovers in the second, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nflTurnoversBand' },
+        { t: 'More rushing or more passing in the second?', o: ['Rushing','Passing','Even'], r:'nflMoreRushOrPass' }
+      ],
+      [
+        { t: 'Scoring drives in the third, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nflScoringDrivesBand' },
+        { t: 'Penalties in the third, both teams — how many?', o: ['One or fewer','Two or three','Four or five','Six or more'], r:'nflPenaltiesBand' },
+        { t: 'Punts in the third, both teams — how many?', o: ['One or fewer','Two','Three','Four or more'], r:'nflPuntsBand' },
+        { t: 'Who leads after three?', o: ['{HOME}','{AWAY}','Level'], r:'nflLeadAfter' }
+      ],
+      [
+        { t: 'Touchdowns in the fourth, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nflTouchdownsBand' },
+        { t: 'The longest drive of the fourth — how far?', o: ['20 yards or fewer','21 to 45','46 to 70','71 or more'], r:'nflLongestDriveBand' },
+        { t: 'Who finished with more first downs?', o: ['{HOME}','{AWAY}','Even'], r:'nflMoreFirstDowns' },
+        { t: 'Who finished with more total yards?', o: ['{HOME}','{AWAY}','Even'], r:'nflMoreTotalYards' }
+      ]
+    ]
+  },
+
+  /* ============================ SOCCER ==============================
+     THE TRAP, AND IT IS THE WHOLE REASON THIS BANK IS SHAPED LIKE THIS.
+     Soccer has no `plays` array. Half its facts come from keyEvents, which
+     ARE per-period, and half from the box score, which is a running
+     cumulative total. At halftime the box IS the first half; at full time
+     it is the WHOLE MATCH and never the second half. So:
+
+       event-based (safe per period): mlsFirstGoalTeam, mlsGoalsBand,
+         mlsCardsBand, mlsSubsBand, mlsFirstGoalKind, mlsFirstGoalWindow
+       box-based   (cumulative):      mlsMoreShots, mlsMorePossession,
+         mlsMoreCorners, mlsMoreFouls, mlsCornersBand, mlsShotsOnTargetBand
+
+     A box question is worded "in the first half" ONLY at 1H, and "in the
+     match" at FT. There is deliberately NO second-half box question: it
+     would need a halftime snapshot nobody has built, and it would read as
+     a correct answer to a question the app got wrong.
+
+     Cutoffs: mlsGoalsBand [0,1,2] · mlsCardsBand [0,1,3] ·
+              mlsSubsBand [0,2,5] · mlsCornersBand [3,6,9] ·
+              mlsShotsOnTargetBand [3,6,9]                              */
+  soccer: {
+    league: 'mls',
+    tags:   ['1H','FT'],
+    names:  ['First half','Full time'],
+    worth:  [40,60],
+    rounds: [
+      [
+        { t: 'Who scored first in the half?', o: ['{HOME}','{AWAY}','Nobody scored'], r:'mlsFirstGoalTeam' },
+        { t: 'Goals in the first half, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlsGoalsBand' },
+        { t: 'Cards shown in the first half — how many?', o: ['None','One','Two or three','Four or more'], r:'mlsCardsBand' },
+        { t: 'Who had more shots in the first half?', o: ['{HOME}','{AWAY}','Even'], r:'mlsMoreShots' }
+      ],
+      [
+        { t: 'Goals in the second half, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlsGoalsBand' },
+        /* WAS mlsSubsBand, KILLED BY THE SHADOW TEST. Eight finished
+           matches, eight answers of "Six or more" — its cutoffs are
+           [0,2,5] and modern soccer allows five subs a side, so a second
+           half is essentially never under six. The resolver is correct;
+           the QUESTION was dead, and only a spread check tells those two
+           apart. Left in the R table for a competition with different
+           substitution rules. */
+        { t: 'Shots on target in the match, both teams — how many?', o: ['Three or fewer','Four to six','Seven to nine','Ten or more'], r:'mlsShotsOnTargetBand' },
+        { t: 'Corners in the match, both teams — how many?', o: ['Three or fewer','Four to six','Seven to nine','Ten or more'], r:'mlsCornersBand' },
+        { t: 'Who kept more of the ball over the match?', o: ['{HOME}','{AWAY}','Even'], r:'mlsMorePossession' }
+      ]
+    ]
+  },
+
+  /* ============================ HOCKEY ==============================
+     Structurally the closest sport to basketball there is — a plays array,
+     coordinates on nearly all of it, three periods, and every nhl* resolver
+     reading p as the period number. So no `periods` here either: index+1 is
+     already right.
+
+     Cutoffs: nhlGoalsBand [0,1,2] · nhlShotsBand [8,12,16] ·
+              nhlHitsBand [12,20,28] · nhlBlockedBand [4,8,12] ·
+              nhlGiveawaysBand [4,8,12] · nhlPenaltiesBand [2,4,7]      */
+  hockey: {
+    league: 'nhl',
+    tags:   ['1st','2nd','3rd'],
+    names:  ['1st period','2nd period','3rd period'],
+    worth:  [15,30,45],
+    rounds: [
+      [
+        { t: 'Who scored first in the period?', o: ['{HOME}','{AWAY}','Still scoreless'], r:'nhlFirstGoalTeam' },
+        { t: 'Goals in the first, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nhlGoalsBand' },
+        { t: 'Shots on goal in the first, both teams — how many?', o: ['Eight or fewer','Nine to twelve','Thirteen to sixteen','Seventeen or more'], r:'nhlShotsBand' },
+        { t: 'Hits in the first, both teams — how many?', o: ['Twelve or fewer','Thirteen to twenty','Twenty-one to twenty-eight','Twenty-nine or more'], r:'nhlHitsBand' }
+      ],
+      [
+        { t: 'Goals in the second, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nhlGoalsBand' },
+        { t: 'Shots on goal in the second, both teams — how many?', o: ['Eight or fewer','Nine to twelve','Thirteen to sixteen','Seventeen or more'], r:'nhlShotsBand' },
+        { t: 'Blocked shots in the second, both teams — how many?', o: ['Four or fewer','Five to eight','Nine to twelve','Thirteen or more'], r:'nhlBlockedBand' },
+        { t: 'Who leads after two?', o: ['{HOME}','{AWAY}','Level'], r:'nhlLeadAfter' }
+      ],
+      [
+        { t: 'Goals in the third, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nhlGoalsBand' },
+        { t: 'Giveaways in the third, both teams — how many?', o: ['Four or fewer','Five to eight','Nine to twelve','Thirteen or more'], r:'nhlGiveawaysBand' },
+        { t: 'Who threw more hits in the third?', o: ['{HOME}','{AWAY}','Even'], r:'nhlMoreHits' },
+        { t: 'Who put more shots on net in the third?', o: ['{HOME}','{AWAY}','Even'], r:'nhlMoreShots' }
+      ]
+    ]
+  }
+};
+
 const BANK = {
   /* GAME NIGHT #10 — MINNESOTA AT LAS VEGAS. Set up with real lead time,
      the whole point of doing it this way after GN9: this is GN8's bank

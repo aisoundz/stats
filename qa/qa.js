@@ -5117,6 +5117,77 @@ function controlRoomStatic(){
    from being quietly reverted afterwards. */
 /* THE SLATE. The behaviour is proved in a browser by qa/slate.js; these
    are the structural guarantees that keep it from being quietly undone. */
+/* THE TEMPLATES — one bank per sport, and every claim in it checkable.
+   The banks themselves are proved against finished games by
+   qa/bank-shadow.js; these are the structural claims a shadow test cannot
+   make, because a template that names a resolver which does not exist
+   publishes happily and then voids every question at the buzzer. */
+function templateStatic(){
+  group('THE TEMPLATES — a bank per sport');
+  const src=read(ADMIN);
+  const grab=(open,name)=>{
+    const i=src.indexOf(open); if(i<0) return null;
+    let d=0,end=-1; const o=src.indexOf('{',i);
+    for(let j=o;j<src.length;j++){const c=src[j]; if(c==='{')d++; else if(c==='}'){d--; if(!d){end=j+1;break;}}}
+    try{ return require('vm').runInNewContext(src.slice(i,end)+';'+name+';',{},{timeout:5000}); }catch(_){ return null; }
+  };
+  const T=grab('const TEMPLATES = {','TEMPLATES');
+  check('tmpl.evaluates', !!T && Object.keys(T).length>0,
+    'TEMPLATES did not evaluate — publish.js reads it the same way and would die at the same point');
+  if(!T) return;
+
+  /* Every resolver a template names must exist in the R table. */
+  const known=new Set([...src.matchAll(/\n  R\.(\w+)\s*=/g)].map(m=>m[1]));
+  const missing=[];
+  Object.keys(T).forEach(sp=>{
+    (T[sp].rounds||[]).forEach((rd,i)=>rd.forEach((q,x)=>{
+      if(q.r && !known.has(q.r)) missing.push(`${sp} ${T[sp].tags[i]}Q${x+1} -> ${q.r}`);
+    }));
+  });
+  check('tmpl.every-resolver-exists', missing.length===0,
+    `named but not defined: ${missing.join(', ')}`,
+    'a bank naming a resolver that does not exist publishes fine and then voids every one of those questions at the buzzer, where nobody can fix it');
+
+  /* tags / names / worth / rounds all describe the same rounds. B26's shape. */
+  const ragged=[];
+  Object.keys(T).forEach(sp=>{
+    const t=T[sp], n=(t.rounds||[]).length;
+    if((t.tags||[]).length!==n)  ragged.push(`${sp}: ${(t.tags||[]).length} tags vs ${n} rounds`);
+    if((t.names||[]).length!==n) ragged.push(`${sp}: ${(t.names||[]).length} names vs ${n} rounds`);
+    if((t.worth||[]).length!==n) ragged.push(`${sp}: ${(t.worth||[]).length} worths vs ${n} rounds`);
+    if(t.periods && t.periods.length!==n) ragged.push(`${sp}: ${t.periods.length} periods vs ${n} rounds`);
+  });
+  check('tmpl.four-lists-one-set-of-rounds', ragged.length===0,
+    ragged.join(' | '),
+    'tags, names, worth and periods all describe the same rounds and must be edited together — B26 with a new name');
+
+  /* A round with no questions is GN9's failure, pre-published. */
+  const empty=[];
+  Object.keys(T).forEach(sp=>(T[sp].rounds||[]).forEach((rd,i)=>{
+    if(!rd.length) empty.push(`${sp} ${(T[sp].tags||[])[i]||i}`);
+  }));
+  check('tmpl.no-empty-rounds', empty.length===0, empty.join(', '),
+    'B28. A round the runner opens and scores, with nothing in it to earn from, is worse than not opening it');
+
+  /* Every option list a player will see must have something to choose. */
+  const thin=[];
+  Object.keys(T).forEach(sp=>(T[sp].rounds||[]).forEach((rd,i)=>rd.forEach((q,x)=>{
+    if(!q.t || (q.o||[]).length<2) thin.push(`${sp} ${T[sp].tags[i]}Q${x+1}`);
+  })));
+  check('tmpl.every-question-is-answerable', thin.length===0, thin.join(', '),
+    'a question with fewer than two options is not a question');
+
+  /* Team tokens come in pairs. A round offering {HOME} and a real name is a
+     question whose two sides were written at different times. */
+  const lone=[];
+  Object.keys(T).forEach(sp=>(T[sp].rounds||[]).forEach((rd,i)=>rd.forEach((q,x)=>{
+    const j=(q.o||[]).join(' ');
+    if(/\{HOME\}/.test(j) !== /\{AWAY\}/.test(j)) lone.push(`${sp} ${T[sp].tags[i]}Q${x+1}`);
+  })));
+  check('tmpl.team-tokens-come-in-pairs', lone.length===0, lone.join(', '),
+    'one side tokenised and the other hard-coded means a real team name from some other night is sitting in an option');
+}
+
 function slateStatic(){
   group('THE SLATE — every game gets a room');
   {
@@ -5402,6 +5473,7 @@ function voiceStatic(){
   voiceStatic();
   nightConfigStatic();
   slateStatic();
+  templateStatic();
   if(!QUICK){ try{
     /* A CEILING ON THE WHOLE BROWSER LAYER. The feed groups have their own,
        but any of the twenty-odd other groups could wedge the same way, and a
