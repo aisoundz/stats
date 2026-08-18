@@ -4843,6 +4843,19 @@ var SLATE_PICK_KEY = 'stats_slate_pick_v1';
 function slatePick(){
   try{ return localStorage.getItem(SLATE_PICK_KEY) || null; }catch(_){ return null; }
 }
+/* ?game=<nightId> — A LINK STRAIGHT INTO ONE ROOM.
+   With more than one game on a night, "go to statsgametime.com and pick the
+   right one" is an instruction somebody can follow wrongly, and then the
+   report that comes back is about the wrong room. A link cannot be followed
+   wrongly.
+
+   It outranks a remembered pick, because a link is an explicit instruction
+   given NOW and the remembered pick is one given at some point in the past.
+   It is still checked against tonight's slate like any other pick: a link
+   to a game that is not on tonight refuses rather than half-applying. */
+function slateParam(){
+  try{ return new URLSearchParams(location.search).get('game') || null; }catch(_){ return null; }
+}
 function slatePickSet(id){
   try{ if(id) localStorage.setItem(SLATE_PICK_KEY, id); else localStorage.removeItem(SLATE_PICK_KEY); }catch(_){}
 }
@@ -4921,6 +4934,13 @@ async function loadSlate(db, F){
     SLATE.league = d.league || null;
     SLATE.games  = Array.isArray(d.games) ? d.games.filter(function(g){ return g && g.nightId; }) : [];
     SLATE.loaded = true;
+
+    /* A link wins, if it names a game that is actually on tonight. */
+    var link = slateParam();
+    if(link){
+      if(slateGame(link)){ slatePickSet(link); }
+      else { try{ console.error('?game='+link+' is not on tonight\'s slate — ignoring it'); }catch(_){} }
+    }
 
     /* Drop a pick that is not on tonight's slate. */
     var p = slatePick();
@@ -14357,7 +14377,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-slate.140';
+const STATS_BUILD='2026-08-18-slate.141';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

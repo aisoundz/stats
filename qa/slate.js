@@ -174,6 +174,66 @@ const FAKE = `(function(store){
     await p.close();
   }
 
+  /* ---- 5b. ?game= drops you straight into a room -------------------- */
+  {
+    const p=await b.newPage();
+    const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
+    await p.goto('file://'+TARGET+'?game=slate-2026-08-19-tor-wsh');
+    await p.waitForFunction(()=>typeof window.loadSlate==='function', {timeout:15000});
+    await p.evaluate(`(${FAKE})(${JSON.stringify(STORE)})`);
+    const r=await p.evaluate(async()=>{
+      localStorage.removeItem('stats_slate_pick_v1');
+      await window.loadSlate({}, window.__F);
+      window.__reads=[];
+      await window.loadNightConfig({}, window.__F);
+      return { night:window.GAME.nightId, home:window.GAME.homeName,
+               reads:window.__reads.slice(),
+               remembered:localStorage.getItem('stats_slate_pick_v1') };
+    });
+    ok('slate.a-link-opens-that-room', r.night==='slate-2026-08-19-tor-wsh' && r.home==='Mystics',
+       `?game= landed on ${r.night} / ${r.home}`);
+    ok('slate.a-link-does-not-read-the-pointer', !r.reads.includes('schedule/current'),
+       JSON.stringify(r.reads));
+    ok('slate.a-link-is-remembered-like-a-tap', r.remembered==='slate-2026-08-19-tor-wsh', r.remembered);
+    ok('slate.a-link-causes-no-errors', errs.length===0, errs.join(' / '));
+    await p.close();
+  }
+  {
+    /* A LINK OUTRANKS A REMEMBERED PICK. Somebody who played the flagship
+       last night and is sent a link to the other room must land in the
+       room the link names, not the one their phone remembers. */
+    const p=await b.newPage();
+    await p.goto('file://'+TARGET+'?game=slate-2026-08-19-tor-wsh');
+    await p.waitForFunction(()=>typeof window.loadSlate==='function', {timeout:15000});
+    await p.evaluate(`(${FAKE})(${JSON.stringify(STORE)})`);
+    const r=await p.evaluate(async()=>{
+      localStorage.setItem('stats_slate_pick_v1','gn13-2026-08-19-min-gs');
+      await window.loadSlate({}, window.__F);
+      await window.loadNightConfig({}, window.__F);
+      return window.GAME.nightId;
+    });
+    ok('slate.a-link-outranks-what-the-phone-remembers', r==='slate-2026-08-19-tor-wsh',
+       `landed on ${r} — the link must win`);
+    await p.close();
+  }
+  {
+    /* A link to a game that is not on tonight must refuse, not half-apply. */
+    const p=await b.newPage();
+    await p.goto('file://'+TARGET+'?game=slate-1999-01-01-xx-yy');
+    await p.waitForFunction(()=>typeof window.loadSlate==='function', {timeout:15000});
+    await p.evaluate(`(${FAKE})(${JSON.stringify(STORE)})`);
+    const r=await p.evaluate(async()=>{
+      localStorage.removeItem('stats_slate_pick_v1');
+      await window.loadSlate({}, window.__F);
+      await window.loadNightConfig({}, window.__F);
+      return { night:window.GAME.nightId, remembered:localStorage.getItem('stats_slate_pick_v1') };
+    });
+    ok('slate.a-link-to-a-game-not-on-tonight-is-refused',
+       r.night==='gn13-2026-08-19-min-gs' && r.remembered===null,
+       `landed on ${r.night}, remembered ${r.remembered}`);
+    await p.close();
+  }
+
   /* ---- 6. a game not on the slate is refused ------------------------ */
   {
     const {p}=await boot(STORE);
