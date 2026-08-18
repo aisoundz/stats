@@ -46,8 +46,8 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
                               {name:'Google US English', lang:'en-US', voiceURI:'v-goog', localService:false}
                             ]; } });
     def('SpeechSynthesisUtterance', function(t){ this.text=t; });
-    const R=function(){ window.__recStarts++; window.__rec=this;
-      this.start=function(){ if(window.__micThrows) throw new Error('not allowed'); };
+    const R=function(){ window.__recBuilds++; window.__rec=this;
+      this.start=function(){ if(window.__micThrows) throw new Error('not allowed'); window.__recStarts++; };
       this.stop=function(){}; this.abort=function(){};
       /* drive the engine the way a real one does: interim first, then final */
       this.__speak=function(txt,final){
@@ -185,16 +185,30 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
   /* ---- iPHONE. Everything the founder reported is consistent with Safari
      refusing a microphone that has no tap behind it, so this is the path
      that has to be right; the desktop one already worked. */
+  /* The recogniser is built ONCE now, so the iOS decision is made at build
+     time — force a rebuild to test it, the way a real iPhone would. */
+  /* SETTLE THE SPEECH FIRST. V.ear() declines while the app is talking —
+     correctly — so a check that runs on the tail of the previous one's
+     utterance reads a recogniser that was never rebuilt. It failed one run
+     in two, and a flaky check is worse than no check: it teaches you to
+     re-run until it goes green. Null the handle too, so "never built" is a
+     loud failure rather than a stale object quietly answering for it. */
+  await p.waitForFunction(()=>VX.speaking===false,{timeout:5000});
   R['ios-does-not-ask-for-a-session-it-cannot-have'] = await p.evaluate(()=>{
-    const was=VX.ios; VX.ios=true; VX.deaf(); VX.wantEar=true; VX.ear();
-    const r=window.__rec, ok = r && r.continuous===false && r.interimResults===false;
-    VX.ios=was; return !!ok;
+    const was=VX.ios; VX.deaf(); VX.mic=null; window.__rec=null; VX.ios=true;
+    VX.wantEar=true; VX.ear();
+    const r=window.__rec, ok = !!r && r.continuous===false && r.interimResults===false;
+    VX.ios=was; VX.deaf(); VX.mic=null; return ok;
   });
-  R['ios-asks-for-the-tap-instead-of-retrying'] = await p.evaluate(()=>{
-    const was=VX.ios; VX.ios=true; VX.note=''; VX.wantEar=true;
+  /* THE GUARANTEE CHANGED ON PURPOSE, so this is re-aimed rather than
+     patched. It used to assert that iOS gives up and asks for a specific
+     button. It now asserts the better thing: a mic that ends while still
+     wanted stays WANTED, and re-arms itself. Sending a player hunting for
+     one particular button is not conversational; any touch is. */
+  R['a-mic-that-ends-while-wanted-comes-back'] = await p.evaluate(()=>{
+    VX.wantEar=true; VX.ear(); VX.listening=false;
     if(window.__rec && window.__rec.onend) window.__rec.onend();
-    const ok = /tap/i.test(VX.note||'');
-    VX.ios=was; VX.note=''; return ok;
+    return VX.wantEar===true;
   });
   R['a-tap-reopens-the-mic'] = await p.evaluate(()=>{
     VX.deaf(); const before=window.__recStarts; VX.listenNow();
@@ -220,6 +234,56 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     VX.openCheck(); const d=document.getElementById('vxCheck');
     const open = !!d && d.className==='open' && /VOICE CHECK/.test(d.textContent||'');
     VX.closeCheck(); return open && document.getElementById('vxCheck').className==='';
+  });
+
+  /* ---- THE THREE SYMPTOMS FROM ONE DEAD MICROPHONE -----------------
+     "I said made field goals, it didn't hear me" · "it put me as wrong" ·
+     "I said next question and it wouldn't move". One fault, three faces. */
+  await p.evaluate(()=>{ VX.enable(); S.mode='live'; S.qi=0; S.ni=0; S.answered=false;
+                         go('live'); window.__recBuilds=0; loadQuestion(); });
+  await p.waitForTimeout(900);
+  R['one-recogniser-not-one-per-utterance'] = await p.evaluate(()=>{
+    const b0=window.__recBuilds;
+    VX.pause(); VX.ear(); VX.pause(); VX.ear();      // four lifecycle events
+    return window.__recBuilds===b0;                   // and still one object
+  });
+  /* Speaking must PAUSE the mic, never surrender the permission. */
+  R['talking-pauses-the-mic-it-does-not-give-it-up'] = await p.evaluate(()=>{
+    VX.wantEar=true; VX.ear(); VX.deafSay('something');
+    return VX.wantEar===true && VX.listening===false;
+  });
+  R['locking-a-question-keeps-the-conversation-open'] = await p.evaluate(()=>{
+    VX.wantEar=true; VX.ear(); VX.locked('Locked in.');
+    return VX.wantEar===true;
+  });
+  R['the-reveal-listens-for-next'] = await p.evaluate(()=>{
+    VX.deaf(); VX.reveal('Not quite.');
+    return VX.wantEar===true;
+  });
+  /* ANY tap re-arms it — that is what makes iOS feel conversational. */
+  await p.waitForFunction(()=>VX.speaking===false,{timeout:5000});
+  R['any-tap-anywhere-reopens-a-shut-mic'] = await p.evaluate(()=>{
+    window.__micThrows=true; VX.deaf(); VX.wantEar=true; VX.ear();
+    const shut = VX.listening===false && VX.wantEar===true;
+    window.__micThrows=false;
+    const before=window.__recStarts;
+    document.body.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));
+    return shut && window.__recStarts>before && VX.listening===true;
+  });
+  R['a-shut-mic-says-so-loudly'] = await p.evaluate(()=>{
+    VX.deaf(); VX.wantEar=true; VX.note='';
+    VX.paint();
+    const t=(document.getElementById('vxBar')||{}).textContent||'';
+    return /can.t hear you/i.test(t);
+  });
+  /* And the phrase he actually said has to land. */
+  R['made-field-goals-lands'] = await p.evaluate(()=>{
+    const m=VX.match('made field goals', ['Made field goals','Made free throws','Equal']);
+    return !!m && m.kind==='pick' && m.i===0;
+  });
+  R['next-question-moves-on'] = await p.evaluate(()=>{
+    const m=VX.match('next question', ['Yes','No']);
+    return !!m && m.kind==='lock';
   });
 
   await p.evaluate(()=>{ VX.disable(); window.__said=[]; window.__recStarts=0;

@@ -7045,90 +7045,124 @@ var VX=(function(){
   function curBtn(i){
     try{ return document.querySelectorAll('#qOpts .opt')[i]||null; }catch(_){ return null; }
   }
+  /* ---- THE MICROPHONE, AND THE ONLY THING THAT MATTERS ABOUT IT -------
+     Three symptoms reported in one message — "I said made field goals, it
+     didn't hear me", "it put me as wrong", "I said next question and it
+     wouldn't move" — and they are ONE fault with three faces. The mic was
+     shut. He spoke into nothing, the twenty seconds ran out, practice
+     scores a timeout as wrong, and the phrase meant to move on hit the
+     same dead microphone. Every previous fix of mine was aimed at the
+     grammar, which was never the thing that was broken.
+
+     WHY IT WAS SHUT. The mic was torn down and rebuilt around every event
+     — each question, each read-back, each reveal — and on iOS Safari a
+     rebuild is a NEW permission request, which the platform grants only
+     from a user gesture. So on an iPhone the very first teardown was
+     permanent. Rebuilding a microphone between two questions is not
+     robustness, it is throwing away the one thing that took a gesture to
+     acquire.
+
+     SO IT IS NOT TORN DOWN ANY MORE. Three changes, and together they are
+     the difference between a walkie-talkie and a conversation:
+
+       1. ONE RECOGNISER FOR THE WHOLE NIGHT. Reused, never reconstructed.
+          Safari is far happier restarting an instance it already granted
+          than minting a new one, and the old code minted one per utterance.
+       2. PAUSE IS NOT STOP. While we are talking we pause, so the phone
+          does not answer its own question off its own speaker — and paused
+          still WANTS to hear, so it comes straight back. Only leaving the
+          question stops it.
+       3. ANY TAP RE-ARMS IT. When the mic is wanted and shut, one listener
+          goes on the whole document, and the next touch anywhere at all
+          reopens it — an option, the scoreboard, a scroll. iOS asked for a
+          gesture; it never said WHICH gesture. That is what makes this feel
+          conversational on a platform that will not do hands-free, without
+          making a person hunt for a particular button.                  */
+  V.mic=null;              // ONE recogniser, for the life of the page
+  V.build=function(){
+    if(V.mic) return V.mic;
+    var C=window.SpeechRecognition||window.webkitSpeechRecognition; if(!C) return null;
+    var r=new C();
+    r.lang='en-US'; r.maxAlternatives=6;
+    /* Safari will not hold a continuous session — it hears one utterance
+       and stops — and asking for one makes it fail rather than degrade. */
+    r.continuous     = !V.ios;
+    r.interimResults = !V.ios;
+    /* DO NOT TALK OVER THE PLAYER. The options prompt aborts the mic to
+       speak; answer while it is pending and you were cut off mid-word and
+       discarded. Any voice in the room cancels it. */
+    r.onspeechstart=function(){ V.clearHint(); };
+    r.onaudiostart =function(){ V.micThrew=0; V.paint(); };
+    r.onresult=function(e){
+      var i, j, res, fin=false;
+      for(i=e.resultIndex; i<e.results.length; i++){
+        res=e.results[i];
+        if(!res.isFinal){ V.clearHint(); continue; }
+        fin=true;
+        /* SHOW WHAT IT HEARD. "It did not work" is not a bug report; a
+           mishear and a mis-grammar look nothing alike once this is on
+           screen, and they have completely different fixes. */
+        try{ V.lastHeard=String(res[0].transcript||'').trim(); V.log(V.lastHeard); }catch(_){}
+        for(j=0;j<res.length;j++){ if(V.heard(res[j].transcript)) return; }
+      }
+      if(fin){ V.miss=(V.miss||0)+1; V.paint(); }
+    };
+    r.onerror=function(e){
+      var c=(e&&e.error)||'';
+      if(c==='not-allowed' || c==='service-not-allowed'){
+        /* FAILURE IS VISIBLE. A denied microphone must never look like a
+           microphone that is on and ignoring you. */
+        V.wantEar=false; V.note='Microphone blocked — tap your answers, or allow the mic in your browser settings.';
+        V.paint(); return;
+      }
+      if(c==='no-speech' || c==='aborted' || c==='audio-capture'){ return; }
+      V.errs++; V.paint();
+    };
+    r.onend=function(){
+      V.listening=false;
+      if(!V.wantEar){ V.paint(); return; }
+      if(V.errs>6){ V.note='Voice input stopped responding — tap your answers.'; V.wantEar=false; V.paint(); return; }
+      /* Try immediately — on desktop this simply works. On iOS it throws,
+         and the throw arms the gesture so the player's next touch (which
+         is coming anyway) brings it back. Either way it is still WANTED,
+         which is why "next question" now survives a closed mic. */
+      setTimeout(function(){ try{ V.ear(); }catch(_){} }, V.ios?60:120);
+    };
+    V.mic=r; return r;
+  };
   V.ear=function(){
     if(!V.on || !V.hasEar || !V.wantEar || V.listening || V.speaking) return;
-    var C=window.SpeechRecognition||window.webkitSpeechRecognition; if(!C) return;
+    var r=V.build(); if(!r) return;
     try{
-      var r=new C();
-      /* CONTINUOUS, AND INTERIM RESULTS ON. The first build ran one
-         utterance per session and restarted on `onend`. Every restart is a
-         dead window — the engine's own start-up latency plus our timer —
-         and a player who answers promptly answers INTO it. "It is not
-         accepting my answer" is what that feels like from the sofa, and it
-         is not a recognition failure at all: the microphone was between
-         sessions. One long session removes the window entirely.
-
-         Interim results are not used to answer — only a final transcript
-         may pick — but they are the earliest possible proof that somebody
-         is talking, which is what stops us reading the options over them. */
-      r.lang='en-US'; r.maxAlternatives=6;
-      r.continuous     = !V.ios;   // see V.ios — Safari will not hold a session
-      r.interimResults = !V.ios;
-      /* DO NOT TALK OVER THE PLAYER. This was the sharpest of the three
-         bugs: the options are read 2.6s after the question, and reading
-         them ABORTS the microphone. Answer at 2.7s and the app cut you off
-         mid-word and threw the answer away — reliably, on the questions
-         with four options, which is most of them. The moment there is any
-         voice in the room, the prompt is cancelled. It is a prompt for
-         somebody who said nothing, and somebody is saying something. */
-      r.onspeechstart=function(){ V.clearHint(); };
-      r.onaudiostart =function(){ V.paint(); };
-      r.onresult=function(e){
-        var i, j, res, fin=false;
-        for(i=e.resultIndex; i<e.results.length; i++){
-          res=e.results[i];
-          if(!res.isFinal){ V.clearHint(); continue; }
-          fin=true;
-          /* SHOW WHAT IT HEARD. Without this the only report anybody can
-             make is "it did not work", which is not a bug report. With it,
-             a mishear and a mis-grammar look completely different on
-             screen and either one can be fixed. */
-          try{ V.lastHeard=String(res[0].transcript||'').trim(); }catch(_){}
-          for(j=0;j<res.length;j++){ if(V.heard(res[j].transcript)) return; }
-        }
-        if(fin){ V.miss=(V.miss||0)+1; V.paint(); }
-      };
-      r.onerror=function(e){
-        var c=(e&&e.error)||'';
-        if(c==='not-allowed' || c==='service-not-allowed'){
-          /* FAILURE IS VISIBLE. A denied microphone must not look like a
-             microphone that is on and ignoring you. */
-          V.wantEar=false; V.note='Microphone blocked — tap your answers, or allow the mic in your browser settings.';
-          V.paint(); return;
-        }
-        if(c==='no-speech' || c==='aborted' || c==='audio-capture'){ return; }
-        V.errs++; V.paint();
-      };
-      r.onend=function(){
-        V.listening=false; V.rec=null;
-        if(!V.wantEar) { V.paint(); return; }
-        if(V.errs>6){ V.note='Voice input stopped responding — tap your answers.'; V.wantEar=false; V.paint(); return; }
-        /* NO TIMER RESTART ON iOS. A restart with no gesture behind it is
-           refused, and the refusal is what looked like the app ignoring
-           the player. Ask for the tap instead — honestly, in words. */
-        if(V.ios){ V.note='Tap 🎙 and say your answer.'; V.paint(); return; }
-        setTimeout(function(){ try{ V.ear(); }catch(_){} }, V.errs?600*V.errs:120);
-      };
-      V.rec=r; V.listening=true; r.start(); V.paint();
+      r.start(); V.listening=true; V.micThrew=0; V.paint();
     }catch(e){
-      /* THIS CATCH WAS SILENT, AND THAT WAS MY OWN RULE BROKEN. Safari on
-         iOS refuses to open a microphone outside the gesture that asked for
-         it, and refuses by THROWING here — so on an iPhone the app sat
-         there saying "Listening" with no microphone behind it, which is
-         precisely the thing the blocked-mic message exists to prevent.
-         Now it says so, and says what to do about it. */
-      V.listening=false; V.rec=null;
+      /* Already running is a success, not a failure — Safari throws
+         InvalidStateError for a start() on a live session. */
+      if(/already|InvalidState/i.test(String(e&&(e.name||e.message)||''))){ V.listening=true; V.paint(); return; }
+      V.listening=false;
       V.micThrew=(V.micThrew||0)+1;
-      if(V.micThrew>=2){
-        V.wantEar=false;
-        V.note='Tap 🎙 to answer out loud — this browser only opens the mic when you ask it to.';
-      }
+      V.armGesture();          // the next touch anywhere reopens it
+      if(V.micThrew>=2) V.note='Tap 🎙 to answer out loud — this browser only opens the mic when you ask it to.';
       V.paint();
     }
   };
-  /* THE GESTURE DOOR. iOS will open a microphone from a tap and from
-     nothing else, so there has to be a tap available. On every other
-     browser this is a no-op that people never need to find. */
+  /* ONE listener, replaced not stacked, removed the moment it fires. A
+     page that accumulates a gesture handler per failed start is a page
+     that gets slower every question. */
+  V.armGesture=function(){
+    if(V.armed2) return; V.armed2=true;
+    var go=function(){
+      V.armed2=false;
+      try{ document.removeEventListener('pointerdown', go, true); }catch(_){}
+      try{ document.removeEventListener('touchend',   go, true); }catch(_){}
+      try{ document.removeEventListener('keydown',    go, true); }catch(_){}
+      if(V.on && V.wantEar && !V.listening){ try{ V.ear(); }catch(_){} }
+    };
+    try{ document.addEventListener('pointerdown', go, true); }catch(_){}
+    try{ document.addEventListener('touchend',   go, true); }catch(_){}
+    try{ document.addEventListener('keydown',    go, true); }catch(_){}
+  };
+  /* THE GESTURE DOOR, for when somebody wants to be explicit about it. */
   V.listenNow=function(){
     if(!V.on) return;
     V.micThrew=0; V.note=''; V.wantEar=true; V.errs=0;
@@ -7136,11 +7170,31 @@ var VX=(function(){
     V.clearHint();
     V.ear(); V.paint();
   };
-  V.deaf=function(){
-    V.wantEar=false;
-    try{ if(V.rec){ V.rec.onend=null; V.rec.abort(); } }catch(_){}
-    V.rec=null; V.listening=false; V.paint();
+  /* PAUSE: stop hearing, keep WANTING to hear. Used whenever the app
+     itself is talking, which is the only legitimate reason to go quiet
+     mid-question. */
+  V.pause=function(){
+    try{ if(V.mic) V.mic.abort(); }catch(_){}
+    V.listening=false;
   };
+  /* DEAF: stop, and stop wanting. Only when the question is over or the
+     player has left it — the mic belongs to the question. */
+  V.deaf=function(){
+    V.wantEar=false; V.armed2=false;
+    try{ if(V.mic) V.mic.abort(); }catch(_){}
+    V.listening=false; V.paint();
+  };
+  /* A rolling record of what it actually heard, on the device and nowhere
+     else. Every guess I have made tonight would have been a fact with this
+     in place. Twenty lines is enough to read a quarter back. */
+  V.heardLog=[];
+  V.log=function(txt){
+    try{ V.heardLog.unshift(String(txt||'').slice(0,80)); V.heardLog.length=Math.min(V.heardLog.length,20); }catch(_){}
+  };
+  /* A phone that locked mid-quarter comes back deaf otherwise. */
+  try{ document.addEventListener('visibilitychange', function(){
+    if(!document.hidden && V.on && V.wantEar && !V.listening){ try{ V.ear(); }catch(_){} }
+  }); }catch(_){}
 
   /* ---- WHAT A HEARD PHRASE DOES -------------------------------------- */
   V.heard=function(raw){
@@ -7175,6 +7229,7 @@ var VX=(function(){
     if(m.kind==='pick'){
       var b=curBtn(m.i); if(!b) return false;
       var label=opts[m.i];
+      V.pause();
       V.hush();
       try{ if(typeof answer==='function') answer(label, b); }catch(_){}
       /* DID THE QUESTION SURVIVE BEING ANSWERED? In a game night a pick is
@@ -7198,11 +7253,15 @@ var VX=(function(){
   /* Say something, with the ear closed so the phone does not answer its own
      question off its own speaker, then reopen it. */
   V.deafSay=function(text, keepOpen){
-    var was=V.wantEar;
-    try{ if(V.rec){ V.rec.onend=null; V.rec.abort(); } }catch(_){}
-    V.rec=null; V.listening=false;
+    /* PAUSE, NOT TEARDOWN. This used to abort the recogniser and drop it,
+       which on iOS meant the next open needed a fresh gesture — so the app
+       went permanently deaf the first time it said anything back. It keeps
+       WANTING to hear throughout; it just stops listening while its own
+       voice is in the room. */
+    var was = (keepOpen===false) ? false : V.wantEar;
+    V.pause();
     V.say(text, function(){
-      if(was && (keepOpen!==false)){ V.wantEar=true; V.ear(); }
+      if(was){ V.wantEar=true; V.ear(); }
       V.paint();
     });
     V.paint();
@@ -7256,9 +7315,14 @@ var VX=(function(){
 
   /* ---- THE MOMENTS THE GAME TELLS US ABOUT --------------------------- */
   V.locked=function(txt){
-    V.clearHint(); V.deaf();
-    if(!V.on) return;
-    V.say(txt||'Locked in.');
+    V.clearHint();
+    if(!V.on){ V.deaf(); return; }
+    /* Pause, do not go deaf. Locking one question is the middle of a round,
+       not the end of the conversation — and the next question reopens in
+       milliseconds. Going deaf here cost a gesture on iOS every single
+       time, which is why "next question" fell on a dead microphone. */
+    V.pause();
+    V.say(txt||'Locked in.', function(){ if(V.wantEar) V.ear(); V.paint(); });
     V.paint();
   };
   /* A reveal closes the mic while it talks and OPENS IT AGAIN after. In
@@ -7269,10 +7333,12 @@ var VX=(function(){
   V.reveal=function(txt){
     if(!V.on) return;
     V.clearHint();
-    var was=V.wantEar;
-    try{ if(V.rec){ V.rec.onend=null; V.rec.abort(); } }catch(_){}
-    V.rec=null; V.listening=false;
-    V.say(txt, function(){ if(was){ V.wantEar=true; V.ear(); } V.paint(); });
+    V.pause();
+    /* The reveal is exactly where a player says "next question", so the ear
+       must be open the moment the sentence ends — not waiting on a button
+       press that a person looking at their television will never make. */
+    V.wantEar=true;
+    V.say(txt, function(){ V.ear(); V.paint(); });
     V.paint();
   };
   V.timeUp=function(){ if(!V.on) return; V.say('Time is up.'); };
@@ -7385,11 +7451,17 @@ var VX=(function(){
   V.paint=function(){
     try{
       var el=document.getElementById('vxBar'); if(!el) return;
-      var state = !V.on ? 'off' : (V.speaking ? 'reading' : (V.listening ? 'hearing' : 'on'));
+      var state = !V.on ? 'off' : (V.speaking ? 'reading' : (V.listening ? 'hearing' : (V.hasEar ? 'deaf' : 'on')));
+      /* "Voice on" over a shut microphone is the same lie as "Listening"
+         over one — a player says their answer into a phone that is not
+         hearing it, and the twenty seconds run out. If it cannot hear, that
+         is the most important thing on the screen. */
+      var deafNow = V.on && V.hasEar && !V.listening && !V.speaking;
       var txt = !V.on ? 'Voice off'
               : V.note ? V.note
               : V.speaking ? 'Reading the question…'
-              : V.listening ? 'Listening — say a number, then say “lock”'
+              : V.listening ? 'Listening — say your answer, then “next”'
+              : deafNow ? '🎙 Tap anywhere to talk — I can’t hear you yet'
               : V.hasEar ? 'Voice on' : 'Voice on — tap your answer';
       var h='<button type="button" class="vxb" onclick="VX.toggle()" aria-pressed="'+(V.on?'true':'false')+'">'
         + (V.on?'🔊':'🔈') + ' <b>Voice</b> <s>'+(V.on?'on':'off')+'</s></button>';
@@ -12881,7 +12953,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-17-numbers.125';
+const STATS_BUILD='2026-08-17-open-mic.126';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -16986,6 +17058,8 @@ body.hasrail #menuBtn{top:calc(6px + env(safe-area-inset-top,0px))}
 .vx.reading .vxb{border-color:var(--blue2)}
 .vx.reading .vxt{color:var(--body)}
 .vx.warn .vxt{color:var(--gold)}
+.vx.deaf .vxb{border-color:var(--gold)}
+.vx.deaf .vxt{color:var(--gold)}
 .vx .vxb.mic{padding:7px 12px}
 .vx .vxb.mic.big{border-color:var(--teal2);color:var(--ink)}
 .vx .vxq{background:transparent;border:1px solid var(--line2);color:var(--dim);
