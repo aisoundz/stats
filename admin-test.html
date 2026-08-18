@@ -80,6 +80,38 @@
     font-variant-numeric:tabular-nums}
   .bcol s{text-decoration:none;font-size:12px;color:var(--dim);letter-spacing:.06em}
 
+  /* ---- the day strip ---- */
+  .daystrip{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
+  .daystrip::-webkit-scrollbar{display:none}
+  .daybtn{flex:0 0 auto;min-width:64px;text-align:center;cursor:pointer;padding:8px 11px;
+    border-radius:11px;background:var(--bg2);border:1px solid var(--line);color:var(--muted);
+    font-family:inherit;transition:border-color .18s,color .18s,background .18s}
+  .daybtn:hover{border-color:var(--line2);color:var(--ink)}
+  .daybtn.on{background:var(--teal);border-color:var(--teal);color:#04120f}
+  .daybtn.has{border-color:var(--line2)}
+  .daybtn b{display:block;font-family:var(--d);font-weight:700;font-size:12px;letter-spacing:.12em;
+    text-transform:uppercase}
+  .daybtn s{text-decoration:none;display:block;font-family:var(--d);font-weight:800;font-size:17px;
+    margin-top:2px;font-variant-numeric:tabular-nums}
+  .daybtn i{display:block;font-style:normal;font-size:12px;margin-top:3px;opacity:.75}
+  .daygames{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:8px}
+  .gamebtn{text-align:left;cursor:pointer;padding:11px 12px;border-radius:11px;background:var(--bg2);
+    border:1px solid var(--line);color:var(--ink);font-family:inherit;
+    transition:border-color .18s,background .18s}
+  .gamebtn:hover{border-color:var(--line2)}
+  .gamebtn.on{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 10%,var(--bg2))}
+  .gamebtn .gl{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    font-family:var(--d);font-weight:700;font-size:12px;letter-spacing:.14em;color:var(--dim)}
+  .gamebtn .gn{display:block;font-family:var(--d);font-weight:700;font-size:17px;margin-top:4px}
+  .gamebtn .gn s{text-decoration:none;color:var(--dim);font-weight:600;font-size:14px}
+  .gamebtn .gt{display:block;font-size:12px;color:var(--muted);margin-top:3px}
+  .gamebtn .star{color:var(--gold)}
+  .adv{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  .adv summary{cursor:pointer;font-size:14px;color:var(--dim);list-style:none}
+  .adv summary::-webkit-details-marker{display:none}
+  .adv summary:before{content:"▸ ";color:var(--dim)}
+  .adv[open] summary:before{content:"▾ "}
+
   /* ---- the rooms board ---- */
   .roomsgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:9px}
   .roomcard{text-align:left;cursor:pointer;padding:12px;border-radius:12px;
@@ -340,10 +372,27 @@
         <h3>Tonight's game</h3>
         <p class="sub">Everything below is written into this room. Players who opened a different night can't see it.</p>
         <label for="nightSel">Night</label>
-        <select id="nightSel"></select>
-        <label for="nightId">Night ID (must match the app exactly)</label>
-        <input id="nightId" spellcheck="false" autocapitalize="off">
-        <p class="sub tip">The app sends players to this ID automatically. Only change it if you know you changed it in the app too.</p>
+        <!-- ============ PICK A DAY, THEN A GAME =====================
+             A <select> was right when there was one game a week. It is the
+             wrong control for a list that grows every night: fifteen
+             entries today, hundreds by November, and tonight at the bottom
+             of a scroll. Founder: "maybe now we add a calendar that has the
+             games from each day."
+
+             So: a strip of days, then the games on that day as cards. The
+             raw night id stops being a form field with a warning attached —
+             a host should never have to read or type
+             `slate-2026-08-19-tor-wsh` — and moves behind Advanced, where
+             it is still there for the one night somebody needs it. -->
+        <div id="dayStrip" class="daystrip"></div>
+        <div id="dayGames" class="daygames"></div>
+        <select id="nightSel" class="hide" aria-hidden="true"></select>
+        <details class="adv">
+          <summary>Advanced · the raw night id</summary>
+          <label for="nightId">Night ID (must match the app exactly)</label>
+          <input id="nightId" spellcheck="false" autocapitalize="off">
+          <p class="sub tip">The app sends players to this ID automatically. Only change it if you know you changed it in the app too.</p>
+        </details>
       </div>
 
       <div class="card">
@@ -1707,6 +1756,77 @@ function slateToNight(g){
   };
 }
 
+/* ============ THE DAY STRIP ========================================
+   A night has a DATE, and every id in this product carries it — gn13-
+   2026-08-19-min-gs, slate-2026-08-19-tor-wsh. So the date is already the
+   organising fact; the dropdown just never used it. */
+function nightDate(n){
+  const m = String(n.id||'').match(/(\d{4}-\d{2}-\d{2})/);
+  if(m) return m[1];
+  if(n.tipISO) return String(n.tipISO).slice(0,10);
+  return '';
+}
+let DAY_SEL = null;
+
+function paintDayStrip(){
+  const strip = $('dayStrip'), grid = $('dayGames');
+  if(!strip || !grid) return;
+  const all = allNights();
+  const byDay = {};
+  all.forEach(n=>{ const d=nightDate(n); if(!d) return; (byDay[d]=byDay[d]||[]).push(n); });
+
+  /* The days worth offering: everything that has a game, plus today and
+     tomorrow even when empty, because "nothing on" is an answer a host
+     needs and an absent button cannot give it. */
+  const today = new Date().toLocaleDateString('en-CA');
+  const tomorrow = new Date(Date.now()+86400000).toLocaleDateString('en-CA');
+  const days = [...new Set(Object.keys(byDay).concat([today, tomorrow]))].sort();
+
+  if(!DAY_SEL){
+    const cur = nightDate(nightCfg(night));
+    DAY_SEL = (cur && days.includes(cur)) ? cur : (byDay[today] ? today : (days.find(d=>d>=today) || days[days.length-1]));
+  }
+
+  const D=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  strip.innerHTML = days.map(d=>{
+    const dt = new Date(d+'T12:00:00');
+    const n = (byDay[d]||[]).length;
+    const label = d===today ? 'Today' : (d===tomorrow ? 'Tomorrow' : D[dt.getDay()]);
+    return '<button type="button" class="daybtn'+(d===DAY_SEL?' on':'')+(n?' has':'')+'" data-day="'+esc(d)+'">'
+      + '<b>'+esc(label)+'</b><s>'+dt.getDate()+'</s>'
+      + '<i>'+(n? n+(n===1?' game':' games') : '—')+'</i></button>';
+  }).join('');
+
+  const games = (byDay[DAY_SEL]||[]);
+  grid.innerHTML = games.length
+    ? games.map(n=>{
+        const flag = !n.fromSlate;
+        const gn = String(n.id||'').match(/^gn(\d+)/i);
+        return '<button type="button" class="gamebtn'+(n.id===night?' on':'')+'" data-night="'+esc(n.id)+'">'
+          + '<span class="gl"><span>'+esc(String(n.league||'wnba').toUpperCase())+'</span>'
+          +   (gn ? '<span class="star">Game Night #'+gn[1]+'</span>' : '') + '</span>'
+          + '<span class="gn">'+esc(n.away||'')+' <s>at</s> '+esc(n.home||'')+'</span>'
+          + '<span class="gt">'+(flag ? 'hand-written bank' : 'from the slate · template bank')+'</span>'
+          + '</button>';
+      }).join('')
+    : '<p class="sub tip" style="margin:0">No games built for this day. The slate is built each morning at 08:10.</p>';
+}
+try{
+  document.addEventListener('click', function(e){
+    const d = e.target && e.target.closest ? e.target.closest('[data-day]') : null;
+    if(d){ DAY_SEL = d.getAttribute('data-day'); paintDayStrip(); return; }
+    const g = e.target && e.target.closest ? e.target.closest('[data-night]') : null;
+    if(!g) return;
+    const id = g.getAttribute('data-night');
+    if(!id || id===night) return;
+    night = id;
+    try{ const ns=$('nightSel'); if(ns) ns.value=id; }catch(_){}
+    try{ const ni=$('nightId'); if(ni) ni.value=id; }catch(_){}
+    onNightChange();
+    paintDayStrip();
+  }, false);
+}catch(_){}
+
 /* Every room the Control Room can act on tonight. */
 function allNights(){
   const have = new Set(NIGHTS.map(n=>n.id));
@@ -2095,6 +2215,7 @@ function initUI(){
   };
   window.paintNightSel = paintNightSel;
   paintNightSel();
+  try{ paintDayStrip(); }catch(_){}
   ns.onchange = () => { night = ns.value; $('nightId').value = night; onNightChange(); };
   $('nightId').value = night;
   $('nightId').onchange = () => { night = $('nightId').value.trim() || night; onNightChange(); };
@@ -2165,6 +2286,7 @@ function loadSlateIntoPicker(){
     loadSlateRooms().then(function(ok){
       if(!ok) return;
       try{ window.paintNightSel && window.paintNightSel(); }catch(_){}
+      try{ DAY_SEL=null; paintDayStrip(); }catch(_){}
       try{ toast(SLATE_ROOMS.length + ' room(s) from tonight\'s slate are in the picker'); }catch(_){}
     }).catch(function(){});
   }catch(_){}
