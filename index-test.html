@@ -2655,7 +2655,8 @@ window.STATS_FIREBASE = {
           .catch(function(){ return false; })
           .then(function(){ try{ paintSlate(); }catch(_){}
                             return loadNightConfig(db, fsMod); })
-          .then(function(){ try{ paintSlate(); }catch(_){} })
+          .then(function(){ try{ paintSlate(); }catch(_){}
+                            try{ sweepOldSaves(); }catch(_){} })
           .catch(function(){});
       }catch(_){ try{ loadNightConfig(db, fsMod); }catch(_){} }
 
@@ -4858,7 +4859,14 @@ function hydrateNight(cfg){
 /* Repaint whatever is currently showing game data. Deliberately narrow and
    wrapped: a repaint that throws must not take the night with it. */
 function repaintAfterHydrate(){
-  ['renderPortal','paintNav','renderStats','renderGametime','renderBoard','buildPred']
+  /* applySport() FIRST, and it was the omission that made switching rooms
+     look broken. It is the painter that writes the matchup, the eyebrow,
+     the countdown, the tip line and the chips — everything a person looks
+     at to know WHICH GAME THIS IS. Without it the picker said "Tempo at
+     Mystics · PLAYING" while the hero above it still read LYNX at
+     VALKYRIES with the other game's tip time, so the switch appeared to do
+     nothing at all. paintSlate() re-marks which row is current. */
+  ['applySport','paintSlate','renderPortal','paintNav','renderStats','renderGametime','renderBoard','buildPred']
     .forEach(function(fn){ try{ if(typeof window[fn]==='function') window[fn](); }catch(_){} });
   try{ if(typeof trk==='function') trk('night_cfg', {source:NIGHT_CFG_SOURCE, night:GAME.nightId}); }catch(_){}
 }
@@ -5010,10 +5018,34 @@ async function chooseGame(db, F, nightId){
   if(!nightId) return false;
   var g = slateGame(nightId);
   if(!g){ try{ console.error('not a game on tonight\'s slate: '+nightId); }catch(_){} return false; }
+  var here=''; try{ here=(GAME&&GAME.nightId)||''; }catch(_){}
+  if(nightId === here){ try{ paintSlate(); }catch(_){} return true; }
+
+  /* ============ CHANGING ROOMS IS A CHANGE OF EVERYTHING ==============
+     Hydrating in place swaps the CONFIG and leaves the in-memory game
+     exactly where it was — mid-quarter, with a locked card, a score and a
+     question about the other game's teams. The night before GN13 that is
+     precisely what happened: the resume bar offered "Continue tonight's
+     game · Q1 is open" for a room he had just left, and the question under
+     it named the wrong two teams.
+
+     Park this room's card under its own key, remember the choice, and
+     reload. A reload is the only thing that is CERTAIN to leave nothing of
+     the old room behind — every module, timer, listener and cached render
+     starts again — and on the way back up loadSlate() reads the pick,
+     hydration fetches the right night, and checkResume() runs its per-night
+     guard against the room you actually chose. One tap, one second, and no
+     class of stale state survives it. */
+  try{ save(); }catch(_){}
   slatePickSet(nightId);
-  var ok = await loadNightConfig(db, F);
-  try{ if(typeof trk==='function') trk('slate_pick', {night:nightId, flagship:!!g.flagship}); }catch(_){}
-  return ok;
+  try{ if(typeof trk==='function') trk('slate_pick', {night:nightId, flagship:!!g.flagship, from:here}); }catch(_){}
+  try{ toast('Switching to ' + (g.away||'') + ' at ' + (g.home||'') + '…'); }catch(_){}
+  try{
+    var u=new URL(location.href);
+    u.searchParams.set('game', nightId);
+    location.replace(u.toString());
+    return true;
+  }catch(_){ try{ location.reload(); }catch(__){} return true; }
 }
 try{ window.loadSlate = loadSlate; window.chooseGame = chooseGame;
      window.SLATE = SLATE; window.slatePick = slatePick; }catch(_){}
@@ -5502,7 +5534,31 @@ function startDemo(){
   setMode("demo");try{Object.keys(demoCiFired).forEach(k=>delete demoCiFired[k]);PCI.muted=false;}catch(e){}go('name');prefillGate();}
 
 /* ---------------- PERSISTENCE (Game Night only) ---------------- */
-const LS_KEY="stats_gamenight_v1_"+SPORT_KEY; // saves never cross sports
+/* ============ A SAVE BELONGS TO ONE NIGHT, BY CONSTRUCTION ==========
+   This was one slot per SPORT, with a guard in checkResume() that cleared
+   a save whose stamped night did not match. The guard was right and it ran
+   ONCE, at boot, against whichever night the page loaded with — and now a
+   player can change rooms without reloading. So: load on the flagship,
+   switch to the other game, and the flagship's half-played card was still
+   in memory and still on screen. Founder, testing the night before:
+
+     "i cannot move between both games, then instead of taking me to where
+      I should to put in my picks it take mes to the end of q1"
+
+   That is exactly it — the resume bar offered "Continue tonight's game ·
+   Q1 is open" for a night he was no longer in, and the question underneath
+   named the other game's teams.
+
+   One slot per NIGHT removes the class of bug rather than the instance:
+   two rooms cannot share a slot, so nothing can bleed between them, and
+   switching back to a room you were playing finds your card where you left
+   it. LS_KEY has to be a function because the night arrives from the
+   database AFTER this file evaluates. */
+const LS_BASE="stats_gamenight_v1_"+SPORT_KEY;
+function LS_KEY(){
+  var n=''; try{ n=(typeof GAME!=='undefined'&&GAME.nightId)||''; }catch(_){}
+  return n ? (LS_BASE+"_"+n) : LS_BASE;
+}
 /* The screens that mean "you are somewhere in a game night". Everything else
    — landing, gametime, stats, board, me — is a place to look, not a place to
    be. Adding a new TAB must never require touching this list; adding a new
@@ -5803,11 +5859,27 @@ function save(){try{
   try{ S.nid=(typeof GAME!=='undefined'&&GAME.nightId)||''; }catch(_){}
   // Snapshot the Caught It record into the blob so a reload keeps the streak.
   try{ if(typeof PCI==='object') S.pci={called:PCI.called,hit:PCI.hit,streak:PCI.streak,best:PCI.best,heat:PCI.heat,pts:PCI.pts,paid:PCI.paid||{}}; }catch(_){}
-  localStorage.setItem(LS_KEY,JSON.stringify(S));
+  localStorage.setItem(LS_KEY(),JSON.stringify(S));
 }catch(e){}}
-function clearSave(){try{localStorage.removeItem(LS_KEY);}catch(e){}}
+function clearSave(){try{localStorage.removeItem(LS_KEY());}catch(e){}}
+/* Sweep saves from nights that are OVER — never from tonight's other
+   rooms. A player who starts a card in one game, wanders to the other and
+   comes back must find their card where they left it; that is the whole
+   point of a key per night. What gets cleaned is last week. */
+function sweepOldSaves(){
+  try{
+    var keep={}; keep[LS_KEY()]=1;
+    try{ (SLATE.games||[]).forEach(function(g){ if(g&&g.nightId) keep[LS_BASE+'_'+g.nightId]=1; }); }catch(_){}
+    var kill=[];
+    for(var i=0;i<localStorage.length;i++){
+      var k=localStorage.key(i);
+      if(k && k.indexOf(LS_BASE)===0 && !keep[k]) kill.push(k);
+    }
+    kill.forEach(function(k){ try{ localStorage.removeItem(k); }catch(_){} });
+  }catch(_){}
+}
 function checkResume(){
-  let saved=null;try{saved=JSON.parse(localStorage.getItem(LS_KEY));}catch(e){}
+  let saved=null;try{saved=JSON.parse(localStorage.getItem(LS_KEY()));}catch(e){}
   /* A SAVE BELONGS TO ONE NIGHT. Without this, tonight's players get last
      night's game handed back to them — locked card, stale score, a roster
      of people who are not playing — and the resume is automatic, so they
@@ -8450,6 +8522,68 @@ var VX=(function(){
         function(b){ return b.getAttribute('data-pd')||''; }).filter(Boolean);
     }catch(_){ return []; }
   };
+  /* THE BONUS FIELD — the half of a player pick voice could not reach.
+     "Who scores the most points" is TWO answers: a name and a number. The
+     name was wired from the first day and the number never was, so a player
+     said a name, got "Got it", said "twenty three" into the silence, and
+     nothing happened at all. Founder, testing: "it doesnt know how to say
+     how many points. So it gets stuck." */
+  V.pickBonus=function(){
+    try{ return document.querySelector('#predCard .pdbonus input') || null; }catch(_){ return null; }
+  };
+  V.bonusLabel=function(){
+    try{
+      var l=document.querySelector('#predCard .pdbonus label');
+      var t=String((l&&l.textContent)||'').replace(/\+\s*\d+\s*$/,'').trim();
+      return t || 'How many?';
+    }catch(_){ return 'How many?'; }
+  };
+
+  /* SPOKEN NUMBERS. The recogniser hands back "twenty three", "23",
+     "twenty-three" and sometimes "20 3" for the same breath, and a stat
+     line is 0-120, so the four-option NUM table above is no use here.
+
+     Deliberately narrow: it will not invent a number out of a sentence.
+     "twenty three" is a number; "she had about twenty three I think" is
+     not, and returning null there costs one repeat where a wrong guess
+     costs a bonus nobody can see is wrong. */
+  var ONES={zero:0,oh:0,none:0,nothing:0,one:1,won:1,two:2,too:2,to:2,three:3,tree:3,four:4,for:4,fore:4,
+            five:5,six:6,seven:7,eight:8,ate:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,
+            fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19};
+  var TENS={twenty:20,thirty:30,forty:40,fourty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
+  V.spokenNumber=function(raw){
+    var t=String(raw==null?'':raw).toLowerCase()
+      .replace(/[^a-z0-9\- ]+/g,' ').replace(/-/g,' ').replace(/\s+/g,' ').trim();
+    if(!t) return null;
+    /* strip only the words that carry no number of their own */
+    t=t.replace(/^(?:say|its|it is|the answer is|answer|i say|put|make it|about|around|maybe)\s+/,'').trim();
+    if(!t) return null;
+    /* a bare figure, including "23 points" */
+    var d=t.match(/^(\d{1,3})(?:\s+(?:points?|pts?|rebounds?|boards?|assists?|dimes?|steals?|blocks?))?$/);
+    if(d){ var v=Number(d[1]); return (v>=0 && v<=199) ? v : null; }
+    /* words: at most "ninety nine", plus an optional trailing unit */
+    var w=t.split(' ').filter(function(x){
+      return !/^(?:points?|pts?|rebounds?|boards?|assists?|dimes?|steals?|blocks?)$/.test(x); });
+    if(!w.length || w.length>2) return null;
+    if(w.length===1){
+      if(ONES[w[0]]!=null) return ONES[w[0]];
+      if(TENS[w[0]]!=null) return TENS[w[0]];
+      return null;
+    }
+    if(TENS[w[0]]!=null && ONES[w[1]]!=null && ONES[w[1]]>=1 && ONES[w[1]]<=9)
+      return TENS[w[0]] + ONES[w[1]];
+    return null;
+  };
+
+  /* Put a number in the field the way a thumb would, so every listener the
+     card already has fires — the running "pts riding" total included. */
+  V.setBonus=function(n){
+    var nb=V.pickBonus(); if(!nb) return false;
+    nb.value=String(n);
+    try{ nb.dispatchEvent(new Event('input',{bubbles:true})); }catch(_){ try{ nb.oninput&&nb.oninput(); }catch(_){} }
+    return true;
+  };
+
   V.onPickCard=function(){
     try{ return S.screen==='predict' && !!document.querySelector('#predCard .pdopt'); }catch(_){ return false; }
   };
@@ -8486,21 +8620,88 @@ var VX=(function(){
   V.heardPick=function(raw){
     if(!V.on || !V.onPickCard()) return false;
     var opts=V.pickOpts();
-    var t=String(raw==null?'':raw).toLowerCase().trim();
-    if(/^(?:next|next one|forward|skip)$/.test(t)){
-      V.deaf(); try{ predGo(1); }catch(_){} return true;
-    }
-    if(/^(?:back|previous|go back|last one)$/.test(t)){
-      V.deaf(); try{ predGo(-1); }catch(_){} return true;
-    }
-    if(/^(?:repeat|again|say again|say that again)$/.test(t)){ V.askPick(true); return true; }
-    var m=V.match(raw, opts);
-    if(!m) return false;
-    if(m.kind==='ambiguous'){
-      V.deafSay('More than one player matches that. Say the first name too.');
+    var t=String(raw==null?'':raw).toLowerCase().replace(/[^a-z0-9' ]+/g,' ').replace(/\s+/g,' ').trim();
+
+    /* ---- LOCK THE CARD. Its own branch, above everything.
+       This used to fall through to V.match(), which returns {kind:'lock'}
+       for BOTH "lock" and "next" — one word for two different things — and
+       the handler then called V.deaf() and predGo(1). On the last card
+       predGo does nothing, so "lock my card" locked nothing AND turned the
+       microphone off, which is why every single thing said after it landed
+       on a dead mic. Founder: "It also doesnt allow me to lock my card."
+       Never V.deaf() here. The mic belongs to the sheet until the sheet is
+       finished with it. */
+    if(/^(?:lock|lock it|lock it in|lock in|lock my card|lock the card|lock my picks|submit|submit my card|finished|i'm done|im done|that's my card|thats my card)$/.test(t)){
+      var lk=document.getElementById('pdLock');
+      if(!lk){
+        V.deafSay('Pick at least one first, then say lock my card.');
+        return true;
+      }
+      var ready = lk.classList.contains('ready');
+      V.pause();
+      try{ lk.click(); }catch(_){}
+      /* Not ready means the button JUMPED to the card you missed rather
+         than locking. Say which, or the sheet appears to ignore you. */
+      if(!ready){
+        setTimeout(function(){
+          var q=''; try{ q=(document.querySelector('#predCard .pdq')||{}).textContent||''; }catch(_){}
+          V.deafSay('Not yet — ' + (q ? q.replace(/\?$/,'') : 'one still needs an answer') + '.');
+        }, 260);
+      }
       return true;
     }
-    if(m.kind==='lock'){ V.deaf(); try{ predGo(1); }catch(_){} return true; }
+
+    if(/^(?:next|next one|forward|skip|skip it)$/.test(t)){
+      try{ predGo(1); }catch(_){} return true;
+    }
+    if(/^(?:back|previous|go back|last one)$/.test(t)){
+      try{ predGo(-1); }catch(_){} return true;
+    }
+    if(/^(?:repeat|again|say again|say that again)$/.test(t)){ V.askPick(true); return true; }
+
+    /* ---- THE BONUS NUMBER.
+       Checked BEFORE the name match, and only when the card actually has a
+       field for it. A roster has no player called "twenty three", so this
+       cannot steal a name — but a name match on a bare number would be a
+       fuzzy hit on nothing, so order still matters. */
+    var nb=V.pickBonus();
+    if(nb){
+      if(/^(?:no number|skip the number|no bonus|leave it|pass|dont know|don't know|no idea|not sure)$/.test(t)){
+        V.deafSay('No number then. Say next for the following one.', true);
+        return true;
+      }
+      var n=V.spokenNumber(t);
+      if(n!=null){
+        var who=V.pickedName();
+        if(!who){
+          V.deafSay('Say the player first, then the number.', true);
+          return true;
+        }
+        V.setBonus(n);
+        V.deafSay('Got it. ' + who.split(' ')[0] + ' for ' + n + '. Say next, or a different number to change it.', true);
+        return true;
+      }
+    }
+
+    var m=V.match(raw, opts);
+    if(!m){
+      /* SILENCE WAS THE BUG. An unmatched phrase used to return false and
+         the sheet said nothing at all, which on a phone in a pocket is
+         indistinguishable from a dead microphone — and that is exactly
+         what it was mistaken for. Say what this card can hear. */
+      V.deafSay(nb
+        ? 'I did not catch that. Say a player’s name, or a number for the bonus.'
+        : 'I did not catch that. ' + V.optionLine(opts) + '.', true);
+      return true;
+    }
+    if(m.kind==='ambiguous'){
+      V.deafSay('More than one player matches that. Say the first name too.', true);
+      return true;
+    }
+    /* "next"/"done" reach here through the grammar as {kind:'lock'} — on
+       this screen that means the NEXT CARD, because the real lock has its
+       own branch at the top now. */
+    if(m.kind==='lock'){ try{ predGo(1); }catch(_){} return true; }
     if(m.kind==='pick'){
       var name=opts[m.i]; if(!name) return false;
       var btn=null;
@@ -8508,15 +8709,30 @@ var VX=(function(){
       /* A ruled-out player is a real refusal on this card, not a pick —
          the button is disabled on purpose and voice must not walk past it. */
       if(btn && btn.classList.contains('isout')){
-        V.deafSay(name.split(' ')[0]+' is ruled out tonight. She cannot score you anything. Pick somebody else.');
+        V.deafSay(name.split(' ')[0]+' is ruled out tonight. She cannot score you anything. Pick somebody else.', true);
         return true;
       }
       V.pause(); V.hush();
       try{ predPick(V.pickId(), name); }catch(_){}
-      V.deafSay('Got it. '+name+'. Say next, or another name to change it.', true);
+      /* AND THE SECOND HALF OF THE QUESTION. A card with a bonus is not
+         finished when the name lands, so ask for the number instead of
+         saying "say next" over a field nobody mentioned. */
+      var bonusNow=V.pickBonus();
+      V.deafSay(bonusNow
+        ? 'Got it. ' + name + '. ' + V.bonusLabel()
+        : 'Got it. ' + name + '. Say next, or another name to change it.', true);
       return true;
     }
     return false;
+  };
+  /* Who is currently picked on this card — the name a bonus belongs to. */
+  V.pickedName=function(){
+    try{
+      var on=document.querySelector('#predCard .pdopt.on');
+      if(on) return on.getAttribute('data-pd')||'';
+      var id=V.pickId();
+      return (id && S.predChoices && S.predChoices[id]) || '';
+    }catch(_){ return ''; }
   };
   V.pickId=function(){
     try{ var L=predOrderList(); return (L[PD.i]||{}).id; }catch(_){ return null; }
@@ -14472,7 +14688,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-door.142';
+const STATS_BUILD='2026-08-18-rooms.143';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

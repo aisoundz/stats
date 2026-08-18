@@ -125,18 +125,39 @@ const FAKE = `(function(store){
       window.__reads=[];
       const a=await window.loadNightConfig({}, window.__F);   // no pick → pointer
       const pointed=window.GAME.nightId, readA=window.__reads.slice();
-      await window.chooseGame({}, window.__F, 'slate-2026-08-19-tor-wsh');
-      const chosen=window.GAME.nightId, home=window.GAME.homeName;
-      return { a, pointed, readA, chosen, home,
-               remembered:localStorage.getItem('stats_slate_pick_v1') };
+      /* CHANGING ROOMS RELOADS, and that is the fix rather than a
+         shortcut. Hydrating in place swapped the config and left the
+         in-memory game mid-quarter in the room you had just left — a
+         locked card, a score and a question about the other game's teams.
+
+         location.replace cannot be stubbed in Chromium, so this does not
+         try: it calls the real thing, lets the page actually go, and then
+         asserts the two effects that SURVIVE a navigation — the choice was
+         remembered, and the room being left had its card parked under its
+         own per-night key. Where it lands is covered by the ?game= tests
+         above, which load the page for real. */
+      window.__before = { pick:localStorage.getItem('stats_slate_pick_v1') };
+      S.mode='live'; S.place='predict'; S.qi=0;
+      window.chooseGame({}, window.__F, 'slate-2026-08-19-tor-wsh');
+      return { a, pointed, readA };
     });
     ok('slate.with-no-choice-the-pointer-wins', r.a===true && r.pointed==='gn13-2026-08-19-min-gs',
        `landed on ${r.pointed}`);
     ok('slate.reads-the-pointer-when-nothing-is-chosen', r.readA.includes('schedule/current'),
        JSON.stringify(r.readA));
-    ok('slate.a-choice-switches-the-room', r.chosen==='slate-2026-08-19-tor-wsh' && r.home==='Mystics',
-       `after choosing, GAME is ${r.chosen} / ${r.home}`);
-    ok('slate.a-choice-is-remembered', r.remembered==='slate-2026-08-19-tor-wsh', r.remembered);
+    await p.waitForTimeout(900);
+    const after=await p.evaluate(()=>({
+      url: location.search,
+      pick: localStorage.getItem('stats_slate_pick_v1'),
+      parked: !!localStorage.getItem('stats_gamenight_v1_basketball_gn13-2026-08-19-min-gs')
+    }));
+    ok('slate.a-choice-sends-you-to-that-room',
+       /game=slate-2026-08-19-tor-wsh/.test(after.url) && after.pick==='slate-2026-08-19-tor-wsh',
+       `url=${after.url} pick=${after.pick} — a switch must reload, or the old room's half-played card comes with you`);
+    ok('slate.the-room-you-leave-keeps-its-card',
+       after.parked===true,
+       'the card from the room being left was not parked under its own per-night key, so coming back would lose it');
+
     await p.close();
   }
 
