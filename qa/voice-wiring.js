@@ -27,12 +27,38 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
   const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
   await p.addInitScript(()=>{
     window.__said=[]; window.__recStarts=0;
-    const def=(k,v)=>Object.defineProperty(window,k,{configurable:true,value:v});
+    /* WRITABLE. Object.defineProperty defaults writable:false, so a later
+       `window.__micThrows = true` is a SILENT no-op — the third time this
+       harness has reported the feature broken when only the stub was. */
+    const def=(k,v)=>Object.defineProperty(window,k,{configurable:true,writable:true,value:v});
     def('speechSynthesis',{ speak(u){ window.__said.push(u.text); setTimeout(()=>u.onend&&u.onend(),5); },
-                            cancel(){ window.__said.push('<<CANCEL>>'); }, getVoices(){return[];} });
+                            cancel(){ window.__said.push('<<CANCEL>>'); },
+                            addEventListener(){},
+                            /* Headless Chromium ships NO voices at all, so an
+                               empty list here tests nothing. This is the real
+                               shape of an iOS/Android list, novelty voices
+                               included, because ranking them is the point. */
+                            getVoices(){ return [
+                              {name:'Samantha', lang:'en-US', voiceURI:'v-sam', localService:true},
+                              {name:'Aaron',    lang:'en-US', voiceURI:'v-aaron', localService:true},
+                              {name:'Bells',    lang:'en-US', voiceURI:'v-bells', localService:true},
+                              {name:'Daniel',   lang:'en-GB', voiceURI:'v-dan', localService:true},
+                              {name:'Google US English', lang:'en-US', voiceURI:'v-goog', localService:false}
+                            ]; } });
     def('SpeechSynthesisUtterance', function(t){ this.text=t; });
-    const R=function(){ window.__recStarts++; this.start=function(){}; this.stop=function(){}; this.abort=function(){}; };
+    const R=function(){ window.__recStarts++; window.__rec=this;
+      this.start=function(){ if(window.__micThrows) throw new Error('not allowed'); };
+      this.stop=function(){}; this.abort=function(){};
+      /* drive the engine the way a real one does: interim first, then final */
+      this.__speak=function(txt,final){
+        const res=[{transcript:txt,confidence:.9}]; res.isFinal=!!final; res.length=1;
+        const ev={resultIndex:0,results:Object.assign([res],{length:1})};
+        if(this.onspeechstart && !final) this.onspeechstart();
+        if(this.onresult) this.onresult(ev);
+      };
+    };
     def('SpeechRecognition', R); def('webkitSpeechRecognition', R);
+    def('__micThrows', false);
   });
   await p.goto('file://'+TARGET,{waitUntil:'domcontentloaded'});
   await p.waitForFunction(()=>document.body.classList.contains('booted'),{timeout:25000});
@@ -104,6 +130,56 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     window.nextQuestion=function(){window.__nq2++;return o.apply(this,arguments);};
     window.__said=[]; VX.heard('next'); window.nextQuestion=o;
     return window.__nq2===1 && !window.__said.some(s=>/Nothing picked yet/i.test(s));
+  });
+
+  /* ---- THE THREE BUGS THAT MADE IT "NOT ACCEPT MY ANSWER" ---------- */
+  await p.evaluate(()=>{ VX.enable(); S.mode='live'; S.qi=0; S.ni=0; S.answered=false;
+                         go('live'); window.__said=[]; loadQuestion(); });
+  await p.waitForTimeout(900);
+  /* 1. Answering must cancel the options prompt, not be cut off by it. */
+  R['speaking-cancels-the-options-prompt'] = await p.evaluate(()=>{
+    if(!window.__rec) return false;
+    window.__said=[]; window.__rec.__speak('tw',false);   // interim: somebody is talking
+    return VX.hint===null;                                 // the prompt is off
+  });
+  /* 2. The engine runs one long session — no gap to answer into. */
+  R['recognition-is-continuous'] = await p.evaluate(()=>!!(window.__rec && window.__rec.continuous===true && window.__rec.interimResults===true));
+  /* 3. A final transcript answers, and is shown back on screen. */
+  await p.evaluate(()=>{ window.__said=[]; window.__rec.__speak('two',true); });
+  await p.waitForTimeout(300);
+  R['a-spoken-answer-lands-through-the-engine'] = await p.evaluate(()=>{
+    const s=document.querySelector('#qOpts .opt.sel');
+    return !!s && (document.querySelectorAll('#qOpts .opt')[1]||{}).textContent.indexOf(s.querySelector('span').textContent)>=0;
+  });
+  R['it-shows-you-what-it-heard'] = await p.evaluate(()=>
+    VX.lastHeard==='two' && (document.getElementById('vxBar').textContent||'').indexOf('heard')>=0);
+
+  /* A MIC THAT REFUSES TO OPEN MUST SAY SO — iOS throws from start(). */
+  R['a-mic-that-will-not-open-says-so'] = await p.evaluate(()=>{
+    window.__micThrows=true; VX.micThrew=0; VX.note='';
+    VX.deaf(); VX.wantEar=true; VX.ear(); VX.wantEar=true; VX.ear();
+    const said=!!VX.note && /tap/i.test(VX.note);
+    window.__micThrows=false; VX.micThrew=0; VX.note='';
+    return said && VX.listening===false;
+  });
+  R['there-is-a-tap-to-talk-door'] = await p.evaluate(()=>
+    typeof VX.listenNow==='function' && (document.getElementById('vxBar').innerHTML||'').indexOf('VX.listenNow()')>=0);
+
+  /* THE VOICE ITSELF — a real choice off the device, remembered. */
+  R['a-voice-can-be-chosen-and-is-remembered'] = await p.evaluate(()=>{
+    const l=VX.voices(); if(!l.length) return false;
+    const pick=l[l.length-1].voiceURI; VX.setVoice(pick);
+    const ok=VX.voice() && VX.voice().voiceURI===pick;
+    VX.setVoice(''); return ok;
+  });
+  R['it-prefers-a-real-voice-over-a-novelty-one'] = await p.evaluate(()=>{
+    VX.setVoice(''); const v=VX.voice();
+    return !!v && !/compact|eloquence|novelty|bells|bad news/i.test(v.name||'');
+  });
+  /* The default must not just be "whatever came first" — Samantha is first
+     in the list and is exactly what the founder asked us to move off. */
+  R['the-default-is-a-male-us-voice-not-the-first-one'] = await p.evaluate(()=>{
+    VX.setVoice(''); const v=VX.voice(); return !!v && v.voiceURI==='v-aaron';
   });
 
   await p.evaluate(()=>{ VX.disable(); window.__said=[]; window.__recStarts=0;

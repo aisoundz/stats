@@ -6799,7 +6799,8 @@ var VX=(function(){
     try{
       window.speechSynthesis.cancel();
       var u=new window.SpeechSynthesisUtterance(t);
-      u.rate=1.08; u.pitch=1; u.volume=1; u.lang='en-US';
+      u.rate=1.06; u.pitch=1; u.volume=1; u.lang='en-US';
+      try{ var vv=V.voice(); if(vv){ u.voice=vv; u.lang=vv.lang||'en-US'; } }catch(_){}
       u.onend=fire; u.onerror=fire;
       V.speaking=true;
       window.speechSynthesis.speak(u);
@@ -6808,6 +6809,60 @@ var VX=(function(){
       setTimeout(fire, Math.min(20000, Math.max(1200, t.length*80+1200)));
     }catch(e){ fire(); }
   };
+
+  /* ---- WHICH VOICE ---------------------------------------------------
+     The founder's note, and it is a brand question rather than a settings
+     question: the default robot is not the voice of this product. What is
+     reachable from a web page is ONLY the voices already installed on the
+     device — we cannot ship a voice, and the list is different on every
+     phone. So: pick from what is really there, prefer a male US English
+     voice over the default, let it be changed and remembered, and be
+     honest that a specific voice is a hosted-TTS decision and not this.
+
+     Names rather than a gender flag, because the API does not expose one.
+     These are the male en-US voices Apple, Google and Microsoft actually
+     ship, most natural first — Apple's Siri voices and Google's WaveNet
+     ones are markedly less robotic than the older built-ins. */
+  var MALEISH=['siri male','aaron','arthur','daniel','alex','fred','junior','ralph','tom',
+               'google us english male','microsoft guy','microsoft davis','microsoft eric',
+               'microsoft christopher','microsoft roger','rishi','oliver','matthew','joey','male'];
+  var VKEY='stats_voice_pick_v1';
+  V.voices=function(){
+    try{
+      var all=window.speechSynthesis.getVoices()||[];
+      var en=all.filter(function(v){ return /^en(-|_|$)/i.test(v.lang||''); });
+      return en.length?en:all;
+    }catch(_){ return []; }
+  };
+  V.voice=function(){
+    var list=V.voices(); if(!list.length) return null;
+    var want=''; try{ want=localStorage.getItem(VKEY)||''; }catch(_){}
+    if(want){
+      var exact=list.find(function(v){ return v.voiceURI===want || v.name===want; });
+      if(exact) return exact;
+    }
+    /* No choice made yet — rank rather than take whatever is first. */
+    var best=null, bestScore=-1;
+    list.forEach(function(v){
+      var n=String(v.name||'').toLowerCase(), sc=0;
+      for(var i=0;i<MALEISH.length;i++){ if(n.indexOf(MALEISH[i])>=0){ sc=MALEISH.length-i+10; break; } }
+      if(/en-us/i.test(v.lang||'')) sc+=4;
+      if(v.localService) sc+=1;
+      if(/compact|eloquence|novelty|whisper|bells|bad news|good news/.test(n)) sc-=30;
+      if(sc>bestScore){ bestScore=sc; best=v; }
+    });
+    return best||list[0];
+  };
+  V.setVoice=function(uri){
+    try{ localStorage.setItem(VKEY, uri||''); }catch(_){}
+    V.hush();
+    V.say('This is the voice for tonight.');
+    V.paint();
+  };
+  /* Voices load asynchronously on every platform and are an empty list on
+     the first call. Repaint when they arrive or the picker is born empty. */
+  try{ if(V.hasOut && window.speechSynthesis.addEventListener)
+         window.speechSynthesis.addEventListener('voiceschanged', function(){ try{ V.paint(); }catch(_){} }); }catch(_){}
 
   /* ---- THE GRAMMAR --------------------------------------------------- */
   var NUM={ 'one':0,'won':0,'first':0,'1':0,'a':0,
@@ -6889,13 +6944,41 @@ var VX=(function(){
     var C=window.SpeechRecognition||window.webkitSpeechRecognition; if(!C) return;
     try{
       var r=new C();
-      r.lang='en-US'; r.continuous=false; r.interimResults=false; r.maxAlternatives=4;
+      /* CONTINUOUS, AND INTERIM RESULTS ON. The first build ran one
+         utterance per session and restarted on `onend`. Every restart is a
+         dead window — the engine's own start-up latency plus our timer —
+         and a player who answers promptly answers INTO it. "It is not
+         accepting my answer" is what that feels like from the sofa, and it
+         is not a recognition failure at all: the microphone was between
+         sessions. One long session removes the window entirely.
+
+         Interim results are not used to answer — only a final transcript
+         may pick — but they are the earliest possible proof that somebody
+         is talking, which is what stops us reading the options over them. */
+      r.lang='en-US'; r.continuous=true; r.interimResults=true; r.maxAlternatives=4;
+      /* DO NOT TALK OVER THE PLAYER. This was the sharpest of the three
+         bugs: the options are read 2.6s after the question, and reading
+         them ABORTS the microphone. Answer at 2.7s and the app cut you off
+         mid-word and threw the answer away — reliably, on the questions
+         with four options, which is most of them. The moment there is any
+         voice in the room, the prompt is cancelled. It is a prompt for
+         somebody who said nothing, and somebody is saying something. */
+      r.onspeechstart=function(){ V.clearHint(); };
+      r.onaudiostart =function(){ V.paint(); };
       r.onresult=function(e){
-        var res=e.results&&e.results[0]; if(!res) return;
-        for(var i=0;i<res.length;i++){
-          if(V.heard(res[i].transcript)) return;
+        var i, j, res, fin=false;
+        for(i=e.resultIndex; i<e.results.length; i++){
+          res=e.results[i];
+          if(!res.isFinal){ V.clearHint(); continue; }
+          fin=true;
+          /* SHOW WHAT IT HEARD. Without this the only report anybody can
+             make is "it did not work", which is not a bug report. With it,
+             a mishear and a mis-grammar look completely different on
+             screen and either one can be fixed. */
+          try{ V.lastHeard=String(res[0].transcript||'').trim(); }catch(_){}
+          for(j=0;j<res.length;j++){ if(V.heard(res[j].transcript)) return; }
         }
-        V.heard(null);   // heard something, understood none of it
+        if(fin){ V.miss=(V.miss||0)+1; V.paint(); }
       };
       r.onerror=function(e){
         var c=(e&&e.error)||'';
@@ -6906,19 +6989,40 @@ var VX=(function(){
           V.paint(); return;
         }
         if(c==='no-speech' || c==='aborted' || c==='audio-capture'){ return; }
-        V.errs++;
+        V.errs++; V.paint();
       };
       r.onend=function(){
         V.listening=false; V.rec=null;
         if(!V.wantEar) { V.paint(); return; }
-        /* Recognition ends itself constantly — after every result, after
-           every silence. Restarting is normal, so the backoff exists only
-           to stop a genuinely broken engine from becoming a spin loop. */
         if(V.errs>6){ V.note='Voice input stopped responding — tap your answers.'; V.wantEar=false; V.paint(); return; }
-        setTimeout(function(){ try{ V.ear(); }catch(_){} }, V.errs?600*V.errs:250);
+        setTimeout(function(){ try{ V.ear(); }catch(_){} }, V.errs?600*V.errs:120);
       };
       V.rec=r; V.listening=true; r.start(); V.paint();
-    }catch(e){ V.listening=false; }
+    }catch(e){
+      /* THIS CATCH WAS SILENT, AND THAT WAS MY OWN RULE BROKEN. Safari on
+         iOS refuses to open a microphone outside the gesture that asked for
+         it, and refuses by THROWING here — so on an iPhone the app sat
+         there saying "Listening" with no microphone behind it, which is
+         precisely the thing the blocked-mic message exists to prevent.
+         Now it says so, and says what to do about it. */
+      V.listening=false; V.rec=null;
+      V.micThrew=(V.micThrew||0)+1;
+      if(V.micThrew>=2){
+        V.wantEar=false;
+        V.note='Tap 🎙 to answer out loud — this browser only opens the mic when you ask it to.';
+      }
+      V.paint();
+    }
+  };
+  /* THE GESTURE DOOR. iOS will open a microphone from a tap and from
+     nothing else, so there has to be a tap available. On every other
+     browser this is a no-op that people never need to find. */
+  V.listenNow=function(){
+    if(!V.on) return;
+    V.micThrew=0; V.note=''; V.wantEar=true; V.errs=0;
+    V.hush();            // stop reading, the player wants to talk
+    V.clearHint();
+    V.ear(); V.paint();
   };
   V.deaf=function(){
     V.wantEar=false;
@@ -7011,8 +7115,10 @@ var VX=(function(){
     V.wantEar=true;
     V.say(lead, function(){
       V.ear();
-      if(opts.length>2 || again){ V.hint=setTimeout(function(){ V.readOptions(); }, 2600); }
-      else { V.hint=setTimeout(function(){ V.readOptions(); }, 4200); }
+      /* Longer than it was. The prompt is now cancelled the instant the
+         microphone hears anybody, so its only job is to rescue a silence —
+         and rushing it was what made it interrupt people. */
+      V.hint=setTimeout(function(){ V.readOptions(); }, opts.length>2 ? 4500 : 6000);
     });
     V.paint();
   };
@@ -7113,10 +7219,33 @@ var VX=(function(){
               : V.speaking ? 'Reading the question…'
               : V.listening ? 'Listening — say a number, then say “lock”'
               : V.hasEar ? 'Voice on' : 'Voice on — tap your answer';
+      var h='<button type="button" class="vxb" onclick="VX.toggle()" aria-pressed="'+(V.on?'true':'false')+'">'
+        + (V.on?'🔊':'🔈') + ' <b>Voice</b> <s>'+(V.on?'on':'off')+'</s></button>';
+      if(V.on && V.hasEar){
+        h+='<button type="button" class="vxb mic" onclick="VX.listenNow()" title="Answer out loud">🎙</button>';
+      }
+      h+='<span class="vxt">'+String(txt).replace(/</g,'&lt;')+'</span>';
+      /* WHAT IT HEARD, ON SCREEN. "It is not accepting my answer" and "it
+         heard something else entirely" are different bugs with different
+         fixes, and until this line existed neither could be told apart
+         from the sofa. */
+      if(V.on && V.lastHeard){
+        h+='<span class="vxh">heard: “'+String(V.lastHeard).replace(/</g,'&lt;')+'”</span>';
+      }
+      if(V.on && V.hasOut){
+        var list=V.voices(), cur=V.voice();
+        if(list.length>1){
+          h+='<select class="vxv" onchange="VX.setVoice(this.value)" aria-label="Reading voice">';
+          list.forEach(function(v){
+            var sel=(cur && v.voiceURI===cur.voiceURI)?' selected':'';
+            h+='<option value="'+String(v.voiceURI).replace(/"/g,'&quot;')+'"'+sel+'>'
+              + String(v.name).replace(/</g,'&lt;')+'</option>';
+          });
+          h+='</select>';
+        }
+      }
       el.className='vx '+state+(V.note?' warn':'');
-      el.innerHTML='<button type="button" class="vxb" onclick="VX.toggle()" aria-pressed="'+(V.on?'true':'false')+'">'
-        + (V.on?'🔊':'🔈') + ' <b>Voice</b> <s>'+(V.on?'on':'off')+'</s></button>'
-        + '<span class="vxt">'+String(txt).replace(/</g,'&lt;')+'</span>';
+      el.innerHTML=h;
     }catch(_){}
   };
   return V;
@@ -12578,7 +12707,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-17-voice-practice.121';
+const STATS_BUILD='2026-08-17-voice-ear.122';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
