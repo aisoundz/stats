@@ -219,6 +219,37 @@
     mask-image:linear-gradient(180deg,#000 34%,rgba(0,0,0,.5) 66%,transparent 94%)}
   @media (prefers-reduced-motion:reduce){ #s-landing.mq #landingSurface{opacity:.7} }
 
+  /* ============ THE ARENA LIGHT ======================================
+     Founder, on the landing mock: "I like the colors and how it moves and
+     blends with the teams and the beauty."
+
+     Two lamps and a floor, under the markings and behind everything else.
+     The lamps ARE the two teams — the only saturated light on the page —
+     and the floor is the material the sport is played on, so basketball
+     reads warm hardwood, baseball clay, hockey ice. It re-lights itself
+     when the rail changes game, which is what makes switching feel like
+     walking into a different building rather than swapping a label.
+
+     Under the same mask as the markings so it never crosses the countdown,
+     and it breathes slowly enough to read as light rather than animation. */
+  #s-landing.mq #arenaLight{position:absolute;left:-18px;right:-18px;top:-14px;height:330px;
+    z-index:-2;pointer-events:none;overflow:hidden;
+    -webkit-mask-image:linear-gradient(180deg,#000 40%,rgba(0,0,0,.45) 70%,transparent 94%);
+    mask-image:linear-gradient(180deg,#000 40%,rgba(0,0,0,.45) 70%,transparent 94%)}
+  #arenaLight .flr{position:absolute;inset:0;transition:background .6s cubic-bezier(.22,.61,.36,1);
+    background:
+      radial-gradient(120% 80% at 50% 8%, color-mix(in srgb,var(--surface,#c8823c) 30%, transparent), transparent 64%),
+      linear-gradient(180deg, color-mix(in srgb,var(--surface,#c8823c) 14%, transparent), transparent 68%)}
+  #arenaLight .lmp{position:absolute;left:-26%;right:-26%;top:14px;height:300px;
+    background:
+      radial-gradient(56% 72% at 13% 24%, color-mix(in srgb,var(--away) 92%,transparent), transparent 70%),
+      radial-gradient(56% 72% at 87% 18%, color-mix(in srgb,var(--home) 92%,transparent), transparent 70%);
+    filter:blur(30px) saturate(1.25);
+    transition:background .6s cubic-bezier(.22,.61,.36,1);
+    animation:arenaBreathe 7s ease-in-out infinite}
+  @keyframes arenaBreathe{0%,100%{opacity:.78}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){ #arenaLight .lmp{animation:none;opacity:.85} }
+
   /* ── the rail. The wordmark stops being the biggest thing on the page,
         and the vertical space it was taking goes to the game. The right
         slot carries the positioning statement that used to live in a 12px
@@ -675,8 +706,12 @@
     background:linear-gradient(180deg,rgba(19,27,43,.94),rgba(12,18,30,.88));
     -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
     border-bottom:1px solid var(--line)}
+  /* The menu button is fixed to the top-right corner, so the rail's own
+     label has to stop before it — "nothing in the corner of a focused
+     task" cuts both ways. The tiles below may scroll under it; a label
+     that is half-covered cannot. */
   .grTop{display:flex;align-items:center;justify-content:space-between;gap:10px;
-    padding:8px 14px 6px}
+    padding:8px 62px 6px 14px}
   .grLbl{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
     color:var(--dim)}
   .grAll{background:none;border:0;padding:0;cursor:pointer;font-family:inherit;font-size:12px;
@@ -684,8 +719,12 @@
   .grTiles{display:flex;gap:7px;overflow-x:auto;padding:0 14px 10px;scrollbar-width:none;
     -webkit-overflow-scrolling:touch}
   .grTiles::-webkit-scrollbar{display:none}
-  .grTile{flex:0 0 auto;min-width:126px;max-width:190px;text-align:left;cursor:pointer;
-    padding:8px 10px;border-radius:11px;color:var(--body);font-family:inherit;font-size:14px;
+  /* WIDE ENOUGH FOR A REAL NAME. At 126px "Tempo at Mystics" and its tip
+     time collided and wrapped mid-word — the first thing a person reads on
+     the page, broken. Nicknames are the long part, so the floor is set by
+     them and the time gets its own line. */
+  .grTile{flex:0 0 auto;min-width:152px;max-width:220px;text-align:left;cursor:pointer;
+    padding:9px 11px;border-radius:11px;color:var(--body);font-family:inherit;font-size:14px;
     background:rgba(5,8,14,.6);border:1px solid var(--line);
     transition:border-color .2s,background .2s,transform .2s}
   .grTile:hover{border-color:var(--line2)}
@@ -700,10 +739,11 @@
   .grLg i{width:5px;height:5px;border-radius:50%;background:var(--dim);display:block;font-style:normal}
   .grTile.onair .grLg{color:var(--red)}
   .grTile.onair .grLg i{background:var(--red)}
-  .grWho{font-size:15px;font-weight:800;color:var(--ink);letter-spacing:.01em;
+  .grWho{display:block;font-size:15px;font-weight:800;color:var(--ink);letter-spacing:.01em;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .grWho s{text-decoration:none;color:var(--dim);font-weight:600;font-size:12px;margin:0 4px}
-  .grWhen{font-size:12px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+  .grWhen{display:block;font-size:12px;color:var(--muted);margin-top:3px;
+    font-variant-numeric:tabular-nums;white-space:nowrap}
   .grTile[aria-current="true"] .grWhen{color:var(--teal)}
   .grStar{color:var(--gold);font-size:12px}
 
@@ -1179,6 +1219,7 @@
          light. Painted by paintSurface() from the sport and the two team
          colours; geometry only, no logos, no marks; empty for any sport
          with no drawing rather than another sport's markings. -->
+    <div id="arenaLight" aria-hidden="true"><div class="flr"></div><div class="lmp"></div></div>
     <div id="landingSurface" aria-hidden="true"></div>
     <div class="brand"><span class="logo" style="letter-spacing:1.5px">STATS GAMETIME</span></div>
     <p class="tag strangers">The game that pays to pay attention</p>
@@ -5422,6 +5463,13 @@ function paintSurface(){
     var el=document.getElementById('landingSurface'); if(!el) return;
     var key=''; try{ key=String(SPORT&&SPORT.key||''); }catch(_){}
     var draw=SURFACES[key];
+    /* THE MATERIAL, PER SPORT. Hardwood, clay, turf, ice — the floor the
+       game is actually played on. It is the difference between a page that
+       is dark and a page that is somewhere. Set here because this is the
+       one function that already knows which sport is on screen. */
+    var FLOOR={ basketball:'#c8823c', baseball:'#a8552f', football:'#2f7a45',
+                soccer:'#2f7a45', hockey:'#a8c6dc' };
+    try{ document.documentElement.style.setProperty('--surface', FLOOR[key] || '#c8823c'); }catch(_){}
     /* No drawing for this sport? Then nothing — never another sport's
        markings, and never a placeholder. */
     if(!draw){ el.innerHTML=''; return; }
@@ -14857,7 +14905,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-noflash.145';
+const STATS_BUILD='2026-08-18-arena.146';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
