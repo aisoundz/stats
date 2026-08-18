@@ -1711,6 +1711,14 @@ function allNights(){
 
 async function loadSlateRooms(){
   try{
+    /* F AND db ARE NOT GLOBALS IN THIS FILE. They live on FB — every other
+       Firestore caller here starts with `var F=FB.F, db=FB.db;` and I did
+       not, so this threw ReferenceError on every boot, caught its own
+       error, returned false, and the slate rooms silently never appeared in
+       the picker. The founder looked at a one-game dropdown three times
+       while being told it had two. Nothing but running it would have
+       shown this. */
+    const F = FB.F, db = FB.db;
     const cur = await F.getDoc(F.doc(db,'slate','current'));
     if(!cur.exists()) return false;
     const date = (cur.data()||{}).date; if(!date) return false;
@@ -2141,6 +2149,7 @@ try{
 let STATS_CACHE = null;
 
 async function countHistory(){
+  const F = FB.F, db = FB.db;
   const nights = await F.getDocs(F.collection(db,'nights'));
   const rows = [], everyone = new Map();
   for(const n of nights.docs){
@@ -2444,6 +2453,8 @@ let ROOM_STATE = {};
 let roomPollT = null;
 
 async function pollRooms(){
+  const F = FB.F, db = FB.db;
+  if(!F || !db) return;
   const rooms = tonightRooms();
   for(const r of rooms){
     try{
