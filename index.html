@@ -190,6 +190,30 @@
      out of the two team colours now — the same job done with the game's
      own material instead of with a drawing of a court. */
   #s-landing.mq #landingCourt{display:none}
+  /* ── THE PLAYING SURFACE ──────────────────────────────────────────
+     The court came back, sport-aware. Founder: "look at the background of
+     the first image how there's like a court, and now on the new website
+     there is no court… whenever we showcase a new sport we should have the
+     sport image behind in the same style."
+
+     He is right about what it was doing: before you read a word it told you
+     this is a sports product and WHICH sport. The glow that replaced it
+     said neither.
+
+     It is a GROUND, not a picture — masked to nothing before it reaches the
+     matchup, and pinned behind everything in the card. isolation:isolate on
+     the parent, because a z-index:-1 child without it paints behind the
+     whole page. That is a named lesson in this codebase and it has cost a
+     day before. ── */
+  #s-landing.mq #tonightCard{position:relative;isolation:isolate;overflow:hidden}
+  #s-landing.mq #landingSurface{position:absolute;left:0;right:0;top:0;height:190px;
+    z-index:-1;pointer-events:none;overflow:hidden;opacity:.82;
+    /* Fades out well before the countdown. The first pass ran linework
+       straight through "TIPS IN 1d 11:49" and a ground that crosses the
+       loudest number on the page has stopped being a ground. */
+    -webkit-mask-image:linear-gradient(180deg,#000 22%,rgba(0,0,0,.42) 58%,transparent 88%);
+    mask-image:linear-gradient(180deg,#000 22%,rgba(0,0,0,.42) 58%,transparent 88%)}
+  @media (prefers-reduced-motion:reduce){ #s-landing.mq #landingSurface{opacity:.7} }
 
   /* ── the rail. The wordmark stops being the biggest thing on the page,
         and the vertical space it was taking goes to the game. The right
@@ -228,7 +252,13 @@
     inset:-58% -26% auto -26%;height:340px;pointer-events:none;opacity:.20;
     background:radial-gradient(ellipse at 26% 0%,var(--away),transparent 62%),
                radial-gradient(ellipse at 86% 14%,var(--home),transparent 60%)}
-  #s-landing.mq #tonightCard > *{position:relative}
+  /* :not(#landingSurface) — this rule lifts every child of the card above
+     the ground, and it was written before there WAS a ground. Without the
+     exemption it beat the surface's own position:absolute on equal
+     specificity by coming later, and a 210px static div pushed the whole
+     hero four hundred pixels down the page. Found by asking the browser
+     which rule won rather than by reaching for !important. */
+  #s-landing.mq #tonightCard > *:not(#landingSurface){position:relative}
 
   /* the eyebrow is #landingHead, still written by applySport() */
   #s-landing.mq #landingHead{font-size:12px;letter-spacing:.16em;
@@ -992,6 +1022,10 @@
          the real score while live, the final after. Painted from the ESPN
          feed; hides entirely if the feed can't be reached. -->
     <div class="card" id="tonightCard" style="margin-top:14px">
+      <!-- THE PLAYING SURFACE. Painted by paintSurface() from the sport and
+           the two team colours; empty for any sport with no geometry, never
+           another sport's markings. Geometry only — no logos, no marks. -->
+      <div id="landingSurface" aria-hidden="true"></div>
       <!-- These are overwritten from BB_GAME on load; they are here only so
            the first paint is not blank. Keep them in sync with the fixture
            anyway — a stale flash of last week's game is still a stale flash. -->
@@ -4777,6 +4811,87 @@ function startLive(){
 /* Tip-off before the game, the score during it, the result after. The
    scoreline comes off GS — the one read — so this can never disagree with
    the ribbon eight pixels below it. */
+/* ============ THE PLAYING SURFACE BEHIND THE HERO ===================
+   "Look at the background of the first image, how there's like a court,
+   and now on the new website there is no court… whenever we showcase a new
+   sport we should have the sport image behind in the same style."
+
+   The old landing had a basketball court drawn behind the wordmark. THE
+   MARQUEE parked it and painted a team-colour glow instead, which was a
+   defensible swap and the wrong one — the court is what told you, before
+   you read a single word, that this is a sports product and which sport.
+
+   It comes back, and it comes back SPORT-AWARE, because the roadmap is six
+   leagues and a basketball court behind a baseball night would be the same
+   class of lie as a wrong score. One geometry per sport, drawn from the
+   sport's own markings, in the two team colours the feed already owns.
+
+   Rules it obeys:
+     · No logos, no marks, no crest — geometry only. The imagery guardrails
+       are non-negotiable and a league's court markings are not its brand.
+     · --away/--home have ONE writer, paintTeamColours(). This reads them,
+       never sets them.
+     · Faint. It is a ground, not a picture: if it competes with the
+       matchup it has failed, and the matchup is the page.
+     · A sport with no drawing gets NOTHING rather than a basketball court.
+*/
+var SURFACES={
+  basketball:function(a,h){ return ''
+    + '<circle cx="215" cy="150" r="46" fill="none" stroke="'+h+'" stroke-width="1.6" opacity=".5"/>'
+    + '<path d="M215,150 m-46,0 a46,46 0 0,1 92,0" fill="none" stroke="'+a+'" stroke-width="1.6" opacity=".5"/>'
+    + '<path d="M52,172 V96 H128 V172" fill="none" stroke="'+a+'" stroke-width="1.4" opacity=".38"/>'
+    + '<path d="M378,172 V96 H302 V172" fill="none" stroke="'+h+'" stroke-width="1.4" opacity=".38"/>'
+    + '<path d="M8,172 A116,116 0 0,1 8,40" fill="none" stroke="'+a+'" stroke-width="1.5" opacity=".32"/>'
+    + '<path d="M422,172 A116,116 0 0,0 422,40" fill="none" stroke="'+h+'" stroke-width="1.5" opacity=".32"/>'; },
+  football:function(a,h){ var o='';
+    for(var x=40;x<=390;x+=50) o+='<line x1="'+x+'" y1="34" x2="'+x+'" y2="172" stroke="#eef2fb" stroke-width="1.1" opacity=".14"/>';
+    for(var y=70;y<=160;y+=30) for(var k=15;k<430;k+=50) o+='<line x1="'+k+'" y1="'+y+'" x2="'+(k+9)+'" y2="'+y+'" stroke="#eef2fb" stroke-width="1" opacity=".12"/>';
+    return o + '<rect x="0" y="34" width="40" height="138" fill="'+a+'" opacity=".13"/>'
+             + '<rect x="390" y="34" width="40" height="138" fill="'+h+'" opacity=".13"/>'; },
+  soccer:function(a,h){ return ''
+    + '<line x1="215" y1="24" x2="215" y2="172" stroke="#eef2fb" stroke-width="1.2" opacity=".16"/>'
+    + '<circle cx="215" cy="120" r="44" fill="none" stroke="#eef2fb" stroke-width="1.3" opacity=".16"/>'
+    + '<path d="M0,52 H74 V172 H0" fill="none" stroke="'+a+'" stroke-width="1.5" opacity=".42"/>'
+    + '<path d="M430,52 H356 V172 H430" fill="none" stroke="'+h+'" stroke-width="1.5" opacity=".42"/>'; },
+  baseball:function(a,h){ return ''
+    + '<path d="M215,168 L296,104 L215,42 L134,104 Z" fill="none" stroke="'+a+'" stroke-width="1.6" opacity=".5"/>'
+    + '<path d="M134,104 A104,104 0 0,1 296,104" fill="none" stroke="'+h+'" stroke-width="1.4" opacity=".34"/>'
+    + '<circle cx="215" cy="104" r="11" fill="none" stroke="'+h+'" stroke-width="1.3" opacity=".42"/>'
+    + '<path d="M52,172 L134,104" stroke="'+a+'" stroke-width="1.1" opacity=".2" fill="none"/>'
+    + '<path d="M378,172 L296,104" stroke="'+h+'" stroke-width="1.1" opacity=".2" fill="none"/>'; },
+  hockey:function(a,h){ return ''
+    + '<line x1="215" y1="24" x2="215" y2="172" stroke="#ff4d5e" stroke-width="1.6" opacity=".3"/>'
+    + '<line x1="140" y1="24" x2="140" y2="172" stroke="'+a+'" stroke-width="1.5" opacity=".38"/>'
+    + '<line x1="290" y1="24" x2="290" y2="172" stroke="'+h+'" stroke-width="1.5" opacity=".38"/>'
+    + '<circle cx="215" cy="112" r="30" fill="none" stroke="#eef2fb" stroke-width="1.3" opacity=".18"/>'
+    + '<circle cx="66" cy="88" r="26" fill="none" stroke="'+a+'" stroke-width="1.3" opacity=".3"/>'
+    + '<circle cx="364" cy="88" r="26" fill="none" stroke="'+h+'" stroke-width="1.3" opacity=".3"/>'; }
+};
+function paintSurface(){
+  try{
+    var el=document.getElementById('landingSurface'); if(!el) return;
+    var key=''; try{ key=String(SPORT&&SPORT.key||''); }catch(_){}
+    var draw=SURFACES[key];
+    /* No drawing for this sport? Then nothing — never another sport's
+       markings, and never a placeholder. */
+    if(!draw){ el.innerHTML=''; return; }
+    var cs=getComputedStyle(document.documentElement);
+    var a=(cs.getPropertyValue('--away')||'').trim()||'#7fe3c7';
+    var h=(cs.getPropertyValue('--home')||'').trim()||'#4a86ff';
+    el.innerHTML =
+      '<svg width="100%" height="100%" viewBox="0 0 430 172" preserveAspectRatio="xMidYMid slice"'
+      + ' style="display:block" aria-hidden="true" focusable="false">'
+      + '<defs><radialGradient id="srfGlow" cx="50%" cy="24%" r="78%">'
+      +   '<stop offset="0" stop-color="'+h+'" stop-opacity=".20"/>'
+      +   '<stop offset="55%" stop-color="'+a+'" stop-opacity=".08"/>'
+      +   '<stop offset="100%" stop-color="#070b12" stop-opacity="0"/></radialGradient></defs>'
+      + '<rect width="430" height="172" fill="url(#srfGlow)"/>'
+      + draw(a,h)
+      + '</svg>';
+  }catch(_){}
+}
+try{ window.paintSurface=paintSurface; }catch(_){}
+
 function landingTipLine(){
   try{
     var ph=''; try{ ph=phaseNow(); }catch(_){}
@@ -13178,6 +13293,7 @@ function applySport(){
      must not be: --away/--home have exactly one writer, paintTeamColours(),
      which reads the feed and already lifts a near-black team hex and splits
      a two-navy matchup. The :root defaults hold until it lands. */
+  try{ paintSurface(); }catch(_){}
   set('mqAway',(GAME.awayAbbr||''));
   set('mqHome',(GAME.homeAbbr||''));
   set('landingBtn',`Play ${GAME.night}`);
@@ -13577,7 +13693,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-readthem.133';
+const STATS_BUILD='2026-08-18-surface.134';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

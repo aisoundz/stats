@@ -5131,6 +5131,30 @@ function boardStatic(){
       'the between-rounds button still blames a host for the wait',
       'there is no host — the runner opens a round off the game clock, and the player is owed the trigger, not a name');
 
+    /* THE SURFACE IS THE FIRST THING THAT SAYS "SPORT". Founder, after the
+       redesign: "look at the background of the first image how there's like
+       a court, and now on the new website there is no court… whenever we
+       showcase a new sport we should have the sport image behind in the
+       same style." THE MARQUEE had parked it for a colour glow, which says
+       neither sport nor which one. */
+    check('home.the-playing-surface-is-behind-the-hero',
+      /id="landingSurface"/.test(src) && /function paintSurface\(\)/.test(src)
+        && /#s-landing\.mq #landingSurface\{position:absolute/.test(src),
+      'the landing hero has no playing surface behind it',
+      'before a word is read it says this is a sports product and which sport');
+    check('home.every-built-sport-has-its-own-surface',
+      ['basketball','football','soccer','baseball','hockey']
+        .every(k=>new RegExp('\\b'+k+':function\\(a,h\\)').test(src)),
+      'a sport is missing its own playing surface',
+      'a basketball court behind a baseball night is the same class of lie as a wrong score');
+    /* The rule that lifts the card's children above the ground must not
+       lift the ground with them — it did, and a 210px static div pushed the
+       hero four hundred pixels down the page. */
+    check('home.the-ground-stays-under-the-hero',
+      /#tonightCard > \*:not\(#landingSurface\)\{position:relative\}/.test(src),
+      'the card lifts the surface along with everything else',
+      'equal specificity, later in the sheet — it beat position:absolute and became a spacer');
+
     check('home.the-time-and-the-channel-survive',
       !/#s-landing\.mq #landingTip\{[^}]*display:\s*none/.test(src)
         && /#s-landing\.mq #landingTip\{[^}]*display:block !important/.test(src),
