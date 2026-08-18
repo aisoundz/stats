@@ -67,3 +67,9 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Build artifact from the landing redesign — a 960KB copy of index.html
+# that must never ride along in a `git add -A`.
+index-marquee.html
+index-baseline-tmp.html
+*-tmp.js
