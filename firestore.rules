@@ -292,6 +292,29 @@ service cloud.firestore {
       allow write: if isOwner();
     }
 
+    /* THE SLATE — every game of the night, and the pointer that names the
+       date. Exactly the same shape and the same reasoning as schedule/
+       above: it decides what the room is offered, it is written only by
+       build-slate.js through the Admin SDK, and it has to be READABLE by
+       anybody or the picker cannot render.
+
+       WHY THIS RULE EXISTS AT ALL, WRITTEN DOWN SO NOBODY REPEATS IT:
+       the slate shipped without one. The catch-all below closed it, so
+       every read failed, the picker never rendered and a ?game= link
+       landed everyone in the flagship. The code was correct and the
+       feature was invisible — and it was invisible in a way NO test in
+       this repo could see, because the browser suites stub Firestore and
+       the node tools use the Admin SDK, which bypasses rules entirely.
+       Both layers were green while the live site had no picker at all.
+       It was caught by opening the real link on the real domain.
+
+       A new top-level collection needs a rule in the SAME change that
+       creates it. There is no test that will tell you. */
+    match /slate/{id} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
     match /signups/{uid} {
       allow read: if isOwner();
 
