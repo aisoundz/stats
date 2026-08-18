@@ -77,7 +77,13 @@ RUN_LEAGUES="${RUN_LEAGUES:-$LEAGUES}"
 MAX_ROOMS="${MAX_ROOMS:-0}"        # 0 = no cap
 RUN_MINUTES="${RUN_MINUTES:-240}"
 TICK_MS="${TICK_MS:-30000}"
-IDLE_EXIT_MIN="${IDLE_EXIT_MIN:-60}"
+# 0 = never stand down. While we are testing with real people in the rooms
+# this must stay OFF: a room that stood itself down at 5:30 because nobody
+# had arrived yet is a room a tester walks into at 5:35 and finds dead —
+# the plan published, the doc there, and no host to open a single round.
+# Turn it back on (60) when slates run unattended at scale, which is the
+# only situation it was ever for.
+IDLE_EXIT_MIN="${IDLE_EXIT_MIN:-0}"
 LEAD_MIN="${LEAD_MIN:-30}"      # start a room this long before its own tip
 KEY="$HOME/.secrets/stats-firebase-admin.json"
 LOGDIR="$HOME/gamenight-logs"
@@ -135,7 +141,26 @@ GAMES=$(wc -l < "$ALL")
 echo "--- $GAMES game(s) in tonight's manifest ---"
 [ "$GAMES" -gt 0 ] || exit 0
 NOW_EPOCH=$(date +%s)
-echo "--- running: [$RUN_LEAGUES]${MAX_ROOMS:+  cap $MAX_ROOMS/league}${MAX_ROOMS:+ }---"
+
+# COUNT ROOMS THAT ARE ACTUALLY UP, NOT LOCK FILES THAT EXIST.
+# `9> file` creates the lock file and it stays on disk forever after the
+# runner exits, so counting files would have read one dead room as one live
+# one — and after a week of nights the cap would have silently blocked
+# every new room while reporting that it was full. A lock is only meaningful
+# while something HOLDS it, so ask: flock -n fails exactly when it is held.
+# pgrep is not usable here — a pattern matching "run.js" also matches the
+# shell running the check, which is how this was miscounted the first time.
+live_rooms(){
+  local n=0 f
+  for f in "$LOGDIR"/*.lock; do
+    [ -e "$f" ] || continue
+    if ! flock -n "$f" true 2>/dev/null; then n=$((n+1)); fi
+  done
+  echo "$n"
+}
+
+echo "--- running: [$RUN_LEAGUES]  $(live_rooms) room(s) already up${MAX_ROOMS:+, cap $MAX_ROOMS} ---"
+[ "$IDLE_EXIT_MIN" = "0" ] && echo "--- stand-down OFF: rooms stay up for late arrivals ---"
 STARTED_COUNT=""   # one char per started room, per league, counted with ${#}
 
 # ---- 2. publish a plan and start a runner for each --------------------
@@ -152,7 +177,7 @@ while IFS=$'\t' read -r LG NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT; do
   # the cap is SAID OUT LOUD — a silent truncation reads as "we covered
   # everything" when we did not.
   if [ "$MAX_ROOMS" -gt 0 ]; then
-    RUNNING=$(ls "$LOGDIR"/*.lock 2>/dev/null | wc -l)
+    RUNNING=$(live_rooms)
     if [ "$RUNNING" -ge "$MAX_ROOMS" ]; then
       echo "  CAP  $NIGHT_ID — $RUNNING room(s) already up, cap is $MAX_ROOMS"
       continue
