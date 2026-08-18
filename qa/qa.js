@@ -5188,6 +5188,45 @@ function templateStatic(){
     'one side tokenised and the other hard-coded means a real team name from some other night is sitting in an option');
 }
 
+/* THE DOOR — playing comes before signing in. The browser group already
+   checks that practice OPENS the app; this checks the front door still
+   OFFERS it first, which is a different claim and the one a redesign
+   quietly reverses. */
+function doorStatic(){
+  group('THE DOOR — play first, account second');
+  {
+    const src=read(PLAYER);
+    const card=(src.match(/<div class="card" id="portalCard"[\s\S]*?\n    <\/div>/)||[''])[0];
+    check('door.the-card-still-exists', card.length>400,
+      'portalCard could not be found — the order checks in the browser group depend on it');
+
+    const play = card.indexOf('startDemo()');
+    const gsi  = card.indexOf('portalGsi');
+    check('door.playing-is-offered-before-signing-in',
+      play > 0 && gsi > 0 && play < gsi,
+      `practice at ${play}, sign-in at ${gsi}`,
+      'a stranger sent a link met an account form before they had seen a single question. Playing costs nothing and goes first');
+
+    /* The honest sentence. If sign-in ever gets sold as a benefit again
+       rather than explained as a requirement, this is the line that went. */
+    check('door.says-why-an-account-is-needed',
+      /belong to somebody/i.test(card),
+      'the door no longer explains that a seat and a score need an identity — it is not a toll and must not read like one');
+
+    check('door.you-can-ask-for-a-heads-up-without-an-account',
+      /id="notifyEmail"/.test(card) && /notifyOnly\(\)/.test(card),
+      'the notify-me path is gone. The consent box only fires as a side effect of signing in, so without this somebody who tried the game and left has no way to hear about the next night');
+  }
+  {
+    const src=read(PLAYER);
+    const code=src.replace(/\/\*[\s\S]*?\*\//g,' ');
+    const fn=(code.match(/function notifyOnly\(\)\{[\s\S]*?\n\}/)||[''])[0];
+    check('door.notify-validates-before-it-writes',
+      /\^\[\^@/.test(fn) && /SB\.signup/.test(fn),
+      'notifyOnly no longer checks the address before writing — the rules would refuse it and the player would see a permission error they cannot read');
+  }
+}
+
 function slateStatic(){
   group('THE SLATE — every game gets a room');
   {
@@ -5473,6 +5512,7 @@ function voiceStatic(){
   voiceStatic();
   nightConfigStatic();
   slateStatic();
+  doorStatic();
   templateStatic();
   if(!QUICK){ try{
     /* A CEILING ON THE WHOLE BROWSER LAYER. The feed groups have their own,

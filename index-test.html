@@ -644,6 +644,28 @@
   .foot{font-size:12px;color:var(--dim);text-align:center;line-height:1.5;margin-top:14px}
   a.link{color:var(--teal2);text-decoration:none}
 
+  /* ---- THE DOOR ------------------------------------------------------
+     A labelled rule rather than a bare line. Three things live in this card
+     now — play, sign in, be told — and an unlabelled divider between them
+     just reads as the card being broken into pieces. The label says what
+     the next piece is FOR. */
+  .doorLbl{display:block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--gold)}
+  .doorSplit{display:flex;align-items:center;gap:10px;margin:18px 0 14px;
+    font-size:12px;color:var(--dim);letter-spacing:.02em}
+  .doorSplit::before,.doorSplit::after{content:"";flex:1;height:1px;background:var(--line)}
+  .doorSplit span{white-space:nowrap}
+  .notifyRow{display:flex;gap:8px;align-items:stretch}
+  .notifyRow input{flex:1;min-width:0;background:var(--glass);border:1px solid var(--line);
+    border-radius:var(--r3);color:var(--ink);font-family:inherit;font-size:15px;
+    padding:12px 13px}
+  .notifyRow input::placeholder{color:var(--dim)}
+  .notifyRow input:focus{outline:2px solid var(--teal);outline-offset:1px;border-color:transparent}
+  .notifyRow .btn{width:auto;flex:0 0 auto;margin:0;white-space:nowrap}
+  .notifyMsg{font-size:12px;line-height:1.45;margin:9px 0 0;color:var(--muted);min-height:1px}
+  .notifyMsg.ok{color:var(--green)}
+  .notifyMsg.bad{color:var(--red)}
+
   /* ---- THE SLATE PICKER ---------------------------------------------
      Rows, not a dropdown. A dropdown hides the options behind a tap, and
      the options ARE the pitch here: the point of the screen is that the
@@ -1174,21 +1196,39 @@
          never sees it: they already bought this. -->
 
     <div class="card" id="portalCard" style="display:none;margin-top:16px">
-      <!-- Sign in / Sign up is one action behind the scenes — Google decides
-           which. The toggle exists because the two words carry different
-           promises, and a returning player and a stranger deserve to be
-           spoken to differently on the same door. -->
-      <div style="display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:5px;margin-bottom:13px">
-        <button id="segIn" onclick="portalSeg('in')" style="flex:1;border:none;border-radius:9px;padding:14px 8px;font-weight:800;font-size:14px;line-height:1;cursor:pointer;background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e">Sign in</button>
-        <button id="segUp" onclick="portalSeg('up')" style="flex:1;border:none;border-radius:9px;padding:14px 8px;font-weight:800;font-size:14px;line-height:1;cursor:pointer;background:none;color:var(--muted,#93a0bd)">Sign up</button>
-      </div>
-      <b id="portalLbl" style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)">Welcome back — sign in to build your card</b>
-      <p class="sub" id="portalSub" style="margin:6px 0 12px">One tap. Your card and your points follow you to any phone.</p>
+      <!-- ============ THE DOOR IS OPEN NOW ==========================
+           Founder, 18 Aug: "We dont need the sign in so we can get people
+           to start testing and get feedback. I'll send it to people."
+
+           This card used to BE the sign-in form: a segmented control, a
+           Google button, an email button and a consent box, with "Try a
+           practice game" as a ghost button at the bottom. A stranger
+           arriving from a link he sent would meet an account form before
+           they had seen a single question.
+
+           So the order is inverted. Playing comes first and costs nothing.
+           Signing in is second and is described honestly: it is not a toll,
+           it is that a SEAT and a SCORE have to belong to somebody, and the
+           rules refuse to record either without an identity. And a person
+           who only wants to be told when a game is on can now say so
+           WITHOUT an account at all, which is the thing that was missing —
+           the old consent box only ever fired as a side effect of signing
+           in, so somebody who tried the game and left had no way to hear
+           about the next one. -->
+
+      <b class="doorLbl">Never played? Start here</b>
+      <p class="sub" style="margin:6px 0 13px">A practice game, right now — real questions, simulated players. No account, nothing to fill in.</p>
+      <button class="btn" onclick="startDemo()">Try it now</button>
+
+      <div class="doorSplit"><span>when you want a seat</span></div>
+
+      <b id="portalLbl" class="doorLbl">Playing a live game?</b>
+      <p class="sub" id="portalSub" style="margin:6px 0 12px">One tap. A seat and a score have to belong to somebody — that is the only reason this is here.</p>
       <button id="portalGsi" onclick="portalGoogle()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:#fff;color:#1a1a1a;border:none;border-radius:12px;padding:14px;font-weight:800;font-size:15px;line-height:1;cursor:pointer">
         <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:conic-gradient(#ea4335 0 25%,#fbbc05 0 50%,#34a853 0 75%,#4285f4 0)"></span>
         Sign in with Google
       </button>
-      <button class="btn ghost sm" id="portalEmailBtn" style="margin-top:8px" onclick="portalEmailPath()">✉️ Use email instead</button>
+      <button class="btn ghost sm" id="portalEmailBtn" style="margin-top:8px" onclick="portalEmailPath()">Use email instead</button>
       <div id="portalDown" style="display:none;margin-top:10px;background:rgba(255,197,77,.10);border:1px solid rgba(255,197,77,.35);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)">
         <b>Our sign-in server isn’t answering right now.</b><br>
         <span style="color:var(--muted,#93a0bd)">Nothing you do here would save, so we’ve switched the buttons off rather than let you lose a night’s points. Try a refresh in a minute.</span>
@@ -1197,8 +1237,16 @@
         <input type="checkbox" id="portalConsent" checked style="margin-top:1px;width:26px;height:26px;padding:6px;flex:0 0 auto;accent-color:#28e0d0">
         <span style="font-size:12px;line-height:1.45;color:var(--muted,#93a0bd)">Email me when the next game night is on. One a game, unsubscribe any time.</span>
       </label>
-      <button class="btn ghost sm" style="margin-top:11px;font-size:14px" onclick="startDemo()">Try a practice game</button>
-      <p class="foot" style="margin:10px 0 0;text-align:center">Free to play · Not gambling · Prizes are sponsor-funded</p>
+
+      <div class="doorSplit"><span>or just want to know when a game is on</span></div>
+      <div class="notifyRow">
+        <input id="notifyEmail" type="email" inputmode="email" autocomplete="email"
+               placeholder="you@email.com" aria-label="Email me when a game is on">
+        <button class="btn ghost sm" id="notifyBtn" onclick="notifyOnly()">Notify me</button>
+      </div>
+      <p id="notifyMsg" class="notifyMsg"></p>
+
+      <p class="foot" style="margin:12px 0 0;text-align:center">Free to play · Not gambling · Prizes are sponsor-funded</p>
     </div>
     <div class="card" id="welcomeStrip" style="display:none;margin-top:14px;padding:11px 14px;border-color:rgba(46,230,166,.35)"></div>
     <!-- ONE SET OF DOORS. "Play Game Night" and "Practice" used to sit in
@@ -14141,6 +14189,53 @@ function portalSeg(which){
   if(gsi) gsi.lastChild.textContent = up ? ' Sign up with Google ' : ' Sign in with Google ';
 }
 
+/* ============ TELL ME WHEN A GAME IS ON — WITHOUT AN ACCOUNT =========
+   The consent box above only ever fired as a SIDE EFFECT of signing in, so
+   the one person this product most needs to keep — somebody who tried it,
+   liked it, and was not ready to make an account — had no way to hear about
+   the next night. Six signups in three weeks is what that costs.
+
+   It needs no new permission. Every visitor is already signed in
+   anonymously, so `signedIn()` in the rules is satisfied and the write
+   lands under their own uid, which is exactly the uid the rules require.
+   The same SB.signup() the account path uses; one destination, two doors. */
+function notifyOnly(){
+  const inp=document.getElementById('notifyEmail');
+  const msg=document.getElementById('notifyMsg');
+  const btn=document.getElementById('notifyBtn');
+  if(!inp||!msg) return;
+  const say=(t,cls)=>{ msg.textContent=t; msg.className='notifyMsg'+(cls?' '+cls:''); };
+  const em=String(inp.value||'').trim();
+  /* The same shape the rules enforce. Checking it here is not security —
+     the rules are — it is so the answer comes back instantly instead of as
+     a permission error the player cannot read. */
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em) || em.length<6 || em.length>120){
+    say('That address does not look right — check it and try again.','bad');
+    try{ inp.focus(); }catch(_){}
+    return;
+  }
+  if(!window.SB || !SB.enabled){
+    say('Our server is not answering right now. Nothing would save, so try again in a minute.','bad');
+    return;
+  }
+  if(btn){ btn.disabled=true; btn.style.opacity=.55; }
+  say('Saving…','');
+  Promise.resolve(SB.signup({email:em, name:(typeof S!=='undefined'&&S.name)||'', consent:true}))
+    .then(function(r){
+      const ok = r && (r===true || r.ok!==false);
+      if(ok){
+        say('Done — we will email you when the next game night is on. One a game, unsubscribe any time.','ok');
+        try{ inp.value=''; inp.disabled=true; }catch(_){}
+        try{ if(typeof trk==='function') trk('notify_only',{}); }catch(_){}
+      } else {
+        say('That did not save. Try again, or sign in and we will add you that way.','bad');
+      }
+    })
+    .catch(function(){ say('That did not save. Try again in a moment.','bad'); })
+    .finally(function(){ if(btn){ btn.disabled=false; btn.style.opacity=1; } });
+}
+try{ window.notifyOnly = notifyOnly; }catch(_){}
+
 /* Write the signed-in address onto the game-night list. Consent is read from
    the box the player can see and untick — never assumed. */
 function portalSaveSignup(email){
@@ -14377,7 +14472,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-slate.141';
+const STATS_BUILD='2026-08-18-door.142';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
