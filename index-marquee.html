@@ -170,6 +170,110 @@
     text-transform:uppercase;padding:6px 12px;border-radius:var(--pill);
     background:rgba(40,224,208,.10);color:var(--teal);border:1px solid rgba(40,224,208,.30)}
 
+  /* ═══════════════ THE MARQUEE — the landing hero ═══════════════════
+     "We can keep everything else the same, but I think the landing page
+     can be more modern."
+
+     The page's ORDER was already right — tonight's game, then the door,
+     then the pitch, won in the .84 pass and defended by four gate checks.
+     What was wrong was the WEIGHT: six identical rounded boxes at one
+     width, nothing on the page above 26px, and the matchup — the single
+     fact that makes anybody open this app — set at 17px inside a card,
+     underneath an emoji.
+
+     So nothing below moves an element or removes one. It is a class on
+     the section (#s-landing.mq) and a set of mq- prefixed rules, which
+     means the old page is one class away at any time and every id an
+     existing function writes into is still exactly where it was.       */
+  #s-landing.mq{padding-top:10px}
+  /* The court SVG is PARKED, not deleted. The hero paints its own glow
+     out of the two team colours now — the same job done with the game's
+     own material instead of with a drawing of a court. */
+  #s-landing.mq #landingCourt{display:none}
+
+  /* ── the rail. The wordmark stops being the biggest thing on the page,
+        and the vertical space it was taking goes to the game. The right
+        slot carries the positioning statement that used to live in a 12px
+        footer under the fold: free and no wager is a compliance posture,
+        not a footnote. ── */
+  #s-landing.mq .brand{justify-content:space-between;margin:0 0 12px;
+    padding-bottom:12px;border-bottom:1px solid var(--line)}
+  #s-landing.mq .logo{font-size:14px;letter-spacing:.17em;font-weight:800;
+    background:none;-webkit-text-fill-color:var(--ink);color:var(--ink)}
+  .mq-railr{display:none}
+  #s-landing.mq .mq-railr{display:block;font-size:12px;font-weight:700;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+  #s-landing.mq .tag{font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--dim);text-align:left;margin:0 0 18px;font-weight:700}
+  #s-landing.mq #landingPill{display:none}   /* the rail already says it */
+
+  /* ── the hero. #tonightCard keeps its id and every child id; it just
+        stops being a card. Full-bleed past the section's 16px padding. ── */
+  #s-landing.mq #tonightCard{background:none;border:0;box-shadow:none;
+    border-radius:0;margin:0 -16px;padding:20px 16px 18px;
+    position:relative;overflow:hidden;overflow:clip}
+  /* This also overrides .card::before, the top hairline — a full-bleed
+     hero has no card edge to draw. */
+  #s-landing.mq #tonightCard::before{content:'';position:absolute;
+    inset:-58% -26% auto -26%;height:340px;pointer-events:none;opacity:.20;
+    background:radial-gradient(ellipse at 26% 0%,var(--away),transparent 62%),
+               radial-gradient(ellipse at 86% 14%,var(--home),transparent 60%)}
+  #s-landing.mq #tonightCard > *{position:relative}
+
+  /* the eyebrow is #landingHead, still written by applySport() */
+  #s-landing.mq #landingHead{font-size:12px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--muted);font-weight:700;
+    margin:0 0 14px;line-height:1.35}
+
+  /* the two codes ARE the headline */
+  .mq-vs{display:none}
+  #s-landing.mq .mq-vs{display:flex;align-items:center;gap:12px}
+  .mq-code{font-size:52px;font-weight:900;line-height:.84;letter-spacing:-.03em;
+    font-variant-numeric:tabular-nums}
+  .mq-code.mq-a{color:var(--away)}
+  .mq-code.mq-h{color:var(--home)}
+  .mq-at{font-size:17px;font-weight:600;color:var(--dim);padding-bottom:6px}
+  @media (max-width:340px){ .mq-code{font-size:46px} }
+
+  #s-landing.mq #landingMatch{font-size:14px;margin:12px 0 0;color:var(--muted);
+    font-weight:600;line-height:1.4}
+  /* One sentence on this page about when the game is. #landingTip said
+     "Tip-off 10:00 ET" two inches under a strip that said "Tips in 1h 34m":
+     two elements, two functions, one fact. The clock below is the owner
+     now; the old line stays in the DOM, parked, and is right there if the
+     mq class is ever taken off. */
+  #s-landing.mq #landingTip{display:none}
+  #s-landing.mq .chips{margin-top:14px}
+
+  /* ── the clock. This is #heroRibbon, moved inside the hero and painted
+        by the same paintHeroRibbon() that always painted it. ── */
+  .mq-clock{display:none;align-items:baseline;gap:9px;margin-top:16px;
+    padding-top:15px;border-top:1px solid var(--line)}
+  .mq-clab{font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);font-weight:700}
+  .mq-cbig{font-size:30px;font-weight:900;letter-spacing:-.01em;
+    font-variant-numeric:tabular-nums;line-height:1;color:var(--gold)}
+  .mq-clock.live .mq-cbig{color:var(--red)}
+  .mq-clock.final .mq-cbig,
+  .mq-clock.rest .mq-cbig{color:var(--ink)}
+  .mq-clock.rest .mq-cbig{font-size:20px}
+  .mq-cdet{font-size:12px;font-weight:700;color:var(--muted);margin-left:auto;
+    white-space:nowrap}
+  .mq-dot{width:8px;height:8px;border-radius:50%;background:var(--red);
+    align-self:center;animation:ribPulse 1.4s infinite;flex:0 0 auto}
+
+  /* ── the three beats. Same sequence, same numbering — a real sequence,
+        so the numerals earn their place — but hairlines instead of three
+        more rounded boxes on a page that already had six. ── */
+  #s-landing.mq #howBlock{margin-top:22px;border-top:1px solid var(--line)}
+  .mq-beat{display:flex;gap:14px;align-items:baseline;padding:15px 0;
+    border-bottom:1px solid var(--line)}
+  .mq-bn{flex:0 0 20px;font-size:12px;font-weight:700;color:var(--teal);
+    font-variant-numeric:tabular-nums}
+  .mq-bt{font-size:14px;line-height:1.45;color:var(--ink)}
+  .mq-bt span{color:var(--muted)}
+
+
   h1{font-size:26px;margin:16px 0 6px;font-weight:900;line-height:1.12;
      letter-spacing:-.6px;color:var(--ink)}
   h2{font-size:17px;margin:0 0 4px;font-weight:800}
@@ -763,7 +867,7 @@
   <button class="backbtn" id="backBtn" onclick="goBack()">←</button>
 
   <!-- 1. LANDING -->
-  <section class="screen active" id="s-landing" style="position:relative;isolation:isolate">
+  <section class="screen active mq" id="s-landing" style="position:relative;isolation:isolate">
     <!-- Court + arena backdrop — original SVG, no external image. Hardwood,
          spotlights, a crowd line and court markings behind the wordmark. -->
     <!-- The arena art dissolves into the page instead of stopping at a
@@ -771,7 +875,7 @@
          enough the same colour that the hard bottom edge did not read; on
          the darker base it was a visible seam straight across the hero. A
          mask costs nothing and there is no seam to notice. -->
-    <div aria-hidden="true" style="position:absolute;left:0;right:0;top:0;height:196px;overflow:hidden;pointer-events:none;z-index:-1;
+    <div id="landingCourt" aria-hidden="true" style="position:absolute;left:0;right:0;top:0;height:196px;overflow:hidden;pointer-events:none;z-index:-1;
          -webkit-mask-image:linear-gradient(180deg,#000 46%,rgba(0,0,0,.55) 72%,transparent 100%);
          mask-image:linear-gradient(180deg,#000 46%,rgba(0,0,0,.55) 72%,transparent 100%)">
       <svg width="100%" height="100%" viewBox="0 0 430 172" preserveAspectRatio="xMidYMid slice" style="display:block">
@@ -810,9 +914,9 @@
       <button class="btn teal sm" onclick="doResume()">Resume my game</button>
       <button class="btn ghost sm" style="margin-top:8px" onclick="dismissResume()">Start a new game</button>
     </div>
-    <div class="brand"><span class="logo" style="letter-spacing:1.5px;font-size:26px">STATS GAMETIME</span></div>
+    <div class="brand"><span class="logo" style="letter-spacing:1.5px;font-size:26px">STATS GAMETIME</span><span class="mq-railr">Free · No wager</span></div>
     <p class="tag strangers">The game that pays to pay attention</p>
-    <div class="center strangers" style="margin-top:8px"><span class="pill">Play from home • Free to enter</span></div>
+    <div class="center strangers" id="landingPill" style="margin-top:8px"><span class="pill">Play from home • Free to enter</span></div>
 
     <!-- THE FRONT DOOR — sign in before anything else. Hidden the moment the
          account is real; replaced by the welcome strip below. -->
@@ -832,18 +936,35 @@
     <!-- THE MOMENT RIBBON — what's true right now: a countdown before tip,
          the real score while live, the final after. Painted from the ESPN
          feed; hides entirely if the feed can't be reached. -->
-    <div id="heroRibbon" style="display:none;align-items:center;gap:7px;margin-top:12px;background:var(--card);border:1px solid var(--line,var(--line));border-radius:12px;padding:11px 13px;font-size:14px;font-weight:700;color:var(--ink,#eef2fb)"></div>
     <div class="card" id="tonightCard" style="margin-top:14px">
-      <!-- These three are overwritten from BB_GAME on load; they are here only
-           so the first paint is not blank. Keep them in sync with the fixture
+      <!-- These are overwritten from BB_GAME on load; they are here only so
+           the first paint is not blank. Keep them in sync with the fixture
            anyway — a stale flash of last week's game is still a stale flash. -->
-      <h2 id="landingHead">🔴 Game Night #2 · Sun · August 2</h2>
+      <!-- #landingHead is the eyebrow now, not the headline. The emoji came
+           off it: the design system already bans emoji in the interface,
+           because they render at a different size on every platform and
+           that is most of why a screen reads homemade. -->
+      <h2 id="landingHead">Game Night #2 · Sun · August 2</h2>
+      <!-- THE MATCHUP IS THE PAGE. Two codes, 52px, in the two colours the
+           feed already owns — --away and --home, whose only writer is
+           paintTeamColours(), which lifts a near-black team hex and splits
+           a two-navy matchup before either one reaches this line. -->
+      <div class="mq-vs">
+        <span class="mq-code mq-a" id="mqAway">DAL</span>
+        <span class="mq-at">at</span>
+        <span class="mq-code mq-h" id="mqHome">GS</span>
+      </div>
       <!-- THE MATCHUP IS THE HEADLINE, not a footnote under the times. It
            used to trail a sentence explaining the game for the third time
            on one page ("watch the broadcast, play from your couch, predict
            before tip-off, answer at every quarter break…"). Two teams and
            a time is the whole message. -->
       <p class="sub" id="landingMatch" style="font-size:17px;margin:4px 0 2px"><b style="color:var(--ink)">Indiana Fever @ Minnesota Lynx</b></p>
+      <!-- THE CLOCK. Same element, same painter, promoted out of a
+           bordered 14px strip above the wordmark and into the hero, where
+           a countdown is the most persuasive thing a live product can put
+           in front of a stranger. -->
+      <div id="heroRibbon" class="mq-clock"></div>
       <p style="font-size:14px;font-weight:800;color:var(--gold);margin:0 0 8px" id="landingTip">🕐 Tip-off 1:00 ET · 12:00 CT · 10:00 PT · ABC</p>
       <!-- "1,000 points" came out: it is the theoretical maximum, not a
            fact about tonight, and it was the chip that pushed the row onto
@@ -905,17 +1026,22 @@
          the first screen to explain a game the pill above already sums up
          in five words. Signed-out only; a member already knows. -->
     <div id="howBlock" class="strangers" style="display:none;margin-top:16px">
-      <div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:11px">
-        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:var(--card2);border:1px solid var(--line2);color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">1</span>
-        <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Predict before tip.</b> <span style="color:var(--muted,#93a0bd)">Winner, stat leaders, the numbers.</span></div>
+      <!-- The numbering stays: this is a real sequence, so the numerals
+           are carrying information rather than decorating. What goes is
+           the rounded tile around each one — three more boxes on a page
+           that already had six. "Caught it live" was also a live copy
+           error; the feature is Caught It and the instruction is catch. -->
+      <div class="mq-beat">
+        <span class="mq-bn">01</span>
+        <div class="mq-bt"><b>Fill your card before tip.</b> <span>Winner, stat leaders, the numbers.</span></div>
       </div>
-      <div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:11px">
-        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:var(--card2);border:1px solid var(--line2);color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">2</span>
-        <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Caught it live.</b> <span style="color:var(--muted,#93a0bd)">One-tap reads during the game as it happens.</span></div>
+      <div class="mq-beat">
+        <span class="mq-bn">02</span>
+        <div class="mq-bt"><b>Catch it live.</b> <span>One tap on what just happened, while it is happening.</span></div>
       </div>
-      <div style="display:flex;gap:11px;align-items:flex-start">
-        <span style="flex:0 0 auto;width:25px;height:25px;border-radius:8px;background:var(--card2);border:1px solid var(--line2);color:#28e0d0;font-weight:800;font-size:14px;line-height:25px;text-align:center">3</span>
-        <div style="font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)"><b>Climb the board.</b> <span style="color:var(--muted,#93a0bd)">Sharpest, fastest fan wins the night.</span></div>
+      <div class="mq-beat">
+        <span class="mq-bn">03</span>
+        <div class="mq-bt"><b>Climb the board.</b> <span>Sharpest and fastest wins the night.</span></div>
       </div>
     </div>
 
@@ -2541,6 +2667,25 @@ window.STATS_FIREBASE = {
       TRK.flushT = setTimeout(function(){ TRK.flushT = null; trkFlush(); }, 45000);
     }catch(_){}
   }
+  /* WHERE THEY CAME FROM. With posts driving traffic, an Instagram
+     visitor and a group-chat invite were indistinguishable in the data,
+     which is the one thing a media funnel has to be able to tell. Read
+     ONCE, at boot: read later and it is the referrer of whatever
+     navigation has happened since, which is usually our own page. */
+  var TRK_SRC = (function(){
+    try{
+      var q = new URLSearchParams(location.search || '');
+      var u = q.get('utm_source') || q.get('src') || q.get('ref') || '';
+      if(u) return String(u).slice(0, 40);
+      var r = String(document.referrer || '');
+      if(!r) return 'direct';
+      var host = ''; try{ host = new URL(r).hostname.replace(/^www\./, ''); }catch(_){}
+      if(!host) return 'direct';
+      if(host === location.hostname) return 'internal';
+      return host.slice(0, 40);
+    }catch(_){ return ''; }
+  })();
+
   async function trkFlush(force){
     try{
       if (!TRK.dirty && !force) return false;
@@ -2550,6 +2695,7 @@ window.STATS_FIREBASE = {
         night: trkNight(),
         name: (function(){ try{ return S.name || ''; }catch(_){ return ''; } })(),
         started: TRK.t0,
+        src: TRK_SRC,
         mins: Math.round((Date.now() - TRK.t0) / 60000),
         screen: (function(){ try{ return (window.screen && screen.width) ? (screen.width + 'x' + screen.height) : ''; }catch(_){ return ''; } })(),
         events: TRK.buf.slice(-TRK_MAX)
@@ -6759,27 +6905,6 @@ var VX=(function(){
 
   V.hasOut = (function(){ try{ return !!(window.speechSynthesis && window.SpeechSynthesisUtterance); }catch(_){ return false; } })();
   V.hasEar = (function(){ try{ return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }catch(_){ return false; } })();
-  /* iOS IS A DIFFERENT MACHINE AND HAS TO BE TREATED AS ONE.
-     Safari opens a microphone from a user gesture and from nothing else,
-     and its recogniser does not hold a continuous session the way desktop
-     Chrome does — it hears one utterance and stops. Restarting it from a
-     timer is not "restarting", it is asking for a microphone with no tap
-     behind it, which Safari refuses, silently, forever. Everything the
-     founder reported is consistent with that and with nothing else: the
-     bar said Listening, the app was deaf, and no error was ever raised.
-
-     So on iOS the microphone is TAP-TO-TALK and says so, and the tap is
-     the thing the platform was asking for all along. Chrome and Android
-     keep the hands-free session, because there it actually works. */
-  V.ios = (function(){ try{
-      return /iP(hone|od|ad)/.test(navigator.platform||'')
-          || (/Mac/.test(navigator.platform||'') && navigator.maxTouchPoints>1)
-          || /iPhone|iPad|iPod/.test(navigator.userAgent||'');
-    }catch(_){ return false; } })();
-  /* Chrome and Firefox on iOS are Safari underneath with the speech API
-     removed entirely — worth telling the truth about rather than showing a
-     microphone that cannot exist. */
-  V.iosNotSafari = V.ios && /CriOS|FxiOS|EdgiOS|OPiOS/.test((navigator.userAgent||''));
 
   try{ V.on = V.hasOut && localStorage.getItem(KEY)==='1'; }catch(_){}
 
@@ -6788,21 +6913,6 @@ var VX=(function(){
       .replace(/[‘’“”]/g,"'").replace(/[^a-z0-9' ]+/g,' ')
       .replace(/\s+/g,' ').trim();
   }
-  /* Content words only, stemmed. "or", "the", "a" appear in half the bank
-     and carry no meaning; a trailing s is the difference between how a
-     bank is written and how a person says it, and never the difference
-     between two options. Deliberately crude — this is matching four short
-     phrases a player is looking at, not parsing English. */
-  var STOP=['or','the','a','an','of','and','was','were','is','are','it','that',
-            'this','to','in','on','at','be','been','did','do','does','how','many'];
-  function stem(w){ return (w.length>3 && /s$/.test(w) && !/ss$/.test(w)) ? w.slice(0,-1) : w; }
-  function words(x){
-    return norm(x).split(' ').filter(function(w){ return w && STOP.indexOf(w)<0; }).map(stem);
-  }
-  function countIn(list, pool){
-    var n=0; for(var i=0;i<list.length;i++){ if(pool.indexOf(list[i])>=0) n++; } return n;
-  }
-
   /* Strip the scoreboard shorthand a screen reads fine and a speaker does
      not. "Q1" spoken by a synthesiser is "kyoo one"; "24-second" is fine
      but "3PT" is not. Only what we actually put in banks. */
@@ -6924,68 +7034,35 @@ var VX=(function(){
     if(/^(?:options|what are the options|read the options|choices|what are my choices)$/.test(t)) return {kind:'help'};
 
     opts=opts||[];
+    // 1. the option said in full, or a distinctive part of it. Must land on
+    //    exactly one option — two candidates is a refusal, not a coin toss.
+    var hits=[];
+    for(var i=0;i<opts.length;i++){
+      var on=norm(opts[i]); if(!on) continue;
+      /* A LONG OPTION CAN MATCH ANYWHERE; A SHORT ONE ONLY AS A WHOLE WORD.
+         Found by testing "yes or no" — a player reading the question back
+         at the room. The old rule skipped any option under three letters
+         entirely, so "No" could only ever match a transcript that was
+         exactly "no": "yes or no" found ONE candidate, not two, and
+         quietly picked Yes. A refusal was the correct answer and it
+         returned a pick instead, which is the one direction this function
+         is not allowed to fail in. Word-bounded so "know" is not "no". */
+      var ok = (t===on) ? true
+             : (on.length>=3) ? (t.indexOf(on)>=0)
+             : (new RegExp('\\b'+on+'\\b')).test(t);
+      if(ok) hits.push(i);
+    }
+    if(hits.length===1) return {kind:'pick', i:hits[0]};
+    if(hits.length>1)  return {kind:'ambiguous'};
 
-    /* ---- THE POSITION COMES FIRST -----------------------------------
-       We tell the player "say the number", so a bare number word means the
-       position and nothing else. It used to be checked LAST, behind the
-       text matching, which meant a set like None / Once / Twice / Three or
-       more turned "one" into two text candidates and refused — while the
-       app was on screen telling them to say exactly that. The instruction
-       we give out-loud has to be the rule that wins.
-
-       Homophones ("to", "for") still only count on a short utterance, so a
-       sentence with "for" in it is not an answer. And a position nobody
-       offered falls through to the words rather than being refused —
-       "four" against two options is somebody naming an option, not a
-       position. */
+    // 2. the position. Homophones ("to", "for") only count on a short
+    //    utterance, so a sentence with "for" in it is not an answer.
     var stripped=t.replace(LEAD,'');
-    var ntoks=stripped.split(' ');
-    if(ntoks.length<=2 && NUM[ntoks[0]]!=null){
-      var idx=NUM[ntoks[0]];
+    var toks=stripped.split(' ');
+    if(toks.length<=2 && NUM[toks[0]]!=null){
+      var idx=NUM[toks[0]];
       if(idx<opts.length) return {kind:'pick', i:idx};
     }
-
-    /* ---- THEN THE WORDS, THE WAY PEOPLE ACTUALLY SAY THEM ------------
-       THIS IS THE BUG THE FOUNDER FOUND, and it was a one-directional
-       test: it asked whether what you SAID contained the option, and never
-       whether the OPTION contained what you said. Nobody reads an option
-       aloud in full. The option is "Made field goals" and a person says
-       "field goals"; the option is "Six or more" and they say "six". Every
-       one of those was a fragment of the option, so every one of them
-       missed, and from the sofa that is the app ignoring you.
-
-       So: compare CONTENT WORDS, in both directions. An option is a
-       candidate when everything you said appears in it (you named part of
-       it) or when you said all of it (you read it out). Plurals are
-       stemmed because "field goal" and "field goals" are the same answer,
-       and joining words are dropped because "or" carries no meaning and
-       appears in half the bank.
-
-       Ambiguity still refuses. Say "made" against "Made field goals" and
-       "Made free throws" and you have named neither — a coin toss written
-       onto a player's card as though they chose it is the one direction
-       this function may not fail in. */
-    var said=words(t);
-    if(said.length){
-      var cands=[];
-      for(var i=0;i<opts.length;i++){
-        var ow=words(opts[i]); if(!ow.length) continue;
-        var hit=0;
-        for(var j=0;j<said.length;j++){ if(ow.indexOf(said[j])>=0) hit++; }
-        if(!hit) continue;
-        var saidAllIn = (hit===said.length);          // you named part of it
-        var optAllSaid= (countIn(ow, said)===ow.length); // you read it out
-        if(saidAllIn || optAllSaid) cands.push({i:i, hit:hit, whole:optAllSaid?1:0});
-      }
-      if(cands.length){
-        cands.sort(function(x,y){ return (y.hit-x.hit) || (y.whole-x.whole); });
-        if(cands.length===1) return {kind:'pick', i:cands[0].i};
-        var top=cands[0], nxt=cands[1];
-        if(top.hit>nxt.hit || top.whole>nxt.whole) return {kind:'pick', i:top.i};
-        return {kind:'ambiguous'};
-      }
-    }
-
     // 3. yes / no, which people say instead of reading the option
     if(/^(?:yes|yeah|yep|yup|correct|true|affirmative)$/.test(stripped)){
       var y=opts.findIndex(function(o){ return /^yes$/i.test(String(o).trim()); });
@@ -7024,9 +7101,7 @@ var VX=(function(){
          Interim results are not used to answer — only a final transcript
          may pick — but they are the earliest possible proof that somebody
          is talking, which is what stops us reading the options over them. */
-      r.lang='en-US'; r.maxAlternatives=6;
-      r.continuous     = !V.ios;   // see V.ios — Safari will not hold a session
-      r.interimResults = !V.ios;
+      r.lang='en-US'; r.continuous=true; r.interimResults=true; r.maxAlternatives=4;
       /* DO NOT TALK OVER THE PLAYER. This was the sharpest of the three
          bugs: the options are read 2.6s after the question, and reading
          them ABORTS the microphone. Answer at 2.7s and the app cut you off
@@ -7066,10 +7141,6 @@ var VX=(function(){
         V.listening=false; V.rec=null;
         if(!V.wantEar) { V.paint(); return; }
         if(V.errs>6){ V.note='Voice input stopped responding — tap your answers.'; V.wantEar=false; V.paint(); return; }
-        /* NO TIMER RESTART ON iOS. A restart with no gesture behind it is
-           refused, and the refusal is what looked like the app ignoring
-           the player. Ask for the tap instead — honestly, in words. */
-        if(V.ios){ V.note='Tap 🎙 and say your answer.'; V.paint(); return; }
         setTimeout(function(){ try{ V.ear(); }catch(_){} }, V.errs?600*V.errs:120);
       };
       V.rec=r; V.listening=true; r.start(); V.paint();
@@ -7275,59 +7346,6 @@ var VX=(function(){
   };
   V.toggle=function(){ if(V.on) V.disable(); else V.enable(); };
 
-  /* ---- THE VOICE CHECK ------------------------------------------------
-     Three rounds of "it still isn't taking my voice" with no way to tell a
-     dead microphone from a mishearing from a grammar that refused. That is
-     not a bug report anybody can act on, and it is not the founder's job
-     to produce one. This is: seven steps, in order, each either done or
-     naming what to do about it. It is the same principle as the submit
-     receipt — silence is the one thing a player cannot forgive. */
-  V.check=function(){
-    var L=[], ok=function(t){ L.push(['ok',t]); }, no=function(t){ L.push(['no',t]); },
-        hm=function(t){ L.push(['hm',t]); };
-    V.hasOut ? ok('This browser can speak.') : no('This browser cannot speak at all. Use Safari on iPhone, or Chrome elsewhere.');
-    if(V.iosNotSafari) no('You are in Chrome or Firefox on an iPhone — they have no microphone access. Open this page in SAFARI.');
-    else if(!V.hasEar) no('This browser has no speech recognition. It can still read questions out loud.');
-    else ok('This browser can listen.');
-    V.on ? ok('Voice is switched on.') : no('Voice is switched off — tap the Voice button.');
-    if(V.ios) hm('iPhone: Safari only opens the microphone when you tap 🎙. One tap per answer.');
-    if(V.micThrew) no('The microphone was refused '+V.micThrew+'\u00d7 — that is the tap it wants.');
-    if(V.note) hm(V.note);
-    V.listening ? ok('The microphone is open right now.')
-                : hm('The microphone is closed right now'+(V.ios?' — tap 🎙.':'.'));
-    if(V.lastHeard){ ok('Last thing it heard: \u201c'+V.lastHeard+'\u201d'); }
-    else { hm('It has not heard anything yet. If you have spoken, the microphone never opened.'); }
-    if(V.lastHeard){
-      var m=null; try{ m=V.match(V.lastHeard, V.curOpts()); }catch(_){}
-      if(!m) no('It heard you but that phrase is not one of the answers. Say the NUMBER — one, two, three or four.');
-      else if(m.kind==='ambiguous') hm('That phrase matched more than one answer, so it refused. Say the number instead.');
-      else ok('It understood that as: '+(m.kind==='pick'?('answer '+(m.i+1)):m.kind)+'.');
-    }
-    if(V.hasOut){ var vv=V.voice(); ok('Reading voice: '+(vv?vv.name:'the browser default')+'.'); }
-    return L;
-  };
-  V.openCheck=function(){
-    try{
-      var L=V.check();
-      var h='<div class="vxck"><b>VOICE CHECK</b><ul>';
-      L.forEach(function(r){ h+='<li class="'+r[0]+'">'+String(r[1]).replace(/</g,'&lt;')+'</li>'; });
-      h+='</ul><button type="button" class="btn" onclick="VX.listenNow()">🎙 Test the microphone — say “two”</button>'
-       + '<button type="button" class="btn ghost" onclick="VX.closeCheck()">Close</button></div>';
-      var d=document.getElementById('vxCheck');
-      if(!d){ d=document.createElement('div'); d.id='vxCheck'; document.body.appendChild(d);
-              d.onclick=function(e){ if(e.target===d) V.closeCheck(); }; }
-      d.innerHTML=h; d.className='open';
-      /* Re-read it as things happen, so a tap and a word show up live. */
-      try{ clearInterval(V.ckInt); }catch(_){}
-      V.ckInt=setInterval(function(){ try{ if(document.getElementById('vxCheck')&&document.getElementById('vxCheck').className==='open'){
-        var L2=V.check(), ul=document.querySelector('#vxCheck ul'); if(!ul) return;
-        var h2=''; L2.forEach(function(r){ h2+='<li class="'+r[0]+'">'+String(r[1]).replace(/</g,'&lt;')+'</li>'; });
-        ul.innerHTML=h2; } }catch(_){} }, 700);
-    }catch(_){}
-  };
-  V.closeCheck=function(){ try{ clearInterval(V.ckInt); var d=document.getElementById('vxCheck'); if(d){ d.className=''; d.innerHTML=''; } }catch(_){} };
-  V.curOpts=function(){ return curOpts(); };
-
   /* ---- WHAT IT LOOKS LIKE -------------------------------------------- */
   V.mount=function(){
     try{
@@ -7350,10 +7368,8 @@ var VX=(function(){
       var h='<button type="button" class="vxb" onclick="VX.toggle()" aria-pressed="'+(V.on?'true':'false')+'">'
         + (V.on?'🔊':'🔈') + ' <b>Voice</b> <s>'+(V.on?'on':'off')+'</s></button>';
       if(V.on && V.hasEar){
-        h+='<button type="button" class="vxb mic'+(V.ios?' big':'')+'" onclick="VX.listenNow()" title="Answer out loud">🎙'
-          + (V.ios?' <b>Say it</b>':'') + '</button>';
+        h+='<button type="button" class="vxb mic" onclick="VX.listenNow()" title="Answer out loud">🎙</button>';
       }
-      if(V.on){ h+='<button type="button" class="vxq" onclick="VX.openCheck()" title="Voice check">?</button>'; }
       h+='<span class="vxt">'+String(txt).replace(/</g,'&lt;')+'</span>';
       /* WHAT IT HEARD, ON SCREEN. "It is not accepting my answer" and "it
          heard something else entirely" are different bugs with different
@@ -12552,6 +12568,12 @@ function applySport(){
   set('landingHead',`${GAME.night} · ${GAME.date}`.replace(' · ·',' ·'));
   set('landingChip1',SPORT.L.league);
   set('landingChip3',SPORT.L.cadence);
+  /* The two codes are the headline now. Their COLOUR is not set here and
+     must not be: --away/--home have exactly one writer, paintTeamColours(),
+     which reads the feed and already lifts a near-black team hex and splits
+     a two-navy matchup. The :root defaults hold until it lands. */
+  set('mqAway',(GAME.awayAbbr||''));
+  set('mqHome',(GAME.homeAbbr||''));
   set('landingBtn',`Play ${GAME.night}`);
   set('landingDemoBtn',`Practice with a simulated ${L.unit}`);
   set('step1h',`Predict before ${L.start}`);
@@ -12784,44 +12806,122 @@ async function portalGoogle(){
    about the third one, which is the player's own. So the ribbon has no eyes
    any more. It reads GS, like everything else, and if GS has nothing it
    says nothing rather than going to find its own answer.                */
+/* THE HERO CLOCK — one line, four states, one source.
+
+   THE FOURTH STATE IS THE ONE THAT DID NOT EXIST, AND IT IS THE ONE MOST
+   VISITORS WILL ACTUALLY MEET. BB_GAME is a baked-in constant, so from the
+   final buzzer until somebody edits the file and deploys, this page went on
+   presenting a finished game as tonight's headline — B6 with a longer fuse,
+   and it only ever looked right because the person checking was the person
+   who had just set the night up. `rest` is what the page says when the only
+   night it knows about is over: no countdown, no score, and no invented
+   next game, because there is no feed anywhere that has been asked.
+
+   Six hours is the line, not zero, because a game that has ended is still
+   tonight's game to somebody opening the app on the way home from it. */
+var REST_AFTER_MS = 6 * 3600 * 1000;
+
+function heroTipMs(){
+  var d = NaN;
+  try{ d = Date.parse((GS.info && GS.info.date) || (typeof GAME!=='undefined' && GAME.tipISO) || ''); }catch(_){}
+  if(!isFinite(d)){ try{ d = Date.parse((typeof GAME!=='undefined' && GAME.tipISO) || ''); }catch(_2){} }
+  return isFinite(d) ? (d - Date.now()) : NaN;
+}
+
+/* phaseNow() stays the one answer to "where are we in this game". This adds
+   the one thing it cannot know, which is whether the CONFIG is stale. */
+function heroState(){
+  var ph = ''; try{ ph = phaseNow(); }catch(_){}
+  if(ph === 'live') return 'live';
+  var ms = heroTipMs();
+  if(!isFinite(ms)) return (ph === 'final') ? 'final' : 'pre';
+  var since = -ms;                                 /* how long since tip */
+  if(ph === 'final') return since > REST_AFTER_MS ? 'rest' : 'final';
+  /* No phase, and the tip is hours gone: that is a stale config, not a late
+     game. Say nothing rather than count down to a time that has passed. */
+  if(since > REST_AFTER_MS) return 'rest';
+  return 'pre';
+}
+
+function heroCountdown(ms){
+  var s = Math.max(0, Math.floor(ms / 1000));
+  var d = Math.floor(s / 86400); s -= d * 86400;
+  var hh = Math.floor(s / 3600);  s -= hh * 3600;
+  var mm = Math.floor(s / 60);    s -= mm * 60;
+  var p = function(n){ return (n < 10 ? '0' : '') + n; };
+  return (d > 0 ? (d + 'd ') : '') + p(hh) + ':' + p(mm) + ':' + p(s);
+}
+
 async function paintHeroRibbon(){
-  const el=document.getElementById('heroRibbon'); if(!el) return;
-  const ev=(typeof GAME!=='undefined')&&GAME.espnEvent; if(!ev){ el.style.display='none'; return; }
+  const el = document.getElementById('heroRibbon'); if(!el) return;
+  const put = function(html, cls){
+    el.className = 'mq-clock' + (cls ? (' ' + cls) : '');
+    el.innerHTML = html;
+    el.style.display = 'flex';
+  };
+  const lab = function(t){ return '<span class="mq-clab">' + t + '</span>'; };
   try{
+    const ev = (typeof GAME !== 'undefined') && GAME.espnEvent;
     /* The one read. Unforced — loadGameStats() has its own 25s cache and a
        backoff, so this rides whatever the rest of the app already fetched
        instead of adding a request per surface. */
-    try{ await loadGameStats(); }catch(_){}
-    if(!GS.ok || !GS.teams || GS.teams.length<2){ el.style.display='none'; return; }
-    const home=GS.teams.find(t=>t.home)||GS.teams[1]||{},
-          away=GS.teams.find(t=>!t.home)||GS.teams[0]||{};
-    const hA=home.ab||'', aA=away.ab||'';
-    /* phaseNow() is the app's single answer to "where are we in this game".
-       Reading `st.state` here was a fourth opinion on the same question. */
-    let ph=''; try{ ph=phaseNow(); }catch(_){ ph=''; }
-    const st={ state: (ph==='live'?'in':(ph==='final'?'post':'pre')),
-               shortDetail: String(GS.detail||'') };
-    if(st.state==='in'){
-      el.innerHTML='<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red,#ff4d5e);animation:ribPulse 1.4s infinite"></span>'
-        +'<b style="color:var(--red,#ff4d5e)">LIVE</b><span style="color:var(--muted)">·</span> '
-        +esc(aA)+' <b>'+esc(away.score==null?'–':String(away.score))+'</b> — <b>'+esc(home.score==null?'–':String(home.score))+'</b> '+esc(hA)
-        +' <span style="color:var(--muted);font-weight:600;margin-left:auto">'+esc(st.shortDetail||'')+'</span>';
-      el.style.display='flex';
-    } else if(st.state==='post'){
-      el.innerHTML='🏁 <b>Final</b><span style="color:var(--muted)">·</span> '
-        +esc(aA)+' <b>'+esc(away.score==null?'–':String(away.score))+'</b> — <b>'+esc(home.score==null?'–':String(home.score))+'</b> '+esc(hA);
-      el.style.display='flex';
-    } else {
-      const d=new Date((GS.info&&GS.info.date)||(GAME&&GAME.tipISO)||''); const ms=d-Date.now();
-      if(isFinite(ms)&&ms>0){
-        const h=Math.floor(ms/3.6e6), m=Math.max(1,Math.round((ms%3.6e6)/6e4));
-        el.innerHTML='⏱ Tips in <b style="color:var(--gold,#ffc54d)">'+(h>0?(h+'h '):'')+m+'m</b>'
-          +'<span style="color:var(--muted);font-weight:600;margin-left:auto">'+esc(aA)+' @ '+esc(hA)+'</span>';
-        el.style.display='flex';
-      } else { el.style.display='none'; }
+    if(ev){ try{ await loadGameStats(); }catch(_){} }
+
+    var st = heroState();
+    if(st === 'rest'){
+      put(lab('No game tonight') + '<b class="mq-cbig">Next night to be announced</b>', 'rest');
+      return;
     }
-  }catch(e){ el.style.display='none'; }
+
+    var home = null, away = null;
+    try{
+      if(GS.ok && GS.teams && GS.teams.length >= 2){
+        home = GS.teams.find(function(t){ return  t.home; }) || GS.teams[1];
+        away = GS.teams.find(function(t){ return !t.home; }) || GS.teams[0];
+      }
+    }catch(_){}
+
+    if(st === 'live' || st === 'final'){
+      /* No feed means no score, and a score is the one thing this line is
+         not allowed to guess. Fall back to the state, never to a number. */
+      if(!home || !away || home.score == null || away.score == null){
+        put((st === 'live' ? '<i class="mq-dot"></i>' : '') + lab(st === 'live' ? 'Live now' : 'Final')
+            + '<b class="mq-cbig">' + esc(String((typeof GAME!=='undefined' && GAME.awayAbbr) || '')) + ' at '
+            + esc(String((typeof GAME!=='undefined' && GAME.homeAbbr) || '')) + '</b>', st);
+        return;
+      }
+      var det = ''; try{ det = String(GS.detail || ''); }catch(_){}
+      put((st === 'live' ? '<i class="mq-dot"></i>' : '') + lab(st === 'live' ? 'Live' : 'Final')
+          + '<b class="mq-cbig">' + esc(String(away.score)) + ' – ' + esc(String(home.score)) + '</b>'
+          + (det ? ('<span class="mq-cdet">' + esc(det) + '</span>') : ''), st);
+      return;
+    }
+
+    var ms = heroTipMs();
+    if(!isFinite(ms) || ms <= 0){ el.style.display = 'none'; return; }
+    put(lab('Tips in') + '<b class="mq-cbig">' + heroCountdown(ms) + '</b>', 'pre');
+  }catch(e){ try{ el.style.display = 'none'; }catch(_){} }
 }
+
+/* ONE ticker, and it does no work unless the landing is the screen you are
+   actually looking at. A second poller is how Caught It ended up with two. */
+var HERO_T = null;
+function heroTick(){
+  try{
+    var sec = document.getElementById('s-landing');
+    if(!sec || !sec.classList.contains('active')) return;
+    if(document.hidden) return;
+    if(heroState() !== 'pre') return;         /* only the countdown moves per second */
+    var el = document.getElementById('heroRibbon');
+    var big = el && el.querySelector('.mq-cbig');
+    if(!big) return;
+    var ms = heroTipMs();
+    /* It just tipped — hand back to the painter, which owns the states. */
+    if(!isFinite(ms) || ms <= 0){ paintHeroRibbon(); return; }
+    big.textContent = heroCountdown(ms);
+  }catch(_){}
+}
+try{ if(!HERO_T) HERO_T = setInterval(heroTick, 1000); }catch(_){}
 if(!document.getElementById('ribCss')){
   const st=document.createElement('style'); st.id='ribCss';
   st.textContent='@keyframes ribPulse{0%{box-shadow:0 0 0 0 rgba(255,77,94,.5)}70%{box-shadow:0 0 0 8px rgba(255,77,94,0)}100%{box-shadow:0 0 0 0 rgba(255,77,94,0)}}';
@@ -12837,7 +12937,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-17-voice-words.123';
+const STATS_BUILD='2026-08-17-voice-ear.122';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -13239,8 +13339,7 @@ function menuRows(){
   };
   R.push('<div class="mgrp">The game</div>');
   row('📖','How to play &amp; full rules','rules');
-  try{ if(VX && VX.hasOut){ row(VX.on?'🔊':'🔈','Voice: read questions out loud','voice', VX.on?'On':'Off');
-       row('🎙','Voice check — why isn\u2019t it hearing me?','voicecheck'); } }catch(_){}
+  try{ if(VX && VX.hasOut) row(VX.on?'🔊':'🔈','Voice: read questions out loud','voice', VX.on?'On':'Off'); }catch(_){}
   try{ if(S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0) row('▶','Back to my game','resume'); }catch(_){}
   try{ if(S.screen==='final' || (S.mode==='demo' && S.pts>0)) row('🔁','Play again','restart'); }catch(_){}
   try{ if(S.screen==='final'){ row('😈','Post-game roast card','roast'); } }catch(_){}
@@ -13257,7 +13356,6 @@ function menuRows(){
 var MENU_GO={
   rules:function(){ go('rules'); },
   voice:function(){ try{ VX.toggle(); }catch(_){} },
-  voicecheck:function(){ try{ VX.openCheck(); }catch(_){} },
   resume:function(){ try{ returnToGame(); }catch(_){ go('gametime'); } },
   restart:function(){ try{ restart(); }catch(_){} },
   roast:function(){ try{ openRoast(); }catch(_){} },
@@ -16942,33 +17040,6 @@ body.hasrail #menuBtn{top:calc(6px + env(safe-area-inset-top,0px))}
 .vx.reading .vxb{border-color:var(--blue2)}
 .vx.reading .vxt{color:var(--body)}
 .vx.warn .vxt{color:var(--gold)}
-.vx .vxb.mic{padding:7px 12px}
-.vx .vxb.mic.big{border-color:var(--teal2);color:var(--ink)}
-.vx .vxq{background:transparent;border:1px solid var(--line2);color:var(--dim);
-    border-radius:999px;width:26px;height:26px;font-size:12px;font-weight:800;
-    cursor:pointer;font-family:var(--f);flex:0 0 auto;padding:0}
-.vx .vxh{font-size:12px;color:var(--teal2);flex:1 1 100%;min-width:0;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.vx .vxv{background:var(--glass);border:1px solid var(--line2);color:var(--body);
-    border-radius:999px;padding:6px 10px;font-size:12px;font-family:var(--f);
-    flex:1 1 100%;max-width:100%;-webkit-appearance:none;appearance:none}
-/* THE VOICE CHECK. Deliberately plain: a list of steps, each one either
-   done or telling you what to do. Nothing here is decorative. */
-#vxCheck{position:fixed;inset:0;z-index:9200;display:none;background:rgba(3,6,12,.72);
-    padding:calc(58px + env(safe-area-inset-top,0px)) 14px 20px;overflow:auto}
-#vxCheck.open{display:block}
-#vxCheck .vxck{max-width:430px;margin:0 auto;background:var(--card);
-    border:1px solid var(--line);border-radius:var(--r2,18px);padding:16px}
-#vxCheck .vxck>b{font-size:12px;font-weight:800;letter-spacing:1.6px;color:var(--muted)}
-#vxCheck ul{list-style:none;padding:0;margin:12px 0}
-#vxCheck li{font-size:14px;line-height:1.45;padding:8px 0 8px 24px;position:relative;
-    border-bottom:1px solid var(--line);color:var(--body)}
-#vxCheck li:last-child{border-bottom:0}
-#vxCheck li::before{position:absolute;left:0;top:8px;font-size:12px}
-#vxCheck li.ok::before{content:'✓';color:var(--green,#2ee6a6)}
-#vxCheck li.no::before{content:'✕';color:var(--red,#ff4d5e)}
-#vxCheck li.hm::before{content:'•';color:var(--gold)}
-#vxCheck li.no{color:var(--ink)}
 @media (prefers-reduced-motion:no-preference){
   .vx.hearing .vxb{animation:vxpulse 1.8s var(--ease,cubic-bezier(.2,.8,.2,1)) infinite}
 }

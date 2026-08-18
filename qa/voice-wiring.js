@@ -182,6 +182,46 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     VX.setVoice(''); const v=VX.voice(); return !!v && v.voiceURI==='v-aaron';
   });
 
+  /* ---- iPHONE. Everything the founder reported is consistent with Safari
+     refusing a microphone that has no tap behind it, so this is the path
+     that has to be right; the desktop one already worked. */
+  R['ios-does-not-ask-for-a-session-it-cannot-have'] = await p.evaluate(()=>{
+    const was=VX.ios; VX.ios=true; VX.deaf(); VX.wantEar=true; VX.ear();
+    const r=window.__rec, ok = r && r.continuous===false && r.interimResults===false;
+    VX.ios=was; return !!ok;
+  });
+  R['ios-asks-for-the-tap-instead-of-retrying'] = await p.evaluate(()=>{
+    const was=VX.ios; VX.ios=true; VX.note=''; VX.wantEar=true;
+    if(window.__rec && window.__rec.onend) window.__rec.onend();
+    const ok = /tap/i.test(VX.note||'');
+    VX.ios=was; VX.note=''; return ok;
+  });
+  R['a-tap-reopens-the-mic'] = await p.evaluate(()=>{
+    VX.deaf(); const before=window.__recStarts; VX.listenNow();
+    return window.__recStarts>before && VX.wantEar===true;
+  });
+
+  /* ---- THE VOICE CHECK. Its whole job is to name the broken step. */
+  R['the-check-names-a-dead-mic'] = await p.evaluate(()=>{
+    VX.deaf(); VX.lastHeard=''; const L=VX.check().map(r=>r[1]).join(' | ');
+    return /has not heard anything yet/i.test(L) && /microphone is closed/i.test(L);
+  });
+  R['the-check-tells-chrome-on-iphone-to-use-safari'] = await p.evaluate(()=>{
+    const w=VX.iosNotSafari; VX.iosNotSafari=true;
+    const L=VX.check().map(r=>r[1]).join(' | '); VX.iosNotSafari=w;
+    return /SAFARI/.test(L);
+  });
+  R['the-check-explains-a-phrase-it-refused'] = await p.evaluate(()=>{
+    VX.lastHeard='what do you reckon';
+    const L=VX.check().filter(r=>r[0]==='no').map(r=>r[1]).join(' | ');
+    VX.lastHeard=''; return /not one of the answers/i.test(L);
+  });
+  R['the-check-is-reachable-without-a-question'] = await p.evaluate(()=>{
+    VX.openCheck(); const d=document.getElementById('vxCheck');
+    const open = !!d && d.className==='open' && /VOICE CHECK/.test(d.textContent||'');
+    VX.closeCheck(); return open && document.getElementById('vxCheck').className==='';
+  });
+
   await p.evaluate(()=>{ VX.disable(); window.__said=[]; window.__recStarts=0;
                          VX.askQuestion(); VX.reveal('x'); VX.roundOpen(1,true); VX.locked('y'); });
   await p.waitForTimeout(200);

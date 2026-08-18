@@ -6759,6 +6759,27 @@ var VX=(function(){
 
   V.hasOut = (function(){ try{ return !!(window.speechSynthesis && window.SpeechSynthesisUtterance); }catch(_){ return false; } })();
   V.hasEar = (function(){ try{ return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }catch(_){ return false; } })();
+  /* iOS IS A DIFFERENT MACHINE AND HAS TO BE TREATED AS ONE.
+     Safari opens a microphone from a user gesture and from nothing else,
+     and its recogniser does not hold a continuous session the way desktop
+     Chrome does — it hears one utterance and stops. Restarting it from a
+     timer is not "restarting", it is asking for a microphone with no tap
+     behind it, which Safari refuses, silently, forever. Everything the
+     founder reported is consistent with that and with nothing else: the
+     bar said Listening, the app was deaf, and no error was ever raised.
+
+     So on iOS the microphone is TAP-TO-TALK and says so, and the tap is
+     the thing the platform was asking for all along. Chrome and Android
+     keep the hands-free session, because there it actually works. */
+  V.ios = (function(){ try{
+      return /iP(hone|od|ad)/.test(navigator.platform||'')
+          || (/Mac/.test(navigator.platform||'') && navigator.maxTouchPoints>1)
+          || /iPhone|iPad|iPod/.test(navigator.userAgent||'');
+    }catch(_){ return false; } })();
+  /* Chrome and Firefox on iOS are Safari underneath with the speech API
+     removed entirely — worth telling the truth about rather than showing a
+     microphone that cannot exist. */
+  V.iosNotSafari = V.ios && /CriOS|FxiOS|EdgiOS|OPiOS/.test((navigator.userAgent||''));
 
   try{ V.on = V.hasOut && localStorage.getItem(KEY)==='1'; }catch(_){}
 
@@ -6767,6 +6788,21 @@ var VX=(function(){
       .replace(/[‘’“”]/g,"'").replace(/[^a-z0-9' ]+/g,' ')
       .replace(/\s+/g,' ').trim();
   }
+  /* Content words only, stemmed. "or", "the", "a" appear in half the bank
+     and carry no meaning; a trailing s is the difference between how a
+     bank is written and how a person says it, and never the difference
+     between two options. Deliberately crude — this is matching four short
+     phrases a player is looking at, not parsing English. */
+  var STOP=['or','the','a','an','of','and','was','were','is','are','it','that',
+            'this','to','in','on','at','be','been','did','do','does','how','many'];
+  function stem(w){ return (w.length>3 && /s$/.test(w) && !/ss$/.test(w)) ? w.slice(0,-1) : w; }
+  function words(x){
+    return norm(x).split(' ').filter(function(w){ return w && STOP.indexOf(w)<0; }).map(stem);
+  }
+  function countIn(list, pool){
+    var n=0; for(var i=0;i<list.length;i++){ if(pool.indexOf(list[i])>=0) n++; } return n;
+  }
+
   /* Strip the scoreboard shorthand a screen reads fine and a speaker does
      not. "Q1" spoken by a synthesiser is "kyoo one"; "24-second" is fine
      but "3PT" is not. Only what we actually put in banks. */
@@ -6888,35 +6924,68 @@ var VX=(function(){
     if(/^(?:options|what are the options|read the options|choices|what are my choices)$/.test(t)) return {kind:'help'};
 
     opts=opts||[];
-    // 1. the option said in full, or a distinctive part of it. Must land on
-    //    exactly one option — two candidates is a refusal, not a coin toss.
-    var hits=[];
-    for(var i=0;i<opts.length;i++){
-      var on=norm(opts[i]); if(!on) continue;
-      /* A LONG OPTION CAN MATCH ANYWHERE; A SHORT ONE ONLY AS A WHOLE WORD.
-         Found by testing "yes or no" — a player reading the question back
-         at the room. The old rule skipped any option under three letters
-         entirely, so "No" could only ever match a transcript that was
-         exactly "no": "yes or no" found ONE candidate, not two, and
-         quietly picked Yes. A refusal was the correct answer and it
-         returned a pick instead, which is the one direction this function
-         is not allowed to fail in. Word-bounded so "know" is not "no". */
-      var ok = (t===on) ? true
-             : (on.length>=3) ? (t.indexOf(on)>=0)
-             : (new RegExp('\\b'+on+'\\b')).test(t);
-      if(ok) hits.push(i);
-    }
-    if(hits.length===1) return {kind:'pick', i:hits[0]};
-    if(hits.length>1)  return {kind:'ambiguous'};
 
-    // 2. the position. Homophones ("to", "for") only count on a short
-    //    utterance, so a sentence with "for" in it is not an answer.
+    /* ---- THE POSITION COMES FIRST -----------------------------------
+       We tell the player "say the number", so a bare number word means the
+       position and nothing else. It used to be checked LAST, behind the
+       text matching, which meant a set like None / Once / Twice / Three or
+       more turned "one" into two text candidates and refused — while the
+       app was on screen telling them to say exactly that. The instruction
+       we give out-loud has to be the rule that wins.
+
+       Homophones ("to", "for") still only count on a short utterance, so a
+       sentence with "for" in it is not an answer. And a position nobody
+       offered falls through to the words rather than being refused —
+       "four" against two options is somebody naming an option, not a
+       position. */
     var stripped=t.replace(LEAD,'');
-    var toks=stripped.split(' ');
-    if(toks.length<=2 && NUM[toks[0]]!=null){
-      var idx=NUM[toks[0]];
+    var ntoks=stripped.split(' ');
+    if(ntoks.length<=2 && NUM[ntoks[0]]!=null){
+      var idx=NUM[ntoks[0]];
       if(idx<opts.length) return {kind:'pick', i:idx};
     }
+
+    /* ---- THEN THE WORDS, THE WAY PEOPLE ACTUALLY SAY THEM ------------
+       THIS IS THE BUG THE FOUNDER FOUND, and it was a one-directional
+       test: it asked whether what you SAID contained the option, and never
+       whether the OPTION contained what you said. Nobody reads an option
+       aloud in full. The option is "Made field goals" and a person says
+       "field goals"; the option is "Six or more" and they say "six". Every
+       one of those was a fragment of the option, so every one of them
+       missed, and from the sofa that is the app ignoring you.
+
+       So: compare CONTENT WORDS, in both directions. An option is a
+       candidate when everything you said appears in it (you named part of
+       it) or when you said all of it (you read it out). Plurals are
+       stemmed because "field goal" and "field goals" are the same answer,
+       and joining words are dropped because "or" carries no meaning and
+       appears in half the bank.
+
+       Ambiguity still refuses. Say "made" against "Made field goals" and
+       "Made free throws" and you have named neither — a coin toss written
+       onto a player's card as though they chose it is the one direction
+       this function may not fail in. */
+    var said=words(t);
+    if(said.length){
+      var cands=[];
+      for(var i=0;i<opts.length;i++){
+        var ow=words(opts[i]); if(!ow.length) continue;
+        var hit=0;
+        for(var j=0;j<said.length;j++){ if(ow.indexOf(said[j])>=0) hit++; }
+        if(!hit) continue;
+        var saidAllIn = (hit===said.length);          // you named part of it
+        var optAllSaid= (countIn(ow, said)===ow.length); // you read it out
+        if(saidAllIn || optAllSaid) cands.push({i:i, hit:hit, whole:optAllSaid?1:0});
+      }
+      if(cands.length){
+        cands.sort(function(x,y){ return (y.hit-x.hit) || (y.whole-x.whole); });
+        if(cands.length===1) return {kind:'pick', i:cands[0].i};
+        var top=cands[0], nxt=cands[1];
+        if(top.hit>nxt.hit || top.whole>nxt.whole) return {kind:'pick', i:top.i};
+        return {kind:'ambiguous'};
+      }
+    }
+
     // 3. yes / no, which people say instead of reading the option
     if(/^(?:yes|yeah|yep|yup|correct|true|affirmative)$/.test(stripped)){
       var y=opts.findIndex(function(o){ return /^yes$/i.test(String(o).trim()); });
@@ -6955,7 +7024,9 @@ var VX=(function(){
          Interim results are not used to answer — only a final transcript
          may pick — but they are the earliest possible proof that somebody
          is talking, which is what stops us reading the options over them. */
-      r.lang='en-US'; r.continuous=true; r.interimResults=true; r.maxAlternatives=4;
+      r.lang='en-US'; r.maxAlternatives=6;
+      r.continuous     = !V.ios;   // see V.ios — Safari will not hold a session
+      r.interimResults = !V.ios;
       /* DO NOT TALK OVER THE PLAYER. This was the sharpest of the three
          bugs: the options are read 2.6s after the question, and reading
          them ABORTS the microphone. Answer at 2.7s and the app cut you off
@@ -6995,6 +7066,10 @@ var VX=(function(){
         V.listening=false; V.rec=null;
         if(!V.wantEar) { V.paint(); return; }
         if(V.errs>6){ V.note='Voice input stopped responding — tap your answers.'; V.wantEar=false; V.paint(); return; }
+        /* NO TIMER RESTART ON iOS. A restart with no gesture behind it is
+           refused, and the refusal is what looked like the app ignoring
+           the player. Ask for the tap instead — honestly, in words. */
+        if(V.ios){ V.note='Tap 🎙 and say your answer.'; V.paint(); return; }
         setTimeout(function(){ try{ V.ear(); }catch(_){} }, V.errs?600*V.errs:120);
       };
       V.rec=r; V.listening=true; r.start(); V.paint();
@@ -7200,6 +7275,59 @@ var VX=(function(){
   };
   V.toggle=function(){ if(V.on) V.disable(); else V.enable(); };
 
+  /* ---- THE VOICE CHECK ------------------------------------------------
+     Three rounds of "it still isn't taking my voice" with no way to tell a
+     dead microphone from a mishearing from a grammar that refused. That is
+     not a bug report anybody can act on, and it is not the founder's job
+     to produce one. This is: seven steps, in order, each either done or
+     naming what to do about it. It is the same principle as the submit
+     receipt — silence is the one thing a player cannot forgive. */
+  V.check=function(){
+    var L=[], ok=function(t){ L.push(['ok',t]); }, no=function(t){ L.push(['no',t]); },
+        hm=function(t){ L.push(['hm',t]); };
+    V.hasOut ? ok('This browser can speak.') : no('This browser cannot speak at all. Use Safari on iPhone, or Chrome elsewhere.');
+    if(V.iosNotSafari) no('You are in Chrome or Firefox on an iPhone — they have no microphone access. Open this page in SAFARI.');
+    else if(!V.hasEar) no('This browser has no speech recognition. It can still read questions out loud.');
+    else ok('This browser can listen.');
+    V.on ? ok('Voice is switched on.') : no('Voice is switched off — tap the Voice button.');
+    if(V.ios) hm('iPhone: Safari only opens the microphone when you tap 🎙. One tap per answer.');
+    if(V.micThrew) no('The microphone was refused '+V.micThrew+'\u00d7 — that is the tap it wants.');
+    if(V.note) hm(V.note);
+    V.listening ? ok('The microphone is open right now.')
+                : hm('The microphone is closed right now'+(V.ios?' — tap 🎙.':'.'));
+    if(V.lastHeard){ ok('Last thing it heard: \u201c'+V.lastHeard+'\u201d'); }
+    else { hm('It has not heard anything yet. If you have spoken, the microphone never opened.'); }
+    if(V.lastHeard){
+      var m=null; try{ m=V.match(V.lastHeard, V.curOpts()); }catch(_){}
+      if(!m) no('It heard you but that phrase is not one of the answers. Say the NUMBER — one, two, three or four.');
+      else if(m.kind==='ambiguous') hm('That phrase matched more than one answer, so it refused. Say the number instead.');
+      else ok('It understood that as: '+(m.kind==='pick'?('answer '+(m.i+1)):m.kind)+'.');
+    }
+    if(V.hasOut){ var vv=V.voice(); ok('Reading voice: '+(vv?vv.name:'the browser default')+'.'); }
+    return L;
+  };
+  V.openCheck=function(){
+    try{
+      var L=V.check();
+      var h='<div class="vxck"><b>VOICE CHECK</b><ul>';
+      L.forEach(function(r){ h+='<li class="'+r[0]+'">'+String(r[1]).replace(/</g,'&lt;')+'</li>'; });
+      h+='</ul><button type="button" class="btn" onclick="VX.listenNow()">🎙 Test the microphone — say “two”</button>'
+       + '<button type="button" class="btn ghost" onclick="VX.closeCheck()">Close</button></div>';
+      var d=document.getElementById('vxCheck');
+      if(!d){ d=document.createElement('div'); d.id='vxCheck'; document.body.appendChild(d);
+              d.onclick=function(e){ if(e.target===d) V.closeCheck(); }; }
+      d.innerHTML=h; d.className='open';
+      /* Re-read it as things happen, so a tap and a word show up live. */
+      try{ clearInterval(V.ckInt); }catch(_){}
+      V.ckInt=setInterval(function(){ try{ if(document.getElementById('vxCheck')&&document.getElementById('vxCheck').className==='open'){
+        var L2=V.check(), ul=document.querySelector('#vxCheck ul'); if(!ul) return;
+        var h2=''; L2.forEach(function(r){ h2+='<li class="'+r[0]+'">'+String(r[1]).replace(/</g,'&lt;')+'</li>'; });
+        ul.innerHTML=h2; } }catch(_){} }, 700);
+    }catch(_){}
+  };
+  V.closeCheck=function(){ try{ clearInterval(V.ckInt); var d=document.getElementById('vxCheck'); if(d){ d.className=''; d.innerHTML=''; } }catch(_){} };
+  V.curOpts=function(){ return curOpts(); };
+
   /* ---- WHAT IT LOOKS LIKE -------------------------------------------- */
   V.mount=function(){
     try{
@@ -7222,8 +7350,10 @@ var VX=(function(){
       var h='<button type="button" class="vxb" onclick="VX.toggle()" aria-pressed="'+(V.on?'true':'false')+'">'
         + (V.on?'🔊':'🔈') + ' <b>Voice</b> <s>'+(V.on?'on':'off')+'</s></button>';
       if(V.on && V.hasEar){
-        h+='<button type="button" class="vxb mic" onclick="VX.listenNow()" title="Answer out loud">🎙</button>';
+        h+='<button type="button" class="vxb mic'+(V.ios?' big':'')+'" onclick="VX.listenNow()" title="Answer out loud">🎙'
+          + (V.ios?' <b>Say it</b>':'') + '</button>';
       }
+      if(V.on){ h+='<button type="button" class="vxq" onclick="VX.openCheck()" title="Voice check">?</button>'; }
       h+='<span class="vxt">'+String(txt).replace(/</g,'&lt;')+'</span>';
       /* WHAT IT HEARD, ON SCREEN. "It is not accepting my answer" and "it
          heard something else entirely" are different bugs with different
@@ -12707,7 +12837,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-17-voice-ear.122';
+const STATS_BUILD='2026-08-17-voice-words.123';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -13109,7 +13239,8 @@ function menuRows(){
   };
   R.push('<div class="mgrp">The game</div>');
   row('📖','How to play &amp; full rules','rules');
-  try{ if(VX && VX.hasOut) row(VX.on?'🔊':'🔈','Voice: read questions out loud','voice', VX.on?'On':'Off'); }catch(_){}
+  try{ if(VX && VX.hasOut){ row(VX.on?'🔊':'🔈','Voice: read questions out loud','voice', VX.on?'On':'Off');
+       row('🎙','Voice check — why isn\u2019t it hearing me?','voicecheck'); } }catch(_){}
   try{ if(S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0) row('▶','Back to my game','resume'); }catch(_){}
   try{ if(S.screen==='final' || (S.mode==='demo' && S.pts>0)) row('🔁','Play again','restart'); }catch(_){}
   try{ if(S.screen==='final'){ row('😈','Post-game roast card','roast'); } }catch(_){}
@@ -13126,6 +13257,7 @@ function menuRows(){
 var MENU_GO={
   rules:function(){ go('rules'); },
   voice:function(){ try{ VX.toggle(); }catch(_){} },
+  voicecheck:function(){ try{ VX.openCheck(); }catch(_){} },
   resume:function(){ try{ returnToGame(); }catch(_){ go('gametime'); } },
   restart:function(){ try{ restart(); }catch(_){} },
   roast:function(){ try{ openRoast(); }catch(_){} },
@@ -16810,6 +16942,33 @@ body.hasrail #menuBtn{top:calc(6px + env(safe-area-inset-top,0px))}
 .vx.reading .vxb{border-color:var(--blue2)}
 .vx.reading .vxt{color:var(--body)}
 .vx.warn .vxt{color:var(--gold)}
+.vx .vxb.mic{padding:7px 12px}
+.vx .vxb.mic.big{border-color:var(--teal2);color:var(--ink)}
+.vx .vxq{background:transparent;border:1px solid var(--line2);color:var(--dim);
+    border-radius:999px;width:26px;height:26px;font-size:12px;font-weight:800;
+    cursor:pointer;font-family:var(--f);flex:0 0 auto;padding:0}
+.vx .vxh{font-size:12px;color:var(--teal2);flex:1 1 100%;min-width:0;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vx .vxv{background:var(--glass);border:1px solid var(--line2);color:var(--body);
+    border-radius:999px;padding:6px 10px;font-size:12px;font-family:var(--f);
+    flex:1 1 100%;max-width:100%;-webkit-appearance:none;appearance:none}
+/* THE VOICE CHECK. Deliberately plain: a list of steps, each one either
+   done or telling you what to do. Nothing here is decorative. */
+#vxCheck{position:fixed;inset:0;z-index:9200;display:none;background:rgba(3,6,12,.72);
+    padding:calc(58px + env(safe-area-inset-top,0px)) 14px 20px;overflow:auto}
+#vxCheck.open{display:block}
+#vxCheck .vxck{max-width:430px;margin:0 auto;background:var(--card);
+    border:1px solid var(--line);border-radius:var(--r2,18px);padding:16px}
+#vxCheck .vxck>b{font-size:12px;font-weight:800;letter-spacing:1.6px;color:var(--muted)}
+#vxCheck ul{list-style:none;padding:0;margin:12px 0}
+#vxCheck li{font-size:14px;line-height:1.45;padding:8px 0 8px 24px;position:relative;
+    border-bottom:1px solid var(--line);color:var(--body)}
+#vxCheck li:last-child{border-bottom:0}
+#vxCheck li::before{position:absolute;left:0;top:8px;font-size:12px}
+#vxCheck li.ok::before{content:'✓';color:var(--green,#2ee6a6)}
+#vxCheck li.no::before{content:'✕';color:var(--red,#ff4d5e)}
+#vxCheck li.hm::before{content:'•';color:var(--gold)}
+#vxCheck li.no{color:var(--ink)}
 @media (prefers-reduced-motion:no-preference){
   .vx.hearing .vxb{animation:vxpulse 1.8s var(--ease,cubic-bezier(.2,.8,.2,1)) infinite}
 }

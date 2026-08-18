@@ -5122,12 +5122,17 @@ function voiceStatic(){
            && /Say lock, or say another number/.test(vx),
       'a heard answer no longer says itself back, or locking is not its own word',
       'speech recognition mishears; the read-back is how a player finds out before it costs them the question');
+    /* These two assert the GUARANTEE, not the code that implements it. The
+       first version named a `hits` array and a local called `toks`, so a
+       rewrite that kept both behaviours exactly turned them red — and a
+       check that fails on a rename is a check that trains you to ignore it.
+       The behaviour itself is proven case by case in qa/voice.js. */
     check('voice.two-candidates-is-a-refusal',
-      !!vx && /hits\.length>1\)\s*return \{kind:'ambiguous'\}/.test(vx),
+      !!vx && /return \{kind:'ambiguous'\}/.test(vx),
       'an ambiguous phrase resolves to one of the candidates instead of refusing',
       '"yes or no" picked Yes — a coin toss written on a player\'s card as if they had chosen it');
     check('voice.homophones-only-count-on-a-short-phrase',
-      !!vx && /toks\.length<=2 && NUM\[toks\[0\]\]!=null/.test(vx),
+      !!vx && /\.length<=2 && NUM\[/.test(vx),
       '"for" and "to" can be picked out of the middle of a sentence',
       'a player says "go for it" at the television and the app answers 4 on their behalf');
     /* OFF MEANS OFF. Not a preference — the default, and the state every
