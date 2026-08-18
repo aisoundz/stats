@@ -666,6 +666,47 @@
   .notifyMsg.ok{color:var(--green)}
   .notifyMsg.bad{color:var(--red)}
 
+  /* ============ THE GAME RAIL =====================================
+     Tiles, not a dropdown. A dropdown hides the options behind a tap and
+     the options ARE the pitch: the point is that the game already on your
+     television is one of them. Horizontal because a slate is a row, and
+     it scrolls because an NFL Sunday is sixteen of them. */
+  #gameRail{position:sticky;top:0;z-index:40;
+    background:linear-gradient(180deg,rgba(19,27,43,.94),rgba(12,18,30,.88));
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line)}
+  .grTop{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:8px 14px 6px}
+  .grLbl{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--dim)}
+  .grAll{background:none;border:0;padding:0;cursor:pointer;font-family:inherit;font-size:12px;
+    color:var(--teal);font-weight:700}
+  .grTiles{display:flex;gap:7px;overflow-x:auto;padding:0 14px 10px;scrollbar-width:none;
+    -webkit-overflow-scrolling:touch}
+  .grTiles::-webkit-scrollbar{display:none}
+  .grTile{flex:0 0 auto;min-width:126px;max-width:190px;text-align:left;cursor:pointer;
+    padding:8px 10px;border-radius:11px;color:var(--body);font-family:inherit;font-size:14px;
+    background:rgba(5,8,14,.6);border:1px solid var(--line);
+    transition:border-color .2s,background .2s,transform .2s}
+  .grTile:hover{border-color:var(--line2)}
+  .grTile[aria-current="true"]{transform:translateY(-1px);border-color:transparent;
+    background:linear-gradient(var(--card),var(--card)) padding-box,
+               linear-gradient(120deg,var(--gA),var(--gH)) border-box;
+    border:1px solid transparent}
+  .grTile:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  .grTile[disabled]{opacity:.5;cursor:default}
+  .grLg{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:800;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+  .grLg i{width:5px;height:5px;border-radius:50%;background:var(--dim);display:block;font-style:normal}
+  .grTile.onair .grLg{color:var(--red)}
+  .grTile.onair .grLg i{background:var(--red)}
+  .grWho{font-size:15px;font-weight:800;color:var(--ink);letter-spacing:.01em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .grWho s{text-decoration:none;color:var(--dim);font-weight:600;font-size:12px;margin:0 4px}
+  .grWhen{font-size:12px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+  .grTile[aria-current="true"] .grWhen{color:var(--teal)}
+  .grStar{color:var(--gold);font-size:12px}
+
   /* ---- THE SLATE PICKER ---------------------------------------------
      Rows, not a dropdown. A dropdown hides the options behind a tap, and
      the options ARE the pitch here: the point of the screen is that the
@@ -1064,6 +1105,23 @@
 <div class="phone" id="app">
 
   <button class="backbtn" id="backBtn" onclick="goBack()">←</button>
+
+  <!-- ============ THE GAME RAIL ==================================
+       The old app was built for one game and "which game" was a
+       setting inside the landing card. With two rooms that breaks in
+       the way the founder found the night before GN13: the picker said
+       one game while the hero said the other, and switching mid-night
+       meant scrolling back to Home to find the control.
+
+       So the rail sits OUTSIDE every screen, at the top of the app. It
+       is on the pick sheet, it is on a live question, it is on the
+       board. One component owns which game you are in; everything else
+       reads it. That is what stops the class of bug rather than the
+       instance.
+
+       It hides itself on a one-game night — which is every night this
+       product ran before this week — so nothing about those changes. -->
+  <div id="gameRail" style="display:none"></div>
 
   <!-- 1. LANDING -->
   <section class="screen active mq" id="s-landing" style="position:relative;isolation:isolate">
@@ -4926,11 +4984,65 @@ function slateGame(id){
 
    It hides itself when there is nothing to choose. A picker offering one
    option is a question with one answer, which is not a question. */
+/* THE GAME RAIL. Same data as the old picker card, drawn once, above
+   everything, on every screen. paintSlate() below still exists and now
+   draws nothing — the card it painted has been replaced by this.
+
+   NAMED paintGameRail AND NOT paintRail, because paintRail() already
+   exists further down this file — it shows the live score strip. Two
+   functions with one name in one script is not a conflict the browser
+   reports: the second declaration silently replaces the first, so mine
+   was never called and the rail simply never appeared. Twenty minutes to
+   find, and the only symptom was a component that did nothing. */
+function paintGameRail(){
+  var el = document.getElementById('gameRail');
+  if(!el) return;
+  var gs = (SLATE.games || []);
+  /* One game is not a choice, and every night before this week was one
+     game. Hidden means the app is exactly what it was. */
+  if(gs.length < 2){ el.style.display='none'; el.innerHTML=''; return; }
+
+  var cur = (typeof GAME!=='undefined' && GAME) ? GAME.nightId : null;
+  var rows = gs.map(function(g){
+    var on = (g.nightId === cur);
+    var live = !!g.live;
+    return '<button type="button" class="grTile'+(live?' onair':'')+'" data-slate="'+esc(g.nightId)+'"'
+      + ' style="--gA:'+esc(g.awayColor||'#666')+';--gH:'+esc(g.homeColor||'#666')+'"'
+      + (on ? ' aria-current="true" disabled' : '') + '>'
+      + '<span class="grLg"><i></i>'+esc(String(g.league||'').toUpperCase())
+      +   (g.flagship ? ' <span class="grStar">★</span>' : '') + '</span>'
+      /* REAL SPACES AROUND "at". The margin came from CSS, so the text
+         itself read "TempoatMystics" — which is what a screen reader says
+         out loud, and what any text-based check sees. Spacing that only
+         exists in the styling is not spacing. */
+      + '<span class="grWho">'+esc(g.away||g.awayAbbr||'')+' <s>at</s> '+esc(g.home||g.homeAbbr||'')+'</span>'
+      + '<span class="grWhen">'+esc(g.tipLabel || tipShort(g.tipISO) || '')+'</span>'
+      + '</button>';
+  }).join('');
+
+  el.innerHTML =
+      '<div class="grTop"><span class="grLbl">Which game are you watching?</span></div>'
+    + '<div class="grTiles">'+rows+'</div>';
+  el.style.display='';
+}
+/* A tip time a person reads at a glance, in their own zone. */
+function tipShort(iso){
+  try{
+    var d=new Date(iso); if(isNaN(d)) return '';
+    return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+  }catch(_){ return ''; }
+}
+try{ window.paintGameRail = paintGameRail; }catch(_){}
+
 function paintSlate(){
+  /* RETIRED, DELIBERATELY NOT DELETED. Six call sites and two suites name
+     it; making it draw the rail keeps every one of them correct rather
+     than turning a rename into a hunt. */
+  paintGameRail();
   var el = document.getElementById('slateCard');
   if(!el) return;
   var gs = (SLATE.games || []);
-  if(gs.length < 2){ el.style.display='none'; el.innerHTML=''; return; }
+  if(true){ el.style.display='none'; el.innerHTML=''; return; }
 
   var cur = (typeof GAME!=='undefined' && GAME) ? GAME.nightId : null;
   var rows = gs.map(function(g){
@@ -14688,7 +14800,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-rooms.143';
+const STATS_BUILD='2026-08-18-rail.144';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

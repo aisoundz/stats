@@ -693,14 +693,20 @@ async function browserTests(){
         try{ go('lobby'); }catch(e){}
         try{ navGo(t); }catch(e){}
         try{ save(); }catch(e){}
-        let blob=null; try{ blob=JSON.parse(localStorage.getItem(LS_KEY)||'null'); }catch(e){}
+        /* LS_KEY IS A FUNCTION NOW. One save slot per NIGHT rather than
+           per sport, because two rooms sharing a slot is how the flagship's
+           half-played card followed a player into the other game. Passing
+           it as a value coerced the function to its own source text and
+           used that as the key — every read came back null and the save
+           looked like it had never been written. */
+        let blob=null; try{ blob=JSON.parse(localStorage.getItem(LS_KEY())||'null'); }catch(e){}
         if(!blob){ out.push(t+': nothing saved'); return; }
         const where = blob.place || blob.screen;
         if(['predict','lobby','live','review','predreview','break'].indexOf(where)<0)
           out.push(t+': save says "'+where+'" — resume will not recognise it');
         if(Number(blob.pts)!==42) out.push(t+': points lost in the save ('+blob.pts+')');
       });
-      try{ S.mode='demo'; localStorage.removeItem(LS_KEY); }catch(e){}
+      try{ S.mode='demo'; localStorage.removeItem(LS_KEY()); }catch(e){}
       return out;
     });
     check(`state.survives-tab-switch.${vp.name}`, resumeCheck.length===0,
@@ -716,7 +722,7 @@ async function browserTests(){
       S.mode='live'; S.name='QA'; S.qi=2; S.nextQ=2; S.place='lobby';
       try{ ledgerClear(); ledgerSet('r0',42,0,'live'); }catch(e){ S.pts=42; }
       try{ renderLobby(2); go('lobby'); save(); }catch(e){}
-      const blob=JSON.parse(localStorage.getItem(LS_KEY)||'null');
+      const blob=JSON.parse(localStorage.getItem(LS_KEY())||'null');
       return blob ? {place:blob.place, pts:blob.pts} : null;
     });
     check(`state.wake-saves-position.${vp.name}`, !!wake && wake.place==='lobby' && Number(wake.pts)===42,
@@ -725,7 +731,7 @@ async function browserTests(){
 
     const replay=await p.evaluate(()=>{
       // simulate the reload path without navigating: resume from the blob
-      const saved=JSON.parse(localStorage.getItem(LS_KEY)||'null');
+      const saved=JSON.parse(localStorage.getItem(LS_KEY())||'null');
       if(!saved) return 'no save';
       resumeData=saved;
       try{ doResume(); }catch(e){ return 'doResume threw: '+e.message; }
@@ -745,20 +751,20 @@ async function browserTests(){
       S.mode='live'; S.name='QA'; S.qi=2; S.pts=99; S.place='lobby';
       S.predChoices={pts:'Somebody From Last Night'};
       try{ save(); }catch(e){}
-      const stamped=(JSON.parse(localStorage.getItem(LS_KEY)||'{}')||{}).nid;
+      const stamped=(JSON.parse(localStorage.getItem(LS_KEY())||'{}')||{}).nid;
       // now pretend the app has moved on to the next game night
-      const blob=JSON.parse(localStorage.getItem(LS_KEY));
+      const blob=JSON.parse(localStorage.getItem(LS_KEY()));
       blob.nid='gn-some-other-night';
-      localStorage.setItem(LS_KEY, JSON.stringify(blob));
+      localStorage.setItem(LS_KEY(), JSON.stringify(blob));
       resumeData=null;
       try{ checkResume(); }catch(e){ return {err:e.message}; }
-      const after=localStorage.getItem(LS_KEY);
+      const after=localStorage.getItem(LS_KEY());
       // ...and an ancient save with no stamp at all is also not tonight's
-      localStorage.setItem(LS_KEY, JSON.stringify({mode:'live',place:'lobby',pts:77}));
+      localStorage.setItem(LS_KEY(), JSON.stringify({mode:'live',place:'lobby',pts:77}));
       resumeData=null;
       try{ checkResume(); }catch(e){}
-      const afterUnstamped=localStorage.getItem(LS_KEY);
-      S.mode='demo'; try{ localStorage.removeItem(LS_KEY); }catch(e){}
+      const afterUnstamped=localStorage.getItem(LS_KEY());
+      S.mode='demo'; try{ localStorage.removeItem(LS_KEY()); }catch(e){}
       return {stamped, cleared:after===null, unstampedCleared:afterUnstamped===null, resumed:!!resumeData};
     });
     check(`state.save-is-per-night.${vp.name}`,
@@ -781,7 +787,7 @@ async function browserTests(){
       window.joinNight=function(){ window.__qaJoinCalls++; return Promise.resolve(true); };
       S.mode='live'; S.name='QA'; S.qi=2; S.nextQ=2; S.pts=42; S.place='lobby';
       try{ save(); }catch(e){}
-      const saved=JSON.parse(localStorage.getItem(LS_KEY)||'null');
+      const saved=JSON.parse(localStorage.getItem(LS_KEY())||'null');
       if(!saved){ window.joinNight=window.__qaPrevJoin; window.__qaErr='no save'; return; }
       resumeData=saved;
       try{ doResume(); }catch(e){ window.joinNight=window.__qaPrevJoin; window.__qaErr='doResume threw: '+e.message; }
@@ -872,7 +878,7 @@ async function browserTests(){
     check(`state.play-does-not-restart.${vp.name}`, playGuard==='lobby',
       `pressing Play mid-night went to "${playGuard}" instead of back to the game`,
       'REGRESSION: the Play button handed back a blank pick sheet for an already-locked card');
-    await p.evaluate(()=>{ try{ S.mode='demo'; S.place=''; localStorage.removeItem(LS_KEY); }catch(e){} });
+    await p.evaluate(()=>{ try{ S.mode='demo'; S.place=''; localStorage.removeItem(LS_KEY()); }catch(e){} });
 
     /* ---- THE BOARD MUST READ FOR ITSELF ---------------------------
        Two real players on two devices, both in Firestore, and the board
@@ -1217,26 +1223,26 @@ async function browserTests(){
            has gone up, is from a rehearsal. It must not be walked into. */
         const stale={mode:'live',place:'live',screen:'live',qi:NR-1,pts:110,
                      nid:GAME.nightId,name:'QA',predLocked:true};
-        localStorage.setItem(LS_KEY, JSON.stringify(stale));
+        localStorage.setItem(LS_KEY(), JSON.stringify(stale));
         resumeData=null;
         checkResume();
         R.staleRefused = (resumeData===null);
-        R.staleCleared = (localStorage.getItem(LS_KEY)===null);
+        R.staleCleared = (localStorage.getItem(LS_KEY())===null);
 
         /* THE ONE THE FIRST FIX MISSED. Between quarters you sit in the
            LOBBY, so a stale mid-game save is far more likely to be parked
            there than on 'live' — and 'lobby' was whitelisted as a normal
            pre-tip position. Points and a scored round are the tell. */
-        localStorage.setItem(LS_KEY, JSON.stringify(
+        localStorage.setItem(LS_KEY(), JSON.stringify(
           Object.assign({},stale,{place:'lobby',screen:'lobby',qi:3,nextQ:3,pts:110})));
         resumeData=null;
         checkResume();
         R.lobbyRefused = (resumeData===null);
-        R.lobbyCleared = (localStorage.getItem(LS_KEY)===null);
+        R.lobbyCleared = (localStorage.getItem(LS_KEY())===null);
 
         /* …and the mirror case: sitting in the lobby before tip with a
            locked card and nothing scored is exactly right, and must live. */
-        localStorage.setItem(LS_KEY, JSON.stringify(
+        localStorage.setItem(LS_KEY(), JSON.stringify(
           Object.assign({},stale,{place:'lobby',screen:'lobby',qi:0,nextQ:0,pts:0})));
         resumeData=null;
         checkResume();
@@ -1246,7 +1252,7 @@ async function browserTests(){
         /* …but a pre-tip save that is only "I was filling my card in" is
            real, and taking THAT away would be a worse bug than the one we
            are fixing. */
-        localStorage.setItem(LS_KEY, JSON.stringify(
+        localStorage.setItem(LS_KEY(), JSON.stringify(
           Object.assign({},stale,{place:'predict',screen:'predict',qi:0,pts:0})));
         resumeData=null;
         checkResume();
@@ -1256,7 +1262,7 @@ async function browserTests(){
            save would detonate under whichever test happened to be running
            in 60ms time — which is exactly how it behaved the first time. */
         resumeData=null;
-        localStorage.removeItem(LS_KEY);
+        localStorage.removeItem(LS_KEY());
         try{ document.getElementById('resumeBar').style.display='none'; }catch(e){}
 
         /* HALF TWO — with a live game genuinely in progress, the home card
@@ -1280,7 +1286,7 @@ async function browserTests(){
         paintContinueCard();
         R.restored = /practice/i.test((document.getElementById('landingDemoBtn')||{}).textContent||'');
       }catch(e){ R.err=e.message; }
-      try{ localStorage.removeItem(LS_KEY); S.mode='demo'; S.practice=false; }catch(e){}
+      try{ localStorage.removeItem(LS_KEY()); S.mode='demo'; S.practice=false; }catch(e){}
       return R;
     });
     check(`night.a-save-cannot-be-ahead-of-the-game.${vp.name}`,

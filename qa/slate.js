@@ -79,11 +79,11 @@ const FAKE = `(function(store){
       localStorage.removeItem('stats_slate_pick_v1');
       const loaded=await window.loadSlate({}, window.__F);
       window.paintSlate();
-      const el=document.getElementById('slateCard');
+      const el=document.getElementById('gameRail');
       return { loaded, games:window.SLATE.games.length, date:window.SLATE.date,
                shown:el.style.display!=='none',
                rows:[...el.querySelectorAll('[data-slate]')].map(x=>x.getAttribute('data-slate')),
-               stars:el.querySelectorAll('.slateStar').length,
+               stars:el.querySelectorAll('.grStar').length,
                text:el.textContent.replace(/\s+/g,' ').trim() };
     });
     ok('slate.loads-tonights-games', r.loaded && r.games===2 && r.date==='2026-08-19',
@@ -101,6 +101,11 @@ const FAKE = `(function(store){
     await p.close();
   }
 
+  /* THE PICKER IS NOW A RAIL, ABOVE EVERY SCREEN. It was a card inside
+     the landing, which meant the control for "which game" was only
+     reachable by scrolling back Home — the thing that made switching feel
+     stuck mid-night. Same data, same rules, different home; these checks
+     follow it rather than being deleted. */
   /* ---- 2. one game is not a choice ---------------------------------- */
   {
     const one=JSON.parse(JSON.stringify(SLATE_DOC)); one.games=[SLATE_DOC.games[0]];
@@ -108,7 +113,7 @@ const FAKE = `(function(store){
     const r=await p.evaluate(async()=>{
       localStorage.removeItem('stats_slate_pick_v1');
       await window.loadSlate({}, window.__F); window.paintSlate();
-      const el=document.getElementById('slateCard');
+      const el=document.getElementById('gameRail');
       return { shown:el.style.display!=='none', html:el.innerHTML.length };
     });
     ok('slate.one-game-shows-no-picker', !r.shown && r.html===0,
@@ -283,7 +288,7 @@ const FAKE = `(function(store){
       window.paintSlate();
       const okc=await window.loadNightConfig({}, window.__F);
       return { loaded, okc, night:window.GAME.nightId,
-               shown:document.getElementById('slateCard').style.display!=='none' };
+               shown:document.getElementById('gameRail').style.display!=='none' };
     });
     ok('slate.no-slate-is-not-an-error', r.loaded===false && r.okc===true &&
        r.night==='gn13-2026-08-19-min-gs' && !r.shown,
