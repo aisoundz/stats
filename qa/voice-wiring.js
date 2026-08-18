@@ -405,6 +405,49 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     return started===1;       // exactly one, no deferral, nothing changed for them
   });
 
+  /* ---- THE PRE-GAME CARD. "This is how it starts." ----------------
+     Six picks, 600 of the night's 1,000 points, the first thing anybody
+     does — and voice was silent on all of it until now. */
+  await p.evaluate(()=>{ VX.enable(); setMode('demo'); go('predict'); PD.i=1; window.__said=[]; buildPred(); });
+  await p.waitForTimeout(500);
+  R['the-pick-card-is-read-aloud'] = await p.evaluate(()=>
+    window.__said.some(u=>/say a player.s name/i.test(u)));
+  R['thirty-names-are-not-read-out-loud'] = await p.evaluate(()=>{
+    /* A quarter question reads its options; a roster cannot. Nobody holds
+       thirty names, and reading them would outlast the card. */
+    const opts=VX.pickOpts();
+    const said=window.__said.join(' ');
+    return opts.length>10 && opts.filter(o=>said.indexOf(o)>=0).length<3;
+  });
+  R['a-surname-picks-the-player'] = await p.evaluate(()=>{
+    const opts=VX.pickOpts(); if(!opts.length) return false;
+    const full=opts[0], last=full.split(' ').pop();
+    /* only meaningful if that surname is unique on the card */
+    if(opts.filter(o=>o.split(' ').pop()===last).length!==1) return true;
+    VX.heard(last);
+    return S.predChoices[VX.pickId()]===full;
+  });
+  R['a-shared-surname-refuses-rather-than-guesses'] = await p.evaluate(()=>{
+    const opts=VX.pickOpts();
+    const counts={}; opts.forEach(o=>{const l=o.split(' ').pop(); counts[l]=(counts[l]||0)+1;});
+    const dupe=Object.keys(counts).find(k=>counts[k]>1);
+    if(!dupe) return true;                       // nothing to disambiguate on this card
+    const before=S.predChoices[VX.pickId()]||null;
+    window.__said=[]; VX.heard(dupe);
+    return S.predChoices[VX.pickId()]===before
+        && window.__said.some(u=>/more than one player/i.test(u));
+  });
+  R['next-moves-to-the-next-pick-not-the-next-question'] = await p.evaluate(()=>{
+    const before=PD.i; VX.heard('next'); return PD.i===before+1;
+  });
+  R['back-goes-to-the-previous-pick'] = await p.evaluate(()=>{
+    const before=PD.i; VX.heard('back'); return PD.i===before-1;
+  });
+  R['the-bar-follows-the-player-to-the-pick-sheet'] = await p.evaluate(()=>{
+    const d=document.getElementById('vxBar');
+    return !!d && !!d.closest('#predCard') && document.querySelectorAll('#vxBar').length===1;
+  });
+
   await p.evaluate(()=>{ VX.disable(); window.__said=[]; window.__recStarts=0;
                          VX.askQuestion(); VX.reveal('x'); VX.roundOpen(1,true); VX.locked('y'); });
   await p.waitForTimeout(200);

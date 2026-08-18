@@ -6641,6 +6641,10 @@ function buildPred(){
     }catch(_){}
   }
 
+  /* VOICE READS THIS CARD TOO. Last thing buildPred does, so everything
+     the reader looks at is already painted. Guarded and wrapped: with
+     voice off this returns immediately. */
+  try{ VX.mount(); VX.askPick(); }catch(_){}
   Array.prototype.forEach.call(c.querySelectorAll('.pdopt'), function(b){
     b.onclick=function(){
       var nm=b.getAttribute('data-pd');
@@ -7686,6 +7690,11 @@ var VX=(function(){
   /* ---- WHAT A HEARD PHRASE DOES -------------------------------------- */
   V.heard=function(raw){
     if(!V.on) return false;
+    /* The pick sheet owns the phrase when the player is on it. One
+       listener, two surfaces, and the surface decides — rather than two
+       recognisers racing, which is the shape of every duplication bug in
+       this codebase. */
+    try{ if(V.onPickCard()){ if(V.heardPick(raw)) return true; } }catch(_){}
     var opts=curOpts();
     var m=V.match(raw, opts);
     if(!m) return false;
@@ -7838,6 +7847,99 @@ var VX=(function(){
     try{ return !!document.querySelector('#qOpts .opt.sel'); }catch(_){ return false; }
   };
   V.clearHint=function(){ try{ clearTimeout(V.hint); }catch(_){} V.hint=null; };
+
+  /* ---- THE PRE-GAME CARD ---------------------------------------------
+     "With the opening question it should ask. Like rebounds, who will have
+     the most rebounds — you can say it and it takes it in. This is
+     important, this is how it starts."
+
+     He is right and it is the biggest gap the feature had. The pick sheet
+     is six questions worth 600 of the night's 1,000 points and it is the
+     FIRST thing anybody does — and voice was silent on all of it, because
+     voice had been built into the quarter-question engine and this is a
+     different surface entirely.
+
+     THE PART THAT IS GENUINELY DIFFERENT, AND WHY THIS IS NOT A COPY OF
+     askQuestion(): a quarter question has two to four options and reading
+     them aloud is the whole answer. This card has THIRTY PLAYERS. Reading
+     thirty names would take a minute and nobody could hold them. So the
+     prompt does what a person does — it asks the question and invites a
+     name — and the matching does the work.
+
+     Surnames are what people actually say. "Bueckers", not "Paige
+     Bueckers", and V.match already handles that: it compares content words
+     both ways, so a said fragment finds the full name. And two players
+     sharing a surname REFUSE rather than guess, which matters more here
+     than anywhere — a wrong player on the pick sheet is 100 points and it
+     is not discovered until the buzzer. */
+  V.pickOpts=function(){
+    try{
+      return Array.prototype.map.call(document.querySelectorAll('#predCard .pdopt'),
+        function(b){ return b.getAttribute('data-pd')||''; }).filter(Boolean);
+    }catch(_){ return []; }
+  };
+  V.onPickCard=function(){
+    try{ return S.screen==='predict' && !!document.querySelector('#predCard .pdopt'); }catch(_){ return false; }
+  };
+  V.askPick=function(again){
+    if(!V.on || !V.onPickCard()) return;
+    V.errs=0; V.note=''; V.clearHint();
+    var q='', opts=V.pickOpts();
+    try{ q=(document.querySelector('#predCard .pdq')||{}).textContent||''; }catch(_){}
+    if(!q){ try{ q=(document.querySelector('#predCard h2, #predCard h3')||{}).textContent||''; }catch(_){} }
+    if(!q) return;
+    V.mount();
+    /* A short set gets read out; a roster does not. The line between them
+       is whether a person could hold the list in their head, not a number
+       I like. */
+    var body = q + (opts.length && opts.length<=4
+      ? (' \u2026 ' + V.optionLine(opts))
+      : ' \u2026 Say a player\u2019s name.');
+    V.wantEar=true;
+    V.say(body, function(){ V.ear(); });
+    V.paint();
+  };
+  /* Heard something on the pick sheet. Same shape as V.heard, deliberately
+     separate: the commands differ (next/back move CARDS, not questions) and
+     a pick here is not a changeable tap on a running clock. */
+  V.heardPick=function(raw){
+    if(!V.on || !V.onPickCard()) return false;
+    var opts=V.pickOpts();
+    var t=String(raw==null?'':raw).toLowerCase().trim();
+    if(/^(?:next|next one|forward|skip)$/.test(t)){
+      V.deaf(); try{ predGo(1); }catch(_){} return true;
+    }
+    if(/^(?:back|previous|go back|last one)$/.test(t)){
+      V.deaf(); try{ predGo(-1); }catch(_){} return true;
+    }
+    if(/^(?:repeat|again|say again|say that again)$/.test(t)){ V.askPick(true); return true; }
+    var m=V.match(raw, opts);
+    if(!m) return false;
+    if(m.kind==='ambiguous'){
+      V.deafSay('More than one player matches that. Say the first name too.');
+      return true;
+    }
+    if(m.kind==='lock'){ V.deaf(); try{ predGo(1); }catch(_){} return true; }
+    if(m.kind==='pick'){
+      var name=opts[m.i]; if(!name) return false;
+      var btn=null;
+      try{ btn=document.querySelector('#predCard .pdopt[data-pd="'+CSS.escape(name)+'"]'); }catch(_){}
+      /* A ruled-out player is a real refusal on this card, not a pick —
+         the button is disabled on purpose and voice must not walk past it. */
+      if(btn && btn.classList.contains('isout')){
+        V.deafSay(name.split(' ')[0]+' is ruled out tonight. She cannot score you anything. Pick somebody else.');
+        return true;
+      }
+      V.pause(); V.hush();
+      try{ predPick(V.pickId(), name); }catch(_){}
+      V.deafSay('Got it. '+name+'. Say next, or another name to change it.', true);
+      return true;
+    }
+    return false;
+  };
+  V.pickId=function(){
+    try{ var L=predOrderList(); return (L[PD.i]||{}).id; }catch(_){ return null; }
+  };
 
   /* ---- THE MOMENTS THE GAME TELLS US ABOUT --------------------------- */
   V.locked=function(txt){
@@ -7999,10 +8101,22 @@ var VX=(function(){
   /* ---- WHAT IT LOOKS LIKE -------------------------------------------- */
   V.mount=function(){
     try{
-      if(document.getElementById('vxBar')) return;
-      var host=document.getElementById('revealBox'); if(!host||!host.parentNode) return;
-      var d=document.createElement('div'); d.id='vxBar';
-      host.parentNode.insertBefore(d, host);
+      /* TWO SURFACES, ONE BAR. The pick sheet is a different screen with
+         different markup, and a control that only exists on one of them is
+         a feature that only exists on one of them. It is moved rather than
+         duplicated — two bars would be two states of one fact. */
+      var onPick=false; try{ onPick=V.onPickCard(); }catch(_){}
+      var host = onPick ? document.getElementById('predCard')
+                        : document.getElementById('revealBox');
+      if(!host) return;
+      var d=document.getElementById('vxBar');
+      if(!d){ d=document.createElement('div'); d.id='vxBar'; }
+      if(onPick){
+        if(d.parentNode!==host) host.appendChild(d);
+      }else{
+        if(!host.parentNode) return;
+        if(d.parentNode!==host.parentNode) host.parentNode.insertBefore(d, host);
+      }
       V.paint();
     }catch(_){}
   };
@@ -8018,7 +8132,8 @@ var VX=(function(){
       var txt = !V.on ? 'Voice off'
               : V.note ? V.note
               : V.speaking ? 'Reading the question…'
-              : V.listening ? 'Listening — say your answer, then “next”'
+              : V.listening ? (V.onPickCard() ? 'Listening — say a name, then “next”'
+                                             : 'Listening — say your answer, then “next”')
               : deafNow ? '🎙 Tap anywhere to talk — I can’t hear you yet'
               : V.hasEar ? 'Voice on' : 'Voice on — tap your answer';
       var h='<button type="button" class="vxb" onclick="VX.toggle()" aria-pressed="'+(V.on?'true':'false')+'">'
@@ -13693,7 +13808,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-surface.134';
+const STATS_BUILD='2026-08-18-pickvoice.135';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
