@@ -1216,7 +1216,7 @@
            paintTeamColours(), which lifts a near-black team hex and splits
            a two-navy matchup before either one reaches this line. -->
       <div class="mq-vs">
-        <span class="mq-side mq-a"><span class="mq-code" id="mqAway">DAL</span><span class="mq-nick" id="mqAwayNick">Wings</span></span>
+        <span class="mq-side mq-a"><span class="mq-code" id="mqAway">MIN</span><span class="mq-nick" id="mqAwayNick">Lynx</span></span>
         <span class="mq-at">at</span>
         <span class="mq-side mq-h"><span class="mq-code" id="mqHome">GS</span><span class="mq-nick" id="mqHomeNick">Valkyries</span></span>
       </div>
@@ -1225,7 +1225,7 @@
            on one page ("watch the broadcast, play from your couch, predict
            before tip-off, answer at every quarter break…"). Two teams and
            a time is the whole message. -->
-      <p class="sub" id="landingMatch" style="margin:4px 0 2px"><b style="color:var(--ink)">Indiana Fever @ Minnesota Lynx</b></p>
+      <p class="sub" id="landingMatch" style="margin:4px 0 2px"><b style="color:var(--ink)">Minnesota Lynx @ Golden State Valkyries</b></p>
       <!-- THE CLOCK. Same element, same painter, promoted out of a
            bordered 14px strip above the wordmark and into the hero, where
            a countdown is the most persuasive thing a live product can put
@@ -4906,6 +4906,17 @@ function hydrateNight(cfg){
     }catch(_){}
 
     try{ window.GAME = GAME; }catch(_){}
+    /* KEEP IT, SO THE NEXT PAINT IS RIGHT THE FIRST TIME. Changing rooms
+       reloads, and a reload paints the BAKED-IN night before the network
+       answers — so switching to Toronto showed Lynx at Valkyries for a
+       beat and then swapped. Founder: "it shows the old user interface and
+       then moves to the newer one."
+
+       A cache of the last good config for this night, replayed before
+       first paint, removes the flash without holding the page hostage to a
+       network read. It is only ever an accelerator: the fetch still runs
+       and still wins. */
+    try{ localStorage.setItem('stats_night_cfg_'+GAME.nightId, JSON.stringify(cfg)); }catch(_){}
     NIGHT_CFG_SOURCE = 'database';
     return true;
   }catch(e){
@@ -7006,6 +7017,31 @@ function predFocus(){
     var c=document.getElementById('predCard'); if(!c) return;
     var y=window.scrollY + c.getBoundingClientRect().top - 10;
     window.scrollTo({ top: Math.max(0,y), behavior:'auto' });
+
+    /* ============ AND THE LAST OPTION MUST NOT BE UNDER THE BAR ========
+       Putting the card's TOP at y=10 is right on a tall phone and not
+       enough on a short one. Measured across three viewports: on a
+       390x664 phone an option of the very first question sat behind the
+       fixed summary bar at first paint — which is the exact regression
+       deck.the-bar-does-not-sit-on-the-card was written for, still live,
+       and only ever caught because the gate happens to run at 393x852
+       where it is 115px of card PADDING and no option at all.
+
+       So the rule is about what you can TAP, not about the card's box:
+       nudge down until the last option clears the bar, and never so far
+       that the question itself leaves the screen — a player who cannot
+       see what is being asked is worse off than one who scrolls. */
+    var opts=c.querySelectorAll('.pdopt');
+    var bar=document.getElementById('pdBar');
+    if(!opts.length || !bar) return;
+    var last=opts[opts.length-1].getBoundingClientRect();
+    var b=bar.getBoundingClientRect();
+    var under=last.bottom - b.top + 8;          // 8px of air, not a hairline
+    if(under <= 0) return;
+    var q=c.querySelector('.pdq');
+    var headroom = q ? Math.max(0, q.getBoundingClientRect().top - 8) : 0;
+    var nudge = Math.min(under, headroom);
+    if(nudge > 1) window.scrollTo({ top: window.scrollY + nudge, behavior:'auto' });
   }catch(_){}
 }
 function predGo(d){
@@ -14416,6 +14452,27 @@ function applySport(){
      nicknames after, so the cut always lands after the brand. */
   document.title=`STATS GAMETIME · ${GAME.homeNick||GAME.homeAbbr} v ${GAME.awayNick||GAME.awayAbbr}`;
 }
+/* ============ PAINT THE RIGHT GAME FIRST ==========================
+   Before applySport() draws anything, replay the cached config for the
+   night this page is actually for — from ?game= if a link named one, else
+   the room this phone last chose. Costs one synchronous localStorage read
+   and removes the wrong-game flash entirely.
+
+   It cannot show a game that is not tonight's: loadSlate() drops a pick
+   that is not on the slate, and loadNightConfig() overwrites this with the
+   real document a moment later either way. */
+try{
+  (function(){
+    var want=null;
+    try{ want=new URLSearchParams(location.search).get('game'); }catch(_){}
+    if(!want){ try{ want=localStorage.getItem('stats_slate_pick_v1'); }catch(_){} }
+    if(!want) return;
+    var raw=null; try{ raw=localStorage.getItem('stats_night_cfg_'+want); }catch(_){}
+    if(!raw) return;
+    var cfg=null; try{ cfg=JSON.parse(raw); }catch(_){ return; }
+    if(cfg && hydrateNight(cfg)) NIGHT_CFG_SOURCE='cache';
+  })();
+}catch(e){ try{ console.error('cached night replay failed', e); }catch(_){} }
 try{applySport();}catch(e){console.error('applySport',e);}
 try{paintChrome();}catch(e){console.error('paintChrome',e);}
 try{ trk('app_open',{build:(typeof STATS_BUILD!=='undefined')?STATS_BUILD:'', w:(window.innerWidth||0)}); }catch(_){}
@@ -14800,7 +14857,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-rail.144';
+const STATS_BUILD='2026-08-18-noflash.145';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
