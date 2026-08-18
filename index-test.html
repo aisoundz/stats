@@ -2768,6 +2768,8 @@ window.STATS_FIREBASE = {
 
          Still not awaited into sign-in: a slow read may delay the game
          appearing, never a player reaching their account. */
+      /* The rail from cache, immediately, before anything is awaited. */
+      try{ paintSlate(); }catch(_){}
       try{
         loadSlate(db, fsMod)
           .catch(function(){ return false; })
@@ -5023,6 +5025,37 @@ function repaintAfterHydrate(){
    choice quietly surviving into tonight is exactly the shape of bug this
    codebase keeps having: one fact, two copies, one of them stale. */
 var SLATE = { date:null, league:null, games:[], loaded:false };
+/* Paint the rail from the last known slate before the network answers.
+   Dropped the moment the real read lands, and ignored entirely if it is
+   for another day — a stale rail offering yesterday's games is worse than
+   no rail at all. */
+try{
+  (function(){
+    var raw=null; try{ raw=localStorage.getItem('stats_slate_cache_v1'); }catch(_){}
+    if(!raw) return;
+    var c=null; try{ c=JSON.parse(raw); }catch(_){ return; }
+    if(!c || !Array.isArray(c.games) || !c.games.length) return;
+    SLATE.date  = c.date || null;
+    SLATE.games = c.games;
+    /* NOT `loaded`. That flag means "the network has spoken", and things
+       that decide whether to trust a remembered pick read it. */
+
+    /* AND PAINT IT NOW. The first version of this filled SLATE from cache
+       and then called paintSlate() inside the Firebase boot block — which
+       is after an await on the SDK imports, so it was not early at all and
+       the rail still took six seconds to appear. Measured, not assumed:
+       tiles were still 0 at one second. Paint on the next frame, once the
+       document has a body to paint into. */
+    var paintFromCache=function(){
+      try{ if(typeof paintGameRail==='function') paintGameRail(); }catch(_){}
+    };
+    if(document.readyState==='loading'){
+      document.addEventListener('DOMContentLoaded', paintFromCache, {once:true});
+    } else {
+      setTimeout(paintFromCache, 0);
+    }
+  })();
+}catch(_){}
 var SLATE_PICK_KEY = 'stats_slate_pick_v1';
 
 function slatePick(){
@@ -5183,6 +5216,12 @@ async function loadSlate(db, F){
     SLATE.league = d.league || null;
     SLATE.games  = Array.isArray(d.games) ? d.games.filter(function(g){ return g && g.nightId; }) : [];
     SLATE.loaded = true;
+    /* KEEP IT. Sign-in plus two Firestore reads is six or seven seconds on
+       a phone, and for all of that the rail is not on the page. After a
+       switch — which reloads — that reads as "the other game is gone, I
+       have to refresh", which is exactly what happened. The cache is only
+       an accelerator: this fetch still runs and still wins. */
+    try{ localStorage.setItem('stats_slate_cache_v1', JSON.stringify({date:date, games:SLATE.games})); }catch(_){}
 
     /* A link wins, if it names a game that is actually on tonight. */
     var link = slateParam();
@@ -14958,7 +14997,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-switch.148';
+const STATS_BUILD='2026-08-18-instant.149';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
