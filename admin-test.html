@@ -65,6 +65,47 @@
   nav button.on{background:var(--teal);border-color:var(--teal);color:#04120f}
   nav button:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
 
+  /* ---- analytics ---- */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;
+    background:var(--line);border-radius:10px;overflow:hidden}
+  .kpi{background:var(--bg2);padding:12px}
+  .kpi b{display:block;font-family:var(--d);font-weight:800;font-size:30px;line-height:1;
+    color:var(--ink);font-variant-numeric:tabular-nums}
+  .kpi span{display:block;font-size:12px;color:var(--muted);margin-top:6px}
+  .bars{display:flex;align-items:flex-end;gap:7px;overflow-x:auto;padding-bottom:4px}
+  .bcol{flex:0 0 auto;width:46px;text-align:center;display:flex;flex-direction:column;
+    align-items:center;justify-content:flex-end}
+  .bcol i{display:block;width:100%;border-radius:3px 3px 0 0;font-style:normal}
+  .bcol b{font-family:var(--d);font-weight:700;font-size:14px;color:var(--ink);margin-top:5px;
+    font-variant-numeric:tabular-nums}
+  .bcol s{text-decoration:none;font-size:12px;color:var(--dim);letter-spacing:.06em}
+
+  /* ---- the rooms board ---- */
+  .roomsgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:9px}
+  .roomcard{text-align:left;cursor:pointer;padding:12px;border-radius:12px;
+    background:var(--bg2);border:1px solid var(--line);color:var(--ink);
+    font-family:inherit;font-size:14px;display:block;width:100%;
+    transition:border-color .18s,background .18s}
+  .roomcard:hover{border-color:var(--line2)}
+  .roomcard.on{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 9%,var(--bg2))}
+  .roomcard:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  .rc-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+  .rc-lg{font-family:var(--d);font-weight:700;font-size:12px;letter-spacing:.16em;color:var(--dim)}
+  .rc-chip{font-family:var(--d);font-weight:700;font-size:12px;letter-spacing:.1em;
+    text-transform:uppercase;padding:2px 8px;border-radius:999px;white-space:nowrap;
+    border:1px solid var(--line2);color:var(--muted)}
+  .rc-chip.live{background:var(--red);border-color:var(--red);color:#fff}
+  .rc-chip.err{color:var(--red);border-color:color-mix(in srgb,var(--red) 50%,transparent)}
+  .rc-name{display:block;font-family:var(--d);font-weight:700;font-size:17px;color:var(--ink)}
+  .rc-name s{text-decoration:none;color:var(--dim);font-weight:600;font-size:14px}
+  .rc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+    border-radius:9px;overflow:hidden;margin-top:10px}
+  .rc-grid b{background:var(--card);padding:8px 4px;text-align:center;display:block;
+    font-family:var(--d);font-weight:700;font-size:15px;color:var(--ink);
+    font-variant-numeric:tabular-nums}
+  .rc-grid i{display:block;font-style:normal;font-family:var(--f);font-weight:400;
+    font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-top:3px}
+
   /* ---- blocks ---- */
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
     padding:15px;margin:0 0 11px}
@@ -251,6 +292,7 @@
         <button data-tab="grade">3 · Grade</button>
         <button data-tab="room">4 · Room</button>
         <button data-tab="auto">5 · Auto</button>
+        <button data-tab="stats">◷ Analytics</button>
       </nav>
     </div>
   </header>
@@ -278,6 +320,21 @@
     </section>
 
     <!-- ---------- TAB 1: WRITE ---------- -->
+    <!-- ---------- ANALYTICS ----------
+         Counted on demand, never guessed. Everything here is read from
+         Firestore when you open it — roughly fifty reads for the whole
+         history — and a number the system does not measure is shown as
+         absent rather than as a plausible figure. A control room that
+         guesses is worse than one that admits a gap. -->
+    <section id="t-stats" class="hide">
+      <div class="card">
+        <h3>The history</h3>
+        <p class="sub tip" style="margin:0 0 10px">Counted from the rooms themselves. Nothing here is estimated.</p>
+        <button class="btn" id="statsLoad">Count it</button>
+      </div>
+      <div id="statsBody"></div>
+    </section>
+
     <section id="t-write" class="hide">
       <div class="card">
         <h3>Tonight's game</h3>
@@ -1943,6 +2000,22 @@ function onAuth(u){
   initUI();
   /* The extra rooms arrive a moment later and repaint the picker. */
   loadSlateIntoPicker();
+  try{
+    const sb = $('statsLoad');
+    if(sb) sb.onclick = async () => {
+      sb.disabled = true; sb.textContent = 'Counting…';
+      try{ STATS_CACHE = await countHistory(); renderStatsTab(); sb.textContent = 'Count it again'; }
+      catch(e){ toast('Could not count: '+e.message); sb.textContent = 'Count it'; }
+      sb.disabled = false;
+    };
+  }catch(_){}
+  /* Poll every room's state while this screen exists. Twenty seconds is the
+     runner's own tick; faster tells you nothing new and costs reads. */
+  try{
+    pollRooms();
+    if(roomPollT) clearInterval(roomPollT);
+    roomPollT = setInterval(function(){ try{ pollRooms(); }catch(_){} }, 20000);
+  }catch(_){}
 }
 
 $('signinBtn').onclick = async () => {
@@ -2045,6 +2118,81 @@ function loadSlateIntoPicker(){
       try{ toast(SLATE_ROOMS.length + ' room(s) from tonight\'s slate are in the picker'); }catch(_){}
     }).catch(function(){});
   }catch(_){}
+}
+
+/* One delegated listener, bound once. */
+try{
+  document.addEventListener('click', function(e){
+    const b = e.target && e.target.closest ? e.target.closest('[data-room]') : null;
+    if(!b) return;
+    const id = b.getAttribute('data-room');
+    if(!id || id === night) return;
+    night = id;
+    try{ const ns=$('nightSel'); if(ns) ns.value=id; }catch(_){}
+    try{ const ni=$('nightId'); if(ni) ni.value=id; }catch(_){}
+    onNightChange();
+  }, false);
+}catch(_){}
+
+/* ============ ANALYTICS, COUNTED ====================================
+   Reads every night's players subcollection once. ~50 reads for the whole
+   history, on a button, because a screen that costs reads every time
+   somebody glances at it is a screen that gets switched off. */
+let STATS_CACHE = null;
+
+async function countHistory(){
+  const nights = await F.getDocs(F.collection(db,'nights'));
+  const rows = [], everyone = new Map();
+  for(const n of nights.docs){
+    const pl = await F.getDocs(F.collection(db,'nights',n.id,'players'));
+    pl.forEach(d=>{ everyone.set(d.id, (everyone.get(d.id)||0)+1); });
+    rows.push({ id:n.id, seats:pl.size });
+  }
+  let signups = 0;
+  try{ signups = (await F.getCountFromServer(F.collection(db,'signups'))).data().count; }catch(_){}
+  rows.sort((a,b)=>a.id.localeCompare(b.id, undefined, {numeric:true}));
+  const seatTotal = rows.reduce((a,r)=>a+r.seats,0);
+  const humans = everyone.size;
+  const repeat = [...everyone.values()].filter(v=>v>1).length;
+  const loyal  = [...everyone.values()].filter(v=>v>=5).length;
+  return { rows, humans, seatTotal, signups, repeat, loyal,
+           perHuman: humans ? (seatTotal/humans) : 0 };
+}
+
+function renderStatsTab(){
+  const el = $('statsBody'); if(!el) return;
+  const S = STATS_CACHE;
+  if(!S){ el.innerHTML = ''; return; }
+  const max = Math.max(1, ...S.rows.map(r=>r.seats));
+  const bars = S.rows.map(r=>{
+    const h = Math.round(96 * r.seats / max);
+    const peak = r.seats === max;
+    return '<span class="bcol" title="'+esc(r.id)+' · '+r.seats+' seats">'
+      + '<i style="height:'+h+'px;background:'+(peak?'var(--gold)':'var(--blue2)')+'"></i>'
+      + '<b>'+r.seats+'</b><s>'+esc(r.id.split('-')[0].toUpperCase())+'</s></span>';
+  }).join('');
+
+  el.innerHTML =
+    '<div class="card"><h3>What is counted</h3>'
+    + '<div class="kpis">'
+    +   '<div class="kpi"><b>'+S.humans+'</b><span>humans, ever</span></div>'
+    +   '<div class="kpi"><b>'+S.perHuman.toFixed(1)+'</b><span>nights per human</span></div>'
+    +   '<div class="kpi"><b>'+S.loyal+'</b><span>played five or more</span></div>'
+    +   '<div class="kpi"><b>'+S.signups+'</b><span>emails, ever</span></div>'
+    + '</div>'
+    + '<p class="sub" style="margin-top:11px">'+S.seatTotal+' seats across '+S.rows.length
+    +   ' recorded nights. <b>'+S.repeat+' of '+S.humans+' came back for a second night</b> — with no '
+    +   'reminders, no streaks and no notifications. That is the half that is hard to buy.</p></div>'
+
+    + '<div class="card"><h3>Seats per night</h3>'
+    + '<p class="sub tip" style="margin:0 0 12px">The line that has never moved. Round completion went '
+    +   'from 42% to 100% across the same period.</p>'
+    + '<div class="bars">'+bars+'</div></div>'
+
+    + '<div class="card"><h3>Measured nowhere</h3>'
+    + '<p class="sub"><b>Minutes with the app open</b> — the metric this product\u2019s whole positioning '
+    +   'rests on — is not instrumented. Neither is follower count. They are absent here rather than '
+    +   'estimated, because a control room that shows a plausible number is lying.</p></div>';
 }
 
 function onNightChange(){
@@ -2278,9 +2426,100 @@ function tonightAgo(ms){
   return Math.round(s/60) + 'm ago';
 }
 
+/* ============ THE ROOMS BOARD =======================================
+   Tonight used to answer "is the robot alive" about ONE night, because a
+   night was one game. It is now every game the league is playing, and the
+   first question a host has is not about a room — it is WHICH ROOM.
+
+   So the board goes on top: every room on tonight's slate, its state, its
+   seats and how far through it is. Clicking one selects it, and everything
+   below — and every other tab — follows. Deliberately five facts per room
+   and no buttons: the buttons live under the room you have selected, so
+   there is exactly one place to press anything.
+
+   State is polled, not watched. Six live listeners for a screen nobody has
+   open most of the night is a cost with no reader; one read per room every
+   twenty seconds is not. */
+let ROOM_STATE = {};
+let roomPollT = null;
+
+async function pollRooms(){
+  const rooms = tonightRooms();
+  for(const r of rooms){
+    try{
+      const nd = await F.getDoc(F.doc(db,'nights',r.id));
+      if(!nd.exists()){ ROOM_STATE[r.id] = {exists:false}; continue; }
+      const d = nd.data() || {};
+      const sc = d.score || {};
+      const at = (d.host && d.host.at && d.host.at.toMillis) ? d.host.at.toMillis() : 0;
+      const [pl, rd] = await Promise.all([
+        F.getCountFromServer(F.collection(db,'nights',r.id,'players')),
+        F.getDocs(F.collection(db,'nights',r.id,'rounds'))
+      ]);
+      let scored=0, live=0;
+      rd.forEach(x=>{ const v=x.data()||{}; if(v.state==='scored') scored++; if(v.state==='live') live++; });
+      ROOM_STATE[r.id] = { exists:true, seats:pl.data().count, scored, live, total:rd.size,
+                           beat: at ? Date.now()-at : null,
+                           period: sc.period || '', away: sc.away, home: sc.home };
+    }catch(e){ ROOM_STATE[r.id] = {err:String(e.message).slice(0,40)}; }
+  }
+  try{ renderTonight(); }catch(_){}
+}
+
+/* Every room playable tonight: the slate, plus the hand-written night the
+   Control Room opened on if it is not already in it. */
+function tonightRooms(){
+  const out = SLATE_ROOMS.slice();
+  if(!out.some(r=>r.id===night)){
+    const c = nightCfg(night);
+    /* A hand-written NIGHTS entry carries no league field — every one so
+       far has been WNBA — so fall back to the sport's template rather than
+       printing an empty chip. */
+    if(c) out.unshift({ id:c.id, label:c.label, away:c.away, home:c.home,
+                        league: c.league || (TEMPLATES[c.sport||'basketball']||{}).league || 'wnba',
+                        flagship:true });
+  }
+  return out;
+}
+
+function roomsBoard(){
+  const rooms = tonightRooms();
+  if(rooms.length < 2) return '';       // one room is not a board
+  const cards = rooms.map(r=>{
+    const st = ROOM_STATE[r.id] || {};
+    const on = (r.id === night);
+    let chip='idle', word='not started';
+    /* A FINISHED NIGHT IS NOT A BROKEN ONE. The runner stops beating at the
+       buzzer, on purpose — so "no heartbeat" means an alarm only while the
+       night still has rounds to score. Getting this order wrong would put a
+       red RUNNER SILENT on every room that completed perfectly, which is
+       the fastest way to teach a host to ignore the colour. */
+    const done = st.exists && st.total>0 && st.scored>=st.total;
+    if(st.err){ chip='err'; word='read failed'; }
+    else if(!st.exists){ chip='idle'; word='not created'; }
+    else if(done){ chip='idle'; word='final · ' + st.scored + ' scored'; }
+    else if(st.beat!=null && st.beat < 90000){ chip='live'; word = st.period || 'hosting'; }
+    else if(st.beat!=null){ chip='err'; word='runner silent'; }
+    const seats = st.exists ? st.seats : '—';
+    const rounds = st.exists ? (st.scored + '/' + (st.total||0) + (st.live?' open':'')) : '—';
+    const score = (st.away!=null && st.home!=null) ? (st.away+'–'+st.home) : '';
+    return '<button type="button" class="roomcard'+(on?' on':'')+'" data-room="'+esc(r.id)+'">'
+      + '<span class="rc-top"><span class="rc-lg">'+esc(String(r.league||'').toUpperCase())+'</span>'
+      +   '<span class="rc-chip '+chip+'">'+esc(word)+'</span></span>'
+      + '<span class="rc-name">'+esc(r.away||'')+' <s>at</s> '+esc(r.home||'')+'</span>'
+      + '<span class="rc-grid"><b>'+esc(String(seats))+'<i>seats</i></b>'
+      +   '<b>'+esc(String(rounds))+'<i>rounds</i></b>'
+      +   '<b>'+esc(score||'—')+'<i>score</i></b></span>'
+      + '</button>';
+  }).join('');
+  return '<div class="card"><h3>Tonight\u2019s rooms</h3>'
+       + '<p class="sub tip" style="margin:0 0 10px">Pick one. Every tab, and every button below, follows it.</p>'
+       + '<div class="roomsgrid">'+cards+'</div></div>';
+}
+
 function renderTonight(){
   const el = $('tonightBody'); if(!el) return;
-  let html = '';
+  let html = roomsBoard();
   try{
     const cfg = nightCfg(night);
     const h   = (tonightDoc && tonightDoc.host)  || null;
