@@ -1699,7 +1699,11 @@ function slateToNight(g){
     espn: String(g.espnEvent||''),
     tags: (T.tags||[]).slice(), names: (T.names||[]).slice(), worth: (T.worth||[]).slice(),
     periods: (T.periods||[]).slice(),
-    fromSlate: true, tipISO: g.tipISO || '', league: g.league || '', sport: g.sport || 'basketball'
+    fromSlate: true, tipISO: g.tipISO || '', league: g.league || '', sport: g.sport || 'basketball',
+    /* The nicknames, kept because a template bank substitutes them — the
+       same two words publish.js puts in. Without these the Write and Grade
+       tabs would show {HOME} to a host. */
+    homeNick: g.home || g.homeAbbr || '', awayNick: g.away || g.awayAbbr || ''
   };
 }
 
@@ -1767,7 +1771,29 @@ function loadDraft(){
    One fact, many copies, again: BANK owns the resolver, the draft was a
    copy of BANK, and the copy was lossy. Carry it. */
 function bankRound(id, i){
-  const rs = BANK[id];
+  let rs = BANK[id];
+  /* ============ A SLATE ROOM HAS A BANK, JUST NOT IN HERE ============
+     BANK is hand-written and keyed by night id, so a room the runner
+     created had no entry — and Write and Grade showed "0 QUESTIONS" over a
+     room with sixteen questions and an overtime template already published
+     to it. A host who needed to grade that room by hand would have found an
+     empty screen and no reason for it.
+
+     Fall back to the sport's TEMPLATE and substitute the two team words,
+     which is exactly what publish.js does. Same source, same questions —
+     not a second copy, which is the bug this codebase is organised
+     against. */
+  if(!rs){
+    const cfg = (typeof SLATE_ROOMS!=='undefined') ? SLATE_ROOMS.find(r=>r.id===id) : null;
+    if(cfg){
+      const T = TEMPLATES[cfg.sport] || TEMPLATES.basketball;
+      if(T && T.rounds){
+        const swap = v => String(v).replace(/\{HOME\}/g, cfg.homeNick||cfg.home||'Home')
+                                   .replace(/\{AWAY\}/g, cfg.awayNick||cfg.away||'Away');
+        rs = T.rounds.map(rd => rd.map(q => ({ t:swap(q.t), o:(q.o||[]).map(swap), r:q.r })));
+      }
+    }
+  }
   if(!rs || !rs[i]) return [];
   return rs[i].map(q => ({ t:String(q.t||''), o:(q.o||[]).map(String), r:String(q.r||''), k:null }));
 }
@@ -1785,13 +1811,29 @@ function bankRound(id, i){
 function resolverFor(id, i, x, q){
   try{
     if(q && q.r) return String(q.r);
-    var b = (BANK[id]||[])[i]||[];
+    /* Same fallback as bankRound — a template round whose resolver could
+       not be recovered would publish and then void every question. */
+    var b = (BANK[id] || bankRoundSource(id) || [])[i] || [];
     var bq = b[x];
     if(!bq || !bq.r) return '';
     if(String(bq.t||'').trim() !== String((q&&q.t)||'').trim()) return '';
     return String(bq.r);
   }catch(_){ return ''; }
 }
+/* The template rounds for a slate room, in BANK's shape. One place, used
+   by both bankRound() and resolverFor(). */
+function bankRoundSource(id){
+  try{
+    const cfg = (typeof SLATE_ROOMS!=='undefined') ? SLATE_ROOMS.find(r=>r.id===id) : null;
+    if(!cfg) return null;
+    const T = TEMPLATES[cfg.sport] || TEMPLATES.basketball;
+    if(!T || !T.rounds) return null;
+    const swap = v => String(v).replace(/\{HOME\}/g, cfg.homeNick||cfg.home||'Home')
+                               .replace(/\{AWAY\}/g, cfg.awayNick||cfg.away||'Away');
+    return T.rounds.map(rd => rd.map(q => ({ t:swap(q.t), o:(q.o||[]).map(swap), r:q.r })));
+  }catch(_){ return null; }
+}
+
 /* A fingerprint of a round's question TEXT. Options and answer keys are
    deliberately excluded: the host marking an answer is not an edit to the
    questions, and it must not stop a question-set update from landing. */
