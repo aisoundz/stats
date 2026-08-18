@@ -11,8 +11,8 @@
 
 set -euo pipefail
 
-NIGHT_ID="${NIGHT_ID:-gn12-2026-08-19-min-gs}"
-ESPN_EVENT="${ESPN_EVENT:-401857157}"
+NIGHT_ID="${NIGHT_ID:-gn12-2026-08-17-dal-gs}"
+ESPN_EVENT="${ESPN_EVENT:-401857151}"
 RUN_MINUTES="${RUN_MINUTES:-240}"
 
 KEY="$HOME/.secrets/stats-firebase-admin.json"
