@@ -584,22 +584,10 @@ const NIGHTS = [
      ET / 7:00 PT, USA Network. Verified against the scoreboard feed for
      2026-08-19: event 401857157, Chase Center. Golden State are home,
      drawn on the right. */
-  /* GAME NIGHT #12 — DALLAS AT GOLDEN STATE, MOVED UP TO TONIGHT (Mon Aug
-     17). Tip: 10:00 ET / 7:00 PT, Peacock and NBCSN. Verified against the
-     scoreboard feed for 2026-08-17: event 401857151, Chase Center. Golden
-     State are home, drawn on the right.
-
-     The Wednesday game did not get renumbered in place — it kept its own
-     id and became GAME NIGHT #13 below, with its own bank. Reusing an id
-     for a different matchup is B26 with a calendar attached: every archive,
-     every player row and every submission already written under
-     gn12-2026-08-19-min-gs would silently start describing a different
-     game. */
-  { id:'gn12-2026-08-17-dal-gs', label:'Game Night #12 — Wings @ Valkyries (Mon Aug 17, 10:00 ET · Peacock)',
-    away:'DAL', home:'GS', espn:'401857151',
-    tags:['Q1','Q2','Q3','Q4'],
-    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
-    worth:[10,20,30,40] },
+  /* WEDNESDAY IS THE OPEN NIGHT. First in this list is what the Control
+     Room opens on, so the next fixture leads and finished nights stay
+     listed below — the picker is the only way back to a past night's
+     grading screen. */
   { id:'gn13-2026-08-19-min-gs', label:'Game Night #13 — Lynx @ Valkyries (Wed Aug 19, 10:00 ET · USA Network)',
     away:'MIN', home:'GS', espn:'401857157',
     tags:['Q1','Q2','Q3','Q4'],
@@ -618,6 +606,22 @@ const NIGHTS = [
      GN10, so the cron that starts the runner must move with it. Verified
      against the scoreboard for 2026-08-16: event 401857150, State Farm
      Arena, ESPN. */
+  /* GAME NIGHT #12 — DALLAS AT GOLDEN STATE, MOVED UP TO TONIGHT (Mon Aug
+     17). Tip: 10:00 ET / 7:00 PT, Peacock and NBCSN. Verified against the
+     scoreboard feed for 2026-08-17: event 401857151, Chase Center. Golden
+     State are home, drawn on the right.
+
+     The Wednesday game did not get renumbered in place — it kept its own
+     id and became GAME NIGHT #13 below, with its own bank. Reusing an id
+     for a different matchup is B26 with a calendar attached: every archive,
+     every player row and every submission already written under
+     gn12-2026-08-19-min-gs would silently start describing a different
+     game. */
+  { id:'gn12-2026-08-17-dal-gs', label:'Game Night #12 — Wings @ Valkyries (Mon Aug 17, 10:00 ET · Peacock)',
+    away:'DAL', home:'GS', espn:'401857151',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[10,20,30,40] },
   { id:'gn11-2026-08-16-ind-atl', label:'Game Night #11 — Fever @ Dream (Sun Aug 16, 5:00 ET · ESPN)',
     away:'IND', home:'ATL', espn:'401857150',
     tags:['Q1','Q2','Q3','Q4'],
@@ -2604,6 +2608,7 @@ async function gradeAllScored(){
     const t = t3[uid];
     await F.setDoc(F.doc(db,'nights',night,'players',uid), {
       pts: t.pts,
+      livePts: t.live,          // see nightTotal() — the board composes the total
       speed: t.speed,
       roundsDone: t.rounds,
       lastScoredBy: 'host',

@@ -5091,6 +5091,39 @@ function controlRoomStatic(){
 /* VOICE — static, therefore in --quick. These are reads of the source,
    not of a running page, and a three-second gate that covers them is a
    gate people actually run. */
+/* THE BOARD — added after GN12, where the founder photographed a
+   leaderboard putting 135 below 103. The arithmetic lives in
+   qa/board-order.js against that night's real rows; these are the
+   structural guarantees that keep the sort key and the printed number
+   from drifting apart again. */
+function boardStatic(){
+  group('THE BOARD — it ranks on the number it prints');
+  {
+    const src=read(PLAYER);
+    const nt=(src.match(/function nightTotal\(v\) \{[\s\S]*?\n  \}/)||[''])[0];
+    check('board.the-total-is-composed-not-double-counted',
+      !!nt && /v\.livePts/.test(nt) && /if \(live === null\) return Number\(v\.pts\) \|\| 0;/.test(nt),
+      'nightTotal adds the client lanes on top of pts again',
+      'pts already contains them — GN12 ranked on live + 2x(pred+catch+caught) while printing pts');
+    check('board.rows-print-what-they-were-sorted-by',
+      (src.match(/p\.total!=null\?p\.total:p\.pts/g)||[]).length>=2,
+      'a leaderboard row prints pts while the list is ordered by the total',
+      'two quantities in one list is how 135 ended up below 103');
+    /* The live lane has to be PUBLISHED or the total cannot be composed. */
+    const adm=read(ADMIN);
+    check('board.the-server-publishes-the-live-lane',
+      /livePts: t\.live/.test(adm),
+      'the Control Room writes pts without livePts',
+      'without the one lane the phone does not own, the board can only guess at a total');
+    /* One rank, not three. GN12 showed #2 on the tile and #3 in the bar. */
+    check('board.one-answer-to-what-rank-am-i',
+      /function roomStand\(\)/.test(src)
+        && /if\(S\.mode==='live'\)\{\s*\n\s*var l=roomStand\(\); if\(!l\) return null;/.test(src),
+      'myRank still ranks a live player against the practice bots',
+      'one screen said #2 of 3 and #3 at the same time');
+  }
+}
+
 function voiceStatic(){
   /* VOICE — added the night it shipped, Game Night #12. Every check names
      the thing it stops, same rule as everything else here. The grammar
@@ -5175,6 +5208,7 @@ function voiceStatic(){
   staticChecks(ADMIN);
   unitTests();
   controlRoomStatic();
+  boardStatic();
   voiceStatic();
   if(!QUICK){ try{
     /* A CEILING ON THE WHOLE BROWSER LAYER. The feed groups have their own,

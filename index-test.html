@@ -2758,10 +2758,35 @@ window.STATS_FIREBASE = {
 
      nightTotal() is that sum, in one place, so a fifth number cannot be
      invented by a sixth surface. */
+  /* THE BOARD RANKED ON ONE NUMBER AND PRINTED ANOTHER — GN12, found by
+     the founder from a photograph of his own phone: Courtside on 135 sat
+     BELOW Mike on 103.
+
+     `AUTO.tally` sets `pts = live + pred + catch + caught` — already a
+     whole total. This function then added the same three lanes on top of
+     it, so the ordering ran on
+
+         live + 2 × (pred + catch + caught)
+
+     while every row displayed plain `pts`. Two quantities, one list. The
+     cause is the ordinary one: `pts` changed meaning the day the caught
+     lane was folded into the tally, and nothing told this function.
+
+     The fix is not to subtract a lane — that is arithmetic papering over
+     the actual fault, which is that nobody owns "the total". So the server
+     now publishes `livePts`, the ONE lane a phone does not own, and the
+     total is composed here, once, from four lanes with four owners. Sort
+     and display both read it.
+
+     The fallback matters as much as the fix: a player row written before
+     this shipped has no `livePts`, and for those `pts` IS the whole total
+     and must be used alone. Adding lanes to it is the bug. */
   function nightTotal(v) {
     v = v || {};
-    return (Number(v.pts) || 0) + (Number(v.predPts) || 0)
-         + (Number(v.catchPts) || 0) + (Number(v.caughtPts) || 0);
+    var live = (typeof v.livePts === 'number' && isFinite(v.livePts)) ? v.livePts : null;
+    if (live === null) return Number(v.pts) || 0;
+    return live + (Number(v.predPts) || 0)
+                + (Number(v.catchPts) || 0) + (Number(v.caughtPts) || 0);
   }
   SB.nightTotal = nightTotal;
 
@@ -2776,6 +2801,7 @@ window.STATS_FIREBASE = {
       rows.push({
         name: v.name || 'player', color: v.color || '#888',
         pts: Number(v.pts) || 0, speed: Number(v.speed) || 0,
+        livePts: (typeof v.livePts === 'number' && isFinite(v.livePts)) ? v.livePts : null,
         predPts: Number(v.predPts) || 0, catchPts: Number(v.catchPts) || 0,
         caughtPts: Number(v.caughtPts) || 0,
         total: nightTotal(v),
@@ -3567,39 +3593,39 @@ window.STATS_FIREBASE = {
    re-skins to ANY game — NBA, G-League, college, WNBA.
    In production this loads from the nightly schedule feed. */
 const BB_GAME={
-  nightId:"gn12-2026-08-17-dal-gs",
-  espnEvent:"401857151",   // verified against the WNBA scoreboard for 2026-08-17
-  tipISO:"2026-08-18T02:00:00Z",   // 10:00 pm ET / 7:00 pm PT. Never parsed from a display string.
+  nightId:"gn13-2026-08-19-min-gs",
+  espnEvent:"401857157",   // verified against the WNBA scoreboard for 2026-08-19
+  tipISO:"2026-08-20T02:00:00Z",   // 10:00 pm ET / 7:00 pm PT. Never parsed from a display string.
   homeName:"Golden State Valkyries", homeAbbr:"GS", homeNick:"Valkyries", homeEmoji:"\u2694\uFE0F", homeColor:"#b38fcf",
-  awayName:"Dallas Wings", awayAbbr:"DAL", awayNick:"Wings", awayEmoji:"\uD83E\uDEBD", awayColor:"#002b5c",
-  venue:"Chase Center", date:"Mon \u00B7 August 17", short:"August 17", shareDate:"AUG 17", night:"Game Night #12",
-  /* GAME NIGHT #12 \u2014 DALLAS AT GOLDEN STATE, MOVED UP TO TONIGHT.
-     This slot held Minnesota at Golden State on Wednesday; that game is now
-     GAME NIGHT #13 and keeps its own id, bank and roster. Nothing was
-     renamed in place \u2014 a night id that changes meaning is B26 with a
-     calendar attached.
+  awayName:"Minnesota Lynx", awayAbbr:"MIN", awayNick:"Lynx", awayEmoji:"\uD83D\uDC3E", awayColor:"#266092",
+  venue:"Chase Center", date:"Wed \u00B7 August 19", short:"August 19", shareDate:"AUG 19", night:"Game Night #13",
+  /* GAME NIGHT #13 \u2014 MINNESOTA AT GOLDEN STATE. This slot was #12
+     until the Dallas game moved up to Monday; the id moved with the number
+     so nothing already written under the old one changes meaning.
 
-     Everything below was pulled fresh from ESPN on the day, not carried over:
-       - espnEvent confirmed against the scoreboard for 2026-08-17 itself
-         (401857151) \u2014 Golden State are home at Chase Center, tip 10:00
-         ET / 7:00 PT, Peacock and NBCSN.
-       - Both brand colours from the scoreboard team blocks \u2014 #b38fcf
-         lavender against #002b5c navy, which are far enough apart that the
-         two sides of the scoreboard cannot read as one team.
-       - Rosters ORDERED BY MINUTES PLAYED in each side's most recent
-         completed game (GS 401857138 vs Chicago on Aug 13, DAL 401857143 vs
-         Indiana on Aug 14 \u2014 Game Night #8's own game). Zandalasini /
-         Burton / Charles led Golden State at 30/26/25; Bueckers / Smith /
-         Ogunbowale led Dallas at 37/35/30.
-       - Injury report, checked the afternoon of the game: Golden State are
-         without Iliana Rupert (Out) and Janelle Salaun (Day-To-Day). Dallas
-         are missing FOUR \u2014 Jessica Shepard, Azzi Fudd, Aziaha James and
-         Costanza Verona, all Out. That is a thinner Dallas bench than any
-         night we have run, and it is worth saying out loud in the room.
-       - Season series: Golden State lead it 2-0, both completed. Tonight's
-         own game is correctly not counted \u2014 that is B1. */
-  net:"Peacock \u00B7 NBCSN",
-  tip:"Tip-off 10:00 ET \u00B7 9:00 CT \u00B7 7:00 PT \u00B7 Peacock"
+     Pulled fresh the night before, not carried over:
+       - espnEvent confirmed against the scoreboard for 2026-08-19
+         (401857157) \u2014 Golden State home at Chase Center, USA Network.
+       - Colours from the scoreboard team blocks: #b38fcf lavender against
+         #266092 blue, far enough apart that the two sides of the
+         scoreboard cannot read as one team.
+       - Rosters ORDERED BY MINUTES in each side's most recent completed
+         game (GS 401857151 \u2014 Game Night #12's own game; MIN 401857147
+         vs Las Vegas). Thornton/Williams/Burton led Golden State at
+         33/32/32; Howard/Miles/McBride led Minnesota at 36/34/33.
+       - MEMBERSHIP comes from the roster endpoint, not the box score. That
+         is the Christyn Williams lesson from GN12: a player who did not
+         appear in the source game has no minutes to be ordered by and was
+         silently dropped from the pick sheet entirely. The box score
+         decides the ORDER; the roster decides WHO IS THERE.
+       - Injuries checked the night before: Golden State are without Ashten
+         Prechtel, Miela Sowah and Iliana Rupert (all Out) \u2014 note that
+         Prechtel and Sowah are NEW since Monday. Minnesota are without
+         Liatu King and Elena Buenavida.
+       - Season series: Minnesota lead it 2-0. Tonight's own game is
+         correctly not counted \u2014 that is B1. */
+  net:"USA Network",
+  tip:"Tip-off 10:00 ET \u00B7 9:00 CT \u00B7 7:00 PT \u00B7 USA Network"
 };
 /* ============ LEAN — THE FOUR SURFACES ==============================
    Game Night #7 ran nine surfaces in front of three players and produced
@@ -3734,31 +3760,26 @@ const COLORS=["#2f6bff","#19c3d6","#ff4d5e","#ffc54d","#2ee6a6","#b57cff","#ff92
    one. Anyone ruled out keeps their OUT flag; they stay pickable-adjacent
    so you can see for yourself who isn't available. */
 const BB_ROSTER={ // full names \u2014 used on the prediction sheet & final review
-  /* ORDERED BY MINUTES PLAYED IN EACH SIDE'S LAST GAME, not alphabetically.
-     ESPN's roster endpoint has no starter flag and no per-player stats, so
-     the source is the box score of the most recent completed game
-     (GS 401857138 vs Chicago Aug 13, DAL 401857143 vs Indiana Aug 14).
-     Zandalasini/Burton/Charles led Golden State at 30/26/25;
-     Bueckers/Smith/Ogunbowale led Dallas at 37/35/30.
-     Players who did not appear in that box score keep their place at the end,
-     and ruled-out players sit last where they are struck through.
+  /* ORDERED BY MINUTES PLAYED IN EACH SIDE'S LAST GAME, not alphabetically
+     (GS 401857151, MIN 401857147). Players who did not appear keep their
+     place at the end; ruled-out players sit last.
+
+     ORDER FROM THE BOX SCORE, MEMBERSHIP FROM THE ROSTER ENDPOINT. GN12
+     shipped with a Dallas player missing from the sheet entirely because
+     she had not played in the game the order was taken from, so there were
+     no minutes to sort her by and nothing put her back. Two sources, two
+     jobs; using one for both is how a person disappears.
+
      B26: this array, BB_GAME and BB_PREDS all describe ONE night and were
      all three rewritten in the same edit. */
-  home:["Cecilia Zandalasini","Veronica Burton","Kaila Charles","Gabby Williams","Kaitlyn Chen",
-        "Kayla Thornton","Ashten Prechtel","Tiffany Hayes","Laeticia Amihere","Nadia Fingall",
-        "Juste Jocyte","Miela Sowah","Kiah Stokes","Janelle Salaun","Iliana Rupert"],
-  /* Christyn Williams did not appear in the Aug 14 box score, so the
-     minutes ordering had nothing to place her by and she was dropped
-     entirely — she is on ESPN's Dallas roster and was simply unpickable.
-     With four Wings already ruled out she is likelier to play tonight
-     than on a normal night, and a player who leads a category nobody
-     could pick is a prediction sheet quietly lying about the game.
-     Ordering by minutes must never be allowed to DELETE anybody: the box
-     score decides the order, the roster endpoint decides the membership. */
-  away:["Paige Bueckers","Alanna Smith","Arike Ogunbowale","Awak Kuier","Alysha Clark",
-        "Odyssey Sims","Maddy Siegrist","Sug Sutton","Li Yueru","Haley Jones",
-        "Christyn Williams",
-        "Jessica Shepard","Azzi Fudd","Aziaha James","Costanza Verona"]
+  home:["Kayla Thornton","Gabby Williams","Veronica Burton","Kiah Stokes","Tiffany Hayes",
+        "Janelle Salaun","Cecilia Zandalasini","Kaila Charles","Kaitlyn Chen","Laeticia Amihere",
+        "Nadia Fingall","Juste Jocyte",
+        "Ashten Prechtel","Miela Sowah","Iliana Rupert"],
+  away:["Natasha Howard","Olivia Miles","Kayla McBride","Courtney Williams","Nia Coffey",
+        "Napheesa Collier","Maya Caldwell","Dorka Juhasz","Chloe Bibby","Antonia Delaere",
+        "Anastasiia Olairi Kosu","Eliska Joklova",
+        "Liatu King","Elena Buenavida"]
 };
 const BB_GROUPS=[{ab:BB_GAME.homeAbbr,name:BB_GAME.homeName,names:BB_ROSTER.home},
                  {ab:BB_GAME.awayAbbr,name:BB_GAME.awayName,names:BB_ROSTER.away}];
@@ -3814,15 +3835,15 @@ const BB_PREDS=[
   // against — never a claim about the real game. They must always be names
   // that exist in the roster above, or practice grades against a ghost.
   {id:"pts", q:"Who scores the most points?", label:"Most points", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Paige Bueckers", num:24, numLabel:"How many pts?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Napheesa Collier", num:23, numLabel:"How many pts?"},
   {id:"ast", q:"Who dishes the most assists?", label:"Most assists", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Veronica Burton", num:7, numLabel:"How many assists?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Olivia Miles", num:8, numLabel:"How many assists?"},
   {id:"stl", q:"Who racks up the most steals?", label:"Most steals", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Odyssey Sims", num:3, numLabel:"How many steals?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Veronica Burton", num:3, numLabel:"How many steals?"},
   {id:"reb", q:"Who grabs the most rebounds?", label:"Most rebounds", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Alanna Smith", num:9, numLabel:"How many rebounds?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Natasha Howard", num:10, numLabel:"How many rebounds?"},
   {id:"blk", q:"Who swats the most blocks?", label:"Most blocks", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Awak Kuier", num:2, numLabel:"How many blocks?"}
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Kiah Stokes", num:2, numLabel:"How many blocks?"}
 ];
 /* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
    Every question is answerable by WATCHING the broadcast at the break — no lookups,
@@ -6518,7 +6539,30 @@ function bumpBots(maxPer){S.botScores.forEach(b=>{b.pts+=Math.floor(Math.random(
 function standings(){
   const all=[{n:S.name||"You",c:S.color,pts:S.pts,me:true},...S.botScores.map(b=>({...b,me:false}))];
   all.sort((a,b)=>b.pts-a.pts);return all;}
-function myRank(){const s=standings();return s.findIndex(x=>x.me)+1;}
+/* ONE ANSWER TO "WHAT RANK AM I". On GN12 a single screen showed the
+   tile saying #2 OF 3, the room bar saying you're #3, and the list putting
+   the player third — three surfaces, three functions, three numbers.
+
+   This one was the worst of the three: `standings()` ranks you against
+   `S.botScores`, the SIMULATED players from practice. In a live game that
+   is a rank against nobody. It is correct for practice and meaningless the
+   moment there is a real room, so it now answers only for practice, and
+   live play reads the room the board is already sorted from.
+
+   Returns null when there is no room to be ranked in yet — callers print
+   nothing rather than "#null", because a rank nobody can stand behind is
+   worse than no rank. */
+function roomStand(){ try{ return (typeof lastStand!=='undefined' && lastStand && lastStand.length) ? lastStand : null; }catch(_){ return null; } }
+function myRank(){
+  try{
+    if(S.mode==='live'){
+      var l=roomStand(); if(!l) return null;
+      for(var i=0;i<l.length;i++) if(l[i].me) return i+1;
+      return null;
+    }
+  }catch(_){}
+  const s=standings();return s.findIndex(x=>x.me)+1;
+}
 
 /* ---------------- QUARTER / LIVE ---------------- */
 let timerInt=null, audioCtx=null;
@@ -6620,7 +6664,8 @@ function renderScore(){
   if(S.mode==="demo"){
     document.getElementById('scHome').textContent=rounds[S.qi].home;
     document.getElementById('scAway').textContent=rounds[S.qi].away;
-    document.getElementById('youRank').textContent='#'+myRank();
+    var _r=myRank();
+    document.getElementById('youRank').textContent = _r ? ('#'+_r) : '—';
     document.getElementById('youRankLbl').textContent='rank / 1,204';
     hideLiveStrip();
   }else{
@@ -7164,7 +7209,17 @@ var VX=(function(){
   };
   /* THE GESTURE DOOR, for when somebody wants to be explicit about it. */
   V.listenNow=function(){
-    if(!V.on) return;
+    /* IT USED TO RETURN HERE WITH VOICE OFF, SILENTLY — founder, mid-game:
+       "on the voice page in the menu when you test the voice it doesn't
+       work. It says speak into it and it doesn't detect it." The panel
+       printed "Voice is switched off" two lines above a button that then
+       did nothing at all.
+
+       Nobody taps "test the microphone" to be told no. The tap IS the
+       consent gesture — a deliberate press on a control that asks for the
+       microphone — so it turns voice on and proceeds. A blocked control
+       explains and navigates; it never goes dead. */
+    if(!V.on){ V.enable(); if(!V.on) return; }
     V.micThrew=0; V.note=''; V.wantEar=true; V.errs=0;
     V.hush();            // stop reading, the player wants to talk
     V.clearHint();
@@ -7406,11 +7461,17 @@ var VX=(function(){
     V.listening ? ok('The microphone is open right now.')
                 : hm('The microphone is closed right now'+(V.ios?' — tap 🎙.':'.'));
     if(V.lastHeard){ ok('Last thing it heard: \u201c'+V.lastHeard+'\u201d'); }
-    else { hm('It has not heard anything yet. If you have spoken, the microphone never opened.'); }
+    else { hm(V.onAQuestion() ? 'It has not heard anything yet. If you have spoken, the microphone never opened.'
+                              : 'It has not heard anything yet. Tap the button below and say “two”.'); }
     if(V.lastHeard){
+      var onQ=V.onAQuestion();
       var m=null; try{ m=V.match(V.lastHeard, V.curOpts()); }catch(_){}
-      if(!m) no('It heard you but that phrase is not one of the answers. Say the NUMBER — one, two, three or four.');
+      /* Say which thing is being graded. "Not one of the answers" is a lie
+         when there are no answers on the screen. */
+      if(!m) no(onQ ? 'It heard you but that phrase is not one of the answers. Say the NUMBER — one, two, three or four.'
+                    : 'The microphone works — it heard you. That word just is not one of the test words. Say “two”.');
       else if(m.kind==='ambiguous') hm('That phrase matched more than one answer, so it refused. Say the number instead.');
+      else if(!onQ) ok('The microphone works and the words got through — it understood “'+V.lastHeard+'”.');
       else ok('It understood that as: '+(m.kind==='pick'?('answer '+(m.i+1)):m.kind)+'.');
     }
     if(V.hasOut){ var vv=V.voice(); ok('Reading voice: '+(vv?vv.name:'the browser default')+'.'); }
@@ -7436,7 +7497,17 @@ var VX=(function(){
     }catch(_){}
   };
   V.closeCheck=function(){ try{ clearInterval(V.ckInt); var d=document.getElementById('vxCheck'); if(d){ d.className=''; d.innerHTML=''; } }catch(_){} };
-  V.curOpts=function(){ return curOpts(); };
+  /* WHAT THE CHECK GRADES AGAINST. Opened from the menu there is no live
+     question, so curOpts() was empty and V.match() refused everything — the
+     panel told the founder his microphone had failed while it was working
+     perfectly. A diagnostic that produces a false negative is worse than no
+     diagnostic: it sends you to fix the wrong thing.
+
+     Off a question the check is testing the MICROPHONE, so it grades
+     against the words it just asked for out loud. */
+  V.SELFTEST=['one','two','three','four'];
+  V.curOpts=function(){ var o=curOpts(); return (o && o.length) ? o : V.SELFTEST.slice(); };
+  V.onAQuestion=function(){ try{ return !!(curOpts()||[]).length; }catch(_){ return false; } };
 
   /* ---- WHAT IT LOOKS LIKE -------------------------------------------- */
   V.mount=function(){
@@ -8428,9 +8499,23 @@ function renderBreakdown(livePts){
 
   // In live mode the sheet is scored against the numbers the host typed
   // in; hitCount only counts lines we actually have a real result for.
+  /* "0 of 6 lines landed" printed beside 72 points — GN12, on the
+     founder's own card. Both numbers were true and they describe different
+     things: the Quarter Lead Bonus pays into the prediction LANE without
+     being a prediction LINE, so the count and the total stopped agreeing
+     the day that bonus shipped. Same family as B18, where the breakdown
+     summed to five more than its own headline.
+
+     Say both, rather than let one silently contradict the other. */
   const ph = predHits();
-  out.push(bRow('📝 Prediction sheet', S.predPts||0, PRED_MAX, 'gold',
-    ph.total ? `${ph.hits} of ${ph.total} lines landed` : ''));
+  var qlead = 0;
+  try{
+    var L2=ledger()||{};
+    Object.keys(L2).forEach(function(k){ if(k.indexOf('qlead-')===0) qlead += (Number(L2[k].p)||0); });
+  }catch(_){}
+  var predNote = ph.total ? `${ph.hits} of ${ph.total} lines landed` : '';
+  if(qlead>0) predNote = (predNote?predNote+' · ':'') + `+${qlead} for leading a quarter`;
+  out.push(bRow('📝 Prediction sheet', S.predPts||0, PRED_MAX, 'gold', predNote));
 
   if(CATCHES.length){
     out.push(bRow('👀 Your watchlist', S.catchPts||0, CATCH_PTS, '',
@@ -8998,7 +9083,17 @@ function renderSignup(){
   const show = S.mode==='live' && !alreadySignedUp() && !!(window.SB && SB.enabled);
   card.style.display = show ? 'block' : 'none';
   const on=document.getElementById('onListCard');
-  if(on) on.style.display = (S.mode==='live' && alreadySignedUp() && !!(window.SB && SB.enabled)) ? 'block' : 'none';
+  /* NOT ON THE FINAL SCREEN — founder, after GN12: "should it say take me
+     off the list when it gives you the final score". No. That screen is the
+     one moment of the night that belongs entirely to the player, and the
+     app was using it to offer an exit. Nothing else on it asks a person to
+     leave.
+
+     The promise on the checkbox — "unsubscribe any time" — still has to
+     point at something inside the app, so the card stays exactly as it is
+     everywhere else. It is the placement that was wrong, not the control. */
+  var onFinal=false; try{ onFinal = (S.screen==='final' || S.screen==='predreview'); }catch(_){}
+  if(on) on.style.display = (!onFinal && S.mode==='live' && alreadySignedUp() && !!(window.SB && SB.enabled)) ? 'block' : 'none';
   if(show){
     const e=document.getElementById('suEmail');
     if(e && !e.value && S.name) e.placeholder = (S.name.split(' ')[0].toLowerCase()||'you')+'@email.com';
@@ -9772,7 +9867,8 @@ function paintStand(list){
     +'<span class="sr">'+(i+1)+'</span>'
     +'<span class="sdot" style="background:'+esc(p.color||'#888')+'"></span>'
     +'<span class="sn">'+esc(p.name||'player')+(p.me?' (you)':'')+'</span>'
-    +'<span class="sp">'+(Number(p.pts)||0)+'</span></div>').join('');
+    /* Print what we sorted by. See nightTotal(). */
+    +'<span class="sp">'+(Number(p.total!=null?p.total:p.pts)||0)+'</span></div>').join('');
   document.getElementById('standTitle').textContent =
     'Tonight’s top '+five.length;
   document.getElementById('standWhen').textContent='live';
@@ -9781,9 +9877,10 @@ function paintStand(list){
   const mine=five.find(p=>p.me);
   const you=document.getElementById('standYou');
   if(mine){
-    you.textContent='You’re on the board — '+(Number(mine.pts)||0)+' pts. ⚡ Speed breaks ties.';
+    you.textContent='You’re on the board — '+(Number(mine.total!=null?mine.total:mine.pts)||0)+' pts. ⚡ Speed breaks ties.';
   }else{
-    const cut=Number(five[five.length-1].pts)||0;
+    const last=five[five.length-1];
+    const cut=Number(last.total!=null?last.total:last.pts)||0;
     const gap=Math.max(1, cut - (S.pts||0) + 1);
     const r=roomLast && roomLast.rank;
     you.textContent=(r!=null?'You’re #'+r+' on '+(S.pts||0)+' pts. ':'You’re on '+(S.pts||0)+' pts. ')
@@ -11421,7 +11518,7 @@ function shareEmoji(){
 function copyShareText(){
   const head = S.mode==="live"
     ? `STATS ${SPORT.emoji} ${GAME.night} · ${GAME.homeAbbr} vs ${GAME.awayAbbr}\n${S.name||'Me'}: ${S.pts} pts · ⚡${S.speed} speed`
-    : `STATS ${SPORT.emoji} ${S.pts} pts · Rank #${myRank()}`;
+    : `STATS ${SPORT.emoji} ${S.pts} pts${myRank()?(' · Rank #'+myRank()):''}`;
   // The award is the line people actually screenshot, so it goes above the grid.
   const aw = AW_LAST && AW_LAST.list && AW_LAST.list[0];
   const awLine = aw ? `\n${awardEmoji(aw)} ${awardName(aw)}` : '';
@@ -12953,7 +13050,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-17-open-mic.126';
+const STATS_BUILD='2026-08-18-gn13-scoring.127';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -13923,10 +14020,23 @@ function finishNightFromFeed(){
     if(!S || S.mode!=='live') return;
     if(S.screen==='final' || S.screen==='predreview') { FINALISED=true; return; }
     if(!inDeadAir()) return;            // mid-question — catch them on the way out
-    // Nothing to settle if they never locked a card.
+    /* B36 — A PLAYER WITH NO CARD USED TO GET NO ENDING AT ALL. This
+       returned early when there was nothing to settle, and this is the ONLY
+       automatic route to the final screen — which is where seasonRecord()
+       banks the night. So somebody who answered every quarter question but
+       skipped the pre-game sheet reached the buzzer and simply sat there,
+       on whatever screen they were on, with their season unbanked.
+
+       There is genuinely nothing to SETTLE for them. There is still a night
+       to FINISH. Those are different things and only the first one needs a
+       card. */
     var locked=false; try{ locked=!!(S.predChoices && Object.keys(S.predChoices).length); }catch(_){}
-    if(!locked) return;
     FINALISED=true;
+    if(!locked){
+      try{ toast('🏁 Final buzzer — that is the night.'); }catch(_){}
+      try{ showFinal(); }catch(_){ FINALISED=false; }
+      return;
+    }
     try{ toast('🏁 Final buzzer — settling your card.'); }catch(_){}
     try{ openPredReview(); }catch(_){ FINALISED=false; }
   }catch(_){ }
@@ -14224,7 +14334,7 @@ function renderBoard(){
           return '<div class="bdRow'+(p.me?' me':'')+'"><span class="bdR">'+(i+1)+'</span>'
             + '<span class="bdDot" style="background:'+esc(p.color||'#4d86ff')+'"></span>'
             + '<span class="bdN">'+esc(p.name||'player')+(p.me?' (you)':'')+'</span>'
-            + '<span class="bdP">'+(Number(p.pts)||0)+'</span></div>';
+            + '<span class="bdP">'+(Number(p.total!=null?p.total:p.pts)||0)+'</span></div>';
         }).join('')
       + '</div>';
   } else {

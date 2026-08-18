@@ -292,6 +292,32 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     return !!m && m.kind==='lock';
   });
 
+  /* ---- THE VOICE CHECK'S OWN TWO BUGS, both hit by the founder ------
+     "On the voice page in the menu when you test the voice it doesn't work.
+     It says speak into it and it doesn't detect it." */
+  R['the-test-button-works-with-voice-off'] = await p.evaluate(()=>{
+    VX.disable();                       // exactly the state he was in
+    const before=window.__recStarts;
+    VX.listenNow();
+    return VX.on===true && window.__recStarts>before;   // it turns itself on and listens
+  });
+  R['the-check-tests-the-mic-not-a-question-that-isnt-there'] = await p.evaluate(()=>{
+    try{ document.getElementById('qOpts').innerHTML=''; }catch(_){}  // no live question
+    VX.enable();
+    const opts=VX.curOpts();
+    const graded = opts.length>0 && VX.match('two', opts);
+    return VX.onAQuestion()===false && !!graded && graded.kind==='pick' && graded.i===1;
+  });
+  R['a-working-mic-is-never-reported-as-failed'] = await p.evaluate(()=>{
+    try{ document.getElementById('qOpts').innerHTML=''; }catch(_){}
+    VX.enable(); VX.lastHeard='two';
+    const L=VX.check();
+    const bad=L.filter(r=>r[0]==='no').map(r=>r[1]).join(' | ');
+    const good=L.filter(r=>r[0]==='ok').map(r=>r[1]).join(' | ');
+    VX.lastHeard='';
+    return !/not one of the answers/i.test(bad) && /microphone works/i.test(good);
+  });
+
   await p.evaluate(()=>{ VX.disable(); window.__said=[]; window.__recStarts=0;
                          VX.askQuestion(); VX.reveal('x'); VX.roundOpen(1,true); VX.locked('y'); });
   await p.waitForTimeout(200);

@@ -284,7 +284,11 @@ async function scoreRoom(db, FieldValue, AUTO){
   for(const uid of Object.keys(t)){
     const row = t[uid];
     await db.doc(`nights/${NIGHT}/players/${uid}`).set({
-      pts: row.pts, speed: row.speed, roundsDone: row.rounds,
+      /* livePts is the ONE lane a phone does not own, and publishing it is
+         what lets the board compose a total instead of guessing at one.
+         See nightTotal() in index.html — GN12 ranked on a double-counted
+         sum because `pts` was the only thing ever written. */
+      pts: row.pts, livePts: row.live, speed: row.speed, roundsDone: row.rounds,
       lastScoredBy: 'runner', lastScoredAt: FieldValue.serverTimestamp()
     }, { merge: true });
     n++;
