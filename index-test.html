@@ -7596,7 +7596,8 @@ var VX=(function(){
        speak; answer while it is pending and you were cut off mid-word and
        discarded. Any voice in the room cancels it. */
     r.onspeechstart=function(){ V.clearHint(); };
-    r.onaudiostart =function(){ V.micThrew=0; V.paint(); };
+    r.onaudiostart =function(){ V.micThrew=0; V.openedAt=Date.now(); V.heardSomething=false;
+                                V.statBump('opened'); V.paint(); };
     r.onresult=function(e){
       var i, j, res, fin=false;
       for(i=e.resultIndex; i<e.results.length; i++){
@@ -7607,7 +7608,9 @@ var VX=(function(){
            mishear and a mis-grammar look nothing alike once this is on
            screen, and they have completely different fixes. */
         try{ V.lastHeard=String(res[0].transcript||'').trim(); V.log(V.lastHeard); }catch(_){}
-        for(j=0;j<res.length;j++){ if(V.heard(res[j].transcript)) return; }
+        V.statBump('heard'); V.heardSomething=true;
+        for(j=0;j<res.length;j++){ if(V.heard(res[j].transcript)){ V.statBump('matched'); return; } }
+        V.statBump('nomatch');
       }
       if(fin){ V.miss=(V.miss||0)+1; V.paint(); }
     };
@@ -7624,6 +7627,10 @@ var VX=(function(){
     };
     r.onend=function(){
       V.listening=false;
+      /* Opened, ran, and nothing ever came back. That is the platform class
+         — the one five rounds of grammar fixes were aimed at by mistake. */
+      try{ if(V.openedAt && !V.heardSomething && (Date.now()-V.openedAt)>2500) V.statBump('silent'); }catch(_){}
+      V.openedAt=0;
       if(!V.wantEar){ V.paint(); return; }
       if(V.errs>6){ V.note='Voice input stopped responding — tap your answers.'; V.wantEar=false; V.paint(); return; }
       /* Try immediately — on desktop this simply works. On iOS it throws,
@@ -7798,6 +7805,7 @@ var VX=(function(){
          existed. Two voices for one event, and the wrong one won.
 
          So ask the game what just happened rather than assuming. */
+      try{ V.noteSpokenPick(label); }catch(_){}
       var settled=false; try{ settled=!!S.answered; }catch(_){}
       if(settled){ V.paint(); return true; }   // the reveal is already talking
       V.deafSay('Got it. ' + label + '. Say lock, or say another number.', true);
@@ -7906,6 +7914,62 @@ var VX=(function(){
     try{ return !!document.querySelector('#qOpts .opt.sel'); }catch(_){ return false; }
   };
   V.clearHint=function(){ try{ clearTimeout(V.hint); }catch(_){} V.hint=null; };
+
+  /* ---- THE ONE NUMBER ------------------------------------------------
+     Six fixes shipped in a day and every one was argued from feel until the
+     founder's own device log arrived. "It seems better" is not something
+     anybody can be held to.
+
+     FIRST-UTTERANCE SUCCESS RATE: of every attempt to answer out loud, what
+     fraction landed the option you meant, first try, no repeat, no tap.
+     That is the metric. Everything else here is diagnosis.
+
+     THREE FAILURE CLASSES, COUNTED APART, because they have completely
+     different fixes and lumping them is what sent five rounds of work at
+     the wrong layer:
+
+       NEVER HEARD    the microphone opened and no transcript ever came —
+                      platform. This is what the audio-session bug looked
+                      like, and no amount of grammar would have touched it.
+       NO MATCH       words arrived and the grammar refused them. Annoying,
+                      honest, and fixable in the matcher.
+       MATCHED WRONG  it picked something the player did not mean. A DEFECT,
+                      not a rate. Must be zero. This is "two" becoming "1".
+
+     The third cannot be observed directly — the app cannot know what
+     somebody meant. What it can see is a CORRECTION: a spoken pick replaced
+     by a different answer within seconds, which is what a mishear looks
+     like from outside. Counted as a signal, labelled as one, never
+     presented as the truth.
+
+     On the device, sent nowhere. Instrumentation for a four-player test
+     phase, not analytics. */
+  V.stat={heard:0,matched:0,nomatch:0,corrected:0,opened:0,silent:0};
+  var VSKEY='stats_voice_stat_v1';
+  try{ var _vs=JSON.parse(localStorage.getItem(VSKEY)||'null');
+       if(_vs && typeof _vs==='object') Object.keys(V.stat).forEach(function(k){
+         if(typeof _vs[k]==='number') V.stat[k]=_vs[k]; }); }catch(_){}
+  V.statBump=function(k){
+    try{ V.stat[k]=(V.stat[k]||0)+1; localStorage.setItem(VSKEY, JSON.stringify(V.stat)); }catch(_){}
+  };
+  /* Same answer twice is somebody confirming. A DIFFERENT answer inside the
+     window is somebody correcting, and that is the only externally visible
+     trace of a mishear. */
+  V.noteSpokenPick=function(label){
+    try{
+      var now=Date.now();
+      if(V.lastPick && V.lastPick.label!==label && (now-V.lastPick.at)<8000) V.statBump('corrected');
+      V.lastPick={label:label, at:now};
+    }catch(_){}
+  };
+  V.statLine=function(){
+    var h=V.stat.heard||0, m=V.stat.matched||0;
+    if(!h) return 'No spoken answers yet — the rate appears once you have used it.';
+    return 'Landed first time: '+Math.round((m/h)*100)+'% ('+m+' of '+h+' things you said)'
+      + ' \u00b7 not understood '+(V.stat.nomatch||0)
+      + ' \u00b7 opened and heard nothing '+(V.stat.silent||0)
+      + ' \u00b7 looks like a mishear '+(V.stat.corrected||0);
+  };
 
   /* ---- CAUGHT IT ------------------------------------------------------
      "There's no voice for when the questions for Caught It are asked."
@@ -8212,6 +8276,7 @@ var VX=(function(){
       else ok('It understood that as: '+(m.kind==='pick'?('answer '+(m.i+1)):m.kind)+'.');
     }
     if(V.hasOut){ var vv=V.voice(); ok('Reading voice: '+(vv?vv.name:'the browser default')+'.'); }
+    hm(V.statLine());
     /* SAY WHICH THING THIS PROVED. Founder, looking at a panel that had
        just correctly reported a working microphone: "it seems like it
        captured it but then it doesn't show it right." He was right to be
@@ -14002,7 +14067,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-topcourt.138';
+const STATS_BUILD='2026-08-18-measured.139';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

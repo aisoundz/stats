@@ -532,6 +532,44 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     return S.screen==='live' && !!sel && sel.textContent==='Board';
   });
 
+  /* ---- THE ONE NUMBER. Six fixes were argued from feel; this is what
+     stops the next round being another opinion. ---- */
+  R['it-counts-what-landed-and-what-did-not'] = await p.evaluate(()=>{
+    try{ localStorage.removeItem('stats_voice_stat_v1'); }catch(_){}
+    VX.stat={heard:0,matched:0,nomatch:0,corrected:0,opened:0,silent:0};
+    VX.enable(); S.mode='live'; S.qi=0; S.ni=0; S.answered=false; go('live'); loadQuestion();
+    if(!window.__rec) return false;
+    window.__rec.__speak('two', true);          // lands
+    const afterGood={h:VX.stat.heard,m:VX.stat.matched,n:VX.stat.nomatch};
+    S.answered=false;
+    window.__rec.__speak('purple monkey dishwasher', true);   // does not
+    return afterGood.h===1 && afterGood.m===1 && afterGood.n===0
+        && VX.stat.heard===2 && VX.stat.matched===1 && VX.stat.nomatch===1;
+  });
+  R['the-three-failure-classes-are-counted-apart'] = await p.evaluate(()=>{
+    /* Never heard / no match / matched wrong have completely different
+       fixes. Lumping them is what aimed five rounds at the wrong layer. */
+    const k=Object.keys(VX.stat);
+    return ['heard','matched','nomatch','silent','corrected'].every(x=>k.indexOf(x)>=0);
+  });
+  R['a-mishear-is-a-signal-not-a-claim'] = await p.evaluate(()=>{
+    /* Same answer twice is confirming; a DIFFERENT answer inside the window
+       is correcting, which is the only visible trace of a mishear. */
+    VX.stat.corrected=0; VX.lastPick=null;
+    VX.noteSpokenPick('Yes'); VX.noteSpokenPick('Yes');
+    const same=VX.stat.corrected;
+    VX.noteSpokenPick('No');
+    return same===0 && VX.stat.corrected===1;
+  });
+  R['the-rate-shows-up-in-the-voice-check'] = await p.evaluate(()=>{
+    const L=VX.check().map(r=>r[1]).join(' | ');
+    return /Landed first time: \d+%/.test(L);
+  });
+  R['no-attempts-yet-says-so-rather-than-showing-zero-percent'] = await p.evaluate(()=>{
+    VX.stat={heard:0,matched:0,nomatch:0,corrected:0,opened:0,silent:0};
+    return /No spoken answers yet/.test(VX.statLine());
+  });
+
   await p.evaluate(()=>{ VX.disable(); window.__said=[]; window.__recStarts=0;
                          VX.askQuestion(); VX.reveal('x'); VX.roundOpen(1,true); VX.locked('y'); });
   await p.waitForTimeout(200);
