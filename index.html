@@ -5176,14 +5176,54 @@ function paintSlate(){
 try{ window.paintSlate = paintSlate; }catch(_){}
 
 /* One listener, delegated, bound once — a listener added inside the painter
-   would be added again on every repaint and fire N times on the Nth tap. */
+   would be added again on every repaint and fire N times on the Nth tap.
+
+   ============ AND IT LISTENS FOR A TOUCH, NOT ONLY A CLICK ============
+   Reproduced in WebKit at iPhone width, which is the engine and the size
+   the founder is actually on: the rail is a horizontally scrollable strip,
+   and a tap inside one does not reliably produce a `click` in Safari. It
+   worked on the iPad — where both tiles fit and the strip does not scroll —
+   and on every desktop browser, which is exactly why it survived so long:
+   "it works on mine" was true and useless.
+
+   pointerup covers mouse, touch and pen in one path. The movement guard is
+   what keeps a SCROLL from being read as a choice — a strip you can flick
+   must not change your game because your thumb travelled twelve pixels. */
+var SLATE_TAP={x:0,y:0,id:null};
 try{
+  document.addEventListener('pointerdown', function(e){
+    var b = e.target && e.target.closest ? e.target.closest('[data-slate]') : null;
+    SLATE_TAP = b ? {x:e.clientX, y:e.clientY, id:b.getAttribute('data-slate')} : {x:0,y:0,id:null};
+  }, {passive:true});
+
+  document.addEventListener('pointerup', function(e){
+    var b = e.target && e.target.closest ? e.target.closest('[data-slate]') : null;
+    if(!b || !SLATE_TAP.id) return;
+    if(b.getAttribute('data-slate') !== SLATE_TAP.id) return;   // started on a different tile
+    var moved = Math.abs(e.clientX-SLATE_TAP.x) + Math.abs(e.clientY-SLATE_TAP.y);
+    SLATE_TAP = {x:0,y:0,id:null};
+    if(moved > 12) return;                                       // that was a scroll
+    activateSlateTile(b, e);
+  }, false);
+
+  /* Kept for the keyboard and for anything that dispatches a synthetic
+     click. activateSlateTile() is idempotent while a switch is in flight. */
   document.addEventListener('click', function(e){
     var b = e.target && e.target.closest ? e.target.closest('[data-slate]') : null;
     if(!b) return;
-    e.preventDefault();
+    activateSlateTile(b, e);
+  }, false);
+}catch(_){}
+
+var SLATE_SWITCHING=false;
+function activateSlateTile(b, e){
+  try{
+    if(!b) return;
+    if(SLATE_SWITCHING) return;
+    if(e && e.preventDefault) e.preventDefault();
     var id = b.getAttribute('data-slate');
     if(!id) return;
+    SLATE_SWITCHING = true;
     /* NO DATABASE HANDLE NEEDED, AND THAT IS THE FIX. This used to bail
        silently unless window.__SB_DB and __SB_FS were both set — handles
        assigned during the Firebase boot, absent on a fast tap and disturbed
@@ -5198,9 +5238,9 @@ try{
     Promise.resolve(chooseGame(window.__SB_DB, window.__SB_FS, id))
       .then(function(){ try{ paintSlate(); }catch(_){} })
       .catch(function(){})
-      .finally(function(){ try{ b.disabled = false; }catch(_){} });
-  }, false);
-}catch(_){}
+      .finally(function(){ SLATE_SWITCHING=false; try{ b.disabled = false; }catch(_){} });
+  }catch(_){ SLATE_SWITCHING=false; }
+}
 
 async function loadSlate(db, F){
   if(!db || !F) return false;
@@ -14997,7 +15037,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-instant.149';
+const STATS_BUILD='2026-08-18-touch.150';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
