@@ -29,7 +29,7 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     window.__said=[]; window.__recStarts=0;
     const def=(k,v)=>Object.defineProperty(window,k,{configurable:true,value:v});
     def('speechSynthesis',{ speak(u){ window.__said.push(u.text); setTimeout(()=>u.onend&&u.onend(),5); },
-                            cancel(){}, getVoices(){return[];} });
+                            cancel(){ window.__said.push('<<CANCEL>>'); }, getVoices(){return[];} });
     def('SpeechSynthesisUtterance', function(t){ this.text=t; });
     const R=function(){ window.__recStarts++; this.start=function(){}; this.stop=function(){}; this.abort=function(){}; };
     def('SpeechRecognition', R); def('webkitSpeechRecognition', R);
@@ -81,6 +81,30 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
                          window.nextQuestion=function(){window.__nq++;return o.apply(this,arguments);}; VX.heard('lock'); });
   await p.waitForTimeout(300);
   R['lock-goes-through-nextQuestion'] = await p.evaluate(()=>window.__nq===1);
+
+  /* PRACTICE — how almost everybody sees this app first, and the mode
+     where a question SETTLES the instant it is answered rather than
+     staying changeable. Voice used to talk over its own reveal here and
+     then dead-end, so these are the checks for exactly that. */
+  await p.evaluate(()=>{ S.answered=false; try{setMode('demo');}catch(_){}; window.__said=[]; startQuarter(0); });
+  await p.waitForTimeout(900);
+  await p.evaluate(()=>{ window.__said=[]; window.__recStarts=0; VX.heard('one'); });
+  await p.waitForTimeout(600);
+  const pr=await p.evaluate(()=>({said:window.__said.filter(s=>s!=='<<CANCEL>>'), answered:S.answered, recStarts:window.__recStarts}));
+  R['practice-reveal-is-not-talked-over'] =
+    pr.said.some(s=>/Correct|Not quite|Missed it/i.test(s)) &&
+    !pr.said.some(s=>/say another number/i.test(s));
+  R['practice-reopens-the-ear-for-next'] = pr.recStarts>0;
+  /* Assert the MOVE, not the absence of a complaint. The first version of
+     this check only looked for "Nothing picked yet" — and passed happily
+     while "next" was not in the grammar at all and did nothing whatsoever.
+     A check that passes when the feature is missing is worse than no check. */
+  R['next-works-on-a-settled-question'] = await p.evaluate(()=>{
+    window.__nq2=0; const o=window.nextQuestion;
+    window.nextQuestion=function(){window.__nq2++;return o.apply(this,arguments);};
+    window.__said=[]; VX.heard('next'); window.nextQuestion=o;
+    return window.__nq2===1 && !window.__said.some(s=>/Nothing picked yet/i.test(s));
+  });
 
   await p.evaluate(()=>{ VX.disable(); window.__said=[]; window.__recStarts=0;
                          VX.askQuestion(); VX.reveal('x'); VX.roundOpen(1,true); VX.locked('y'); });
