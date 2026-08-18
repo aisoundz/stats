@@ -205,14 +205,18 @@
      the parent, because a z-index:-1 child without it paints behind the
      whole page. That is a named lesson in this codebase and it has cost a
      day before. ── */
-  #s-landing.mq #tonightCard{position:relative;isolation:isolate;overflow:hidden}
-  #s-landing.mq #landingSurface{position:absolute;left:0;right:0;top:0;height:190px;
+  #s-landing.mq #tonightCard{position:relative}
+  /* Spans the whole header — wordmark, tagline, pill and into the top of
+     the hero — because that is the band the old landing lit and it is what
+     "the very top" means. Negative offsets so it bleeds past the section's
+     own padding rather than sitting in a box. */
+  #s-landing.mq #landingSurface{position:absolute;left:-18px;right:-18px;top:-14px;height:330px;
     z-index:-1;pointer-events:none;overflow:hidden;opacity:.82;
     /* Fades out well before the countdown. The first pass ran linework
        straight through "TIPS IN 1d 11:49" and a ground that crosses the
        loudest number on the page has stopped being a ground. */
-    -webkit-mask-image:linear-gradient(180deg,#000 22%,rgba(0,0,0,.42) 58%,transparent 88%);
-    mask-image:linear-gradient(180deg,#000 22%,rgba(0,0,0,.42) 58%,transparent 88%)}
+    -webkit-mask-image:linear-gradient(180deg,#000 34%,rgba(0,0,0,.5) 66%,transparent 94%);
+    mask-image:linear-gradient(180deg,#000 34%,rgba(0,0,0,.5) 66%,transparent 94%)}
   @media (prefers-reduced-motion:reduce){ #s-landing.mq #landingSurface{opacity:.7} }
 
   /* ── the rail. The wordmark stops being the biggest thing on the page,
@@ -1034,6 +1038,15 @@
       <button class="btn teal sm" onclick="doResume()">Resume my game</button>
       <button class="btn ghost sm" style="margin-top:8px" onclick="dismissResume()">Start a new game</button>
     </div>
+    <!-- THE PLAYING SURFACE, AT THE TOP OF THE PAGE. Founder: "the
+         basketball image should be above at the very top." It sat inside
+         the hero card on the first pass, which put it under the matchup
+         instead of behind the whole header — the old landing had the court
+         behind the WORDMARK and that is what gave the top of the page its
+         light. Painted by paintSurface() from the sport and the two team
+         colours; geometry only, no logos, no marks; empty for any sport
+         with no drawing rather than another sport's markings. -->
+    <div id="landingSurface" aria-hidden="true"></div>
     <div class="brand"><span class="logo" style="letter-spacing:1.5px">STATS GAMETIME</span></div>
     <p class="tag strangers">The game that pays to pay attention</p>
     <div class="center strangers" id="landingPill" style="margin-top:8px"><span class="pill">Play from home • Free to enter</span></div>
@@ -1057,10 +1070,6 @@
          the real score while live, the final after. Painted from the ESPN
          feed; hides entirely if the feed can't be reached. -->
     <div class="card" id="tonightCard" style="margin-top:14px">
-      <!-- THE PLAYING SURFACE. Painted by paintSurface() from the sport and
-           the two team colours; empty for any sport with no geometry, never
-           another sport's markings. Geometry only — no logos, no marks. -->
-      <div id="landingSurface" aria-hidden="true"></div>
       <!-- These are overwritten from BB_GAME on load; they are here only so
            the first paint is not blank. Keep them in sync with the fixture
            anyway — a stale flash of last week's game is still a stale flash. -->
@@ -5420,7 +5429,7 @@ function setMode(mode){
     S.botScores = [];
     /* The Caught It record is progress too — a practice streak must not
        walk into the live night wearing the same numbers. */
-    if(typeof PCI === 'object'){ PCI.called=0; PCI.hit=0; PCI.streak=0; PCI.best=0; PCI.heat=0; PCI.pts=0; }
+    if(typeof PCI === 'object'){ PCI.called=0; PCI.hit=0; PCI.streak=0; PCI.best=0; PCI.heat=0; PCI.pts=0; PCI.paid={}; }
     S.pci = null;
   }catch(_){}
   try{ recomputeScore(); }catch(_){}
@@ -5440,7 +5449,7 @@ function save(){try{
      night's points and six players who are not in the building. */
   try{ S.nid=(typeof GAME!=='undefined'&&GAME.nightId)||''; }catch(_){}
   // Snapshot the Caught It record into the blob so a reload keeps the streak.
-  try{ if(typeof PCI==='object') S.pci={called:PCI.called,hit:PCI.hit,streak:PCI.streak,best:PCI.best,heat:PCI.heat,pts:PCI.pts}; }catch(_){}
+  try{ if(typeof PCI==='object') S.pci={called:PCI.called,hit:PCI.hit,streak:PCI.streak,best:PCI.best,heat:PCI.heat,pts:PCI.pts,paid:PCI.paid||{}}; }catch(_){}
   localStorage.setItem(LS_KEY,JSON.stringify(S));
 }catch(e){}}
 function clearSave(){try{localStorage.removeItem(LS_KEY);}catch(e){}}
@@ -5559,6 +5568,10 @@ function doResume(){
       Object.keys(S.pci).forEach(function(k){
         if(typeof S.pci[k]==='number' && typeof PCI[k]==='number') PCI[k]=S.pci[k];
       });
+      /* The per-question record is an object, not a number, so the numeric
+         restore above skips it — and a refresh mid-night would otherwise
+         make every already-resolved card fall back to a guess. */
+      try{ if(S.pci.paid && typeof S.pci.paid==='object') PCI.paid=S.pci.paid; }catch(_){}
     }
   }catch(_){}
   /* ============ REJOIN THE ROOM ======================================
@@ -10701,7 +10714,7 @@ function startHostedWatch(){
    on a board that is SEPARATE from the 100-pt leaderboard. It never calls
    SB.join / SB.push / the HR flow, and if the whole thing broke the main
    game would not notice. */
-var PCI = { unsub:null, active:null, picked:{}, graded:{}, streak:0, best:0, called:0, hit:0, heat:0, pts:0, muted:false, tick:null, hideT:null };
+var PCI = { unsub:null, active:null, picked:{}, graded:{}, paid:{}, streak:0, best:0, called:0, hit:0, heat:0, pts:0, muted:false, tick:null, hideT:null };
 
 /* ============ WHAT A CAUGHT IT IS WORTH =============================
    For seven game nights: nothing. ciGrade() incremented five counters,
@@ -11559,6 +11572,21 @@ function ciGrade(q){
        and so that recomputing never double-pays a card that grades twice. */
     PCI.ptsBefore = Number(PCI.pts)||0;
     PCI.pts = Math.min(CAUGHT_NIGHT_CAP, PCI.ptsBefore + caughtWorth(PCI.streak));
+    /* WHAT THIS QUESTION PAID BELONGS TO THIS QUESTION. Founder, GN12: "on
+       the Caught It question it showed a point total from the first quarter
+       when they asked a question in the 4th quarter."
+
+       `ptsBefore` and `pts` are ONE pair of module globals, overwritten by
+       every catch of the night. The resolved card computed its "+N" by
+       subtracting them — so any card that rendered after a later question
+       had been answered, or on any repaint once the pair had moved,
+       displayed a number belonging to a different moment of the game.
+       One fact, stored where only the newest copy survives.
+
+       It is written onto the question's own record now, keyed by qid, and
+       read back from there. The globals stay because the cap logic uses
+       them live, but nothing DISPLAYS them any more. */
+    try{ PCI.paid = PCI.paid || {}; PCI.paid[q.qid] = Math.max(0, PCI.pts - PCI.ptsBefore); }catch(_){}
     /* AND A FLOOR, because the restore fix alone is not enough. This writes
        an ABSOLUTE into the ledger, so ANY future path that resets PCI.pts —
        a restore that misses a field, a reload, a bug not yet written —
@@ -11699,10 +11727,15 @@ function renderCiCard(q){
        rather than the scoreboard lagging. Ask the owner what it paid. */
     var paid = 0;
     if(right){
-      var _before = Number(PCI.ptsBefore);
-      var _after  = Number(PCI.pts);
-      paid = (isFinite(_before) && isFinite(_after)) ? Math.max(0, _after - _before)
-                                                    : caughtWorth(PCI.streak);
+      /* Read what THIS question paid, from the question. The old code
+         subtracted two module globals that every later catch overwrote —
+         see the note in ciGrade. Falling back to the streak worth is fine
+         for a card graded before this shipped; falling back to the globals
+         is what produced a fourth-quarter card showing a first-quarter
+         number. */
+      var _rec = null;
+      try{ _rec = (PCI.paid && PCI.paid[q.qid]!=null) ? Number(PCI.paid[q.qid]) : null; }catch(_){}
+      paid = (_rec!=null && isFinite(_rec)) ? Math.max(0,_rec) : caughtWorth(PCI.streak);
     }
     /* B-66, GN10. B24 stopped the card announcing points it had not paid.
        It did not cover the case underneath: a player who is RIGHT and has
@@ -13969,7 +14002,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-brandcolour.137';
+const STATS_BUILD='2026-08-18-topcourt.138';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
