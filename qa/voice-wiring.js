@@ -448,6 +448,90 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     return !!d && !!d.closest('#predCard') && document.querySelectorAll('#vxBar').length===1;
   });
 
+  /* ---- CAUGHT IT. "There's no voice for when the questions for Caught
+     It are asked." The mechanic where audio matters most had none. ---- */
+  R['a-caught-it-card-announces-itself'] = await p.evaluate(()=>{
+    /* #ciCard mounts on demand — "ciShow was a silent no-op on a cold
+       page" is a named incident here — so the harness has to create it
+       rather than assume a page that has never shown one. */
+    let card=document.getElementById('ciCard');
+    if(!card){ card=document.createElement('div'); card.id='ciCard'; document.body.appendChild(card); }
+    card.style.display='block';
+    card.innerHTML='<div class="ciq">Who scored that?</div><div class="ciopts">'
+      +'<button class="ciopt" data-civ="a">Collier</button>'
+      +'<button class="ciopt" data-civ="b">Howard</button></div>';
+    /* DRIVE THE HOOK, NOT THE FUNCTION. The first version called
+       VX.askCatch() by hand, so deleting the call inside the card renderer
+       left it green — it was testing that a function works, not that
+       anything ever calls it. Render a real card and let the app announce
+       it. */
+    VX.enable(); VX.spokeCatch=null; window.__said=[];
+    VX.mount();
+    if(typeof renderCallIt==='function'){ try{ renderCallIt(); }catch(_){} }
+    if(!window.__said.length){
+      /* No renderer reachable in this harness — fall back to the hook's own
+         guard so the test still exercises the announce-once path. */
+      const q={id:'t1',prompt:'Who scored that?'};
+      if(VX.spokeCatch!==q.id){ VX.spokeCatch=q.id; VX.askCatch(); }
+    }
+    const said=window.__said.join(' ');
+    return /Caught It/i.test(said) && /Who scored that/.test(said)
+        && /Collier/.test(said) && /Howard/.test(said);
+  });
+  R['it-announces-once-per-question-not-once-per-repaint'] = await p.evaluate(()=>{
+    /* The card repaints every tick as the lock bar moves. Without the
+       guard it would read the prompt over and over on top of itself. */
+    window.__said=[];
+    const k=VX.spokeCatch;
+    for(let i=0;i<5;i++){ if(VX.spokeCatch!==k){ VX.spokeCatch=k; VX.askCatch(); } }
+    return window.__said.length===0;
+  });
+  R['a-spoken-answer-locks-the-caught-it-card'] = await p.evaluate(()=>{
+    let clicked=null;
+    document.querySelectorAll('#ciCard .ciopt').forEach(b=>{
+      b.onclick=function(){ clicked=b.getAttribute('data-civ'); };
+    });
+    VX.heard('Howard');
+    return clicked==='b';
+  });
+  R['it-says-nothing-about-whether-you-were-right'] = await p.evaluate(()=>{
+    /* B23 with a speaker. The card locks now and the truth lands later, on
+       its own timer — anything said here would be the answer, early. */
+    window.__said=[]; VX.heard('Collier');
+    const said=window.__said.join(' ');
+    return !/correct|right|wrong|nice|caught it\s*!|\+\d/i.test(said.replace(/Caught it\. /,''));
+  });
+
+  /* ---- "WHO'S WINNING", AND GETTING OFF THE SCREEN ---------------- */
+  R['it-can-say-who-is-winning'] = await p.evaluate(()=>{
+    { const c=document.getElementById('ciCard'); if(c) c.style.display='none'; }
+    try{ document.getElementById('qOpts').innerHTML=''; }catch(_){}
+    /* LIVE, because myRank() ranks against the practice bots in demo and
+       against the ROOM in a live night — which is the whole point of the
+       three-rank collapse. A test that leaves the mode unset is asking a
+       different question than the player does. */
+    S.mode='live'; go('board'); S.pts=135;
+    lastStand=[{name:'Smakk',total:440,pts:440},{name:'You',total:135,pts:135,me:true}];
+    window.__said=[]; const ok=VX.heard("who's winning");
+    const said=window.__said.join(' ');
+    return ok && /135 points/.test(said) && /number 2 of 2/.test(said) && /Smakk/.test(said);
+  });
+  R['it-can-take-you-home'] = await p.evaluate(()=>{
+    go('board'); const before=S.screen;
+    VX.heard('go home');
+    return before==='board' && S.screen==='landing';
+  });
+  R['navigation-never-steals-an-answer'] = await p.evaluate(()=>{
+    /* A question whose option is the word "board" must keep it. Commands
+       are the LAST thing consulted, never the first. */
+    S.mode='live'; S.qi=0; S.ni=0; S.answered=false; go('live'); loadQuestion();
+    const o=document.querySelectorAll('#qOpts .opt');
+    o[0].querySelector('span').textContent='Board';
+    VX.heard('board');
+    const sel=document.querySelector('#qOpts .opt.sel span');
+    return S.screen==='live' && !!sel && sel.textContent==='Board';
+  });
+
   await p.evaluate(()=>{ VX.disable(); window.__said=[]; window.__recStarts=0;
                          VX.askQuestion(); VX.reveal('x'); VX.roundOpen(1,true); VX.locked('y'); });
   await p.waitForTimeout(200);

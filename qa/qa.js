@@ -5202,9 +5202,16 @@ function voiceStatic(){
        submit or its own ledger write is the day the room has two games in
        it — B2 with a microphone. */
     check('voice.answers-through-the-same-door',
+      /* FORBID WRITING, NOT READING. This used to ban the string `S.pts`
+         outright, and it went red the day voice learned to SAY the score —
+         "you have 135 points" reads S.pts and changes nothing. Reading a
+         number to speak it is the opposite of owning it. What must never
+         appear is an assignment or a scoring call. */
       !!vx && /typeof answer==='function'\) answer\(/.test(vx)
            && /typeof nextQuestion==='function'\) nextQuestion\(/.test(vx)
-           && !/ledgerSet|S\.pts|SB\.submit|pushScore/.test(vx),
+           && !/ledgerSet\(|SB\.submit|pushScore\(/.test(vx)
+           && !/S\.pts\s*(=[^=]|\+=|-=)/.test(vx)
+           && !/S\.led\s*(=[^=]|\[)/.test(vx),
       'voice reaches the score by some path other than answer() and nextQuestion()',
       'a second way to score is the two-question-banks bug wearing a microphone');
     /* A mishear that LOCKED would be worse than no voice at all. Hearing an

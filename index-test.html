@@ -7694,8 +7694,15 @@ var VX=(function(){
        listener, two surfaces, and the surface decides — rather than two
        recognisers racing, which is the shape of every duplication bug in
        this codebase. */
+    var _t=String(raw==null?'':raw).toLowerCase().replace(/[^a-z0-9' ]+/g,' ').replace(/\s+/g,' ').trim();
+    /* ORDER IS A DECISION. A Caught It card is on a clock and is physically
+       on top of everything, so it hears first. Then the pick sheet, then
+       the quarter question. Global commands go LAST so that a sport whose
+       option is the word "board" can never be stolen by navigation. */
+    try{ if(V.onCatch()){ if(V.heardCatch(raw)) return true; } }catch(_){}
     try{ if(V.onPickCard()){ if(V.heardPick(raw)) return true; } }catch(_){}
     var opts=curOpts();
+    if(!opts.length){ try{ if(V.globalCmd(_t)) return true; }catch(_){} return false; }
     var m=V.match(raw, opts);
     if(!m) return false;
     if(m.kind==='off'){ V.disable(); return true; }
@@ -7722,7 +7729,11 @@ var VX=(function(){
       try{ if(typeof nextQuestion==='function') nextQuestion(); }catch(_){}
       return true;
     }
-    if(m.kind==='pick'){
+    /* NOTHING ON THIS SCREEN WANTED IT. Only now do the app-wide commands
+       get a look — last, deliberately, so a question whose option is the
+       word "board" can never be stolen by navigation. */
+    if(!m){ try{ if(V.globalCmd(_t)) return true; }catch(_){} return false; }
+    if(m && m.kind==='pick'){
       var b=curBtn(m.i); if(!b) return false;
       var label=opts[m.i];
       V.pause();
@@ -7848,6 +7859,102 @@ var VX=(function(){
   };
   V.clearHint=function(){ try{ clearTimeout(V.hint); }catch(_){} V.hint=null; };
 
+  /* ---- CAUGHT IT ------------------------------------------------------
+     "There's no voice for when the questions for Caught It are asked."
+
+     This is the mechanic where audio matters MOST and it was the one with
+     none. The entire point of Caught It is catching a moment while your
+     eyes are on the television — which is exactly when you cannot see a
+     card appear. A twenty-second card nobody is looking at is a card
+     nobody answers, and the room's hit rate was measuring eyesight rather
+     than attention.
+
+     It announces itself, reads the options, and takes a spoken answer.
+     Short by design: this card lives for seconds, not for a quarter, so
+     the prompt is the prompt and nothing else. */
+  V.catchOpts=function(){
+    try{
+      return Array.prototype.map.call(document.querySelectorAll('#ciCard .ciopt:not([disabled])'),
+        function(b){ return { label:(b.textContent||'').trim(), v:b.getAttribute('data-civ') }; })
+        .filter(function(x){ return x.label; });
+    }catch(_){ return []; }
+  };
+  V.onCatch=function(){
+    try{
+      var c=document.getElementById('ciCard');
+      if(!c || c.style.display==='none') return false;
+      return !!c.querySelector('.ciopt:not([disabled])');
+    }catch(_){ return false; }
+  };
+  V.askCatch=function(){
+    if(!V.on || !V.onCatch()) return;
+    var q=''; try{ q=(document.querySelector('#ciCard .ciq')||{}).textContent||''; }catch(_){}
+    if(!q) return;
+    var o=V.catchOpts(); if(!o.length) return;
+    /* Announced, because it arrives unasked. A player watching the game
+       has no reason to look down and every reason not to. */
+    V.wantEar=true;
+    V.say('Caught It. '+q+' \u2026 '+V.optionLine(o.map(function(x){return x.label;})),
+      function(){ V.ear(); });
+    V.paint();
+  };
+  V.heardCatch=function(raw){
+    if(!V.on || !V.onCatch()) return false;
+    var o=V.catchOpts(); if(!o.length) return false;
+    var m=V.match(raw, o.map(function(x){ return x.label; }));
+    if(!m) return false;
+    if(m.kind==='ambiguous'){ V.deafSay('Say the number instead.'); return true; }
+    if(m.kind!=='pick') return false;
+    var hit=o[m.i]; if(!hit) return false;
+    var btn=null;
+    try{ btn=document.querySelector('#ciCard .ciopt[data-civ="'+CSS.escape(String(hit.v))+'"]'); }catch(_){}
+    if(!btn || btn.disabled) return false;
+    V.pause(); V.hush();
+    try{ btn.click(); }catch(_){}
+    /* No read-back of an answer here and no result: the card locks the
+       instant you answer and the truth lands a beat later, on its own
+       timer. Saying anything about it now would be B23 with a speaker. */
+    V.deafSay('Caught it. '+hit.label+'.');
+    return true;
+  };
+
+  /* ---- WHERE AM I, AND WHO IS WINNING ---------------------------------
+     "You should be able to voice activate the entire platform — after I
+     answered the questions I wanted to go back home and it was stuck. It
+     would be good if I could go back, or to the board, and get the update
+     on who's in the lead."
+
+     Two different asks in one sentence and both are right. Navigation, so
+     the phone stops being a thing you have to look at to escape. And the
+     score out loud, which is the one number a player wants between rounds
+     and the reason they pick the phone up at all.
+
+     It is also, exactly, the surface an Alexa skill needs. One build. */
+  V.navSay=function(){
+    var me=null, n=null;
+    try{ me=(typeof myRank==='function')?myRank():null; }catch(_){}
+    try{ n=(typeof lastStand!=='undefined'&&lastStand)?lastStand.length:null; }catch(_){}
+    var pts=0; try{ pts=Math.round(Number(S.pts)||0); }catch(_){}
+    var lead=null;
+    try{ if(lastStand&&lastStand.length){ var t=lastStand[0]; lead=(t.name||'somebody')+' on '+(Number(t.total!=null?t.total:t.pts)||0); } }catch(_){}
+    /* Never a rank nobody can stand behind — the same rule the tile obeys. */
+    var line='You have '+pts+' point'+(pts===1?'':'s')+'.';
+    if(me&&n) line+=' You are number '+me+' of '+n+'.';
+    if(lead && !(me===1)) line+=' '+lead+' is leading.';
+    else if(me===1) line+=' You are leading.';
+    return line;
+  };
+  V.globalCmd=function(t){
+    if(/^(?:who.?s winning|whos winning|who is winning|what.?s the score|score|where am i|my score|how am i doing)$/.test(t)){
+      V.deafSay(V.navSay()); return true;
+    }
+    if(/^(?:go home|home|take me home)$/.test(t)){ V.deaf(); try{ navGo('home'); }catch(_){} return true; }
+    if(/^(?:board|the board|leaderboard|go to the board|show the board)$/.test(t)){ V.deaf(); try{ navGo('board'); }catch(_){} return true; }
+    if(/^(?:stats|the stats|go to stats)$/.test(t)){ V.deaf(); try{ navGo('stats'); }catch(_){} return true; }
+    if(/^(?:gametime|game time|the game|back to the game)$/.test(t)){ V.deaf(); try{ navGo('gametime'); }catch(_){} return true; }
+    return false;
+  };
+
   /* ---- THE PRE-GAME CARD ---------------------------------------------
      "With the opening question it should ask. Like rebounds, who will have
      the most rebounds — you can say it and it takes it in. This is
@@ -7902,6 +8009,15 @@ var VX=(function(){
   /* Heard something on the pick sheet. Same shape as V.heard, deliberately
      separate: the commands differ (next/back move CARDS, not questions) and
      a pick here is not a changeable tap on a running clock. */
+  /* Between rounds there is no question, no pick card and no Caught It —
+     which is 90% of a game night, and exactly when somebody asks who is
+     winning. V.heard returns early on an empty option set, so the commands
+     get their own way in. */
+  V.heardAnywhere=function(raw){
+    if(!V.on) return false;
+    var t=String(raw==null?'':raw).toLowerCase().replace(/[^a-z0-9' ]+/g,' ').replace(/\s+/g,' ').trim();
+    try{ return V.globalCmd(t); }catch(_){ return false; }
+  };
   V.heardPick=function(raw){
     if(!V.on || !V.onPickCard()) return false;
     var opts=V.pickOpts();
@@ -11639,6 +11755,16 @@ function renderCiCard(q){
   Array.prototype.forEach.call(card.querySelectorAll('.ciopt'), function(b){
     b.onclick=function(){ if(!locked) ciPick(q, b.getAttribute('data-civ')); };
   });
+  /* SAY IT OUT LOUD. This card arrives unasked, lives for seconds, and the
+     player it is aimed at is looking at a television. Announced once per
+     question — CI_SPOKEN guards a repaint, which happens every tick as the
+     lock bar moves and would otherwise read the prompt over and over. */
+  try{
+    if(!locked && typeof VX!=='undefined' && VX.on){
+      var _k=String((q&&q.id)||(q&&q.prompt)||'');
+      if(_k && VX.spokeCatch!==_k){ VX.spokeCatch=_k; VX.mount(); VX.askCatch(); }
+    }
+  }catch(_){}
   var mb=card.querySelector('.cimute'); if(mb) mb.onclick=function(){ PCI.muted=true; card.style.display='none'; try{ document.body.classList.remove('ciopen'); }catch(_){} };
   var hb=card.querySelector('[data-cihide]'); if(hb) hb.onclick=function(){ card.style.display='none'; try{ if(typeof renderGametime==='function') renderGametime(); }catch(_){} };
   /* YOUR ANSWER IS IN — THE CARD GETS OUT OF THE WAY. A locked card that
@@ -13808,7 +13934,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-pickvoice.135';
+const STATS_BUILD='2026-08-18-catchvoice.136';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
