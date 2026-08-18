@@ -5108,6 +5108,29 @@ function boardStatic(){
        answering anything once the game is live. The existing
        home.the-game-is-on-the-first-screen only asserts the matchup is
        above the fold, which is why this got through. */
+    /* THE WAIT IS 90% OF THE NIGHT AND IT HAS TO SAY WHAT IT IS. Measured
+       on GN12: 106 minutes, 11 of them answering, 95 waiting — 27, 32 and
+       36 minutes between rounds. For all of it the button read "opens when
+       the host pushes it", which names a person who has not existed since
+       the runner shipped and never says WHEN. Two devices, three silences,
+       and the founder's word for it was "stuck". */
+    /* SCOPED TO THE FUNCTION, not the file. The first version searched the
+       whole of index.html for the old sentence and went red on two
+       COMMENTS — including the one directly above the fix, which quotes the
+       old copy to explain why it went. That is the unanchored-search false
+       green's evil twin: an unanchored search producing a false RED, on
+       prose. Slice to the function before asserting on its contents. */
+    const gsr=(src.match(/function gtStartRow\(\)\{[\s\S]*?\n\}/)||[''])[0];
+    check('night.the-wait-says-what-it-is-waiting-for',
+      /* Match the CODE form, not the words. The fix's own comment quotes the
+         old sentence to explain why it went, and a plain substring search
+         cannot tell an explanation from an instruction. The concatenation
+         only appears when it is a string being built. */
+      !!gsr && gsr.indexOf("+' opens when the host pushes it'") < 0
+        && gsr.indexOf("opens when this '+(L.period||'quarter')+' ends") >= 0,
+      'the between-rounds button still blames a host for the wait',
+      'there is no host — the runner opens a round off the game clock, and the player is owed the trigger, not a name');
+
     check('home.the-time-and-the-channel-survive',
       !/#s-landing\.mq #landingTip\{[^}]*display:\s*none/.test(src)
         && /#s-landing\.mq #landingTip\{[^}]*display:block !important/.test(src),

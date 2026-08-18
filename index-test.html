@@ -6916,7 +6916,8 @@ function liveRoundBlocked(qi){
 function startQuarter(qi){
   var _blk=liveRoundBlocked(qi);
   if(_blk==='no-host'){
-    try{ toast('The host hasn\u2019t opened this '+L.period+' yet \u2014 it appears here the moment they do.'); }catch(_){}
+    /* Same correction as the button above: nobody is pushing anything. */
+    try{ toast('This '+(L.period||'quarter')+' is still being played \u2014 the questions open the moment it ends.'); }catch(_){}
     return;
   }
   if(_blk){
@@ -7791,6 +7792,22 @@ var VX=(function(){
       else ok('It understood that as: '+(m.kind==='pick'?('answer '+(m.i+1)):m.kind)+'.');
     }
     if(V.hasOut){ var vv=V.voice(); ok('Reading voice: '+(vv?vv.name:'the browser default')+'.'); }
+    /* SAY WHICH THING THIS PROVED. Founder, looking at a panel that had
+       just correctly reported a working microphone: "it seems like it
+       captured it but then it doesn't show it right." He was right to be
+       unconvinced — every line above is about the MICROPHONE, and none of
+       them is about whether an answer was saved. Those are different
+       claims and the panel was letting the good one stand in for the one
+       that matters. */
+    if(V.onAQuestion()){
+      var sel=null;
+      try{ var e=document.querySelector('#qOpts .opt.sel span'); sel=e?e.textContent:null; }catch(_){}
+      if(sel) ok('YOUR ANSWER RIGHT NOW: \u201c'+sel+'\u201d — that is what would be locked in.');
+      else hm('No answer is selected yet. Say a number, then check this again.');
+    }else{
+      hm('This is a MICROPHONE test only — nothing here saves an answer. '
+        +'Open this during a question to test answering itself.');
+    }
     return L;
   };
   V.openCheck=function(){
@@ -13521,7 +13538,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-audiosession.131';
+const STATS_BUILD='2026-08-18-thewait.132';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -17034,9 +17051,32 @@ function gtStartRow(){
          tips" told a player at 9:40pm, mid-third-quarter, something they
          could see with their own eyes was false — and taught them the app
          was not paying attention to the game it was about. */
-      var why = (blk==='no-host')
-        ? (roundTag(qi)+' opens when the host pushes it')
-        : (roundTag(qi)+' opens when the game tips');
+      /* MEASURED ON GAME NIGHT #12: a player spent 95 of the night's 106
+         minutes with nothing to answer — 27, 32 and 36 minutes between
+         rounds — and for every one of those minutes this button said
+         "Q2 opens when the host pushes it".
+
+         That sentence is wrong twice. THERE IS NO HOST: the runner opens a
+         round off the game clock and has done since 13 August, so this was
+         COPY DESCRIBING A WORLD THAT NO LONGER EXISTS — the same bug the
+         Control Room's score panel had, and the same fix. And it never
+         said WHEN, which is the only thing the player wanted to know. Two
+         devices, three long silences, and the founder's word for it was
+         "stuck". The app was working perfectly and telling him nothing.
+
+         So name the real trigger — the quarter ending, in this sport's own
+         word for a quarter — and show the live clock, which GS.detail
+         already carries straight from the feed. No estimate, no countdown
+         computed from a guess: if the feed cannot say, this says less
+         rather than inventing a number. */
+      var why;
+      if(blk==='no-host'){
+        var det=''; try{ det=String(GS.detail||'').trim(); }catch(_){}
+        why = roundName(qi)+' opens when this '+(L.period||'quarter')+' ends'
+            + (det ? (' \u00b7 ' + det) : '');
+      }else{
+        why = roundTag(qi)+' opens when the game tips';
+      }
       return '<button class="btn ghost" style="margin-top:11px" disabled>'
         + esc(why) + '</button>';
     }

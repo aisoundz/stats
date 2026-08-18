@@ -345,6 +345,26 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     return !/not one of the answers/i.test(bad) && /microphone works/i.test(good);
   });
 
+  /* THE CHECK MUST NOT LET "THE MIC WORKS" STAND IN FOR "YOUR ANSWER WAS
+     SAVED". The founder looked at a panel correctly reporting a working
+     microphone and said it "doesn't show it right" — because every line in
+     it was about the microphone and none about the answer. */
+  R['the-check-says-it-is-only-testing-the-mic'] = await p.evaluate(()=>{
+    try{ document.getElementById('qOpts').innerHTML=''; }catch(_){}
+    VX.enable(); VX.lastHeard='two';
+    const L=VX.check().map(r=>r[1]).join(' | ');
+    VX.lastHeard='';
+    return /MICROPHONE test only/i.test(L) && /nothing here saves an answer/i.test(L);
+  });
+  R['on-a-question-it-shows-the-answer-that-would-lock'] = await p.evaluate(()=>{
+    S.mode='live'; S.qi=0; S.ni=0; S.answered=false; go('live'); loadQuestion();
+    const o=document.querySelectorAll('#qOpts .opt');
+    if(!o.length) return false;
+    answer(o[1].querySelector('span').textContent, o[1]);
+    const L=VX.check().map(r=>r[1]).join(' | ');
+    return /YOUR ANSWER RIGHT NOW/i.test(L) && !/MICROPHONE test only/i.test(L);
+  });
+
   await p.evaluate(()=>{ VX.disable(); window.__said=[]; window.__recStarts=0;
                          VX.askQuestion(); VX.reveal('x'); VX.roundOpen(1,true); VX.locked('y'); });
   await p.waitForTimeout(200);
