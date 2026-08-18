@@ -365,6 +365,46 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     return /YOUR ANSWER RIGHT NOW/i.test(L) && !/MICROPHONE test only/i.test(L);
   });
 
+  /* ---- THE OPTIONS ARE PART OF THE QUESTION -----------------------
+     Founder, after a test run: "right now it only gives the question, then
+     someone has to look at the screen." A question without its answers
+     cannot be answered with your eyes on the television, which is the
+     entire feature. */
+  await p.evaluate(()=>{ VX.enable(); S.mode='live'; S.qi=0; S.ni=0; S.answered=false;
+                         go('live'); window.__said=[]; loadQuestion(); });
+  await p.waitForTimeout(700);
+  R['every-option-on-screen-is-read-aloud'] = await p.evaluate(()=>{
+    const opts=[...document.querySelectorAll('#qOpts .opt span')].map(e=>e.textContent.trim()).filter(Boolean);
+    const said=window.__said.join(' ');
+    return opts.length>1 && opts.every(o=>said.indexOf(o)>=0);
+  });
+  R['the-options-arrive-with-the-question-not-on-a-timer'] = await p.evaluate(()=>{
+    /* One utterance carries both. A second, delayed utterance was
+       cancellable by any voice in the room and often never arrived. */
+    const opts=[...document.querySelectorAll('#qOpts .opt span')].map(e=>e.textContent.trim()).filter(Boolean);
+    const one=window.__said.find(u=>u.indexOf(opts[0])>=0 && u.indexOf(opts[opts.length-1])>=0);
+    return !!one && /\?|—/.test(one);          // the question text is in the same breath
+  });
+  /* THE CLOCK STARTS WHEN THE QUESTION HAS BEEN DELIVERED. */
+  R['the-clock-restarts-when-the-reading-ends'] = await p.evaluate(()=>{
+    let restarts=0; const real=window.startTimer;
+    window.startTimer=function(){ restarts++; return real.apply(this,arguments); };
+    S.answered=false; window.__said=[]; loadQuestion();
+    return new Promise(res=>setTimeout(()=>{
+      window.startTimer=real;
+      res(restarts>=2);        // once by loadQuestion, once when speech ends
+    }, 600));
+  });
+  R['a-tapping-player-still-gets-a-clock-immediately'] = await p.evaluate(()=>{
+    VX.disable();
+    let started=0; const real=window.startTimer;
+    window.startTimer=function(){ started++; return real.apply(this,arguments); };
+    S.answered=false; loadQuestion();
+    window.startTimer=real;
+    VX.enable();
+    return started===1;       // exactly one, no deferral, nothing changed for them
+  });
+
   await p.evaluate(()=>{ VX.disable(); window.__said=[]; window.__recStarts=0;
                          VX.askQuestion(); VX.reveal('x'); VX.roundOpen(1,true); VX.locked('y'); });
   await p.waitForTimeout(200);

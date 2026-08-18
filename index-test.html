@@ -7649,36 +7649,75 @@ var VX=(function(){
     if(!qt) return;
     V.mount();
     var opts=curOpts();
-    /* The count first, then the question, then nothing. Options are held
-       back deliberately: most people answer a two-option question the
-       moment they hear it, and reading four bands out loud costs six
-       seconds of a twenty-second clock that is already running. If nobody
-       says anything, they get read. */
+    /* THE OPTIONS ARE PART OF THE QUESTION. They used to be held back and
+       read only after four seconds of silence, to save clock — and the
+       founder found the hole in that immediately: "right now it only gives
+       the question, then someone has to look at the screen."
+
+       Which is the whole feature, gone. A question without its answers is
+       not something you can answer with your eyes on the television, and
+       saving three seconds on a mechanic nobody can use saves nothing.
+       Worse, the rescue prompt was cancelled the moment the microphone
+       heard ANY voice — so in a room with a game on, it frequently never
+       arrived at all.
+
+       One breath: the count, the question, the options. That is what a
+       voice assistant does and it is what a person expects. */
     var lead=(again?'':(cnt?cnt+'. ':''))+qt;
+    var body=lead + (opts.length ? (' \u2026 ' + V.optionLine(opts)) : '');
     V.wantEar=true;
-    V.say(lead, function(){
+    V.optsRead=true;
+    var t0=Date.now();
+    V.say(body, function(){
       V.ear();
-      /* Longer than it was. The prompt is now cancelled the instant the
-         microphone hears anybody, so its only job is to rescue a silence —
-         and rushing it was what made it interrupt people. */
-      V.hint=setTimeout(function(){ V.readOptions(); }, opts.length>2 ? 4500 : 6000);
+      /* THE TWENTY SECONDS START WHEN YOU KNOW WHAT IS BEING ASKED.
+         Reading a four-option question aloud takes six to nine seconds, and
+         the clock was already running through all of it — so a voice player
+         was answering a twenty-second question in twelve while a tapping
+         player got the full twenty. Not a small handicap on the mechanic
+         this product wants to be known for.
+
+         This is ONE RULE, not two clocks: your time starts when the
+         question has been delivered. For somebody reading the screen that
+         is instantly, and nothing changes for them. For somebody listening
+         it is when the sentence ends. Nobody gains — the speed bonus is
+         capped by the same twenty seconds either way — the listener simply
+         stops being penalised for listening.
+
+         Capped, and deliberately fails in the direction that costs nobody:
+         the clock has ALREADY been started by loadQuestion, so if this
+         never runs, or runs late, the question still has a running timer.
+         A reading that somehow took longer than twelve seconds does not get
+         to hand out a fresh twenty. */
+      try{
+        var spent=Date.now()-t0;
+        if(spent<12000 && !S.answered && typeof startTimer==='function'){
+          startTimer(S.mode==='live'?20:15);
+        }
+      }catch(_){}
     });
     V.paint();
   };
+  /* One place that turns options into something sayable, used by the
+     question and by "options" alike — they were two copies and they
+     drifted the day numeric sets got their own wording. */
+  V.optionLine=function(opts){
+    if(!opts || !opts.length) return '';
+    return numericOpts(opts)
+      ? ('Say the answer. ' + opts.join('. '))
+      : opts.map(function(o,i){ return (i+1)+'. '+o; }).join('. ');
+  };
+  /* Kept for the spoken "options" command and for repeat. It no longer
+     fires on a timer — the options are said with the question now. */
   V.readOptions=function(){
-    if(!V.on || V.optsRead) return;
-    if(V.answeredNow()) return;
-    V.optsRead=true;
+    if(!V.on) return;
     var opts=curOpts(); if(!opts.length) return;
     /* NUMBERED PROMPTS ON A NUMBERED ANSWER SET ARE A TRAP. "One. None.
        Two. One. Three. Two." is not a list anybody can follow, and it
        actively teaches the player to say a position when the position and
        the answer are different numbers. Read those plainly and ask for the
        answer itself. */
-    var say = numericOpts(opts)
-      ? ('Say the answer. ' + opts.join('. '))
-      : opts.map(function(o,i){ return (i+1)+'. '+o; }).join('. ');
-    V.deafSay(say);
+    V.deafSay(V.optionLine(opts));
   };
   V.answeredNow=function(){
     try{ return !!document.querySelector('#qOpts .opt.sel'); }catch(_){ return false; }
@@ -13538,7 +13577,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-thewait.132';
+const STATS_BUILD='2026-08-18-readthem.133';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
