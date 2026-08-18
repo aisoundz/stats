@@ -28,9 +28,15 @@
 # four o'clock start for a ten o'clock game is six hours of a process, a
 # lease and a feed poll for a game that has not begun.
 #
-#   DATE=2026-08-19 host/start-slate.sh --build      # morning: build + publish
-#   host/start-slate.sh                              # every 30m: start what is due
-#   LEAGUE=mlb host/start-slate.sh --build           # sport two
+#   DATE=2026-08-19 host/start-slate.sh --build          # morning: build + publish
+#   host/start-slate.sh                                  # every 30m: start what is due
+#   LEAGUES="wnba nfl mlb" host/start-slate.sh --build    # several sports, one day
+#
+# LEAGUES IS PLURAL ON PURPOSE. From September this box runs basketball and
+# football and baseball on the same evening, and they share ONE slate
+# document per date — because "which game are you watching?" is a question
+# across sports, not within one. build-slate.js merges rather than
+# overwrites, so the order these run in does not matter.
 #
 # COST. Slate rooms tick at 30s rather than 20s, start 30 minutes before
 # their own tip, and stand down if nobody has joined in the 60 minutes
@@ -46,7 +52,29 @@ MODE="start"
 [ "$1" = "--dry" ]   && MODE="dry"
 
 DATE="${DATE:-$(date +%F)}"
-LEAGUE="${LEAGUE:-wnba}"
+# ============ BUILDING AND RUNNING ARE TWO DIFFERENT DECISIONS ========
+# Founder, 18 Aug: "baseball we can do all games and turn it on when we want
+# to. This will not be on till we turn it all the way on."
+#
+# BUILDING a night is a handful of Firestore writes and costs essentially
+# nothing, so build everything that is in season — the schedule docs and the
+# banks are then already there, checked, and visible in the picker the day
+# somebody decides to switch a league on.
+#
+# RUNNING a night is a node process, a lease and a feed poll every thirty
+# seconds for four hours. That is the thing to be careful with, and it is
+# the thing this switch controls.
+#
+#   LEAGUES     which leagues get schedule docs and banks   (build it all)
+#   RUN_LEAGUES which leagues actually get runners          (turn it on)
+#   MAX_ROOMS   most rooms to start per league per day      (start small)
+#
+# A league in LEAGUES but not RUN_LEAGUES is fully built and simply not
+# played. Its rooms exist, its questions are published, and switching it on
+# is one word in a cron line — not a deploy.
+LEAGUES="${LEAGUES:-${LEAGUE:-wnba}}"
+RUN_LEAGUES="${RUN_LEAGUES:-$LEAGUES}"
+MAX_ROOMS="${MAX_ROOMS:-0}"        # 0 = no cap
 RUN_MINUTES="${RUN_MINUTES:-240}"
 TICK_MS="${TICK_MS:-30000}"
 IDLE_EXIT_MIN="${IDLE_EXIT_MIN:-60}"
@@ -55,26 +83,39 @@ KEY="$HOME/.secrets/stats-firebase-admin.json"
 LOGDIR="$HOME/gamenight-logs"
 mkdir -p "$LOGDIR"
 
-echo "=== slate $LEAGUE $DATE  mode=$MODE  ($(date '+%F %T %Z')) ==="
+echo "=== slate [$LEAGUES] $DATE  mode=$MODE  ($(date '+%F %T %Z')) ==="
 
 [ -f "$KEY" ] || { echo "FATAL: no service account at $KEY"; exit 1; }
 export FIREBASE_SERVICE_ACCOUNT="$(cat "$KEY")"
 
 # ---- 1. build every night that is not already claimed ----------------
-MANIFEST="$LOGDIR/slate-$LEAGUE-$DATE.tsv"
+ALL="$LOGDIR/slate-all-$DATE.tsv"
 
 if [ "$MODE" = "build" ] || [ "$MODE" = "dry" ]; then
   BUILDFLAG=""; [ "$MODE" = "build" ] && BUILDFLAG="--apply"
-  if ! DATE="$DATE" LEAGUE="$LEAGUE" node host/build-slate.js $BUILDFLAG --manifest > "$MANIFEST"; then
-    echo "FATAL: build-slate failed"; exit 1
-  fi
-  GAMES=$(wc -l < "$MANIFEST")
-  echo "--- $GAMES game(s) built into the manifest ---"
-  [ "$MODE" = "dry" ] && { echo "dry run — nothing written, nothing started"; cut -f1 "$MANIFEST" | sed 's/^/    /'; exit 0; }
+  : > "$ALL"
+  for LG in $LEAGUES; do
+    MANIFEST="$LOGDIR/slate-$LG-$DATE.tsv"
+    # A league with no games today is NOT a failure — most leagues are out
+    # of season most of the time, and a hard exit there would stop every
+    # league listed after it.
+    if DATE="$DATE" LEAGUE="$LG" node host/build-slate.js $BUILDFLAG --manifest > "$MANIFEST"; then
+      # Tag every manifest row with its league so the start pass can tell
+      # which switch applies to it.
+      sed "s/^/$LG\t/" "$MANIFEST" >> "$ALL"
+      echo "--- $LG: $(wc -l < "$MANIFEST") game(s) built ---"
+    else
+      echo "--- $LG: nothing to build today ---"
+      : > "$MANIFEST"
+    fi
+  done
+  GAMES=$(wc -l < "$ALL")
+  echo "--- $GAMES game(s) built in total ---"
+  [ "$MODE" = "dry" ] && { echo "dry run — nothing written, nothing started"; cut -f1 "$ALL" | sed 's/^/    /'; exit 0; }
 
   # Publish each bank now, in the morning, so a failure is found in daylight
   # rather than four minutes before a tip nobody is watching.
-  while IFS=$'\t' read -r NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT; do
+  while IFS=$'\t' read -r LG NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT; do
     [ -n "$NIGHT_ID" ] || continue
     if NIGHT_ID="$NIGHT_ID" HOME_NICK="$HOME_NICK" AWAY_NICK="$AWAY_NICK" \
        ESPN_EVENT="$ESPN_EVENT" SPORT="$SPORT" \
@@ -83,22 +124,40 @@ if [ "$MODE" = "build" ] || [ "$MODE" = "dry" ]; then
     else
       echo "  FAIL $NIGHT_ID — its bank would not publish (see $LOGDIR/$NIGHT_ID.log)"
     fi
-  done < "$MANIFEST"
+  done < "$ALL"
   echo "--- built; runners start from the half-hourly cron line ---"
   exit 0
 fi
 
 # ---- start mode: only what is due ------------------------------------
-[ -f "$MANIFEST" ] || { echo "no manifest for $DATE — run --build first"; exit 0; }
-GAMES=$(wc -l < "$MANIFEST")
+[ -f "$ALL" ] || { echo "no manifest for $DATE — run --build first"; exit 0; }
+GAMES=$(wc -l < "$ALL")
 echo "--- $GAMES game(s) in tonight's manifest ---"
 [ "$GAMES" -gt 0 ] || exit 0
 NOW_EPOCH=$(date +%s)
+echo "--- running: [$RUN_LEAGUES]${MAX_ROOMS:+  cap $MAX_ROOMS/league}${MAX_ROOMS:+ }---"
+STARTED_COUNT=""   # one char per started room, per league, counted with ${#}
 
 # ---- 2. publish a plan and start a runner for each --------------------
-while IFS=$'\t' read -r NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT; do
+while IFS=$'\t' read -r LG NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT; do
   [ -n "$NIGHT_ID" ] || continue
   LOG="$LOGDIR/$NIGHT_ID.log"
+
+  # Built but not switched on. The room and its questions exist; nobody is
+  # hosting it. Silent by design — this is the normal state for most
+  # leagues most of the time and should not fill the log.
+  case " $RUN_LEAGUES " in *" $LG "*) ;; *) continue ;; esac
+
+  # Start small. A cap is per league per run, and a room that is skipped for
+  # the cap is SAID OUT LOUD — a silent truncation reads as "we covered
+  # everything" when we did not.
+  if [ "$MAX_ROOMS" -gt 0 ]; then
+    RUNNING=$(ls "$LOGDIR"/*.lock 2>/dev/null | wc -l)
+    if [ "$RUNNING" -ge "$MAX_ROOMS" ]; then
+      echo "  CAP  $NIGHT_ID — $RUNNING room(s) already up, cap is $MAX_ROOMS"
+      continue
+    fi
+  fi
 
   # Is this game due? A room opens LEAD_MIN before its own tip and not before.
   TIP_EPOCH=$(date -d "$TIP" +%s 2>/dev/null || echo 0)
@@ -137,6 +196,6 @@ while IFS=$'\t' read -r NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT; do
   ) 9> "$LOGDIR/$NIGHT_ID.lock" &
 
   sleep 2   # stagger, so N runners do not all hit the feed on the same second
-done < "$MANIFEST"
+done < "$ALL"
 
 echo "--- slate started; flagship (if any) runs from its own cron line ---"

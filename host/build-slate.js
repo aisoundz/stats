@@ -280,7 +280,10 @@ function prettyDate(iso){
       away: g.awayNick, home: g.homeNick,
       awayAbbr: g.awayAbbr, homeAbbr: g.homeAbbr,
       awayColor: g.awayColor, homeColor: g.homeColor,
-      venue: g.venue, net: g.net, flagship: !!owner
+      venue: g.venue, net: g.net, flagship: !!owner,
+      /* The merge above filters on this. A game with no league is a game
+         the next league's build cannot tell apart from its own. */
+      league: LEAGUE, sport: L.sport
     });
 
     if(owner){
@@ -363,19 +366,72 @@ function prettyDate(iso){
       { merge: true });
     log('wrote', `schedule/${x.g.nightId}`);
   }
-  await db.doc(`slate/${DATE}`).set(
-    Object.assign({}, slate, { at: admin.firestore.FieldValue.serverTimestamp() }));
+  /* ============ ONE SLATE A DAY, MANY LEAGUES IN IT =================
+     From September this box runs WNBA and NFL and MLB on the same evening,
+     and `slate/{date}` is ONE document. A plain .set() here — which is what
+     this was — means building the NFL slate at 8am wipes every basketball
+     game out of the picker, and the person who came for the game in the
+     email opens the app and cannot find it.
+
+     So: keep every game that belongs to ANOTHER league, replace only this
+     league's. Read-modify-write is safe because the builder runs once per
+     league per morning from one cron line, in sequence, on one machine.
+     If that ever stops being true this needs a transaction.
+
+     "Which game are you watching?" is the right question ACROSS sports, not
+     within one — a fan on a Saturday in September is choosing between a
+     football game and a basketball game, not between two football games. */
+  const slateRef = db.doc(`slate/${DATE}`);
+  const prior = await slateRef.get();
+  const fresh = new Set(slate.games.map(g => g.nightId));
+  /* DEDUPE ON nightId, NOT JUST ON LEAGUE. Filtering by league alone was
+     enough for a slate written by this script — but it is not enough for
+     one written by an EARLIER version of it, whose games carry no `league`
+     field at all. Those would fail the league test, be kept, and then be
+     added again: the same game twice in the picker, which reads as the app
+     being broken rather than as a migration. A nightId is the one thing
+     that is unique whatever wrote it. */
+  const kept = (prior.exists ? (prior.data().games || []) : [])
+                 .filter(g => g && g.nightId && g.league !== LEAGUE && !fresh.has(g.nightId));
+  const merged = kept.concat(slate.games)
+                     .sort((a,b) => String(a.tipISO).localeCompare(String(b.tipISO)));
+  const leagues = [...new Set(merged.map(g => g.league).filter(Boolean))];
+  if(kept.length)
+    log('merge', `kept ${kept.length} game(s) from ${[...new Set(kept.map(g=>g.league))].join(', ')} already on this date`);
+
+  await slateRef.set({
+    date: DATE, games: merged, leagues,
+    flagship: merged.filter(g => g.flagship).map(g => g.nightId),
+    at: admin.firestore.FieldValue.serverTimestamp()
+  });
   /* THE POINTER, exactly like schedule/current. The app cannot work out
      which date's slate is "tonight" on its own: a 10pm ET tip is already
      tomorrow in UTC, and a phone's own clock is in whatever zone the person
      is standing in. One pointer, written by the thing that knows, read by
      everything else — rather than five clients each deriving a date and
      one of them getting it wrong on the night nobody checks. */
-  await db.doc('slate/current').set(
-    { date: DATE, league: LEAGUE, sport: L.sport, games: slate.games.length,
-      at: admin.firestore.FieldValue.serverTimestamp() });
-  log('key', `slate/current → ${DATE}`);
-  log('key', `slate/${DATE} — ${offered.length} game(s) in the picker, ${games.length} built here` +
+  /* THE POINTER ONLY EVER NAMES TODAY.
+     Building a FUTURE date is a normal and useful thing to do — checking
+     Saturday's ten-game football slate on a Wednesday, for instance — and
+     the first version of this moved slate/current every time, so a
+     rehearsal for Saturday would have shown Saturday's games to everyone
+     opening the app on Wednesday night. The pointer answers "what is on
+     RIGHT NOW", and a build for another day is not an answer to that.
+
+     Today is the BOX's today, deliberately. It is the machine that runs the
+     nights, its clock is the one the cron fires on, and a phone's clock is
+     in whatever zone its owner is standing in. */
+  const today = new Date().toLocaleDateString('en-CA');
+  if(DATE === today){
+    await db.doc('slate/current').set(
+      { date: DATE, leagues, games: merged.length,
+        at: admin.firestore.FieldValue.serverTimestamp() });
+    log('key', `slate/current → ${DATE} · ${merged.length} game(s) across ${leagues.join(', ')}`);
+  } else {
+    log('note', `${DATE} is not today (${today}) — slate/${DATE} is written and ready, ` +
+                'but slate/current is left alone so tonight keeps pointing at tonight');
+  }
+  log('key', `slate/${DATE} — ${offered.length} ${LEAGUE.toUpperCase()} game(s), ${games.length} built here` +
              (slate.flagship.length ? ` (flagship ${slate.flagship.join(', ')} runs alongside)` : ''));
   log('next', `publish each plan:  ${games.map(x =>
     `NIGHT_ID=${x.g.nightId} HOME_NICK="${x.g.homeNick}" AWAY_NICK="${x.g.awayNick}" node host/publish.js`).join('\n           ')}`);
