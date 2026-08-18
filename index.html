@@ -6805,9 +6805,24 @@ var VX=(function(){
   var STOP=['or','the','a','an','of','and','was','were','is','are','it','that',
             'this','to','in','on','at','be','been','did','do','does','how','many'];
   function stem(w){ return (w.length>3 && /s$/.test(w) && !/ss$/.test(w)) ? w.slice(0,-1) : w; }
+  /* A DIGIT AND ITS WORD ARE THE SAME ANSWER. The bank writes "3 or more"
+     and a person says "three or more"; the bank writes "2" and a person
+     says "two". Comparing them as raw strings makes those different
+     answers, which is how a correct answer became a wrong one. */
+  var DIG={'0':'zero','1':'one','2':'two','3':'three','4':'four','5':'five',
+           '6':'six','7':'seven','8':'eight','9':'nine','10':'ten','11':'eleven','12':'twelve'};
   function words(x){
-    return norm(x).split(' ').filter(function(w){ return w && STOP.indexOf(w)<0; }).map(stem);
+    return norm(x).split(' ').filter(function(w){ return w && STOP.indexOf(w)<0; })
+      .map(function(w){ return DIG[w] || stem(w); });
   }
+  /* Is this option set made of numbers? Then reading "1. None. 2. one.
+     3. two." out loud is gibberish, and the position prompt is a trap. */
+  function numericOpts(opts){
+    var n=0;
+    (opts||[]).forEach(function(o){ var w=words(o); if(w.length && DIGW.indexOf(w[0])>=0) n++; });
+    return n>=2;
+  }
+  var DIGW=['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve'];
   function countIn(list, pool){
     var n=0; for(var i=0;i<list.length;i++){ if(pool.indexOf(list[i])>=0) n++; } return n;
   }
@@ -6934,26 +6949,6 @@ var VX=(function(){
 
     opts=opts||[];
 
-    /* ---- THE POSITION COMES FIRST -----------------------------------
-       We tell the player "say the number", so a bare number word means the
-       position and nothing else. It used to be checked LAST, behind the
-       text matching, which meant a set like None / Once / Twice / Three or
-       more turned "one" into two text candidates and refused — while the
-       app was on screen telling them to say exactly that. The instruction
-       we give out-loud has to be the rule that wins.
-
-       Homophones ("to", "for") still only count on a short utterance, so a
-       sentence with "for" in it is not an answer. And a position nobody
-       offered falls through to the words rather than being refused —
-       "four" against two options is somebody naming an option, not a
-       position. */
-    var stripped=t.replace(LEAD,'');
-    var ntoks=stripped.split(' ');
-    if(ntoks.length<=2 && NUM[ntoks[0]]!=null){
-      var idx=NUM[ntoks[0]];
-      if(idx<opts.length) return {kind:'pick', i:idx};
-    }
-
     /* ---- THEN THE WORDS, THE WAY PEOPLE ACTUALLY SAY THEM ------------
        THIS IS THE BUG THE FOUNDER FOUND, and it was a one-directional
        test: it asked whether what you SAID contained the option, and never
@@ -6974,7 +6969,13 @@ var VX=(function(){
        "Made free throws" and you have named neither — a coin toss written
        onto a player's card as though they chose it is the one direction
        this function may not fail in. */
-    var said=words(t);
+    /* STRIP THE RUN-UP ONCE, FOR BOTH PATHS. "four" and "I pick four" were
+       landing on different options — the words path saw three tokens and
+       declined, so the phrase fell through to position while the bare word
+       did not. Same intent, two answers, decided by whether the player was
+       chatty. */
+    var lead=t.replace(LEAD,'');
+    var said=words(lead);
     if(said.length){
       var cands=[];
       for(var i=0;i<opts.length;i++){
@@ -6993,6 +6994,33 @@ var VX=(function(){
         if(top.hit>nxt.hit || top.whole>nxt.whole) return {kind:'pick', i:top.i};
         return {kind:'ambiguous'};
       }
+    }
+
+    /* ---- THE POSITION, ONLY WHEN THE WORDS FOUND NOTHING ------------
+       THIS ORDER IS THE BUG THE FOUNDER HIT, AND IT COST HIM A QUESTION.
+       Position used to be checked FIRST. On "How many timeouts in Q1?" the
+       options are None / 1 / 2 / 3 or more — he said "two", meaning the
+       answer 2, and position-first handed him the SECOND option, which is
+       "1". He was marked wrong and then read the correct answer, which was
+       the number he had just said. That is the worst failure this feature
+       can have: not deaf, not confused — confidently wrong, on the record,
+       in a way that looks like the player's mistake.
+
+       Position was in front because token matching used to be SUBSTRING
+       matching, where "one" matched inside "None". Matching whole words
+       killed that collision, so the words can go back where they belong:
+       what you SAID beats where it happens to SIT. Position is now the
+       fallback for sets that carry no numbers at all — Yes / No, teams,
+       shot types — which is exactly where "say the number" is the only
+       instruction that makes sense.
+
+       Homophones ("to", "for") still only count on a short utterance, so a
+       sentence with "for" in it is never an answer. */
+    var stripped=lead;
+    var ntoks=stripped.split(' ');
+    if(ntoks.length<=2 && NUM[ntoks[0]]!=null){
+      var idx=NUM[ntoks[0]];
+      if(idx<opts.length) return {kind:'pick', i:idx};
     }
 
     // 3. yes / no, which people say instead of reading the option
@@ -7211,7 +7239,14 @@ var VX=(function(){
     if(V.answeredNow()) return;
     V.optsRead=true;
     var opts=curOpts(); if(!opts.length) return;
-    var say=opts.map(function(o,i){ return (i+1)+'. '+o; }).join('. ');
+    /* NUMBERED PROMPTS ON A NUMBERED ANSWER SET ARE A TRAP. "One. None.
+       Two. One. Three. Two." is not a list anybody can follow, and it
+       actively teaches the player to say a position when the position and
+       the answer are different numbers. Read those plainly and ask for the
+       answer itself. */
+    var say = numericOpts(opts)
+      ? ('Say the answer. ' + opts.join('. '))
+      : opts.map(function(o,i){ return (i+1)+'. '+o; }).join('. ');
     V.deafSay(say);
   };
   V.answeredNow=function(){
@@ -12846,7 +12881,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-17-roster-fix.124';
+const STATS_BUILD='2026-08-17-numbers.125';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

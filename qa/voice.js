@@ -32,8 +32,9 @@ function is(said, opts, want, why){
 }
 console.log('\nNUMBERS — the reliable path, and the one the prompt teaches');
 is('one',YN,'pick:Yes'); is('two',YN,'pick:No');
-is('number two',YN,'pick:No'); is('say three',BAND,'pick:Four or five');
-is('I pick four',BAND,'pick:Six or more'); is('4',BAND,'pick:Six or more');
+is('number two',YN,'pick:No'); is('say three',BAND,'pick:Two or three','a number means the band that holds it');
+is('I pick four',BAND,'pick:Four or five','chatty or terse, same answer');
+is('4',BAND,'pick:Four or five');
 
 console.log('\nTHE OPTION, SAID OUT LOUD');
 is('yes',YN,'pick:Yes'); is('nope',YN,'pick:No');
@@ -78,6 +79,26 @@ is('three or more',CNT,'pick:Three or more');
 const LAST=['Went in','Missed','Nobody got one off'];
 is('missed',LAST,'pick:Missed'); is('went in',LAST,'pick:Went in');
 is('nobody',LAST,'pick:Nobody got one off');
+
+console.log('\nNUMBERED ANSWERS — the founder was marked WRONG for the right answer');
+// "How many team timeouts in Q1?" — real practice question, real options.
+const HOWMANY=['None','1','2','3 or more'];
+is('two',HOWMANY,'pick:2','HE SAID TWO AND GOT "1". The whole bug.');
+is('one',HOWMANY,'pick:1');
+is('three',HOWMANY,'pick:3 or more','"three" means the band that holds three');
+is('none',HOWMANY,'pick:None');
+is('3 or more',HOWMANY,'pick:3 or more');
+is('three or more',HOWMANY,'pick:3 or more','said in words, written as a digit');
+const WORTH=['1','2','3','No basket — it ended on a miss or a turnover'];
+is('two',WORTH,'pick:2'); is('three',WORTH,'pick:3');
+is('no basket',WORTH,'pick:No basket — it ended on a miss or a turnover');
+const ADDED=['1','2','3','4+'];
+is('four',ADDED,'pick:4+'); is('two',ADDED,'pick:2');
+// and the sets with NO numbers must still take a position, because that is
+// the only instruction that makes sense for them
+is('two',YN,'pick:No','no numbers in the set — position still means position');
+is('one',YN,'pick:Yes');
+is('two',TEAM,'pick:Wings');
 
 console.log('\nAMBIGUITY — two candidates is a refusal, never a coin toss');
 is('yes or no',YN,'ambiguous','the player read the question back');
