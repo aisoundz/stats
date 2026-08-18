@@ -5150,12 +5150,22 @@ try{
     if(!b) return;
     e.preventDefault();
     var id = b.getAttribute('data-slate');
-    if(!id || !window.__SB_DB || !window.__SB_FS) return;
+    if(!id) return;
+    /* NO DATABASE HANDLE NEEDED, AND THAT IS THE FIX. This used to bail
+       silently unless window.__SB_DB and __SB_FS were both set — handles
+       assigned during the Firebase boot, absent on a fast tap and disturbed
+       by signing in. The symptom is exactly what the founder reported:
+       "after you pick one, it wont let you go to the other, you have to
+       refresh" and "when you sign in there is no way to go back and forth."
+
+       A switch navigates, so it never needed a database: remember the
+       choice and go. A control whose failure mode is doing nothing at all
+       is worse than one that errors. */
     b.disabled = true;
-    chooseGame(window.__SB_DB, window.__SB_FS, id).then(function(){
-      try{ paintSlate(); }catch(_){}
-      try{ b.disabled = false; }catch(_){}
-    }).catch(function(){ try{ b.disabled=false; }catch(_){} });
+    Promise.resolve(chooseGame(window.__SB_DB, window.__SB_FS, id))
+      .then(function(){ try{ paintSlate(); }catch(_){} })
+      .catch(function(){})
+      .finally(function(){ try{ b.disabled = false; }catch(_){} });
   }, false);
 }catch(_){}
 
@@ -5203,6 +5213,30 @@ async function chooseGame(db, F, nightId){
   if(!g){ try{ console.error('not a game on tonight\'s slate: '+nightId); }catch(_){} return false; }
   var here=''; try{ here=(GAME&&GAME.nightId)||''; }catch(_){}
   if(nightId === here){ try{ paintSlate(); }catch(_){} return true; }
+
+  /* ============ SWITCH IN PLACE WHEN THERE IS NOTHING TO LOSE ========
+     A reload is the only thing CERTAIN to leave nothing of the old room
+     behind, and mid-game that is worth it. But most switches happen while
+     somebody is on the landing deciding what to watch, and reloading there
+     is a white flash for nothing — founder: "at the top its not having a
+     smooth transition."
+
+     Mid-game reloads. Browsing swaps in place. GAME_SCREENS is the same
+     list that decides whether the tabs unlock, because it is the same
+     question: is this person INSIDE a game, or looking at one. */
+  var inGame=false;
+  try{ inGame = GAME_SCREENS.indexOf(S.place||'')>=0; }catch(_){}
+  if(!inGame && db && F){
+    slatePickSet(nightId);
+    try{ if(typeof trk==='function') trk('slate_pick',{night:nightId, from:here, mode:'in-place'}); }catch(_){}
+    var okNow = await loadNightConfig(db, F);
+    try{ paintSlate(); }catch(_){}
+    try{
+      var u2=new URL(location.href); u2.searchParams.set('game', nightId);
+      history.replaceState(null,'',u2.toString());   // the link stays shareable
+    }catch(_){}
+    return okNow;
+  }
 
   /* ============ CHANGING ROOMS IS A CHANGE OF EVERYTHING ==============
      Hydrating in place swaps the CONFIG and leaves the in-memory game
@@ -14924,7 +14958,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-readable.147';
+const STATS_BUILD='2026-08-18-switch.148';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
