@@ -3567,34 +3567,39 @@ window.STATS_FIREBASE = {
    re-skins to ANY game — NBA, G-League, college, WNBA.
    In production this loads from the nightly schedule feed. */
 const BB_GAME={
-  nightId:"gn12-2026-08-19-min-gs",
-  espnEvent:"401857157",   // verified against the WNBA scoreboard for 2026-08-19
-  tipISO:"2026-08-20T02:00:00Z",   // 10:00 pm ET / 7:00 pm PT. Never parsed from a display string.
+  nightId:"gn12-2026-08-17-dal-gs",
+  espnEvent:"401857151",   // verified against the WNBA scoreboard for 2026-08-17
+  tipISO:"2026-08-18T02:00:00Z",   // 10:00 pm ET / 7:00 pm PT. Never parsed from a display string.
   homeName:"Golden State Valkyries", homeAbbr:"GS", homeNick:"Valkyries", homeEmoji:"\u2694\uFE0F", homeColor:"#b38fcf",
-  awayName:"Minnesota Lynx", awayAbbr:"MIN", awayNick:"Lynx", awayEmoji:"\uD83D\uDC3E", awayColor:"#266092",
-  venue:"Chase Center", date:"Wed \u00B7 August 19", short:"August 19", shareDate:"AUG 19", night:"Game Night #12",
-  /* GAME NIGHT #12 \u2014 MINNESOTA AT GOLDEN STATE. Set up three days out,
-     the same lead time discipline as GN10 and GN11.
+  awayName:"Dallas Wings", awayAbbr:"DAL", awayNick:"Wings", awayEmoji:"\uD83E\uDEBD", awayColor:"#002b5c",
+  venue:"Chase Center", date:"Mon \u00B7 August 17", short:"August 17", shareDate:"AUG 17", night:"Game Night #12",
+  /* GAME NIGHT #12 \u2014 DALLAS AT GOLDEN STATE, MOVED UP TO TONIGHT.
+     This slot held Minnesota at Golden State on Wednesday; that game is now
+     GAME NIGHT #13 and keeps its own id, bank and roster. Nothing was
+     renamed in place \u2014 a night id that changes meaning is B26 with a
+     calendar attached.
 
-     Everything below was pulled fresh from ESPN, not carried over:
-       - espnEvent confirmed against the scoreboard for 2026-08-19 itself
-         (401857157) \u2014 Golden State are home at Chase Center, national
-         broadcast on USA Network.
-       - Both brand colours from the team endpoints (teams/129689 Golden
-         State, teams/8 Minnesota) \u2014 #b38fcf lavender against #266092
-         blue.
+     Everything below was pulled fresh from ESPN on the day, not carried over:
+       - espnEvent confirmed against the scoreboard for 2026-08-17 itself
+         (401857151) \u2014 Golden State are home at Chase Center, tip 10:00
+         ET / 7:00 PT, Peacock and NBCSN.
+       - Both brand colours from the scoreboard team blocks \u2014 #b38fcf
+         lavender against #002b5c navy, which are far enough apart that the
+         two sides of the scoreboard cannot read as one team.
        - Rosters ORDERED BY MINUTES PLAYED in each side's most recent
-         completed game (GS 401857138 vs Chicago, MIN 401857147 vs Las
-         Vegas \u2014 GN10's own game). Zandalasini/Burton/Charles led Golden
-         State at 30/26/25; Howard/Miles/McBride led Minnesota at 36/34/33.
-         Players who did not appear in that box score keep their place at
-         the end; ruled-out players sit last, struck through.
-       - Injury report, checked three days out: Golden State are without
-         Iliana Rupert (Out) and Janelle Salaun (Day-To-Day \u2014 worth a
-         second look nearer tip). Minnesota are without Liatu King and
-         Elena Buenavida (both Out). */
-  net:"USA Network",
-  tip:"Tip-off 10:00 ET \u00B7 9:00 CT \u00B7 7:00 PT \u00B7 USA Network"
+         completed game (GS 401857138 vs Chicago on Aug 13, DAL 401857143 vs
+         Indiana on Aug 14 \u2014 Game Night #8's own game). Zandalasini /
+         Burton / Charles led Golden State at 30/26/25; Bueckers / Smith /
+         Ogunbowale led Dallas at 37/35/30.
+       - Injury report, checked the afternoon of the game: Golden State are
+         without Iliana Rupert (Out) and Janelle Salaun (Day-To-Day). Dallas
+         are missing FOUR \u2014 Jessica Shepard, Azzi Fudd, Aziaha James and
+         Costanza Verona, all Out. That is a thinner Dallas bench than any
+         night we have run, and it is worth saying out loud in the room.
+       - Season series: Golden State lead it 2-0, both completed. Tonight's
+         own game is correctly not counted \u2014 that is B1. */
+  net:"Peacock \u00B7 NBCSN",
+  tip:"Tip-off 10:00 ET \u00B7 9:00 CT \u00B7 7:00 PT \u00B7 Peacock"
 };
 /* ============ LEAN — THE FOUR SURFACES ==============================
    Game Night #7 ran nine surfaces in front of three players and produced
@@ -3732,17 +3737,19 @@ const BB_ROSTER={ // full names \u2014 used on the prediction sheet & final revi
   /* ORDERED BY MINUTES PLAYED IN EACH SIDE'S LAST GAME, not alphabetically.
      ESPN's roster endpoint has no starter flag and no per-player stats, so
      the source is the box score of the most recent completed game
-     (GS 401857138 vs Chicago, MIN 401857147 vs Las Vegas \u2014 GN10's game).
+     (GS 401857138 vs Chicago Aug 13, DAL 401857143 vs Indiana Aug 14).
      Zandalasini/Burton/Charles led Golden State at 30/26/25;
-     Howard/Miles/McBride led Minnesota at 36/34/33.
+     Bueckers/Smith/Ogunbowale led Dallas at 37/35/30.
      Players who did not appear in that box score keep their place at the end,
-     and ruled-out players sit last where they are struck through. */
+     and ruled-out players sit last where they are struck through.
+     B26: this array, BB_GAME and BB_PREDS all describe ONE night and were
+     all three rewritten in the same edit. */
   home:["Cecilia Zandalasini","Veronica Burton","Kaila Charles","Gabby Williams","Kaitlyn Chen",
         "Kayla Thornton","Ashten Prechtel","Tiffany Hayes","Laeticia Amihere","Nadia Fingall",
-        "Juste Jocyte","Janelle Salaun","Miela Sowah","Kiah Stokes","Iliana Rupert"],
-  away:["Natasha Howard","Olivia Miles","Kayla McBride","Courtney Williams","Nia Coffey",
-        "Napheesa Collier","Maya Caldwell","Dorka Juhasz","Chloe Bibby","Antonia Delaere",
-        "Anastasiia Olairi Kosu","Eliska Joklova","Liatu King","Elena Buenavida"]
+        "Juste Jocyte","Miela Sowah","Kiah Stokes","Janelle Salaun","Iliana Rupert"],
+  away:["Paige Bueckers","Alanna Smith","Arike Ogunbowale","Awak Kuier","Alysha Clark",
+        "Odyssey Sims","Maddy Siegrist","Sug Sutton","Li Yueru","Haley Jones",
+        "Jessica Shepard","Azzi Fudd","Aziaha James","Costanza Verona"]
 };
 const BB_GROUPS=[{ab:BB_GAME.homeAbbr,name:BB_GAME.homeName,names:BB_ROSTER.home},
                  {ab:BB_GAME.awayAbbr,name:BB_GAME.awayName,names:BB_ROSTER.away}];
@@ -3798,15 +3805,15 @@ const BB_PREDS=[
   // against — never a claim about the real game. They must always be names
   // that exist in the roster above, or practice grades against a ghost.
   {id:"pts", q:"Who scores the most points?", label:"Most points", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Napheesa Collier", num:22, numLabel:"How many pts?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Paige Bueckers", num:24, numLabel:"How many pts?"},
   {id:"ast", q:"Who dishes the most assists?", label:"Most assists", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Olivia Miles", num:8, numLabel:"How many assists?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Veronica Burton", num:7, numLabel:"How many assists?"},
   {id:"stl", q:"Who racks up the most steals?", label:"Most steals", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Veronica Burton", num:2, numLabel:"How many steals?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Odyssey Sims", num:3, numLabel:"How many steals?"},
   {id:"reb", q:"Who grabs the most rebounds?", label:"Most rebounds", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Natasha Howard", num:10, numLabel:"How many rebounds?"},
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Alanna Smith", num:9, numLabel:"How many rebounds?"},
   {id:"blk", q:"Who swats the most blocks?", label:"Most blocks", base:50, bonus:50,
-   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Kiah Stokes", num:2, numLabel:"How many blocks?"}
+   opts:BB_ROSTER.home.concat(BB_ROSTER.away), groups:BB_GROUPS, answer:"Awak Kuier", num:2, numLabel:"How many blocks?"}
 ];
 /* 4 quarters × 4 questions. worth = quarter index+1 → 4 + 8 + 12 + 16 = 40 live pts.
    Every question is answerable by WATCHING the broadcast at the break — no lookups,
@@ -5232,6 +5239,11 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
     if(q)  q.style.display  = (k==='live')   ? '' : 'none';
     if(rv) rv.style.display = (k==='review') ? '' : 'none';
     try{ document.body.classList.toggle('qopen', k==='live' || k==='review'); }catch(_){}
+    /* THE MIC BELONGS TO THE QUESTION. Leave the question and it closes,
+       whatever else is happening. Speech is allowed to finish its sentence
+       — cutting the lock confirmation off mid-word to change screens is
+       worse than a second of overlap. */
+    try{ if(k!=='live'){ VX.clearHint(); VX.deaf(); } }catch(_){}
     if(k==='live'){ try{ ciStash(); }catch(_){} }
     /* The waiting room's own controls. Hidden during a question for the
        same reason the nav and the menu are — nothing else on screen while
@@ -6684,6 +6696,398 @@ function paintLiveStrip(){
   main.className='lsmain'+(lead?' lead':'');
   side.textContent = spd ? ('⚡ '+spd+' banked') : '';
 }
+/* ================= VOICE — PLAY WITH YOUR EYES ON THE GAME =============
+   The ask, from a player, and it is the best note this product has had
+   since the six-picks reversal: "people don't want to look at the screen."
+   That is not a feature request, it is the tagline being read back to us.
+   The whole promise is PAY ATTENTION TO THE GAME — and then we hand you a
+   phone and ask you to look at it four times a quarter. A question you can
+   hear and answer out loud is the first thing this app has ever done that
+   points your eyes AT the television instead of away from it, and it turns
+   a single-player phone game into something a room plays together.
+
+   FIVE RULES, and they are what keep this from being the thing that breaks
+   a game night:
+
+   1. VOICE IS AN INPUT, NOT A SECOND GAME. It owns no question, no clock,
+      no score and no answer. It reads the question out of `rounds` — the
+      owner — and it answers by calling `answer()` and `nextQuestion()`,
+      the exact functions the buttons call. There is no path through here
+      that can score, submit, or reveal anything on its own. That is ONE
+      FACT, MANY COPIES applied before the fact exists rather than after.
+
+   2. HEARING YOU IS A PICK, NEVER A LOCK. Speech recognition mishears, and
+      a mishearing that silently locked an answer would be worse than no
+      voice at all. So a heard answer does exactly what a tap does — it
+      selects, changeably, and the app says the option back to you. Locking
+      is its own word. The read-back is the safety mechanism: it is how you
+      find out it heard "None" when you said "once".
+
+   3. OFF MEANS NOTHING CHANGED. Every hook into the game is one wrapped,
+      guarded call. With voice off — the default — this file does nothing
+      at all, and a browser with no speech support behaves exactly like
+      today's app.
+
+   4. THE MIC IS ONLY ON WHILE A QUESTION IS. It starts when a question
+      opens and stops the moment it locks, the round ends, or you leave the
+      screen. Nobody's living room is listened to between quarters.
+
+   5. IT NEVER SPEAKS SOMETHING THAT IS NOT ALREADY ON THE SCREEN. B23 was
+      the answer going public 1.8 seconds before the card locked; a speaker
+      is a far faster leak than a screen. Everything spoken here is read
+      back out of the DOM or out of the question the player is looking at.
+
+   WHAT WE ARE MEASURING TONIGHT, said plainly because it is the honest
+   cost: reading a question out loud takes three to nine seconds, and the
+   twenty-second clock is NOT paused for it. So a voice player banks less
+   ⚡ than a tapping player on the same question. That is a real trade and
+   it is deliberately not fixed tonight — deferring the clock start until
+   speech ends is a change to the one number the leaderboard is built on,
+   and this product's own rule is to measure the dead air before building
+   for it. If tonight shows voice players consistently banking near zero,
+   that measurement is what earns the clock change, not this comment.
+
+   AND WHERE IT GOES: this is the shape an Alexa or Google skill needs.
+   Ask, listen, confirm, lock. Building it here first means the voice
+   grammar gets proven against real players in a real room before it is
+   ported to a device that has no screen to fall back on.              */
+var VX=(function(){
+  var V={ on:false, hasOut:false, hasEar:false, speaking:false, listening:false,
+          rec:null, wantEar:false, optsRead:false, errs:0, note:'', lastOpen:-1,
+          armed:false, hint:null };
+  var KEY='stats_voice_v1';
+
+  V.hasOut = (function(){ try{ return !!(window.speechSynthesis && window.SpeechSynthesisUtterance); }catch(_){ return false; } })();
+  V.hasEar = (function(){ try{ return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }catch(_){ return false; } })();
+
+  try{ V.on = V.hasOut && localStorage.getItem(KEY)==='1'; }catch(_){}
+
+  function norm(s){
+    return String(s==null?'':s).toLowerCase()
+      .replace(/[‘’“”]/g,"'").replace(/[^a-z0-9' ]+/g,' ')
+      .replace(/\s+/g,' ').trim();
+  }
+  /* Strip the scoreboard shorthand a screen reads fine and a speaker does
+     not. "Q1" spoken by a synthesiser is "kyoo one"; "24-second" is fine
+     but "3PT" is not. Only what we actually put in banks. */
+  function speakable(s){
+    return String(s==null?'':s)
+      .replace(/\bQ(\d)\b/g,'quarter $1')
+      .replace(/\bOT(\d?)\b/g,function(m,n){ return n? ('overtime '+n) : 'overtime'; })
+      .replace(/\bFG\b/g,'field goal').replace(/\bFT\b/g,'free throw')
+      .replace(/\b3PT\b/gi,'three point')
+      .replace(/—/g,' — ').replace(/\s+/g,' ').trim();
+  }
+
+  /* ---- SPEAKING ------------------------------------------------------ */
+  V.hush=function(){
+    try{ if(V.hasOut) window.speechSynthesis.cancel(); }catch(_){}
+    V.speaking=false;
+  };
+  /* One utterance at a time, and `then` runs whether the browser bothers to
+     fire onend or not. Safari and Chrome both drop onend often enough that
+     anything sequenced behind it needs its own timer, and everything this
+     schedules behind speech (starting the ear, reading the options) would
+     otherwise just never happen. Failure here has to be a shorter silence,
+     never a dead question. */
+  V.say=function(text, then){
+    if(!V.on || !V.hasOut){ if(then) try{ then(); }catch(_){} return; }
+    var t=speakable(text);
+    if(!t){ if(then) try{ then(); }catch(_){} return; }
+    var done=false, fire=function(){ if(done) return; done=true; V.speaking=false;
+      if(then) try{ then(); }catch(_){} };
+    try{
+      window.speechSynthesis.cancel();
+      var u=new window.SpeechSynthesisUtterance(t);
+      u.rate=1.08; u.pitch=1; u.volume=1; u.lang='en-US';
+      u.onend=fire; u.onerror=fire;
+      V.speaking=true;
+      window.speechSynthesis.speak(u);
+      // ~13 characters a second at this rate, floored at a second, plus a
+      // second of slack. This is the failsafe, not the schedule.
+      setTimeout(fire, Math.min(20000, Math.max(1200, t.length*80+1200)));
+    }catch(e){ fire(); }
+  };
+
+  /* ---- THE GRAMMAR --------------------------------------------------- */
+  var NUM={ 'one':0,'won':0,'first':0,'1':0,'a':0,
+            'two':1,'too':1,'to':1,'second':1,'2':1,'b':1,
+            'three':2,'tree':2,'third':2,'3':2,'c':2,
+            'four':3,'for':3,'fore':3,'fourth':3,'4':3,'d':3 };
+  var LEAD=/^(?:say|it's|its|it is|the|answer|option|number|i say|i pick|i choose|pick|choose|go with|gonna say|i'll say|ill say)\s+/;
+
+  /* Returns {kind:'pick',i} · {kind:'lock'|'repeat'|'off'|'help'} ·
+     {kind:'ambiguous'} · null. Everything about this is deliberately
+     conservative: the cost of returning null is that the player says it
+     again, and the cost of guessing is a wrong answer on their card. */
+  V.match=function(raw, opts){
+    var t=norm(raw); if(!t) return null;
+    if(/^(?:repeat|again|say again|say that again|one more time|what was the question|what's the question|whats the question)$/.test(t)) return {kind:'repeat'};
+    if(/^(?:lock|locked|lock it|lock it in|lock in|done|confirm|that's it|thats it|final|go)$/.test(t)) return {kind:'lock'};
+    if(/^(?:voice off|stop voice|turn voice off|mute|quiet|stop listening)$/.test(t)) return {kind:'off'};
+    if(/^(?:options|what are the options|read the options|choices|what are my choices)$/.test(t)) return {kind:'help'};
+
+    opts=opts||[];
+    // 1. the option said in full, or a distinctive part of it. Must land on
+    //    exactly one option — two candidates is a refusal, not a coin toss.
+    var hits=[];
+    for(var i=0;i<opts.length;i++){
+      var on=norm(opts[i]); if(!on) continue;
+      /* A LONG OPTION CAN MATCH ANYWHERE; A SHORT ONE ONLY AS A WHOLE WORD.
+         Found by testing "yes or no" — a player reading the question back
+         at the room. The old rule skipped any option under three letters
+         entirely, so "No" could only ever match a transcript that was
+         exactly "no": "yes or no" found ONE candidate, not two, and
+         quietly picked Yes. A refusal was the correct answer and it
+         returned a pick instead, which is the one direction this function
+         is not allowed to fail in. Word-bounded so "know" is not "no". */
+      var ok = (t===on) ? true
+             : (on.length>=3) ? (t.indexOf(on)>=0)
+             : (new RegExp('\\b'+on+'\\b')).test(t);
+      if(ok) hits.push(i);
+    }
+    if(hits.length===1) return {kind:'pick', i:hits[0]};
+    if(hits.length>1)  return {kind:'ambiguous'};
+
+    // 2. the position. Homophones ("to", "for") only count on a short
+    //    utterance, so a sentence with "for" in it is not an answer.
+    var stripped=t.replace(LEAD,'');
+    var toks=stripped.split(' ');
+    if(toks.length<=2 && NUM[toks[0]]!=null){
+      var idx=NUM[toks[0]];
+      if(idx<opts.length) return {kind:'pick', i:idx};
+    }
+    // 3. yes / no, which people say instead of reading the option
+    if(/^(?:yes|yeah|yep|yup|correct|true|affirmative)$/.test(stripped)){
+      var y=opts.findIndex(function(o){ return /^yes$/i.test(String(o).trim()); });
+      if(y>=0) return {kind:'pick', i:y};
+    }
+    if(/^(?:no|nope|nah|negative|false)$/.test(stripped)){
+      var n=opts.findIndex(function(o){ return /^no$/i.test(String(o).trim()); });
+      if(n>=0) return {kind:'pick', i:n};
+    }
+    return null;
+  };
+
+  /* ---- LISTENING ------------------------------------------------------ */
+  function curOpts(){
+    try{
+      return Array.prototype.map.call(document.querySelectorAll('#qOpts .opt'),
+        function(b){ var s=b.querySelector('span'); return s?s.textContent:''; });
+    }catch(_){ return []; }
+  }
+  function curBtn(i){
+    try{ return document.querySelectorAll('#qOpts .opt')[i]||null; }catch(_){ return null; }
+  }
+  V.ear=function(){
+    if(!V.on || !V.hasEar || !V.wantEar || V.listening || V.speaking) return;
+    var C=window.SpeechRecognition||window.webkitSpeechRecognition; if(!C) return;
+    try{
+      var r=new C();
+      r.lang='en-US'; r.continuous=false; r.interimResults=false; r.maxAlternatives=4;
+      r.onresult=function(e){
+        var res=e.results&&e.results[0]; if(!res) return;
+        for(var i=0;i<res.length;i++){
+          if(V.heard(res[i].transcript)) return;
+        }
+        V.heard(null);   // heard something, understood none of it
+      };
+      r.onerror=function(e){
+        var c=(e&&e.error)||'';
+        if(c==='not-allowed' || c==='service-not-allowed'){
+          /* FAILURE IS VISIBLE. A denied microphone must not look like a
+             microphone that is on and ignoring you. */
+          V.wantEar=false; V.note='Microphone blocked — tap your answers, or allow the mic in your browser settings.';
+          V.paint(); return;
+        }
+        if(c==='no-speech' || c==='aborted' || c==='audio-capture'){ return; }
+        V.errs++;
+      };
+      r.onend=function(){
+        V.listening=false; V.rec=null;
+        if(!V.wantEar) { V.paint(); return; }
+        /* Recognition ends itself constantly — after every result, after
+           every silence. Restarting is normal, so the backoff exists only
+           to stop a genuinely broken engine from becoming a spin loop. */
+        if(V.errs>6){ V.note='Voice input stopped responding — tap your answers.'; V.wantEar=false; V.paint(); return; }
+        setTimeout(function(){ try{ V.ear(); }catch(_){} }, V.errs?600*V.errs:250);
+      };
+      V.rec=r; V.listening=true; r.start(); V.paint();
+    }catch(e){ V.listening=false; }
+  };
+  V.deaf=function(){
+    V.wantEar=false;
+    try{ if(V.rec){ V.rec.onend=null; V.rec.abort(); } }catch(_){}
+    V.rec=null; V.listening=false; V.paint();
+  };
+
+  /* ---- WHAT A HEARD PHRASE DOES -------------------------------------- */
+  V.heard=function(raw){
+    if(!V.on) return false;
+    var opts=curOpts();
+    var m=V.match(raw, opts);
+    if(!m) return false;
+    if(m.kind==='off'){ V.disable(); return true; }
+    if(m.kind==='repeat'){ V.askQuestion(true); return true; }
+    if(m.kind==='help'){ V.readOptions(); return true; }
+    if(m.kind==='ambiguous'){
+      V.deafSay('That could be more than one — say the number instead.');
+      return true;
+    }
+    if(m.kind==='lock'){
+      /* Only lock what is already picked. "Lock" with nothing selected
+         would otherwise commit a blank answer out loud. */
+      var picked=false;
+      try{ picked=!!document.querySelector('#qOpts .opt.sel'); }catch(_){}
+      if(!picked){ V.deafSay('Nothing picked yet. Say a number first.'); return true; }
+      V.deaf();
+      try{ if(typeof nextQuestion==='function') nextQuestion(); }catch(_){}
+      return true;
+    }
+    if(m.kind==='pick'){
+      var b=curBtn(m.i); if(!b) return false;
+      var label=opts[m.i];
+      V.hush();
+      try{ if(typeof answer==='function') answer(label, b); }catch(_){}
+      /* The read-back IS the safety mechanism — see rule 2 at the top.
+         Speaking it is how a player finds out the phone heard something
+         else, while it is still free to change. */
+      V.deafSay('Got it. ' + label + '. Say lock, or say another number.', true);
+      return true;
+    }
+    return false;
+  };
+  /* Say something, with the ear closed so the phone does not answer its own
+     question off its own speaker, then reopen it. */
+  V.deafSay=function(text, keepOpen){
+    var was=V.wantEar;
+    try{ if(V.rec){ V.rec.onend=null; V.rec.abort(); } }catch(_){}
+    V.rec=null; V.listening=false;
+    V.say(text, function(){
+      if(was && (keepOpen!==false)){ V.wantEar=true; V.ear(); }
+      V.paint();
+    });
+    V.paint();
+  };
+
+  /* ---- THE QUESTION -------------------------------------------------- */
+  V.askQuestion=function(again){
+    if(!V.on) return;
+    V.optsRead=false; V.errs=0; V.note='';
+    var qt='', cnt='';
+    try{ qt=(document.getElementById('qText')||{}).textContent||''; }catch(_){}
+    try{ cnt=(document.getElementById('qCount')||{}).textContent||''; }catch(_){}
+    if(!qt) return;
+    V.mount();
+    var opts=curOpts();
+    /* The count first, then the question, then nothing. Options are held
+       back deliberately: most people answer a two-option question the
+       moment they hear it, and reading four bands out loud costs six
+       seconds of a twenty-second clock that is already running. If nobody
+       says anything, they get read. */
+    var lead=(again?'':(cnt?cnt+'. ':''))+qt;
+    V.wantEar=true;
+    V.say(lead, function(){
+      V.ear();
+      if(opts.length>2 || again){ V.hint=setTimeout(function(){ V.readOptions(); }, 2600); }
+      else { V.hint=setTimeout(function(){ V.readOptions(); }, 4200); }
+    });
+    V.paint();
+  };
+  V.readOptions=function(){
+    if(!V.on || V.optsRead) return;
+    if(V.answeredNow()) return;
+    V.optsRead=true;
+    var opts=curOpts(); if(!opts.length) return;
+    var say=opts.map(function(o,i){ return (i+1)+'. '+o; }).join('. ');
+    V.deafSay(say);
+  };
+  V.answeredNow=function(){
+    try{ return !!document.querySelector('#qOpts .opt.sel'); }catch(_){ return false; }
+  };
+  V.clearHint=function(){ try{ clearTimeout(V.hint); }catch(_){} V.hint=null; };
+
+  /* ---- THE MOMENTS THE GAME TELLS US ABOUT --------------------------- */
+  V.locked=function(txt){
+    V.clearHint(); V.deaf();
+    if(!V.on) return;
+    V.say(txt||'Locked in.');
+    V.paint();
+  };
+  V.reveal=function(txt){ if(!V.on) return; V.clearHint(); V.deaf(); V.say(txt); };
+  V.timeUp=function(){ if(!V.on) return; V.say('Time is up.'); };
+  /* Edge-triggered, because the caller is a repaint that runs every few
+     seconds all night. Announcing on every repaint would be a talking
+     phone that never stops. */
+  V.roundOpen=function(qi, live){
+    if(!V.on) return;
+    if(!live){ if(V.lastOpen===qi) V.lastOpen=-1; return; }
+    if(V.lastOpen===qi) return;
+    V.lastOpen=qi;
+    var nm=''; try{ nm=roundName(qi); }catch(_){ nm='The next round'; }
+    V.say(nm+' is open. Tap to start, and I will read the questions.');
+  };
+
+  /* ---- ON AND OFF ---------------------------------------------------- */
+  /* The toggle must be a real click. Safari will not speak, and no browser
+     will open a microphone, except from inside a gesture — so enabling
+     speaks immediately from within the handler. That first sentence is not
+     decoration, it is what unlocks audio for the rest of the session. */
+  V.enable=function(){
+    if(!V.hasOut){ V.note='This browser cannot read questions out loud. Try Chrome or Safari.'; V.paint(); return; }
+    V.on=true; V.armed=true; V.errs=0;
+    try{ localStorage.setItem(KEY,'1'); }catch(_){}
+    V.note = V.hasEar ? '' : 'This browser can read the questions but cannot hear answers — tap to answer.';
+    try{ trk('voice_on',{ear:!!V.hasEar}); }catch(_){}
+    V.say(V.hasEar
+      ? 'Voice is on. I will read each question. Say the number of your answer, then say lock.'
+      : 'Voice is on. I will read each question out loud. Tap your answer.');
+    /* Mid-question? Then start doing the job now rather than next question. */
+    try{
+      var open=document.getElementById('gtQuestion');
+      if(open && open.style.display!=='none' && !V.answeredNow()){
+        setTimeout(function(){ V.askQuestion(); }, 2600);
+      }
+    }catch(_){}
+    V.paint();
+  };
+  V.disable=function(){
+    V.on=false; V.clearHint(); V.deaf(); V.hush();
+    try{ localStorage.setItem(KEY,'0'); }catch(_){}
+    try{ trk('voice_off'); }catch(_){}
+    V.note=''; V.paint();
+  };
+  V.toggle=function(){ if(V.on) V.disable(); else V.enable(); };
+
+  /* ---- WHAT IT LOOKS LIKE -------------------------------------------- */
+  V.mount=function(){
+    try{
+      if(document.getElementById('vxBar')) return;
+      var host=document.getElementById('revealBox'); if(!host||!host.parentNode) return;
+      var d=document.createElement('div'); d.id='vxBar';
+      host.parentNode.insertBefore(d, host);
+      V.paint();
+    }catch(_){}
+  };
+  V.paint=function(){
+    try{
+      var el=document.getElementById('vxBar'); if(!el) return;
+      var state = !V.on ? 'off' : (V.speaking ? 'reading' : (V.listening ? 'hearing' : 'on'));
+      var txt = !V.on ? 'Voice off'
+              : V.note ? V.note
+              : V.speaking ? 'Reading the question…'
+              : V.listening ? 'Listening — say a number, then say “lock”'
+              : V.hasEar ? 'Voice on' : 'Voice on — tap your answer';
+      el.className='vx '+state+(V.note?' warn':'');
+      el.innerHTML='<button type="button" class="vxb" onclick="VX.toggle()" aria-pressed="'+(V.on?'true':'false')+'">'
+        + (V.on?'🔊':'🔈') + ' <b>Voice</b> <s>'+(V.on?'on':'off')+'</s></button>'
+        + '<span class="vxt">'+String(txt).replace(/</g,'&lt;')+'</span>';
+    }catch(_){}
+  };
+  return V;
+})();
+try{ window.VX=VX; }catch(_){}
+
 function nq(){return rounds[S.qi].q.length;}
 function loadQuestion(){
   S.answered=false; pastTime=false;
@@ -6707,6 +7111,10 @@ function loadQuestion(){
   /* Server clock, stamp one of two: the question is now on screen. Fire and
      forget — the round must never wait on a write. */
   try{ if(S.mode==='live' && window.SB && SB.stampQ){ var _r=curRoundId(); if(_r) SB.stampQ(_r, S.ni, 'o'); } }catch(_){}
+  /* VOICE. Last thing loadQuestion does, so everything it reads off the
+     DOM is already painted. Wrapped and guarded: with voice off this is a
+     function call that returns immediately. */
+  try{ VX.mount(); VX.askQuestion(); }catch(_){}
 }
 /* The clock is a WALL clock, not a tick counter. The old version counted
    `t--` once per foreground second — and phones pause timers the moment
@@ -6802,6 +7210,8 @@ function commitLive(){
        <div class="r2">If you're right, that's +${worth} pt${worth>1?'s':''} and +${bank} ⚡ when the host announces answers.</div></div>`
     : `<div class="reveal bad"><div class="r1">⏰ TIME — no answer locked</div>
        <div class="r2">This one can't score. Be quicker next question.</div></div>`;
+  try{ VX.locked(m.choice ? ('Locked in. '+m.choice+'. '+bank+' seconds banked.')
+                          : 'Time ran out with nothing locked.'); }catch(_){}
 }
 function answer(choice,btn){
   if(S.answered)return;
@@ -6827,6 +7237,7 @@ function answer(choice,btn){
         `<div class="reveal bad"><div class="r1">⏰ TIME — ⚡ gone, points still live</div>
          <div class="r2">The 20 seconds are up, so there's no speed bonus on this one — but the answer still counts. Pick one and lock it in.</div></div>`;
       showNext();
+      try{ VX.deafSay('Time. No speed bonus on this one, but the point is still live. Say a number.'); }catch(_){}
       return;
     }
     // A pick, not a lock. Bank is whatever the clock says RIGHT NOW.
@@ -6871,6 +7282,8 @@ function answer(choice,btn){
     rb.innerHTML=`<div class="reveal bad"><div class="r1">✕ ${choice?'NOT QUITE':'MISSED IT'} · +0</div>
       <div class="r2">${miss} Correct answer: <b>${q.a}</b>.</div></div>`;
   }
+  try{ VX.reveal(correct ? ('Correct. Plus '+worth+'. You are on '+S.pts+' points.')
+                         : ((choice?'Not quite. ':'Missed it. ')+'The answer was '+q.a+'.')); }catch(_){}
   bumpBots(worth); // other players score too
   renderScore();
   document.getElementById('nextBtn').style.display='block';
@@ -12130,7 +12543,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-16-gn12-setup.119';
+const STATS_BUILD='2026-08-17-voice-gn12.120';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -12532,6 +12945,7 @@ function menuRows(){
   };
   R.push('<div class="mgrp">The game</div>');
   row('📖','How to play &amp; full rules','rules');
+  try{ if(VX && VX.hasOut) row(VX.on?'🔊':'🔈','Voice: read questions out loud','voice', VX.on?'On':'Off'); }catch(_){}
   try{ if(S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0) row('▶','Back to my game','resume'); }catch(_){}
   try{ if(S.screen==='final' || (S.mode==='demo' && S.pts>0)) row('🔁','Play again','restart'); }catch(_){}
   try{ if(S.screen==='final'){ row('😈','Post-game roast card','roast'); } }catch(_){}
@@ -12547,6 +12961,7 @@ function menuRows(){
 }
 var MENU_GO={
   rules:function(){ go('rules'); },
+  voice:function(){ try{ VX.toggle(); }catch(_){} },
   resume:function(){ try{ returnToGame(); }catch(_){ go('gametime'); } },
   restart:function(){ try{ restart(); }catch(_){} },
   roast:function(){ try{ openRoast(); }catch(_){} },
@@ -12566,7 +12981,15 @@ function openMenu(){
   var body=document.getElementById('menuBody'); if(body) body.innerHTML=menuRows();
   try{ var st=document.getElementById('menuStamp'); if(st && typeof buildStampHTML==='function') st.innerHTML=buildStampHTML(); }catch(_){}
   Array.prototype.forEach.call(sh.querySelectorAll('[data-m]'), function(b){
-    b.onclick=function(){ var k=b.getAttribute('data-m'); closeMenu();
+    b.onclick=function(){ var k=b.getAttribute('data-m');
+      /* GESTURE-GATED ROWS RUN NOW, NOT IN 60ms. Every other row navigates,
+         and deferring that until after the sheet closes is what stops the
+         animation stuttering. Voice is different: a browser will only start
+         speech or open a microphone from inside the click that asked for it,
+         so a deferred VX.toggle() is a button that appears to do nothing the
+         first time it is pressed — on Safari, every time. */
+      if(k==='voice'){ try{ (MENU_GO[k]||function(){})(); }catch(_){} closeMenu(); return; }
+      closeMenu();
       setTimeout(function(){ try{ (MENU_GO[k]||function(){})(); }catch(_){} }, 60); };
   });
   sh.classList.add('open');
@@ -15573,6 +15996,10 @@ function gtStartRow(){
               : held  ? (roundName(qi)+' — locked, waiting on the host')
               : (roundTag(qi)+' ended? Answer now');
     var dead = held;
+    /* Edge-triggered inside VX — this function is a repaint that runs all
+       night, and announcing on every pass would be a phone that never shuts
+       up. See VX.roundOpen. */
+    try{ VX.roundOpen(qi, !!hLive); }catch(_){}
     return '<button class="btn'+(hLive?'':' ghost')+'" style="margin-top:11px"'
       + (dead?' disabled':' onclick="startQuarter('+qi+')"')+'>'+esc(label)+'</button>';
   }catch(_){ return ''; }
@@ -16199,6 +16626,30 @@ body.hasrail #menuBtn{top:calc(6px + env(safe-area-inset-top,0px))}
 #menuBtn span{display:block;width:16px;height:2px;border-radius:2px;background:var(--body)}
 #menuBtn:active{transform:scale(.94)}
 #menuBtn.show{display:flex}
+/* VOICE. One row under the options: the switch, and what it is doing
+   right now. The state line is not decoration — a microphone that is on
+   and a microphone that is blocked look identical unless the app says so,
+   and "failure is visible" is a rule here, not a nicety. Built from the
+   existing tokens: no new colours, no new type sizes. */
+.vx{display:flex;align-items:center;gap:10px;margin-top:11px;padding-top:10px;
+    border-top:1px solid var(--line);flex-wrap:wrap}
+.vx .vxb{display:inline-flex;align-items:center;gap:6px;background:var(--glass);
+    border:1px solid var(--line2);color:var(--body);border-radius:999px;
+    padding:7px 13px;font-size:12px;font-weight:800;letter-spacing:.6px;
+    cursor:pointer;font-family:var(--f);flex:0 0 auto}
+.vx .vxb b{font-weight:800;text-transform:uppercase;letter-spacing:1.2px}
+.vx .vxb s{text-decoration:none;color:var(--dim);font-weight:700}
+.vx .vxt{font-size:12px;color:var(--dim);flex:1 1 120px;min-width:0}
+.vx.hearing .vxb{border-color:var(--teal2);color:var(--ink)}
+.vx.hearing .vxb s{color:var(--teal2)}
+.vx.hearing .vxt{color:var(--teal2)}
+.vx.reading .vxb{border-color:var(--blue2)}
+.vx.reading .vxt{color:var(--body)}
+.vx.warn .vxt{color:var(--gold)}
+@media (prefers-reduced-motion:no-preference){
+  .vx.hearing .vxb{animation:vxpulse 1.8s var(--ease,cubic-bezier(.2,.8,.2,1)) infinite}
+}
+@keyframes vxpulse{0%,100%{box-shadow:0 0 0 0 rgba(40,224,208,0)}50%{box-shadow:0 0 0 4px rgba(40,224,208,.12)}}
 #menuSheet{position:fixed;inset:0;z-index:8800;display:none;background:rgba(3,6,12,.62);
   backdrop-filter:blur(3px);align-items:flex-start;justify-content:center;padding:0 12px}
 #menuSheet.open{display:flex}

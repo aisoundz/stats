@@ -578,11 +578,29 @@ const NIGHTS = [
   /* `espn` is new and it is the hinge for the autonomous host: it is the
      event id the resolvers read. A night without one can still be run by
      hand, it just cannot be run by the robot. */
-  /* GAME NIGHT #12 — MINNESOTA AT GOLDEN STATE, Wednesday, set up three
-     days out. Tip: 10:00 ET / 7:00 PT, USA Network. Verified against the
-     scoreboard feed for 2026-08-19: event 401857157, Chase Center. Golden
-     State are home, drawn on the right. */
-  { id:'gn12-2026-08-19-min-gs', label:'Game Night #12 — Lynx @ Valkyries (Wed Aug 19, 10:00 ET · USA Network)',
+  /* GAME NIGHT #13 — MINNESOTA AT GOLDEN STATE, Wednesday. Was #12 until
+     the Dallas game moved up to Monday; the id moved with the number so
+     nothing already written under the old id changes meaning. Tip: 10:00
+     ET / 7:00 PT, USA Network. Verified against the scoreboard feed for
+     2026-08-19: event 401857157, Chase Center. Golden State are home,
+     drawn on the right. */
+  /* GAME NIGHT #12 — DALLAS AT GOLDEN STATE, MOVED UP TO TONIGHT (Mon Aug
+     17). Tip: 10:00 ET / 7:00 PT, Peacock and NBCSN. Verified against the
+     scoreboard feed for 2026-08-17: event 401857151, Chase Center. Golden
+     State are home, drawn on the right.
+
+     The Wednesday game did not get renumbered in place — it kept its own
+     id and became GAME NIGHT #13 below, with its own bank. Reusing an id
+     for a different matchup is B26 with a calendar attached: every archive,
+     every player row and every submission already written under
+     gn12-2026-08-19-min-gs would silently start describing a different
+     game. */
+  { id:'gn12-2026-08-17-dal-gs', label:'Game Night #12 — Wings @ Valkyries (Mon Aug 17, 10:00 ET · Peacock)',
+    away:'DAL', home:'GS', espn:'401857151',
+    tags:['Q1','Q2','Q3','Q4'],
+    names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
+    worth:[10,20,30,40] },
+  { id:'gn13-2026-08-19-min-gs', label:'Game Night #13 — Lynx @ Valkyries (Wed Aug 19, 10:00 ET · USA Network)',
     away:'MIN', home:'GS', espn:'401857157',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
@@ -716,7 +734,40 @@ const BANK = {
      how. Shadow-tested against real finished games before this went near
      a room — see the shadow-test notes; do not skip that step for a
      bank this new. */
-  'gn12-2026-08-19-min-gs': [
+  /* GAME NIGHT #12 — DALLAS AT GOLDEN STATE, TONIGHT. The same sixteen
+     resolvers written for the Wednesday game, with one word moved: the
+     opposing team option reads Wings instead of Lynx. Every other line is
+     structurally team-agnostic ("both teams combined", "either team"), so
+     nothing else in the bank depends on which side is which — that is why
+     these questions survive a matchup change and hand-written ones do not.
+     The Wednesday bank is unchanged and now sits under gn13 below. */
+  'gn12-2026-08-17-dal-gs': [
+    [
+      { t: 'Was the first basket of the game assisted?', o: ['Yes', 'No'], r:'firstBasketAssisted' },
+      { t: 'Which team committed the first foul of the game?', o: ['Valkyries', 'Wings'], r:'firstFoulTeam' },
+      { t: 'Fouls in Q1, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'foulsBand' },
+      { t: 'The first turnover of the game — whose team gave it up?', o: ['Valkyries', 'Wings'], r:'firstTurnoverTeam' }
+    ],
+    [
+      { t: 'Assisted baskets in Q2, both teams combined — how many?', o: ['Eight or fewer', 'Nine to eleven', 'Twelve or thirteen', 'Fourteen or more'], r:'assistedBasketsBand' },
+      { t: 'Did either team score in the final minute before halftime?', o: ['Yes', 'No'], r:'lastMinuteScoredQ2' },
+      { t: 'Turnovers in Q2, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'turnoversBand' },
+      { t: 'Free throws made in Q2, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'ftMadeBand' }
+    ],
+    [
+      { t: 'Free throws attempted in Q3, both teams combined — how many?', o: ['None to two', 'Three to five', 'Six to nine', 'Ten or more'], r:'ftAttemptsBand' },
+      { t: 'Driving or running shot attempts in Q3, both teams combined — how many?', o: ['Six or fewer', 'Seven to nine', 'Ten to twelve', 'Thirteen or more'], r:'drivingPlaysBand' },
+      { t: 'Substitutions in Q3, both teams combined — how many?', o: ['Nine or fewer', 'Ten to thirteen', 'Fourteen to seventeen', 'Eighteen or more'], r:'subsBand' },
+      { t: 'Which team made more free throws in Q3?', o: ['Valkyries', 'Wings', 'Equal'], r:'ftMakeCompareQ3' }
+    ],
+    [
+      { t: 'In the last two minutes, which team committed more turnovers?', o: ['Valkyries', 'Wings', 'Equal'], r:'lastTwoMinTurnoverCompare' },
+      { t: 'Was there a technical or flagrant foul at any point in the game?', o: ['Yes', 'No'], r:'anyTechOrFlagrant' },
+      { t: 'Was the game’s final basket assisted?', o: ['Yes', 'No'], r:'lastBasketAssisted' },
+      { t: 'In the 4th quarter, which was more common: jump shots or drives to the basket?', o: ['Jump shots', 'Drives', 'Equal'], r:'q4ShotTypeCompare' }
+    ]
+  ],
+  'gn13-2026-08-19-min-gs': [
     [
       { t: 'Was the first basket of the game assisted?', o: ['Yes', 'No'], r:'firstBasketAssisted' },
       { t: 'Which team committed the first foul of the game?', o: ['Valkyries', 'Lynx'], r:'firstFoulTeam' },
@@ -3102,8 +3153,17 @@ async function publishPlan(){
      it reads as broken rather than as absent. So this one is not a
      warning the host can miss in a wall of green text; it refuses to
      write the plan at all until every round has at least one question. */
+  /* THE OVERTIME ROUND IS A TEMPLATE, NOT A REGULATION ROUND — 17 Aug 2026.
+     Split before validating, because the two are held to different rules:
+     a regulation round WILL open, so an empty one hard-stops the publish
+     (B28). An overtime round only opens if the game goes there, so an empty
+     one is dropped with a note rather than blocking the whole night. */
+  var split = AUTO.splitOtRound(rounds);
+  var otAuthored = rounds.filter(function(r){ return AUTO.isOtTag(r.tag); });
+  rounds = split.rounds;
+
   var empty = [];
-  rounds.forEach(function(r,i){ if(!r.qs.length) empty.push(cfg.tags[i]); });
+  rounds.forEach(function(r,i){ if(!r.qs.length) empty.push(r.tag || cfg.tags[i]); });
   if(empty.length){
     hostSay('err', 'Publish blocked \u2014 ' + empty.join(', ') + ' ' + (empty.length===1?'has':'have')
       + ' zero questions written. The runner will not invent them; write at least one question per round, then publish again.');
@@ -3111,14 +3171,36 @@ async function publishPlan(){
     return;
   }
   var bad = [];
-  rounds.forEach(function(r,i){ r.qs.forEach(function(q,x){
-    if(!q.t) bad.push(cfg.tags[i]+' Q'+(x+1)+' has no question text');
-    if(q.o.length<2) bad.push(cfg.tags[i]+' Q'+(x+1)+' has fewer than two options');
-    if(!q.r && q.k==null) bad.push(cfg.tags[i]+' Q'+(x+1)+' has no resolver and no answer \u2014 the runner would stall on it');
+  /* Label by the round's OWN tag, not cfg.tags[i]. Once the overtime round is
+     split out of this list the two indexes no longer line up, and a validation
+     message naming the wrong round is worse than none — it sends the host to
+     fix a quarter that is fine. */
+  var toCheck = rounds.slice();
+  if(split.ot) toCheck.push({ tag:'OT', qs:split.ot.qs });
+  toCheck.forEach(function(r){ r.qs.forEach(function(q,x){
+    var where = (r.tag||'round')+' Q'+(x+1);
+    if(!q.t) bad.push(where+' has no question text');
+    if(q.o.length<2) bad.push(where+' has fewer than two options');
+    if(!q.r && q.k==null) bad.push(where+' has no resolver and no answer \u2014 the runner would stall on it');
   }); });
   try{
-    await FB.F.setDoc(FB.F.doc(FB.db,'nights',night,'plan','rounds'),
-      { rounds:rounds, at:FB.F.serverTimestamp(), by:(FB.auth.currentUser.email||'host') });
+    /* `ot` travels with the plan so the runner can instantiate it for every
+       overtime period without inventing anything. Absent is a legitimate
+       value — a night with no overtime questions simply has no template,
+       and run.js says so out loud (needsHuman) if overtime then happens. */
+    var planDoc = { rounds:rounds, at:FB.F.serverTimestamp(), by:(FB.auth.currentUser.email||'host') };
+    if(split.ot) planDoc.ot = split.ot;
+    await FB.F.setDoc(FB.F.doc(FB.db,'nights',night,'plan','rounds'), planDoc);
+    if(split.ot){
+      hostSay('ok', 'Overtime template published \u2014 ' + split.ot.qs.length + ' question(s), worth '
+        + (split.ot.worth || 'auto') + '. It covers OT, OT2 and OT3 alike, and costs nothing if the game ends in regulation.');
+    } else if(otAuthored.length){
+      hostSay('warn', 'An overtime round is configured but has NO questions written, so no template was published. '
+        + 'If tonight goes to overtime the runner will open nothing and flag it for a human. Write at least one OT question to close that.');
+    } else {
+      hostSay('warn', 'No overtime round is configured for this night. Add \u2018OT\u2019 to this night\u2019s tags in NIGHTS '
+        + 'and write questions for it \u2014 otherwise an overtime is played with nothing to answer.');
+    }
     hostSay('key','Plan published \u2014 '+rounds.length+' rounds, '
       + rounds.reduce(function(a,r){ return a+r.qs.length; },0) + ' questions.'
       + (bad.length ? ' Heads up, ' + bad.length + ' will need you: ' + bad[0]

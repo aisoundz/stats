@@ -5088,6 +5088,80 @@ function controlRoomStatic(){
 }
 
 /* ========== RUN ======================================================= */
+/* VOICE — static, therefore in --quick. These are reads of the source,
+   not of a running page, and a three-second gate that covers them is a
+   gate people actually run. */
+function voiceStatic(){
+  /* VOICE — added the night it shipped, Game Night #12. Every check names
+     the thing it stops, same rule as everything else here. The grammar
+     itself has its own suite (node qa/voice.js) because it is a pure
+     function and deserves real cases; these are the structural guarantees
+     that keep voice from becoming a second game. */
+  group('VOICE — reading the question out loud, and hearing the answer');
+  {
+    const src=read(PLAYER);
+    const vx=(src.match(/var VX=\(function\(\)\{[\s\S]*?\n\}\)\(\);/)||[''])[0];
+    check('voice.module-exists', !!vx && /window\.VX=VX/.test(src),
+      'the voice module is gone or no longer exposed',
+      'the feature a player asked for by name: "people do not want to look at the screen"');
+    /* THE ONE THAT MATTERS. Voice must reach the game through the same two
+       functions the buttons use. The day it grows its own scoring, its own
+       submit or its own ledger write is the day the room has two games in
+       it — B2 with a microphone. */
+    check('voice.answers-through-the-same-door',
+      !!vx && /typeof answer==='function'\) answer\(/.test(vx)
+           && /typeof nextQuestion==='function'\) nextQuestion\(/.test(vx)
+           && !/ledgerSet|S\.pts|SB\.submit|pushScore/.test(vx),
+      'voice reaches the score by some path other than answer() and nextQuestion()',
+      'a second way to score is the two-question-banks bug wearing a microphone');
+    /* A mishear that LOCKED would be worse than no voice at all. Hearing an
+       answer must do exactly what a tap does: select, changeably. */
+    check('voice.hearing-you-is-a-pick-never-a-lock',
+      !!vx && /kind==='pick'/.test(vx)
+           && /kind==='lock'/.test(vx)
+           && /Say lock, or say another number/.test(vx),
+      'a heard answer no longer says itself back, or locking is not its own word',
+      'speech recognition mishears; the read-back is how a player finds out before it costs them the question');
+    check('voice.two-candidates-is-a-refusal',
+      !!vx && /hits\.length>1\)\s*return \{kind:'ambiguous'\}/.test(vx),
+      'an ambiguous phrase resolves to one of the candidates instead of refusing',
+      '"yes or no" picked Yes — a coin toss written on a player\'s card as if they had chosen it');
+    check('voice.homophones-only-count-on-a-short-phrase',
+      !!vx && /toks\.length<=2 && NUM\[toks\[0\]\]!=null/.test(vx),
+      '"for" and "to" can be picked out of the middle of a sentence',
+      'a player says "go for it" at the television and the app answers 4 on their behalf');
+    /* OFF MEANS OFF. Not a preference — the default, and the state every
+       player who never finds the button stays in all night. */
+    check('voice.off-is-the-default',
+      !!vx && /V\.on = V\.hasOut && localStorage\.getItem\(KEY\)==='1'/.test(vx),
+      'voice is on for somebody who never asked for it',
+      'a phone that starts talking in a quiet room is a phone that gets closed');
+    check('voice.the-mic-belongs-to-the-question',
+      !!vx && /V\.deaf=function/.test(vx)
+           && /if\(k!=='live'\)\{ VX\.clearHint\(\); VX\.deaf\(\); \}/.test(src)
+           && /VX\.locked\(/.test(src),
+      'the microphone outlives the question it belongs to',
+      'nobody\'s living room gets listened to between quarters');
+    /* FAILURE IS VISIBLE — the fail.* rule, applied to the two ways voice
+       dies quietly: a blocked microphone, and a browser that cannot speak. */
+    check('voice.a-blocked-mic-says-so',
+      !!vx && /not-allowed/.test(vx) && /Microphone blocked/.test(vx)
+           && /cannot read questions out loud/.test(vx),
+      'a denied microphone looks exactly like one that is on and ignoring you',
+      'silence is the one thing a player cannot forgive — the same lesson as the submit receipt');
+    /* Speech and the microphone are both gesture-gated. A deferred toggle is
+       a button that does nothing the first time it is pressed. */
+    check('voice.the-toggle-runs-inside-the-click',
+      /if\(k==='voice'\)\{ try\{ \(MENU_GO\[k\]\|\|function\(\)\{\}\)\(\); \}catch\(_\)\{\} closeMenu\(\); return; \}/.test(src),
+      'the voice row is deferred behind closeMenu like every other row',
+      'Safari will not speak or open a mic outside the gesture that asked — the row would silently do nothing');
+    check('voice.speech-never-strands-the-question',
+      !!vx && /setTimeout\(fire, Math\.min\(20000/.test(vx),
+      'nothing sequenced behind speech has a failsafe',
+      'Safari and Chrome both drop onend; without this the ear never opens and the question sits silent');
+  }
+}
+
 (async()=>{
   console.log('\x1b[1m\nSTATS GAMETIME — pre-deploy QA\x1b[0m');
   console.log(`player: ${PLAYER}   admin: ${ADMIN}   mode: ${QUICK?'quick':'full'}`);
@@ -5096,6 +5170,7 @@ function controlRoomStatic(){
   staticChecks(ADMIN);
   unitTests();
   controlRoomStatic();
+  voiceStatic();
   if(!QUICK){ try{
     /* A CEILING ON THE WHOLE BROWSER LAYER. The feed groups have their own,
        but any of the twenty-odd other groups could wedge the same way, and a
