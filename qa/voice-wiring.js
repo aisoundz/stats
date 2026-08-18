@@ -200,11 +200,29 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
      re-run until it goes green. Null the handle too, so "never built" is a
      loud failure rather than a stale object quietly answering for it. */
   await p.waitForFunction(()=>VX.speaking===false,{timeout:5000});
-  R['ios-does-not-ask-for-a-session-it-cannot-have'] = await p.evaluate(()=>{
+  /* Re-aimed for the same reason. iOS ends a session after one utterance
+     whatever you ask for, so continuous:false is still right — but the
+     device log shows an INTERIM result arriving at 2.8s, 1.7s before the
+     final, so interimResults must be ON. It had been off on an assumption,
+     which cost the earliest signal that somebody is talking. */
+  R['ios-asks-for-what-the-device-actually-gives'] = await p.evaluate(()=>{
     const was=VX.ios; VX.deaf(); VX.mic=null; window.__rec=null; VX.ios=true;
     VX.wantEar=true; VX.ear();
-    const r=window.__rec, ok = !!r && r.continuous===false && r.interimResults===false;
-    VX.ios=was; VX.deaf(); VX.mic=null; return ok;
+    return new Promise(res=>setTimeout(()=>{
+      const r=window.__rec, ok = !!r && r.continuous===false && r.interimResults===true;
+      VX.ios=was; VX.deaf(); VX.mic=null; res(ok);
+    }, 140));                                   // iOS path settles the audio session first
+  });
+  /* THE FIX THE DEVICE LOG POINTED AT: the app speaks before it listens and
+     the working test page never speaks. Synthesis must be handed back
+     before the microphone is asked for. */
+  R['it-hands-the-audio-session-back-before-listening'] = await p.evaluate(()=>{
+    let cancelled=0;
+    const real=window.speechSynthesis.cancel;
+    window.speechSynthesis.cancel=function(){ cancelled++; return real.apply(this,arguments); };
+    VX.deaf(); VX.wantEar=true; VX.ear();
+    window.speechSynthesis.cancel=real;
+    return cancelled>0;
   });
   /* THE GUARANTEE CHANGED ON PURPOSE, so this is re-aimed rather than
      patched. It used to assert that iOS gives up and asks for a specific
@@ -248,10 +266,19 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
   await p.evaluate(()=>{ VX.enable(); S.mode='live'; S.qi=0; S.ni=0; S.answered=false;
                          go('live'); window.__recBuilds=0; loadQuestion(); });
   await p.waitForTimeout(900);
-  R['one-recogniser-not-one-per-utterance'] = await p.evaluate(()=>{
-    const b0=window.__recBuilds;
-    VX.pause(); VX.ear(); VX.pause(); VX.ear();      // four lifecycle events
-    return window.__recBuilds===b0;                   // and still one object
+  /* THIS CHECK USED TO ASSERT THE OPPOSITE, and the founder's own iPhone
+     disproved it. voicetest.html creates a NEW recogniser on every tap and
+     works perfectly on iOS 18.7 Safari — mic open at 0.9s, FINAL "Two" at
+     4.5s. Reusing an instance after abort() is not something Safari
+     promises; I had invented it as an iOS accommodation and then written a
+     test that locked the invention in.
+
+     A stubbed engine can never have caught this. The check now asserts the
+     configuration the DEVICE proved, which is a fresh instance per open. */
+  R['a-fresh-recogniser-every-time'] = await p.evaluate(()=>{
+    VX.deaf(); const b0=window.__recBuilds;
+    VX.wantEar=true; VX.ear();
+    return window.__recBuilds>b0;
   });
   /* Speaking must PAUSE the mic, never surrender the permission. */
   R['talking-pauses-the-mic-it-does-not-give-it-up'] = await p.evaluate(()=>{

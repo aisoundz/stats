@@ -7397,16 +7397,33 @@ var VX=(function(){
           gesture; it never said WHICH gesture. That is what makes this feel
           conversational on a platform that will not do hands-free, without
           making a person hunt for a particular button.                  */
-  V.mic=null;              // ONE recogniser, for the life of the page
+  /* A FRESH RECOGNISER EVERY TIME — and the previous build's "one
+     recogniser for the whole page" was my invention, not a finding.
+
+     PROVED WRONG BY voicetest.html ON THE FOUNDER'S OWN iPHONE. That page
+     creates a NEW instance on every tap and works perfectly: mic open at
+     0.9s, interim at 2.8s, FINAL "Two" at 4.5s, iOS 18.7 Safari. Every
+     browser test I had written stubbed the engine, so none of them could
+     ever have caught this — they proved my code did what I wrote, which
+     was never the question.
+
+     Reusing an instance after abort() is not something Safari promises,
+     and the one configuration known to work on this device does not do it. */
+  V.mic=null;              // the CURRENT recogniser, replaced on every open
   V.build=function(){
-    if(V.mic) return V.mic;
     var C=window.SpeechRecognition||window.webkitSpeechRecognition; if(!C) return null;
+    try{ if(V.mic){ V.mic.onend=null; V.mic.onresult=null; V.mic.onerror=null; V.mic.abort(); } }catch(_){}
     var r=new C();
     r.lang='en-US'; r.maxAlternatives=6;
     /* Safari will not hold a continuous session — it hears one utterance
        and stops — and asking for one makes it fail rather than degrade. */
-    r.continuous     = !V.ios;
-    r.interimResults = !V.ios;
+    r.continuous     = !V.ios;   // Safari ends after one utterance either way
+    /* INTERIM RESULTS ON, INCLUDING iOS. I had these off for iOS on an
+       assumption; the device log shows an interim "Two" arriving at 2.8s,
+       1.7 seconds before the final. That is the earliest possible proof
+       somebody is talking, and it is what cancels the options prompt
+       before it can speak over them. */
+    r.interimResults = true;
     /* DO NOT TALK OVER THE PLAYER. The options prompt aborts the mic to
        speak; answer while it is pending and you were cut off mid-word and
        discarded. Any voice in the room cancels it. */
@@ -7451,6 +7468,31 @@ var VX=(function(){
   };
   V.ear=function(){
     if(!V.on || !V.hasEar || !V.wantEar || V.listening || V.speaking) return;
+    /* HAND THE AUDIO SESSION BACK BEFORE ASKING FOR THE MICROPHONE.
+       This is the difference between the app and the test page that works:
+       voicetest.html NEVER SPEAKS, and the app always speaks the question
+       first. On iOS, speech synthesis and speech recognition contend for
+       one audio session, and recognition started in the shadow of a
+       just-finished utterance opens and then hears nothing — no error, no
+       onspeechstart, exactly the silence the founder reported five times.
+
+       cancel() is not enough on its own; the session needs a beat to be
+       released. Sixty milliseconds is imperceptible next to the 900ms the
+       engine itself took to reach onstart on his phone. */
+    try{ if(V.hasOut) window.speechSynthesis.cancel(); }catch(_){}
+    /* A ONE-SHOT TOKEN, NOT A BUSY FLAG. The first version of this cleared
+       the flag inside the timer and then called ear() again — which walked
+       straight back into this branch and rescheduled, forever, never
+       opening the microphone at all. On iOS that would have been worse
+       than the bug it was fixing, and it was caught by the wiring suite
+       rather than by a person. The token is set on the way in and CONSUMED
+       on the way through, so the second pass falls past it. */
+    if(V.ios && !V.audioReady){
+      V.audioReady=true;
+      setTimeout(function(){ try{ V.ear(); }catch(_){} }, 60);
+      return;
+    }
+    V.audioReady=false;                       // consumed
     var r=V.build(); if(!r) return;
     try{
       r.start(); V.listening=true; V.micThrew=0; V.paint();
@@ -7509,7 +7551,7 @@ var VX=(function(){
   /* DEAF: stop, and stop wanting. Only when the question is over or the
      player has left it — the mic belongs to the question. */
   V.deaf=function(){
-    V.wantEar=false; V.armed2=false;
+    V.wantEar=false; V.armed2=false; V.audioReady=false;
     try{ if(V.mic) V.mic.abort(); }catch(_){}
     V.listening=false; V.paint();
   };
@@ -13479,7 +13521,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-marquee.130';
+const STATS_BUILD='2026-08-18-audiosession.131';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
