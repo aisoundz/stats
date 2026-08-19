@@ -55,7 +55,11 @@
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
   /* ---- tabs ---- */
-  nav{display:flex;gap:5px;padding:0 0 12px;overflow-x:auto;scrollbar-width:none}
+  /* The tab bar wraps too, for the same reason as .daystrip below: a
+     hidden scrollbar is unreachable with a mouse, and TONIGHT / WRITE /
+     RUN / GRADE / ROOM / AUTO / ANALYTICS do not fit a narrow window. A
+     host who cannot reach RUN cannot start the night. */
+  nav{display:flex;flex-wrap:wrap;gap:5px;padding:0 0 12px}
   nav::-webkit-scrollbar{display:none}
   nav button{flex:1 0 auto;background:transparent;border:1px solid var(--line);color:var(--muted);
     font-family:var(--d);font-weight:700;font-size:12px;line-height:1;letter-spacing:.12em;
@@ -81,8 +85,19 @@
   .bcol s{text-decoration:none;font-size:12px;color:var(--dim);letter-spacing:.06em}
 
   /* ---- the day strip ---- */
-  .daystrip{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
-  .daystrip::-webkit-scrollbar{display:none}
+  /* IT WRAPS. IT DOES NOT SCROLL SIDEWAYS WITH THE SCROLLBAR HIDDEN.
+     Founder, on a laptop, ten hours before a game night: "i cant move
+     anything in the control room". He was exactly right and it is not
+     subtle — this was overflow-x:auto with the scrollbar removed on both
+     engines, which on a PHONE you can swipe and with a MOUSE you cannot
+     move at all: no scrollbar to drag, and a wheel scrolls vertically.
+     Fifteen nights in a strip ~410px wide meant the last four, including
+     the one that was selected, sat off the right edge unreachable.
+
+     Same disease as #gameRail in the player app, found the same morning,
+     fixed the same way: wrap it. Nothing hidden, nothing to scroll, every
+     night reachable at any width. */
+  .daystrip{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 10px}
   .daybtn{flex:0 0 auto;min-width:64px;text-align:center;cursor:pointer;padding:8px 11px;
     border-radius:11px;background:var(--bg2);border:1px solid var(--line);color:var(--muted);
     font-family:inherit;transition:border-color .18s,color .18s,background .18s}
@@ -651,7 +666,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-19-admin.55-esbank';
+window.ADMIN_BUILD='2026-08-19-admin.56-reach';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
