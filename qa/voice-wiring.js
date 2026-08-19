@@ -89,7 +89,60 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     return !!qt && window.__said.some(s=>s.indexOf(qt.slice(0,25))>=0);
   });
   R['the-switch-is-on-the-question-card'] = await p.evaluate(()=>!!document.getElementById('vxBar'));
-  R['the-mic-opens-only-after-it-stops-talking'] = await p.evaluate(()=>window.__recStarts>0);
+  /* RENAMED, BECAUSE THE BEHAVIOUR CHANGED AND THE NAME WOULD HAVE LIED.
+     The mic used to open only in V.say()'s callback — after the sentence
+     finished — which is the six-to-eight-second deaf window the founder
+     described as "when i start talking its still talking". It now opens
+     ALONGSIDE the speech off iOS. A check whose name still said "only
+     after it stops talking" would have gone green over the opposite. */
+  R['the-mic-opens'] = await p.evaluate(()=>window.__recStarts>0);
+
+  /* ---- BARGE-IN, the three halves of one conversation ---------------- */
+  R['barge.the-ear-opens-while-it-is-still-talking'] = await p.evaluate(async()=>{
+    VX.ios=false; VX.wantEar=true; VX.hasEar=true; VX.listening=false;
+    window.__recStarts=0;
+    /* THE STUB ENDS EVERY UTTERANCE IN 5ms, which is the one thing a real
+       one never does — and it made this check measure a sentence that was
+       already over. A barge-in test needs an utterance still in progress,
+       so this one holds onend rather than firing it. */
+    const realSpeak=window.speechSynthesis.speak;
+    window.speechSynthesis.speak=function(u){ window.__said.push(u.text); };
+    VX.say('One two three four five six seven eight nine ten.');
+    await new Promise(r=>setTimeout(r,400));
+    const opened = window.__recStarts>0 && VX.speaking===true;
+    window.speechSynthesis.speak=realSpeak;
+    VX.speaking=false;
+    return opened;
+  });
+  R['barge.talking-over-it-shuts-it-up'] = await p.evaluate(async()=>{
+    VX.speaking=true; VX.spokeAt=Date.now()-800;   // past the 350ms floor
+    window.__said=[];
+    window.__rec.__speak('layup', false);          // an INTERIM with real words
+    return window.__said.indexOf('<<CANCEL>>')>=0;
+  });
+  R['barge.its-own-first-syllable-does-not-cancel-it'] = await p.evaluate(async()=>{
+    VX.speaking=true; VX.spokeAt=Date.now();       // INSIDE the 350ms floor
+    window.__said=[];
+    window.__rec.__speak('la', false);
+    return window.__said.indexOf('<<CANCEL>>')<0;
+  });
+  /* AN OPEN MIC UNDER A LOUDSPEAKER HEARS THE APP. A whole sentence coming
+     back must never reach the grammar — and a short fragment must still
+     get through, or the guard has broken the feature to fix the echo. */
+  R['barge.it-does-not-answer-its-own-loudspeaker'] = await p.evaluate(async()=>{
+    /* A BUILD WITH NO GUARD MUST GO RED, NOT THROW. voice-lang.js learned
+       this the hard way: "TypeError: VX.langs is not a function" does not
+       tell a human which promise broke, and the gate reads exit codes while
+       the human reads the line above them. */
+    if(typeof VX.isEcho!=='function') return false;
+    const line='Got it. Layup or dunk. Say lock, or say another number.';
+    VX.saidNorm=null; VX.say(line);                // sets saidNorm + spokeAt
+    VX.speaking=true;
+    const echoed = VX.isEcho(line);
+    VX.speaking=false; VX.spokeAt=Date.now();
+    const fragment = VX.isEcho('layup or dunk');   // a player, not the speaker
+    return echoed===true && fragment===false;
+  });
 
   await p.evaluate(()=>{ window.__said=[]; VX.heard('two'); });
   await p.waitForTimeout(300);

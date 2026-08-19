@@ -8970,6 +8970,9 @@ var VX=(function(){
       u.onend=fire; u.onerror=fire;
       V.speaking=true;
       V.spokeAt=Date.now();
+      /* WHAT WE ARE SAYING, so the recogniser can be told not to answer it.
+         An open mic under a live loudspeaker hears the app. See V.isEcho. */
+      try{ V.saidNorm=norm(t); }catch(_){ V.saidNorm=''; }
       window.speechSynthesis.speak(u);
       /* ---- BARGE-IN ---------------------------------------------------
          FOUNDER, TESTING TONIGHT'S GAME: "when i start talking its still
@@ -9271,6 +9274,11 @@ var VX=(function(){
           continue;
         }
         fin=true;
+        /* OUR OWN VOICE, COMING BACK IN. Dropped before anything reads it,
+           so it never reaches the grammar and never reaches the log — a
+           heard-line showing the app's own prompt would send the next
+           debugging round after the wrong thing entirely. */
+        if(V.isEcho(res[0] && res[0].transcript)){ V.statBump('echo'); continue; }
         /* SHOW WHAT IT HEARD. "It did not work" is not a bug report; a
            mishear and a mis-grammar look nothing alike once this is on
            screen, and they have completely different fixes. */
@@ -9638,6 +9646,29 @@ var VX=(function(){
   try{ var _vs=JSON.parse(localStorage.getItem(VSKEY)||'null');
        if(_vs && typeof _vs==='object') Object.keys(V.stat).forEach(function(k){
          if(typeof _vs[k]==='number') V.stat[k]=_vs[k]; }); }catch(_){}
+  /* ---- THE APP MUST NOT ANSWER ITS OWN LOUDSPEAKER ------------------
+     Opening the ear while the voice is still going (the barge-in above) is
+     what the founder asked for, and it hands the recogniser a microphone
+     pointed at a speaker playing our own sentence. On a phone the echo
+     canceller usually eats it; on a laptop with the volume up it does not.
+
+     DELIBERATELY NARROW. This refuses a transcript only when it is most of
+     a WHOLE SENTENCE we are in the middle of saying — because a player
+     answering with one option ("three", "layup or dunk") is a short
+     fragment, and suppressing THAT would break the entire feature to fix a
+     smaller problem. Long echo is what a person never produces.
+
+     Left unguarded on purpose: a short echo. The grammar already refuses
+     it — read a four-option list back and every option is contained in it,
+     which is `ambiguous`, which is a refusal. Annoying, never wrong. */
+  V.isEcho=function(said){
+    try{
+      if(!V.saidNorm) return false;
+      if(!V.speaking && (Date.now()-(V.spokeAt||0))>1500) return false;
+      var h=norm(said); if(h.length<14) return false;
+      return V.saidNorm.indexOf(h)>=0 && h.length > V.saidNorm.length*0.5;
+    }catch(_){ return false; }
+  };
   V.statBump=function(k){
     try{ V.stat[k]=(V.stat[k]||0)+1; localStorage.setItem(VSKEY, JSON.stringify(V.stat)); }catch(_){}
   };
@@ -16636,7 +16667,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-19-voice.166';
+const STATS_BUILD='2026-08-19-echo.167';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

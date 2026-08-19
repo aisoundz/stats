@@ -10,8 +10,9 @@
   "qa.js": 103,
   "slate.js": 25,
   "voice-pick.js": 33,
-  "voice-wiring.js": 70,
+  "voice-wiring.js": 74,
   "localise.js": 16,
   "i18n.js": 23,
-  "season.js": 12
+  "season.js": 12,
+  "change-it.js": 6
 }
