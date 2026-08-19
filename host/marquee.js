@@ -61,6 +61,19 @@ function onlyUnavailable(net){
   if(!P.length) return false;
   return P.every(p => UNAVAILABLE.some(u => p.toLowerCase() === u.toLowerCase()));
 }
+/* A LOCAL AFFILIATE IN HIS OWN MARKET IS WATCHABLE, and ranking it as
+   "regional" got Saints @ Rams — the LA team, on CBS Los Angeles, at 1pm —
+   beaten by a preseason game in New England. The whole reason the rule is
+   "national first, then SoCal" is watchability, so a channel that reaches
+   Anaheim counts even when it is not the network feed. Below true national,
+   above nothing. */
+const LOCAL_LA = ['KCBS-TV','KCBS','KCAL','KTTV','KABC','KNBC','KCOP','KTLA','FOX 11',
+                  'Spectrum SportsNet','Spectrum Sports Net','Spectrum SportsNet LA',
+                  'SportsNet LA','CBS LA','KPIX+'];
+function isLocalLA(net){
+  const P = parts(net).map(x => x.toLowerCase());
+  return LOCAL_LA.some(x => P.includes(x.toLowerCase()));
+}
 /* Then watchability where the host actually is. A "regional" Phillies
    broadcast does not reach Anaheim. */
 const SOCAL = ['Sparks','Dodgers','Angels','Padres','Rams','Chargers','LAFC','Galaxy',
@@ -91,8 +104,9 @@ function score(g){
   let s = 0;
   if(onlyUnavailable(g.net)) return -1;     // cannot be featured at all
   if(isNational(g.net)) s += 100;
+  else if(isLocalLA(g.net)) s += 80;       // reaches Anaheim, just not the network feed
   if(isSoCal(g))        s += 40;
-  if(g.flagship)        s += 25;          // a hand-written night already owns the evening
+  if(/^gn\d/i.test(String(g.nightId||''))) s += 25;   // a hand-written night owns the evening
   const h = ptHour(g.tipISO);
   if(h >= 16 && h <= 20) s += 20;         // 4pm–8pm PT
   else if(h >= 13)       s += 8;
@@ -100,9 +114,14 @@ function score(g){
 }
 function why(g){
   const bits = [];
-  bits.push(isNational(g.net) ? 'national' : 'regional');
+  bits.push(isNational(g.net) ? 'national' : isLocalLA(g.net) ? 'LA local' : 'regional');
   if(isSoCal(g)) bits.push('SoCal');
-  if(g.flagship) bits.push('hand-written flagship');
+  /* `flagship` is set by a hand-written night AND by a previous marquee run
+     — this file's own stamp. Reading it back and calling every featured game
+     "hand-written" was the tool describing its own output as somebody
+     else's decision. Only an id shaped like a hand-written night is one. */
+  if(g.flagship && /^gn\d/i.test(String(g.nightId||''))) bits.push('hand-written flagship');
+  else if(g.marquee) bits.push('already featured');
   const h = ptHour(g.tipISO);
   bits.push(h >= 16 && h <= 20 ? 'prime PT' : (h + ':00 PT'));
   return bits.join(' · ');
