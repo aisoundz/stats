@@ -5717,7 +5717,22 @@ var AUTO = (function(){
     }) || null;
   }
 
+  /* THE NUMBER BEHIND THE BAND, remembered.
+     Every banded question in every sport goes through this one function,
+     and until now the raw count was thrown away the instant it became a
+     label: the archive stored "3 to 5", never 4. That made the cutoffs
+     unimprovable — retuning [3,6,9] to [4,7,10] meant re-running the whole
+     backtest and re-fetching every feed, so in practice nobody ever did,
+     and the bands stayed at whatever they were first guessed at.
+
+     Recording n costs nothing, changes no return value, and turns the
+     archive into a calibration set: "what would these questions have paid
+     under different cutoffs" becomes a query over data already on disk.
+     Read it right after a resolve — AUTO.lastN — and treat a stale value
+     as no value, which is why it is cleared on every call. */
+  var LAST_N = null;
   function band(n, cuts, opts){
+    LAST_N = (typeof n === 'number' && isFinite(n)) ? n : null;
     for(var i=0;i<cuts.length;i++){ if(n<=cuts[i]) return opts[i]; }
     return opts[opts.length-1];
   }
@@ -7029,13 +7044,17 @@ var AUTO = (function(){
 
   function resolve(name, j, p, opts){
     var f = R[name];
+    LAST_N = null;                 // stale is worse than absent
     if(typeof f !== 'function') return { ok:false, why:'no resolver named "'+name+'"' };
     if(!periodDone(j, p)) return { ok:false, why:'that quarter has not finished yet' };
     try{
       var v = f(j, p, opts||[]);
       if(v===null || v===undefined) return { ok:false, why:'the feed does not carry this yet' };
       if((opts||[]).indexOf(v) < 0)  return { ok:false, why:'resolved to "'+v+'", which is not one of the options' };
-      return { ok:true, answer:v };
+      /* `n` is the raw count behind a banded answer, when there was one —
+         the difference between an archive you can retune cutoffs from and
+         one you can only read. Absent for questions that are not bands. */
+      return (LAST_N === null) ? { ok:true, answer:v } : { ok:true, answer:v, n:LAST_N };
     }catch(e){ return { ok:false, why:'threw: '+((e&&e.message)||e) }; }
   }
 

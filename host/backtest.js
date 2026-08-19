@@ -166,11 +166,40 @@ function report(){
                     home:H.team.name, away:A.team.name,
                     homeScore:Number(H.score)||0, awayScore:Number(A.score)||0, q:[] };
 
+        /* ============ WHAT A FINISHED GAME CANNOT TELL YOU ==============
+           A soccer box score is a set of FINAL totals — `{"name":
+           "wonCorners", "displayValue": "7"}` — with no per-half split, and
+           soccer has no `plays` array to rebuild one from. In a LIVE match
+           that is fine: at half time the cumulative box IS the first half,
+           which is exactly why the template asks these only at 1H.
+
+           A backtest has no half time. It reads a finished match, so every
+           box-based first-half question here was being keyed off FULL-MATCH
+           totals and archived as `answered` — 15 of 15 in the MLS archive.
+           Not merely useless: actively dangerous, because band cutoffs get
+           calibrated from this archive. Corners over a full match run about
+           double a half, so `[3,6,9]` tuned on this data would put nearly
+           every real first-half answer in the bottom band and the question
+           would be born dead.
+
+           So say what is true: unknowable, not answered. The only way to
+           get real first-half box data is to snapshot it live at the break
+           — see host/snapshot.js, which is why that exists. */
+        const BOX_CUMULATIVE = ['mlsMoreShots','mlsMorePossession','mlsMoreCorners',
+                                'mlsMoreFouls','mlsCornersBand','mlsShotsOnTargetBand'];
+        const cannotKnow = (resolver, tagIdx) =>
+          L.sport === 'soccer' && tagIdx === 0 && BOX_CUMULATIVE.indexOf(resolver) >= 0;
+
         tpl.rounds.forEach((rd,i)=>{
           const p=(tpl.periods && tpl.periods[i]!=null) ? tpl.periods[i] : (i+1);
           rd.forEach(q=>{
             const opts=q.o.map(o=>sub(o,H.team.name,A.team.name));
             const rec={tag:tpl.tags[i], r:q.r, t:q.t};
+            if(cannotKnow(q.r, i)){
+              rec.st='unknowable';
+              rec.why='cumulative box stat at a period boundary — needs a live half-time snapshot';
+              row.q.push(rec); tally.unknowable=(tally.unknowable||0)+1; return;
+            }
             let res=null;
             try{ res=AUTO.resolve(q.r, feed, p, opts); }
             catch(err){ rec.st='threw'; rec.why=String(err.message).slice(0,80); row.q.push(rec); tally.threw++; return; }
@@ -179,16 +208,23 @@ function report(){
               rec.st='invalid'; rec.a=String(res.answer); row.q.push(rec); tally.invalid++;
               log('INVALID',`${e.shortName} ${q.r} -> ${res.answer}`); return;
             }
-            rec.st='answered'; rec.a=String(res.answer); row.q.push(rec); tally.answered++;
+            rec.st='answered'; rec.a=String(res.answer);
+            /* The number behind the band. Without it the archive can be read
+               but not RETUNED — and a cutoff nobody can retune is a cutoff
+               that stays at its first guess forever. */
+            if(typeof res.n === 'number') rec.n = res.n;
+            row.q.push(rec); tally.answered++;
           });
         });
         lines.push(JSON.stringify(row)); added++;
       }
     }
     if(lines.length) fs.appendFileSync(archivePath(lg), lines.join('\n')+'\n');
-    const tot=tally.answered+tally.silent+tally.invalid+tally.threw;
+    const unk=tally.unknowable||0;
+    const tot=tally.answered+tally.silent+tally.invalid+tally.threw+unk;
     log(lg.toUpperCase(), `${games} finished · ${added} newly archived · ${tot} resolutions · `
-      + `${tally.answered} answered, ${tally.silent} silent, ${tally.invalid} invalid, ${tally.threw} threw`);
+      + `${tally.answered} answered, ${tally.silent} silent, ${tally.invalid} invalid, ${tally.threw} threw`
+      + (unk ? `, ${unk} unknowable from a finished game` : ''));
   }
   console.log('\n  archive: '+OUT);
   console.log('  read it: node host/backtest.js --report\n');
