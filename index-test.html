@@ -500,7 +500,13 @@
   .btn.ghost:hover{background:var(--glass2)}
   .btn.gold{background:linear-gradient(90deg,#ffb020,var(--gold));color:#20160a;box-shadow:0 10px 22px rgba(255,197,77,.25)}
   .btn:disabled{opacity:.4;cursor:not-allowed}
-  .btn.sm{padding:11px;font-size:14px;margin-top:0}
+  /* 44px IS THE FLOOR FOR ANYTHING A THUMB HAS TO HIT — Apple's number,
+     and Google's is 48. .btn.sm came out at 40-41px on every phone and
+     tablet in qa/platforms.js, and "Use email instead" sits on the sign-in
+     path, which is the one flow where a missed tap loses the player
+     entirely. Padding alone cannot guarantee it because the font can be
+     smaller than assumed, so the height is stated. */
+  .btn.sm{padding:11px;font-size:14px;margin-top:0;min-height:44px}
 
   /* how it works steps */
   .step{display:flex;gap:12px;align-items:flex-start;margin:12px 0}
@@ -1374,7 +1380,7 @@
            about the next one. -->
 
       <b class="doorLbl">Never played? Start here</b>
-      <p class="sub" style="margin:6px 0 13px">A practice game, right now — real questions, simulated players. No account, nothing to fill in.</p>
+      <p class="sub" style="margin:6px 0 13px">A practice game, right now — real questions, simulated players. No account needed, just a name to play under.</p>
       <button class="btn" onclick="startDemo()">Try it now</button>
 
       <div class="doorSplit"><span>when you want a seat</span></div>
@@ -8651,15 +8657,20 @@ var VX=(function(){
      "translated" stopped being a yes/no the moment the QUESTIONS were done
      and the interface was not.
        'full'      everything. Only this earns an automatic switch.
-       'questions' the game itself — question text, options, and the voice
-                   that reads and hears them. The interface chrome is still
-                   English. Offered, labelled, never forced on anybody.
+       'beta'      the game AND the screens people actually use — questions,
+                   options, the voice, the home screen, the rail, the menu.
+                   The long tail (deeper screens, the rules text, some
+                   sheets) is still English. Offered, labelled, never forced.
+                   It was 'questions' for a few hours this morning when only
+                   the bank was translated; leaving that label up once the
+                   interface shipped would have UNDERSOLD it, which is the
+                   same dishonesty as overselling, pointing the other way.
        (absent)    the voice can pronounce it and nothing else is written.
      A device is only trusted for 'full'. Anything less is a deliberate
      choice a person makes, because handing somebody a half-translated app
      they did not ask for is worse than leaving them in English — and it
      lands on exactly the people the feature is for. */
-  var CONTENT_READY={ en:'full', es:'questions' };
+  var CONTENT_READY={ en:'full', es:'beta' };
 
   /* ?lang= wins for a single visit (how a host demos it), the saved choice
      is the standing answer, and the device is the fallback — but only as
@@ -8692,7 +8703,7 @@ var VX=(function(){
   V.contentLevel=function(k){ return CONTENT_READY[k||V.lang] || 'voice'; };
   V.contentNote=function(k){
     var L=V.contentLevel(k);
-    return L==='full' ? '' : L==='questions' ? 'questions only' : 'voice only';
+    return L==='full' ? '' : L==='beta' ? 'beta' : L==='questions' ? 'questions only' : 'voice only';
   };
   V.L=function(){ return LANGS[V.lang]||LANGS.en; };
   V.langs=function(){ return Object.keys(LANGS).map(function(k){ return {key:k, name:LANGS[k].name}; }); };
@@ -9976,7 +9987,9 @@ var VX=(function(){
       /* A language whose bank is still English says so in the one place a
          player is already looking, not only in the picker they used once. */
       var halfLang = V.on && !V.contentReady()
-        ? (V.contentLevel()==='questions'
+        ? (V.contentLevel()==='beta'
+             ? (V.L().name+' · beta — algunas pantallas siguen en inglés')
+             : V.contentLevel()==='questions'
              ? (V.L().name+': preguntas y voz — el resto de la app sigue en inglés')
              : (V.L().name+': voice only — questions are still in English'))
         : '';
@@ -10101,6 +10114,8 @@ var I18N = {
     "Sharpest and fastest wins the night.":"El más certero y más rápido gana la noche.",
     "Get in the game":"Entra al juego",
     "Practice with a simulated game":"Practica con un partido simulado",
+    "A practice game, right now — real questions, simulated players. No account needed, just a name to play under.":
+      "Un partido de práctica, ahora mismo — preguntas reales, jugadores simulados. Sin cuenta, solo un nombre para jugar.",
     "Working demo":"Demo funcional",
     /* THE MOST DANGEROUS KEY IN THIS TABLE. It is safe ONLY because the
        match is on the WHOLE trimmed text of a node — the rail's separator
@@ -10219,8 +10234,90 @@ var I18N = {
     "Official Rules 📖":"Reglas oficiales 📖",
     "⚖️ The fine print":"⚖️ La letra pequeña",
     "🤝 Fair play":"🤝 Juego limpio",
-    "On":"Activada", "Off":"Desactivada"
+    "On":"Activada", "Off":"Desactivada",
+    /* --- the play screen: the loop a player is in for four quarters --- */
+    "Voice":"Voz", "off":"apagada", "on":"activada",
+    "Voice off":"Voz apagada", "Voice on":"Voz activada",
+    "Simulated · nothing here is a real result":"Simulado · nada de esto es un resultado real",
+    "Score this quarter ✅":"Puntuar este cuarto ✅",
+    "Confirm & score quarter":"Confirmar y puntuar el cuarto",
+    "Confirm & see my final score":"Confirmar y ver mi puntuación final",
+    "Score your predictions 📝":"Puntuar tus predicciones 📝",
+    "🔥 Talk trash":"🔥 Habla basura",
+    "Open the tally board":"Abrir la tabla",
+    "Host mode":"Modo anfitrión", "Host tally":"Conteo del anfitrión",
+    /* --- the board --- */
+    "TONIGHT":"ESTA NOCHE", "YOUR SEASON":"TU TEMPORADA",
+    "TOTAL PTS":"PTS TOTALES", "NIGHTS":"NOCHES", "BEST NIGHT":"MEJOR NOCHE",
+    "Nights":"Noches", "Season pts":"Pts de temporada",
+    "Play a night through to the final buzzer and it banks here. Points carry all season.":
+      "Juega una noche hasta la bocina final y queda registrada aquí. Los puntos cuentan toda la temporada.",
+    /* --- the final screen --- */
+    "Your stat line · Season 1":"Tus números · Temporada 1",
+    "One email before each game — when it's on, who's playing, what's up for grabs. That's it.":
+      "Un correo antes de cada partido — cuándo es, quién juega y qué hay en juego. Nada más.",
+    /* --- rules --- */
+    "🏁 Scoring the night":"🏁 Cómo se puntúa la noche",
+    "STATS Game Night · Friends & Family Beta · v1.0":
+      "STATS Game Night · Beta para amigos y familia · v1.0",
+    "Why it's built this way:":"Por qué está hecho así:",
+    /* --- the last of the loop, found by walking the app in Spanish --- */
+    "Your card":"Tu tarjeta",
+    "Your card so far":"Tu tarjeta hasta ahora",
+    "Winning team":"Equipo ganador",
+    "Who takes it tonight?":"¿Quién gana esta noche?",
+    "Your night":"Tu noche",
+    "points":"puntos",
+    "You (you)":"Tú (tú)",
+    "AT":"VS", "PRACTICE":"PRÁCTICA", "Practice":"Práctica", "LIVE":"EN VIVO",
+    "↑ new":"↑ nuevo",
+    "Set these before kickoff. They score themselves while you watch — no tapping during the match.":
+      "Configúralas antes del saque inicial. Se puntúan solas mientras ves el partido — sin tocar nada durante el juego.",
+    "Tap to copy. If this is behind, pull down to refresh.":
+      "Toca para copiar. Si va atrasado, desliza hacia abajo para actualizar."
   }
+};
+
+/* ---- THE HANDFUL THAT CARRY A NUMBER --------------------------------
+   "Question 1 of 3" and "Worth 10 pts" are built at render time, so an
+   exact-match table can never hold them — and they sit in the middle of
+   the screen a player stares at for four quarters, which is exactly where
+   leaving English looks worst.
+
+   EVERY PATTERN IS ANCHORED ^…$ AND MATCHES THE WHOLE TRIMMED NODE. That
+   is not a style preference: an unanchored pattern is a substring match,
+   and a substring match is what turns "translated" into "translvsed" and
+   rewrites the inside of a team name. If a pattern here is ever written
+   without ^ and $, the safety property of this whole design is gone. */
+var I18N_PATTERNS = {
+  es: [
+    [/^Question (\d+) of (\d+)$/,        'Pregunta $1 de $2'],
+    /* SINGULAR AND PLURAL. "Vale 1 pts" is the kind of thing that tells a
+       native speaker instantly that a machine wrote this — and the whole
+       point of asking testers to read it is to avoid exactly that. The
+       one-point case gets its own pattern, and it is listed FIRST because
+       these are tried in order. */
+    [/^Worth 1 pt$/,                     'Vale 1 punto'],
+    [/^Worth (\d+) pts$/,                'Vale $1 puntos'],
+    [/^Worth 1 pt \+ ⚡$/,                'Vale 1 punto + ⚡'],
+    [/^Worth (\d+) pts \+ ⚡$/,           'Vale $1 puntos + ⚡'],
+    [/^(\d+) of (\d+)$/,                 '$1 de $2'],
+    [/^(\d+) pts$/,                      '$1 pts'],
+    [/^PRACTICE · Q(\d)$/,               'PRÁCTICA · C$1'],
+    [/^LIVE · Q(\d)$/,                   'EN VIVO · C$1'],
+    [/^PRACTICE · (.+)$/,                'PRÁCTICA · $1'],
+    [/^Score Q(\d)$/,                    'Puntuar C$1'],
+    [/^Start Quarter (\d) ▶$/,           'Empezar el cuarto $1 ▶'],
+    [/^End of Q(\d)$/,                   'Fin del cuarto $1'],
+    [/^Quarter (\d) in the books$/,      'Cuarto $1 terminado'],
+    [/^(\d+) \/ (\d+) picked$/,          '$1 / $2 elegidas'],
+    [/^(\d+) \/ (\d+) locked$/,          '$1 / $2 confirmadas'],
+    [/^(\d+) pts riding$/,               '$1 pts en juego'],
+    [/^OUT OF (\d+)$/,                   'DE $1'],
+    [/^Up to (\d+) pts$/,                'Hasta $1 pts'],
+    [/^(\d+) × (\d+) pt$/,               '$1 × $2 pt'],
+    [/^🔥 (\d+)-game streak$/,            '🔥 racha de $1 partidos']
+  ]
 };
 /* Attributes worth translating as well as text. */
 var I18N_ATTRS = ['placeholder','aria-label','title'];
@@ -10285,6 +10382,19 @@ function applyLang(root){
         return;
       }
       var es = d[key];
+      if(!es){
+        /* No exact entry — try the anchored patterns before giving up. */
+        /* VX.lang, not V.lang — `V` exists only inside the VX closure, and
+           this function is outside it. The reference threw, the outer
+           try/catch swallowed it, and the ENTIRE translation pass became a
+           silent no-op: every screen stayed English and nothing anywhere
+           reported an error. Same shape as B12, where a variable declared
+           inside an IIFE made a 20-second tick throw in total silence. */
+        var pats = (I18N_PATTERNS[VX.lang]||[]);
+        for(var pi=0; pi<pats.length; pi++){
+          if(pats[pi][0].test(key)){ es = key.replace(pats[pi][0], pats[pi][1]); break; }
+        }
+      }
       if(!es) return;
       /* keep the original leading/trailing whitespace */
       var next = String(en).replace(key, es);
@@ -10320,8 +10430,25 @@ function applyLang(root){
         I18N_EVER = true;
       });
     });
-  }catch(_){}
+  }catch(e){
+    /* A SWALLOWED ERROR HERE DISABLES THE WHOLE FEATURE IN SILENCE, and it
+       has already happened once: a reference to `V.lang` from outside the
+       VX closure threw on every pass, this catch ate it, and every screen
+       stayed English while nothing anywhere said why. Twenty checks were
+       green because they exercised the lookup, not the pass.
+
+       So the catch still protects the page — a translation must never take
+       the app down — but it records that it fired, once, loudly, where both
+       a human and a test can see it. B12 is the same story: a variable
+       declared inside an IIFE made a 20-second tick throw in total silence
+       and the autopilot had never once fetched a feed. */
+    I18N_BROKE = String((e && e.message) || e);
+    if(!I18N_TOLD){ I18N_TOLD = true;
+      try{ console.error('applyLang failed — the interface will stay English:', e); }catch(_){}
+    }
+  }
 }
+var I18N_BROKE = null, I18N_TOLD = false;
 try{ window.applyLang=applyLang; }catch(_){}
 
 /* ---- WHEN THE PASS RUNS ---------------------------------------------
@@ -16299,7 +16426,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-19-ui.161';
+const STATS_BUILD='2026-08-19-es.163';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

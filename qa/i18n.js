@@ -187,6 +187,27 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
   ok('i18n.english-costs-nothing', cost < 0.2,
      `${cost.toFixed(3)}ms per pass (lang=${everTouched}) — a player who never touches Spanish pays this on every DOM change, about once a second because the countdown ticks`);
 
+  /* ---- 5d. EVERY PATTERN IS ANCHORED --------------------------------
+     The exact-match rule is what stops the dictionary rewriting the inside
+     of a team name. Patterns are the one place that rule can be broken:
+     an unanchored regex IS a substring match. So this asserts the shape of
+     every pattern rather than its behaviour, because one bad entry added
+     next year is all it takes. */
+  const pats = await p.evaluate(()=>{
+    try{
+      const out=[];
+      for(const lang in I18N_PATTERNS)
+        I18N_PATTERNS[lang].forEach(pr=>out.push({lang, src:String(pr[0])}));
+      return out;
+    }catch(_){ return null; }
+  });
+  ok('i18n.patterns-exist', Array.isArray(pats) && pats.length>0, 'no pattern table found');
+  if(Array.isArray(pats)){
+    const loose=pats.filter(x=>!/^\/\^/.test(x.src) || !/\$\/[a-z]*$/.test(x.src));
+    ok('i18n.every-pattern-is-anchored', loose.length===0,
+       loose.map(x=>x.lang+' '+x.src).join(' · ')+' — an unanchored pattern is a substring match, and a substring match rewrites the inside of team names');
+  }
+
   /* ---- 6. THE SWITCH IS FINDABLE ------------------------------------- */
   const menu = await p.evaluate(()=>{
     try{ openMenu(); }catch(_){}
@@ -215,6 +236,14 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
      `${toggled.before} -> ${toggled.after}`);
 
   await p.evaluate(()=>{ try{ VX.setLang('en'); closeMenu(); }catch(_){} });
+  /* THE PASS MUST NOT HAVE DIED QUIETLY. It is wrapped in a try/catch so a
+     translation can never take the app down — which means a bug inside it
+     produces no symptom except "everything is still English". That is
+     exactly what happened once. If it threw, say so. */
+  const broke = await p.evaluate(()=>{ try{ return I18N_BROKE; }catch(_){ return 'no I18N_BROKE flag'; } });
+  ok('i18n.the-pass-did-not-fail-silently', !broke,
+     'applyLang threw and was swallowed: '+broke);
+
   ok('i18n.no-page-errors', errs.length===0, errs.slice(0,2).join(' · '));
 
   await b.close();

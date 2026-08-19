@@ -61,7 +61,7 @@ const TARGET_ABS=path.resolve(__dirname,'..',TARGET);
    not read argv[2] is harmless, but claiming it was targeted would not be. */
 const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-lang.js',
   'board-order.js','payoff.js','slate.js','acceptance.js','host-sportsreg.js','localise.js','i18n.js','season.js',
-  'devices.js','night-config.js','overtime.js']);
+  'devices.js','night-config.js','overtime.js','platforms.js']);
 /* Suites that read admin.html rather than the player file. The player half
    of the gate was split across two builds and fixed; the ADMIN half is
    split the same way and is NOT fixed — these seven read admin.html even
@@ -124,6 +124,9 @@ const TIER={
   'localise.js':      {tier:'browser'},
   'i18n.js':          {tier:'browser'},
   'season.js':        {tier:'browser'},
+  /* Three engines x 11 device profiles — the slowest suite by far, so it
+     is browser-tier and runs in the full gate rather than --static. */
+  'platforms.js':     {tier:'browser'},
   'claims.js':        {tier:'live'},
   'journey.js':       {tier:'browser'},
   'live-path.js':     {tier:'live'},

@@ -67,7 +67,23 @@ const railOk=(where,s)=>{ const r=railAgrees(s);
    player had left. Only asserted when Firestore is actually up: a local
    run cuts the data channel on purpose, and SB is then correctly bound to
    nothing at all. */
+/* SB.enabled TRUE WITH SB.room() NULL IS ITS OWN BUG, and it has a name:
+   B27, where sign-in looked healthy while nightId stayed null forever and
+   every room op silently failed or queued. This check used to report that
+   state as "SB is in null, the app is in jrn-a" — which reads like a
+   switching bug and is actually the network layer claiming to be up while
+   bound to nothing. Seen under gate load 19 Aug; green 3/3 standalone, so
+   it is a race that only widens when the machine is busy — which is
+   exactly what a slow phone is. Named separately so the next person does
+   not chase the wrong thing. */
 const sbOk=(where,s)=>{ if(!s.sbEnabled) return;
+  if(s.sbRoom==null){
+    ok('journey.the-network-layer-is-never-up-but-roomless ('+where+')', false,
+       'SB.enabled is true while SB.room() is null — B27 shape: the app is in '
+       +s.night+' and the network layer is bound to nothing, so a submission '
+       +'has nowhere to go. Under load, i.e. what a slow phone is.');
+    return;
+  }
   ok('journey.the-network-layer-follows-you ('+where+')', s.sbRoom===s.night,
      'SB is in '+s.sbRoom+', the app is in '+s.night); };
 
