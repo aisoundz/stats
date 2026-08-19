@@ -65,12 +65,33 @@ const ymd = d => d.toISOString().slice(0,10).replace(/-/g,'');
     /* A plan exactly as publish.js would write one for a slate room. */
     process.env.SPORT = L.sport;
     process.env.NIGHT_ID = 'live-path-' + lg;
-    process.env.HOME_NICK = 'Home'; process.env.AWAY_NICK = 'Away';
+    /* THE PLAN IS BUILT PER GAME, WITH THAT GAME'S REAL TEAM NAMES, and
+       this is not tidiness — it is the difference between measuring the
+       question bank and measuring the harness.
+
+       It used to set HOME_NICK='Home' / AWAY_NICK='Away' once and reuse
+       the plan for every game. Every team-comparison question then had
+       options ["Home","Away","Even"], and a resolver answers by mapping
+       the winning TEAM back to one of the options it was given — no real
+       team is called "Home", so every one of them returned null and was
+       counted VOID. That produced "NFL Q4: 2/4 answered · 2 void" and the
+       reasonable conclusion that the football bank was losing half its
+       last round. It was not: the same resolvers answer "Bears" and
+       "Rams" the moment they are handed the names the game actually uses.
+
+       A suite that measures its own stub instead of the product is worse
+       than no suite, because it generates work. */
+    let K;
+    try { K = PUB.loadConstants(); }
+    catch (e) { console.log(`  ${lg}: constants would not load — ${e.message}`); continue; }
+    const planFor = (g) => {
+      process.env.HOME_NICK = g.homeNick; process.env.AWAY_NICK = g.awayNick;
+      return PUB.buildPlan(K.NIGHTS, K.BANK, K.TEMPLATES);
+    };
     let plan;
-    try {
-      const K = PUB.loadConstants();
-      plan = PUB.buildPlan(K.NIGHTS, K.BANK, K.TEMPLATES);
-    } catch (e) { console.log(`  ${lg}: no plan — ${e.message}`); continue; }
+    try { process.env.HOME_NICK='Home'; process.env.AWAY_NICK='Away';
+          plan = PUB.buildPlan(K.NIGHTS, K.BANK, K.TEMPLATES); }
+    catch (e) { console.log(`  ${lg}: no plan — ${e.message}`); continue; }
 
     /* Finished games, most recent first. */
     let games = [];
@@ -85,7 +106,15 @@ const ymd = d => d.toISOString().slice(0,10).replace(/-/g,'');
         if (games.length >= PER_LG) break;
         const c = (e.competitions || [])[0];
         if (!c || !(((c.status||{}).type||{}).completed)) continue;
-        games.push({ id: e.id, name: e.shortName });
+        /* KEEP EACH GAME'S REAL TEAM NICKNAMES. See the plan note below —
+           resolving a team question against placeholder options cannot
+           work, so the plan has to be built per game, not once per league. */
+        const cs = (c.competitors || []);
+        const home = cs.find(x => x.homeAway === 'home') || cs[0] || {};
+        const away = cs.find(x => x.homeAway === 'away') || cs[1] || {};
+        games.push({ id: e.id, name: e.shortName,
+                     homeNick: (home.team||{}).name || (home.team||{}).shortDisplayName || 'Home',
+                     awayNick: (away.team||{}).name || (away.team||{}).shortDisplayName || 'Away' });
       }
     }
     if (!games.length) { console.log(`  ${lg.toUpperCase()}: no finished game in ${DAYS} days`); continue; }
@@ -93,6 +122,8 @@ const ymd = d => d.toISOString().slice(0,10).replace(/-/g,'');
     console.log(`\n  ${lg.toUpperCase()}  (${plan.rounds.length} rounds · ${games.length} game(s))`);
 
     for (const g of games) {
+      try { plan = planFor(g); }
+      catch (e) { ok(`livepath.${lg}.plan-builds`, false, `${g.name}: ${e.message}`); continue; }
       let sum;
       try { sum = await AUTO.fetchFeed(g.id, L.path); }
       catch (e) { ok(`livepath.${lg}.feed-loads`, false, `${g.name}: ${e.message}`); continue; }
@@ -107,7 +138,7 @@ const ymd = d => d.toISOString().slice(0,10).replace(/-/g,'');
          slots.filter(s => s.def).length >= plan.rounds.length,
          `${g.name}: ${slots.filter(s=>s.def).length} slot(s) for ${plan.rounds.length} round(s)`);
 
-      const lines = [];
+      const lines = [], reasons = [];
       let opened = 0, scored = 0;
       for (const sl of slots) {
         const R = sl.def; if (!R) continue;
@@ -120,10 +151,18 @@ const ymd = d => d.toISOString().slice(0,10).replace(/-/g,'');
         try { done = AUTO.periodDone(sum, period); } catch (_) {}
         if (done) opened++;
 
-        let key = null, voided = 0;
+        /* `voided` is an ARRAY of reasons, and an empty array is TRUTHY.
+           This used to hold it as `voided || 0` and then count it with
+           String(voided).split(',').length — which is 1 for [] (String([])
+           is "", and "".split(",") is [""]). So EVERY clean round in every
+           league printed a phantom "1 void", and a reader would reasonably
+           conclude the banks were leaking questions everywhere. Count the
+           array. Splitting on commas was wrong twice over: a void reason
+           can contain one. */
+        let key = null, voided = [];
         try {
           const res = RUN.resolveRound(AUTO, R, sum, period, null);
-          key = res.key; voided = (res.voided || 0);
+          key = res.key; voided = Array.isArray(res.voided) ? res.voided : [];
           if (key && key.length) scored++;
         } catch (e) {
           ok(`livepath.${lg}.round-resolves`, false, `${g.name} ${R.tag}: threw — ${e.message}`);
@@ -132,12 +171,14 @@ const ymd = d => d.toISOString().slice(0,10).replace(/-/g,'');
         ok(`livepath.${lg}.round-resolves`, true);
 
         const answered = (key || []).filter(x => x != null && x !== '').length;
+        voided.forEach(v => reasons.push(`${R.tag}: ${v}`));
         lines.push(`      ${String(R.tag).padEnd(8)} period ${String(period).padStart(2)}  `
           + `${answered}/${(R.qs||[]).length} answered`
-          + (voided ? `  ·  ${String(voided).split(',').length} void` : ''));
+          + (voided.length ? `  ·  ${voided.length} void` : ''));
       }
       console.log(`    ${g.name}`);
       lines.forEach(l => console.log(l));
+      if (reasons.length) reasons.forEach(r => console.log(`         ${r}`));
 
       /* NOT A CHECK ON periodDone. On a completed feed `st.type.completed`
          short-circuits the gate to true for EVERY period — I confirmed it
