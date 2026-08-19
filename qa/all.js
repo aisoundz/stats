@@ -59,7 +59,7 @@ const TARGET_ABS=path.resolve(__dirname,'..',TARGET);
 /* Only these accept a positional target; handing one to a suite that does
    not read argv[2] is harmless, but claiming it was targeted would not be. */
 const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-lang.js',
-  'board-order.js','payoff.js','slate.js','acceptance.js','host-sportsreg.js']);
+  'board-order.js','payoff.js','slate.js','acceptance.js','host-sportsreg.js','localise.js']);
 /* Suites that read admin.html rather than the player file. The player half
    of the gate was split across two builds and fixed; the ADMIN half is
    split the same way and is NOT fixed — these seven read admin.html even
@@ -106,6 +106,7 @@ const TIER={
   'voice-pick.js':    {tier:'browser'},
   'voice-wiring.js':  {tier:'browser'},
   'payoff.js':        {tier:'browser'},
+  'localise.js':      {tier:'browser'},
   'journey.js':       {tier:'browser'},
   'live-path.js':     {tier:'live'},
 };

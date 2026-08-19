@@ -108,6 +108,16 @@ function nickSubst(bank, home, away){
     const c = Object.assign({}, q);
     c.t = swap(c.t);
     c.o = (c.o || []).map(swap);
+    /* EVERY LANGUAGE, NOT JUST ENGLISH. A Spanish option reading "{HOME}"
+       is exactly as broken as an English one, and it is worse in practice
+       because the guard below only ever looked at `t` and `o` — so the
+       token sailed through and the Spanish player saw a literal {HOME} on
+       a button while the English player saw the team name. Found the first
+       time a translated bank was published. */
+    Object.keys(c).forEach(k => {
+      if(/^t_[a-z]{2}$/.test(k) && typeof c[k] === 'string') c[k] = swap(c[k]);
+      else if(/^o_[a-z]{2}$/.test(k) && Array.isArray(c[k])) c[k] = c[k].map(swap);
+    });
     return c;
   }));
 }
@@ -153,11 +163,34 @@ function buildPlan(NIGHTS, BANK, TEMPLATES){
   /* No token may survive. */
   const left = [];
   bank.forEach((rd, i) => rd.forEach((q, x) => {
-    const hay = [q.t].concat(q.o || []).join(' | ');
+    /* Sweep EVERY language field, not only the English pair. */
+    let hay = [q.t].concat(q.o || []);
+    Object.keys(q).forEach(k => {
+      if(/^t_[a-z]{2}$/.test(k)) hay.push(q[k]);
+      else if(/^o_[a-z]{2}$/.test(k) && Array.isArray(q[k])) hay = hay.concat(q[k]);
+    });
+    hay = hay.join(' | ');
     if(/\{[A-Z]+\}/.test(hay)) left.push(`round ${i+1} Q${x+1}: ${hay}`);
   }));
   if(left.length)
     die('publish blocked — a template token was never substituted:\n  ' + left.join('\n  '));
+
+  /* A TRANSLATED OPTION LIST IS ALL-OR-NOTHING, AND THAT IS CHECKED HERE
+     RATHER THAN HOPED FOR. The player falls back to English on a
+     length mismatch, so a bad list is not fatal on the phone — but it is a
+     bank that LOOKS translated and silently is not, for that one question,
+     forever. Say so at publish time, where somebody is watching. */
+  const badLen = [];
+  bank.forEach((rd, i) => rd.forEach((q, x) => {
+    Object.keys(q).forEach(k => {
+      const m = /^o_([a-z]{2})$/.exec(k);
+      if(!m) return;
+      const n = (q.o || []).length, t = Array.isArray(q[k]) ? q[k].length : -1;
+      if(t !== n) badLen.push(`round ${i+1} Q${x+1}: ${k} has ${t} option(s), o has ${n} — the whole list will be ignored`);
+    });
+  }));
+  if(badLen.length)
+    die('publish blocked — a translated option list does not match its canonical one:\n  ' + badLen.join('\n  '));
 
   const rounds = (cfg.tags || []).map((tag, i) => {
     const qs = (bank[i] || []).map(q => {
@@ -172,12 +205,26 @@ function buildPlan(NIGHTS, BANK, TEMPLATES){
           : String(q.k).trim();
         if(!k) k = null;
       }
-      return {
+      /* EVERY t_<lang> / o_<lang> RIDES ALONG. This object literal is the
+         fourth place a question gets rebuilt field by field, and B11 was
+         exactly one of these lists forgetting `r` — sixteen questions
+         published with no resolver while the room said "automated". A
+         translation dropped here would be quieter still: the bank would
+         publish in English and nothing would error, because a missing
+         field looks the same as one nobody set. */
+      const out = {
         t: String(q.t || '').trim(),
         o: (q.o || []).map(o => String(o).trim()).filter(Boolean),
         r: q.r ? String(q.r) : '',
         k
       };
+      Object.keys(q || {}).forEach(key => {
+        if(/^t_[a-z]{2}$/.test(key) && typeof q[key] === 'string')
+          out[key] = q[key].trim();
+        else if(/^o_[a-z]{2}$/.test(key) && Array.isArray(q[key]))
+          out[key] = q[key].map(o => String(o).trim());
+      });
+      return out;
     });
     /* WHICH PERIOD DOES THIS ROUND ASK ABOUT?
        For basketball the answer is boring and always has been: round 1 is

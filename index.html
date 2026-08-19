@@ -10001,11 +10001,45 @@ var VX=(function(){
 })();
 try{ window.VX=VX; }catch(_){}
 
+/* ---- ONE QUESTION, TWO FACES ----------------------------------------
+   THE STRING A PLAYER READS AND THE STRING THE GRADER COMPARES STOP BEING
+   THE SAME STRING the moment there is a second language — and letting them
+   stay one variable is how a translated game marks a correct answer wrong.
+
+   `q.o` is CANONICAL and never moves. It is what the ESPN resolver returns,
+   what `q.a` is compared against, what goes in the submission, and what the
+   Control Room keys the night on. `q.o_es` is DISPLAY ONLY: same length,
+   same order, or it is ignored in full. A half-translated list that silently
+   shifted by one would put every answer on the wrong row and every player in
+   the room would be graded against somebody else's pick — so the check is
+   all-or-nothing rather than per-item.
+
+   The voice layer needs no change and that is not luck: curOpts() reads the
+   option text out of the DOM and V.match returns an INDEX, so it already
+   hears what is on the screen and acts on the row, not the wording. */
+function qLang(){ try{ return VX.lang || 'en'; }catch(_){ return 'en'; } }
+function qText(q){
+  if(!q) return '';
+  var L=qLang(); if(L==='en') return q.t;
+  var t=q['t_'+L];
+  return (typeof t==='string' && t.trim()) ? t : q.t;
+}
+function qOptsFor(q){
+  if(!q || !Array.isArray(q.o)) return [];
+  var L=qLang(); if(L==='en') return q.o.slice();
+  var a=q['o_'+L];
+  if(!Array.isArray(a) || a.length!==q.o.length) return q.o.slice();
+  return q.o.map(function(o,i){
+    var v=a[i]; return (typeof v==='string' && v.trim()) ? v : o;
+  });
+}
+try{ window.qText=qText; window.qOptsFor=qOptsFor; }catch(_){}
+
 function nq(){return rounds[S.qi].q.length;}
 function loadQuestion(){
   S.answered=false; pastTime=false;
   const q=rounds[S.qi].q[S.ni];const worth=roundWorth(S.qi);
-  document.getElementById('qText').textContent=q.t;
+  document.getElementById('qText').textContent=qText(q);
   document.getElementById('qCount').textContent=`Question ${S.ni+1} of ${nq()}`;
   document.getElementById('qWorth').textContent=`Worth ${worth} pt${worth>1?'s':''}${S.mode==="live"?' + ⚡':''}`;
   document.getElementById('revealBox').innerHTML='';
@@ -10017,8 +10051,10 @@ function loadQuestion(){
        if(_hb && _hb.tagName==='BUTTON'){ _hb.disabled=!S[half];
          _hb.textContent = S.mode==="live" ? '✨ Lifeline: +15s (1/half)' : '✨ Lifeline (1/half)'; } }catch(_){}
   const o=document.getElementById('qOpts');o.innerHTML='';
-  q.o.forEach(opt=>{const b=document.createElement('button');b.className='opt';
-    b.innerHTML=`<span>${opt}</span><span class="mk"></span>`;
+  /* SHOW the localised option, SEND the canonical one. */
+  const shown=qOptsFor(q);
+  q.o.forEach((opt,oi)=>{const b=document.createElement('button');b.className='opt';
+    b.innerHTML=`<span>${shown[oi]}</span><span class="mk"></span>`;
     b.onclick=()=>answer(opt,b);o.appendChild(b);});
   startTimer(S.mode==="live"?20:15);
   /* Server clock, stamp one of two: the question is now on screen. Fire and
@@ -10403,9 +10439,10 @@ function openReview(){
       <div class="opts" id="rev_${i}"></div>`;
     list.appendChild(c);
     const box=c.querySelector('#rev_'+i);
-    q.o.forEach(opt=>{const b=document.createElement('button');b.className='opt';
+    const shownR=qOptsFor(q);
+    q.o.forEach((opt,oi)=>{const b=document.createElement('button');b.className='opt';
       b.style.padding='10px 13px';b.style.fontSize='13px';
-      b.innerHTML=`<span>${opt}</span><span class="mk"></span>`;
+      b.innerHTML=`<span>${shownR[oi]}</span><span class="mk"></span>`;
       b.onclick=()=>{revMarks[i]=opt;
         [...box.children].forEach(x=>{x.classList.remove('sel');x.querySelector('.mk').textContent='';});
         b.classList.add('sel');b.querySelector('.mk').textContent='✓';
@@ -15820,7 +15857,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-19-payoff.158';
+const STATS_BUILD='2026-08-19-es.159';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
