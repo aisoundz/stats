@@ -121,6 +121,11 @@
   .gamebtn .gn s{text-decoration:none;color:var(--dim);font-weight:600;font-size:14px}
   .gamebtn .gt{display:block;font-size:12px;color:var(--muted);margin-top:3px}
   .gamebtn .star{color:var(--gold)}
+  /* A HOSTED ROOM LOOKS DIFFERENT FROM A BUILT ONE. Thirty cards that all
+     look alike is why the question "are we doing every baseball game?" had
+     to be asked out loud instead of answered by the screen. */
+  .gamebtn.hosted{border-color:color-mix(in srgb,var(--teal) 45%,var(--line))}
+  .gamebtn .onair{color:var(--teal);font-weight:700;letter-spacing:.04em}
   .adv{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
   .adv summary{cursor:pointer;font-size:14px;color:var(--dim);list-style:none}
   .adv summary::-webkit-details-marker{display:none}
@@ -666,7 +671,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-19-admin.57-weekbuilt';
+window.ADMIN_BUILD='2026-08-19-admin.58-hosted';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -1821,6 +1826,16 @@ function slateToNight(g){
     tags: (T.tags||[]).slice(), names: (T.names||[]).slice(), worth: (T.worth||[]).slice(),
     periods: (T.periods||[]).slice(),
     fromSlate: true, tipISO: g.tipISO || '', league: g.league || '', sport: g.sport || 'basketball',
+    /* BUILT IS NOT HOSTED, AND THE CONTROL ROOM HAS TO SAY WHICH.
+       Founder, looking at 30 cards: "are we doing every baseball game, is
+       that our runner getting the info and will it impact our free tier."
+       A fair question to ask of a screen that shows thirty rooms and marks
+       none of them. Thirteen of those are baseball with a bank and a
+       schedule doc and NO RUNNER — they cost a couple of writes each and
+       nothing per hour. Four are on the rail with a runner behind them,
+       and those are the ones that cost ~2,880 reads a night. Same list,
+       two very different things, and the screen was silent about it. */
+    hosted: !!g.__hosted, marquee: !!g.marquee, gotn: !!g.gotn, gn: g.gn || '',
     /* The nicknames, kept because a template bank substitutes them — the
        same two words publish.js puts in. Without these the Write and Grade
        tabs would show {HOME} to a host. */
@@ -1874,11 +1889,24 @@ function paintDayStrip(){
     ? games.map(n=>{
         const flag = !n.fromSlate;
         const gn = String(n.id||'').match(/^gn(\d+)/i);
-        return '<button type="button" class="gamebtn'+(n.id===night?' on':'')+'" data-night="'+esc(n.id)+'">'
+        /* THE NUMBER, WHEREVER IT COMES FROM. It used to be read only out
+           of a hand-written night's id (gn13-...), so a slate room chosen as
+           the night's marquee had no number even though it is the same
+           thing. Founder: "I love how we have a game of the night and we
+           number it. Please dont stop that." */
+        const num = gn ? gn[1] : (n.gn || '');
+        const badge = n.gotn ? '★★ Game of the Night'
+                    : n.marquee ? '★ Featured'
+                    : num ? 'Game Night #'+num : '';
+        return '<button type="button" class="gamebtn'+(n.id===night?' on':'')+(n.hosted?' hosted':'')+'" data-night="'+esc(n.id)+'">'
           + '<span class="gl"><span>'+esc(String(n.league||'wnba').toUpperCase())+'</span>'
-          +   (gn ? '<span class="star">Game Night #'+gn[1]+'</span>' : '') + '</span>'
+          +   (badge ? '<span class="star">'+esc(badge)+(num&&(n.gotn||n.marquee)?' · #'+esc(num):'')+'</span>' : '') + '</span>'
           + '<span class="gn">'+esc(n.away||'')+' <s>at</s> '+esc(n.home||'')+'</span>'
-          + '<span class="gt">'+(flag ? 'hand-written bank' : 'from the slate · template bank')+'</span>'
+          + '<span class="gt">'
+          +   (n.hosted ? '<b class="onair">ON THE RAIL</b> · a runner hosts this'
+                        : 'built only · no runner, not on the rail')
+          +   ' · ' + (flag ? 'hand-written bank' : 'template bank')
+          + '</span>'
           + '</button>';
       }).join('')
     : '<p class="sub tip" style="margin:0">No games built for this day. The slate is built each morning at 08:10.</p>';
@@ -1929,8 +1957,13 @@ async function loadSlateRooms(){
        and the host could not see one of them. Fall back to `games` for a
        slate written before `built` existed. */
     const d = snap.data()||{};
+    /* `games` is the rail — every room with a runner behind it. `built` is
+       everything. Tag one against the other so a host can see, on the card,
+       which rooms are actually being played tonight. */
+    const onRail = new Set(((d.games)||[]).map(g=>g&&g.nightId).filter(Boolean));
     const games = (Array.isArray(d.built) && d.built.length ? d.built : (d.games||[]));
-    SLATE_ROOMS = games.filter(g=>g&&g.nightId).map(slateToNight);
+    SLATE_ROOMS = games.filter(g=>g&&g.nightId)
+                       .map(g=>{ try{ g.__hosted = onRail.has(g.nightId); }catch(_){} return slateToNight(g); });
 
     /* ============ AND THE WEEK AHEAD ==================================
        TONIGHT IS LOADED FIRST AND SEPARATELY, ON PURPOSE. This used to
@@ -1968,9 +2001,11 @@ async function loadSlateRooms(){
            existed have none, and the fallback covers them. */
         const fw = sn.data() || {};
         const fwGames = (Array.isArray(fw.built) && fw.built.length) ? fw.built : (fw.games || []);
+        const fwRail = new Set(((fw.games)||[]).map(x=>x&&x.nightId).filter(Boolean));
         fwGames.forEach(g => {
           if(!g || !g.nightId || seen[g.nightId]) return;
           seen[g.nightId] = true;
+          try{ g.__hosted = fwRail.has(g.nightId); }catch(_){}
           SLATE_ROOMS.push(slateToNight(g));
           added++;
         });

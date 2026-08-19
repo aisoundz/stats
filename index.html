@@ -4243,12 +4243,27 @@ async function prefetchSlateConfigs(db, F){
   for(var i=0;i<games.length;i++){
     var id = games[i] && games[i].nightId;
     if(!id) continue;
-    try{ if(localStorage.getItem('stats_night_cfg_'+id)) continue; }catch(_){}
+    /* PRESENT IS NOT THE SAME AS CURRENT, and treating them as the same
+       meant a phone that had ever cached a night NEVER fetched it again.
+       That is how a corrected config failed to reach the one person who
+       had already opened the room: the server said "Wed · August 19" and
+       his phone went on replaying the copy it took before the fix, because
+       the only question asked here was "do I have one?".
+
+       A cache with no version is a cache that cannot be repaired. Stamp it
+       with the build that wrote it and refetch when they differ — the read
+       side still paints the old copy first so there is no flash, it just
+       stops being the last word. */
+    try{
+      var had = localStorage.getItem('stats_night_cfg_'+id);
+      if(had && JSON.parse(had)._build === STATS_BUILD) continue;
+    }catch(_){}
     try{
       var snap = await F.getDoc(F.doc(db,'schedule',id));
       if(!snap.exists()) continue;
       var cfg = snap.data();
       if(!cfg || !cfg.game || !cfg.preds) continue;
+      try{ cfg._build = STATS_BUILD; }catch(_){}
       localStorage.setItem('stats_night_cfg_'+id, JSON.stringify(cfg));
       got++;
     }catch(_){}
@@ -4740,8 +4755,16 @@ const SC_GAME={
   nightId:"sn1-2026-08-04-mia-ame",
   homeName:"Inter Miami CF", homeAbbr:"MIA", homeNick:"Miami", homeEmoji:"🩷",
   awayName:"Club América",   awayAbbr:"AME", awayNick:"América", awayEmoji:"🦅",
-  venue:"Leagues Cup · sample fixture", date:"Aug 4 – Sep 6", short:"Aug 4", shareDate:"AUG 4", night:"Soccer Night (sample)",
-  tip:"Kickoff TBD — swap this when the Leagues Cup draw lands"
+  /* A FALLBACK IS STILL SOMETHING A PERSON READS. This carried a note to
+     the author — "swap this when the Leagues Cup draw lands" — and a
+     player found it on two live MLS cards. A placeholder is structurally
+     perfect, which is why nothing caught it: right element, right size,
+     above the fold, on the ramp. The only thing wrong with it was what it
+     said. So the fallback now says a true thing about not knowing yet,
+     and qa/screen-copy.js refuses the words "swap this" and "TBD" on any
+     screen of any room. */
+  venue:"Sample fixture", date:"Sample match", short:"Sample", shareDate:"SAMPLE", night:"Soccer Night (sample)",
+  tip:"Kickoff time loading…"
 };
 // 10 picks × 5 pts = 50. Every one of them always resolves.
 /* SIX PICKS AT 100, LIKE EVERY OTHER SPORT — rebuilt 17 Aug 2026.
@@ -5003,7 +5026,15 @@ const SPORTS={
   },
   soccer:{
     key:"soccer", emoji:"⚽️", word:"soccer",
-    game:SC_GAME, roster:SC_ROSTER, groups:SC_ROSTER.groups, preds:SC_PREDS, rounds:SOCCER_ROUNDS, catches:SC_CATCHES,
+    /* landingFromGame WAS DELIBERATELY OFF HERE AND THAT DECISION EXPIRED.
+       The reasoning was sound when soccer meant one sample Leagues Cup
+       fixture: rebuilding the line from a placeholder would replace
+       something true with something wrong. It is now false in the other
+       direction — the rooms are real MLS matches, and a live LAFC room was
+       captioned "MLS v LIGA MX — Aug 4 to Sep 6", a tournament that is not
+       what anybody is watching. A real matchup beats a tournament window;
+       the guard below still refuses to overwrite it with a blank. */
+    game:SC_GAME, roster:SC_ROSTER, groups:SC_ROSTER.groups, landingFromGame:true, preds:SC_PREDS, rounds:SOCCER_ROUNDS, catches:SC_CATCHES,
     worth:[30,50],                                    // halftime=30, full-time=50 → 240 pts
     tags:["1H","FT"],
     names:["1st half","Full time"],
@@ -5369,6 +5400,7 @@ function hydrateNight(cfg){
        first paint, removes the flash without holding the page hostage to a
        network read. It is only ever an accelerator: the fetch still runs
        and still wins. */
+    try{ cfg._build = STATS_BUILD; }catch(_){}
     try{ localStorage.setItem('stats_night_cfg_'+GAME.nightId, JSON.stringify(cfg)); }catch(_){}
     /* The night just changed shape, so what it is WORTH just changed with
        it. Working this out only when the sport changes left the sheet
@@ -16164,6 +16196,15 @@ function applySport(){
   const $=id=>document.getElementById(id);
   const set=(id,txt)=>{const e=$(id);if(e)e.textContent=txt;};
   const html=(id,h)=>{const e=$(id);if(e)e.innerHTML=h;};
+  /* One place that turns a feed's league key into the words on a chip. */
+  function nightLeagueLabel(){
+    var LB={wnba:'WNBA', nba:'NBA', nfl:'NFL', mlb:'MLB', mls:'MLS', nhl:'NHL'};
+    try{
+      var k=String((GAME&&GAME.league)||'').toLowerCase();
+      if(LB[k]) return LB[k];
+    }catch(_){}
+    try{ return SPORT.L.league; }catch(_){ return ''; }
+  }
   /* `B6` · THE HOME PAGE HELD A PRE-GAME COPY OF A FACT THAT CHANGED AT TIP.
      Mid-second-quarter on Game Night #7 the loudest line on this page — gold,
      bold, above everything — still read "Tip-off 8:00 ET". A page that keeps
@@ -16175,7 +16216,14 @@ function applySport(){
   set('landingTip', landingTipLine());
   html('landingMatch',SPORT.landing);
   set('landingHead',`${GAME.night} · ${GAME.date}`.replace(' · ·',' ·'));
-  set('landingChip1',SPORT.L.league);
+  /* THE LEAGUE IS THE NIGHT'S, NOT THE SPORT'S. SPORT.L.league is a
+     per-SPORT constant, so every soccer room in the product was chipped
+     "Leagues Cup" — including two live MLS matches. One sport has many
+     leagues (that is the whole roadmap: basketball is WNBA and NBA), so a
+     league label read off the sport is a fact with the wrong owner. The
+     night config already carries it; fall back to the sport's word only
+     when a night does not say. */
+  set('landingChip1', nightLeagueLabel());
   set('landingChip3',SPORT.L.cadence);
   /* The two codes are the headline now. Their COLOUR is not set here and
      must not be: --away/--home have exactly one writer, paintTeamColours(),
@@ -16667,7 +16715,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-19-echo.167';
+const STATS_BUILD='2026-08-19-soccer.168';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

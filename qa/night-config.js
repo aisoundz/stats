@@ -112,13 +112,30 @@ function cfg(o){
        r.after.basketball.landing);
   }
   {
-    /* Soccer's landing is a tournament window, not a fixture. Rebuilding
-       it from a placeholder game would replace something true with
-       something wrong, so it is left exactly as it is. */
+    /* REVERSED 19 Aug, AND THE OLD REASONING IS WORTH KEEPING BECAUSE IT
+       WAS RIGHT AT THE TIME. Soccer's landing line used to be a tournament
+       window — "MLS v LIGA MX — Aug 4 to Sep 6" — and this check asserted
+       that a night config must NOT overwrite it, because rebuilding it from
+       the placeholder Leagues Cup fixture would have replaced something
+       true with something wrong.
+
+       Then soccer got real rooms. On 19 Aug two live MLS matches carried
+       that caption and a chip reading "Leagues Cup", and the founder found
+       both. The line was no longer something true being protected; it was a
+       tournament nobody was watching, printed under a fixture that had
+       nothing to do with it.
+
+       So the assertion flips: soccer rebuilds from the matchup like every
+       other sport. The guard that made the old behaviour safe is still
+       there and still tested below — a config with no team names cannot
+       blank the line. */
     const r=await run('soccer', cfg());
-    ok('night-config.soccer-keeps-its-tournament-line',
-       r.after.soccer.landing===r.before.soccer.landing,
+    ok('night-config.soccer-landing-is-the-matchup',
+       /Away Test @ Home Test/.test(r.after.soccer.landing||''),
        'before='+r.before.soccer.landing+'  after='+r.after.soccer.landing);
+    ok('night-config.soccer-no-longer-advertises-a-tournament-it-is-not-in',
+       !/Leagues Cup|LIGA MX/i.test(r.after.soccer.landing||''),
+       r.after.soccer.landing);
   }
 
   /* ---- 3. what must be REFUSED -------------------------------------- */

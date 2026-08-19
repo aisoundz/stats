@@ -80,15 +80,26 @@ function scan(where, text){
   return out;
 }
 
-(async()=>{
-  const b=await chromium.launch();
-  const p=await b.newPage({viewport:{width:393,height:852}});
-  const url=BASE+(BASE.includes('?')?'&':'?')+'cb='+Date.now();
-  await p.goto(url,{waitUntil:'domcontentloaded',timeout:45000});
-  /* The rail is populated from Firestore. Reading before it lands measures
-     an empty page and calls it clean — the failure this suite exists to
-     stop, arriving through the suite itself. */
-  await p.waitForTimeout(6000);
+/* EVERY ROOM, NOT JUST THE FRONT DOOR — and this is the correction that
+   matters more than the suite's first version.
+
+   Round one of this suite loaded statsgametime.com and walked every screen.
+   It went green. The founder then opened
+   `?game=slate-2026-08-19-sj-la&sport=soccer` and found "Kickoff TBD — swap
+   this when the Leagues Cup draw lands" on the hero, which is the exact
+   string this file was written to catch.
+
+   The suite had checked the default room. The bug lived one room over. That
+   is the same mistake in a new costume: THE THING THAT WAS BUILT WAS
+   VERIFIED, THE THING A PERSON WOULD EXPERIENCE WAS NOT — and a suite that
+   makes it is worse than no suite, because it signs off. So the rail is
+   read first and every room on it is opened in turn. */
+async function walk(p, label, url, found){
+  await p.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
+  /* The rail and the night config both come from Firestore. Reading before
+     they land measures an empty page and calls it clean — this suite's own
+     failure mode, arriving through the suite itself. */
+  await p.waitForTimeout(6500);
 
   if(SABOTAGE){
     await p.evaluate(()=>{
@@ -97,14 +108,41 @@ function scan(where, text){
     });
   }
 
-  const found=[];
-  /* ---- 1. THE ROOM CARDS. Where it actually happened. --------------- */
   const tiles=await p.$$eval('.grTile, .grMore', ns=>ns.map(n=>n.innerText||''));
-  console.log('\n  game rail: '+tiles.length+' tile(s)');
-  tiles.forEach((t,i)=>found.push(...scan('rail tile '+(i+1), t)));
+  tiles.forEach((t,i)=>found.push(...scan(label+' · rail tile '+(i+1), t)));
 
-  /* ---- 2. EVERY SCREEN, one at a time ------------------------------- */
+  /* ---- A COMPETITION THIS ROOM IS NOT IN -----------------------------
+     The other half of the soccer card, and the half no placeholder list
+     can catch: "MLS v LIGA MX — Aug 4 to Sep 6" under a live MLS match,
+     and a chip reading "Leagues Cup". Neither is a placeholder. Both are
+     REAL COMPETITIONS, spelled correctly, in the right element — they are
+     simply not the one being played, because the label was read off the
+     SPORT and one sport has many leagues.
+
+     So: the hero may name the room's own competition and no other. Narrow
+     on purpose — it looks only at the hero caption and chips, where the
+     league label belongs, not at prose that may legitimately mention
+     another league. */
+  const COMPS=['Leagues Cup','Liga MX','Champions League','Premier League','La Liga',
+               'Serie A','Bundesliga','Ligue 1','NWSL','WNBA','NBA','NFL','MLB','MLS','NHL'];
+  const hero=await p.evaluate(()=>{
+    const t=id=>{const e=document.getElementById(id); return e?(e.textContent||''):'';};
+    let lg=''; try{ lg=String((window.GAME||{}).league||'').toUpperCase(); }catch(_){}
+    return {lg, text:[t('landingMatch'),t('landingChip1'),t('landingChip3'),t('landingHead')].join(' | ')};
+  });
+  if(hero.lg){
+    /* WORD BOUNDARIES, BECAUSE "NBA" IS INSIDE "WNBA". indexOf reported the
+       WNBA room as naming the NBA — an unanchored pattern IS a substring
+       match, which is the oldest bug in this repo and it got me again in
+       the check written to stop bugs. */
+    const wrong=COMPS.filter(c => c.toUpperCase()!==hero.lg
+      && new RegExp('\\b'+c.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b').test(hero.text));
+    wrong.forEach(c => found.push(label+' hero names "'+c+'" but the room is '+hero.lg
+      +'   (in: "'+hero.text.trim().slice(0,120)+'")'));
+  }
+
   const screens=await p.$$eval('.screen', ns=>ns.map(n=>n.id));
+  let chars=0, hits=0;
   for(const id of screens){
     const txt=await p.evaluate(sid=>{
       document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
@@ -112,19 +150,46 @@ function scan(where, text){
       s.classList.add('active');
       return s.innerText||'';
     }, id);
-    const hits=scan(id, txt);
-    console.log('  '+id.padEnd(16)+String(txt.length).padStart(6)+' chars'+(hits.length?'   '+hits.length+' PROBLEM(S)':''));
-    found.push(...hits);
+    chars+=txt.length;
+    const h=scan(label+' · '+id, txt);
+    hits+=h.length; found.push(...h);
+  }
+  console.log('  '+label.padEnd(34)+String(tiles.length).padStart(2)+' tile(s)  '
+    +String(screens.length).padStart(2)+' screen(s)  '+String(chars).padStart(6)+' chars'
+    +(hits?'   '+hits+' PROBLEM(S)':''));
+}
+
+(async()=>{
+  const b=await chromium.launch();
+  const p=await b.newPage({viewport:{width:393,height:852}});
+  const cb=()=> "cb="+Date.now()+"-"+Math.floor(Math.random()*1e6);
+  const found=[];
+
+  /* 1. the front door, and read the rail off it. */
+  await walk(p, 'default room', BASE+(BASE.includes('?')?'&':'?')+cb(), found);
+  const rooms=await p.evaluate(()=>{
+    try{ return (window.SLATE&&SLATE.games||[]).map(g=>({id:g.nightId, sport:g.sport||''})); }
+    catch(_){ return []; }
+  });
+  console.log('  ---- the rail offers '+rooms.length+' room(s); opening each ----');
+  if(!rooms.length) console.log('  (none — the slate did not load, so only the default room was read)');
+
+  /* 2. and every other room on it. A room the rail offers is a room a
+        person can be standing in. */
+  for(const r of rooms){
+    const u=BASE+(BASE.includes('?')?'&':'?')+'game='+encodeURIComponent(r.id)
+            +(r.sport?('&sport='+encodeURIComponent(r.sport)):'')+'&'+cb();
+    await walk(p, r.id, u, found);
   }
 
   await b.close();
 
   console.log('');
-  ok('copy.no-placeholders-on-any-screen', found.length===0,
+  ok('copy.no-placeholders-in-any-room', found.length===0,
      found.length ? found.join('\n      ') : '');
 
   console.log('\n'+(fail
     ? 'FAIL  '+fail+' of '+(pass+fail)+'\n  '+bad.join('\n  ')
-    : 'GREEN   '+pass+' passed, 0 failed   ('+BASE+')'));
+    : 'GREEN   '+pass+' passed, 0 failed   ('+(rooms.length+1)+' room(s) on '+BASE+')'));
   process.exit(fail?1:0);
 })().catch(e=>{console.error('ERR',e.stack);process.exit(3)});

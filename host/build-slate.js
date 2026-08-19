@@ -380,12 +380,137 @@ function tipLine(iso, net, sport){
   };
 
   const writes = games.length + 1;
+  /* ============ THE CURATION HAPPENS BEFORE THE DRY RUN =============
+     It used to happen after it, which made `--dry` a liar: the picker line
+     printed every game the league plays, while an --apply run of the same
+     command would have offered three. A dry run exists to be believed the
+     day before, and this one was answering a different question than the
+     real one. Reading two small files early costs nothing and makes the
+     rehearsal and the performance the same code path. */
+  /* ---- A HAND-PICKED NIGHT SURVIVES THE NEXT REBUILD -----------------
+     host/pick-slate.sh curates a night down to the rooms somebody actually
+     intends to host. That curation used to live ONLY in the manifest and in
+     slate/{date} — both of which this script rewrites from scratch. So the
+     08:10 build cron silently undid it: a night curated to four rooms at
+     07:30 was back to THIRTY-ONE by 08:10, with thirteen of them offered to
+     players and hosted by nobody. Exactly the bug the RUN_LEAGUES filter
+     was written to stop, arriving through a different door.
+
+     A pick file is the durable record. If one exists for this date, it wins
+     over RUN_LEAGUES entirely — somebody named these rooms on purpose. */
+  const PICKF = path.join(process.env.HOME, 'gamenight-logs', 'slate-pick-' + DATE + '.txt');
+  let PICK = null;
+  try{
+    if(fs.existsSync(PICKF)){
+      PICK = new Set(fs.readFileSync(PICKF,'utf8').split('\n').map(x=>x.trim()).filter(Boolean));
+      if(!PICK.size) PICK = null;
+    }
+  }catch(_){ PICK = null; }
+  if(PICK) log('pick', `${PICK.size} room(s) hand-picked for ${DATE} — the pick file wins over RUN_LEAGUES`);
+
+  /* ---- THE GAME OF THE NIGHT, EVERY NIGHT ---------------------------
+     Founder, 19 Aug: "I love how we have a game of the night and we number
+     it. Please dont stop that — lets pick a main game for everyday,
+     obviously a nationally televised game. And we can have multiple game of
+     the night in a day, so figure that out so we always have a marquee
+     matchup each day with a featured sport."
+
+     Until now a marquee was a FLAGSHIP, and a flagship is a hand-written
+     night in admin.html: a config somebody typed and a bank somebody wrote.
+     That is right for the one game an email goes out about and impossible
+     to do every day — so on any day nobody hand-wrote a night, there was no
+     marquee at all. Tomorrow was one of those days.
+
+     A marquee file makes it a CHOICE rather than a BUILD. One nightId per
+     line, and more than one line is allowed and expected: a day can feature
+     the baseball game AND the football game, one per sport. An optional
+     leading `#14` line carries the night's number, because the number is
+     the thing he actually likes and it has to survive the 08:10 rebuild
+     like everything else that matters.
+
+       ~/gamenight-logs/slate-marquee-2026-08-20.txt
+         #14
+         slate-2026-08-20-sf-lac
+         slate-2026-08-20-wsh-tex
+
+     A hand-written flagship still wins where one exists — it has the email
+     behind it — so this never overrides `owner`, it only fills the gap. */
+  const MARQF = path.join(process.env.HOME, 'gamenight-logs', 'slate-marquee-' + DATE + '.txt');
+  let MARQ = null, GN = '';
+  try{
+    if(fs.existsSync(MARQF)){
+      const lines = fs.readFileSync(MARQF,'utf8').split('\n').map(x=>x.trim()).filter(Boolean);
+      const num = lines.find(x => /^#\d+$/.test(x));
+      if(num) GN = num.slice(1);
+      MARQ = new Set(lines.filter(x => !/^#/.test(x)));
+      if(!MARQ.size) MARQ = null;
+    }
+  }catch(_){ MARQ = null; }
+  if(MARQ) log('marquee', `${MARQ.size} featured game(s) for ${DATE}` + (GN ? ` · Game Night #${GN}` : ' · no number given'));
+
+  const RUN = String(process.env.RUN_LEAGUES || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  /* THE FLAGSHIP IS ALWAYS OFFERED, whatever RUN_LEAGUES says.
+     A flagship is a hand-written night in admin.html's NIGHTS: it is hosted
+     by its OWN cron line (cron-start-night.sh), it never enters this
+     manifest, and it does not spend MAX_ROOMS. So it is hosted by
+     definition, and filtering it on league would remove the ONE game the
+     email, the promotion and the whole evening are about from the picker —
+     while its runner sat there hosting it perfectly. A football-only
+     Saturday, or any night the WNBA runners are off, would have done it.
+     That is the failure this file's own comment forty lines up calls the
+     strangest possible bug: the person who came because of the email
+     arrives and cannot find the game the email was about. */
+  /* ---- MARK THEM, AND SAY WHICH ONE IS THE MAIN GAME ----------------
+     The FIRST id in the file is the Game of the Night — the one game, the
+     one an email goes out about. The rest are FEATURED: one per sport, so a
+     Thursday can feature the baseball game and the football game without
+     either pretending to be the whole night.
+
+     `flagship` is set as well as `marquee` on purpose, because the player
+     app already gives a flagship the two things a marquee needs and has for
+     weeks: a ★ on its tile, and a permanent seat in the rail's must-include
+     list so it can never be the game that scrolls off. Reusing that is one
+     fact with one renderer; a second "featured" flag with its own styling
+     would be the disease this file is full of comments about. */
+  if(MARQ){
+    const order = [...MARQ];
+    slate.games.forEach(g => {
+      if(!MARQ.has(g.nightId)) return;
+      g.marquee = true;
+      g.flagship = true;
+      if(GN) g.gn = GN;
+      if(g.nightId === order[0]) g.gotn = true;      // the main game
+    });
+    /* A FEATURED GAME NOBODY STARTS IS THE WORST ROOM ON THE RAIL — it is
+       starred, it is first, and it never opens a round. The pick file is
+       what start-slate.sh reads, so a marquee missing from it is a promise
+       with no runner behind it. */
+    const inPick = id => !PICK || PICK.has(id);
+    const orphan = [...MARQ].filter(id => !inPick(id));
+    if(orphan.length){
+      log('!!!', `${orphan.length} featured game(s) are NOT in the pick file and nothing will host them:`);
+      orphan.forEach(id => log('!!!', `    ${id}`));
+      log('!!!', `    add them to slate-pick-${DATE}.txt or they are a ★ on a room that never opens a round`);
+    }
+  }
+
+  const hosted = g => !!g.flagship
+                   || (PICK ? PICK.has(g.nightId)
+                            : (!RUN.length || RUN.includes(String(g.league || '').toLowerCase())));
+  const railGames = slate.games.filter(hosted);
+  const withheld = slate.games.length - railGames.length;
+  if(withheld)
+    log('rail', `${withheld} ${LEAGUE.toUpperCase()} game(s) built but NOT offered — `
+      + (PICK ? `not in the pick file for ${DATE}` : `no runner hosts ${LEAGUE} today`));
+
   if(!APPLY){
     log('dry', `would write ${games.length} schedule doc(s) + slate/${DATE} + slate/current = ${writes + 1} write(s)`);
     log('dry', `then: ${games.length} plan(s) via publish.js — ${writes + games.length} writes total`);
     log('next', 'add --apply to write it');
     games.forEach(x => log('  →', `schedule/${x.g.nightId}  (${JSON.stringify(x).length} bytes)`));
-    log('picker', JSON.stringify(slate.games.map(g => `${g.away}@${g.home}` + (g.flagship ? ' ★' : ''))));
+    log('picker', JSON.stringify(railGames.map(g => `${g.away}@${g.home}`
+      + (g.gotn ? ' ★★ GAME OF THE NIGHT' : g.marquee ? ' ★ featured' : g.flagship ? ' ★' : ''))));
+    log('dry', `${railGames.length} of ${slate.games.length} ${LEAGUE.toUpperCase()} game(s) would be OFFERED to players`);
     return;
   }
 
@@ -444,46 +569,6 @@ function tipLine(iso, net, sport){
      leagues are live is precisely the shape of bug this comment is about.
      Unset means "host everything you build", which is the old behaviour and
      the right default for a hand-run build. */
-  /* ---- A HAND-PICKED NIGHT SURVIVES THE NEXT REBUILD -----------------
-     host/pick-slate.sh curates a night down to the rooms somebody actually
-     intends to host. That curation used to live ONLY in the manifest and in
-     slate/{date} — both of which this script rewrites from scratch. So the
-     08:10 build cron silently undid it: a night curated to four rooms at
-     07:30 was back to THIRTY-ONE by 08:10, with thirteen of them offered to
-     players and hosted by nobody. Exactly the bug the RUN_LEAGUES filter
-     was written to stop, arriving through a different door.
-
-     A pick file is the durable record. If one exists for this date, it wins
-     over RUN_LEAGUES entirely — somebody named these rooms on purpose. */
-  const PICKF = path.join(process.env.HOME, 'gamenight-logs', 'slate-pick-' + DATE + '.txt');
-  let PICK = null;
-  try{
-    if(fs.existsSync(PICKF)){
-      PICK = new Set(fs.readFileSync(PICKF,'utf8').split('\n').map(x=>x.trim()).filter(Boolean));
-      if(!PICK.size) PICK = null;
-    }
-  }catch(_){ PICK = null; }
-  if(PICK) log('pick', `${PICK.size} room(s) hand-picked for ${DATE} — the pick file wins over RUN_LEAGUES`);
-
-  const RUN = String(process.env.RUN_LEAGUES || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
-  /* THE FLAGSHIP IS ALWAYS OFFERED, whatever RUN_LEAGUES says.
-     A flagship is a hand-written night in admin.html's NIGHTS: it is hosted
-     by its OWN cron line (cron-start-night.sh), it never enters this
-     manifest, and it does not spend MAX_ROOMS. So it is hosted by
-     definition, and filtering it on league would remove the ONE game the
-     email, the promotion and the whole evening are about from the picker —
-     while its runner sat there hosting it perfectly. A football-only
-     Saturday, or any night the WNBA runners are off, would have done it.
-     That is the failure this file's own comment forty lines up calls the
-     strangest possible bug: the person who came because of the email
-     arrives and cannot find the game the email was about. */
-  const hosted = g => !!g.flagship
-                   || (PICK ? PICK.has(g.nightId)
-                            : (!RUN.length || RUN.includes(String(g.league || '').toLowerCase())));
-  const railGames = slate.games.filter(hosted);
-  const withheld = slate.games.length - railGames.length;
-  if(withheld)
-    log('rail', `${withheld} ${LEAGUE.toUpperCase()} game(s) built but NOT offered — no runner hosts ${LEAGUE} today`);
 
   const slateRef = db.doc(`slate/${DATE}`);
   const prior = await slateRef.get();
