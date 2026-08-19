@@ -651,7 +651,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-19-admin.54-es';
+window.ADMIN_BUILD='2026-08-19-admin.55-esbank';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -1217,37 +1217,56 @@ const BANK = {
   ],
   'gn13-2026-08-19-min-gs': [
     [
-      { t: 'Was the first basket of the game assisted?', o: ['Yes', 'No'], r:'firstBasketAssisted' },
-      { t: 'Which team committed the first foul of the game?', o: ['Valkyries', 'Lynx'], r:'firstFoulTeam' },
-      { t: 'Fouls in Q1, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'foulsBand' },
-      { t: 'The first turnover of the game — whose team gave it up?', o: ['Valkyries', 'Lynx'], r:'firstTurnoverTeam' }
+      { t: 'Was the first basket of the game assisted?', o: ['Yes', 'No'], r:'firstBasketAssisted',
+        t_es: '¿La primera canasta del partido fue asistida?', o_es: ['Sí', 'No'] },
+      { t: 'Which team committed the first foul of the game?', o: ['Valkyries', 'Lynx'], r:'firstFoulTeam',
+        t_es: '¿Qué equipo cometió la primera falta del partido?', o_es: ['Valkyries', 'Lynx'] },
+      { t: 'Fouls in Q1, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'foulsBand',
+        t_es: 'Faltas en el 1er cuarto, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna o una', 'Dos o tres', 'Cuatro o cinco', 'Seis o más'] },
+      { t: 'The first turnover of the game — whose team gave it up?', o: ['Valkyries', 'Lynx'], r:'firstTurnoverTeam',
+        t_es: 'La primera pérdida de balón del partido — ¿de qué equipo fue?', o_es: ['Valkyries', 'Lynx'] }
     ],
     [
-      { t: 'Assisted baskets in Q2, both teams combined — how many?', o: ['Eight or fewer', 'Nine to eleven', 'Twelve or thirteen', 'Fourteen or more'], r:'assistedBasketsBand' },
-      { t: 'Did either team score in the final minute before halftime?', o: ['Yes', 'No'], r:'lastMinuteScoredQ2' },
-      { t: 'Turnovers in Q2, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'turnoversBand' },
-      { t: 'Free throws made in Q2, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'ftMadeBand' }
+      { t: 'Assisted baskets in Q2, both teams combined — how many?', o: ['Eight or fewer', 'Nine to eleven', 'Twelve or thirteen', 'Fourteen or more'], r:'assistedBasketsBand',
+        t_es: 'Canastas asistidas en el 2do cuarto, entre los dos equipos — ¿cuántas?', o_es: ['Ocho o menos', 'De nueve a once', 'Doce o trece', 'Catorce o más'] },
+      { t: 'Did either team score in the final minute before halftime?', o: ['Yes', 'No'], r:'lastMinuteScoredQ2',
+        t_es: '¿Anotó algún equipo en el último minuto antes del descanso?', o_es: ['Sí', 'No'] },
+      { t: 'Turnovers in Q2, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'turnoversBand',
+        t_es: 'Pérdidas de balón en el 2do cuarto, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna o una', 'Dos o tres', 'Cuatro o cinco', 'Seis o más'] },
+      { t: 'Free throws made in Q2, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'ftMadeBand',
+        t_es: 'Tiros libres anotados en el 2do cuarto, entre los dos equipos — ¿cuántos?', o_es: ['Ninguno o uno', 'Dos o tres', 'Cuatro o cinco', 'Seis o más'] }
     ],
     [
-      { t: 'Free throws attempted in Q3, both teams combined — how many?', o: ['None to two', 'Three to five', 'Six to nine', 'Ten or more'], r:'ftAttemptsBand' },
-      { t: 'Driving or running shot attempts in Q3, both teams combined — how many?', o: ['Six or fewer', 'Seven to nine', 'Ten to twelve', 'Thirteen or more'], r:'drivingPlaysBand' },
-      { t: 'Substitutions in Q3, both teams combined — how many?', o: ['Nine or fewer', 'Ten to thirteen', 'Fourteen to seventeen', 'Eighteen or more'], r:'subsBand' },
-      { t: 'Which team made more free throws in Q3?', o: ['Valkyries', 'Lynx', 'Equal'], r:'ftMakeCompareQ3' }
+      { t: 'Free throws attempted in Q3, both teams combined — how many?', o: ['None to two', 'Three to five', 'Six to nine', 'Ten or more'], r:'ftAttemptsBand',
+        t_es: 'Tiros libres intentados en el 3er cuarto, entre los dos equipos — ¿cuántos?', o_es: ['De cero a dos', 'De tres a cinco', 'De seis a nueve', 'Diez o más'] },
+      { t: 'Driving or running shot attempts in Q3, both teams combined — how many?', o: ['Six or fewer', 'Seven to nine', 'Ten to twelve', 'Thirteen or more'], r:'drivingPlaysBand',
+        t_es: 'Penetraciones o tiros en movimiento en el 3er cuarto, entre los dos equipos — ¿cuántos?', o_es: ['Seis o menos', 'De siete a nueve', 'De diez a doce', 'Trece o más'] },
+      { t: 'Substitutions in Q3, both teams combined — how many?', o: ['Nine or fewer', 'Ten to thirteen', 'Fourteen to seventeen', 'Eighteen or more'], r:'subsBand',
+        t_es: 'Cambios de jugador en el 3er cuarto, entre los dos equipos — ¿cuántos?', o_es: ['Nueve o menos', 'De diez a trece', 'De catorce a diecisiete', 'Dieciocho o más'] },
+      { t: 'Which team made more free throws in Q3?', o: ['Valkyries', 'Lynx', 'Equal'], r:'ftMakeCompareQ3',
+        t_es: '¿Qué equipo anotó más tiros libres en el 3er cuarto?', o_es: ['Valkyries', 'Lynx', 'Igual'] }
     ],
     [
-      { t: 'In the last two minutes, which team committed more turnovers?', o: ['Valkyries', 'Lynx', 'Equal'], r:'lastTwoMinTurnoverCompare' },
-      { t: 'Was there a technical or flagrant foul at any point in the game?', o: ['Yes', 'No'], r:'anyTechOrFlagrant' },
-      { t: 'Was the game’s final basket assisted?', o: ['Yes', 'No'], r:'lastBasketAssisted' },
-      { t: 'In the 4th quarter, which was more common: jump shots or drives to the basket?', o: ['Jump shots', 'Drives', 'Equal'], r:'q4ShotTypeCompare' }
+      { t: 'In the last two minutes, which team committed more turnovers?', o: ['Valkyries', 'Lynx', 'Equal'], r:'lastTwoMinTurnoverCompare',
+        t_es: 'En los últimos dos minutos, ¿qué equipo perdió más balones?', o_es: ['Valkyries', 'Lynx', 'Igual'] },
+      { t: 'Was there a technical or flagrant foul at any point in the game?', o: ['Yes', 'No'], r:'anyTechOrFlagrant',
+        t_es: '¿Hubo alguna falta técnica o antideportiva en todo el partido?', o_es: ['Sí', 'No'] },
+      { t: 'Was the game’s final basket assisted?', o: ['Yes', 'No'], r:'lastBasketAssisted',
+        t_es: '¿La última canasta del partido fue asistida?', o_es: ['Sí', 'No'] },
+      { t: 'In the 4th quarter, which was more common: jump shots or drives to the basket?', o: ['Jump shots', 'Drives', 'Equal'], r:'q4ShotTypeCompare',
+        t_es: 'En el 4to cuarto, ¿qué hubo más: tiros de salto o penetraciones al aro?', o_es: ['Tiros de salto', 'Penetraciones', 'Igual'] }
     ],
     /* OVERTIME. Three questions, not four — an overtime is five minutes and
        a bank sized for a quarter would outlast the period it asks about.
        Every resolver here reads inPeriod(j, p), verified, so it answers
        about the overtime being played rather than the game so far. */
     [
-      { t: 'Which team scored the first points of overtime?', o: ['Valkyries', 'Lynx'], r:'firstScoreTeam' },
-      { t: 'Free throws made in overtime, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'ftMadeBand' },
-      { t: 'Which team committed the first foul of overtime?', o: ['Valkyries', 'Lynx'], r:'firstFoulTeam' }
+      { t: 'Which team scored the first points of overtime?', o: ['Valkyries', 'Lynx'], r:'firstScoreTeam',
+        t_es: '¿Qué equipo anotó los primeros puntos del tiempo extra?', o_es: ['Valkyries', 'Lynx'] },
+      { t: 'Free throws made in overtime, both teams combined — how many?', o: ['None or one', 'Two or three', 'Four or five', 'Six or more'], r:'ftMadeBand',
+        t_es: 'Tiros libres anotados en el tiempo extra, entre los dos equipos — ¿cuántos?', o_es: ['Ninguno o uno', 'Dos o tres', 'Cuatro o cinco', 'Seis o más'] },
+      { t: 'Which team committed the first foul of overtime?', o: ['Valkyries', 'Lynx'], r:'firstFoulTeam',
+        t_es: '¿Qué equipo cometió la primera falta del tiempo extra?', o_es: ['Valkyries', 'Lynx'] }
     ]
   ],
   'gn11-2026-08-16-ind-atl': [
