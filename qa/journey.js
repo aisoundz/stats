@@ -298,6 +298,47 @@ const FAKE_SLATE=[
     }
   }
 
+  /* ---- 8b. A CONFIG READ THAT NEVER RETURNS -------------------------
+     Measured on the LIVE site 19 Aug: tapping the other game worked on two
+     runs in five, and every failure was the same shape — chooseGame was
+     entered and never came back. Firestore's getDoc carries no timeout, so
+     a stalled read left the await pending forever: the pick remembered,
+     the room never opened, nothing logged, the player tapping a tile that
+     did nothing until they reloaded. That is the founder's original
+     complaint and it survived the room store, because the room store was
+     never the thing that hung.
+
+     This is the check that would have caught it. Nothing in chooseGame may
+     wait without a bound. */
+  if(!LIVE){
+    const hung = await p.evaluate(async(aid)=>{
+      const realLoad = window.loadNightConfig;
+      const realDB = window.__SB_DB, realFS = window.__SB_FS;
+      window.__SB_DB = window.__SB_DB || {}; window.__SB_FS = window.__SB_FS || {};
+      window.loadNightConfig = function(){ return new Promise(function(){}); };   // never settles
+      /* RACE THE CALL ITSELF, or a regression hangs this suite instead of
+         failing it — which is how a gate stops being run at all. Sabotage
+         proved that: with the await unbounded, this check sat forever. */
+      const t0 = Date.now();
+      let ok = null, threw = null, hung = false;
+      try{
+        ok = await Promise.race([
+          chooseGame(null, null, aid),
+          new Promise(function(res){ setTimeout(function(){ hung = true; res('HUNG'); }, 9000); })
+        ]);
+      }catch(e){ threw = String(e.message); }
+      const out = { ok, threw, hung, ms: Date.now()-t0, night:(window.GAME||{}).nightId };
+      window.loadNightConfig = realLoad; window.__SB_DB = realDB; window.__SB_FS = realFS;
+      return out;
+    }, A.id);
+    ok('journey.a-dead-config-read-does-not-hang-the-tap',
+       hung.hung !== true && hung.ms < 8000 && hung.threw === null,
+       `chooseGame took ${hung.ms}ms against a read that never settles${hung.threw?' and threw '+hung.threw:''} — an unbounded await is a tap that does nothing, forever, with nothing logged`);
+    ok('journey.a-dead-config-read-still-lands-the-room',
+       hung.night === A.id,
+       `the app ended up in ${hung.night} — with the cached config on this phone it must still get into ${A.id}`);
+  }
+
   /* ---- 9. AND ANOTHER SPORT IS STILL THE SAME PAGE ------------------
      The weekend is WNBA, MLB and NFL rooms on one rail. Tapping the
      ballgame used to set ?game= and nothing else: hydrateNight correctly

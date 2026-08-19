@@ -5607,10 +5607,35 @@ async function chooseGame(db, F, nightId){
      were rather than showing them a rail that says one game over a screen
      that holds another. Saying "you are in B" while GAME still says A is
      the whole disease this codebase is named after. */
+  /* ============ A READ THAT NEVER RETURNS IS A TAP THAT DID NOTHING ====
+     Measured on the live site, 19 Aug: tapping the other game worked on
+     two runs out of five, and the three failures were all the SAME shape —
+     `chooseGame` was entered and never came back. Firestore's getDoc has
+     no timeout of its own, so a stalled read leaves this await pending
+     forever: the pick is remembered, the room never opens, nothing is
+     logged, and the player is left tapping a tile that does nothing until
+     they reload. That is the founder's original complaint, and it survived
+     the room store because the room store was never the thing that hung.
+
+     Nothing here may wait without a bound. Four seconds is longer than a
+     healthy read (measured: well under one) and shorter than a person's
+     patience, and when it expires we still have two ways into the room —
+     the cached config and the built-in night — followed by an honest
+     refusal. A slow network now costs a beat, not the night. */
   var okNow = false;
   try{
-    if(db && F) okNow = await loadNightConfig(db, F);
-    else if(window.__SB_DB && window.__SB_FS) okNow = await loadNightConfig(window.__SB_DB, window.__SB_FS);
+    var _db = (db && F) ? db : window.__SB_DB;
+    var _F  = (db && F) ? F  : window.__SB_FS;
+    if(_db && _F){
+      okNow = await Promise.race([
+        loadNightConfig(_db, _F),
+        new Promise(function(res){ setTimeout(function(){ res('timeout'); }, 4000); })
+      ]);
+      if(okNow === 'timeout'){
+        okNow = false;
+        try{ console.error('night config read timed out for '+nightId+' — falling back'); }catch(_){}
+      }
+    }
   }catch(_){}
   if(!okNow || (GAME && GAME.nightId !== nightId)){
     try{ okNow = hydrateFromCache(nightId); }catch(_){ okNow = false; }
@@ -5628,7 +5653,13 @@ async function chooseGame(db, F, nightId){
     slatePickSet(here || null);
     try{ roomRestore(here); }catch(_){}
     try{ paintSlate(); }catch(_){}
-    try{ toast("Couldn't load that game — still on "+((GAME&&GAME.awayAbbr)||'this one')); }catch(_){}
+    /* SAY WHAT TO DO, NOT JUST WHAT WENT WRONG. The cause of the live
+       failures is almost certainly Firestore still opening its connection
+       — the same tap succeeds a moment later. So the honest message is not
+       "that game is broken", it is "not yet, try again", which is both
+       true and actionable. Tapping again is the natural thing to do and it
+       is the thing that works. */
+    try{ toast('Still connecting — tap ' + ((g&&(g.away||g.awayAbbr))||'it') + ' again in a second'); }catch(_){}
     return false;
   }
 
@@ -15434,7 +15465,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-sport.153';
+const STATS_BUILD='2026-08-19-tap.154';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
