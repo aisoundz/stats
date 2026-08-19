@@ -27,11 +27,27 @@ const ROOT = path.resolve(__dirname, '..');
    not the same sentence. */
 const DEFAULT_FIX = path.join(ROOT, 'references', 'multisport');
 const DIR = process.argv[2] || process.env.SPORT_FIXTURES || DEFAULT_FIX;
+/* EVERY FIXTURE, NOT JUST THE FOLDER. Requiring only the directory was
+   half a fix: deleting nfl.json alone took qa/host-resolvers.js from 65
+   checks to 27 and it still printed a green verdict, because each league
+   block quietly prints "absent — skipped" and moves on. A fixture set that
+   can lose a file and stay green is the same disease as a suite that can
+   lose its whole directory and stay green — just quieter. */
+const NEED = ['wnba.json','nba.json','mlb.json','nfl.json','nhl.json','mls.json'];
 if (!fs.existsSync(DIR)) {
   console.log('NO FIXTURES at ' + DIR);
   console.log('  run:  node references/multisport/fetch.js');
   console.log('  (reporting this as a FAILURE — a check that cannot run has not passed)');
   process.exit(1);
+}
+{
+  const missing = NEED.filter(f => !fs.existsSync(path.join(DIR, f)));
+  if (missing.length) {
+    console.log('INCOMPLETE FIXTURES at ' + DIR);
+    missing.forEach(f => console.log('  missing: ' + f + '   (its checks would be skipped, not failed)'));
+    console.log('  run:  node references/multisport/fetch.js');
+    process.exit(1);
+  }
 }
 
 const src = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');

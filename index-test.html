@@ -675,6 +675,45 @@
   .reveal.good .r1{color:var(--green)}.reveal.bad .r1{color:var(--red)}
   .reveal .r2{font-size:14px;color:var(--muted);margin-top:4px;line-height:1.45}
 
+  /* ---- THE PAYOFF, WHICH USED TO BE THE SMALLEST THING ON THE SCREEN --
+     MEASURED 18 Aug on a 390x844 phone, at the instant a player got one
+     right: the "✓ CORRECT · +10 pts" line was 12px — the FLOOR of the type
+     ramp, the smallest anything is allowed to be — while the two team
+     scores, which the player can already see on their television, were
+     40px. The number that changed because of what they just did was the
+     least prominent thing in front of them, and their own running total
+     sat below the fold. Sixteen times a night.
+
+     This is a HIERARCHY fix, not a font-size bump: .r1 is still 12px and
+     still a label, because 12px uppercase IS what a label is here. The
+     payoff is promoted by being given .abig — the ramp's own "a number
+     that is the point of the screen" — and by the total moving rather
+     than appearing. Two blocks, one accent each, per the ramp's rule. */
+  .payoff{display:flex;align-items:flex-end;gap:22px;margin-top:10px}
+  .payoff .pb{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .payoff .pn{font-size:46px;font-weight:900;letter-spacing:-2.4px;line-height:.95;
+    font-variant-numeric:tabular-nums}
+  .reveal.good .payoff .pd .pn{color:var(--green)}
+  .payoff .pt .pn{color:var(--ink)}
+  .payoff .pl{font-size:12px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;
+    color:var(--muted);line-height:1.25}
+  /* The delta arrives; the total counts to meet it. A number that moves is
+     a number you feel — the round summary already knew this and the
+     per-question moment, which happens four times as often, did not. */
+  @keyframes payoffIn{from{opacity:0;transform:translateY(6px) scale(.94)}to{opacity:1;transform:none}}
+  .reveal.good .payoff .pd{animation:payoffIn .34s cubic-bezier(.2,.9,.3,1.4) both}
+  @media (prefers-reduced-motion:reduce){
+    .reveal.good .payoff .pd{animation:none}
+  }
+  /* 34, not 38: the ramp is [12,14,15,17,20,22,24,26,30,34,40,46,52] and a
+     fourteenth size is a decision, not a breakpoint. The gate caught this
+     within a minute of it being written, which is the entire reason
+     type.one-ramp exists — thirty-four sizes had accumulated once. */
+  @media (max-width:360px){
+    .payoff{gap:16px}
+    .payoff .pn{font-size:34px;letter-spacing:-1.8px}
+  }
+
   /* leaderboard */
   .lb{display:flex;align-items:center;gap:12px;padding:12px 12px;border-radius:13px;
     background:var(--card);border:1px solid var(--line);margin:8px 0}
@@ -9895,8 +9934,12 @@ var VX=(function(){
          hearing it, and the twenty seconds run out. If it cannot hear, that
          is the most important thing on the screen. */
       var deafNow = V.on && V.hasEar && !V.listening && !V.speaking;
+      /* A language whose bank is still English says so in the one place a
+         player is already looking, not only in the picker they used once. */
+      var halfLang = V.on && !V.contentReady() ? (V.L().name+': voice only — questions are still in English') : '';
       var txt = !V.on ? 'Voice off'
               : V.note ? V.note
+              : halfLang ? halfLang
               : V.speaking ? 'Reading the question…'
               : V.listening ? (V.onPickCard() ? 'Listening — say a name, then “next”'
                                              : 'Listening — say your answer, then “next”')
@@ -9916,6 +9959,27 @@ var VX=(function(){
          from the sofa. */
       if(V.on && V.lastHeard){
         h+='<span class="vxh">heard: “'+String(V.lastHeard).replace(/</g,'&lt;')+'”</span>';
+      }
+      /* ---- THE LANGUAGE, AND AN HONEST LABEL ON IT -------------------
+         Only shown when there is more than one language and voice is on,
+         because it is a voice setting: it changes what the app SPEAKS and
+         what it LISTENS FOR. It sits before the voice picker because
+         choosing a language changes which voices exist.
+
+         The warning is the point, and it is why V.contentReady exists. The
+         grammar speaks Spanish today; the QUESTION BANK does not. Offering
+         "Español" with no caveat would promise a Spanish game and deliver a
+         Spanish narrator reading English questions — a worse experience
+         than English, sold to exactly the people the feature is for. So the
+         option says what it is, and the bar says so again once it is on. */
+      if(V.on && V.hasOut && V.langs().length>1){
+        h+='<select class="vxv" onchange="VX.setLang(this.value)" aria-label="Language">';
+        V.langs().forEach(function(L){
+          var sel=(L.key===V.lang)?' selected':'';
+          var ready=V.contentReady(L.key);
+          h+='<option value="'+L.key+'"'+sel+'>'+L.name+(ready?'':' (voice only)')+'</option>';
+        });
+        h+='</select>';
       }
       if(V.on && V.hasOut){
         var list=V.voices(), cur=V.voice();
@@ -10123,15 +10187,27 @@ function answer(choice,btn){
   S.results[S.qi].push(correct);
   const rb=document.getElementById('revealBox');
   try{ flashEnergy(correct?'hit':'miss'); }catch(_){}
-  if(correct){ledgerSet('q'+S.qi+'-'+S.ni, worth, 0, 'live');
-    rb.innerHTML=`<div class="reveal good"><div class="r1">✓ CORRECT · +${worth} pt${worth>1?'s':''}</div>
-      <div class="r2">Nice read. You're now on <b>${S.pts}</b> points.</div></div>`;
+  if(correct){
+    /* THE TOTAL BEFORE, so it can count TO the new one. ledgerSet moves
+       S.pts, so this has to be read first — reading it after would count
+       from the answer to the answer, which is a number that does not
+       move, which is the bug this is fixing. */
+    const wasPts = S.pts;
+    ledgerSet('q'+S.qi+'-'+S.ni, worth, 0, 'live');
+    rb.innerHTML=`<div class="reveal good"><div class="r1">✓ ${praise()}</div>
+      <div class="payoff">
+        <div class="pb pd"><div class="pn">+${worth}</div><div class="pl">This one</div></div>
+        <div class="pb pt"><div class="pn" id="revNow">${wasPts}</div><div class="pl">Your points</div></div>
+      </div></div>`;
+    /* Same easing and duration the round summary uses, so the two moments
+       feel like the same product. */
+    try{ countTo('revNow', wasPts, S.pts, 900); }catch(e){}
   }else{
     const miss=choice?`You picked <b>${choice}</b>.`:`Time's up — no answer locked.`;
-    rb.innerHTML=`<div class="reveal bad"><div class="r1">✕ ${choice?'NOT QUITE':'MISSED IT'} · +0</div>
-      <div class="r2">${miss} Correct answer: <b>${q.a}</b>.</div></div>`;
+    rb.innerHTML=`<div class="reveal bad"><div class="r1">✕ ${choice?'NOT QUITE':'MISSED IT'}</div>
+      <div class="r2">${miss} It was <b>${q.a}</b>. You're on <b>${S.pts}</b> points.</div></div>`;
   }
-  try{ VX.reveal(correct ? ('Correct. Plus '+worth+'. You are on '+S.pts+' points.')
+  try{ VX.reveal(correct ? praiseSpoken(worth, S.pts)
                          : ((choice?'Not quite. ':'Missed it. ')+'The answer was '+q.a+'.')); }catch(_){}
   bumpBots(worth); // other players score too
   renderScore();
@@ -10339,6 +10415,60 @@ function openReview(){
   go('review');
 }
 /* A number that moves is a number you feel. Eases from → to in ms. */
+/* ---- WHAT THE PAYOFF SAYS ------------------------------------------
+   A player sees this SIXTEEN TIMES A NIGHT. "✓ CORRECT" sixteen times is
+   a receipt, not a reward, and by the fourth one it has stopped meaning
+   anything. So it varies — and every variant says the same thing, which is
+   the whole positioning in five words: THEY WERE WATCHING.
+
+   "Nice pick" could be any sportsbook. "You saw it" could only be this.
+   That is the line the product is on, and the reward moment is exactly
+   where it gets tested, so no cash / payout / action / "that's a lock"
+   vocabulary lives in here. (`Locked in.` for committing a card stays —
+   that is a player locking their OWN answers, not a wager.)
+
+   A run escalates, because three in a row is a different feeling from one
+   and the app currently reports them identically. */
+var PRAISE     = ['YOU SAW IT','CALLED IT','YOU WERE WATCHING','CAUGHT THAT','EYES ON THE GAME'];
+var PRAISE_SPOKEN = ['You saw it.','Called it.','You were watching.','Caught that.'];
+/* How many correct in a row, counting backwards through the night rather
+   than this round only — a run that carries across a quarter break is
+   still a run, and is the one most worth naming. */
+function streakNow(){
+  var n=0;
+  try{
+    for(var r=(S.results||[]).length-1; r>=0; r--){
+      var a=S.results[r]||[];
+      for(var i=a.length-1; i>=0; i--){ if(a[i]) n++; else return n; }
+    }
+  }catch(_){}
+  return n;
+}
+function praise(){
+  var k=streakNow();
+  if(k>=5) return k+' STRAIGHT';
+  if(k===4) return 'FOUR STRAIGHT';
+  if(k===3) return 'THREE IN A ROW';
+  if(k===2) return 'TWO IN A ROW';
+  /* Rotate on the question index rather than at random: the same moment
+     re-rendered (a repaint, a rank arriving) must not change its own
+     wording under the player. */
+  var i=0; try{ i=(Number(S.qi)||0)*4 + (Number(S.ni)||0); }catch(_){}
+  return PRAISE[Math.abs(i)%PRAISE.length];
+}
+/* The spoken half of the same moment. Kept beside the written one on
+   purpose — they drifted apart once already, and a reward that says one
+   thing on screen and another in your ear is two rewards. */
+function praiseSpoken(worth, pts){
+  var k=streakNow(), lead;
+  if(k>=4)      lead = k+' in a row.';
+  else if(k===3) lead = 'Three in a row.';
+  else if(k===2) lead = 'Two in a row.';
+  else { var i=0; try{ i=(Number(S.qi)||0)*4+(Number(S.ni)||0); }catch(_){}
+         lead = PRAISE_SPOKEN[Math.abs(i)%PRAISE_SPOKEN.length]; }
+  return lead+' Plus '+worth+'. You are on '+pts+' points.';
+}
+
 function countTo(id,from,to,ms){
   const el=document.getElementById(id); if(!el) return;
   if(from===to){ el.textContent=to; return; }
@@ -15690,7 +15820,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-19-lang.157';
+const STATS_BUILD='2026-08-19-payoff.158';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

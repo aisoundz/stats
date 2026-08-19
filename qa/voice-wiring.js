@@ -123,8 +123,21 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
   await p.evaluate(()=>{ window.__said=[]; window.__recStarts=0; VX.heard('one'); });
   await p.waitForTimeout(600);
   const pr=await p.evaluate(()=>({said:window.__said.filter(s=>s!=='<<CANCEL>>'), answered:S.answered, recStarts:window.__recStarts}));
+  if(process.env.VW_DEBUG) console.log('  DEBUG said=', JSON.stringify(pr.said));
+  /* ASSERT THAT THE PAYOFF WAS SPOKEN, NOT THAT IT USED ONE PARTICULAR
+     WORD. This used to grep for "Correct" — and went red the day the
+     reward line was rewritten to say what the product is actually about
+     ("You saw it. Plus 10. You are on 10 points."), while the behaviour it
+     exists to protect was completely intact: spoken once, at the reveal,
+     not talked over, and not offering to re-answer a settled question.
+     A check that fails on a copy change trains you to ignore the gate.
+
+     What must be true, in any wording and any language: the spoken reveal
+     names what just happened to the player's score. "Plus N" for a right
+     answer, the answer itself for a wrong one. That is the guarantee. */
   R['practice-reveal-is-not-talked-over'] =
-    pr.said.some(s=>/Correct|Not quite|Missed it/i.test(s)) &&
+    pr.said.length===1 &&
+    /(plus\s+\d+|the answer was|it was)/i.test(pr.said[0]) &&
     !pr.said.some(s=>/say another number/i.test(s));
   R['practice-reopens-the-ear-for-next'] = pr.recStarts>0;
   /* Assert the MOVE, not the absence of a complaint. The first version of

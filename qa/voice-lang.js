@@ -167,6 +167,20 @@ if(typeof VX.contentReady==='function'){
   ok('lang.explicit-choice-always-wins', VX3.lang==='es', 'an explicit Spanish choice was overridden by the gate');
 }
 
+/* ---- 7. THE HALF-BUILT LANGUAGE SAYS SO ------------------------------
+   V.contentReady existed for a while and was called NOWHERE, which made it
+   a comment with a function signature: the gate on auto-detect worked, but
+   anyone who reached Spanish deliberately got no warning that the question
+   bank was still English. A promise the code knows about and never tells
+   the player is not a promise. */
+console.log('\nA LANGUAGE WHOSE BANK IS NOT TRANSLATED SAYS SO');
+ok('lang.picker-exists', /VX\.setLang\(this\.value\)/.test(src),
+   'there is no way to choose a language in the interface');
+ok('lang.contentReady-is-actually-used', /V\.contentReady\(/.test(src.replace(/V\.contentReady=function[^;]*;/,'')),
+   'contentReady is defined but never called — the warning it exists for is never shown');
+ok('lang.picker-labels-the-untranslated-one', /contentReady\([^)]*\)[\s\S]{0,120}voice only/.test(src),
+   'the picker offers a language with no indication its questions are still English');
+
 console.log('\n'+(fail?'FAIL':'PASS')+'  '+pass+' passed, '+fail+' failed   ['+P.basename(TARGET)+']');
 bad.forEach(x=>console.log('   x '+x));
 process.exit(fail?1:0);

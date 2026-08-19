@@ -134,7 +134,14 @@ promise('acceptance.the-phone-only-lanes-pass-through-untouched',
 }
 
 /* ---- THE PRODUCT, AS SHIPPED --------------------------------------- */
-const app = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+/* WHICH BUILD ARE WE PROMISING ABOUT? This hardcoded index.html — the file
+   ALREADY LIVE — while the gate around it announced it was judging
+   index-test.html, the file about to be promoted. So the suite whose whole
+   job is "does it still do what we said it does" was grading the wrong
+   copy: you could rename the product in the promotion candidate and every
+   promise stayed green. Takes a target now, like the other suites. */
+const TARGET = path.resolve(process.argv.find(a => /\.html$/.test(a)) || path.join(__dirname, '..', 'index.html'));
+const app = fs.readFileSync(TARGET, 'utf8');
 
 promise('acceptance.the-four-tabs-spell-the-product',
   /Home/.test(app) && /Stats/.test(app) && /Gametime/.test(app) && /Board/.test(app),

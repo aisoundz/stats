@@ -419,7 +419,18 @@ function prettyDate(iso){
      Unset means "host everything you build", which is the old behaviour and
      the right default for a hand-run build. */
   const RUN = String(process.env.RUN_LEAGUES || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const hosted = g => !RUN.length || RUN.includes(String(g.league || '').toLowerCase());
+  /* THE FLAGSHIP IS ALWAYS OFFERED, whatever RUN_LEAGUES says.
+     A flagship is a hand-written night in admin.html's NIGHTS: it is hosted
+     by its OWN cron line (cron-start-night.sh), it never enters this
+     manifest, and it does not spend MAX_ROOMS. So it is hosted by
+     definition, and filtering it on league would remove the ONE game the
+     email, the promotion and the whole evening are about from the picker —
+     while its runner sat there hosting it perfectly. A football-only
+     Saturday, or any night the WNBA runners are off, would have done it.
+     That is the failure this file's own comment forty lines up calls the
+     strangest possible bug: the person who came because of the email
+     arrives and cannot find the game the email was about. */
+  const hosted = g => !!g.flagship || !RUN.length || RUN.includes(String(g.league || '').toLowerCase());
   const railGames = slate.games.filter(hosted);
   const withheld = slate.games.length - railGames.length;
   if(withheld)

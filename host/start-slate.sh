@@ -67,12 +67,24 @@ DATE="${DATE:-$(date +%F)}"
 #
 #   LEAGUES     which leagues get schedule docs and banks   (build it all)
 #   RUN_LEAGUES which leagues actually get runners          (turn it on)
-#   MAX_ROOMS   most rooms to start per league per day      (start small)
+#   MAX_ROOMS   most rooms live AT ONCE, across all leagues  (start small)
 #
 # A league in LEAGUES but not RUN_LEAGUES is fully built, kept OFF the
 # player's rail (see build-slate.js), and simply not
 # played. Its rooms exist, its questions are published, and switching it on
 # is one word in a cron line — not a deploy.
+# ONE DEFINITION, SOURCED BEFORE THE DEFAULTS. host/leagues.env holds which
+# leagues are built and which are hosted, so the two cron lines cannot
+# disagree with each other any more — see that file for what went wrong.
+# The environment still wins: values already set are left alone, so a hand
+# run or a one-off cron override behaves exactly as it did.
+if [ -f "$(dirname "$0")/leagues.env" ]; then
+  _ENV_LEAGUES="$LEAGUES"; _ENV_RUN="$RUN_LEAGUES"; _ENV_CAP="$MAX_ROOMS"
+  . "$(dirname "$0")/leagues.env"
+  [ -n "$_ENV_LEAGUES" ] && LEAGUES="$_ENV_LEAGUES"
+  [ -n "$_ENV_RUN" ]     && RUN_LEAGUES="$_ENV_RUN"
+  [ -n "$_ENV_CAP" ]     && MAX_ROOMS="$_ENV_CAP"
+fi
 LEAGUES="${LEAGUES:-${LEAGUE:-wnba}}"
 RUN_LEAGUES="${RUN_LEAGUES:-$LEAGUES}"
 MAX_ROOMS="${MAX_ROOMS:-0}"        # 0 = no cap

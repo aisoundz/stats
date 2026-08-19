@@ -25,12 +25,28 @@
    ================================================================== */
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ROOT = path.resolve(__dirname, '..');
-const DIR = process.argv[2] ||
-  path.join(ROOT, '..', '.claude/skills/stats-gametime/references/multisport/fixtures');
-const BANKS_FILE = path.join(ROOT, '..', '.claude/skills/stats-gametime/references/multisport/question-banks.js');
+/* THIS SUITE USED TO LOOK OUTSIDE THE REPO — at
+   ~/.claude/skills/stats-gametime/references/multisport/ — and skip with
+   exit 0 when it was not there. On this machine the skill happens to be
+   installed, so it ran and looked healthy. On a fresh clone, on CI, or from
+   any other checkout path, the suite that proves EVERY QUESTION IN EVERY
+   BANK resolves to one of its own options reported success while executing
+   nothing. A test whose inputs live somewhere the repo does not control is
+   a test that passes for reasons unrelated to the code.
+   Both inputs are in the repo now, and their absence is a failure. */
+const DIR = process.argv[2] || path.join(ROOT, 'references', 'multisport');
+const BANKS_FILE = path.join(ROOT, 'references', 'multisport', 'question-banks.js');
 
-if (!fs.existsSync(DIR)) { console.log('no fixtures dir — skipping.'); process.exit(0); }
-if (!fs.existsSync(BANKS_FILE)) { console.log('no question-banks.js — skipping.'); process.exit(0); }
+if (!fs.existsSync(DIR)) {
+  console.log('NO FIXTURES at ' + DIR);
+  console.log('  run:  node references/multisport/fetch.js');
+  console.log('  (a check that cannot run has not passed)');
+  process.exit(1);
+}
+if (!fs.existsSync(BANKS_FILE)) {
+  console.log('NO question-banks.js at ' + BANKS_FILE + ' — cannot check any bank');
+  process.exit(1);
+}
 const { BANKS, fillTeams } = require(BANKS_FILE);
 
 const src = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');

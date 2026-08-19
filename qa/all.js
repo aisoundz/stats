@@ -58,7 +58,19 @@ const TARGET=fi>=0 && ARG[fi+1] ? ARG[fi+1] : 'index-test.html';
 const TARGET_ABS=path.resolve(__dirname,'..',TARGET);
 /* Only these accept a positional target; handing one to a suite that does
    not read argv[2] is harmless, but claiming it was targeted would not be. */
-const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-lang.js','board-order.js']);
+const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-lang.js',
+  'board-order.js','payoff.js','slate.js','acceptance.js','host-sportsreg.js']);
+/* Suites that read admin.html rather than the player file. The player half
+   of the gate was split across two builds and fixed; the ADMIN half is
+   split the same way and is NOT fixed — these seven read admin.html even
+   when admin-test.html is the file being promoted, while qa.js reads
+   admin-test.html. Named here so "green" is never read as broader than it
+   is, rather than left to a filename regex to guess at. */
+/* Player-side suites that genuinely ignore a passed target. Verified by
+   reading each one, not inferred from its name. */
+const KNOWN_UNTARGETED=['journey.js','devices.js','live-smoke.js','night-config.js','overtime.js'];
+const ADMIN_READERS=['host-overtime.js','host-resolvers.js','host-sports.js','host-block.js',
+                     'host-banks.js','host-publish-ot.js','bank-shadow.js'];
 
 /* The tier of each suite, stated once. A suite added to the directory and
    not named here is REPORTED, not silently ignored — see the sweep below,
@@ -67,8 +79,12 @@ const TIER={
   'qa.js':            {tier:'browser', args:QUICK?['--quick']:[]},
   'acceptance.js':    {tier:'static'},
   'board-order.js':   {tier:'static'},
-  'fakebase.js':      {tier:'static'},
-  'fixtures.js':      {tier:'static'},
+  /* NOT SUITES. Both end in module.exports and print nothing; node loads
+     them and exits 0, so they can never fail. Tiered as 'lib' so they are
+     neither run nor reported as untiered — "ALL 16 SUITES PASS" used to be
+     14 suites and 2 module loads. */
+  'fakebase.js':      {tier:'lib'},
+  'fixtures.js':      {tier:'lib'},
   'host-banks.js':    {tier:'static'},
   'host-block.js':    {tier:'static'},
   'host-overtime.js': {tier:'static'},
@@ -89,6 +105,7 @@ const TIER={
   'slate.js':         {tier:'browser'},
   'voice-pick.js':    {tier:'browser'},
   'voice-wiring.js':  {tier:'browser'},
+  'payoff.js':        {tier:'browser'},
   'journey.js':       {tier:'browser'},
   'live-path.js':     {tier:'live'},
 };
@@ -101,6 +118,7 @@ const missing =Object.keys(TIER).filter(f=>!onDisk.includes(f));
 
 function wanted(f){
   const t=TIER[f].tier;
+  if(t==='lib')     return false;          // a helper module, not a suite
   if(t==='live')    return WITH_LIVE;
   if(t==='browser') return !ONLY_STATIC;
   return true;
@@ -119,8 +137,18 @@ console.log('\n=== EVERY SUITE ===  judging '+TARGET
 if(!fs.existsSync(TARGET_ABS)){ console.log('  the file under test does not exist: '+TARGET_ABS); process.exit(1); }
 /* Say which suites are NOT reading that file, so "green" is never read as
    broader than it is. */
-const untargeted=run.filter(f=>!TARGETABLE.has(f) && /voice|board|journey|device|night-config|overtime|slate|live-smoke/.test(f));
-if(untargeted.length) console.log('  (these read their own default build, not '+TARGET+': '+untargeted.join(', ')+')\n');
+/* SAY WHICH SUITES ARE NOT READING THE TARGET — from a LIST, not a regex
+   over filenames. The regex version was wrong in both directions: it
+   omitted acceptance.js and host-sportsreg.js (both of which really did
+   hardcode index.html) and it named journey.js, which does not. A note
+   about honesty that is itself guessing is worse than no note. */
+const untargeted=run.filter(f=>!TARGETABLE.has(f) && !ADMIN_READERS.includes(f) && KNOWN_UNTARGETED.includes(f));
+if(untargeted.length)
+  console.log('  player-side suites reading their OWN default build, not '+TARGET+': '+untargeted.join(', '));
+const adminRun=run.filter(f=>ADMIN_READERS.includes(f));
+if(adminRun.length)
+  console.log('  admin-side suites read admin.html (NOT admin-test.html): '+adminRun.join(', '));
+if(untargeted.length||adminRun.length) console.log('');
 if(missing.length)  console.log('  ! named in the table but not on disk: '+missing.join(', ')+'\n');
 if(unlisted.length) console.log('  ! on disk but in no tier, so never run: '+unlisted.join(', ')+'\n');
 
@@ -144,10 +172,59 @@ for(const f of run){
   console.log(mark+f.padEnd(20)+String(ms+'ms').padStart(8)+'   '+line.slice(0,90));
 }
 
+/* ---- COVERAGE DOES NOT SILENTLY SHRINK ------------------------------
+   A suite that reports "GREEN 31 passed, 0 failed" where it used to report
+   34 has not got better — it has quietly stopped running three checks, and
+   every one of those is now unguarded while the line still says GREEN.
+   Seen for real on 19 Aug: qa/journey.js reported 34 during one run and 31
+   in the next, on identical source, differing only in how loaded the
+   machine was. Nothing anywhere would have noticed.
+
+   So the count is remembered. A DROP is reported as a failure; a rise
+   updates the baseline, because adding checks is the thing we want. This
+   is deliberately a floor and not an equality: suites legitimately gain
+   checks, and a gate that goes red when you write a new test is a gate
+   people stop running. */
+/* KNOWN-VARIABLE SUITES. qa/journey.js emits some assertions through
+   railOk() at call sites inside conditional blocks, so its total moves with
+   which branches a run takes — it reported 34 once and 31 in six runs
+   since, on identical source. Until its count is made deterministic, a
+   floor on it would be noise, and a noisy gate is one people stop reading.
+   Everything else is floored. This list should get shorter, not longer. */
+const COUNT_UNSTABLE=new Set(['journey.js']);
+const BASE_FILE=path.join(DIR,'.counts.json');
+let base={}; try{ base=JSON.parse(fs.readFileSync(BASE_FILE,'utf8')); }catch(_){}
+const shrunk=[];
+for(const r of results){
+  const m=r.line.match(/(\d+)\s+(?:passed|promise\(s\) held|voice grammar cases|checks?)/i)
+        || r.line.match(/ALL\s+(\d+)\s+CHECKS/i)
+        || r.line.match(/all\s+(\d+)\s+/i);
+  if(!m) continue;
+  const n=Number(m[1]);
+  if(!isFinite(n) || n<=0) continue;
+  r.count=n;
+  if(COUNT_UNSTABLE.has(r.f)) continue;
+  const was=base[r.f];
+  if(r.how==='PASS'){
+    if(typeof was==='number' && n<was) shrunk.push({f:r.f, was, now:n});
+    if(typeof was!=='number' || n>was) base[r.f]=n;
+  }
+}
+if(!process.argv.includes('--no-baseline')){
+  try{ fs.writeFileSync(BASE_FILE, JSON.stringify(base,null,2)+'\n'); }catch(_){}
+}
+
 const bad=results.filter(r=>r.how!=='PASS');
 console.log('\n'+'-'.repeat(62));
-if(!bad.length){
+if(shrunk.length){
+  console.log('COVERAGE SHRANK — these suites ran FEWER checks than they have before:');
+  shrunk.forEach(x=>console.log('   ! '+x.f+'  '+x.was+' -> '+x.now+'   ('+(x.was-x.now)+' check(s) did not run; the line still said GREEN)'));
+  console.log('');
+}
+if(!bad.length && !shrunk.length){
   console.log('ALL '+results.length+' SUITES PASS'+(ONLY_STATIC?'  (static only — browser suites not run)':''));
+}else if(!bad.length){
+  console.log('every suite passed, but coverage shrank — treat as RED until explained');
 }else{
   console.log(bad.length+' of '+results.length+' SUITES RED — DO NOT PROMOTE');
   bad.forEach(r=>{
@@ -156,5 +233,14 @@ if(!bad.length){
     console.log(r.out.replace(/\x1b\[[0-9;]*m/g,'').trim().split('\n').slice(-14).map(x=>'    '+x).join('\n'));
   });
 }
-if(unlisted.length) console.log('\nNOTE: '+unlisted.length+' suite(s) on disk are in no tier and did not run: '+unlisted.join(', '));
-process.exit(bad.length?1:0);
+/* A SUITE ON DISK IN NO TIER IS A FAILURE, NOT A FOOTNOTE.
+   This file's own thesis is that a suite nobody runs is not a safety net.
+   It then printed exactly that situation as a NOTE and exited 0 — so
+   dropping a new, failing suite into qa/ and forgetting the tier entry
+   produced a green run. The whole disease, reproduced inside the cure. */
+if(unlisted.length){
+  console.log('\nUNTIERED SUITES — on disk, in no tier, and therefore never run:');
+  unlisted.forEach(f=>console.log('   ! '+f+'   (add it to TIER in qa/all.js)'));
+  console.log('   a suite nobody runs is not a safety net; this is a failure, not a note.');
+}
+process.exit((bad.length||shrunk.length||unlisted.length)?1:0);

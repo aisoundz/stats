@@ -17,6 +17,9 @@
    ================================================================== */
 const { chromium } = require('playwright');
 const path=require('path');
+/* The build under test, not always the live one — see qa/all.js. */
+const PLAYER=(function(){ const a=process.argv.find(x=>/\.html$/.test(x));
+  return a? require('path').resolve(a) : require('path').join(__dirname,'..','index.html'); })();
 const ROOT=path.resolve(__dirname,'..');
 const F=require(path.join(__dirname,'fixtures.js'));
 (async()=>{
@@ -26,7 +29,7 @@ const F=require(path.join(__dirname,'fixtures.js'));
     const p=await b.newPage({viewport:{width:393,height:852}});
     const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
     await p.route('**/site.api.espn.com/**',r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(F.PRE)}));
-    await p.goto('file://'+path.join(ROOT,'index.html')+'?sport='+sport,{waitUntil:'domcontentloaded'});
+    await p.goto('file://'+PLAYER+'?sport='+sport,{waitUntil:'domcontentloaded'});
     await p.waitForTimeout(1200);
     const r=await p.evaluate(()=>{
       let started=false, qtext=null, opts=0;

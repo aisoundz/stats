@@ -27,11 +27,27 @@ const ROOT = path.resolve(__dirname, '..');
    not the same sentence. */
 const DEFAULT_FIX = path.join(ROOT, 'references', 'multisport');
 const DIR = process.argv[2] || process.env.SPORT_FIXTURES || DEFAULT_FIX;
+/* EVERY FIXTURE, NOT JUST THE FOLDER. Requiring only the directory was
+   half a fix: deleting nfl.json alone took qa/host-resolvers.js from 65
+   checks to 27 and it still printed a green verdict, because each league
+   block quietly prints "absent — skipped" and moves on. A fixture set that
+   can lose a file and stay green is the same disease as a suite that can
+   lose its whole directory and stay green — just quieter. */
+const NEED = ['wnba.json','nba.json','mlb.json','nfl.json','nhl.json','mls.json'];
 if (!fs.existsSync(DIR)) {
   console.log('NO FIXTURES at ' + DIR);
   console.log('  run:  node references/multisport/fetch.js');
   console.log('  (reporting this as a FAILURE — a check that cannot run has not passed)');
   process.exit(1);
+}
+{
+  const missing = NEED.filter(f => !fs.existsSync(path.join(DIR, f)));
+  if (missing.length) {
+    console.log('INCOMPLETE FIXTURES at ' + DIR);
+    missing.forEach(f => console.log('  missing: ' + f + '   (its checks would be skipped, not failed)'));
+    console.log('  run:  node references/multisport/fetch.js');
+    process.exit(1);
+  }
 }
 
 const src = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
@@ -117,29 +133,24 @@ function run(tag, fn, j, p, opts, want) {
     const nb = JSON.parse(JSON.stringify(j));
     try { delete nb.header.competitions[0].status; } catch (_) {}
     must(AUTO.periodDone(nb, 1) === true, 'nfl blind: quarter 1 did not read done off its End Period row');
-    must(AUTO.periodDone(nb, 4) === true, 'nfl blind: quarter 4 did not read done off End of Game');
-    /* SABOTAGE HAS TO REMOVE EVERY SIGNAL, NOT ONE OF THEM. The gate now
-       has two honest sources for "period 1 finished": its End Period row,
-       and the existence of plays in a LATER period — because a quarter with
-       football played after it is over regardless of what ESPN wrote down.
-       (That second clause was added 19 Aug after a real overtime feed was
-       found carrying fifty fourth-quarter plays and no end-of-period row.)
-       Stripping only the row therefore no longer makes the answer unknowable,
-       and this check went red while the gate was strictly better than before.
-       To prove the ROW is being read, it has to be the only thing left. */
+    /* Quarter 4 of an OVERTIME game ends with "End of Regulation", not
+       "End of Game" — the game ends later, in overtime. Naming the wrong
+       row here is what let the type list stay incomplete. */
+    must(AUTO.periodDone(nb, 4) === true, 'nfl blind: quarter 4 did not read done off its End of Regulation row');
+    /* RESTORED to the original single-signal sabotage. It was briefly
+       widened to also strip every later period, because a "a period with
+       plays after it is over" clause had been added to nflPeriodDone and
+       made this check unfalsifiable. That clause was the wrong fix — it
+       could mark every earlier period done off one mistagged row, and in
+       run.js the done gate OPENS a round, so a stray row would have opened
+       and graded a quarter early. The real bug was a missing token in the
+       type list ("End of Regulation"), and with that fixed the row is once
+       again the only signal, so removing it must once again say false. */
     const nbMid = JSON.parse(JSON.stringify(nb));
-    nbMid.drives.previous = nbMid.drives.previous
-      .map(d => Object.assign({}, d, {
-        plays: (d.plays || []).filter(x => Number((x.period || {}).number) <= 1)
-      }))
-      .filter(d => (d.plays || []).length);
-    /* With everything after quarter 1 gone, the row alone decides. */
-    must(AUTO.periodDone(nbMid, 1) === true, 'nfl blind: quarter 1 did not read done off its End Period row when that row was the only signal left');
-    const nbNoRow = JSON.parse(JSON.stringify(nbMid));
-    nbNoRow.drives.previous = nbNoRow.drives.previous.map(d => Object.assign({}, d, {
-      plays: (d.plays || []).filter(x => !/^End Period$/.test((x.type || {}).text || ''))
+    nbMid.drives.previous = nbMid.drives.previous.map(d => Object.assign({}, d, {
+      plays: (d.plays || []).filter(x => !((x.period || {}).number === 1 && /^End Period$/.test((x.type || {}).text || '')))
     }));
-    must(AUTO.periodDone(nbNoRow, 1) === false, 'nfl blind: quarter 1 still read done with its End Period row removed and nothing after it — the gate is not reading the row');
+    must(AUTO.periodDone(nbMid, 1) === false, 'nfl blind: quarter 1 still read done with its End Period row removed — the gate is not reading it');
     must(AUTO.sportOf(j) === 'football', `nfl: sportOf said "${AUTO.sportOf(j)}"`);
     console.log(`  periodDone 1..5: ${[1,2,3,4,5].map(p => AUTO.periodDone(j, p)).join(' ')}   sportOf="${AUTO.sportOf(j)}"`);
     console.log(`  feedPlays() sees ${AUTO.feedPlays ? AUTO.feedPlays(j).length : 'n/a'} plays (plays() sees ${(j.plays||[]).length})`);

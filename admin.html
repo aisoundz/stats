@@ -651,7 +651,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-19-admin.52-week';
+window.ADMIN_BUILD='2026-08-19-admin.53-nflend';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -6663,24 +6663,39 @@ var AUTO = (function(){
       if(Number(st.period) > want) return true;
     }catch(_){}
     try{
-      var ps = nflPlays(j);
-      /* A PERIOD WITH FOOTBALL PLAYED AFTER IT IS OVER, whatever ESPN did
-         or did not write down. Measured 19 Aug on a real overtime game
-         (LAR @ CHI): quarter 4 carries FIFTY plays and NO end-of-period row
-         at all — the feed jumps straight from the fourth quarter into
-         overtime and only records "End of Game" at period 5. So the row
-         test below answered false for a quarter that had visibly finished.
-         Live the header shortcut above usually covers it, which is exactly
-         why this went unnoticed: the gate was never doing the work, the
-         header was. The moment the header lags — and it does — the fourth
-         quarter's round would never close, and a round that never closes is
-         a room that sits there saying nothing. Overtime is when this
-         product's audience is most likely to still be watching. */
-      var later = ps.some(function(x){ return Number(((x.period)||{}).number) > want; });
-      if(later) return true;
-      return ps.some(function(x){
+      /* "End of Regulation" IS AN END-OF-PERIOD ROW, and leaving it out of
+         this list is why a fourth quarter never read done in a game that
+         went to overtime. ESPN's football vocabulary is not one string per
+         boundary: quarter 1 and 3 end with "End Period", the half with
+         "End of Half", regulation with "End of Regulation", and the game
+         with "End of Game". Four names for one idea, and the list had
+         three of them — the same shape as the "End of Half" special case
+         already sitting beside it.
+
+         MEASURED on LAR @ CHI, 18 Jan 2026, a real overtime game:
+           End Period @p1 · End of Half @p2 · End Period @p3
+           End of Regulation @p4 · End of Game @p5
+
+         A NOTE ON WHAT WAS TRIED FIRST, because it was worse and it very
+         nearly shipped. The first fix said "a period with plays after it is
+         over" — true in the abstract, and it made every check pass. But it
+         has no corroboration: ONE play row carrying a mistagged period
+         number marks EVERY earlier period done at once, and in run.js the
+         done gate OPENS a round. So a single bad row would open the Q4
+         round with minutes left on the clock, grade it against a quarter
+         that had not happened, mark players wrong and write state:'scored'.
+         The old failure was a round that never opens — visible, and
+         watch-night.js alerts on it. That failure would have been silent,
+         wrong, and permanent without host/rescore.js. A blunt rule that
+         turns a stall into bad scores is not an improvement.
+
+         The reason the wrong fix looked right: the probe that "proved" the
+         row was missing grepped for End Period|End of Half|End of Game —
+         the same incomplete list that caused the bug. It could not have
+         found it. */
+      return nflPlays(j).some(function(x){
         var t = String((((x.type)||{}).text)||'');
-        if(!/^(End Period|End of Half|End of Game)$/.test(t)) return false;
+        if(!/^(End Period|End of Half|End of Regulation|End of Game)$/.test(t)) return false;
         return Number(((x.period)||{}).number) === want;
       });
     }catch(_){ return false; }
