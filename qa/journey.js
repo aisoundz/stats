@@ -137,9 +137,28 @@ const FAKE_SLATE=[
             opts:['1-5','6-12','13+'], answer:'6-12'}]
   });
 
+  /* THE FLAGSHIP IS ON THE RAIL TOO, and it is the one room whose config
+     is NOT in schedule/{nightId} — a human wrote it into index.html and
+     publish.js is told to leave it alone. So it is the room most likely to
+     be unreachable, and it was: measured live, out of gn13 fine, back into
+     gn13 never. Adding it here means the path this suite drives includes
+     the game the whole night is named after. */
   const seed=async()=>{ if(LIVE) return;
-    await p.evaluate((games)=>{ window.SLATE.games=games; window.SLATE.loaded=true;
-      window.SLATE.date='2026-08-19'; paintGameRail(); }, FAKE_SLATE); };
+    await p.evaluate((games)=>{
+      /* THE BUILT-IN night, not the CURRENT one. Reading GAME.nightId here
+         meant that after the first switch this re-added the room we were
+         already in and the flagship silently never made it onto the rail —
+         so the check failed for the wrong reason and would have sent me
+         hunting a bug in the app. */
+      const built = (window.BUILTIN_NIGHT||{}).id;
+      const all = games.slice();
+      if(built && !all.some(g=>g.nightId===built))
+        all.push({nightId:built, league:'wnba', sport:'basketball',
+                  away:'Home Built', home:'In Night', awayAbbr:'BLT', homeAbbr:'INN',
+                  awayColor:'#266092', homeColor:'#b38fcf', tipISO:'2026-08-20T02:00Z'});
+      window.SLATE.games=all; window.SLATE.loaded=true;
+      window.SLATE.date='2026-08-19'; paintGameRail();
+    }, FAKE_SLATE); };
 
   const seedConfigs=async()=>{ if(LIVE) return;
     await p.evaluate((cfgs)=>{ cfgs.forEach(c=>{
@@ -261,6 +280,23 @@ const FAKE_SLATE=[
      kept.err||`saved=${kept.saved} nid=${kept.nid} picks=${kept.picks} — a reload would lose it`);
 
   ok('journey.no-page-errors-anywhere', errs.length===0, errs.slice(0,2).join(' | '));
+
+  /* ---- 8. and back into the night this build was born knowing ------- */
+  if(!LIVE){
+    const built = await p.evaluate(()=>(window.BUILTIN_NIGHT||{}).id||null);
+    if(built){
+      await p.evaluate(id=>chooseGame(null,null,id), built);
+      await p.waitForTimeout(1200);
+      await seed();
+      const bs = await state();
+      ok('journey.you-can-walk-back-into-the-flagship', bs.night===built,
+         `asked for the built-in night ${built}, the app is holding ${bs.night} — its config is in this file, not in schedule/, so nothing can load it and the guard correctly refuses; it has to be restorable from what we already hold`);
+      railOk('flagship', bs);
+    } else {
+      ok('journey.you-can-walk-back-into-the-flagship', false,
+         'BUILTIN_NIGHT is not exposed — the built-in config is not captured before hydration overwrites it');
+    }
+  }
 
   await b.close();
   if(process.argv.includes('--trace')) trace.forEach(t=>console.log(t));

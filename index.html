@@ -4926,6 +4926,40 @@ const SPORT_KEY=(()=>{try{return (new URLSearchParams(location.search).get('spor
 const SPORT=SPORTS[SPORT_KEY]||SPORTS.basketball;
 const L=SPORT.L;
 const GAME=SPORT.game, roster=SPORT.roster, preds=SPORT.preds, rounds=SPORT.rounds, CATCHES=SPORT.catches;
+
+/* ============ THE NIGHT THIS BUILD WAS BORN KNOWING ==================
+   Captured HERE, before anything hydrates over it, because after the first
+   hydrateNight() these objects describe some other game and the original
+   is gone.
+
+   The flagship's config lives in this file, not in schedule/{nightId} — a
+   human wrote it and publish.js is told to leave it alone. So when the
+   room store began refusing to enter a room it could not load, the
+   flagship became the one room on the rail nobody could walk back into:
+   switch to the slate game, tap the flagship, and the app correctly said
+   "I cannot load that" about the very night it was built around. Measured
+   on the live site: out of gn13 fine, back into gn13 never.
+
+   A config we already hold is a config we can restore. */
+const BUILTIN_NIGHT = (function(){
+  try{
+    return {
+      id: GAME.nightId || '',
+      cfg: JSON.parse(JSON.stringify({
+        game: GAME,
+        roster: roster,
+        preds: preds
+      }))
+    };
+  }catch(_){ return { id:'', cfg:null }; }
+})();
+try{ window.BUILTIN_NIGHT = BUILTIN_NIGHT; }catch(_){}   /* readable by qa/journey.js */
+function hydrateBuiltIn(want){
+  if(!want || !BUILTIN_NIGHT.cfg || want !== BUILTIN_NIGHT.id) return false;
+  if(!hydrateNight(BUILTIN_NIGHT.cfg)) return false;
+  NIGHT_CFG_SOURCE = 'built-in';
+  return true;
+}
 /* B3 · THE SAFETY NET WAS NEVER CONNECTED. Last thing that happened on Game
    Night #7: a player finished Q4, and instead of a score got the toast "No
    night to save r3 to. Tell the host." His fourth quarter was thrown away at
@@ -5441,6 +5475,9 @@ async function chooseGame(db, F, nightId){
   }catch(_){}
   if(!okNow || (GAME && GAME.nightId !== nightId)){
     try{ okNow = hydrateFromCache(nightId); }catch(_){ okNow = false; }
+  }
+  if(!okNow || (GAME && GAME.nightId !== nightId)){
+    try{ okNow = hydrateBuiltIn(nightId); }catch(_){ okNow = false; }
   }
   var landed = false;
   try{ landed = !!(GAME && GAME.nightId === nightId); }catch(_){}
@@ -15252,7 +15289,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-rooms.151';
+const STATS_BUILD='2026-08-18-rooms.152';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
