@@ -164,10 +164,34 @@ const ymd = d => d.toISOString().slice(0,10).replace(/-/g,'');
         const want = slots.filter(s => s.def).map(sl => {
           const R = sl.def; return (R.p != null && isFinite(R.p)) ? Number(R.p) : sl.per;
         });
-        const missing = want.filter(p => !ends[p]);
+        /* THE LAST INNING OF A HOME WIN HAS NO MARKER, AND CANNOT.
+           When the home side leads after the top of the ninth they do not
+           bat: the inning that ends the game has no End row, and ESPN emits
+           NO end-of-game play either — the feed simply stops. Verified on
+           DET @ PIT (4-1) and MIA @ PHI (6-4), 18 Aug 2026: 35 and 25 plays
+           in the ninth, halves seen ["Top"], and not one play type matching
+           game / final / end-of anywhere in either feed.
+
+           That is roughly half of all baseball games, so asserting a marker
+           for the final round would go red on half the sport forever. And
+           the gate is RIGHT on these feeds — periodDone(3,6,9) is
+           true/true/true, because the header says the game is over, which
+           is the only thing that ever could say so.
+
+           So the final round is allowed to be marked by the game ending.
+           Every EARLIER inning must still have its own row: those are the
+           ones a live round depends on mid-game, and a gap there really
+           would leave a round that never opens. */
+        const lastRound = want.length ? Math.max(...want) : 0;
+        const over = (() => { try { return sum.header.competitions[0].status.type.completed === true; }
+                              catch (_) { return false; } })();
+        const missing = want.filter(p => !ends[p] && !(p === lastRound && over));
+        const excusedByFinal = want.filter(p => !ends[p] && p === lastRound && over);
         ok(`livepath.${lg}.the-gate-has-a-marker-for-every-round`,
            missing.length === 0,
            `${g.name}: no End-of-inning marker for period(s) ${missing.join(',')} — the round would never open in a live game`);
+        if (excusedByFinal.length)
+          console.log(`       ${g.name}: inning ${excusedByFinal.join(',')} has no End row — the home side never batted; the game ending is the marker`);
       }
 
       /* It must produce a key, or a round opens and never scores. */
