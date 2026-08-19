@@ -18,8 +18,13 @@
    east-coast broadcast is a room you cannot watch while you host it.
 
      node host/marquee.js 2026-08-21              # propose, write nothing
-     node host/marquee.js 2026-08-21 --apply      # write the marquee file
+     node host/marquee.js 2026-08-21 --apply      # write the file AND stamp slate/{date}
      node host/marquee.js 2026-08-21 --apply --gn 15
+     node host/marquee.js 2026-08-21 --apply --auto   # no-op if a file already exists
+
+   `--auto` is what start-slate.sh --build runs at the end of every morning
+   build, so EVERY day gets a Game of the Night without anybody choosing
+   one. A hand-written file always wins: --auto leaves it alone.
 
    IT PROPOSES. IT DOES NOT PICK ROOMS. The pick file decides what is
    hosted, and a marquee that is not in it is a ★ on a room that never
@@ -30,6 +35,8 @@ const fs = require('fs'), path = require('path');
 const ARG = process.argv.slice(2);
 const DATE = ARG.find(a => /^\d{4}-\d{2}-\d{2}$/.test(a));
 const APPLY = ARG.includes('--apply');
+const AUTO  = ARG.includes('--auto');     // leave a hand-written file alone
+const QUIET = ARG.includes('--quiet');
 const GNARG = (()=>{ const i = ARG.indexOf('--gn'); return i >= 0 ? String(ARG[i+1]||'').replace(/^#/,'') : ''; })();
 const LOGDIR = path.join(process.env.HOME, 'gamenight-logs');
 const log = (t, m) => console.error(`  ${t.padEnd(8)}${m}`);
@@ -140,6 +147,14 @@ function nextNumber(){
                 .filter(g => g && g.nightId);
   if(!all.length) die(`slate/${DATE} lists no games`);
 
+  const MARQF = path.join(LOGDIR, 'slate-marquee-' + DATE + '.txt');
+  if(AUTO && fs.existsSync(MARQF)){
+    if(!QUIET) log('marquee', `${path.basename(MARQF)} already exists — leaving it alone`);
+    /* STILL STAMP THE SLATE. The file is the choice; the slate document is
+       where the Control Room and the rail read it, and a rebuild wipes the
+       flags off the entries every morning. Skipping this is how a marquee
+       that was chosen once quietly stops appearing. */
+  }
   const PICKF = path.join(LOGDIR, 'slate-pick-' + DATE + '.txt');
   let PICK = null;
   try{
@@ -151,15 +166,33 @@ function nextNumber(){
 
   /* ONE PER LEAGUE — that is what "a featured sport" means. The best of
      each, then the best overall is the Game of the Night. */
+  /* NEVER STAR A ROOM NOTHING HOSTS. A ★ on a room that never opens a
+     round is the worst room on the rail — it is first, it is marked, and it
+     sits there all night. So the candidates are the HOSTED ones: the pick
+     file when there is one, the flagship always. */
+  const hostable = g => !!g.flagship || !PICK || PICK.has(g.nightId);
   const byLeague = new Map();
   all.forEach(g => {
     if(score(g) < 0) return;                // a channel he does not get
+    if(!hostable(g)) return;                // nothing would open its rounds
     const k = String(g.league || g.sport || '?').toLowerCase();
     const cur = byLeague.get(k);
     if(!cur || score(g) > score(cur)) byLeague.set(k, g);
   });
-  const picked = [...byLeague.values()].sort((a,b) => score(b) - score(a) || String(a.tipISO).localeCompare(String(b.tipISO)));
-  const gotn = picked[0];
+  let picked = [...byLeague.values()].sort((a,b) => score(b) - score(a) || String(a.tipISO).localeCompare(String(b.tipISO)));
+
+  /* A HAND-WRITTEN FILE IS A DECISION AND OUTRANKS THE RANKING. */
+  let fromFile = false;
+  try{
+    if(fs.existsSync(MARQF)){
+      const lines = fs.readFileSync(MARQF,'utf8').split('\n').map(x=>x.trim()).filter(Boolean);
+      const ids = lines.filter(x => !/^#/.test(x));
+      const byId = new Map(all.map(g => [g.nightId, g]));
+      const chosen = ids.map(id => byId.get(id)).filter(Boolean);
+      if(chosen.length){ picked = chosen; fromFile = true; }
+    }
+  }catch(_){}
+  if(!picked.length) die(`nothing on ${DATE} can be featured — every candidate is unhosted or on a channel that is not available`);
 
   const GN = GNARG || (()=>{
     try{
@@ -193,10 +226,39 @@ function nextNumber(){
     die(`${notRun.length} featured game(s) are not in slate-pick-${DATE}.txt. A ★ on a room `
       + `nothing hosts is the worst room on the rail. Add them with host/pick-slate.sh, then re-run.`);
   }
-  const out = ['#' + GN].concat(picked.map(g => g.nightId)).join('\n') + '\n';
-  const MARQF = path.join(LOGDIR, 'slate-marquee-' + DATE + '.txt');
-  fs.writeFileSync(MARQF, out);
-  log('wrote', `${MARQF}  (${picked.length} featured, Game Night #${GN})`);
-  log('next', `the 08:10 build reads it — or rebuild now: DATE=${DATE} host/start-slate.sh --build`);
+  if(!fromFile || GNARG){
+    const out = ['#' + GN].concat(picked.map(g => g.nightId)).join('\n') + '\n';
+    fs.writeFileSync(MARQF, out);
+    log('wrote', `${path.basename(MARQF)}  (${picked.length} featured, Game Night #${GN})`);
+  }
+
+  /* ---- AND STAMP THE SLATE DOCUMENT ---------------------------------
+     THE FILE IS THE CHOICE; THE SLATE IS WHERE IT IS READ. The Control
+     Room and the player's rail both read slate/{date}, and the 08:10 build
+     rewrites those entries from the ESPN probe every morning — so a
+     marquee that lives only in a file is a marquee that appears for one
+     day and then quietly stops. build-slate.js applies the file when it
+     runs; this does it for every other moment, including right now.
+
+     Both lists are stamped. `games` is what a player sees; `built` is what
+     the host sees, and a host looking for tonight's main game in the
+     Control Room is exactly who asked for this. */
+  const ids = new Set(picked.map(g => g.nightId));
+  const gotnId = picked[0] && picked[0].nightId;
+  const stamp = arr => (arr || []).map(g => {
+    if(!g || !ids.has(g.nightId)) return g;
+    return Object.assign({}, g, {
+      marquee: true, flagship: true, gn: String(GN),
+      gotn: g.nightId === gotnId
+    });
+  });
+  const games = stamp(d.games), built = stamp(d.built);
+  await db.doc(`slate/${DATE}`).set({
+    games, built,
+    flagship: (games || []).filter(g => g && g.flagship).map(g => g.nightId),
+    marqueeAt: admin.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+  log('slate', `stamped slate/${DATE} — ${picked.length} featured on the rail and in the host list`);
+  log('next', `the 08:10 build reads the file — or rebuild now: DATE=${DATE} host/start-slate.sh --build`);
   console.error('');
 })().catch(e => { console.error('\n  ERR', e.message, '\n'); process.exit(1); });

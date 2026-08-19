@@ -150,6 +150,25 @@ if [ "$MODE" = "build" ] || [ "$MODE" = "dry" ]; then
       echo "  FAIL $NIGHT_ID — its bank would not publish (see $LOGDIR/$NIGHT_ID.log)"
     fi
   done < "$ALL"
+  # ---- 3. AND EVERY DAY GETS A GAME OF THE NIGHT -----------------------
+  # Founder, 19 Aug: "I love how we have a game of the night and we number
+  # it. Please dont stop that — lets pick a main game for everyday."
+  #
+  # It used to require a hand-written night in admin.html, so it only
+  # happened on days somebody typed one, and Thursday had none. This runs at
+  # the end of every morning build and picks from the day's REAL slate using
+  # his rule in his order — national television first, then SoCal, then the
+  # hour it starts. One per league, best overall is the Game of the Night.
+  #
+  # --auto leaves a hand-written marquee file alone; it only ever fills a
+  # gap. It runs LAST because it needs every league already built, and it
+  # re-stamps slate/{DATE} because the loop above rewrote those entries from
+  # the ESPN probe — a marquee that lives only in a file appears for one day
+  # and then quietly stops.
+  if node host/marquee.js "$DATE" --apply --auto --quiet; then :; else
+    echo "  (no marquee set for $DATE — see above; the night still runs)"
+  fi
+
   echo "--- built; runners start from the half-hourly cron line ---"
   exit 0
 fi
@@ -268,6 +287,39 @@ STARTED_COUNT=""   # one char per started room, per league, counted with ${#}
 OFFERED_UNHOSTED=""   # rooms the PLAYER is offered that nobody is hosting
 NOT_PICKED=0          # rooms in the manifest that the pick file leaves out
 
+# ============ THE FEATURED GAME NEVER LOSES ITS SLOT ==================
+# MAX_ROOMS is a global cap and this loop walks the manifest in order, so
+# whichever rooms come due first spend it. That is fine for an ordinary room
+# and wrong for the Game of the Night: it is the one with the email behind
+# it, it is starred on every phone, and it must never be the room that gets
+# "CAP  ... cap is 3" because three earlier games happened to tip first.
+#
+# So the featured rooms are moved to the front of the manifest for this
+# pass. Order only — nothing is added, nothing is dropped, and a featured
+# game that is not yet due still WAITs like anything else.
+MARQF="$LOGDIR/slate-marquee-$DATE.txt"
+ORDER="$ALL"
+if [ -s "$MARQF" ]; then
+  FEAT="$(grep -v '^#' "$MARQF" | tr -d '\r' | grep . || true)"
+  if [ -n "$FEAT" ]; then
+    ORDER="$LOGDIR/.slate-order-$DATE.tsv"
+    : > "$ORDER"
+    while IFS=$'\t' read -r _lg NID _rest; do
+      [ -n "$NID" ] || continue
+      printf '%s\n' "$FEAT" | grep -qxF "$NID" && grep -P "^[^\t]*\t\Q$NID\E\t" "$ALL" >> "$ORDER" 2>/dev/null
+    done < "$ALL"
+    while IFS=$'\t' read -r _lg NID _rest; do
+      [ -n "$NID" ] || continue
+      printf '%s\n' "$FEAT" | grep -qxF "$NID" || grep -P "^[^\t]*\t\Q$NID\E\t" "$ALL" >> "$ORDER" 2>/dev/null
+    done < "$ALL"
+    if [ -s "$ORDER" ]; then
+      echo "--- featured first: $(printf '%s\n' "$FEAT" | grep -c .) room(s) ahead of the queue for the cap ---"
+    else
+      ORDER="$ALL"
+    fi
+  fi
+fi
+
 # ---- 2. publish a plan and start a runner for each --------------------
 while IFS=$'\t' read -r LG NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT SPATH; do
   [ -n "$NIGHT_ID" ] || continue
@@ -364,7 +416,7 @@ while IFS=$'\t' read -r LG NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT SPA
   ) 9> "$LOGDIR/$NIGHT_ID.lock" &
 
   sleep 2   # stagger, so N runners do not all hit the feed on the same second
-done < "$ALL"
+done < "$ORDER"
 
 # ---- 3. WHAT THE PLAYER IS OFFERED vs WHAT WE ARE HOSTING ------------
 # The rail is built from slate/{date}, which carries every game that was
