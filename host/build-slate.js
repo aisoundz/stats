@@ -220,14 +220,39 @@ const SHEETS = {
 };
 
 const two = (n) => String(n).padStart(2, '0');
-function prettyDate(iso){
-  const d = new Date(iso);
+/* THE NIGHT'S DATE IS THE SCOREBOARD'S DATE, NOT UTC MIDNIGHT ARITHMETIC.
+   This read getUTCDay/getUTCMonth/getUTCDate off the kickoff time, and a
+   6:30pm Pacific kickoff is 01:30Z THE NEXT DAY — so both of tonight's
+   soccer rooms told the player "Thu · August 20" for a Wednesday evening
+   game. Every slate room tipping after 5pm Pacific had tomorrow's date on
+   it. The flagship escaped only because its date is hand-written.
+
+   ESPN already groups the fixture under the right calendar day — that is
+   what DATE is, and what the whole slate is keyed on. Formatting THAT
+   removes the timezone question entirely instead of picking a zone and
+   being wrong somewhere else. Parsed at midday so a zone shift cannot
+   move it across a boundary. */
+function prettyDate(_iso, slateDate){
+  const d = new Date(String(slateDate || DATE) + 'T12:00:00');
   const DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const MON = ['January','February','March','April','May','June','July',
                'August','September','October','November','December'];
-  return { long: `${DAY[d.getUTCDay()]} · ${MON[d.getUTCMonth()]} ${d.getUTCDate()}`,
-           short: `${MON[d.getUTCMonth()]} ${d.getUTCDate()}`,
-           share: `${MON[d.getUTCMonth()].slice(0,3).toUpperCase()} ${d.getUTCDate()}` };
+  return { long: `${DAY[d.getDay()]} · ${MON[d.getMonth()]} ${d.getDate()}`,
+           short: `${MON[d.getMonth()]} ${d.getDate()}`,
+           share: `${MON[d.getMonth()].slice(0,3).toUpperCase()} ${d.getDate()}` };
+}
+/* The tip line the card shows. Without one the app falls back to a
+   BUILT-IN placeholder, and for soccer that placeholder still reads
+   "Kickoff TBD — swap this when the Leagues Cup draw lands" from a sample
+   fixture — which is what both MLS rooms were showing players tonight. */
+function tipLine(iso, net, sport){
+  const d = new Date(iso);
+  const fmt = (tz) => d.toLocaleTimeString('en-US',
+    { timeZone: tz, hour: 'numeric', minute: '2-digit' });
+  const word = sport === 'soccer' ? 'Kickoff'
+             : sport === 'baseball' ? 'First pitch' : 'Tip-off';
+  return `${word} ${fmt('America/New_York')} ET · ${fmt('America/Chicago')} CT · `
+       + `${fmt('America/Los_Angeles')} PT` + (net ? ` · ${net}` : '');
 }
 
 (async () => {
@@ -259,7 +284,7 @@ function prettyDate(iso){
     const owner = claimed.get(String(e.id));
     const ab = (t) => String(t.abbreviation || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const nightId = owner || `slate-${DATE}-${ab(A.team)}-${ab(H.team)}`;
-    const pd = prettyDate(e.date);
+    const pd = prettyDate(e.date, DATE);
     const net = (c.broadcasts || []).flatMap(b => b.names || []).join(' · ');
 
     const g = {
@@ -270,6 +295,7 @@ function prettyDate(iso){
       awayNick: A.team.name, awayColor: '#' + String(A.team.color || '666666').replace(/^#/, ''),
       venue: (c.venue || {}).fullName || '', net,
       date: pd.long, short: pd.short, shareDate: pd.share,
+      tip: tipLine(e.date, net, L.sport),
       night: `${A.team.name} @ ${H.team.name}`,
       /* TWO DIFFERENT WORDS, AND THEY ARE NOT INTERCHANGEABLE.
          `sport` is the FAMILY (basketball) — it picks the question bank and
@@ -480,8 +506,31 @@ function prettyDate(iso){
   if(kept.length)
     log('merge', `kept ${kept.length} game(s) from ${[...new Set(kept.map(g=>g.league))].join(', ')} already on this date`);
 
+  /* TWO LISTS, BECAUSE THEY ANSWER TWO DIFFERENT QUESTIONS.
+     `games` is WHAT A PLAYER IS OFFERED — curated, capped, and deliberately
+     smaller than the night, because a room nobody hosts must never appear
+     as a room.
+     `built` is EVERY GAME THAT HAS A ROOM BUILT FOR IT, hosted or not. The
+     Control Room is a HOST tool and needs the whole night: the founder
+     opened it and said "its missing the baseball games", and he was right —
+     fifteen MLB rooms existed with published banks and the host could not
+     see any of them, because the Control Room was reading the PLAYER list.
+     Collapsing those two into one array is the same mistake as one variable
+     holding two facts, which is the disease this codebase is named after. */
+  /* CARRY THE PRIOR *BUILT* LIST, NOT THE PRIOR OFFERED ONE. `kept` is
+     derived from the previous document's `games`, which is the curated
+     player list — so a league that is built and never offered (MLB tonight)
+     was dropped the moment the next league ran, and the host list came back
+     with fifteen baseball rooms missing all over again. The two lists have
+     to be merged from their own histories. */
+  const priorBuilt = (prior.exists ? (prior.data().built || prior.data().games || []) : [])
+                       .filter(g => g && g.nightId && g.league !== LEAGUE && !fresh.has(g.nightId));
+  const builtAll = priorBuilt.concat(slate.games)
+                       .sort((a,b) => String(a.tipISO).localeCompare(String(b.tipISO)));
   await slateRef.set({
     date: DATE, games: merged, leagues,
+    built: builtAll,
+    builtCount: builtAll.length,
     flagship: merged.filter(g => g.flagship).map(g => g.nightId),
     at: admin.firestore.FieldValue.serverTimestamp()
   });

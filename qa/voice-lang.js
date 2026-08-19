@@ -106,6 +106,22 @@ is('es','otra vez',SN,'repeat');
 is('es','opciones',SN,'help');
 is('es','silencio',SN,'off');
 
+/* CHANGE IT, in both languages. It is the opposite of lock, so the pair
+   is checked together in each grammar: heard as lock, "change it" would
+   commit the answer the player just said was wrong. */
+console.log('SPANISH — change it, and it must not be heard as lock');
+is('es','cambia',SN,'change');
+is('es','cambialo',SN,'change');
+is('es','cambiar mi respuesta',BANDA,'change');
+is('es','no espera',SN,'change');
+is('es','mejor no',SN,'change');
+is('es','listo',SN,'lock','the opposite command still locks');
+is('en','change it',SN,'change');
+ok('es  "change it" is not a Spanish command', (()=>{VX.lang='es'; const m=VX.match('change it',SN); return !m||m.kind!=='change';})(),
+   'an English phrase matched the Spanish grammar');
+ok('en  "cambialo" is not an English command', (()=>{VX.lang='en'; const m=VX.match('cambialo',SN); return !m||m.kind!=='change';})(),
+   'a Spanish phrase matched the English grammar');
+
 console.log('SPANISH — and it still refuses rather than guesses');
 is('es','no se',BANDA,'null','not an answer, and must not become one');
 

@@ -48,6 +48,17 @@ is('lock it in',YN,'lock'); is('lock',YN,'lock'); is('done',YN,'lock');
 is('repeat',YN,'repeat'); is('say that again',YN,'repeat');
 is('read the options',BAND,'help'); is('voice off',YN,'off');
 
+/* CHANGE IT — the founder said this to a live screen and got "I did not
+   catch that". It is the OPPOSITE of lock, so the two must never collide:
+   a grammar that heard "change it" as lock would commit the answer the
+   player just said was wrong. */
+console.log('\nCHANGE IT — and it must never be heard as lock');
+is('change it',YN,'change'); is('change',BAND,'change');
+is('change my answer',BAND,'change'); is('change my mind',YN,'change');
+is('no wait',YN,'change'); is('actually',BAND,'change');
+is('undo',YN,'change'); is('switch it',TEAM,'change');
+is('lock it in',BAND,'lock','the opposite command still locks');
+
 console.log('\nREFUSALS — the important half. A wrong pick is worse than none.');
 is('',YN,'null','silence');
 is('uh I think maybe',YN,'null','filler is not an answer');

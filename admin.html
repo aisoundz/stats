@@ -666,7 +666,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-19-admin.56-reach';
+window.ADMIN_BUILD='2026-08-19-admin.57-weekbuilt';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -1920,7 +1920,16 @@ async function loadSlateRooms(){
     const date = (cur.data()||{}).date; if(!date) return false;
     const snap = await F.getDoc(F.doc(db,'slate',date));
     if(!snap.exists()) return false;
-    const games = (snap.data()||{}).games || [];
+    /* THE HOST SEES EVERY ROOM THAT EXISTS, NOT ONLY THE OFFERED ONES.
+       `games` is the PLAYER's list — curated down to what something is
+       actually hosting, because a room nobody hosts must never appear as a
+       room. `built` is every game with a room built for it. Reading the
+       player list here meant the founder opened the Control Room and found
+       fifteen MLB rooms missing: they existed, their banks were published,
+       and the host could not see one of them. Fall back to `games` for a
+       slate written before `built` existed. */
+    const d = snap.data()||{};
+    const games = (Array.isArray(d.built) && d.built.length ? d.built : (d.games||[]));
     SLATE_ROOMS = games.filter(g=>g&&g.nightId).map(slateToNight);
 
     /* ============ AND THE WEEK AHEAD ==================================
@@ -1949,7 +1958,17 @@ async function loadSlateRooms(){
       let added = 0;
       snaps.forEach(sn => {
         if(!sn || !sn.exists()) return;
-        ((sn.data()||{}).games || []).forEach(g => {
+        /* SAME RULE AS TONIGHT, AND IT HAS TO BE. Tonight reads `built`
+           and fell back to `games`; this read `games` outright — so the
+           host saw thirty rooms for today and five for tomorrow, and the
+           difference was not the schedule, it was which array each half of
+           this function happened to read. "Its missing the baseball games"
+           fixed for today and left broken for every other day is the same
+           bug with a date on it. Forward slates written before `built`
+           existed have none, and the fallback covers them. */
+        const fw = sn.data() || {};
+        const fwGames = (Array.isArray(fw.built) && fw.built.length) ? fw.built : (fw.games || []);
+        fwGames.forEach(g => {
           if(!g || !g.nightId || seen[g.nightId]) return;
           seen[g.nightId] = true;
           SLATE_ROOMS.push(slateToNight(g));

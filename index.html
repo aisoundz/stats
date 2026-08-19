@@ -8722,6 +8722,14 @@ var VX=(function(){
       LOCK:/^(?:lock|locked|lock it|lock it in|lock in|done|confirm|that's it|thats it|final|go|next|next question|continue|carry on|move on|keep going)$/,
       OFF:/^(?:voice off|stop voice|turn voice off|mute|quiet|stop listening)$/,
       HELP:/^(?:options|what are the options|read the options|choices|what are my choices)$/,
+      /* CHANGE IT. The founder said it out loud to a screen that answered
+         "I did not catch that", which is the app telling a player their own
+         words are wrong when the app is the one missing a word. A pick is
+         changeable right up to the reveal — that is the design — so the
+         sentence a person uses to exercise it has to exist in the grammar.
+         Kept separate from REPEAT because they are different intents: one
+         asks to hear it again, the other says the last answer is wrong. */
+      CHANGE:/^(?:change|change it|change that|change my answer|change my pick|change answer|change my mind|no wait|wait no|actually|undo|scratch that|switch it|switch|different one|another one|no not that)$/,
       STOP:['or','the','a','an','of','and','was','were','is','are','it','that',
             'this','to','in','on','at','be','been','did','do','does','how','many'],
       DIG:{'0':'zero','1':'one','2':'two','3':'three','4':'four','5':'five',
@@ -8752,6 +8760,9 @@ var VX=(function(){
       LOCK:/^(?:listo|confirmar|confirmo|ya|final|siguiente|continuar|adelante|vamos|terminado|asegurar|bloquear|bloquea|siguiente pregunta)$/,
       OFF:/^(?:apaga la voz|voz apagada|silencio|deja de escuchar|apagar voz|callate)$/,
       HELP:/^(?:opciones|cuales son las opciones|lee las opciones|elecciones|cuales son mis opciones|repite las opciones)$/,
+      /* norm() folds accents before it strips, so "cambialo" here catches
+         "cámbialo" as spoken. */
+      CHANGE:/^(?:cambiar|cambia|cambialo|cambiala|cambio|cambiar respuesta|cambia mi respuesta|cambiar mi respuesta|quiero cambiar|no espera|espera no|mejor no|deshacer|otra opcion|otro|otra|esa no|no esa)$/,
       STOP:['o','el','la','los','las','un','una','unos','unas','de','del','y','en',
             'a','al','que','es','son','fue','fueron','se','lo','con','por','para',
             'cuantos','cuantas','cual','cuales','como','mas'],
@@ -8958,7 +8969,32 @@ var VX=(function(){
       try{ var vv=V.voice(); if(vv){ u.voice=vv; u.lang=vv.lang||V.L().tag; } }catch(_){}
       u.onend=fire; u.onerror=fire;
       V.speaking=true;
+      V.spokeAt=Date.now();
       window.speechSynthesis.speak(u);
+      /* ---- BARGE-IN ---------------------------------------------------
+         FOUNDER, TESTING TONIGHT'S GAME: "when i start talking its still
+         talking. When I talk it should start being quiet and listen for
+         the answer."
+
+         He is describing the whole failure. The microphone used to open
+         only in this function's CALLBACK — after the sentence finished —
+         so a question plus four options is six or eight seconds during
+         which nothing is listening. He answers into that gap, it is lost,
+         the mic then opens onto silence, and the app looks deaf. That one
+         behaviour explains "it doesn't hear the player's name", "it never
+         asks how many points" (the flow never advances) and "it's slow".
+
+         So off iOS the ear opens ALONGSIDE the speech and the utterance is
+         cancelled the moment real words come back (see onresult). iOS is
+         excluded deliberately: there, synthesis and recognition contend
+         for one audio session and a mic opened under a live utterance
+         opens deaf — no error, no onspeechstart — which is the exact bug
+         the serialised path was built to fix. iOS keeps tap-to-talk. */
+      if(!V.ios && V.wantEar && V.hasEar && !V.listening){
+        setTimeout(function(){
+          try{ if(V.speaking && V.wantEar) V.ear({barge:true}); }catch(_){}
+        }, 220);
+      }
       // ~13 characters a second at this rate, floored at a second, plus a
       // second of slack. This is the failsafe, not the schedule.
       setTimeout(fire, Math.min(20000, Math.max(1200, t.length*80+1200)));
@@ -9028,7 +9064,7 @@ var VX=(function(){
   function NUMM(){ return V.L().NUM; }
   function LEADR(){ return V.L().LEAD; }
 
-  /* Returns {kind:'pick',i} · {kind:'lock'|'repeat'|'off'|'help'} ·
+  /* Returns {kind:'pick',i} · {kind:'lock'|'repeat'|'off'|'help'|'change'} ·
      {kind:'ambiguous'} · null. Everything about this is deliberately
      conservative: the cost of returning null is that the player says it
      again, and the cost of guessing is a wrong answer on their card. */
@@ -9040,6 +9076,10 @@ var VX=(function(){
        are "I am finished with this question", the player says whichever
        word the screen happens to be showing them, and one word missing
        from this list is a hands-free loop that dead-ends. */
+    /* BEFORE lock, because "change it" and "lock it in" are opposites and
+       a grammar that heard the wrong one would commit the answer the
+       player just said was wrong. */
+    if(V.L().CHANGE && V.L().CHANGE.test(t)) return {kind:'change'};
     if(V.L().LOCK.test(t)) return {kind:'lock'};
     if(V.L().OFF.test(t)) return {kind:'off'};
     if(V.L().HELP.test(t)) return {kind:'help'};
@@ -9213,7 +9253,23 @@ var VX=(function(){
       var i, j, res, fin=false;
       for(i=e.resultIndex; i<e.results.length; i++){
         res=e.results[i];
-        if(!res.isFinal){ V.clearHint(); continue; }
+        if(!res.isFinal){
+          V.clearHint();
+          /* THE PLAYER IS TALKING — STOP TALKING OVER THEM.
+             Cancelled on a transcribed INTERIM, not on onspeechstart:
+             speechstart is raw audio energy, and on a loudspeaker the
+             app's own voice would trip it and cut itself off mid-sentence
+             every time. Words coming back means the recogniser resolved
+             something, and the 350ms floor keeps the tail of our own
+             utterance from counting. */
+          try{
+            if(V.speaking && String(res[0].transcript||'').trim().length>1
+               && (Date.now()-(V.spokeAt||0))>350){
+              window.speechSynthesis.cancel(); V.speaking=false; V.paint();
+            }
+          }catch(_){}
+          continue;
+        }
         fin=true;
         /* SHOW WHAT IT HEARD. "It did not work" is not a bug report; a
            mishear and a mis-grammar look nothing alike once this is on
@@ -9252,8 +9308,14 @@ var VX=(function(){
     };
     V.mic=r; return r;
   };
-  V.ear=function(){
-    if(!V.on || !V.hasEar || !V.wantEar || V.listening || V.speaking) return;
+  /* opts.barge — open the microphone WHILE the app is still talking, and
+     do NOT cancel the utterance on the way in. Everything below assumes
+     speak-then-listen; barge mode is the one caller that wants both at
+     once. See V.say for why. */
+  V.ear=function(opts){
+    var barge = !!(opts && opts.barge);
+    if(!V.on || !V.hasEar || !V.wantEar || V.listening) return;
+    if(V.speaking && !barge) return;
     /* HAND THE AUDIO SESSION BACK BEFORE ASKING FOR THE MICROPHONE.
        This is the difference between the app and the test page that works:
        voicetest.html NEVER SPEAKS, and the app always speaks the question
@@ -9265,7 +9327,7 @@ var VX=(function(){
        cancel() is not enough on its own; the session needs a beat to be
        released. Sixty milliseconds is imperceptible next to the 900ms the
        engine itself took to reach onstart on his phone. */
-    try{ if(V.hasOut) window.speechSynthesis.cancel(); }catch(_){}
+    if(!barge){ try{ if(V.hasOut) window.speechSynthesis.cancel(); }catch(_){} }
     /* A ONE-SHOT TOKEN, NOT A BUSY FLAG. The first version of this cleared
        the flag inside the timer and then called ear() again — which walked
        straight back into this branch and rescheduled, forever, never
@@ -9273,7 +9335,7 @@ var VX=(function(){
        than the bug it was fixing, and it was caught by the wiring suite
        rather than by a person. The token is set on the way in and CONSUMED
        on the way through, so the second pass falls past it. */
-    if(V.ios && !V.audioReady){
+    if(V.ios && !barge && !V.audioReady){
       V.audioReady=true;
       setTimeout(function(){ try{ V.ear(); }catch(_){} }, 60);
       return;
@@ -9374,6 +9436,22 @@ var VX=(function(){
     if(m.kind==='off'){ V.disable(); return true; }
     if(m.kind==='repeat'){ V.askQuestion(true); return true; }
     if(m.kind==='help'){ V.readOptions(); return true; }
+    /* CHANGE IT. Live, a pick is changeable until the reveal, so this is
+       simply "read them again so I can say a different one" — the app does
+       not need to un-pick anything, saying another number overwrites it.
+       Once the question has SETTLED there is nothing left to change, and
+       saying so is the honest answer; pretending otherwise would be the
+       "Nice call · +25" bug in a new place. */
+    if(m.kind==='change'){
+      var done=false; try{ done=!!S.answered; }catch(_){}
+      if(done){
+        V.deafSay('That one is already settled — say next for the following question.', true);
+        return true;
+      }
+      var lineC=''; try{ lineC=V.optionLine(opts); }catch(_){}
+      V.deafSay(lineC ? ('Okay. ' + lineC) : 'Okay — say another number.', true);
+      return true;
+    }
     if(m.kind==='ambiguous'){
       V.deafSay('That could be more than one — say the number instead.');
       return true;
@@ -9884,6 +9962,9 @@ var VX=(function(){
       V.deafSay('More than one player matches that. Say the first name too.', true);
       return true;
     }
+    /* On the sheet, "change it" means THIS card, not the whole sheet — the
+       player is looking at one question and wants the names again. */
+    if(m.kind==='change'){ V.askPick(true); return true; }
     /* "next"/"done" reach here through the grammar as {kind:'lock'} — on
        this screen that means the NEXT CARD, because the real lock has its
        own branch at the top now. */
@@ -16555,7 +16636,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-19-rail.165';
+const STATS_BUILD='2026-08-19-voice.166';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
