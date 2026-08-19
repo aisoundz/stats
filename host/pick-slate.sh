@@ -38,7 +38,11 @@ show(){
 case "${1:-}" in
   --show)    show; exit 0 ;;
   --restore) [ -f "$FULL" ] || { echo "no full copy at $FULL — nothing to restore"; exit 1; }
-             cp "$FULL" "$ALL"; echo "restored the full slate"; show; exit 0 ;;
+             cp "$FULL" "$ALL"
+             # AND drop the durable pick, or the next build re-applies it and
+             # "restore" would quietly do nothing.
+             rm -f "$LOGDIR/slate-pick-$DATE.txt"
+             echo "restored the full slate (and cleared the pick file)"; show; exit 0 ;;
 esac
 
 # Keep the full slate ONCE, so repeated picking never loses the original.
@@ -65,6 +69,19 @@ sort -t'	' -k6,6 "$TMP" > "$ALL"
 rm -f "$TMP"
 echo "picked $# room(s) for $DATE  (full slate kept at $(basename "$FULL"))"
 show
+
+# ---- WRITE THE PICK DOWN SO A REBUILD CANNOT UNDO IT -----------------
+# The manifest and slate/{date} are both rewritten from scratch by the 08:10
+# build cron. A night curated by hand at 07:30 was back to thirty-one rooms
+# by 08:10 — thirteen of them offered to players and hosted by nobody. The
+# pick file is the durable record; build-slate.js reads it and it wins over
+# RUN_LEAGUES. Delete it (or --restore) to go back to the whole slate.
+PICKFILE="$LOGDIR/slate-pick-$DATE.txt"
+: > "$PICKFILE"
+while IFS=$'\t' read -r _lg NID _rest; do
+  [ -n "$NID" ] && echo "$NID" >> "$PICKFILE"
+done < "$ALL"
+echo "  pick    $(wc -l < "$PICKFILE") room(s) recorded in $(basename "$PICKFILE") — survives the next build"
 
 # ---- AND MAKE THE RAIL AGREE ----------------------------------------
 # Trimming the manifest used to leave `slate/{date}` untouched, so the

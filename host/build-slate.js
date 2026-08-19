@@ -418,6 +418,27 @@ function prettyDate(iso){
      leagues are live is precisely the shape of bug this comment is about.
      Unset means "host everything you build", which is the old behaviour and
      the right default for a hand-run build. */
+  /* ---- A HAND-PICKED NIGHT SURVIVES THE NEXT REBUILD -----------------
+     host/pick-slate.sh curates a night down to the rooms somebody actually
+     intends to host. That curation used to live ONLY in the manifest and in
+     slate/{date} — both of which this script rewrites from scratch. So the
+     08:10 build cron silently undid it: a night curated to four rooms at
+     07:30 was back to THIRTY-ONE by 08:10, with thirteen of them offered to
+     players and hosted by nobody. Exactly the bug the RUN_LEAGUES filter
+     was written to stop, arriving through a different door.
+
+     A pick file is the durable record. If one exists for this date, it wins
+     over RUN_LEAGUES entirely — somebody named these rooms on purpose. */
+  const PICKF = path.join(process.env.HOME, 'gamenight-logs', 'slate-pick-' + DATE + '.txt');
+  let PICK = null;
+  try{
+    if(fs.existsSync(PICKF)){
+      PICK = new Set(fs.readFileSync(PICKF,'utf8').split('\n').map(x=>x.trim()).filter(Boolean));
+      if(!PICK.size) PICK = null;
+    }
+  }catch(_){ PICK = null; }
+  if(PICK) log('pick', `${PICK.size} room(s) hand-picked for ${DATE} — the pick file wins over RUN_LEAGUES`);
+
   const RUN = String(process.env.RUN_LEAGUES || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
   /* THE FLAGSHIP IS ALWAYS OFFERED, whatever RUN_LEAGUES says.
      A flagship is a hand-written night in admin.html's NIGHTS: it is hosted
@@ -430,7 +451,9 @@ function prettyDate(iso){
      That is the failure this file's own comment forty lines up calls the
      strangest possible bug: the person who came because of the email
      arrives and cannot find the game the email was about. */
-  const hosted = g => !!g.flagship || !RUN.length || RUN.includes(String(g.league || '').toLowerCase());
+  const hosted = g => !!g.flagship
+                   || (PICK ? PICK.has(g.nightId)
+                            : (!RUN.length || RUN.includes(String(g.league || '').toLowerCase())));
   const railGames = slate.games.filter(hosted);
   const withheld = slate.games.length - railGames.length;
   if(withheld)
