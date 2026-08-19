@@ -4113,7 +4113,31 @@ window.STATS_FIREBASE = {
     return true;
   };
 
-  /* ============ CHANGING ROOMS, ON THE NETWORK SIDE ==================
+  /* Fetch and cache the night config for every room on the slate, without
+   hydrating any of them. Cheap (one read a room), silent, and it is what
+   makes switching feel instant instead of feeling like a network call. */
+async function prefetchSlateConfigs(db, F){
+  if(!db || !F) return 0;
+  var games = (SLATE.games || []).slice(0, 24);       // a sane ceiling, not a limit we expect to hit
+  var got = 0;
+  for(var i=0;i<games.length;i++){
+    var id = games[i] && games[i].nightId;
+    if(!id) continue;
+    try{ if(localStorage.getItem('stats_night_cfg_'+id)) continue; }catch(_){}
+    try{
+      var snap = await F.getDoc(F.doc(db,'schedule',id));
+      if(!snap.exists()) continue;
+      var cfg = snap.data();
+      if(!cfg || !cfg.game || !cfg.preds) continue;
+      localStorage.setItem('stats_night_cfg_'+id, JSON.stringify(cfg));
+      got++;
+    }catch(_){}
+  }
+  return got;
+}
+try{ window.prefetchSlateConfigs = prefetchSlateConfigs; }catch(_){}
+
+/* ============ CHANGING ROOMS, ON THE NETWORK SIDE ==================
      `observe` binds the night ONCE and refuses to move — correct while a
      room change reloaded the page, and wrong the moment it stopped. With
      the room store, switching games is a state swap, so this layer kept
@@ -5499,6 +5523,23 @@ async function loadSlate(db, F){
        an accelerator: this fetch still runs and still wins. */
     try{ localStorage.setItem('stats_slate_cache_v1', JSON.stringify({date:date, games:SLATE.games})); }catch(_){}
 
+    /* ============ EVERY ROOM'S CONFIG, BEFORE ANYONE TAPS ==============
+       Switching used to depend on a Firestore read happening at the moment
+       of the tap, and measured on the live site that read stalls often
+       enough to matter: 2 taps in 5 worked before this, 4 in 6 after a
+       timeout was added. A timeout only helps when there is something to
+       fall back TO, and on a first visit there was nothing cached.
+
+       So fetch the whole slate's configs now, in the background, while the
+       player is still reading the landing. It costs one read per room
+       (two, tonight) and it means a tap never waits on the network at all
+       — the room opens from disk, instantly, whatever Firestore is doing.
+
+       Fire and forget on purpose: nothing on this page should wait for it,
+       and a failure here costs nothing because the tap path still has its
+       live read. */
+    try{ prefetchSlateConfigs(db, F); }catch(_){}
+
     /* A link wins, if it names a game that is actually on tonight. */
     var link = slateParam();
     if(link){
@@ -5622,11 +5663,28 @@ async function chooseGame(db, F, nightId){
      patience, and when it expires we still have two ways into the room —
      the cached config and the built-in night — followed by an honest
      refusal. A slow network now costs a beat, not the night. */
+  /* ============ THE CACHE GOES FIRST, AND THAT IS THE FIX =============
+     The live read used to go first and the cache was its fallback. That
+     made every switch wait on Firestore, and measured on the live site
+     that read stalls often enough to break the feature: 2 taps in 5 before
+     a timeout existed, 4 in 6 after. The timeout bounded the damage; it
+     could not remove the dependency.
+
+     A night config is written once when the night is published and does
+     not change while the game is being played, so a copy on this phone is
+     not a stale approximation of the truth — it IS the truth, and it is
+     already sitting on disk because prefetchSlateConfigs put it there
+     while the player was reading the landing. Use it. The room opens
+     instantly and Firestore's mood stops being a factor.
+
+     The live read stays for the case that actually needs it: a room this
+     phone has never seen. */
   var okNow = false;
+  try{ okNow = hydrateFromCache(nightId); }catch(_){ okNow = false; }
   try{
     var _db = (db && F) ? db : window.__SB_DB;
     var _F  = (db && F) ? F  : window.__SB_FS;
-    if(_db && _F){
+    if(!okNow && _db && _F){
       okNow = await Promise.race([
         loadNightConfig(_db, _F),
         new Promise(function(res){ setTimeout(function(){ res('timeout'); }, 4000); })
@@ -15465,7 +15523,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-19-tap.154';
+const STATS_BUILD='2026-08-19-tap.155';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
