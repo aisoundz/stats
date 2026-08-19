@@ -4599,46 +4599,62 @@ const BB_PREDS=[
 const BBALL_ROUNDS=[
   // --- Q1 - 1 pt each - the warm-up. Low stakes, everybody in. ---
   {home:24,away:20, q:[
-    {t:"The first bucket of the night — how did it go in?", o:["Layup or dunk","Mid-range jumper","Three","Free throw"], a:"Layup or dunk"},
+    {t:"The first bucket of the night — how did it go in?", o:["Layup or dunk","Mid-range jumper","Three","Free throw"], a:"Layup or dunk",
+     t_es:"La primera canasta de la noche — ¿cómo entró?", o_es:["Bandeja o clavada", "Tiro de media distancia", "Triple", "Tiro libre"]},
     // TALLY. Timeouts are loud, they stop the game, and you cannot miss one.
-    {t:"How many team timeouts in Q1? (media/TV timeouts don't count)", o:["None","1","2","3 or more"], a:"2"},
+    {t:"How many team timeouts in Q1? (media/TV timeouts don't count)", o:["None","1","2","3 or more"], a:"2",
+     t_es:"¿Cuántos tiempos muertos de equipo en el 1er cuarto? (los de TV no cuentan)", o_es:["Ninguno", "1", "2", "3 o más"]},
     // WHICH WAS MORE. The question the room named. You do not need the count -
     // you need a feel for whether it was a whistle quarter or a shooting one.
-    {t:"In Q1, which was more — made field goals or made free throws?", o:["Made field goals","Made free throws","Equal"], a:"Made field goals"},
-    {t:"Q1 ended on…", o:["A made basket","A missed shot","A turnover","Free throws"], a:"A missed shot"}
+    {t:"In Q1, which was more — made field goals or made free throws?", o:["Made field goals","Made free throws","Equal"], a:"Made field goals",
+     t_es:"En el 1er cuarto, ¿qué hubo más: tiros de campo anotados o tiros libres anotados?", o_es:["Tiros de campo anotados", "Tiros libres anotados", "Igual"]},
+    {t:"Q1 ended on…", o:["A made basket","A missed shot","A turnover","Free throws"], a:"A missed shot",
+     t_es:"El 1er cuarto terminó con…", o_es:["Una canasta anotada", "Un tiro fallado", "Una pérdida de balón", "Tiros libres"]}
   ]},
   /* --- Q2 - 2 pts each - the room warms up. --- */
   {home:48,away:41, q:[
-    {t:"Who led at halftime?", o:[BB_GAME.homeNick,BB_GAME.awayNick,"Tied"], a:BB_GAME.homeNick},
+    {t:"Who led at halftime?", o:[BB_GAME.homeNick,BB_GAME.awayNick,"Tied"], a:BB_GAME.homeNick,
+     t_es:"¿Quién iba ganando al descanso?", o_es:[BB_GAME.homeNick, BB_GAME.awayNick, "Empate"]},
     // TALLY. An and-one is a make and a whistle at the same time. Ask this
     // and people start listening for the whistle on every made basket.
-    {t:"How many and-ones in Q2? (made the shot AND got the foul)", o:["None","1","2","3 or more"], a:"1"},
+    {t:"How many and-ones in Q2? (made the shot AND got the foul)", o:["None","1","2","3 or more"], a:"1",
+     t_es:"¿Cuántos and-one en el 2do cuarto? (anotó Y recibió la falta)", o_es:["Ninguno", "1", "2", "3 o más"]},
     // WHICH WAS MORE. Turnovers are the one thing both benches scream about.
-    {t:"In Q2, which team coughed it up more?", o:[BB_GAME.homeNick,BB_GAME.awayNick,"About even"], a:BB_GAME.awayNick},
-    {t:"The last shot before the halftime buzzer…", o:["Went in","Missed","Nobody got one off"], a:"Missed"}
+    {t:"In Q2, which team coughed it up more?", o:[BB_GAME.homeNick,BB_GAME.awayNick,"About even"], a:BB_GAME.awayNick,
+     t_es:"En el 2do cuarto, ¿qué equipo perdió más balones?", o_es:[BB_GAME.homeNick, BB_GAME.awayNick, "Más o menos igual"]},
+    {t:"The last shot before the halftime buzzer…", o:["Went in","Missed","Nobody got one off"], a:"Missed",
+     t_es:"El último tiro antes de la bocina del descanso…", o_es:["Entró", "Falló", "Nadie llegó a tirar"]}
   ]},
   /* --- Q3 - 3 pts each - the turn. Now it costs you to look away. --- */
   {home:72,away:63, q:[
-    {t:"Which team scored FIRST in Q3?", o:[BB_GAME.homeNick,BB_GAME.awayNick], a:BB_GAME.awayNick},
+    {t:"Which team scored FIRST in Q3?", o:[BB_GAME.homeNick,BB_GAME.awayNick], a:BB_GAME.awayNick,
+     t_es:"¿Qué equipo anotó PRIMERO en el 3er cuarto?", o_es:[BB_GAME.homeNick, BB_GAME.awayNick]},
     // TALLY. A replay review is dead time everybody tunes out of. Put a
     // point on it and dead time becomes the most-watched part of the quarter.
-    {t:"How many times did the refs go to the monitor in Q3?", o:["None","1","2","3 or more"], a:"1"},
+    {t:"How many times did the refs go to the monitor in Q3?", o:["None","1","2","3 or more"], a:"1",
+     t_es:"¿Cuántas veces fueron los árbitros al monitor en el 3er cuarto?", o_es:["Ninguna", "1", "2", "3 o más"]},
     // WHICH WAS MORE. Two streams at once, and neither needs an exact number.
-    {t:"In Q3, which was more — threes made or turnovers? (both teams)", o:["Threes made","Turnovers","Equal"], a:"Turnovers"},
-    {t:"Which team won Q3 (outscored the other)?", o:[BB_GAME.homeNick,BB_GAME.awayNick,"Tied"], a:BB_GAME.homeNick}
+    {t:"In Q3, which was more — threes made or turnovers? (both teams)", o:["Threes made","Turnovers","Equal"], a:"Turnovers",
+     t_es:"En el 3er cuarto, ¿qué hubo más: triples anotados o pérdidas? (ambos equipos)", o_es:["Triples anotados", "Pérdidas", "Igual"]},
+    {t:"Which team won Q3 (outscored the other)?", o:[BB_GAME.homeNick,BB_GAME.awayNick,"Tied"], a:BB_GAME.homeNick,
+     t_es:"¿Qué equipo ganó el 3er cuarto (anotó más)?", o_es:[BB_GAME.homeNick, BB_GAME.awayNick, "Empate"]}
   ]},
   // --- Q4 - 4 pts each - money time. The quarter that decides the night. ---
   {home:97,away:88, q:[
-    {t:"The final basket of the game was worth…", o:["1","2","3","No basket — it ended on a miss or a turnover"], a:"2"},
+    {t:"The final basket of the game was worth…", o:["1","2","3","No basket — it ended on a miss or a turnover"], a:"2",
+     t_es:"La última canasta del partido valió…", o_es:["1", "2", "3", "Sin canasta — terminó en fallo o pérdida"]},
     // TALLY, and the best question anyone gave us. It runs the WHOLE game,
     // it is asked at the end, and to answer it you have to watch the shot
     // clock for 48 minutes - a thing literally nobody does for fun.
     /* No emoji in question text. It was there to flag the best question on
        the sheet to ME, and it shipped to the player as a red dart floating
        in the middle of a sentence. */
-    {t:"How many 24-second violations in the WHOLE game?", o:["None","1","2","3 or more"], a:"1"},
-    {t:"In the last two minutes, which happened more?", o:["Free throws attempted","Field goals attempted","Equal"], a:"Free throws attempted"},
-    {t:"Did any player foul out?", o:["Yes","No"], a:"No"}
+    {t:"How many 24-second violations in the WHOLE game?", o:["None","1","2","3 or more"], a:"1",
+     t_es:"¿Cuántas violaciones de 24 segundos en TODO el partido?", o_es:["Ninguna", "1", "2", "3 o más"]},
+    {t:"In the last two minutes, which happened more?", o:["Free throws attempted","Field goals attempted","Equal"], a:"Free throws attempted",
+     t_es:"En los últimos dos minutos, ¿qué pasó más?", o_es:["Tiros libres intentados", "Tiros de campo intentados", "Igual"]},
+    {t:"Did any player foul out?", o:["Yes","No"], a:"No",
+     t_es:"¿Algún jugador se eliminó por faltas?", o_es:["Sí", "No"]}
   ]}
 ];
 /* ================= SOCCER =================================================
@@ -8626,7 +8642,19 @@ var VX=(function(){
      An explicit choice — ?lang=es, or the picker — is always honoured,
      because that is a person asking to see the half that exists. Add 'es'
      here on the day the bank ships translated, and not before. */
-  var CONTENT_READY={ en:true };
+  /* HOW FAR EACH LANGUAGE ACTUALLY GOES — three states, not two, because
+     "translated" stopped being a yes/no the moment the QUESTIONS were done
+     and the interface was not.
+       'full'      everything. Only this earns an automatic switch.
+       'questions' the game itself — question text, options, and the voice
+                   that reads and hears them. The interface chrome is still
+                   English. Offered, labelled, never forced on anybody.
+       (absent)    the voice can pronounce it and nothing else is written.
+     A device is only trusted for 'full'. Anything less is a deliberate
+     choice a person makes, because handing somebody a half-translated app
+     they did not ask for is worse than leaving them in English — and it
+     lands on exactly the people the feature is for. */
+  var CONTENT_READY={ en:'full', es:'questions' };
 
   /* ?lang= wins for a single visit (how a host demos it), the saved choice
      is the standing answer, and the device is the fallback — but only as
@@ -8650,11 +8678,17 @@ var VX=(function(){
     }catch(_){}
     try{
       var nav=String((navigator.languages&&navigator.languages[0])||navigator.language||'en').slice(0,2).toLowerCase();
-      if(LANGS[nav] && CONTENT_READY[nav]) return nav;
+      if(LANGS[nav] && CONTENT_READY[nav]==='full') return nav;
     }catch(_){}
     return 'en';
   })();
-  V.contentReady=function(k){ return !!CONTENT_READY[k||V.lang]; };
+  /* contentReady means AUTO-SWITCHABLE, and only 'full' is. */
+  V.contentReady=function(k){ return CONTENT_READY[k||V.lang]==='full'; };
+  V.contentLevel=function(k){ return CONTENT_READY[k||V.lang] || 'voice'; };
+  V.contentNote=function(k){
+    var L=V.contentLevel(k);
+    return L==='full' ? '' : L==='questions' ? 'questions only' : 'voice only';
+  };
   V.L=function(){ return LANGS[V.lang]||LANGS.en; };
   V.langs=function(){ return Object.keys(LANGS).map(function(k){ return {key:k, name:LANGS[k].name}; }); };
   V.setLang=function(k){
@@ -9936,7 +9970,11 @@ var VX=(function(){
       var deafNow = V.on && V.hasEar && !V.listening && !V.speaking;
       /* A language whose bank is still English says so in the one place a
          player is already looking, not only in the picker they used once. */
-      var halfLang = V.on && !V.contentReady() ? (V.L().name+': voice only — questions are still in English') : '';
+      var halfLang = V.on && !V.contentReady()
+        ? (V.contentLevel()==='questions'
+             ? (V.L().name+': preguntas y voz — el resto de la app sigue en inglés')
+             : (V.L().name+': voice only — questions are still in English'))
+        : '';
       var txt = !V.on ? 'Voice off'
               : V.note ? V.note
               : halfLang ? halfLang
@@ -9976,8 +10014,8 @@ var VX=(function(){
         h+='<select class="vxv" onchange="VX.setLang(this.value)" aria-label="Language">';
         V.langs().forEach(function(L){
           var sel=(L.key===V.lang)?' selected':'';
-          var ready=V.contentReady(L.key);
-          h+='<option value="'+L.key+'"'+sel+'>'+L.name+(ready?'':' (voice only)')+'</option>';
+          var note=V.contentNote(L.key);
+          h+='<option value="'+L.key+'"'+sel+'>'+L.name+(note?' ('+note+')':'')+'</option>';
         });
         h+='</select>';
       }
@@ -15857,7 +15895,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-19-es.159';
+const STATS_BUILD='2026-08-19-es.160';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

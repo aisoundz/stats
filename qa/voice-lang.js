@@ -178,8 +178,15 @@ ok('lang.picker-exists', /VX\.setLang\(this\.value\)/.test(src),
    'there is no way to choose a language in the interface');
 ok('lang.contentReady-is-actually-used', /V\.contentReady\(/.test(src.replace(/V\.contentReady=function[^;]*;/,'')),
    'contentReady is defined but never called — the warning it exists for is never shown');
-ok('lang.picker-labels-the-untranslated-one', /contentReady\([^)]*\)[\s\S]{0,120}voice only/.test(src),
-   'the picker offers a language with no indication its questions are still English');
+/* The label is derived from the readiness LEVEL now, not a boolean: a
+   language can be 'full', 'questions' (the game is translated, the chrome
+   is not) or neither. The picker must print whichever caveat applies. */
+ok('lang.picker-labels-a-partly-translated-language', /V\.contentNote\(/.test(src),
+   'the picker offers a language with no indication of how far the translation goes');
+ok('lang.readiness-has-a-level-not-a-flag', /contentLevel=function/.test(src) && /'questions'/.test(src),
+   'readiness is still a yes/no, so a language whose questions are done but whose interface is not cannot be described honestly');
+ok('lang.only-full-is-auto-switchable', /CONTENT_READY\[nav\]==='full'/.test(src),
+   'a partly-translated language could be forced on somebody by their device setting');
 
 console.log('\n'+(fail?'FAIL':'PASS')+'  '+pass+' passed, '+fail+' failed   ['+P.basename(TARGET)+']');
 bad.forEach(x=>console.log('   x '+x));
