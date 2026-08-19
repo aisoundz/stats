@@ -51,5 +51,20 @@ check('launcher.a-league-that-is-built-but-not-hosted-is-normal',
   /RUN_LEAGUES/.test(src) && /LEAGUES=/.test(src),
   'building a league and hosting it are different decisions and must stay separate knobs');
 
+/* ---- 4. offered to players vs hosted by us ------------------------
+   The rail is built from slate/{date}, which carries every game that was
+   BUILT. Runners come from RUN_LEAGUES and MAX_ROOMS. Nothing else in this
+   system compares those two numbers, and the difference is rooms a person
+   can walk into and sit in all night waiting for a round nothing will
+   open — the same "up and mute" failure as the feed 404, through a door we
+   built ourselves. Measured 18 Aug 2026: slate/2026-08-22 offered 13 rooms
+   against MAX_ROOMS=2. */
+check('launcher.a-league-built-but-not-hosted-is-not-silent',
+  /OFFERED_UNHOSTED/.test(src) && !/Silent by design/.test(src),
+  'a league that is built but not in RUN_LEAGUES is skipped without a word, while build-slate has already OFFERED its games on every phone');
+check('launcher.offered-and-hosted-are-counted-against-each-other',
+  /offered on the rail/.test(src) && /HOSTED BY NOBODY/.test(src),
+  'the run never states how many rooms players are offered versus how many have a runner, so the gap can only be found by a person opening one');
+
 console.log(fail ? `\n${fail} FAILED` : '\nall good');
 process.exit(fail?1:0);

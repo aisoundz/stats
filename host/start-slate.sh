@@ -168,16 +168,27 @@ live_rooms(){
 echo "--- running: [$RUN_LEAGUES]  $(live_rooms) room(s) already up${MAX_ROOMS:+, cap $MAX_ROOMS} ---"
 [ "$IDLE_EXIT_MIN" = "0" ] && echo "--- stand-down OFF: rooms stay up for late arrivals ---"
 STARTED_COUNT=""   # one char per started room, per league, counted with ${#}
+OFFERED_UNHOSTED=""   # rooms the PLAYER is offered that nobody is hosting
 
 # ---- 2. publish a plan and start a runner for each --------------------
 while IFS=$'\t' read -r LG NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT SPATH; do
   [ -n "$NIGHT_ID" ] || continue
   LOG="$LOGDIR/$NIGHT_ID.log"
 
-  # Built but not switched on. The room and its questions exist; nobody is
-  # hosting it. Silent by design — this is the normal state for most
-  # leagues most of the time and should not fill the log.
-  case " $RUN_LEAGUES " in *" $LG "*) ;; *) continue ;; esac
+  # BUILT BUT NOT SWITCHED ON — and no longer silent. The room, its
+  # questions and its schedule doc all exist, so build-slate has OFFERED it
+  # in slate/{date} and the rail on every phone shows it. Nobody is hosting
+  # it. A player taps it, joins, and waits all night for a round that has
+  # no runner to open it — which looks exactly like a room where nothing
+  # has happened yet. That is the same "up and mute" failure as the feed
+  # 404, arriving through a different door: this time we built the door.
+  #
+  # Measured 18 Aug: slate/2026-08-22 already offers 13 rooms while
+  # MAX_ROOMS is 2. Eleven of them would be mute.
+  case " $RUN_LEAGUES " in
+    *" $LG "*) ;;
+    *) OFFERED_UNHOSTED="$OFFERED_UNHOSTED$LG "; continue ;;
+  esac
 
   # IS THIS GAME DUE — asked BEFORE the cap, and the order is the point. A
   # room opens LEAD_MIN before its own tip and not before. Charging the cap
@@ -247,5 +258,25 @@ while IFS=$'\t' read -r LG NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT SPA
 
   sleep 2   # stagger, so N runners do not all hit the feed on the same second
 done < "$ALL"
+
+# ---- 3. WHAT THE PLAYER IS OFFERED vs WHAT WE ARE HOSTING ------------
+# The rail is built from slate/{date}, which carries every game that was
+# BUILT. The runners come from RUN_LEAGUES and MAX_ROOMS. When those two
+# numbers disagree, the difference is rooms a person can walk into and sit
+# in all night. Nothing else in this system compares them, so it is said
+# here, every run, out loud.
+OFFERED=$(wc -l < "$ALL" 2>/dev/null || echo 0)
+HOSTABLE=0
+while IFS=$'\t' read -r LG _rest; do
+  [ -n "$LG" ] || continue
+  case " $RUN_LEAGUES " in *" $LG "*) HOSTABLE=$((HOSTABLE+1)) ;; esac
+done < "$ALL"
+echo "--- offered on the rail: $OFFERED   ·   in a hosted league: $HOSTABLE   ·   cap: ${MAX_ROOMS:-none} ---"
+if [ "$OFFERED" -gt "$HOSTABLE" ]; then
+  echo "!!! $((OFFERED - HOSTABLE)) room(s) are OFFERED TO PLAYERS AND HOSTED BY NOBODY."
+  echo "!!! leagues built but not run:$(printf '%s' " $OFFERED_UNHOSTED" | tr -s ' ')"
+  echo "!!! build only what you host (LEAGUES == RUN_LEAGUES), or a player taps one of these"
+  echo "!!! and waits all night for a round nothing will open."
+fi
 
 echo "--- slate started; flagship (if any) runs from its own cron line ---"
