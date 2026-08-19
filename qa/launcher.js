@@ -27,14 +27,40 @@ const ok  = id => console.log(`  \x1b[32m✓\x1b[0m ${id}`);
 const bad = (id,why) => { fail++; console.log(`  \x1b[31m✗ ${id}\x1b[0m — ${why}`); };
 const check=(id,c,why)=> c?ok(id):bad(id,why);
 
-/* ---- 1. a watcher is not a room ----------------------------------- */
+/* ---- 1. only a ROOM is a room -------------------------------------
+   THIS CHECK USED TO NAME ONE FILE AND THAT IS WHY IT KEPT FAILING TO
+   HELP. It asserted the exclusion of `watch-*` — the lock that had
+   already caused the bug — and said nothing about the next one. On
+   19 Aug host/snapshot.js turned out to hold snapshot.lock in the same
+   directory for the whole MLS match day, so it was counted as a room and
+   MAX_ROOMS=3 was really 2: the last room of the night would have been
+   refused by a box-score collector.
+
+   So the check is the positive rule now, which is the only version that
+   covers a lock nobody has written yet: a room lock is named after a
+   nightId, and every nightId begins `slate-` or `gn`. */
 const lr = src.slice(src.indexOf('live_rooms(){'), src.indexOf('}', src.indexOf('echo "$n"')));
-check('launcher.the-watchdog-is-not-counted-as-a-room',
-  /watch-\*\)\s*continue/.test(lr),
-  'live_rooms() counts every *.lock in the log directory, and host/watch-start.sh keeps watch-$DATE.lock there for six hours — the watcher eats a room off the cap');
+check('launcher.only-a-nightid-lock-counts-as-a-room',
+  /slate-\*\|gn\*\)/.test(lr) && /\*\)\s*continue/.test(lr),
+  'live_rooms() must count ONLY locks named after a nightId. An exclusion list of known non-room locks misses the next one — watch-*.lock cost a room once and snapshot.lock cost one again');
 check('launcher.a-lock-counts-only-while-it-is-held',
   /flock -n "\$f" true/.test(lr),
   'a lock file survives the runner that made it; counting files rather than held locks reads a dead room as a live one');
+
+/* ---- 1b. the pick file governs what STARTS, not only what is offered
+   19 Aug, four hours before a game night: pick-slate.sh trims the manifest
+   AND writes the durable pick file, but the 08:10 build rewrites the
+   manifest from scratch (`: > "$ALL"`). After that the pick governed the
+   rail and NOTHING governed the starter — so the rail offered three rooms
+   while the starter was about to spend all three slots on rooms nobody had
+   picked, and the two the evening was built around would have been refused
+   with CAP. Both halves must read the same list. */
+check('launcher.the-pick-file-governs-what-starts',
+  /slate-pick-\$DATE\.txt/.test(src) && /grep -qxF "\$NIGHT_ID"/.test(src),
+  'start-slate.sh does not read slate-pick-{DATE}.txt, so a hand-picked night survives in the rail and not in the launcher');
+check('launcher.a-pick-that-matches-nothing-is-loud',
+  /THE PICK FILE MATCHES NO ROOM/.test(src),
+  'a pick file naming ids that were not built today starts nothing at all, and says nothing about it');
 
 /* ---- 2. only a DUE game spends the cap ---------------------------- */
 const capAt = src.indexOf('MAX_ROOMS" -gt 0');

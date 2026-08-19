@@ -179,6 +179,54 @@ echo "--- $GAMES game(s) in tonight's manifest ---"
 [ "$GAMES" -gt 0 ] || exit 0
 NOW_EPOCH=$(date +%s)
 
+# ============ THE PICK FILE HAS TO GOVERN WHAT STARTS, NOT ONLY =======
+# ============ WHAT IS OFFERED ========================================
+# MEASURED 19 Aug, four hours before a game night, and it would have taken
+# the night down in silence.
+#
+# host/pick-slate.sh does two things: it TRIMS this manifest to the rooms
+# somebody named, and it writes slate-pick-{DATE}.txt as the durable record.
+# build-slate.js reads that file, so the RAIL survives the 08:10 rebuild.
+# The manifest does not: `: > "$ALL"` at the top of build mode rewrites it
+# from scratch, every league, every game. So after 08:10 the pick governed
+# the rail and NOTHING governed the starter.
+#
+# Tonight that meant: the rail offered tor-wsh, lafc-col and sj-la, and at
+# 16:00 PT eight rooms went due in the same minute. The first three in
+# manifest order — a WNBA game and two MLS matches nobody had picked —
+# would have taken all three slots, and LAFC (18:00) and SJ @ LA (19:00),
+# the two rooms the whole evening was built around, would have been refused
+# with CAP and never opened a round. Two rooms hosted that are not on the
+# rail, and two rooms on the rail that are not hosted, both at once.
+#
+# So the pick file is read HERE too, and it wins over RUN_LEAGUES exactly as
+# it does in build-slate.js — one fact, read the same way by both halves.
+PICKFILE="$LOGDIR/slate-pick-$DATE.txt"
+PICKED=""
+if [ -s "$PICKFILE" ]; then
+  PICKED="$(tr -d '\r' < "$PICKFILE" | grep . || true)"
+fi
+if [ -n "$PICKED" ]; then
+  NPICK=$(printf '%s\n' "$PICKED" | grep -c .)
+  echo "--- pick file: $NPICK room(s) hand-picked for $DATE — nothing else is started ---"
+  # A PICK THAT MATCHES NOTHING IS A NIGHT WITH NO ROOMS, and the failure
+  # is silent otherwise: every line reads "not picked" and the slate simply
+  # never starts. It happens for one boring reason — a game moved or was
+  # postponed, so the id built this morning is not the id in the file.
+  HITS=0
+  while IFS=$'\t' read -r _lg NID _rest; do
+    [ -n "$NID" ] || continue
+    printf '%s\n' "$PICKED" | grep -qxF "$NID" && HITS=$((HITS+1))
+  done < "$ALL"
+  if [ "$HITS" -eq 0 ]; then
+    echo "!!! THE PICK FILE MATCHES NO ROOM IN TODAY'S MANIFEST."
+    echo "!!! $PICKFILE names ids that were not built today — a game probably moved."
+    echo "!!! NOTHING WILL START. Fix the ids or delete the file to fall back to RUN_LEAGUES."
+  elif [ "$HITS" -lt "$NPICK" ]; then
+    echo "!!! only $HITS of $NPICK picked room(s) exist in today's manifest — check $PICKFILE"
+  fi
+fi
+
 # COUNT ROOMS THAT ARE ACTUALLY UP, NOT LOCK FILES THAT EXIST.
 # `9> file` creates the lock file and it stays on disk forever after the
 # runner exits, so counting files would have read one dead room as one live
@@ -192,11 +240,23 @@ NOW_EPOCH=$(date +%s)
 # hours, so the watchdog was being counted as a room: switch the watcher on
 # with MAX_ROOMS=2 and the slate silently got ONE room, blaming a cap that
 # was never reached. The watcher watches rooms; it is not one.
+# AND THE EXCLUSION LIST WAS THE WRONG SHAPE. It named `watch-*` — the one
+# non-room lock that had already caused this — and let every future one
+# through. MEASURED 19 Aug: host/snapshot.js holds snapshot.lock for the
+# whole MLS match day (started 10:00, still held at 11:37), so it was being
+# counted as a room and MAX_ROOMS=3 was really 2. SJ @ LA, the last room of
+# the night to come due, would have been refused with CAP by a half-time
+# box-score collector.
+#
+# So the test is POSITIVE now: a room lock is named after a nightId, and a
+# nightId begins `slate-` or `gn`. Anything else in this directory is not a
+# room, whatever it is called and whenever somebody adds it.
 live_rooms(){
-  local n=0 f
+  local n=0 f b
   for f in "$LOGDIR"/*.lock; do
     [ -e "$f" ] || continue
-    case "$(basename "$f")" in watch-*) continue ;; esac
+    b="$(basename "$f" .lock)"
+    case "$b" in slate-*|gn*) ;; *) continue ;; esac
     if ! flock -n "$f" true 2>/dev/null; then n=$((n+1)); fi
   done
   echo "$n"
@@ -206,11 +266,21 @@ echo "--- running: [$RUN_LEAGUES]  $(live_rooms) room(s) already up${MAX_ROOMS:+
 [ "$IDLE_EXIT_MIN" = "0" ] && echo "--- stand-down OFF: rooms stay up for late arrivals ---"
 STARTED_COUNT=""   # one char per started room, per league, counted with ${#}
 OFFERED_UNHOSTED=""   # rooms the PLAYER is offered that nobody is hosting
+NOT_PICKED=0          # rooms in the manifest that the pick file leaves out
 
 # ---- 2. publish a plan and start a runner for each --------------------
 while IFS=$'\t' read -r LG NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT SPATH; do
   [ -n "$NIGHT_ID" ] || continue
   LOG="$LOGDIR/$NIGHT_ID.log"
+
+  # HAND-PICKED, AND THE PICK WINS OVER EVERYTHING BELOW IT. A room named
+  # in the pick file starts even if its league is not in RUN_LEAGUES —
+  # somebody chose it on purpose, which is a stronger statement than a
+  # league-wide switch. A room not named in it does not start at all.
+  if [ -n "$PICKED" ] && ! printf '%s\n' "$PICKED" | grep -qxF "$NIGHT_ID"; then
+    NOT_PICKED=$((NOT_PICKED+1))
+    continue
+  fi
 
   # BUILT BUT NOT SWITCHED ON — and no longer silent. The room, its
   # questions and its schedule doc all exist, so build-slate has OFFERED it
@@ -302,6 +372,15 @@ done < "$ALL"
 # numbers disagree, the difference is rooms a person can walk into and sit
 # in all night. Nothing else in this system compares them, so it is said
 # here, every run, out loud.
+# WITH A PICK FILE THE TWO NUMBERS COME FROM THE SAME LIST BY CONSTRUCTION,
+# and the old sum would have printed a fifteen-room warning about a night
+# that is deliberately three rooms — a false alarm every half hour teaches
+# people to stop reading the real one.
+if [ -n "$PICKED" ]; then
+  echo "--- picked: $NPICK   ·   left out of the manifest by the pick: $NOT_PICKED   ·   cap: ${MAX_ROOMS:-none} ---"
+  echo "--- slate started; flagship (if any) runs from its own cron line ---"
+  exit 0
+fi
 OFFERED=$(wc -l < "$ALL" 2>/dev/null || echo 0)
 HOSTABLE=0
 while IFS=$'\t' read -r LG _rest; do
