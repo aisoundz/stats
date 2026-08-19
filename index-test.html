@@ -2838,6 +2838,16 @@ window.STATS_FIREBASE = {
 
       var app = appMod.initializeApp(CFG);
       auth = authMod.getAuth(app);
+      /* Plain getFirestore. A transport change was written here on 19 Aug
+         to fix WebKit "failing to load the slate" about one run in three —
+         and it was aimed at the wrong layer entirely. The real error was
+         400 TOO_MANY_ATTEMPTS_TRY_LATER from identitytoolkit: anonymous
+         sign-in rate-limited PER IP, because the test harness had opened
+         fifty-odd headless browsers against production that morning and
+         every one creates a brand-new anonymous account. Boot never
+         reached Firestore at all (fsReady:false, dbReady:false), so the
+         rail was empty because NOTHING loaded, not because the slate was
+         slow. See host/../qa/claims.js for the rule that came out of it. */
       db   = fsMod.getFirestore(app);
       A    = authMod;
 

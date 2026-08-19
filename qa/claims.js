@@ -29,6 +29,27 @@
         founder. If the check passes but the sentence would still mislead
         him, the sentence is wrong and belongs rewritten here.
 
+   ONE MORE RULE, LEARNED THE EXPENSIVE WAY ON 19 AUG.
+   EVERY RUN AGAINST PRODUCTION CREATES A NEW ANONYMOUS FIREBASE ACCOUNT,
+   and Firebase rate-limits anonymous sign-ups PER IP. Fifty-odd headless
+   browsers against the live site in one morning produced
+
+       400 TOO_MANY_ATTEMPTS_TRY_LATER   (identitytoolkit accounts:signUp)
+
+   and from then on roughly one load in three never got past auth: boot
+   stopped before Firestore existed, so the game rail was empty because
+   NOTHING had loaded. That looked exactly like an iPhone bug — WebKit
+   failing where Chromium passed — and very nearly got a Firestore
+   transport change shipped on a game day to fix the wrong layer.
+
+   Worse, the limit is on the IP, and the founder tests from the same
+   network. Load-testing production can degrade HIS testing.
+
+   So: run this suite when a claim needs checking, not in a loop. Drive
+   the LOCAL file for anything iterative — it needs no account. If a
+   production check ever reports strange auth failures, suspect this
+   before suspecting the product.
+
        node qa/claims.js              # against https://statsgametime.com
        node qa/claims.js --local      # against index.html on disk
        node qa/claims.js --json       # machine-readable
