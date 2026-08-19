@@ -186,13 +186,24 @@ for(const f of run){
    is deliberately a floor and not an equality: suites legitimately gain
    checks, and a gate that goes red when you write a new test is a gate
    people stop running. */
-/* KNOWN-VARIABLE SUITES. qa/journey.js emits some assertions through
-   railOk() at call sites inside conditional blocks, so its total moves with
-   which branches a run takes — it reported 34 once and 31 in six runs
-   since, on identical source. Until its count is made deterministic, a
-   floor on it would be noise, and a noisy gate is one people stop reading.
-   Everything else is floored. This list should get shorter, not longer. */
-const COUNT_UNSTABLE=new Set(['journey.js']);
+/* KNOWN-VARIABLE SUITES, each for a stated reason. A floor on these would
+   be noise, and a noisy gate is one people stop reading — but "we do not
+   know why it moves" is not a reason, so anything added here has to come
+   with one.
+
+     journey.js     emits some assertions through railOk() at call sites
+                    inside conditional blocks, so the total moves with which
+                    branches a run takes: 34 idle, 31 under load, identical
+                    source. A loaded machine getting LESS coverage is
+                    backwards and worth fixing properly.
+     live-smoke.js  drives the real https://statsgametime.com/ over the
+                    network, so a check can go unrun because something was
+                    unreachable rather than because the code changed. Seen
+                    10 -> 8 -> 10 within minutes.
+
+   Both should become deterministic and come off this list. Everything else
+   is floored. This list should get SHORTER, not longer. */
+const COUNT_UNSTABLE=new Set(['journey.js','live-smoke.js']);
 const BASE_FILE=path.join(DIR,'.counts.json');
 let base={}; try{ base=JSON.parse(fs.readFileSync(BASE_FILE,'utf8')); }catch(_){}
 const shrunk=[];
