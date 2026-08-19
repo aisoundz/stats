@@ -77,9 +77,9 @@ const cb=()=> (URL_.includes('?')?'&':'?')+'cb='+Date.now();
 /* Two games, in the shape the slate really has. On a live run the real
    slate is used instead — faking it there would test the fake. */
 const FAKE_SLATE=[
-  {nightId:'jrn-a', league:'wnba', away:'Tempo', home:'Mystics', awayAbbr:'TOR', homeAbbr:'WSH',
+  {nightId:'jrn-a', league:'wnba', sport:'basketball', away:'Tempo', home:'Mystics', awayAbbr:'TOR', homeAbbr:'WSH',
    awayColor:'#33476D', homeColor:'#e03a3e', tipISO:'2026-08-19T23:30Z'},
-  {nightId:'jrn-b', league:'wnba', away:'Lynx', home:'Valkyries', awayAbbr:'MIN', homeAbbr:'GS',
+  {nightId:'jrn-b', league:'wnba', sport:'basketball', away:'Lynx', home:'Valkyries', awayAbbr:'MIN', homeAbbr:'GS',
    awayColor:'#266092', homeColor:'#b38fcf', tipISO:'2026-08-20T02:00Z', flagship:true}
 ];
 
@@ -296,6 +296,86 @@ const FAKE_SLATE=[
       ok('journey.you-can-walk-back-into-the-flagship', false,
          'BUILTIN_NIGHT is not exposed — the built-in config is not captured before hydration overwrites it');
     }
+  }
+
+  /* ---- 9. AND ANOTHER SPORT IS STILL THE SAME PAGE ------------------
+     The weekend is WNBA, MLB and NFL rooms on one rail. Tapping the
+     ballgame used to set ?game= and nothing else: hydrateNight correctly
+     refused to lay a baseball config over a basketball page, and the
+     player sat on the WNBA night WHILE THE RUNNER HOSTED THE BALLGAME.
+     Every answer graded against a game they were not being shown.
+
+     What has to move is not just the night. It is how many rounds there
+     are, what the card is worth, what this phone saves under, and what the
+     app CALLS the start of a game — a baseball night that says "tip-off"
+     is a basketball app wearing a hat. */
+  if(!LIVE){
+    const cross = await p.evaluate(async()=>{
+      const before = {sport:SPORT_KEY, start:(L&&L.start)||null};
+      window.__SAME_DOCUMENT = 'yes';
+      window.SLATE.games = window.SLATE.games.concat([{
+        nightId:'jrn-mlb', league:'mlb', sport:'baseball', away:'Jays', home:'Yankees',
+        awayAbbr:'TOR', homeAbbr:'NYY', awayColor:'#134A8E', homeColor:'#0C2340'}]);
+      paintGameRail();
+      localStorage.setItem('stats_night_cfg_jrn-mlb', JSON.stringify({
+        game:{nightId:'jrn-mlb', espnEvent:'401816628', sport:'baseball',
+              awayName:'Jays', homeName:'Yankees', awayAbbr:'TOR', homeAbbr:'NYY'},
+        roster:{home:['NYY One','NYY Two'], away:['TOR One','TOR Two']},
+        preds:[{id:'w', q:'Who takes it?', label:'Winner', base:100, opts:['Jays','Yankees'], answer:'Yankees'},
+               {id:'r', q:'How many runs?', label:'Runs', base:100, opts:['0-5','6+'], answer:'6+'}]}));
+      const ok = await chooseGame(null,null,'jrn-mlb');
+      await new Promise(r=>setTimeout(r,400));
+      return { ok, before,
+        sport:SPORT_KEY, night:(window.GAME||{}).nightId, rounds:NR,
+        worth:PRED_MAX, cardIs:preds.length*100, lsBase:LS_BASE,
+        start:(L&&L.start)||null, same:window.__SAME_DOCUMENT||null,
+        url:location.search };
+    });
+    ok('journey.a-game-in-another-sport-opens', cross.night==='jrn-mlb' && cross.sport==='baseball',
+       `asked for a baseball room; the app is in ${cross.sport} holding ${cross.night}`);
+    ok('journey.the-sport-swap-does-not-reload', cross.same==='yes',
+       'the page reloaded to change sport — the room store made switching games a swap and the sport must move the same way');
+    ok('journey.the-round-count-follows-the-sport', cross.rounds===3,
+       `baseball plays 3 rounds (innings 3/6/9); the app still thinks there are ${cross.rounds}`);
+    ok('journey.the-card-is-worth-what-it-pays', cross.worth===cross.cardIs,
+       `the sheet promises ${cross.worth} over a card that pays ${cross.cardIs} — a total worked out from the sport we LEFT`);
+    ok('journey.the-words-follow-the-sport', cross.start==='first pitch',
+       `a baseball night calls its start "${cross.start}" — that vocabulary belongs to ${cross.before.sport}`);
+    ok('journey.the-save-key-follows-the-sport', /baseball/.test(cross.lsBase||''),
+       `saves would land under ${cross.lsBase}, so a baseball card would be restored into a basketball night`);
+    ok('journey.the-link-names-the-sport', /sport=baseball/.test(cross.url) && /game=jrn-mlb/.test(cross.url),
+       `the URL is "${cross.url}" — a shared link has to open on the right sport`);
+
+    /* THE WEEKEND, IN ONE PATH: a card in the ballgame, a card in the
+       basketball game, and walking between them. The room store already
+       proves this within one sport; a sport swap tears down more (round
+       count, card worth, save key) and is where it would break. */
+    const both = await p.evaluate(async(aid)=>{
+      const n = () => Object.keys(S.predChoices||{}).filter(k=>!/_num$/.test(k)).length;
+      S.sport = 'hockey';                    // what the PERSON told us their sport is
+      const o = {};
+      startDemo(); S.name='QA';
+      try{ await loadGameStats(true); }catch(e){}
+      startPredict(); await new Promise(r=>setTimeout(r,600));
+      const opt = document.querySelector('#predCard .pdopt'); if(opt) opt.click();
+      await new Promise(r=>setTimeout(r,300));
+      o.mlbPicks = n();
+      await chooseGame(null,null,aid); await new Promise(r=>setTimeout(r,500));
+      o.backSport = SPORT_KEY; o.backNight = (window.GAME||{}).nightId; o.backPicks = n();
+      await chooseGame(null,null,'jrn-mlb'); await new Promise(r=>setTimeout(r,500));
+      o.mlbAgainSport = SPORT_KEY; o.mlbAgainPicks = n();
+      o.favourite = S.sport;
+      return o;
+    }, A.id);
+    ok('journey.a-card-in-each-sport-survives-the-other',
+       both.mlbPicks>=1 && both.mlbAgainPicks>=1,
+       `picked ${both.mlbPicks} in the ballgame, came back to ${both.mlbAgainPicks} — a room's card must survive a sport change`);
+    ok('journey.coming-back-brings-the-sport-with-you',
+       both.backSport==='basketball' && both.backNight===A.id && both.mlbAgainSport==='baseball',
+       `back in ${A.id} the app was in ${both.backSport}, then the ballgame was ${both.mlbAgainSport}`);
+    ok('journey.the-room-does-not-overwrite-your-favourite-sport',
+       both.favourite==='hockey',
+       `the player told us "hockey" and after moving through baseball and basketball rooms their profile says "${both.favourite}" — the room's sport and the person's sport are different facts and must not share a field`);
   }
 
   await b.close();

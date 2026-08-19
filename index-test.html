@@ -4922,38 +4922,146 @@ SPORTS.hockey={
   ruleScore:"Every question settles from the play-by-play at the end of the period. Nothing for you to tap."
 };
 
-const SPORT_KEY=(()=>{try{return (new URLSearchParams(location.search).get('sport')||'basketball').toLowerCase();}catch(e){return 'basketball';}})();
-const SPORT=SPORTS[SPORT_KEY]||SPORTS.basketball;
-const L=SPORT.L;
-const GAME=SPORT.game, roster=SPORT.roster, preds=SPORT.preds, rounds=SPORT.rounds, CATCHES=SPORT.catches;
+/* ============ THE SPORT IS A VARIABLE, NOT A CONSTANT =================
+   These were `const`, read once from ?sport= at load, and everything about
+   a night hung off them. That was right when a night meant one game of one
+   sport. It stopped being right the moment the rail could offer an MLB
+   game next to a WNBA one: tapping the ballgame set ?game= and nothing
+   else, hydrateNight correctly refused to lay a baseball config over a
+   basketball page, and the player sat looking at the WNBA night WHILE THE
+   RUNNER HOSTED THE BALLGAME. Every answer graded against a game they were
+   not being shown.
 
-/* ============ THE NIGHT THIS BUILD WAS BORN KNOWING ==================
-   Captured HERE, before anything hydrates over it, because after the first
-   hydrateNight() these objects describe some other game and the original
-   is gone.
+   `let`, and not a rebuilt container: every function here says GAME or
+   preds and resolves the variable when it RUNS, so reassigning these
+   points the whole app at another sport without touching one of the
+   hundreds of call sites. Identity is preserved too — GAME stays the very
+   object SPORTS[key].game is, which is what lets hydrateNight write a
+   night into the sport it belongs to and nowhere else (B39). */
+let SPORT_KEY=(()=>{try{return (new URLSearchParams(location.search).get('sport')||'basketball').toLowerCase();}catch(e){return 'basketball';}})();
+let SPORT=SPORTS[SPORT_KEY]||SPORTS.basketball;
+if(!SPORTS[SPORT_KEY]) SPORT_KEY='basketball';
+let L=SPORT.L;
+let GAME=SPORT.game, roster=SPORT.roster, preds=SPORT.preds, rounds=SPORT.rounds, CATCHES=SPORT.catches;
 
-   The flagship's config lives in this file, not in schedule/{nightId} — a
+/* ============ THE NIGHTS THIS BUILD WAS BORN KNOWING ==================
+   Captured for EVERY sport, HERE, before anything hydrates over any of
+   them — after the first hydrateNight() those objects describe some other
+   game and the originals are gone.
+
+   The flagship's config lives in this file, not in schedule/{nightId}: a
    human wrote it and publish.js is told to leave it alone. So when the
    room store began refusing to enter a room it could not load, the
-   flagship became the one room on the rail nobody could walk back into:
-   switch to the slate game, tap the flagship, and the app correctly said
-   "I cannot load that" about the very night it was built around. Measured
-   on the live site: out of gn13 fine, back into gn13 never.
+   flagship became the one room on the rail nobody could walk back into.
+   Measured on the live site: out of gn13 fine, back into gn13 never.
 
-   A config we already hold is a config we can restore. */
-const BUILTIN_NIGHT = (function(){
+   Keyed by nightId and carrying its sport, because walking back into a
+   built-in night may also mean walking back into another SPORT. */
+const BUILTIN_NIGHTS = (function(){
+  var out = {};
   try{
-    return {
-      id: GAME.nightId || '',
-      cfg: JSON.parse(JSON.stringify({
-        game: GAME,
-        roster: roster,
-        preds: preds
-      }))
-    };
-  }catch(_){ return { id:'', cfg:null }; }
+    Object.keys(SPORTS).forEach(function(k){
+      var sp = SPORTS[k]; if(!sp || !sp.game || !sp.game.nightId) return;
+      out[sp.game.nightId] = {
+        sport: k,
+        cfg: JSON.parse(JSON.stringify({ game: sp.game, roster: sp.roster, preds: sp.preds }))
+      };
+    });
+  }catch(_){}
+  return out;
 })();
-try{ window.BUILTIN_NIGHT = BUILTIN_NIGHT; }catch(_){}   /* readable by qa/journey.js */
+/* The built-in night of the sport we are CURRENTLY in. Recomputed by
+   setSport, because "the night this build knows" changes with the sport. */
+let BUILTIN_NIGHT = (function(){
+  var id = '';
+  try{ id = GAME.nightId || ''; }catch(_){}
+  return { id: id, cfg: (BUILTIN_NIGHTS[id] || {}).cfg || null };
+})();
+try{ window.BUILTIN_NIGHT = BUILTIN_NIGHT; window.BUILTIN_NIGHTS = BUILTIN_NIGHTS; }catch(_){}
+
+/* ============ CHANGING SPORT WITHOUT LEAVING THE PAGE =================
+   The room store made switching GAMES a state swap. This is the same move
+   one level up, and it is the last thing standing between the app and a
+   Saturday where basketball, baseball and football are all on the rail.
+
+   It reassigns the variables rather than rebuilding containers, so
+   GAME stays identical to SPORTS[key].game and hydrateNight keeps writing
+   a night into its own sport and nowhere else. Everything derived from a
+   sport at load — how many rounds there are, what a full card is worth,
+   which key this phone saves under — is recomputed here, because a value
+   worked out once from basketball is simply a wrong number about baseball.
+   Leaving any of them behind is this codebase's whole disease. */
+/* ============ WHAT A NIGHT IS WORTH, WORKED OUT ONCE =================
+   How many rounds there are, what a full prediction card pays, what the
+   live rounds are worth, what the catches are worth. All four are read off
+   the CURRENT night, and all four used to be `const` — computed once at
+   load from whatever sport the URL named and never again.
+
+   That was invisible while a build had one night baked in, because the
+   published night had the same shape as the built-in one. It stops being
+   invisible the moment a slate publishes a card of a different size, or
+   the sport changes underneath: the sheet says "Up to 600 pts" over a card
+   that cannot pay 600. The number a player is promised has to come from
+   the card they are actually being shown.
+
+   So: one function, called by BOTH the thing that changes the sport and
+   the thing that hydrates a night. Two callers, one answer. */
+function sportTotals(){
+  try{ NR        = rounds.length; }catch(_){}
+  try{ CATCH_PTS = CATCHES.length * 10; }catch(_){}
+  try{ PRED_MAX  = preds.reduce(function(a,p){ return a + (p.base||0) + (p.bonus||0); }, 0); }catch(_){}
+  try{ LIVE_MAX  = rounds.reduce(function(a,r,i){ return a + r.q.length * roundWorth(i); }, 0); }catch(_){}
+}
+try{ window.sportTotals = sportTotals; }catch(_){}
+
+function setSport(key){
+  key = String(key || '').toLowerCase();
+  if(!key || !SPORTS[key]) return false;
+  if(key === SPORT_KEY) return true;
+
+  SPORT_KEY = key;
+  SPORT     = SPORTS[key];
+  L         = SPORT.L;
+  GAME      = SPORT.game;
+  roster    = SPORT.roster;
+  preds     = SPORT.preds;
+  rounds    = SPORT.rounds;
+  CATCHES   = SPORT.catches;
+
+  try{ LS_BASE = "stats_gamenight_v1_" + SPORT_KEY; }catch(_){}
+  sportTotals();
+
+  try{
+    var bid = GAME.nightId || '';
+    BUILTIN_NIGHT = { id: bid, cfg: (BUILTIN_NIGHTS[bid] || {}).cfg || null };
+    window.BUILTIN_NIGHT = BUILTIN_NIGHT;
+  }catch(_){}
+
+  /* The tests and the console read these; a stale window.GAME after a
+     sport change is a second copy of the night, which is the bug. */
+  try{ window.SPORT = SPORT; window.SPORT_KEY = SPORT_KEY; window.GAME = GAME; }catch(_){}
+
+  /* NOT S.sport. That is the player's FAVOURITE sport — the chip they tap
+     on the handle screen, saved to their profile and carried between rooms
+     as a fact about the person. Writing the room's sport into it would
+     overwrite what they told us with wherever they happened to wander, and
+     then persist it. The room's sport is SPORT_KEY and GAME.sport; the
+     person's is S.sport; giving one name two meanings is the whole disease. */
+  return true;
+}
+try{ window.setSport = setSport; }catch(_){}
+
+function hydrateBuiltIn(want){
+  if(!want) return false;
+  var b = BUILTIN_NIGHTS[want];
+  if(!b || !b.cfg) return false;
+  /* A built-in night may belong to another sport — walking back into it
+     means walking back into that sport, or hydrateNight will refuse it. */
+  if(b.sport !== SPORT_KEY && !setSport(b.sport)) return false;
+  if(!hydrateNight(b.cfg)) return false;
+  NIGHT_CFG_SOURCE = 'built-in';
+  return true;
+}
 function hydrateBuiltIn(want){
   if(!want || !BUILTIN_NIGHT.cfg || want !== BUILTIN_NIGHT.id) return false;
   if(!hydrateNight(BUILTIN_NIGHT.cfg)) return false;
@@ -5102,6 +5210,11 @@ function hydrateNight(cfg){
        network read. It is only ever an accelerator: the fetch still runs
        and still wins. */
     try{ localStorage.setItem('stats_night_cfg_'+GAME.nightId, JSON.stringify(cfg)); }catch(_){}
+    /* The night just changed shape, so what it is WORTH just changed with
+       it. Working this out only when the sport changes left the sheet
+       promising the built-in sport's total over a published card of a
+       different size. */
+    try{ sportTotals(); }catch(_){}
     NIGHT_CFG_SOURCE = 'database';
     return true;
   }catch(e){
@@ -5444,22 +5557,48 @@ async function chooseGame(db, F, nightId){
      pick reloads with the sport named. It is a page load rather than a
      swap, which is worse than switching inside a sport and far better than
      silently being in the wrong room. */
-  var wantSport = String((g.sport || '') || '').toLowerCase();
-  if(wantSport && wantSport !== String(SPORT.key || '').toLowerCase()){
-    try{ save(); }catch(_){}
-    slatePickSet(nightId);
-    try{
-      var u3 = new URL(location.href);
-      u3.searchParams.set('sport', wantSport);
-      u3.searchParams.set('game', nightId);
-      location.replace(u3.toString());
-    }catch(_){}
-    return true;
-  }
-
   try{ roomSnapshot(here); }catch(_){}
   try{ save(); }catch(_){}                 // and on disk, for a real reload
   slatePickSet(nightId);
+
+  /* ============ ANOTHER SPORT IS STILL THE SAME PAGE =================
+     This used to reload with ?sport= named, which was correct and not
+     seamless. It is a swap now: point the app at the other sport, then
+     carry on down the ordinary path, because from here a baseball room
+     loads exactly the way a basketball one does.
+
+     The sport moves BEFORE the config is fetched, since hydrateNight
+     refuses a config whose sport is not the page's — that refusal is what
+     stops a baseball night being half-applied over basketball, and it is
+     worth keeping. The URL still gains ?sport= so the link a player sends
+     opens on the right sport. */
+  /* WHICH SPORT IS THIS ROOM. The slate tile says so — build-slate writes
+     `sport` on every offered game — but a tile is a summary and the CONFIG
+     is the fact. A tile that arrived without one (an older slate document,
+     a hand-made entry) would leave the app in the sport it was already in,
+     and hydrateNight would then refuse that room's own config for
+     mismatching the page. The room would be unreachable and the reason
+     would be a console line. So: ask the tile, and if it does not say, ask
+     the config this phone already holds. */
+  var wantSport = String(g.sport || '').toLowerCase();
+  if(!wantSport){
+    try{
+      var raw = localStorage.getItem('stats_night_cfg_'+nightId);
+      if(raw){ var c = JSON.parse(raw); wantSport = String(((c||{}).game||{}).sport || '').toLowerCase(); }
+    }catch(_){}
+  }
+  if(!wantSport){
+    var bn = BUILTIN_NIGHTS[nightId];
+    if(bn) wantSport = bn.sport;
+  }
+  var sportWas  = SPORT_KEY;
+  if(wantSport && wantSport !== SPORT_KEY){
+    if(!setSport(wantSport)){
+      try{ toast("That game is a sport this build cannot open yet"); }catch(_){}
+      slatePickSet(here || null);
+      return false;
+    }
+  }
   try{ if(typeof trk==='function') trk('slate_pick',{night:nightId, from:here}); }catch(_){}
 
   /* ENTER THE ROOM, OR DO NOT CLAIM IT.
@@ -5482,6 +5621,10 @@ async function chooseGame(db, F, nightId){
   var landed = false;
   try{ landed = !!(GAME && GAME.nightId === nightId); }catch(_){}
   if(!landed){
+    /* Put the SPORT back too. Failing to enter a baseball room and leaving
+       the app pointed at baseball would strand the player on a sport whose
+       night never loaded — the wrong-room bug wearing the other hat. */
+    if(SPORT_KEY !== sportWas){ try{ setSport(sportWas); }catch(_){} }
     slatePickSet(here || null);
     try{ roomRestore(here); }catch(_){}
     try{ paintSlate(); }catch(_){}
@@ -5511,7 +5654,9 @@ async function chooseGame(db, F, nightId){
   try{ paintSlate(); }catch(_){}
   try{ applySport(); }catch(_){}
   try{
-    var u2=new URL(location.href); u2.searchParams.set('game', nightId);
+    var u2=new URL(location.href);
+    u2.searchParams.set('game', nightId);
+    u2.searchParams.set('sport', SPORT_KEY);
     history.replaceState(null,'',u2.toString());
   }catch(_){}
   try{ toast((g.away||'')+' at '+(g.home||'')); }catch(_){}
@@ -5574,7 +5719,7 @@ try{ window.hydrateNight = hydrateNight; window.loadNightConfig = loadNightConfi
    So overtime ROUNDS ARE GROWN, once, at the moment the host pushes one —
    which only happens if the game actually went there. Regulation nights
    never allocate it and never see it. */
-const NR=rounds.length;                               // REGULATION rounds
+let NR=rounds.length;                               // REGULATION rounds
 const MAX_OT=3;                                       // OT, OT2, OT3 — beyond that, say nothing
 function liveRounds(){ try{ return rounds.length; }catch(_){ return NR; } }
 /* The label a player sees over an overtime question. "Q1" printed over a
@@ -5630,7 +5775,7 @@ function emptyRounds(){return Array.from({length:NR},()=>[]);}
    nothing there — a hidden card whose points still exist in MAXPTS is the
    kind of half-off that produces a wrong total. */
 if(typeof LEAN_ON!=='undefined' && LEAN_ON){ try{ CATCHES.length=0; }catch(_){} }
-const CATCH_PTS=CATCHES.length*10;                    // 10 pts per catch
+let CATCH_PTS=CATCHES.length*10;                    // 10 pts per catch
 
 const bots=[
   {n:"HoopsOracle",c:"#ff4d5e"},{n:"StatQueen",c:"#2ee6a6"},{n:"CourtVision",c:"#ffc54d"},
@@ -6086,7 +6231,7 @@ function startDemo(){
    switching back to a room you were playing finds your card where you left
    it. LS_KEY has to be a function because the night arrives from the
    database AFTER this file evaluates. */
-const LS_BASE="stats_gamenight_v1_"+SPORT_KEY;
+let LS_BASE="stats_gamenight_v1_"+SPORT_KEY;
 function LS_KEY(){
   var n=''; try{ n=(typeof GAME!=='undefined'&&GAME.nightId)||''; }catch(_){}
   return n ? (LS_BASE+"_"+n) : LS_BASE;
@@ -14557,8 +14702,8 @@ function movePred(id,dir){
   o[i]=o[j]; o[j]=id; S.predOrder=o;
   buildPred(); if(typeof save==='function') save();
 }
-const PRED_MAX=preds.reduce((a,p)=>a+p.base+(p.bonus||0),0);
-const LIVE_MAX=rounds.reduce((a,r,i)=>a+r.q.length*roundWorth(i),0);
+let PRED_MAX=preds.reduce((a,p)=>a+p.base+(p.bonus||0),0);
+let LIVE_MAX=rounds.reduce((a,r,i)=>a+r.q.length*roundWorth(i),0);
 /* Caught It is capped rather than counted, because how many cards fire on a
    given night is the host's choice, not a fixed denominator. The cap IS the
    denominator — and it only counts when Caught It is actually running. A
@@ -15289,7 +15434,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-18-rooms.152';
+const STATS_BUILD='2026-08-18-sport.153';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

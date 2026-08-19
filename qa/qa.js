@@ -4469,10 +4469,24 @@ async function browserTests(){
           await new Promise(r=>setTimeout(r,50));
         }
       };
+      /* AND THEN WAIT FOR THE CONDITION, NOT THE CLOCK — which is what the
+         paragraph above says and what the line under it stopped doing. The
+         settle only requires 150ms of stable height, so content arriving in
+         bursts further apart than that slips through, and the fixed 120ms
+         sleep after the scroll is one more window for the page to grow
+         under the measurement. It went red in two gate runs out of five
+         while passing 6/6 in isolation, which is the signature of a race
+         and not a bug in the page.
+         So: scroll, and keep re-scrolling until the page is actually at its
+         own bottom, up to ~4s. Then measure. */
       window.scrollTo(0,999999);
       await settle();
-      window.scrollTo(0, document.documentElement.scrollHeight);
-      await new Promise(r=>setTimeout(r,120));
+      for(let i=0;i<40;i++){
+        window.scrollTo(0, document.documentElement.scrollHeight);
+        await new Promise(r=>setTimeout(r,100));
+        const d=document.documentElement;
+        if(Math.abs(d.scrollHeight-d.clientHeight-window.scrollY)<4) break;
+      }
       const doc=document.documentElement;
       const gs=document.getElementById('gtSticky');
       // the LAST thing on the page must be reachable and not covered
