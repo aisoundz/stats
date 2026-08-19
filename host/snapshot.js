@@ -81,7 +81,7 @@ if(REPORT){
   for(const lg of LEAGUES){
     if(fs.existsSync(file(lg)))
       fs.readFileSync(file(lg),'utf8').trim().split('\n').filter(Boolean)
-        .forEach(l=>{ try{ done.add(JSON.parse(l).event); }catch(_){} });
+        .forEach(l=>{ try{ const r=JSON.parse(l); done.add(r.event+':'+(r.at_end||'HT')); }catch(_){} });
   }
   log('start', `${LEAGUES.join(', ')} · ${today} · already have ${done.size} match(es)`);
 
@@ -99,33 +99,55 @@ if(REPORT){
       for(const ev of (board.events||[])){
         const c=(ev.competitions||[])[0]; if(!c) continue;
         const st=(c.status||{}).type||{};
-        if(st.completed) continue;
-        alive=true;                                  // something is still being played
-        if(done.has(String(ev.id))) continue;
         const name=String(st.name||st.description||'').toUpperCase();
-        /* SAY WHAT YOU ARE SEEING. This matches on ESPN's status string, and
-           if that string is not what I think it is, the collector gathers
-           nothing and reports nothing — the exact silent failure this repo
-           keeps paying for. So every status it declines is logged ONCE per
-           match, which means one dry run on a match day tells you whether
-           the detection works instead of a month of empty files. */
+
+        /* A match is still "live" for this loop until it is finished — that
+           is what keeps the collector awake through the evening. */
+        if(!st.completed) alive=true;
+
+        /* ============ BOTH ENDS, NOT JUST THE BREAK ====================
+           With half time AND full time, the second half is arithmetic:
+           final minus half, for every cumulative stat in the box. That is
+           worth more than doubling the sample. The soccer template says
+           outright there is "deliberately NO second-half box question: it
+           would need a halftime snapshot nobody has built" — so capturing
+           the far end does not merely calibrate the questions that exist,
+           it unlocks a half of the match nobody can ask about today.
+
+           A finished match is therefore NOT skipped: it is exactly when
+           the full-time box is readable. Each end is remembered separately
+           so one is never mistaken for the other. */
         const atBreak = name.indexOf('HALFTIME')>=0 || name.indexOf('HALF_TIME')>=0
                      || name.indexOf('END_OF_PERIOD')>=0 || name.indexOf('END_PERIOD')>=0
                      || name.indexOf('END_OF_HALF')>=0;
-        if(!atBreak){
+        const atEnd   = st.completed === true || name.indexOf('FULL_TIME')>=0
+                     || name.indexOf('STATUS_FINAL')>=0;
+        const at  = atBreak ? 'HT' : (atEnd ? 'FT' : null);
+        const key = String(ev.id)+':'+at;
+
+        if(!at){
+          /* SAY WHAT YOU ARE SEEING. This matches on ESPN's status string,
+             and if that string is not what I think it is the collector
+             gathers nothing and reports nothing — the silent failure this
+             repo keeps paying for. Every status it declines is logged once
+             per match, so one match day proves the detection works rather
+             than a month of empty files revealing it never did. */
           if(!seenStatus.has(ev.id+name)){
             seenStatus.add(ev.id+name);
             log('watch', `${ev.shortName} — ${name}${st.description?' ('+st.description+')':''}`);
           }
           continue;
         }
+        if(done.has(key)) continue;
+
         let feed;
         try{ const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/${L.path}/summary?event=${ev.id}`);
              feed=await r.json(); }
         catch(e){ log('feed', ev.shortName+' — '+e.message); continue; }
+
         const row={ league:lg, sport:L.sport, event:String(ev.id), name:ev.shortName,
                     date:String(ev.date).slice(0,10), at:new Date().toISOString(),
-                    status:name, period:(c.status||{}).period||null,
+                    at_end:at, status:name, period:(c.status||{}).period||null,
                     score:(c.competitors||[]).map(x=>({team:(x.team||{}).abbreviation, s:Number(x.score)||0})),
                     box:boxOf(feed) };
         fs.appendFileSync(file(lg), JSON.stringify(row)+'\n');

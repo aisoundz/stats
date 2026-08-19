@@ -935,10 +935,16 @@ const TEMPLATES = {
      mlbLeadAfter and the compare resolvers need a tie word tieOpt() knows.  */
   baseball: {
     league: 'mlb',
-    tags:   ['1st-3rd','4th-6th','7th-9th'],
-    names:  ['Innings 1–3','Innings 4–6','Innings 7–9'],
-    worth:  [30,50,70],
-    periods:[3,6,9],
+    tags:   ['1st-3rd','4th-6th','7th-9th','OT'],
+    names:  ['Innings 1–3','Innings 4–6','Innings 7–9','Extra innings'],
+    worth:  [30,50,70,70],
+    /* The fourth entry is the FIRST extra inning, not a fixed one. The OT
+       round is lifted out by splitOtRound before any period is stamped on
+       it, and roundSlots derives the real inning per extra frame — so 10 is
+       here to keep the four lists describing the same rounds, which is the
+       thing tmpl.four-lists-one-set-of-rounds exists to enforce. It caught
+       this within a minute of the round being added. */
+    periods:[3,6,9,10],
     rounds: [
       [
         { t: 'The first hit of the game — what was it?', o: ['Single','Double','Triple','Home run'], r:'mlbFirstHitKind' },
@@ -964,6 +970,11 @@ const TEMPLATES = {
            A resolver being correct is not the same as a question being
            worth asking, and only a spread check tells you which you have. */
         { t: 'Home runs in the last three — how many?', o: ['None','One','Two','Three or more'], r:'mlbHomeRunsBand' }
+      ],
+      [
+        { t: 'Who scores first this inning?', o: ['{HOME}','{AWAY}','Nobody scored'], r:'mlbExtraFirstScoringTeam' },
+        { t: 'Runs this inning, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlbExtraRunsBand' },
+        { t: 'Does the game end here?', o: ['Yes','No'], r:'mlbExtraDecides' }
       ]
     ]
     /* NO EXTRA-INNINGS TEMPLATE YET. run.js splits an overtime round out by
@@ -6235,6 +6246,64 @@ var AUTO = (function(){
     var runs = (endA-preA) + (endH-preH);
     if(!isFinite(runs) || runs < 0) return null;
     return band(runs, [0,2,4], o);
+  };
+
+  /* ============ EXTRA INNINGS ======================================
+     THE TRAP THESE THREE EXIST TO AVOID: `mlbSpan(p)` is a THREE-inning
+     window — {lo: p-2, hi: p} — because every regulation baseball round
+     covers three innings. Point any existing resolver at the 10th and it
+     answers about the 8th, 9th and 10th COMBINED, mixing regulation with
+     extras and grading a question nobody was asked. So extras read
+     `mlbInInning`, which is one inning and nothing else.
+
+     They are also written to be REUSED. splitOtRound drops the OT round's
+     tag deliberately so "OT" cannot leak onto the second overtime, and
+     roundSlots appends one slot per extra inning the feed reports — so the
+     same three questions are asked again in the 11th, the 12th, and for as
+     long as the game refuses to end. Nothing here may name an inning. */
+
+  /* Who scored first in THIS inning. Away bats first, so this is a real
+     question from the moment the inning starts — and with the runner
+     starting on second, both halves usually threaten. */
+  R.mlbExtraFirstScoringTeam = function(j, p, o){
+    var s = mlbInInning(j, p).find(function(x){ return !!x.scoringPlay; });
+    if(!s){
+      /* Nobody scored — but only say so once the inning is actually over,
+         or this answers "nobody" while the inning is still being played. */
+      if(!mlbInningDone(j, p)) return null;
+      return o.find(function(x){ return /nobody|no one|neither|none/i.test(x); }) || null;
+    }
+    return optForTeam(j, String(((s.team)||{}).id||''), o);
+  };
+
+  /* Runs in THIS inning, both teams. Read off the scoreboard carried on
+     every play and subtracted, for the same reason mlbRunsBand does it:
+     scoreValue is 0 on most scoring rows. Cutoffs are single-inning, not
+     the three-inning ones — [0,1,2] gives none / one / two / three or more,
+     which is where an extra inning actually lands. */
+  R.mlbExtraRunsBand = function(j, p, o){
+    var endA = mlbScoreAt(j, p, 'away'), endH = mlbScoreAt(j, p, 'home');
+    var preA = mlbScoreAt(j, p-1, 'away'), preH = mlbScoreAt(j, p-1, 'home');
+    if(endA===null || endH===null || preA===null || preH===null) return null;
+    var runs = (endA-preA) + (endH-preH);
+    if(!isFinite(runs) || runs < 0) return null;
+    return band(runs, [0,1,2], o);
+  };
+
+  /* Does the game end here — the question everybody watching is already
+     asking. Answerable the moment a later inning exists (No) or the game
+     is final on this one (Yes), and silent while it is genuinely unknown. */
+  R.mlbExtraDecides = function(j, p, o){
+    var mx = 0;
+    plays(j).forEach(function(x){
+      var n = Number(((x.period)||{}).number);
+      if(isFinite(n) && n > mx) mx = n;
+    });
+    if(mx > Number(p)) return o.find(function(x){ return /^no/i.test(x); }) || null;
+    var done = false;
+    try{ done = !!(j.header.competitions[0].status.type||{}).completed; }catch(_){}
+    if(done && mx === Number(p)) return o.find(function(x){ return /^yes/i.test(x); }) || null;
+    return null;
   };
 
   R.mlbHomeRunsBand = function(j, p, o){
