@@ -651,7 +651,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-18-admin.51-slate';
+window.ADMIN_BUILD='2026-08-19-admin.52-week';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -1861,6 +1861,45 @@ async function loadSlateRooms(){
     if(!snap.exists()) return false;
     const games = (snap.data()||{}).games || [];
     SLATE_ROOMS = games.filter(g=>g&&g.nightId).map(slateToNight);
+
+    /* ============ AND THE WEEK AHEAD ==================================
+       TONIGHT IS LOADED FIRST AND SEPARATELY, ON PURPOSE. This used to
+       read exactly one slate document — the one slate/current names — so
+       the day strip could only ever show today, and a host planning
+       Saturday had nothing to look at. Reading a range fixes that, but a
+       range is six more reads that can fail, and a failure that took
+       tonight's rooms down with it would be a far worse trade than the
+       thing it fixes. The founder has already looked at a one-game picker
+       three times while being told it had two.
+
+       So the week is a SEPARATE pass with its own catch, appended to what
+       is already there. If it throws, tonight is untouched and the strip
+       simply shows what it always showed. */
+    try{
+      const seen = {}; SLATE_ROOMS.forEach(r => { seen[r.id] = true; });
+      const base = new Date(date + 'T12:00:00');
+      const ahead = [];
+      for(let i = 1; i <= 6; i++){
+        const d = new Date(base.getTime() + i * 86400000);
+        ahead.push(d.toLocaleDateString('en-CA'));
+      }
+      const snaps = await Promise.all(
+        ahead.map(dt => F.getDoc(F.doc(db,'slate',dt)).catch(() => null)));
+      let added = 0;
+      snaps.forEach(sn => {
+        if(!sn || !sn.exists()) return;
+        ((sn.data()||{}).games || []).forEach(g => {
+          if(!g || !g.nightId || seen[g.nightId]) return;
+          seen[g.nightId] = true;
+          SLATE_ROOMS.push(slateToNight(g));
+          added++;
+        });
+      });
+      if(added) console.log('slate: +' + added + ' room(s) from the next six days');
+    }catch(e){
+      try{ console.error('the week ahead did not load; tonight is unaffected:', e); }catch(_){}
+    }
+
     return SLATE_ROOMS.length > 0;
   }catch(e){
     try{ console.error('could not read tonight\'s slate:', e); }catch(_){}
@@ -6624,7 +6663,22 @@ var AUTO = (function(){
       if(Number(st.period) > want) return true;
     }catch(_){}
     try{
-      return nflPlays(j).some(function(x){
+      var ps = nflPlays(j);
+      /* A PERIOD WITH FOOTBALL PLAYED AFTER IT IS OVER, whatever ESPN did
+         or did not write down. Measured 19 Aug on a real overtime game
+         (LAR @ CHI): quarter 4 carries FIFTY plays and NO end-of-period row
+         at all — the feed jumps straight from the fourth quarter into
+         overtime and only records "End of Game" at period 5. So the row
+         test below answered false for a quarter that had visibly finished.
+         Live the header shortcut above usually covers it, which is exactly
+         why this went unnoticed: the gate was never doing the work, the
+         header was. The moment the header lags — and it does — the fourth
+         quarter's round would never close, and a round that never closes is
+         a room that sits there saying nothing. Overtime is when this
+         product's audience is most likely to still be watching. */
+      var later = ps.some(function(x){ return Number(((x.period)||{}).number) > want; });
+      if(later) return true;
+      return ps.some(function(x){
         var t = String((((x.type)||{}).text)||'');
         if(!/^(End Period|End of Half|End of Game)$/.test(t)) return false;
         return Number(((x.period)||{}).number) === want;

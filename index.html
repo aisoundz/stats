@@ -8502,6 +8502,137 @@ var VX=(function(){
           armed:false, hint:null };
   var KEY='stats_voice_v1';
 
+  /* ---- WHAT LANGUAGE IS THIS ROOM IN --------------------------------
+     ONE OWNER, AND IT IS THE WHOLE REASON SPANISH WAS UNREACHABLE.
+     The language tag used to be written out five separate times — twice
+     onto the utterance, once in the voice filter, once as a scoring bonus
+     and once on the recogniser — which is B0..B39 wearing a new hat: one
+     fact, many copies. Setting any one of them to Spanish left the other
+     four saying en-US, so the app would have read Spanish words in an
+     English voice to a recogniser listening for English. Not "not built":
+     built wrong, in the one way this codebase has a name for.
+
+     So the tag has an owner and everything reads it. Adding a third
+     language is now a table entry, not a hunt. */
+  var LKEY='stats_lang_v1';
+  var LANGS={
+    en:{
+      tag:'en-US', name:'English',
+      NUM:{ 'one':0,'won':0,'first':0,'1':0,'a':0,
+            'two':1,'too':1,'to':1,'second':1,'2':1,'b':1,
+            'three':2,'tree':2,'third':2,'3':2,'c':2,
+            'four':3,'for':3,'fore':3,'fourth':3,'4':3,'d':3 },
+      LEAD:/^(?:say|it's|its|it is|the|answer|option|number|i say|i pick|i choose|pick|choose|go with|gonna say|i'll say|ill say)\s+/,
+      REPEAT:/^(?:repeat|again|say again|say that again|one more time|what was the question|what's the question|whats the question)$/,
+      LOCK:/^(?:lock|locked|lock it|lock it in|lock in|done|confirm|that's it|thats it|final|go|next|next question|continue|carry on|move on|keep going)$/,
+      OFF:/^(?:voice off|stop voice|turn voice off|mute|quiet|stop listening)$/,
+      HELP:/^(?:options|what are the options|read the options|choices|what are my choices)$/,
+      STOP:['or','the','a','an','of','and','was','were','is','are','it','that',
+            'this','to','in','on','at','be','been','did','do','does','how','many'],
+      DIG:{'0':'zero','1':'one','2':'two','3':'three','4':'four','5':'five',
+           '6':'six','7':'seven','8':'eight','9':'nine','10':'ten','11':'eleven','12':'twelve'},
+      /* Scoreboard shorthand a screen reads fine and a speaker does not. */
+      SPEAK:[ [/\bQ(\d)\b/g,'quarter $1'],
+              [/\bFG\b/g,'field goal'], [/\bFT\b/g,'free throw'], [/\b3PT\b/gi,'three point'],
+              [/\bRBI\b/g,'runs batted in'], [/\bK\b/g,'strikeout'], [/\bTD\b/g,'touchdown'] ],
+      OT:function(n){ return n? ('overtime '+n) : 'overtime'; },
+      LINES:{ voicePick:'This is the voice for tonight.',
+              timeUp:'Time is up.',
+              caught:'Caught It. ',
+              micBlocked:'Microphone blocked — tap your answers, or allow the mic in your browser settings.',
+              tapToTalk:'Tap 🎙 to answer out loud — this browser only opens the mic when you ask it to.',
+              noVoice:'This browser cannot read questions out loud. Try Chrome or Safari.',
+              earDied:'Voice input stopped responding — tap your answers.' }
+    },
+    es:{
+      tag:'es-US', name:'Español',
+      /* "uno" and "un" both happen; so do the ordinals, because a person
+         answering a numbered list says "el primero" as often as "uno". */
+      NUM:{ 'uno':0,'un':0,'una':0,'primero':0,'primera':0,'primer':0,'1':0,'a':0,
+            'dos':1,'segundo':1,'segunda':1,'2':1,'b':1,
+            'tres':2,'tercero':2,'tercera':2,'tercer':2,'3':2,'c':2,
+            'cuatro':3,'cuarto':3,'cuarta':3,'4':3,'d':3 },
+      LEAD:/^(?:digo|es|el|la|los|las|respuesta|la respuesta es|opcion|numero|yo digo|elijo|escojo|voy con|dire|creo que)\s+/,
+      REPEAT:/^(?:repite|repetir|otra vez|de nuevo|repite la pregunta|cual es la pregunta|que dijiste|no escuche)$/,
+      LOCK:/^(?:listo|confirmar|confirmo|ya|final|siguiente|continuar|adelante|vamos|terminado|asegurar|bloquear|bloquea|siguiente pregunta)$/,
+      OFF:/^(?:apaga la voz|voz apagada|silencio|deja de escuchar|apagar voz|callate)$/,
+      HELP:/^(?:opciones|cuales son las opciones|lee las opciones|elecciones|cuales son mis opciones|repite las opciones)$/,
+      STOP:['o','el','la','los','las','un','una','unos','unas','de','del','y','en',
+            'a','al','que','es','son','fue','fueron','se','lo','con','por','para',
+            'cuantos','cuantas','cual','cuales','como','mas'],
+      DIG:{'0':'cero','1':'uno','2':'dos','3':'tres','4':'cuatro','5':'cinco',
+           '6':'seis','7':'siete','8':'ocho','9':'nueve','10':'diez','11':'once','12':'doce'},
+      SPEAK:[ [/\bQ(\d)\b/g,'cuarto $1'],
+              [/\bFG\b/g,'tiro de campo'], [/\bFT\b/g,'tiro libre'], [/\b3PT\b/gi,'triple'],
+              [/\bRBI\b/g,'carreras impulsadas'], [/\bK\b/g,'ponche'], [/\bTD\b/g,'anotacion'] ],
+      OT:function(n){ return n? ('tiempo extra '+n) : 'tiempo extra'; },
+      LINES:{ voicePick:'Esta es la voz de esta noche.',
+              timeUp:'Se acabó el tiempo.',
+              caught:'Lo captaste. ',
+              micBlocked:'Micrófono bloqueado — toca tus respuestas, o permite el micrófono en tu navegador.',
+              tapToTalk:'Toca 🎙 para responder en voz alta — este navegador solo abre el micrófono cuando se lo pides.',
+              noVoice:'Este navegador no puede leer las preguntas en voz alta. Prueba Chrome o Safari.',
+              earDied:'La voz dejó de responder — toca tus respuestas.' }
+    }
+  };
+  /* WHICH LANGUAGES THE QUESTIONS THEMSELVES ARE IN — not which ones the
+     voice can pronounce. These are two different facts and conflating them
+     is a regression, not a feature: the grammar below speaks Spanish today,
+     the BANK does not, and auto-detecting a Spanish phone would hand that
+     player a Spanish synthesiser reading English question text aloud. That
+     is materially worse than English, and it would have shipped silently to
+     exactly the audience this feature is for.
+
+     So the device is only trusted for a language whose CONTENT is ready.
+     An explicit choice — ?lang=es, or the picker — is always honoured,
+     because that is a person asking to see the half that exists. Add 'es'
+     here on the day the bank ships translated, and not before. */
+  var CONTENT_READY={ en:true };
+
+  /* ?lang= wins for a single visit (how a host demos it), the saved choice
+     is the standing answer, and the device is the fallback — but only as
+     far as CONTENT_READY allows. */
+  /* ONE TRY PER SOURCE, NOT ONE TRY ROUND ALL THREE. Written as a single
+     block, anything the URL line threw — a missing URLSearchParams on an
+     old browser, a sandboxed location — skipped the SAVED CHOICE and the
+     device too, so a player who had picked Spanish got English back on
+     their next load and no error anywhere said why. Three questions, three
+     answers, three catches. */
+  V.lang=(function(){
+    var k;
+    try{
+      var q=(new URLSearchParams(location.search)).get('lang');
+      k=q?String(q).slice(0,2).toLowerCase():'';
+      if(k && LANGS[k]) return k;
+    }catch(_){}
+    try{
+      var sv=localStorage.getItem(LKEY);
+      if(sv && LANGS[sv]) return sv;
+    }catch(_){}
+    try{
+      var nav=String((navigator.languages&&navigator.languages[0])||navigator.language||'en').slice(0,2).toLowerCase();
+      if(LANGS[nav] && CONTENT_READY[nav]) return nav;
+    }catch(_){}
+    return 'en';
+  })();
+  V.contentReady=function(k){ return !!CONTENT_READY[k||V.lang]; };
+  V.L=function(){ return LANGS[V.lang]||LANGS.en; };
+  V.langs=function(){ return Object.keys(LANGS).map(function(k){ return {key:k, name:LANGS[k].name}; }); };
+  V.setLang=function(k){
+    if(!LANGS[k]) return;
+    V.lang=k;
+    try{ localStorage.setItem(LKEY,k); }catch(_){}
+    /* The saved VOICE belongs to the old language — an English voice
+       reading Spanish is worse than no choice at all. Drop it and let the
+       ranker pick again in the new language. */
+    try{ localStorage.removeItem(VKEY); }catch(_){}
+    V.hush();
+    try{ if(V.rec) V.rec.abort(); }catch(_){}
+    V.rec=null;
+    V.say(V.L().LINES.voicePick);
+    try{ V.paint(); }catch(_){}
+  };
+
   V.hasOut = (function(){ try{ return !!(window.speechSynthesis && window.SpeechSynthesisUtterance); }catch(_){ return false; } })();
   V.hasEar = (function(){ try{ return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }catch(_){ return false; } })();
   /* iOS IS A DIFFERENT MACHINE AND HAS TO BE TREATED AS ONE.
@@ -8528,37 +8659,49 @@ var VX=(function(){
 
   try{ V.on = V.hasOut && localStorage.getItem(KEY)==='1'; }catch(_){}
 
+  /* FOLD THE ACCENTS BEFORE STRIPPING, NOT AFTER. The old line deleted
+     every character outside [a-z0-9' ], which in Spanish is not punctuation
+     — it is the alphabet. "cuántos" became "cu ntos" and matched nothing,
+     and "año" became "a o", so the whole language would have failed as a
+     mysterious never-hears-you rather than as an obvious bug. Normalising
+     to NFD splits a letter from its accent so the strip removes only the
+     accent, and a recogniser that returns "cuantos" unaccented still lands
+     on the same string. ñ is folded to n on purpose: nobody's answer turns
+     on that distinction and a mis-heard tilde should not cost a point. */
   function norm(s){
-    return String(s==null?'':s).toLowerCase()
-      .replace(/[‘’“”]/g,"'").replace(/[^a-z0-9' ]+/g,' ')
-      .replace(/\s+/g,' ').trim();
+    var t=String(s==null?'':s).toLowerCase().replace(/[‘’“”]/g,"'");
+    try{ t=t.normalize('NFD').replace(/[\u0300-\u036f]/g,''); }catch(_){}
+    return t.replace(/[^a-z0-9' ]+/g,' ').replace(/\s+/g,' ').trim();
   }
   /* Content words only, stemmed. "or", "the", "a" appear in half the bank
      and carry no meaning; a trailing s is the difference between how a
      bank is written and how a person says it, and never the difference
      between two options. Deliberately crude — this is matching four short
      phrases a player is looking at, not parsing English. */
-  var STOP=['or','the','a','an','of','and','was','were','is','are','it','that',
-            'this','to','in','on','at','be','been','did','do','does','how','many'];
+  function STOPW(){ return V.L().STOP; }
   function stem(w){ return (w.length>3 && /s$/.test(w) && !/ss$/.test(w)) ? w.slice(0,-1) : w; }
   /* A DIGIT AND ITS WORD ARE THE SAME ANSWER. The bank writes "3 or more"
      and a person says "three or more"; the bank writes "2" and a person
      says "two". Comparing them as raw strings makes those different
      answers, which is how a correct answer became a wrong one. */
-  var DIG={'0':'zero','1':'one','2':'two','3':'three','4':'four','5':'five',
-           '6':'six','7':'seven','8':'eight','9':'nine','10':'ten','11':'eleven','12':'twelve'};
+  function DIGM(){ return V.L().DIG; }
   function words(x){
-    return norm(x).split(' ').filter(function(w){ return w && STOP.indexOf(w)<0; })
-      .map(function(w){ return DIG[w] || stem(w); });
+    var st=STOPW(), dg=DIGM();
+    return norm(x).split(' ').filter(function(w){ return w && st.indexOf(w)<0; })
+      .map(function(w){ return dg[w] || stem(w); });
   }
   /* Is this option set made of numbers? Then reading "1. None. 2. one.
      3. two." out loud is gibberish, and the position prompt is a trap. */
   function numericOpts(opts){
     var n=0;
-    (opts||[]).forEach(function(o){ var w=words(o); if(w.length && DIGW.indexOf(w[0])>=0) n++; });
+    var dw=DIGWORDS();
+    (opts||[]).forEach(function(o){ var w=words(o); if(w.length && dw.indexOf(w[0])>=0) n++; });
     return n>=2;
   }
-  var DIGW=['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve'];
+  /* Derived, never listed twice — the English list and the English DIG map
+     were the same fact and would have drifted the moment one language
+     gained a number the other did not. */
+  function DIGWORDS(){ var m=DIGM(), out=[]; for(var k in m) if(m.hasOwnProperty(k)) out.push(m[k]); return out; }
   function countIn(list, pool){
     var n=0; for(var i=0;i<list.length;i++){ if(pool.indexOf(list[i])>=0) n++; } return n;
   }
@@ -8567,12 +8710,10 @@ var VX=(function(){
      not. "Q1" spoken by a synthesiser is "kyoo one"; "24-second" is fine
      but "3PT" is not. Only what we actually put in banks. */
   function speakable(s){
-    return String(s==null?'':s)
-      .replace(/\bQ(\d)\b/g,'quarter $1')
-      .replace(/\bOT(\d?)\b/g,function(m,n){ return n? ('overtime '+n) : 'overtime'; })
-      .replace(/\bFG\b/g,'field goal').replace(/\bFT\b/g,'free throw')
-      .replace(/\b3PT\b/gi,'three point')
-      .replace(/—/g,' — ').replace(/\s+/g,' ').trim();
+    var L=V.L(), t=String(s==null?'':s);
+    t=t.replace(/\bOT(\d?)\b/g,function(m,n){ return L.OT(n); });
+    for(var i=0;i<L.SPEAK.length;i++){ t=t.replace(L.SPEAK[i][0], L.SPEAK[i][1]); }
+    return t.replace(/—/g,' — ').replace(/\s+/g,' ').trim();
   }
 
   /* ---- SPEAKING ------------------------------------------------------ */
@@ -8595,8 +8736,8 @@ var VX=(function(){
     try{
       window.speechSynthesis.cancel();
       var u=new window.SpeechSynthesisUtterance(t);
-      u.rate=1.06; u.pitch=1; u.volume=1; u.lang='en-US';
-      try{ var vv=V.voice(); if(vv){ u.voice=vv; u.lang=vv.lang||'en-US'; } }catch(_){}
+      u.rate=1.06; u.pitch=1; u.volume=1; u.lang=V.L().tag;
+      try{ var vv=V.voice(); if(vv){ u.voice=vv; u.lang=vv.lang||V.L().tag; } }catch(_){}
       u.onend=fire; u.onerror=fire;
       V.speaking=true;
       window.speechSynthesis.speak(u);
@@ -8626,8 +8767,13 @@ var VX=(function(){
   V.voices=function(){
     try{
       var all=window.speechSynthesis.getVoices()||[];
-      var en=all.filter(function(v){ return /^en(-|_|$)/i.test(v.lang||''); });
-      return en.length?en:all;
+      /* Match on the LANGUAGE, not the region. A phone with es-MX and es-ES
+         installed and none tagged es-US must still find a Spanish voice —
+         filtering on the full tag would have found nothing and fallen back
+         to the whole list, i.e. to an English voice reading Spanish. */
+      var want=V.lang;
+      var mine=all.filter(function(v){ return String(v.lang||'').slice(0,2).toLowerCase()===want; });
+      return mine.length?mine:all;
     }catch(_){ return []; }
   };
   V.voice=function(){
@@ -8642,7 +8788,7 @@ var VX=(function(){
     list.forEach(function(v){
       var n=String(v.name||'').toLowerCase(), sc=0;
       for(var i=0;i<MALEISH.length;i++){ if(n.indexOf(MALEISH[i])>=0){ sc=MALEISH.length-i+10; break; } }
-      if(/en-us/i.test(v.lang||'')) sc+=4;
+      if(String(v.lang||'').toLowerCase()===V.L().tag.toLowerCase()) sc+=4;
       if(v.localService) sc+=1;
       if(/compact|eloquence|novelty|whisper|bells|bad news|good news/.test(n)) sc-=30;
       if(sc>bestScore){ bestScore=sc; best=v; }
@@ -8652,7 +8798,7 @@ var VX=(function(){
   V.setVoice=function(uri){
     try{ localStorage.setItem(VKEY, uri||''); }catch(_){}
     V.hush();
-    V.say('This is the voice for tonight.');
+    V.say(V.L().LINES.voicePick);
     V.paint();
   };
   /* Voices load asynchronously on every platform and are an empty list on
@@ -8661,11 +8807,8 @@ var VX=(function(){
          window.speechSynthesis.addEventListener('voiceschanged', function(){ try{ V.paint(); }catch(_){} }); }catch(_){}
 
   /* ---- THE GRAMMAR --------------------------------------------------- */
-  var NUM={ 'one':0,'won':0,'first':0,'1':0,'a':0,
-            'two':1,'too':1,'to':1,'second':1,'2':1,'b':1,
-            'three':2,'tree':2,'third':2,'3':2,'c':2,
-            'four':3,'for':3,'fore':3,'fourth':3,'4':3,'d':3 };
-  var LEAD=/^(?:say|it's|its|it is|the|answer|option|number|i say|i pick|i choose|pick|choose|go with|gonna say|i'll say|ill say)\s+/;
+  function NUMM(){ return V.L().NUM; }
+  function LEADR(){ return V.L().LEAD; }
 
   /* Returns {kind:'pick',i} · {kind:'lock'|'repeat'|'off'|'help'} ·
      {kind:'ambiguous'} · null. Everything about this is deliberately
@@ -8673,15 +8816,15 @@ var VX=(function(){
      again, and the cost of guessing is a wrong answer on their card. */
   V.match=function(raw, opts){
     var t=norm(raw); if(!t) return null;
-    if(/^(?:repeat|again|say again|say that again|one more time|what was the question|what's the question|whats the question)$/.test(t)) return {kind:'repeat'};
+    if(V.L().REPEAT.test(t)) return {kind:'repeat'};
     /* MOVE ON. Live, this locks a changeable pick; in practice the
        question has already settled and it is simply the Next button. Both
        are "I am finished with this question", the player says whichever
        word the screen happens to be showing them, and one word missing
        from this list is a hands-free loop that dead-ends. */
-    if(/^(?:lock|locked|lock it|lock it in|lock in|done|confirm|that's it|thats it|final|go|next|next question|continue|carry on|move on|keep going)$/.test(t)) return {kind:'lock'};
-    if(/^(?:voice off|stop voice|turn voice off|mute|quiet|stop listening)$/.test(t)) return {kind:'off'};
-    if(/^(?:options|what are the options|read the options|choices|what are my choices)$/.test(t)) return {kind:'help'};
+    if(V.L().LOCK.test(t)) return {kind:'lock'};
+    if(V.L().OFF.test(t)) return {kind:'off'};
+    if(V.L().HELP.test(t)) return {kind:'help'};
 
     opts=opts||[];
 
@@ -8710,7 +8853,7 @@ var VX=(function(){
        declined, so the phrase fell through to position while the bare word
        did not. Same intent, two answers, decided by whether the player was
        chatty. */
-    var lead=t.replace(LEAD,'');
+    var lead=t.replace(LEADR(),'');
     var said=words(lead);
     if(said.length){
       var cands=[];
@@ -8754,8 +8897,9 @@ var VX=(function(){
        sentence with "for" in it is never an answer. */
     var stripped=lead;
     var ntoks=stripped.split(' ');
-    if(ntoks.length<=2 && NUM[ntoks[0]]!=null){
-      var idx=NUM[ntoks[0]];
+    var nm=NUMM();
+    if(ntoks.length<=2 && nm[ntoks[0]]!=null){
+      var idx=nm[ntoks[0]];
       if(idx<opts.length) return {kind:'pick', i:idx};
     }
 
@@ -8831,7 +8975,7 @@ var VX=(function(){
     var C=window.SpeechRecognition||window.webkitSpeechRecognition; if(!C) return null;
     try{ if(V.mic){ V.mic.onend=null; V.mic.onresult=null; V.mic.onerror=null; V.mic.abort(); } }catch(_){}
     var r=new C();
-    r.lang='en-US'; r.maxAlternatives=6;
+    r.lang=V.L().tag; r.maxAlternatives=6;
     /* Safari will not hold a continuous session — it hears one utterance
        and stops — and asking for one makes it fail rather than degrade. */
     r.continuous     = !V.ios;   // Safari ends after one utterance either way
@@ -8868,7 +9012,7 @@ var VX=(function(){
       if(c==='not-allowed' || c==='service-not-allowed'){
         /* FAILURE IS VISIBLE. A denied microphone must never look like a
            microphone that is on and ignoring you. */
-        V.wantEar=false; V.note='Microphone blocked — tap your answers, or allow the mic in your browser settings.';
+        V.wantEar=false; V.note=V.L().LINES.micBlocked;
         V.paint(); return;
       }
       if(c==='no-speech' || c==='aborted' || c==='audio-capture'){ return; }
@@ -8881,7 +9025,7 @@ var VX=(function(){
       try{ if(V.openedAt && !V.heardSomething && (Date.now()-V.openedAt)>2500) V.statBump('silent'); }catch(_){}
       V.openedAt=0;
       if(!V.wantEar){ V.paint(); return; }
-      if(V.errs>6){ V.note='Voice input stopped responding — tap your answers.'; V.wantEar=false; V.paint(); return; }
+      if(V.errs>6){ V.note=V.L().LINES.earDied; V.wantEar=false; V.paint(); return; }
       /* Try immediately — on desktop this simply works. On iOS it throws,
          and the throw arms the gesture so the player's next touch (which
          is coming anyway) brings it back. Either way it is still WANTED,
@@ -8927,7 +9071,7 @@ var VX=(function(){
       V.listening=false;
       V.micThrew=(V.micThrew||0)+1;
       V.armGesture();          // the next touch anywhere reopens it
-      if(V.micThrew>=2) V.note='Tap 🎙 to answer out loud — this browser only opens the mic when you ask it to.';
+      if(V.micThrew>=2) V.note=V.L().LINES.tapToTalk;
       V.paint();
     }
   };
@@ -9255,7 +9399,7 @@ var VX=(function(){
     /* Announced, because it arrives unasked. A player watching the game
        has no reason to look down and every reason not to. */
     V.wantEar=true;
-    V.say('Caught It. '+q+' \u2026 '+V.optionLine(o.map(function(x){return x.label;})),
+    V.say(V.L().LINES.caught+q+' \u2026 '+V.optionLine(o.map(function(x){return x.label;})),
       function(){ V.ear(); });
     V.paint();
   };
@@ -9590,7 +9734,7 @@ var VX=(function(){
     V.say(txt, function(){ V.ear(); V.paint(); });
     V.paint();
   };
-  V.timeUp=function(){ if(!V.on) return; V.say('Time is up.'); };
+  V.timeUp=function(){ if(!V.on) return; V.say(V.L().LINES.timeUp); };
   /* Edge-triggered, because the caller is a repaint that runs every few
      seconds all night. Announcing on every repaint would be a talking
      phone that never stops. */
@@ -9609,7 +9753,7 @@ var VX=(function(){
      speaks immediately from within the handler. That first sentence is not
      decoration, it is what unlocks audio for the rest of the session. */
   V.enable=function(){
-    if(!V.hasOut){ V.note='This browser cannot read questions out loud. Try Chrome or Safari.'; V.paint(); return; }
+    if(!V.hasOut){ V.note=V.L().LINES.noVoice; V.paint(); return; }
     V.on=true; V.armed=true; V.errs=0;
     try{ localStorage.setItem(KEY,'1'); }catch(_){}
     V.note = V.hasEar ? '' : 'This browser can read the questions but cannot hear answers — tap to answer.';
@@ -15546,7 +15690,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-19-tap.156';
+const STATS_BUILD='2026-08-19-lang.157';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

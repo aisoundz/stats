@@ -55,12 +55,28 @@ const FAKE = `(function(store){
 (async()=>{
   const b=await chromium.launch();
 
+  /* THE FAKE HAS TO SURVIVE A NAVIGATION, and this is why two checks in
+     section 3 were red against a build that was behaving correctly.
+
+     Switching rooms RELOADS the page. The fake transport used to be
+     installed with p.evaluate() AFTER the first load, so the moment
+     chooseGame navigated, the new page came up with NO fake at all and
+     talked to the REAL Firestore. The real slate for the real today does
+     not contain slate-2026-08-19-tor-wsh, so the app did exactly what it
+     is supposed to do — refused a ?game= that is not on tonight and
+     cleared the remembered pick — and the assertions read that correct
+     refusal as a broken switch. The test was measuring the production
+     database, not the build under test.
+
+     addInitScript runs before every document in the page, navigations
+     included, so the room the test switches INTO exists on the other side
+     of the reload too. */
   async function boot(store){
     const p=await b.newPage();
     const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
+    await p.addInitScript(`(${FAKE})(${JSON.stringify(store)})`);
     await p.goto('file://'+TARGET);
     await p.waitForFunction(()=>typeof window.loadSlate==='function', {timeout:15000});
-    await p.evaluate(`(${FAKE})(${JSON.stringify(store)})`);
     return {p, errs};
   }
 
@@ -130,37 +146,46 @@ const FAKE = `(function(store){
       window.__reads=[];
       const a=await window.loadNightConfig({}, window.__F);   // no pick → pointer
       const pointed=window.GAME.nightId, readA=window.__reads.slice();
-      /* CHANGING ROOMS RELOADS, and that is the fix rather than a
-         shortcut. Hydrating in place swapped the config and left the
-         in-memory game mid-quarter in the room you had just left — a
-         locked card, a score and a question about the other game's teams.
+      /* SWITCHING ROOMS NO LONGER NAVIGATES, so this can simply await it.
+         This block used to fire chooseGame WITHOUT awaiting and then read
+         storage 900ms later, on the stated grounds that "location.replace
+         cannot be stubbed in Chromium". That was true when switching was a
+         reload. It is a STATE SWAP now — park the room, bring the other one
+         up, repaint, rewrite the URL with history.replaceState — so there
+         is nothing to race and nothing to survive.
 
-         location.replace cannot be stubbed in Chromium, so this does not
-         try: it calls the real thing, lets the page actually go, and then
-         asserts the two effects that SURVIVE a navigation — the choice was
-         remembered, and the room being left had its card parked under its
-         own per-night key. Where it lands is covered by the ?game= tests
-         above, which load the page for real. */
+         Left as it was, the two checks below were reading the page AFTER a
+         real boot against the REAL Firestore, where slate-2026-08-19-tor-wsh
+         is not on the real tonight, so the app correctly cleared the pick
+         and the test called that a broken switch. It was grading production,
+         not the build.
+
+         (A localStorage.setItem spy was tried first and silently recorded
+         nothing: assigning to a property of a Storage object creates an
+         ITEM called "setItem" rather than overriding the method.) */
       window.__before = { pick:localStorage.getItem('stats_slate_pick_v1') };
       S.mode='live'; S.place='predict'; S.qi=0;
-      window.chooseGame({}, window.__F, 'slate-2026-08-19-tor-wsh');
-      return { a, pointed, readA };
+      let __err=null, __ret=null;
+      try{ __ret = await window.chooseGame({}, window.__F, 'slate-2026-08-19-tor-wsh'); }
+      catch(e){ __err=String(e && e.message || e); }
+      return { a, pointed, readA, __err, __ret,
+               url: location.search,
+               pick: localStorage.getItem('stats_slate_pick_v1'),
+               parked: !!localStorage.getItem('stats_gamenight_v1_basketball_gn13-2026-08-19-min-gs') };
     });
     ok('slate.with-no-choice-the-pointer-wins', r.a===true && r.pointed==='gn13-2026-08-19-min-gs',
        `landed on ${r.pointed}`);
     ok('slate.reads-the-pointer-when-nothing-is-chosen', r.readA.includes('schedule/current'),
        JSON.stringify(r.readA));
-    await p.waitForTimeout(900);
-    const after=await p.evaluate(()=>({
-      url: location.search,
-      pick: localStorage.getItem('stats_slate_pick_v1'),
-      parked: !!localStorage.getItem('stats_gamenight_v1_basketball_gn13-2026-08-19-min-gs')
-    }));
+    if(process.env.SLATE_DEBUG) console.log('  DEBUG', JSON.stringify({ret:r.__ret,err:r.__err,url:r.url,pick:r.pick,parked:r.parked}));
     ok('slate.a-choice-sends-you-to-that-room',
-       /game=slate-2026-08-19-tor-wsh/.test(after.url) && after.pick==='slate-2026-08-19-tor-wsh',
-       `url=${after.url} pick=${after.pick} — a switch must reload, or the old room's half-played card comes with you`);
+       /game=slate-2026-08-19-tor-wsh/.test(r.url) && r.__ret===true,
+       `url=${r.url} ret=${r.__ret} err=${r.__err} — the switch did not complete into that room`);
+    ok('slate.a-choice-is-remembered',
+       r.pick==='slate-2026-08-19-tor-wsh',
+       `pick=${r.pick} — the room being entered was not written down, so a real reload lands somewhere else`);
     ok('slate.the-room-you-leave-keeps-its-card',
-       after.parked===true,
+       r.parked===true,
        'the card from the room being left was not parked under its own per-night key, so coming back would lose it');
 
     await p.close();

@@ -1,0 +1,160 @@
+#!/usr/bin/env node
+/* =====================================================================
+   RUN EVERY SUITE, IN ONE COMMAND, AND RETURN ONE VERDICT.
+   ---------------------------------------------------------------------
+   WHY THIS EXISTS. There are twenty-six suites in this directory and no
+   file anywhere in the repo that runs them all. Each one is invoked by
+   hand, from memory, which means the honest description of the gate is
+   "whichever suites somebody remembered tonight". A suite nobody runs is
+   not a safety net — it is a file that makes you feel like you have one.
+   qa/voice-lang.js was written on 19 Aug and would have been the fourth
+   suite in a row that only ever ran on the day it was written.
+
+   It also fixes a subtler thing: qa.js reports "ALL 103 CHECKS PASS —
+   safe to promote", and that sentence is only true about the checks IN
+   qa.js. Promoting on it while host-resolvers.js is red is exactly the
+   kind of confident-and-wrong the incident catalogue is full of.
+
+   THE TIERS, because they are not the same kind of check.
+     static   no browser, no network. The default. Always runnable.
+     browser  drives a real Chromium; needs playwright installed.
+     live     asks ESPN or Firestore. Real answers, real flakiness, and
+              it fails when the sport is out of season rather than when
+              the code is wrong — so it is never in the default run.
+
+     node qa/all.js                 # static + browser  (the gate)
+     node qa/all.js --static        # no browser needed
+     node qa/all.js --live          # everything, including the network
+     node qa/all.js --list          # what would run
+
+   A suite that CRASHES is reported as a failure, not skipped. That is the
+   whole point: the failure mode this file exists to stop is a red suite
+   that nobody was looking at.
+   ================================================================== */
+const {spawnSync}=require('child_process');
+const fs=require('fs'), path=require('path');
+const DIR=__dirname;
+
+const ARG=process.argv.slice(2);
+const ONLY_STATIC=ARG.includes('--static');
+const WITH_LIVE  =ARG.includes('--live');
+const LIST       =ARG.includes('--list');
+const QUICK      =ARG.includes('--quick');
+/* WHICH BUILD IS THIS GATE JUDGING? One answer, handed to every suite that
+   accepts one. Found 19 Aug and it is worse than untidy: voice-pick.js
+   defaulted to index-test.html while voice.js, voice-wiring.js,
+   board-order.js and voice-lang.js defaulted to index.html — so a single
+   "the gate is green" was four suites reading the FILE BEING PROMOTED and
+   the rest reading the file ALREADY LIVE. Half the gate was grading the
+   old build, and the halves swap depending on which suite you ran. That is
+   ONE FACT, MANY COPIES with the fact being "the build under test".
+
+   index-test.html is the default because that is what qa.js checks and the
+   rule is build-on-test-then-promote.  --file index.html re-runs the same
+   suites against what is live, which is how you tell a NEW break from an
+   inherited one. */
+const fi=ARG.indexOf('--file');
+const TARGET=fi>=0 && ARG[fi+1] ? ARG[fi+1] : 'index-test.html';
+const TARGET_ABS=path.resolve(__dirname,'..',TARGET);
+/* Only these accept a positional target; handing one to a suite that does
+   not read argv[2] is harmless, but claiming it was targeted would not be. */
+const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-lang.js','board-order.js']);
+
+/* The tier of each suite, stated once. A suite added to the directory and
+   not named here is REPORTED, not silently ignored — see the sweep below,
+   which is the difference between a manifest and a lie. */
+const TIER={
+  'qa.js':            {tier:'browser', args:QUICK?['--quick']:[]},
+  'acceptance.js':    {tier:'static'},
+  'board-order.js':   {tier:'static'},
+  'fakebase.js':      {tier:'static'},
+  'fixtures.js':      {tier:'static'},
+  'host-banks.js':    {tier:'static'},
+  'host-block.js':    {tier:'static'},
+  'host-overtime.js': {tier:'static'},
+  'host-publish-ot.js':{tier:'static'},
+  'host-resolvers.js':{tier:'static'},
+  'host-runner.js':   {tier:'static'},
+  'host-sports.js':   {tier:'static'},
+  'launcher.js':      {tier:'static'},
+  'voice.js':         {tier:'static'},
+  'voice-lang.js':    {tier:'static'},
+  'feed-path.js':     {tier:'static'},   // static by default; --live asks ESPN
+  'bank-shadow.js':   {tier:'static'},
+  'devices.js':       {tier:'browser'},
+  'host-sportsreg.js':{tier:'browser'},
+  'live-smoke.js':    {tier:'browser'},
+  'night-config.js':  {tier:'browser'},
+  'overtime.js':      {tier:'browser'},
+  'slate.js':         {tier:'browser'},
+  'voice-pick.js':    {tier:'browser'},
+  'voice-wiring.js':  {tier:'browser'},
+  'journey.js':       {tier:'browser'},
+  'live-path.js':     {tier:'live'},
+};
+
+/* NAME THE SUITES THAT EXIST BUT ARE NOT IN THE TABLE. A manifest that
+   silently covers a subset is the same bug as a gate that runs a subset. */
+const onDisk=fs.readdirSync(DIR).filter(f=>/\.js$/.test(f) && f!=='all.js').sort();
+const unlisted=onDisk.filter(f=>!TIER[f]);
+const missing =Object.keys(TIER).filter(f=>!onDisk.includes(f));
+
+function wanted(f){
+  const t=TIER[f].tier;
+  if(t==='live')    return WITH_LIVE;
+  if(t==='browser') return !ONLY_STATIC;
+  return true;
+}
+const run=onDisk.filter(f=>TIER[f] && wanted(f));
+
+if(LIST){
+  console.log('\nwould run '+run.length+' of '+onDisk.length+' suites, judging '+TARGET+':');
+  run.forEach(f=>console.log('  '+TIER[f].tier.padEnd(8)+f));
+  if(unlisted.length) console.log('\nNOT IN THE TABLE (never run): '+unlisted.join(', '));
+  process.exit(0);
+}
+
+console.log('\n=== EVERY SUITE ===  judging '+TARGET
+  +(ONLY_STATIC?'   static only':WITH_LIVE?'   including live':'')+'\n');
+if(!fs.existsSync(TARGET_ABS)){ console.log('  the file under test does not exist: '+TARGET_ABS); process.exit(1); }
+/* Say which suites are NOT reading that file, so "green" is never read as
+   broader than it is. */
+const untargeted=run.filter(f=>!TARGETABLE.has(f) && /voice|board|journey|device|night-config|overtime|slate|live-smoke/.test(f));
+if(untargeted.length) console.log('  (these read their own default build, not '+TARGET+': '+untargeted.join(', ')+')\n');
+if(missing.length)  console.log('  ! named in the table but not on disk: '+missing.join(', ')+'\n');
+if(unlisted.length) console.log('  ! on disk but in no tier, so never run: '+unlisted.join(', ')+'\n');
+
+const results=[];
+for(const f of run){
+  const t0=Date.now();
+  const argv=[path.join(DIR,f), ...(TIER[f].args||[])];
+  if(TARGETABLE.has(f)) argv.push(TARGET_ABS);
+  const r=spawnSync('node',argv,{encoding:'utf8', timeout:20*60*1000, maxBuffer:64*1024*1024});
+  const ms=Date.now()-t0;
+  const out=(r.stdout||'')+(r.stderr||'');
+  /* A timeout or a crash has no exit status; treat both as failure and say
+     which, because "suite hung" and "suite failed" are different repairs. */
+  const how = r.error && r.error.code==='ETIMEDOUT' ? 'TIMEOUT'
+            : r.status===0 ? 'PASS'
+            : (r.status==null ? 'CRASH' : 'FAIL');
+  /* The last non-empty line is every suite's verdict line, by convention. */
+  const line=(out.trim().split('\n').filter(x=>x.trim()).pop()||'').replace(/\x1b\[[0-9;]*m/g,'').trim();
+  results.push({f, how, ms, line, out});
+  const mark = how==='PASS' ? '  ok  ' : '  XX  ';
+  console.log(mark+f.padEnd(20)+String(ms+'ms').padStart(8)+'   '+line.slice(0,90));
+}
+
+const bad=results.filter(r=>r.how!=='PASS');
+console.log('\n'+'-'.repeat(62));
+if(!bad.length){
+  console.log('ALL '+results.length+' SUITES PASS'+(ONLY_STATIC?'  (static only — browser suites not run)':''));
+}else{
+  console.log(bad.length+' of '+results.length+' SUITES RED — DO NOT PROMOTE');
+  bad.forEach(r=>{
+    console.log('\n--- '+r.f+'  ['+r.how+'] ---');
+    /* Enough of the tail to act on, not the whole log. */
+    console.log(r.out.replace(/\x1b\[[0-9;]*m/g,'').trim().split('\n').slice(-14).map(x=>'    '+x).join('\n'));
+  });
+}
+if(unlisted.length) console.log('\nNOTE: '+unlisted.length+' suite(s) on disk are in no tier and did not run: '+unlisted.join(', '));
+process.exit(bad.length?1:0);

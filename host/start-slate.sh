@@ -69,7 +69,8 @@ DATE="${DATE:-$(date +%F)}"
 #   RUN_LEAGUES which leagues actually get runners          (turn it on)
 #   MAX_ROOMS   most rooms to start per league per day      (start small)
 #
-# A league in LEAGUES but not RUN_LEAGUES is fully built and simply not
+# A league in LEAGUES but not RUN_LEAGUES is fully built, kept OFF the
+# player's rail (see build-slate.js), and simply not
 # played. Its rooms exist, its questions are published, and switching it on
 # is one word in a cron line — not a deploy.
 LEAGUES="${LEAGUES:-${LEAGUE:-wnba}}"
@@ -105,7 +106,13 @@ if [ "$MODE" = "build" ] || [ "$MODE" = "dry" ]; then
     # A league with no games today is NOT a failure — most leagues are out
     # of season most of the time, and a hard exit there would stop every
     # league listed after it.
-    if DATE="$DATE" LEAGUE="$LG" node host/build-slate.js $BUILDFLAG --manifest > "$MANIFEST"; then
+    # RUN_LEAGUES GOES TO THE BUILDER TOO, and this is the fix for the
+    # warning this script has been printing at the bottom of every run:
+    # a league that is built but not run must still get its schedule docs
+    # (the backtest reads them) and must NOT go on the player's rail. The
+    # builder needs to know which leagues are hosted to make that split,
+    # and there must be exactly one answer to that question.
+    if DATE="$DATE" LEAGUE="$LG" RUN_LEAGUES="$RUN_LEAGUES" node host/build-slate.js $BUILDFLAG --manifest > "$MANIFEST"; then
       # Tag every manifest row with its league so the start pass can tell
       # which switch applies to it.
       sed "s/^/$LG\t/" "$MANIFEST" >> "$ALL"
@@ -136,7 +143,25 @@ if [ "$MODE" = "build" ] || [ "$MODE" = "dry" ]; then
 fi
 
 # ---- start mode: only what is due ------------------------------------
-[ -f "$ALL" ] || { echo "no manifest for $DATE — run --build first"; exit 0; }
+# SELF-HEAL, BECAUSE A MISSED BUILD USED TO COST A WHOLE DAY IN SILENCE.
+# 18 Aug: the morning build cron was installed after its own 8:10 slot, so no
+# manifest existed. This line then printed "run --build first" and exited 0 —
+# twenty times, every half hour from 13:00 to 22:30, while four WNBA games and
+# fifteen MLB games went by with no room for any of them. Nothing was broken;
+# nothing tried. A starter that finds no manifest must BUILD one, not narrate
+# its absence. The flock makes the half-hourly cron safe against itself: a
+# build takes minutes, the ticks are 30 apart, but a slow feed must not start
+# a second builder on top of the first.
+if [ ! -f "$ALL" ]; then
+  echo "no manifest for $DATE — building one now (self-heal)"
+  if flock -n 8; then
+    LEAGUES="$LEAGUES" "$0" --build || echo "  self-heal build failed; see above"
+  else
+    echo "  another build is already running; skipping this tick"
+    exit 0
+  fi 8>"$LOGDIR/heal-$DATE.lock"
+fi
+[ -f "$ALL" ] || { echo "still no manifest for $DATE after the self-heal — giving up this tick"; exit 0; }
 GAMES=$(wc -l < "$ALL")
 echo "--- $GAMES game(s) in tonight's manifest ---"
 [ "$GAMES" -gt 0 ] || exit 0

@@ -16,8 +16,23 @@
    ================================================================== */
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ROOT = path.resolve(__dirname, '..');
-const DIR = process.argv[2] || process.env.SPORT_FIXTURES || '';
-if (!DIR || !fs.existsSync(DIR)) { console.log('no fixtures dir — skipping.'); process.exit(0); }
+/* DEFAULT TO THE FIXTURES IN THE REPO, AND SAY SO WHEN THEY ARE MISSING.
+   This used to be `|| ''` followed by a silent `process.exit(0)`, so for
+   the whole life of this file it printed "no fixtures dir — skipping" and
+   returned SUCCESS. Every gate run counted it as a pass. The suite that
+   checks 84 resolvers and every overtime path had never once executed, and
+   nothing anywhere said so out loud — the exit code said the opposite.
+   Now: the repo's own fixtures are the default, and their absence is a
+   FAILURE, because "I could not check" and "I checked and it is fine" are
+   not the same sentence. */
+const DEFAULT_FIX = path.join(ROOT, 'references', 'multisport');
+const DIR = process.argv[2] || process.env.SPORT_FIXTURES || DEFAULT_FIX;
+if (!fs.existsSync(DIR)) {
+  console.log('NO FIXTURES at ' + DIR);
+  console.log('  run:  node references/multisport/fetch.js');
+  console.log('  (reporting this as a FAILURE — a check that cannot run has not passed)');
+  process.exit(1);
+}
 
 const src = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
 const S = '/* @host-shared:start', E = '/* @host-shared:end */';
@@ -100,15 +115,31 @@ console.log('\nreal games that went past regulation');
 {
   const h = load('nhl.json');
   if (h) {
+    /* DERIVE THE EXPECTATION FROM THE FIXTURE, DO NOT PIN IT TO ONE GAME.
+       These three lines used to hardcode "period 4" and "[1,2,3,4]", i.e.
+       single overtime. The fixture is whatever finished NHL overtime game
+       the fetcher found, and the first one that happened to be a DOUBLE
+       overtime turned all three red while the code was right — a plan of
+       [1,2,3,4,5] is the correct answer for a game that played five
+       periods. A test that fails when the input gets MORE interesting is a
+       test that teaches you to swap the input, which is the opposite of
+       what it is for. What must hold for any overtime game: it reached at
+       least the first overtime, the plan is every period from 1 to the
+       last with no gaps, and each overtime period is tagged as one. */
     const mx = A.maxPeriodIn(h);
-    eq('real.nhl.reached-period-4', mx, 4);
+    const REG_NHL = 3;
+    eq('real.nhl.reached-overtime', mx > REG_NHL, true);
     eq('real.nhl.wentToOvertime', A.wentToOvertime(h), true);
-    same('real.nhl.plan-includes-ot', A.roundPeriodsFor(h, mx), [1,2,3,4]);
+    const wantPlan = Array.from({length: mx}, (_, i) => i + 1);
+    same('real.nhl.plan-covers-every-period', A.roundPeriodsFor(h, mx), wantPlan);
     eq('real.nhl.ot-round-is-tagged-OT', A.roundTagFor(h, 4), 'OT');
+    /* A second overtime, when the fixture has one, must not be tagged "OT"
+       as well — two rounds with the same name is the GN11 shape. */
+    if (mx >= 5) eq('real.nhl.second-ot-is-tagged-OT2', A.roundTagFor(h, 5), 'OT2');
     /* And the gate must agree that the OT period finished, or a round would
        open and never close. This is the "End of OT" row, which carries no
        digit and is invisible to the basketball regex. */
-    eq('real.nhl.ot-period-reads-done', A.periodDone(h, 4), true);
+    eq('real.nhl.ot-period-reads-done', A.periodDone(h, mx), true);
   }
   /* Football's plays are nested in drives, so maxPeriodIn has to go through
      feedPlays() — a naive j.plays read finds nothing and would report period
@@ -203,8 +234,26 @@ console.log('\nthe runner walks a round list that grows');
     const plan3 = { rounds: [ {tag:'1st-3rd',worth:30,qs:[{t:'a',o:['x']}]},
                               {tag:'4th-6th',worth:50,qs:[{t:'a',o:['x']}]},
                               {tag:'7th-9th',worth:70,qs:[{t:'a',o:['x']}]} ] };
-    const bs = roundSlots(A, m, plan3);
+    /* CLAMP TO NINE FIRST. This check is about the REGULATION mapping —
+       three rounds landing on the 3rd, 6th and 9th — and the fixture is now
+       deliberately an extra-innings game (a regulation feed cannot exercise
+       an overtime path at all). Against a tenth inning the correct answer
+       becomes [3,6,9,10], which is the extras feature working, so asserting
+       [3,6,9] on the raw feed tested the fixture rather than the mapping.
+       Same technique the WNBA regulation case above already uses. */
+    const reg9 = JSON.parse(JSON.stringify(m));
+    /* THE PLAYS TOO, NOT JUST THE STATUS. maxPeriodIn reads the plays, so a
+       status clamped to 9 over a feed still carrying tenth-inning plays
+       still produced a tenth round — the clamp looked applied and was not.
+       The WNBA regulation case above filters both for exactly this reason. */
+    reg9.plays = (m.plays || []).filter(p => Number((p.period || {}).number) <= 9);
+    reg9.header.competitions[0].status = { period: 9, type: { completed: true } };
+    const bs = roundSlots(A, reg9, plan3);
     same('runner.baseball-rounds-map-to-innings-3-6-9', bs.map(s => s.per), [3,6,9]);
+    /* And the extra innings the fixture really has DO grow the plan — the
+       other half of the same fact, asserted on the unclamped feed. */
+    const bx = roundSlots(A, m, Object.assign({ ot: { qs: [{t:'q',o:['x']}] } }, plan3));
+    eq('runner.real-extra-innings-grow-the-plan', bx.length > 3, true);
     const ext = JSON.parse(JSON.stringify(m));
     ext.header.competitions[0].status = { period: 11, type: { completed: true } };
     const be = roundSlots(A, ext, Object.assign({ ot: { qs: [{t:'q',o:['x']}] } }, plan3));

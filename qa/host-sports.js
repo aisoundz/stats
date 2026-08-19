@@ -27,12 +27,19 @@
    ================================================================== */
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ROOT = path.resolve(__dirname, '..');
-const DIR = process.argv[2] || process.env.SPORT_FIXTURES || '';
+/* Same silent-skip as qa/host-overtime.js and qa/host-resolvers.js had:
+   no directory, exit ZERO, gate counts it green. It also pointed at
+   references/multisport/multi.sh, a script that has never existed in this
+   repo — so following the instruction could not have helped either. The
+   fetcher that does exist is references/multisport/fetch.js. */
+const DEFAULT_FIX = path.join(ROOT, 'references', 'multisport');
+const DIR = process.argv[2] || process.env.SPORT_FIXTURES || DEFAULT_FIX;
 
-if (!DIR || !fs.existsSync(DIR)) {
-  console.log('no sport fixtures directory given or found — skipping.');
-  console.log('fetch some with references/multisport/multi.sh, then pass the directory.');
-  process.exit(0);
+if (!fs.existsSync(DIR)) {
+  console.log('NO FIXTURES at ' + DIR);
+  console.log('  run:  node references/multisport/fetch.js');
+  console.log('  (reporting this as a FAILURE — a check that cannot run has not passed)');
+  process.exit(1);
 }
 
 const src = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');

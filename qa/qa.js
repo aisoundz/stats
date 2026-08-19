@@ -5515,8 +5515,38 @@ function voiceStatic(){
       !!vx && /return \{kind:'ambiguous'\}/.test(vx),
       'an ambiguous phrase resolves to one of the candidates instead of refusing',
       '"yes or no" picked Yes — a coin toss written on a player\'s card as if they had chosen it');
+    /* ASSERT THE GUARANTEE, NOT THE VARIABLE NAME. This check used to grep
+       for the literal `NUM[`, and the multilingual rewrite renamed that map
+       to a per-language lookup — so a change that kept the behaviour exactly
+       turned it red, which is the precise failure the comment above warns
+       about. Run the matcher instead: what matters is that a sentence with a
+       homophone in the middle of it is not an answer, whoever holds the map. */
     check('voice.homophones-only-count-on-a-short-phrase',
-      !!vx && /\.length<=2 && NUM\[/.test(vx),
+      (function(){
+        try{
+          const store={};
+          const g=global, sv={window:g.window,localStorage:g.localStorage,document:g.document,navigator:g.navigator};
+          g.window={};
+          g.localStorage={getItem:k=>(k in store?store[k]:null),setItem:(k,v)=>{store[k]=String(v);},removeItem:k=>{delete store[k];}};
+          g.document={getElementById:()=>null,querySelector:()=>null,querySelectorAll:()=>[],createElement:()=>({})};
+          g.navigator={language:'en-US',languages:['en-US'],platform:'',userAgent:'',maxTouchPoints:0};
+          let V;
+          try{ V=new Function(vx+'\nreturn VX;')(); }
+          finally{ Object.assign(g,sv); }
+          const OPTS=['None or one','Two or three','Four or five','Six or more'];
+          const notAPick=(said)=>{ const m=V.match(said,OPTS); return !m || m.kind!=='pick'; };
+          /* The television sentences. None of these is a player answering. */
+          return notAPick('go for it')
+              && notAPick('come on ref that was a foul')
+              && notAPick('pass it to him')
+              /* ...while the short utterance the prompt teaches still lands. */
+              /* Assert by the OPTION, not by its index — the index is a
+                 property of this list, and getting it wrong writes a green
+                 check that proves nothing (it took one to write this). */
+              && (function(){ const m=V.match('four',OPTS);
+                   return !!m && m.kind==='pick' && OPTS[m.i]==='Four or five'; })();
+        }catch(e){ return false; }
+      })(),
       '"for" and "to" can be picked out of the middle of a sentence',
       'a player says "go for it" at the television and the app answers 4 on their behalf');
     /* OFF MEANS OFF. Not a preference — the default, and the state every

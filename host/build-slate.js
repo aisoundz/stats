@@ -391,6 +391,40 @@ function prettyDate(iso){
      "Which game are you watching?" is the right question ACROSS sports, not
      within one — a fan on a Saturday in September is choosing between a
      football game and a basketball game, not between two football games. */
+  /* ============ NEVER OFFER A ROOM NOBODY HOSTS =====================
+     MEASURED 18 Aug, in production, in a log nobody was reading:
+
+         !!! 15 room(s) are OFFERED TO PLAYERS AND HOSTED BY NOBODY.
+         !!! leagues built but not run: mlb mlb mlb ... (x15)
+
+     The cron builds `wnba nfl mlb mls` and runs `wnba nfl`, because
+     building is how the backtest gets its data and running costs Firestore
+     reads and a room cap. Both halves are right. What was wrong is that
+     `slate/{date}` — the document the PLAYER'S RAIL reads — was written
+     from the BUILT set, so fifteen baseball rooms appeared in the picker
+     with no runner behind any of them. Tap one and it looks like a normal
+     room: it has a name, it has teams, it has a card. It just never opens a
+     round, all night, in silence. That is the worst failure this product
+     has, and start-slate.sh has been printing a warning about it into a
+     log file at 23:00 rather than anything acting on it.
+
+     So the rail is now written from the HOSTED set. Every game still gets
+     its `schedule/{nightId}` document — the backtest, the archive and
+     tomorrow's data collection are untouched — it simply is not OFFERED to
+     a human unless something is going to host it.
+
+     RUN_LEAGUES is the same variable start-slate.sh uses to decide what to
+     run, passed through rather than restated, because two lists of which
+     leagues are live is precisely the shape of bug this comment is about.
+     Unset means "host everything you build", which is the old behaviour and
+     the right default for a hand-run build. */
+  const RUN = String(process.env.RUN_LEAGUES || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const hosted = g => !RUN.length || RUN.includes(String(g.league || '').toLowerCase());
+  const railGames = slate.games.filter(hosted);
+  const withheld = slate.games.length - railGames.length;
+  if(withheld)
+    log('rail', `${withheld} ${LEAGUE.toUpperCase()} game(s) built but NOT offered — no runner hosts ${LEAGUE} today`);
+
   const slateRef = db.doc(`slate/${DATE}`);
   const prior = await slateRef.get();
   const fresh = new Set(slate.games.map(g => g.nightId));
@@ -403,7 +437,10 @@ function prettyDate(iso){
      that is unique whatever wrote it. */
   const kept = (prior.exists ? (prior.data().games || []) : [])
                  .filter(g => g && g.nightId && g.league !== LEAGUE && !fresh.has(g.nightId));
-  const merged = kept.concat(slate.games)
+  /* `fresh` covers every game built for this league, hosted or not, so a
+     game that WAS offered yesterday and is not hosted today is removed
+     rather than left behind by the filter. */
+  const merged = kept.concat(railGames)
                      .sort((a,b) => String(a.tipISO).localeCompare(String(b.tipISO)));
   const leagues = [...new Set(merged.map(g => g.league).filter(Boolean))];
   if(kept.length)

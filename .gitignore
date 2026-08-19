@@ -73,3 +73,8 @@ node_modules/
 index-marquee.html
 index-baseline-tmp.html
 *-tmp.js
+
+# Scratch probes. The dash form was already here; the dot form is what
+# actually gets typed, and one slipped into a commit on 19 Aug.
+*.tmp.js
+*.tmp.html
