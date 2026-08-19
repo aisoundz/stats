@@ -671,7 +671,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-19-admin.58-hosted';
+window.ADMIN_BUILD='2026-08-19-admin.59-gamenumbers';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -1884,7 +1884,13 @@ function paintDayStrip(){
       + '<i>'+(n? n+(n===1?' game':' games') : '—')+'</i></button>';
   }).join('');
 
-  const games = (byDay[DAY_SEL]||[]);
+  /* THE MAIN GAME GOES FIRST. Founder, looking at thirty identical cards:
+     "I dont know which is the main game." It was in there — it was just the
+     eleventh card in slate order. A numbered game leads, then anything else
+     with a runner, then the built-only rooms; ties keep tip order. */
+  const rank = n => (n.gotn ? 0 : n.gn ? 1 : n.hosted ? 2 : 3);
+  const games = (byDay[DAY_SEL]||[]).slice().sort((a,b) =>
+    (rank(a)-rank(b)) || String(a.tipISO||'').localeCompare(String(b.tipISO||'')));
   grid.innerHTML = games.length
     ? games.map(n=>{
         const flag = !n.fromSlate;
@@ -1895,12 +1901,16 @@ function paintDayStrip(){
            thing. Founder: "I love how we have a game of the night and we
            number it. Please dont stop that." */
         const num = gn ? gn[1] : (n.gn || '');
-        const badge = n.gotn ? '★★ Game of the Night'
-                    : n.marquee ? '★ Featured'
-                    : num ? 'Game Night #'+num : '';
+        /* ONE NUMBER PER GAME, NOT PER NIGHT. Founder, 19 Aug: "each game of
+           the night its own number based on its order of being live... so we
+           can correspond to it instead of sharing the same number each
+           night." So the number IS the badge, and the ★ is a separate fact:
+           which of the day's main games is the main event. */
+        const badge = num ? ((n.gotn ? '★ ' : '') + 'Game Night #' + num)
+                    : n.marquee ? '★ Featured' : '';
         return '<button type="button" class="gamebtn'+(n.id===night?' on':'')+(n.hosted?' hosted':'')+'" data-night="'+esc(n.id)+'">'
           + '<span class="gl"><span>'+esc(String(n.league||'wnba').toUpperCase())+'</span>'
-          +   (badge ? '<span class="star">'+esc(badge)+(num&&(n.gotn||n.marquee)?' · #'+esc(num):'')+'</span>' : '') + '</span>'
+          +   (badge ? '<span class="star">'+esc(badge)+'</span>' : '') + '</span>'
           + '<span class="gn">'+esc(n.away||'')+' <s>at</s> '+esc(n.home||'')+'</span>'
           + '<span class="gt">'
           +   (n.hosted ? '<b class="onair">ON THE RAIL</b> · a runner hosts this'

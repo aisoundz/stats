@@ -435,18 +435,33 @@ function tipLine(iso, net, sport){
 
      A hand-written flagship still wins where one exists — it has the email
      behind it — so this never overrides `owner`, it only fills the gap. */
+  /* ONE NUMBER PER GAME, IN THE ORDER THEY GO LIVE. Each line is
+     `<number> <nightId> [*]`, the `*` marking the day's main event. The old
+     format — `#N` on its own line, then bare ids — numbered the whole night
+     and is still read, so a file written before this change keeps working. */
   const MARQF = path.join(process.env.HOME, 'gamenight-logs', 'slate-marquee-' + DATE + '.txt');
-  let MARQ = null, GN = '';
+  const MARQ = new Map();       // nightId -> {gn, star}
   try{
     if(fs.existsSync(MARQF)){
-      const lines = fs.readFileSync(MARQF,'utf8').split('\n').map(x=>x.trim()).filter(Boolean);
-      const num = lines.find(x => /^#\d+$/.test(x));
-      if(num) GN = num.slice(1);
-      MARQ = new Set(lines.filter(x => !/^#/.test(x)));
-      if(!MARQ.size) MARQ = null;
+      const lines = fs.readFileSync(MARQF,'utf8').split('\n').map(x => x.trim()).filter(Boolean);
+      let legacy = '';
+      lines.forEach(line => {
+        const lg = line.match(/^#\s*(\d+)$/);
+        if(lg){ legacy = lg[1]; return; }
+        const m = line.match(/^(?:(\d+)\s+)?(\S+)\s*(\*)?\s*$/);
+        if(m) MARQ.set(m[2], { gn: m[1] || '', star: !!m[3] });
+      });
+      if(legacy && MARQ.size && ![...MARQ.values()].some(v => v.gn)){
+        const first = [...MARQ.keys()][0];
+        MARQ.set(first, { gn: legacy, star: true });
+      }
     }
-  }catch(_){ MARQ = null; }
-  if(MARQ) log('marquee', `${MARQ.size} featured game(s) for ${DATE}` + (GN ? ` · Game Night #${GN}` : ' · no number given'));
+  }catch(_){ MARQ.clear(); }
+  if(MARQ.size){
+    const ns = [...MARQ.values()].map(v => v.gn).filter(Boolean);
+    log('marquee', `${MARQ.size} main game(s) for ${DATE}`
+      + (ns.length ? ` · Game Night #${ns.join(', #')}` : ' · no numbers yet'));
+  }
 
   const RUN = String(process.env.RUN_LEAGUES || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
   /* THE FLAGSHIP IS ALWAYS OFFERED, whatever RUN_LEAGUES says.
@@ -472,21 +487,21 @@ function tipLine(iso, net, sport){
      list so it can never be the game that scrolls off. Reusing that is one
      fact with one renderer; a second "featured" flag with its own styling
      would be the disease this file is full of comments about. */
-  if(MARQ){
-    const order = [...MARQ];
+  if(MARQ.size){
     slate.games.forEach(g => {
-      if(!MARQ.has(g.nightId)) return;
+      const m = MARQ.get(g.nightId);
+      if(!m) return;
       g.marquee = true;
       g.flagship = true;
-      if(GN) g.gn = GN;
-      if(g.nightId === order[0]) g.gotn = true;      // the main game
+      if(m.gn) g.gn = m.gn;
+      if(m.star) g.gotn = true;      // the day's main event
     });
     /* A FEATURED GAME NOBODY STARTS IS THE WORST ROOM ON THE RAIL — it is
        starred, it is first, and it never opens a round. The pick file is
        what start-slate.sh reads, so a marquee missing from it is a promise
        with no runner behind it. */
     const inPick = id => !PICK || PICK.has(id);
-    const orphan = [...MARQ].filter(id => !inPick(id));
+    const orphan = [...MARQ.keys()].filter(id => !inPick(id));
     if(orphan.length){
       log('!!!', `${orphan.length} featured game(s) are NOT in the pick file and nothing will host them:`);
       orphan.forEach(id => log('!!!', `    ${id}`));

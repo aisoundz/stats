@@ -9166,6 +9166,51 @@ var VX=(function(){
         if(top.hit>nxt.hit || top.whole>nxt.whole) return {kind:'pick', i:top.i};
         return {kind:'ambiguous'};
       }
+
+      /* ---- ONE DISTINCTIVE WORD, AND ONLY ONE OPTION HAS IT -----------
+         FOUND ON THE PICK CARD, 19 Aug, on the founder's own phone:
+
+             heard: "Minnesota links"     options: Golden State Valkyries
+                                                   Minnesota Lynx
+
+         "Lynx" and "links" are the same sound. The recogniser did its job
+         and the matcher refused, because the rule above demands that
+         EVERYTHING you said appears in the option — and "links" does not
+         appear in "Minnesota Lynx". So the pick card sat there, and from
+         the sofa that is the app ignoring you on the sheet that is worth
+         600 of the night's 1,000 points.
+
+         Refusing was not wrong in general. It is wrong HERE, because
+         "minnesota" appears in exactly one option and in no other: there
+         is nothing to be ambiguous between. A coin toss is the failure
+         this function may not have; naming the only thing you could have
+         meant is not a coin toss.
+
+         THREE GUARDS, and they are what keep this from becoming the
+         guessing it replaces:
+           · SHORT UTTERANCE ONLY. Four content words or fewer — a
+             deliberate answer, not a sentence with a stray word in it.
+             "what do you reckon for this one" must still refuse.
+           · A DISTINCTIVE WORD. The overlap has to be a word of four
+             letters or more, so "one" and "or" can never carry a pick.
+           · STRICTLY UNIQUE. If two options share the word, it is
+             ambiguous and we are back to refusing.
+         And the match must be at least half of what was said, so one
+         recognised word out of four is not treated as an answer. */
+      var best=-1, bestHit=0, tied=false;
+      if(said.length<=4){
+        for(var b=0;b<opts.length;b++){
+          var bw=words(opts[b]); if(!bw.length) continue;
+          var bh=0, strong=false;
+          for(var c=0;c<said.length;c++){
+            if(bw.indexOf(said[c])>=0){ bh++; if(said[c].length>=4) strong=true; }
+          }
+          if(!strong) bh=0;
+          if(bh>bestHit){ bestHit=bh; best=b; tied=false; }
+          else if(bh===bestHit && bh>0){ tied=true; }
+        }
+        if(best>=0 && !tied && bestHit*2>=said.length) return {kind:'pick', i:best};
+      }
     }
 
     /* ---- THE POSITION, ONLY WHEN THE WORDS FOUND NOTHING ------------
@@ -16715,7 +16760,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-19-soccer.168';
+const STATS_BUILD='2026-08-19-heard.169';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

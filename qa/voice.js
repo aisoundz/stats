@@ -52,6 +52,27 @@ is('read the options',BAND,'help'); is('voice off',YN,'off');
    catch that". It is the OPPOSITE of lock, so the two must never collide:
    a grammar that heard "change it" as lock would commit the answer the
    player just said was wrong. */
+/* THE HOMOPHONE, FROM THE FOUNDER'S OWN PHONE ON THE PICK CARD:
+     heard: "Minnesota links"   options: Golden State Valkyries / Minnesota Lynx
+   "Lynx" and "links" are the same sound. The recogniser did its job and the
+   matcher refused, because it demanded that EVERY word said appear in the
+   option. "minnesota" appears in exactly one option and in no other — there
+   is nothing to be ambiguous between. */
+console.log('\nONE DISTINCTIVE WORD, AND ONLY ONE OPTION HAS IT');
+const TEAMS=['Golden State Valkyries','Minnesota Lynx'];
+is('minnesota links',TEAMS,'pick:Minnesota Lynx','the mishear that started this');
+is('minnesota lynx',TEAMS,'pick:Minnesota Lynx');
+is('the minnesota lynx',TEAMS,'pick:Minnesota Lynx');
+is('golden state valkeries',TEAMS,'pick:Golden State Valkyries','the other one, misheard too');
+is('valkyries',TEAMS,'pick:Golden State Valkyries');
+/* AND THE GUARDS, which are what keep this from being the guessing it
+   replaces. Every one of these must still refuse. */
+is('what do you reckon for this one',BAND,'null','a sentence is not an answer, even with a word that lands');
+is('made',['Made field goals','Made free throws'],'ambiguous','two options share the word — still a coin toss');
+is('i think it might be one of those two',TEAMS,'null','too long, and nothing distinctive');
+is('or',BAND,'null','a joining word can never carry a pick');
+is('go for it',BAND,'null');
+
 console.log('\nCHANGE IT — and it must never be heard as lock');
 is('change it',YN,'change'); is('change',BAND,'change');
 is('change my answer',BAND,'change'); is('change my mind',YN,'change');

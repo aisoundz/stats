@@ -131,12 +131,49 @@ function why(g){
    runs, and every featured game that day carries it — so a Thursday with a
    baseball room and a football room is ONE Game Night with two featured
    games, not two Game Nights. */
+/* ---- THE MARQUEE FILE FORMAT --------------------------------------
+   ONE NUMBER PER GAME, NOT PER NIGHT. Founder, 19 Aug: "each game of the
+   night its own number based on its order of being live... each of the main
+   games have a number so we can correspond to it instead of sharing the
+   same number each night."
+
+       14 slate-2026-08-20-wsh-tex
+       15 slate-2026-08-20-sf-lac *
+
+   The numbers run in TIP ORDER and CONTINUE ACROSS DAYS — #13 was the
+   flagship on the 19th, so Thursday's first featured game is #14 and its
+   second is #15. The `*` marks the one game that is the day's main event.
+
+   The old format (`#N` on its own line, then bare ids) is still read, so a
+   file written before this change keeps working. */
+function readMarquee(file){
+  const out = { rows: [], legacyGn: '' };
+  let txt = '';
+  try{ txt = fs.readFileSync(file,'utf8'); }catch(_){ return out; }
+  txt.split('\n').map(x => x.trim()).filter(Boolean).forEach(line => {
+    const legacy = line.match(/^#\s*(\d+)$/);
+    if(legacy){ out.legacyGn = legacy[1]; return; }
+    const m = line.match(/^(?:(\d+)\s+)?(\S+)\s*(\*)?\s*$/);
+    if(!m) return;
+    out.rows.push({ gn: m[1] || '', id: m[2], star: !!m[3] });
+  });
+  /* A legacy file numbered the whole NIGHT and starred its first line. Map
+     it forward rather than losing the choice: the first id keeps the number
+     and the star, and the rest are unnumbered until the next write. */
+  if(out.legacyGn && out.rows.length && !out.rows.some(r => r.gn)){
+    out.rows[0].gn = out.legacyGn;
+    out.rows[0].star = true;
+  }
+  return out;
+}
+
 function nextNumber(){
   let max = 0;
   try{
     fs.readdirSync(LOGDIR).filter(f => /^slate-marquee-\d{4}-\d{2}-\d{2}\.txt$/.test(f)).forEach(f => {
-      const m = fs.readFileSync(path.join(LOGDIR,f),'utf8').match(/^#(\d+)$/m);
-      if(m) max = Math.max(max, Number(m[1]));
+      const r = readMarquee(path.join(LOGDIR,f));
+      if(r.legacyGn) max = Math.max(max, Number(r.legacyGn));
+      r.rows.forEach(x => { if(x.gn) max = Math.max(max, Number(x.gn)); });
     });
   }catch(_){}
   try{
@@ -201,38 +238,55 @@ function nextNumber(){
   let picked = [...byLeague.values()].sort((a,b) => score(b) - score(a) || String(a.tipISO).localeCompare(String(b.tipISO)));
 
   /* A HAND-WRITTEN FILE IS A DECISION AND OUTRANKS THE RANKING. */
-  let fromFile = false;
+  let fromFile = false, fileRows = [];
   try{
     if(fs.existsSync(MARQF)){
-      const lines = fs.readFileSync(MARQF,'utf8').split('\n').map(x=>x.trim()).filter(Boolean);
-      const ids = lines.filter(x => !/^#/.test(x));
+      const r = readMarquee(MARQF);
       const byId = new Map(all.map(g => [g.nightId, g]));
-      const chosen = ids.map(id => byId.get(id)).filter(Boolean);
-      if(chosen.length){ picked = chosen; fromFile = true; }
+      const chosen = r.rows.map(x => byId.get(x.id)).filter(Boolean);
+      if(chosen.length){ picked = chosen; fromFile = true; fileRows = r.rows; }
     }
   }catch(_){}
+
+  /* ---- NUMBER THEM, IN THE ORDER THEY GO LIVE ----------------------- */
+  picked.sort((a,b) => String(a.tipISO).localeCompare(String(b.tipISO)));
+  const byIdRow = new Map(fileRows.map(r => [r.id, r]));
+  let seq = 0;
+  const numbers = new Map();
+  picked.forEach(g => {
+    const row = byIdRow.get(g.nightId);
+    if(row && row.gn){ numbers.set(g.nightId, String(row.gn)); return; }
+    numbers.set(g.nightId, '');            // filled below, after the max is known
+  });
+  /* Keep any number a file already gave a game — renumbering a night that
+     has been announced would break exactly the correspondence he asked for.
+     New games take the next free numbers, still in tip order. */
+  let next = nextNumber();
+  picked.forEach(g => { if(!numbers.get(g.nightId)) numbers.set(g.nightId, String(next++)); });
+
+  /* THE STAR IS THE DAY'S MAIN EVENT, and it is a separate question from
+     the number. A file's `*` wins; otherwise the highest-scoring game. */
+  let starId = (fileRows.find(r => r.star) || {}).id;
+  if(!starId || !picked.some(g => g.nightId === starId)){
+    starId = picked.slice().sort((a,b) => score(b) - score(a)
+             || String(a.tipISO).localeCompare(String(b.tipISO)))[0].nightId;
+  }
   if(!picked.length) die(`nothing on ${DATE} can be featured — every candidate is unhosted or on a channel that is not available`);
 
-  const GN = GNARG || (()=>{
-    try{
-      const mf = path.join(LOGDIR, 'slate-marquee-' + DATE + '.txt');
-      const m = fs.existsSync(mf) && fs.readFileSync(mf,'utf8').match(/^#(\d+)$/m);
-      if(m) return m[1];
-    }catch(_){}
-    return String(nextNumber());
-  })();
-
-  console.error(`\n  GAME OF THE NIGHT · ${DATE} · Game Night #${GN}\n`);
-  picked.forEach((g,i) => {
-    const mark = i === 0 ? '★★' : ' ★';
+  console.error(`\n  THE MAIN GAMES · ${DATE}\n`);
+  picked.forEach(g => {
+    const n = numbers.get(g.nightId);
+    const mark = g.nightId === starId ? '★' : ' ';
     /* A FLAGSHIP IS HOSTED BY ITS OWN CRON LINE (cron-start-night.sh) and
        deliberately never enters the pick file or spends MAX_ROOMS, so
        warning about it would be a false alarm every single night. */
     const inPick = !!g.flagship || !PICK || PICK.has(g.nightId);
-    console.error(`  ${mark} ${String(g.league||'').toUpperCase().padEnd(5)} ${(g.away+' @ '+g.home).padEnd(42)} ${g.net || '(no tv)'}`);
+    console.error(`  ${mark} Game Night #${String(n).padEnd(4)} ${String(g.league||'').toUpperCase().padEnd(5)} `
+      + `${(g.away + ' @ ' + g.home).padEnd(40)} ${g.net || '(no tv)'}`);
     console.error(`       ${g.nightId}`);
     console.error(`       ${why(g)}${inPick ? '' : '   !!! NOT IN THE PICK FILE — nothing would host it'}`);
   });
+  console.error(`\n  ★ = the day's main event.  Numbers run in tip order and continue across days.`);
   const notRun = picked.filter(g => !g.flagship && PICK && !PICK.has(g.nightId));
   const rest = all.length - picked.length;
   if(rest > 0) console.error(`\n  (${rest} other game(s) built for ${DATE} and not featured)`);
@@ -245,11 +299,15 @@ function nextNumber(){
     die(`${notRun.length} featured game(s) are not in slate-pick-${DATE}.txt. A ★ on a room `
       + `nothing hosts is the worst room on the rail. Add them with host/pick-slate.sh, then re-run.`);
   }
-  if(!fromFile || GNARG){
-    const out = ['#' + GN].concat(picked.map(g => g.nightId)).join('\n') + '\n';
-    fs.writeFileSync(MARQF, out);
-    log('wrote', `${path.basename(MARQF)}  (${picked.length} featured, Game Night #${GN})`);
-  }
+
+  /* Always rewrite: the file is the durable record of BOTH the choice and
+     the numbers, and a number that only exists in Firestore is a number the
+     next build cannot keep. */
+  const out = picked.map(g =>
+    `${numbers.get(g.nightId)} ${g.nightId}${g.nightId === starId ? ' *' : ''}`).join('\n') + '\n';
+  fs.writeFileSync(MARQF, out);
+  log('wrote', `${path.basename(MARQF)}  (${picked.length} main game(s), `
+    + `#${numbers.get(picked[0].nightId)}–#${numbers.get(picked[picked.length-1].nightId)})`);
 
   /* ---- AND STAMP THE SLATE DOCUMENT ---------------------------------
      THE FILE IS THE CHOICE; THE SLATE IS WHERE IT IS READ. The Control
@@ -262,13 +320,12 @@ function nextNumber(){
      Both lists are stamped. `games` is what a player sees; `built` is what
      the host sees, and a host looking for tonight's main game in the
      Control Room is exactly who asked for this. */
-  const ids = new Set(picked.map(g => g.nightId));
-  const gotnId = picked[0] && picked[0].nightId;
   const stamp = arr => (arr || []).map(g => {
-    if(!g || !ids.has(g.nightId)) return g;
+    if(!g || !numbers.has(g.nightId)) return g;
     return Object.assign({}, g, {
-      marquee: true, flagship: true, gn: String(GN),
-      gotn: g.nightId === gotnId
+      marquee: true, flagship: true,
+      gn: numbers.get(g.nightId),
+      gotn: g.nightId === starId
     });
   });
   const games = stamp(d.games), built = stamp(d.built);
@@ -277,7 +334,7 @@ function nextNumber(){
     flagship: (games || []).filter(g => g && g.flagship).map(g => g.nightId),
     marqueeAt: admin.firestore.FieldValue.serverTimestamp()
   }, { merge: true });
-  log('slate', `stamped slate/${DATE} — ${picked.length} featured on the rail and in the host list`);
+  log('slate', `stamped slate/${DATE} — ${picked.length} main game(s) on the rail and in the host list`);
   log('next', `the 08:10 build reads the file — or rebuild now: DATE=${DATE} host/start-slate.sh --build`);
   console.error('');
 })().catch(e => { console.error('\n  ERR', e.message, '\n'); process.exit(1); });
