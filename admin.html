@@ -1091,13 +1091,18 @@ const TEMPLATES = {
     worth:  [40,60],
     rounds: [
       [
-        { t: 'Who scored first in the half?', o: ['{HOME}','{AWAY}','Nobody scored'], r:'mlsFirstGoalTeam' },
-        { t: 'Goals in the first half, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlsGoalsBand' },
-        { t: 'Cards shown in the first half — how many?', o: ['None','One','Two or three','Four or more'], r:'mlsCardsBand' },
-        { t: 'Who had more shots in the first half?', o: ['{HOME}','{AWAY}','Even'], r:'mlsMoreShots' }
+        { t: 'Who scored first in the half?', o: ['{HOME}','{AWAY}','Nobody scored'], r:'mlsFirstGoalTeam',
+          t_es: '¿Quién anotó primero en la primera mitad?', o_es: ['{HOME}', '{AWAY}', 'Nadie anotó'] },
+        { t: 'Goals in the first half, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlsGoalsBand',
+          t_es: 'Goles en la primera mitad, entre los dos equipos — ¿cuántos?', o_es: ['Ninguno', 'Uno', 'Dos', 'Tres o más'] },
+        { t: 'Cards shown in the first half — how many?', o: ['None','One','Two or three','Four or more'], r:'mlsCardsBand',
+          t_es: 'Tarjetas mostradas en la primera mitad — ¿cuántas?', o_es: ['Ninguna', 'Una', 'Dos o tres', 'Cuatro o más'] },
+        { t: 'Who had more shots in the first half?', o: ['{HOME}','{AWAY}','Even'], r:'mlsMoreShots',
+          t_es: '¿Quién tiró más en la primera mitad?', o_es: ['{HOME}', '{AWAY}', 'Igual'] }
       ],
       [
-        { t: 'Goals in the second half, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlsGoalsBand' },
+        { t: 'Goals in the second half, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlsGoalsBand',
+          t_es: 'Goles en la segunda mitad, entre los dos equipos — ¿cuántos?', o_es: ['Ninguno', 'Uno', 'Dos', 'Tres o más'] },
         /* WAS mlsSubsBand, KILLED BY THE SHADOW TEST. Eight finished
            matches, eight answers of "Six or more" — its cutoffs are
            [0,2,5] and modern soccer allows five subs a side, so a second
@@ -1105,9 +1110,12 @@ const TEMPLATES = {
            the QUESTION was dead, and only a spread check tells those two
            apart. Left in the R table for a competition with different
            substitution rules. */
-        { t: 'Shots on target in the match, both teams — how many?', o: ['Three or fewer','Four to six','Seven to nine','Ten or more'], r:'mlsShotsOnTargetBand' },
-        { t: 'Corners in the match, both teams — how many?', o: ['Three or fewer','Four to six','Seven to nine','Ten or more'], r:'mlsCornersBand' },
-        { t: 'Who kept more of the ball over the match?', o: ['{HOME}','{AWAY}','Even'], r:'mlsMorePossession' }
+        { t: 'Shots on target in the match, both teams — how many?', o: ['Three or fewer','Four to six','Seven to nine','Ten or more'], r:'mlsShotsOnTargetBand',
+          t_es: 'Tiros a puerta en el partido, entre los dos equipos — ¿cuántos?', o_es: ['Tres o menos', 'De cuatro a seis', 'De siete a nueve', 'Diez o más'] },
+        { t: 'Corners in the match, both teams — how many?', o: ['Three or fewer','Four to six','Seven to nine','Ten or more'], r:'mlsCornersBand',
+          t_es: 'Tiros de esquina en el partido, entre los dos equipos — ¿cuántos?', o_es: ['Tres o menos', 'De cuatro a seis', 'De siete a nueve', 'Diez o más'] },
+        { t: 'Who kept more of the ball over the match?', o: ['{HOME}','{AWAY}','Even'], r:'mlsMorePossession',
+          t_es: '¿Quién tuvo más posesión durante el partido?', o_es: ['{HOME}', '{AWAY}', 'Igual'] }
       ]
     ]
   },

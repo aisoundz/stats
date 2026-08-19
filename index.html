@@ -2012,8 +2012,13 @@
     <div class="card" id="fStatLine">
       <div class="fbhead">Your stat line · Season 1</div>
       <div class="slgrid">
-        <div class="slc"><div class="v" id="slGames">1</div><div class="k">Games</div></div>
-        <div class="slc"><div class="v" id="slPts">0</div><div class="k">Points</div></div>
+        <!-- NIGHTS, NOT ROOMS, and SEASON POINTS, NOT A RAW SUM. Two rooms
+             on one evening are one night; the season counts the best of
+             them, out of 100. Labelling a capped percentage "Points" next
+             to a night score would be the same number meaning two things,
+             which is how this codebase's worst bugs start. -->
+        <div class="slc"><div class="v" id="slGames">1</div><div class="k">Nights</div></div>
+        <div class="slc"><div class="v" id="slPts">0</div><div class="k">Season pts</div></div>
         <div class="slc"><div class="v" id="slAcc">—</div><div class="k">Accuracy</div></div>
         <div class="slc"><div class="v">🔥<span id="streakN">1</span></div><div class="k">Streak</div></div>
       </div>
@@ -10039,6 +10044,323 @@ var VX=(function(){
 })();
 try{ window.VX=VX; }catch(_){}
 
+/* =====================================================================
+   THE INTERFACE, IN THE PLAYER'S LANGUAGE.
+   ---------------------------------------------------------------------
+   WHY THIS IS A DICTIONARY PASS OVER THE DOM AND NOT A t() CALL AT EVERY
+   STRING. This app is twenty thousand lines that were written in English
+   with the copy inline, which is why the copy is good — somebody wrote a
+   sentence where it belonged instead of a key. Retrofitting t('home.cta')
+   through all of it would be a month of edits, every one a chance to break
+   a screen that works, for a language with no players in it yet.
+
+   So: exact, whole-string matches only, from a curated list. A string that
+   is not in the list stays in English — never half-translated, never
+   garbled, never a partial word swap inside a team name. The failure mode
+   of a missing entry is "that bit is still English", which is exactly what
+   the picker already promises.
+
+   WHAT IT DELIBERATELY NEVER TOUCHES: anything inside an element marked
+   data-noi18n, and any node whose text is not in the dictionary. Team
+   names, player handles, scores, times and question text all fall through
+   untouched — question text has its own path (q.t_es), because that comes
+   from the bank and not from the page.
+
+   THE FOUNDER'S CALL, 19 Aug 2026: the switch belongs in the ☰ menu, not
+   in a URL. "?lang=es" is a thing nobody will ever type, and a separate
+   Spanish site is two things to keep in sync — which is how every bug in
+   this codebase started. One site, one switch, findable. */
+var I18N = {
+  es: {
+    /* --- the four tabs. THE NAV IS THE WORDMARK: Home · Stats · Gametime
+       · Board, and the middle two spell the product. Translating them
+       would be translating the brand, so only Home and Board move — the
+       two that are ordinary words rather than the name. --- */
+    "Home":"Inicio", "Board":"Tabla", "BOARD":"TABLA",
+    /* --- home --- */
+    "The game that pays to pay attention":"El juego que premia prestar atención",
+    "Play from home • Free to enter":"Juega desde casa • Entrada gratis",
+    "Free to play · Not gambling · Prizes are sponsor-funded":
+      "Gratis · No es apuesta · Los premios los pagan los patrocinadores",
+    "Which game are you watching?":"¿Qué partido estás viendo?",
+    "Never played? Start here":"¿Primera vez? Empieza aquí",
+    "Try it now":"Pruébalo ahora",
+    "when you want a seat":"cuando quieras un lugar",
+    "Playing a live game?":"¿Vas a jugar en vivo?",
+    "Resume my game":"Retomar mi partida",
+    "Start a new game":"Empezar de nuevo",
+    "Tips in":"Empieza en",
+    "Tonight":"Esta noche",
+    "Tipping off":"Por empezar",
+    "Loading the matchup…":"Cargando el partido…",
+    "Connecting to tonight's room…":"Conectando con la sala de esta noche…",
+    "Play every game":"Juega todos los partidos",
+    "Predict before tip.":"Predice antes del salto.",
+    "Catch it live.":"Atrápalo en vivo.",
+    "Climb the board.":"Sube en la tabla.",
+    "Sharpest and fastest wins the night.":"El más certero y más rápido gana la noche.",
+    "Get in the game":"Entra al juego",
+    "Practice with a simulated game":"Practica con un partido simulado",
+    "Working demo":"Demo funcional",
+    /* THE MOST DANGEROUS KEY IN THIS TABLE. It is safe ONLY because the
+       match is on the WHOLE trimmed text of a node — the rail's separator
+       is its own element. Loosen that to a substring match and "translated"
+       becomes "translvsed", which is precisely what qa/i18n.js prints when
+       you sabotage it that way. Do not add short common words to this
+       dictionary without checking that test still passes. */
+    "at":"vs",
+    "4 quarters":"4 cuartos",
+    /* --- the pick sheet --- */
+    "PRE-GAME PREDICTION SHEET":"HOJA DE PREDICCIONES",
+    "Make your picks":"Haz tus predicciones",
+    "Lock these in before tip-off. Bonus points if you nail the exact number.":
+      "Confírmalas antes del salto inicial. Puntos extra si aciertas el número exacto.",
+    "Lock it in — go to tip-off":"Confirmar — ir al salto inicial",
+    "Continue to my picks":"Ir a mis predicciones",
+    "You can't change picks once the game starts.":
+      "No puedes cambiar tus predicciones una vez que empiece el partido.",
+    "⚠️ Once you lock it in, you can't change it.":
+      "⚠️ Una vez que la confirmes, no se puede cambiar.",
+    "Up to 600 pts":"Hasta 600 pts",
+    "📝 Predictions — up to 600 pts":"📝 Predicciones — hasta 600 pts",
+    "⏱️ Quarter questions — up to 400 pts":"⏱️ Preguntas por cuarto — hasta 400 pts",
+    "⚡ Speed points — the tiebreaker":"⚡ Puntos de velocidad — el desempate",
+    "⚡ Your watchlist":"⚡ Tu lista",
+    "⚡ Your watchlist — 1 pt each":"⚡ Tu lista — 1 pt cada una",
+    /* --- in the game --- */
+    "Next":"Siguiente",
+    "Continue":"Continuar",
+    "Score":"Puntos",
+    "Points":"Puntos",
+    "pts":"pts",
+    "your pts":"tus pts",
+    "Your points so far":"Tus puntos hasta ahora",
+    "Your prediction pts (pending)":"Tus pts de predicción (pendientes)",
+    "Streak":"Racha",
+    "Accuracy":"Precisión",
+    "rank":"posición",
+    "Rank #–":"Posición #–",
+    "Final rank":"Posición final",
+    "Sound":"Sonido",
+    "Turn on":"Activar",
+    "Close":"Cerrar",
+    "Send":"Enviar",
+    "Say something…":"Escribe algo…",
+    "← Back":"← Atrás",
+    "Back to home":"Volver al inicio",
+    "← Back to my result":"← Volver a mi resultado",
+    "Tap what actually happened. Your pick is marked 🔵.":
+      "Toca lo que realmente pasó. Tu elección está marcada 🔵.",
+    "✨ Lifeline — one per half":"✨ Comodín — uno por mitad",
+    "🔔 Ping me when the quarter drops":"🔔 Avísame cuando abra el cuarto",
+    "🔔 Pings on":"🔔 Avisos activados",
+    "🔴 You have a game in progress":"🔴 Tienes una partida en curso",
+    "Your predictions and scored quarters are saved. Pick up where you left off.":
+      "Tus predicciones y cuartos puntuados están guardados. Continúa donde lo dejaste.",
+    "You finished!":"¡Terminaste!",
+    "Here's how the room stacks up.":"Así quedó la sala.",
+    "See the full breakdown":"Ver el desglose completo",
+    "Where the points came from":"De dónde salieron los puntos",
+    "Winner, stat leaders, the numbers.":"Ganador, líderes y los números.",
+    "Award of the night":"Premio de la noche",
+    "Best call of the night":"La mejor lectura de la noche",
+    "Beat this % of players":"Superaste a este % de jugadores",
+    "Crown the winner":"Coronar al ganador",
+    "Final buzzer 🚨":"Bocina final 🚨",
+    "📲 Share my result card":"📲 Compartir mi tarjeta",
+    "Copy & share 📲":"Copiar y compartir 📲",
+    "Play the next game to keep the streak alive.":
+      "Juega el siguiente partido para mantener la racha.",
+    /* --- the board --- */
+    "Tonight's top 5":"Top 5 de esta noche",
+    "🔥 The room":"🔥 La sala",
+    "Season standings":"Clasificación de la temporada",
+    "Season stat book":"Libro de la temporada",
+    "Games":"Partidos",
+    "Open the tally board":"Abrir la tabla",
+    /* --- identity / email --- */
+    "Grab your handle":"Elige tu nombre",
+    "What should we call you?":"¿Cómo te llamamos?",
+    "Display name":"Nombre visible",
+    "This is how you'll show up on the leaderboard.":"Así aparecerás en la tabla.",
+    "Pick your color":"Elige tu color",
+    "Email":"Correo",
+    "Use email instead":"Usar correo",
+    "✉️ Use email instead":"✉️ Usar correo",
+    "Email me when a game is on":"Avísame cuando haya partido",
+    "📬 Get the next Game Night":"📬 Recibe la próxima Game Night",
+    "📬 You're on the list":"📬 Estás en la lista",
+    "One email before each game night. Nothing else, ever.":
+      "Un correo antes de cada game night. Nada más, nunca.",
+    "Notify me":"Avísame",
+    "Count me in":"Cuenta conmigo",
+    "Not right now":"Ahora no",
+    "Take me off the list":"Quítame de la lista",
+    "Signed in":"Sesión iniciada",
+    "Sign out":"Cerrar sesión",
+    "— optional":"— opcional",
+    "We don't sell your info. You can ask us to delete it any time.":
+      "No vendemos tus datos. Puedes pedir que los borremos cuando quieras.",
+    "Free to enter • No purchase necessary • 18+ • We don't sell your address.":
+      "Entrada gratis • Sin compra • 18+ • No vendemos tu dirección.",
+    "Our sign-in server isn’t answering right now.":
+      "Nuestro servidor de acceso no responde en este momento.",
+    /* --- menu --- */
+    "Menu":"Menú",
+    "The game":"El juego",
+    "Yours":"Lo tuyo",
+    "How to play &amp; full rules":"Cómo jugar y reglas completas",
+    "How to play & full rules":"Cómo jugar y reglas completas",
+    "Me &amp; my season":"Yo y mi temporada",
+    "Me & my season":"Yo y mi temporada",
+    "Email me about game nights":"Avísame de las game nights",
+    "Back to my game":"Volver a mi partida",
+    "Play again":"Jugar otra vez",
+    "Official Rules 📖":"Reglas oficiales 📖",
+    "⚖️ The fine print":"⚖️ La letra pequeña",
+    "🤝 Fair play":"🤝 Juego limpio",
+    "On":"Activada", "Off":"Desactivada"
+  }
+};
+/* Attributes worth translating as well as text. */
+var I18N_ATTRS = ['placeholder','aria-label','title'];
+/* Remember every node we changed, with its original, so switching BACK to
+   English does not need a reload — and so a second pass cannot translate
+   an already-translated string by accident. */
+var I18N_SEEN = (typeof WeakMap==='function') ? new WeakMap() : null;
+
+function i18nDict(){
+  try{ var L=VX.lang; return (L && L!=='en') ? (I18N[L]||null) : null; }catch(_){ return null; }
+}
+/* Has this page EVER translated anything? Until it has, an English pass has
+   nothing to restore and nothing to change. */
+var I18N_EVER = false;
+function applyLang(root){
+  var d = i18nDict();
+  var scope = root || document.body;
+  if(!scope) return;
+  /* THE ENGLISH PASS WAS THE MOST EXPENSIVE ONE, and every player tonight
+     is English. With no dictionary it still built a TreeWalker, collected
+     ~1,000 text nodes and did a WeakMap lookup on each — measured at 20ms
+     on a throttled mid-range phone, firing about once a second because the
+     countdown ticks. That is a few percent of the main thread, all evening,
+     for a feature those players are not using. If nothing was ever
+     translated there is nothing to undo, so leave immediately. */
+  if(!d && !I18N_EVER) return;
+  try{
+    /* TEXT NODES ONLY, and only ones whose whole trimmed value matches.
+       Walking elements instead would clobber markup; matching substrings
+       would rewrite the inside of a team name. */
+    var w = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, {
+      acceptNode: function(n){
+        if(!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        var p = n.parentElement;
+        if(!p) return NodeFilter.FILTER_REJECT;
+        var tag = p.tagName;
+        if(tag==='SCRIPT'||tag==='STYLE'||tag==='TEXTAREA') return NodeFilter.FILTER_REJECT;
+        if(p.closest && p.closest('[data-noi18n]')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var n, hits=[];
+    while((n = w.nextNode())) hits.push(n);
+    hits.forEach(function(node){
+      var had = I18N_SEEN && I18N_SEEN.get(node);
+      /* DO NOT TOUCH A NODE THE APP HAS TAKEN BACK.
+         `had` records what this node said before we translated it. If the
+         node no longer holds what WE wrote, something else has since put
+         live content there — a score, a clock, a name — and both branches
+         below would stamp our string over it. Today no path reaches this
+         (the app writes through textContent/innerHTML, which replaces the
+         text node and drops the WeakMap key), but a single
+         `node.nodeValue = …` anywhere in this file would arm it, and the
+         person who writes that line will have no idea. */
+      if(had && node.nodeValue !== had.wrote) return;
+      var en  = had ? had.orig : node.nodeValue;
+      var key = String(en).trim();
+      if(!key) return;
+      if(!d){
+        /* back to English: restore anything we changed */
+        if(had && node.nodeValue !== had.orig){ node.nodeValue = had.orig; }
+        return;
+      }
+      var es = d[key];
+      if(!es) return;
+      /* keep the original leading/trailing whitespace */
+      var next = String(en).replace(key, es);
+      /* NEVER ASSIGN A VALUE THAT IS ALREADY THERE. Setting nodeValue to
+         an identical string STILL fires a characterData mutation, so the
+         observer re-fired, re-ran the pass, re-assigned, and the page
+         churned forever — 246 mutations in a second and a half with
+         nothing happening on screen. On a phone that is the battery. */
+      if(node.nodeValue === next) return;
+      if(I18N_SEEN) I18N_SEEN.set(node, {orig: had ? had.orig : node.nodeValue, wrote: next});
+      node.nodeValue = next;
+      I18N_EVER = true;
+    });
+    /* and the attributes */
+    Array.prototype.forEach.call(scope.querySelectorAll('[placeholder],[aria-label],[title]'), function(el){
+      I18N_ATTRS.forEach(function(a){
+        var v = el.getAttribute(a); if(!v) return;
+        var origKey = '__i18n_'+a;
+        var had = el.getAttribute(origKey);
+        var en = had!=null ? had : v;
+        if(!d){ if(had!=null){ el.setAttribute(a, had); el.removeAttribute(origKey); } return; }
+        var es = (I18N[VX.lang]||{})[String(en).trim()];
+        if(!es) return;
+        if(el.getAttribute(a) === es) return;   // same reason as above
+        /* An ELEMENT survives a repaint even when its text node does not,
+           so this branch is the reachable half of the clobber above. If the
+           attribute no longer holds what we wrote, leave it alone. */
+        var wroteKey='__i18n_w_'+a, w=el.getAttribute(wroteKey);
+        if(w!=null && el.getAttribute(a)!==w) return;
+        if(had==null) el.setAttribute(origKey, en);
+        el.setAttribute(a, es);
+        el.setAttribute(wroteKey, es);
+        I18N_EVER = true;
+      });
+    });
+  }catch(_){}
+}
+try{ window.applyLang=applyLang; }catch(_){}
+
+/* ---- WHEN THE PASS RUNS ---------------------------------------------
+   Screens are repainted from dozens of places — go(), loadQuestion(),
+   renderScore(), the rail, every sheet — and hooking each one would be the
+   same retrofit this design exists to avoid. So: watch the app subtree and
+   re-run, debounced.
+
+   THE RE-ENTRANCY GUARD IS THE WHOLE TRICK. applyLang edits text nodes,
+   which fires the observer, which would call applyLang again, forever. The
+   flag makes the pass invisible to itself. (An early version without it
+   pinned a core.) */
+var I18N_BUSY = false, I18N_TIMER = null;
+function scheduleLang(){
+  if(I18N_BUSY) return;
+  if(I18N_TIMER) return;
+  I18N_TIMER = setTimeout(function(){
+    I18N_TIMER = null;
+    if(I18N_BUSY) return;
+    I18N_BUSY = true;
+    try{ applyLang(); }catch(_){}
+    /* clear on the NEXT task, so mutations this pass caused are ignored */
+    setTimeout(function(){ I18N_BUSY = false; }, 0);
+  }, 40);
+}
+try{
+  if(typeof MutationObserver==='function'){
+    var _mo = new MutationObserver(function(){ scheduleLang(); });
+    var _start = function(){
+      var app = document.getElementById('app') || document.body;
+      if(!app) return;
+      _mo.observe(app, {childList:true, subtree:true, characterData:true});
+      applyLang();
+    };
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', _start);
+    else _start();
+  }
+}catch(_){}
+
 /* ---- ONE QUESTION, TWO FACES ----------------------------------------
    THE STRING A PLAYER READS AND THE STRING THE GRADER COMPARES STOP BEING
    THE SAME STRING the moment there is a second language — and letting them
@@ -10253,9 +10575,22 @@ function answer(choice,btn){
      'o' stamp is the answer time nobody on a phone can argue with. */
   try{ if(S.mode==='live' && window.SB && SB.stampQ){ var _r2=curRoundId(); if(_r2) SB.stampQ(_r2, S.ni, 'a'); } }catch(_){}
   const correct=choice===q.a;
-  document.querySelectorAll('#qOpts .opt').forEach(b=>{
-    const label=b.querySelector('span').textContent;b.style.pointerEvents='none';
-    if(label===q.a){b.classList.add('correct');b.querySelector('.mk').textContent='✓';}
+  /* MARK BY ROW, NEVER BY THE WORDS ON THE BUTTON.
+     This read the rendered label and compared it to q.a — which is the
+     CANONICAL answer. The moment a second language existed those stopped
+     being the same string, so in Spanish "Igualado" never equalled "Level":
+     no option was ever marked ✓, and because the first branch failed, the
+     player's OWN CORRECT PICK fell through to the second and was painted
+     ✕. Scored right, shown wrong, in red, on their own answer.
+
+     The row index is the fact. q.o is canonical and the buttons are
+     rendered in q.o order, so option i IS q.o[i] in every language. This is
+     the same lesson as the grading seam one screen earlier: the string a
+     player READS and the string the app COMPARES are different things. */
+  const rightIx = q.o.indexOf(q.a);
+  document.querySelectorAll('#qOpts .opt').forEach((b,i)=>{
+    b.style.pointerEvents='none';
+    if(i===rightIx){b.classList.add('correct');b.querySelector('.mk').textContent='✓';}
     else if(b===btn){b.classList.add('wrong');b.querySelector('.mk').textContent='✕';}
   });
   S.results[S.qi].push(correct);
@@ -10301,7 +10636,13 @@ function useLifeline(){
   const q=rounds[S.qi].q[S.ni];
   // remove wrong options, but always leave a real choice — soccer questions
   // are often 3-way, and killing two would just hand over the answer
-  const wrongs=[...document.querySelectorAll('#qOpts .opt')].filter(b=>b.querySelector('span').textContent!==q.a);
+  /* BY ROW, for the same reason as the marks above — comparing the
+     rendered label made EVERY option "wrong" in Spanish, so the lifeline
+     greyed out the first two rows in DOM order, which can be the correct
+     answer. The player spends their one lifeline and the app removes the
+     right answer. */
+  const rightIx2 = q.o.indexOf(q.a);
+  const wrongs=[...document.querySelectorAll('#qOpts .opt')].filter((b,i)=>i!==rightIx2);
   const kill=Math.max(1,Math.min(2,wrongs.length-1));
   wrongs.slice(0,kill).forEach(b=>{b.style.opacity='.25';b.style.pointerEvents='none';});
   document.getElementById('helpNote').textContent=`Lifeline used — ${kill} option${kill>1?'s':''} removed`;
@@ -11557,14 +11898,73 @@ function recordStatLine(got){
   return line;
 }
 
+/* WHICH CALENDAR NIGHT A ROW BELONGS TO. Every nightId this product has
+   ever written carries its date — gn13-2026-08-19-min-gs,
+   slate-2026-08-19-tor-wsh — so the night is derivable for rows written
+   long before anyone thought to store it. */
+function nightDay(row){
+  var m=/(\d{4}-\d{2}-\d{2})/.exec(String((row&&row.night)||''));
+  if(m) return m[1];
+  return String((row&&row.date)||(row&&row.night)||'');
+}
+
+/* =====================================================================
+   A NIGHT IS WORTH AT MOST ONE NIGHT.
+   ---------------------------------------------------------------------
+   THE PROBLEM, and it arrives on 29 Aug whether or not anybody plans for
+   it. Every room has its own board and its own seat, and the season used
+   to be the SUM of every row — so a player in two rooms on one evening
+   banked both. On a Saturday with twenty-one games available, the season
+   is then won by whoever OPENED THE MOST ROOMS, and the optimal play
+   becomes: drop into the fourth quarter of six games, answer four
+   questions each, leave. That is the highest points-per-minute strategy
+   available and it is the exact opposite of the thing this product is
+   named after. Somebody genuinely watching one game cannot compete.
+
+   There is a measurement error underneath it too: summing across rooms
+   adds numbers that are not the same unit. Baseball has three rounds,
+   basketball four, football four, and the questions differ in difficulty.
+   "180 points" does not mean the same thing in two sports.
+
+   SO: a night scores as a PERCENTAGE of what was available in the best
+   room you played that night, and the season is the sum of those. Each
+   night is worth at most 100. One well-watched game beats six farmed
+   quarters, every sport is comparable, and it explains itself in one
+   sentence — "your season counts your best game each night."
+
+   Hopping is not punished: those rooms still have their own boards, their
+   own live competition and their own moment. It simply stops being a way
+   to inflate a season total.
+
+   The raw sum is kept as `ptsRaw` because the stat book is a record of
+   what happened, and that did happen. */
 function lineTotals(line){
-  let pts=0,hits=0,total=0,speed=0,best=0; const trophies={};
+  let ptsRaw=0,hits=0,total=0,speed=0,best=0; const trophies={};
+  const byNight={};
   (line.games||[]).forEach(x=>{
-    pts+=Number(x.pts)||0; hits+=Number(x.hits)||0; total+=Number(x.total)||0;
+    ptsRaw+=Number(x.pts)||0; hits+=Number(x.hits)||0; total+=Number(x.total)||0;
     speed+=Number(x.speed)||0; if((Number(x.pts)||0)>best) best=Number(x.pts)||0;
     (x.awards||[]).forEach(id=>{ trophies[id]=(trophies[id]||0)+1; });
+    /* % of what was ACTUALLY available in that room, so a three-round
+       baseball night and a four-quarter basketball night are comparable.
+       A row with no max recorded falls back to its raw points rather than
+       being dropped — an old row must not silently vanish from a season. */
+    const day=nightDay(x);
+    const max=Number(x.max)||0;
+    const pct=max>0 ? Math.max(0, Math.min(100, (Number(x.pts)||0)/max*100)) : null;
+    const cur=byNight[day];
+    const score = pct==null ? (Number(x.pts)||0) : pct;
+    if(!cur || score>cur.score) byNight[day]={score, pct, raw:Number(x.pts)||0, rooms:(cur?cur.rooms:0)+1};
+    else cur.rooms++;
   });
-  return { games:(line.games||[]).length, pts, hits, total, speed, best, trophies,
+  const nights=Object.keys(byNight);
+  const seasonPts=Math.round(nights.reduce((a,d)=>a+(byNight[d].pct==null?0:byNight[d].pct),0));
+  const roomsPlayed=(line.games||[]).length;
+  return { games:nights.length,            // NIGHTS, not rooms — the thing a streak counts
+           rooms:roomsPlayed,
+           pts:seasonPts,                  // the season score: best room per night, capped at 100
+           ptsRaw,                         // everything, for the stat book
+           hits, total, speed, best, trophies, byNight,
            acc: total ? Math.round(hits/total*100) : null };
 }
 
@@ -11577,7 +11977,11 @@ function renderStatLine(line){
   // tonight rather than printing zeros over a game that just happened.
   const live = t.games>0;
   set('slGames', live?t.games:1);
-  set('slPts',  (live?t.pts:(S.pts||0)).toLocaleString());
+  /* With no season record yet, show tonight AS A NIGHT SCORE — S.pts is a
+     raw room total and printing it under "Season pts" would put two
+     different units in the same box. */
+  set('slPts',  live ? t.pts.toLocaleString()
+                     : (MAXPTS ? Math.round(Math.min(100,(S.pts||0)/MAXPTS*100)) : 0).toLocaleString());
   set('slAcc',  (live && t.total) ? t.acc+'%' : '—');
   set('streakN', S.streak || (live?t.games:1));
   // seasonRating retired — see the note in the final screen markup.
@@ -15895,7 +16299,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-19-es.160';
+const STATS_BUILD='2026-08-19-ui.161';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -16312,6 +16716,17 @@ function menuRows(){
      behind them, and a menu that advertises things that do not exist next
      to things that do teaches a player to distrust the whole list. They go
      back when they are real. */
+  /* THE LANGUAGE LIVES IN THE MENU. Founder's call, 19 Aug: "?lang=es" is
+     a URL nobody will ever type, and a separate Spanish site is two things
+     to keep in sync. One site, one switch, somewhere a person can find it.
+     The row is labelled in BOTH languages on purpose — somebody who needs
+     Spanish cannot read an English label saying where Spanish is. */
+  try{
+    if(VX && VX.langs && VX.langs().length>1){
+      var _cur = VX.L().name, _note = VX.contentNote();
+      row('🌐','Language · Idioma','lang', _cur + (_note?' · '+_note:''));
+    }
+  }catch(_){}
   R.push('<div class="mgrp">Yours</div>');
   row('👤','Me &amp; my season','me');
   row('📬','Email me about game nights','join');
@@ -16332,6 +16747,28 @@ var MENU_GO={
      row is now the only way in, which is the whole point of retiring the
      tab, so it goes straight to the screen. */
   me:function(){ try{ go('me'); renderMe(); }catch(_){} },
+  /* Two languages is a TOGGLE, not a picker — a sheet to choose between
+     exactly two things is a tap nobody needed. It becomes a list the day
+     there is a third. */
+  lang:function(){
+    try{
+      var ks = VX.langs().map(function(l){ return l.key; });
+      var i  = ks.indexOf(VX.lang);
+      VX.setLang(ks[(i+1) % ks.length]);
+      try{ applyLang(); }catch(_){}
+      /* REPAINT THE QUESTION, WHICH applyLang CANNOT REACH. Dictionary
+         strings update through the observer, but question text and options
+         come from the bank via qText/qOptsFor and are read only inside
+         loadQuestion() — so switching mid-question left the question in the
+         old language. This used to call rerenderCurrent(), which has never
+         existed anywhere in this file: a comment describing behaviour that
+         never ran, guarded so nobody would find out. */
+      try{
+        if(S && S.place==='play' && !S.answered && typeof loadQuestion==='function') loadQuestion();
+      }catch(_){}
+      try{ openMenu(); }catch(_){}
+    }catch(_){}
+  },
   join:function(){ try{ openJoin('menu'); }catch(_){} },
   signout:function(){ try{ doSignOut(); }catch(_){} }
 };
@@ -16339,6 +16776,7 @@ function openMenu(){
   try{ trk('menu_open'); }catch(_){}
   var sh=document.getElementById('menuSheet'); if(!sh) return;
   var body=document.getElementById('menuBody'); if(body) body.innerHTML=menuRows();
+  try{ applyLang(sh); }catch(_){}
   try{ var st=document.getElementById('menuStamp'); if(st && typeof buildStampHTML==='function') st.innerHTML=buildStampHTML(); }catch(_){}
   Array.prototype.forEach.call(sh.querySelectorAll('[data-m]'), function(b){
     b.onclick=function(){ var k=b.getAttribute('data-m');

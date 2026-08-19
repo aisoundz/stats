@@ -122,6 +122,76 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
      graded.en.qtext===Q.t && graded.en.shown.join('|')===Q.o.join('|'),
      `${graded.en.qtext} / ${JSON.stringify(graded.en.shown)}`);
 
+  /* ---- THE MARKS ON THE BUTTONS, WHICH HAD NO TEST AT ALL -----------
+     qa/localise.js proved a Spanish player is SCORED correctly. It never
+     looked at what they were SHOWN. Those were different answers: the tick
+     logic compared the RENDERED LABEL to the canonical q.a, so in Spanish
+     "Igualado" never equalled "Level" — no option got a ✓, and the
+     player's own correct pick fell through and was painted ✕, in red.
+     Scored right, shown wrong. Found by the CTO review 19 Aug, live in the
+     shipped build at the time. */
+  const marks = await p.evaluate(async (Q)=>{
+    const res={};
+    for(const lang of ['en','es']){
+      VX.lang=lang;
+      S.mode='practice'; S.place='play'; S.qi=0; S.ni=0; S.answered=false; S.results=[[]];
+      try{ go('gametime'); }catch(_){}
+      document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+      document.getElementById('s-gametime').classList.add('active');
+      const qp=document.getElementById('gtQuestion'); if(qp) qp.style.display='block';
+      const real=rounds[0].q[0];
+      const keep=JSON.parse(JSON.stringify(real));
+      Object.keys(real).forEach(k=>delete real[k]); Object.assign(real,Q);
+      loadQuestion();
+      const idx=Q.o.indexOf(Q.a);
+      const btns=[...document.querySelectorAll('#qOpts .opt')];
+      btns[idx].click();
+      await new Promise(r=>setTimeout(r,150));
+      res[lang]={
+        marks: btns.map(b=>b.querySelector('.mk').textContent),
+        rightRowHasTick: btns[idx].querySelector('.mk').textContent==='✓',
+        rightRowMarkedWrong: btns[idx].classList.contains('wrong')
+      };
+      Object.keys(real).forEach(k=>delete real[k]); Object.assign(real,keep);
+    }
+    VX.lang='en';
+    return res;
+  }, Q);
+  ok('loc.english-ticks-the-right-row', marks.en.rightRowHasTick,
+     `marks ${JSON.stringify(marks.en.marks)}`);
+  ok('loc.SPANISH-TICKS-THE-RIGHT-ROW', marks.es.rightRowHasTick,
+     `marks ${JSON.stringify(marks.es.marks)} — a Spanish player tapped the correct answer and was not shown a tick`);
+  ok('loc.SPANISH-DOES-NOT-CROSS-OUT-A-CORRECT-PICK', !marks.es.rightRowMarkedWrong,
+     'the player tapped the right answer, was scored correct, and saw a red ✕ on their own pick');
+
+  /* And the lifeline must never remove the right answer. */
+  const life = await p.evaluate(async (Q)=>{
+    const out={};
+    for(const lang of ['en','es']){
+      VX.lang=lang;
+      S.mode='practice'; S.place='play'; S.qi=0; S.ni=0; S.answered=false;
+      S.lifelineHalf1=false; S.lifelineHalf2=false;
+      const real=rounds[0].q[0];
+      const keep=JSON.parse(JSON.stringify(real));
+      Object.keys(real).forEach(k=>delete real[k]); Object.assign(real,Q);
+      loadQuestion();
+      try{ lifeline(); }catch(e){ out[lang]={err:e.message}; }
+      const idx=Q.o.indexOf(Q.a);
+      const btns=[...document.querySelectorAll('#qOpts .opt')];
+      out[lang]=out[lang]||{ killedTheRightOne: btns[idx].style.opacity==='0.25' || btns[idx].style.pointerEvents==='none' };
+      Object.keys(real).forEach(k=>delete real[k]); Object.assign(real,keep);
+    }
+    VX.lang='en';
+    return out;
+  }, Q);
+  if(!life.en.err && !life.es.err){
+    ok('loc.the-lifeline-never-removes-the-right-answer-en', !life.en.killedTheRightOne);
+    ok('loc.THE-LIFELINE-NEVER-REMOVES-THE-RIGHT-ANSWER-ES', !life.es.killedTheRightOne,
+       'in Spanish every option looked wrong, so the lifeline greyed out the correct answer the player paid for');
+  }else{
+    console.log('       (lifeline not reachable in this build — its two checks were not run)');
+  }
+
   ok('loc.no-page-errors', errs.length===0, errs.slice(0,2).join(' · '));
 
   /* ---- 3. THE BANKS THEMSELVES, AT THE SOURCE ------------------------

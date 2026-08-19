@@ -39,6 +39,7 @@ const ARG=process.argv.slice(2);
 const ONLY_STATIC=ARG.includes('--static');
 const WITH_LIVE  =ARG.includes('--live');
 const LIST       =ARG.includes('--list');
+let STAMP_STUCK=false;
 const QUICK      =ARG.includes('--quick');
 /* WHICH BUILD IS THIS GATE JUDGING? One answer, handed to every suite that
    accepts one. Found 19 Aug and it is worse than untidy: voice-pick.js
@@ -59,16 +60,30 @@ const TARGET_ABS=path.resolve(__dirname,'..',TARGET);
 /* Only these accept a positional target; handing one to a suite that does
    not read argv[2] is harmless, but claiming it was targeted would not be. */
 const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-lang.js',
-  'board-order.js','payoff.js','slate.js','acceptance.js','host-sportsreg.js','localise.js']);
+  'board-order.js','payoff.js','slate.js','acceptance.js','host-sportsreg.js','localise.js','i18n.js','season.js',
+  'devices.js','night-config.js','overtime.js']);
 /* Suites that read admin.html rather than the player file. The player half
    of the gate was split across two builds and fixed; the ADMIN half is
    split the same way and is NOT fixed — these seven read admin.html even
    when admin-test.html is the file being promoted, while qa.js reads
    admin-test.html. Named here so "green" is never read as broader than it
    is, rather than left to a filename regex to guess at. */
-/* Player-side suites that genuinely ignore a passed target. Verified by
-   reading each one, not inferred from its name. */
-const KNOWN_UNTARGETED=['journey.js','devices.js','live-smoke.js','night-config.js','overtime.js'];
+/* Player-side suites that genuinely ignore a passed target.
+   THIS LIST WAS WRONG, and the comment above it claimed it had been
+   verified by reading each file. It had not. devices.js, night-config.js
+   and overtime.js all take process.argv[2] and merely DEFAULT to
+   index.html — so 70+ checks, including all sixteen overtime checks on a
+   night with a live OT bank, were grading the file ALREADY LIVE while the
+   banner said "judging index-test.html". That is the same one-fact-many-
+   copies bug this file was written to fix, half-fixed, with a comment
+   asserting it was finished. Re-verified by reading argv handling in each:
+
+     devices.js       process.argv[2] || 'index.html'                 TARGETABLE
+     night-config.js  process.argv[2] || …/index.html                 TARGETABLE
+     overtime.js      process.argv[2] || …/index.html                 TARGETABLE
+     journey.js       ARG('url', …/index-test.html)  — no argv[2]     untargeted
+     live-smoke.js    drives https://statsgametime.com/               by design */
+const KNOWN_UNTARGETED=['journey.js','live-smoke.js'];
 const ADMIN_READERS=['host-overtime.js','host-resolvers.js','host-sports.js','host-block.js',
                      'host-banks.js','host-publish-ot.js','bank-shadow.js'];
 
@@ -107,6 +122,9 @@ const TIER={
   'voice-wiring.js':  {tier:'browser'},
   'payoff.js':        {tier:'browser'},
   'localise.js':      {tier:'browser'},
+  'i18n.js':          {tier:'browser'},
+  'season.js':        {tier:'browser'},
+  'claims.js':        {tier:'live'},
   'journey.js':       {tier:'browser'},
   'live-path.js':     {tier:'live'},
 };
@@ -133,6 +151,28 @@ if(LIST){
   process.exit(0);
 }
 
+/* ---- A PROMOTION NO PHONE CAN DETECT --------------------------------
+   index.html carries the build the player is running; the app compares the
+   SERVED stamp against the LOADED one and only offers "↻ New version ready"
+   when they differ. Promote a candidate whose stamp equals the live one and
+   nobody with the page already open is ever told — half the room plays the
+   old build all night, and nothing on any screen, in the Control Room, or
+   in live-smoke can tell them apart. qa.js checks a stamp EXISTS, not that
+   it MOVED, so the gate could not catch this. Now it can. */
+function stampOf(f){
+  try{ return (fs.readFileSync(path.resolve(__dirname,'..',f),'utf8')
+                 .match(/const STATS_BUILD='([^']+)'/)||[])[1]||null; }catch(_){ return null; }
+}
+if(!LIST && TARGET==='index-test.html'){
+  const cand=stampOf('index-test.html'), live=stampOf('index.html');
+  if(cand && live && cand===live){
+    console.log('\n  !! index-test.html and index.html both say '+cand);
+    console.log('     Promoting now would ship a build no open phone can detect — the');
+    console.log('     "new version ready" prompt only fires when the stamp MOVES.');
+    console.log('     Bump STATS_BUILD before promoting.\n');
+    STAMP_STUCK = true;
+  }
+}
 console.log('\n=== EVERY SUITE ===  judging '+TARGET
   +(ONLY_STATIC?'   static only':WITH_LIVE?'   including live':'')+'\n');
 if(!fs.existsSync(TARGET_ABS)){ console.log('  the file under test does not exist: '+TARGET_ABS); process.exit(1); }
@@ -255,4 +295,5 @@ if(unlisted.length){
   unlisted.forEach(f=>console.log('   ! '+f+'   (add it to TIER in qa/all.js)'));
   console.log('   a suite nobody runs is not a safety net; this is a failure, not a note.');
 }
-process.exit((bad.length||shrunk.length||unlisted.length)?1:0);
+if(STAMP_STUCK) console.log('\nBUILD STAMP UNCHANGED — bump STATS_BUILD before promoting.');
+process.exit((bad.length||shrunk.length||unlisted.length||STAMP_STUCK)?1:0);

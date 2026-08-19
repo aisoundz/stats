@@ -11,5 +11,7 @@
   "slate.js": 25,
   "voice-pick.js": 33,
   "voice-wiring.js": 70,
-  "localise.js": 13
+  "localise.js": 16,
+  "i18n.js": 20,
+  "season.js": 12
 }

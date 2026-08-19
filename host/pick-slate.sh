@@ -65,3 +65,16 @@ sort -t'	' -k6,6 "$TMP" > "$ALL"
 rm -f "$TMP"
 echo "picked $# room(s) for $DATE  (full slate kept at $(basename "$FULL"))"
 show
+
+# ---- AND MAKE THE RAIL AGREE ----------------------------------------
+# Trimming the manifest used to leave `slate/{date}` untouched, so the
+# picker still advertised every game while the launcher started only the
+# picked ones — rooms a person can walk into and sit in all night. The
+# manifest is what gets HOSTED; the rail is what gets OFFERED; they have
+# to be the same list.
+if [ -n "${FIREBASE_SERVICE_ACCOUNT:-}" ]; then
+  node "$(dirname "$0")/slate-offer.js" "$DATE" || echo "  (the rail was not updated — run host/slate-offer.js $DATE by hand)"
+else
+  echo "  NOTE: FIREBASE_SERVICE_ACCOUNT not set, so the RAIL still offers the full slate."
+  echo "        export it and run:  node host/slate-offer.js $DATE"
+fi

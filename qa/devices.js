@@ -6,8 +6,13 @@
        node qa/devices.js [file]                                        */
 const {chromium}=require('playwright'); const path=require('path');
 const F=require('./fixtures.js');
+/* path.resolve, not path.join — join('..', '/abs/path') produces
+   /repo/home/user/stats/index-test.html and Playwright then reports a
+   navigation failure that reads like a browser problem. resolve() handles
+   an absolute path and a bare filename identically, which matters because
+   qa/all.js hands every targetable suite an absolute path. */
 const FILE=process.argv[2]||'index.html';
-const URL='file://'+path.join(__dirname,'..',FILE);
+const URL='file://'+path.resolve(__dirname,'..',FILE);
 
 const DEVICES=[
   {n:'iPhone SE',      w:375, h:667},
