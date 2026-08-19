@@ -780,14 +780,37 @@
     color:var(--dim)}
   .grAll{background:none;border:0;padding:0;cursor:pointer;font-family:inherit;font-size:12px;
     color:var(--teal);font-weight:700}
-  .grTiles{display:flex;gap:7px;overflow-x:auto;padding:0 14px 10px;scrollbar-width:none;
-    -webkit-overflow-scrolling:touch}
-  .grTiles::-webkit-scrollbar{display:none}
+  /* A GRID THAT WRAPS, NOT A SCROLLER THAT HIDES.
+     This was a flex row with overflow-x:auto AND the scrollbar removed on
+     both engines — so with four games the third tile was sliced down the
+     middle and the fourth did not exist as far as anyone could tell. The
+     founder found it in about four seconds. There was no fade, no arrow,
+     no dot, nothing: the app silently decided you only cared about the
+     first two games of the night.
+
+     Worse, the sliced tile was the FLAGSHIP — the one with the star, the
+     one the email is about.
+
+     auto-fit with a 150px floor means the row holds as many whole tiles as
+     fit and wraps the rest onto the next line: two on a phone, five on an
+     iPad, more on a desktop, and NOTHING EVER HIDDEN at any width. The
+     150px floor is the same measurement the old min-width was set from —
+     below it "Tempo at Mystics" wraps mid-word. */
+  .grTiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));
+    gap:7px;padding:0 14px 10px;align-items:stretch}
   /* WIDE ENOUGH FOR A REAL NAME. At 126px "Tempo at Mystics" and its tip
      time collided and wrapped mid-word — the first thing a person reads on
      the page, broken. Nicknames are the long part, so the floor is set by
      them and the time gets its own line. */
-  .grTile{flex:0 0 auto;min-width:152px;max-width:220px;text-align:left;cursor:pointer;
+  /* The grid sizes the tile now; a fixed flex-basis would fight it. */
+  /* The old 152px floor existed because "Tempo at Mystics" broke MID-WORD
+     at narrower sizes. Width was the wrong lever: a name wrapping onto a
+     second line inside its own tile is fine and normal, a name broken
+     across a hyphen is not. Fixing the break behaviour directly lets the
+     floor come down to 132px, which is what makes two tiles fit on a
+     320px phone instead of one per row and a rail four rows tall. */
+  .grTile{min-width:0;text-align:left;cursor:pointer;
+    word-break:normal;overflow-wrap:normal;hyphens:none;
     padding:9px 11px;border-radius:11px;color:var(--body);font-family:inherit;font-size:14px;
     background:rgba(5,8,14,.6);border:1px solid var(--line);
     transition:border-color .2s,background .2s,transform .2s}
@@ -798,7 +821,12 @@
     border:1px solid transparent}
   .grTile:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
   .grTile[disabled]{opacity:.5;cursor:default}
-  .grLg{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:800;
+  /* WRAPS RATHER THAN OVERFLOWS. Putting the tip time on the league line
+     saved 34px of sticky rail, and on a 320px phone it then pushed the
+     time out past the tile edge — the exact bug this change was fixing,
+     one element smaller. Allowed to wrap, it drops onto its own line only
+     on the narrowest screens and stays inline everywhere else. */
+  .grLg{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-size:12px;font-weight:800;
     letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
   .grLg i{width:5px;height:5px;border-radius:50%;background:var(--dim);display:block;font-style:normal}
   .grTile.onair .grLg{color:var(--red)}
@@ -806,10 +834,30 @@
   .grWho{display:block;font-size:15px;font-weight:800;color:var(--ink);letter-spacing:.01em;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .grWho s{text-decoration:none;color:var(--dim);font-weight:600;font-size:12px;margin:0 4px}
-  .grWhen{display:block;font-size:12px;color:var(--muted);margin-top:3px;
-    font-variant-numeric:tabular-nums;white-space:nowrap}
+  .grWhen{font-size:12px;color:var(--muted);font-style:normal;letter-spacing:0;
+    font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto;font-weight:700}
   .grTile[aria-current="true"] .grWhen{color:var(--teal)}
   .grStar{color:var(--gold);font-size:12px}
+  /* The overflow control reads as a tile so it wraps with them, but it is
+     plainly not a game — no colours, no time. */
+  /* A FULL-WIDTH THIN ROW, NOT A TILE. As a tile it occupied a whole grid
+     cell and therefore a whole extra ROW — four games plus the expander
+     became three rows and 221px on an iPhone 15, which the rail-height
+     check caught immediately. Spanning the grid costs ~30px instead of
+     ~63px and reads better anyway: it is plainly a control, not a game. */
+  .grMore{grid-column:1/-1;background:none;border:1px dashed var(--line);
+    min-height:44px;padding:6px 10px;display:flex;align-items:center;justify-content:center;gap:6px}
+  .grMore .grLg{display:none}
+  /* MID-QUESTION IT SITS BESIDE THE GAME, NOT UNDER IT. Full width, the
+     control forced a second row: one tile plus one row of control is 137px
+     on a 320px phone, which is still too much sticky height above a live
+     question. Sharing the row with the current game makes the whole rail a
+     single row. */
+  .grMoreInline{grid-column:auto}
+  /* 14px, not 13 — the ramp is [12,14,15,17,20,22,24,26,30,34,40,46,52] and
+     a fourteenth size is a decision, not a convenience. type.one-ramp caught
+     this within a minute, for the second time today. */
+  .grMore .grWho{color:var(--teal);font-size:14px;font-weight:700}
 
   /* ---- THE SLATE PICKER ---------------------------------------------
      Rows, not a dropdown. A dropdown hides the options behind a tap, and
@@ -5445,26 +5493,97 @@ function paintGameRail(){
   if(gs.length < 2){ el.style.display='none'; el.innerHTML=''; return; }
 
   var cur = (typeof GAME!=='undefined' && GAME) ? GAME.nightId : null;
-  var rows = gs.map(function(g){
+
+  /* ---- A CHOOSER HAS TO FIT ON THE SCREEN IT CHOOSES FROM -------------
+     The tiles wrap now instead of scrolling, which fixed the real bug —
+     four games and the flagship was sliced in half with nothing to say the
+     rest existed. But wrapping is unbounded: seventeen games measured 599px
+     of STICKY rail on an 844px phone, so the chooser was taller than the
+     thing it chose for, and the reward moment fell below the fold.
+
+     So it shows FOUR by default — two rows on a phone, one on a tablet —
+     and says how many more there are. "+13 more" is a fact a player can
+     act on; a silently truncated list is the bug this replaced.
+
+     The room you are IN and the FLAGSHIP are always among the four, however
+     late they tip. Being unable to see the room you are standing in, or the
+     game the email was about, is the version of this that matters most. */
+  /* IN THE MIDDLE OF A QUESTION, A CHOOSER IS NOT THE POINT.
+     The rail is sticky, so whatever height it takes it takes all night. At
+     four games and two rows that is ~158px of an 844px phone — and it
+     pushed the player's own running total 3px below the fold at the exact
+     moment it counts up, which is the one number the reward moment exists
+     to show them.
+
+     While somebody is ON the play screen, they do not need four choices;
+     they need to know which room they are in and to be able to leave it.
+     So the rail collapses to the current game plus the expander, and opens
+     again the moment they are not mid-question. Nothing is removed — the
+     count is still on screen and one tap brings it all back. */
+  var playing = false;
+  try{ playing = (S && S.place==='play' && S.screen==='gametime'); }catch(_){}
+  var RAIL_MAX = playing ? 1 : 4;
+  var showAll = !!window.__railOpen;
+  var shown = gs;
+  var hidden = 0;
+  if(!showAll && gs.length > RAIL_MAX){
+    var must = gs.filter(function(g){ return g.nightId===cur || g.flagship; });
+    var rest = gs.filter(function(g){ return !(g.nightId===cur || g.flagship); });
+    shown = must.concat(rest).slice(0, RAIL_MAX);
+    /* keep the night in tip order rather than in importance order — the
+       player reads it as a schedule */
+    shown.sort(function(a,b){ return String(a.tipISO).localeCompare(String(b.tipISO)); });
+    hidden = gs.length - shown.length;
+  }
+
+  var rows = shown.map(function(g){
     var on = (g.nightId === cur);
     var live = !!g.live;
     return '<button type="button" class="grTile'+(live?' onair':'')+'" data-slate="'+esc(g.nightId)+'"'
       + ' style="--gA:'+esc(g.awayColor||'#666')+';--gH:'+esc(g.homeColor||'#666')+'"'
       + (on ? ' aria-current="true" disabled' : '') + '>'
+      /* LEAGUE AND TIME ON ONE LINE. They are both metadata; the matchup is
+         the content. Three stacked lines per tile made the rail 192px tall
+         and sticky — nearly a quarter of a phone screen given permanently
+         to a chooser. Two lines gets it back without hiding anything, which
+         was the whole problem with the version before this one. */
       + '<span class="grLg"><i></i>'+esc(String(g.league||'').toUpperCase())
-      +   (g.flagship ? ' <span class="grStar">★</span>' : '') + '</span>'
+      +   (g.flagship ? ' <span class="grStar">★</span>' : '')
+      +   '<em class="grWhen">'+esc(g.tipLabel || tipShort(g.tipISO) || '')+'</em>'
+      + '</span>'
       /* REAL SPACES AROUND "at". The margin came from CSS, so the text
          itself read "TempoatMystics" — which is what a screen reader says
          out loud, and what any text-based check sees. Spacing that only
          exists in the styling is not spacing. */
       + '<span class="grWho">'+esc(g.away||g.awayAbbr||'')+' <s>at</s> '+esc(g.home||g.homeAbbr||'')+'</span>'
-      + '<span class="grWhen">'+esc(g.tipLabel || tipShort(g.tipISO) || '')+'</span>'
+
       + '</button>';
   }).join('');
 
   el.innerHTML =
-      '<div class="grTop"><span class="grLbl">Which game are you watching?</span></div>'
-    + '<div class="grTiles">'+rows+'</div>';
+      /* THE HEADER IS A QUESTION, AND MID-GAME IT HAS BEEN ANSWERED.
+       "Which game are you watching?" is exactly right on the landing
+       screen — it is what that page is for. Sticky above a live question,
+       it is 30px spent asking something the player settled ten minutes
+       ago. It comes back the moment they are choosing again. */
+    (playing ? ''
+             : '<div class="grTop"><span class="grLbl">Which game are you watching?</span></div>')
+    + '<div class="grTiles">'+rows
+    +   (hidden ? '<button type="button" class="grTile grMore'+(playing?' grMoreInline':'')+'" data-railmore="1">'
+                + '<span class="grLg"><i></i>MORE</span>'
+                + '<span class="grWho">+'+hidden+' more game'+(hidden>1?'s':'')+'</span></button>'
+        : '')
+    +   (showAll && gs.length>RAIL_MAX ? '<button type="button" class="grTile grMore" data-railmore="0">'
+                + '<span class="grLg"><i></i></span>'
+                + '<span class="grWho">Show fewer</span></button>'
+        : '')
+    + '</div>';
+  /* The expand control is inside the tile grid, so it wraps with everything
+     else and needs no layout of its own. */
+  Array.prototype.forEach.call(el.querySelectorAll('[data-railmore]'), function(b){
+    b.onclick=function(){ window.__railOpen = b.getAttribute('data-railmore')==='1';
+                          try{ paintGameRail(); }catch(_){} };
+  });
   el.style.display='';
 }
 /* A tip time a person reads at a glance, in their own zone. */
@@ -16426,7 +16545,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-19-es.163';
+const STATS_BUILD='2026-08-19-rail.165';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

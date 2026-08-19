@@ -115,7 +115,76 @@ const ok=(dev,n,c,d)=>{ if(c) pass++; else { fail++; bad.push(dev+' · '+n+(d?' 
           .map(x=>x.textContent.trim()).filter(Boolean);
         /* Can a keyboard/D-pad reach anything? A television has no pointer. */
         const focusable=document.querySelectorAll('a[href],button:not([disabled]),input,select,[tabindex]:not([tabindex="-1"])').length;
-        return { docW:document.documentElement.scrollWidth, vw, wide, small, tiny, tabs, focusable,
+        /* CONTENT HIDDEN INSIDE A SCROLLER, WITH NOTHING SAYING SO.
+           This suite already checked that the PAGE does not scroll
+           sideways. It passed a rail that was a flex row with
+           overflow-x:auto AND the scrollbar removed on both engines — so
+           with four games the third tile was sliced down the middle and
+           the fourth did not exist as far as any player could tell. The
+           sliced one was the FLAGSHIP. The founder found it in seconds and
+           114 green checks had not.
+
+           "The page does not scroll" and "nothing is hidden" are different
+           promises. This is the second one: any element whose children
+           overflow its own box is reported, and a hidden scrollbar makes it
+           worse rather than better, because then there is no affordance at
+           all. */
+        const clipped=[];
+        document.querySelectorAll('#app *').forEach(box=>{
+          if(box.children.length<2) return;
+          const cs=getComputedStyle(box);
+          const scrolls = /auto|scroll/.test(cs.overflowX);
+          const overflows = box.scrollWidth > box.clientWidth+2;
+          if(!overflows) return;
+          const bb=box.getBoundingClientRect();
+          /* ONLY THINGS A PLAYER IS MEANT TO SEE OR PRESS. Decorative
+             layers are SUPPOSED to bleed past their box — the arena light
+             behind the matchup is a glow, not content, and flagging it
+             would teach everyone to ignore this check. So: it must carry
+             text or be interactive, and it must not be marked hidden from
+             assistive tech, which is how decoration declares itself. */
+          const cut=[...box.children].filter(ch=>{
+            const r=ch.getBoundingClientRect();
+            if(!(r.width>0 && (r.right>bb.right+1 || r.left<bb.left-1))) return false;
+            if(ch.getAttribute && ch.getAttribute('aria-hidden')==='true') return false;
+            const cs2=getComputedStyle(ch);
+            if(cs2.position==='absolute'||cs2.position==='fixed') return false;
+            if(cs2.pointerEvents==='none') return false;
+            const isControl=/^(BUTTON|A|INPUT|SELECT)$/.test(ch.tagName)
+                          || ch.querySelector('button,a,input,select');
+            const hasText=(ch.textContent||'').trim().length>0;
+            return isControl || hasText;
+          });
+          if(!cut.length) return;
+          const bar = cs.scrollbarWidth==='none' ? ' (scrollbar hidden — no affordance)' : '';
+          clipped.push((box.id?'#'+box.id:box.className||box.tagName)
+            +': '+cut.length+' of '+box.children.length+' child(ren) cut off'
+            +(scrolls?' in a scroller':'')+bar);
+        });
+        /* A STICKY CHOOSER CHARGES RENT ALL NIGHT. Whatever height the rail
+           takes, it takes on every screen for the whole evening. At four
+           games and two rows it reached 158px of an 844px phone and pushed
+           the player's own running total below the fold at the exact moment
+           it counts up. A third of the viewport is the ceiling; past that
+           the chooser is bigger than the thing it chooses for. */
+        const railEl=document.getElementById('gameRail');
+        const railH = railEl && railEl.offsetParent ? Math.round(railEl.getBoundingClientRect().height) : 0;
+        const railTiles = railEl ? railEl.querySelectorAll('.grTile').length : 0;
+        /* MEASURE IT WHERE IT COSTS. On the landing screen the chooser IS
+           the content — "which game are you watching?" is the question that
+           page exists to ask, so a third of the screen is not extravagant
+           there. The cost lands on the PLAY screen, where the rail is
+           sticky above a question the player is trying to answer. That is
+           the number worth holding to a ceiling. */
+        let railPlayH = railH;
+        try{
+          const sp=S.place, ss=S.screen;
+          S.place='play'; S.screen='gametime'; paintGameRail();
+          railPlayH = railEl && railEl.offsetParent ? Math.round(railEl.getBoundingClientRect().height) : 0;
+          S.place=sp; S.screen=ss; paintGameRail();
+        }catch(_){}
+        return { clipped, railH, railPlayH, railTiles, vh:window.innerHeight,
+                 docW:document.documentElement.scrollWidth, vw, wide, small, tiny, tabs, focusable,
                  bodyScrollsSideways: document.documentElement.scrollWidth > vw+2,
                  hasRail: !!document.getElementById('gameRail'),
                  vxExists: typeof window.VX!=='undefined',
@@ -131,6 +200,12 @@ const ok=(dev,n,c,d)=>{ if(c) pass++; else { fail++; bad.push(dev+' · '+n+(d?' 
       +(m.note?('  '+m.note):''));
 
     ok(m.name,'no page errors', errs.length===0, errs.slice(0,1).join(''));
+    if(r.railH>0)
+      ok(m.name,'the game chooser gets out of the way during a question',
+         r.railPlayH <= Math.round(r.vh/5),
+         `mid-question the rail is ${r.railPlayH}px of a ${r.vh}px viewport (${r.railH}px on the landing screen, which is fine — there it IS the content). Sticky above a question the player is trying to answer.`);
+    ok(m.name,'nothing is cut off inside a scroller', (r.clipped||[]).length===0,
+       (r.clipped||[]).slice(0,2).join(' · ')+' — a player cannot see or reach it, and nothing indicates it exists');
     ok(m.name,'no sideways scroll', !r.bodyScrollsSideways,
        `document is ${r.docW}px in a ${r.vw}px window` + (r.wide.length?('; widest: '+r.wide.join(', ')):''));
     ok(m.name,'the four tabs are present', r.tabs.length>=4, 'nav shows '+JSON.stringify(r.tabs));
