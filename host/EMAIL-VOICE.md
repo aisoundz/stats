@@ -93,3 +93,33 @@ If the slate entry has no `net`, do not quietly print the card without one and
 do not invent a channel. Say so in the notification to Anis instead, because a
 room with no national carrier should not have been picked in the first place
 (see rule 7 in `host/leagues.env`).
+
+## 7. One email a day, and which one owns the day
+
+Both routines fire on their own schedule and neither knew about the other. The
+daily tip-off runs at 9:13am PT **every** morning and drafts whenever the slate
+has games. The weekly note runs Sunday at 7am PT. So the first Sunday with a
+slate would have produced two drafts and, if both were approved, two emails to
+the same four people on the same day.
+
+| Day | Who writes it | Signed |
+|---|---|---|
+| Monday to Saturday, games on the slate | the tip-off routine | `STATS GAMETIME` |
+| Monday to Saturday, no games | nobody. Silence is correct. | |
+| **Sunday, always** | **the weekly note, and only the weekly note** | `Anis` |
+
+**The tip-off routine STOPS on a Sunday**, whatever the slate says. Check the
+day before anything else. This is not a preference, it is the difference
+between one email and two.
+
+Which means the Sunday note carries the daily's whole job as well as its own:
+the room cards with channels, STATS of the Day, and a Gametime card that settles
+Saturday's question. Anis, 20 Aug: *"how would the answer get answered from
+saturday and how would we know what games are on sunday."*
+
+**Saturday's question gets settled on Sunday even when Sunday has no games.** A
+question that is never answered is worse than one never asked, and the promise
+printed under it says the answer is in tomorrow's edition.
+
+Monday's tip-off then settles Sunday's question as normal, so the chain runs
+unbroken through the week.
