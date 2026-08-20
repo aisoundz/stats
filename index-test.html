@@ -6184,6 +6184,60 @@ function gametimeFromLink(){
 }
 try{ window.gametimeFromLink = gametimeFromLink; }catch(_){}
 
+/* ============ AND THE APP TELLS YOU IF YOU WERE RIGHT =================
+   Founder, 20 Aug: "Where is the answer going to be the next day for who
+   the answer was the day before?"
+
+   The EMAIL can state the answer, but it is the same email for everybody on
+   the list, so it cannot tell one reader they personally got it. The app
+   can, because it is holding their tap: gametimeFromLink() wrote the pick
+   to stats_gametime_calls_v1 the moment they chose it.
+
+   So the split is: the email says WHAT the answer was, the app says WHETHER
+   YOU CALLED IT. That is also the better place for it — the payoff pulls
+   somebody back into the product instead of ending in an inbox.
+
+   The answer itself is published to gametime/{qid} when the next morning's
+   email settles the question. Until that document exists there is nothing
+   to say and this does nothing, which is the correct behaviour on a game
+   that has not finished. */
+async function gametimeResult(db, F){
+  var KEY = 'stats_gametime_calls_v1';
+  var calls = {};
+  try{ calls = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; }catch(_){}
+  var open = Object.keys(calls).filter(function(q){ return calls[q] && !calls[q].told; });
+  if(!open.length || !db || !F) return null;
+
+  /* Oldest unresolved first, and only one a visit — a stack of toasts about
+     three different nights is noise, not a payoff. */
+  open.sort(function(a,b){ return (calls[a].at||0) - (calls[b].at||0); });
+  for(var i=0;i<open.length;i++){
+    var qid = open[i];
+    var snap = null;
+    try{ snap = await F.getDoc(F.doc(db,'gametime',qid)); }catch(_){ return null; }
+    if(!snap || !snap.exists()) continue;            // not settled yet
+    var d = snap.data() || {};
+    if(!d.answer) continue;
+
+    var mine = String(calls[qid].pick || '');
+    var right = mine && String(d.answer) === mine;
+
+    calls[qid].told = true;
+    calls[qid].right = !!right;
+    try{ localStorage.setItem(KEY, JSON.stringify(calls)); }catch(_){}
+    try{ trk('gametime_result',{qid:qid, pick:mine, answer:String(d.answer), right:!!right}); }catch(_){}
+
+    try{
+      var head = right ? ('\u2705 ' + i18nT('You called it')) : ('\u2716 ' + i18nT('Not this time'));
+      var line = String(d.line || '');
+      toast(head + (line ? (' \u2014 ' + line) : ''));
+    }catch(_){}
+    return { qid: qid, right: !!right };
+  }
+  return null;
+}
+try{ window.gametimeResult = gametimeResult; }catch(_){}
+
 /* A tiny passthrough so the toast speaks Spanish when the app does. */
 function i18nT(t){
   try{ var d = i18nDict(); return (d && d[t]) || t; }catch(_){ return t; }
@@ -6683,6 +6737,9 @@ async function loadSlate(db, F){
     /* After the slate, so the toast lands on a page that already knows what
        tonight is rather than on a half-painted one. */
     try{ gametimeFromLink(); }catch(_){}
+    /* And if a call they made earlier has since been settled, tell them —
+       after a beat, so it never collides with the toast above. */
+    try{ setTimeout(function(){ gametimeResult(db, F); }, 4000); }catch(_){}
 
     return SLATE.games.length > 0;
   }catch(e){
@@ -11396,6 +11453,10 @@ var I18N = {
     "Resume my game":"Retomar mi partida",
     "Start a new game":"Empezar de nuevo",
     "Tips in":"Empieza en",
+    /* the Gametime payoff */
+    "You called it":"Lo acertaste", "Not this time":"Esta vez no",
+    "Call made":"Elección registrada", "Your call is already in":"Tu elección ya está registrada",
+    "The answer is in tomorrow\u2019s email.":"La respuesta llega en el correo de mañana.",
 
     /* ============ THE APP AROUND THE QUESTIONS ========================
        Added 20 Aug 2026. Every question in every sport was already
