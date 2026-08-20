@@ -60,6 +60,7 @@
        node qa/acceptance.js --no-browser      # prints what it did not test
    ================================================================== */
 const path = require('path');
+const { waitReady } = require('./ready.js');
 const RUN  = require(path.join(__dirname, '..', 'host', 'run.js'));
 const fs   = require('fs');
 
@@ -280,7 +281,7 @@ async function browserPromises(){
       status:200, contentType:'application/json', body:JSON.stringify(F.LIVE) }));
     await pg.route('**/site.web.api.espn.com/**', r => r.abort());
     await pg.goto('file://' + TARGET, { waitUntil:'domcontentloaded' });
-    await pg.waitForTimeout(2500);
+    await waitReady(pg);   /* was await pg.waitForTimeout(2500); — a guess at boot */
     await pg.evaluate(AUTH_SHIM);
     /* The one helper the page gets. __FB.docs is a plain Map, so writing
        to it does NOT wake a listener — a round has to be published the way

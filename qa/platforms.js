@@ -31,6 +31,7 @@
        node qa/platforms.js index.html      # judge a specific build
    ================================================================== */
 const {chromium, webkit, firefox, devices}=require('playwright');
+const { waitReady } = require('./ready.js');
 const path=require('path');
 
 const ARGS=process.argv.slice(2);
@@ -82,7 +83,7 @@ const ok=(dev,n,c,d)=>{ if(c) pass++; else { fail++; bad.push(dev+' · '+n+(d?' 
     try{
       await p.goto('file://'+TARGET,{waitUntil:'domcontentloaded'});
       await p.waitForFunction(()=>typeof window.VX!=='undefined',{timeout:20000}).catch(()=>{});
-      await p.waitForTimeout(2500);
+      await waitReady(p);   /* was await p.waitForTimeout(2500); — a guess at boot */
       r=await p.evaluate((kind)=>{
         const app=document.getElementById('app')||document.body;
         const vw=window.innerWidth;

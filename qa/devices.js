@@ -5,6 +5,7 @@
    other. Run before any game night you plan to play on more than one device.
        node qa/devices.js [file]                                        */
 const {chromium}=require('playwright'); const path=require('path');
+const { waitReady } = require('./ready.js');
 const F=require('./fixtures.js');
 /* path.resolve, not path.join — join('..', '/abs/path') produces
    /repo/home/user/stats/index-test.html and Playwright then reports a
@@ -34,7 +35,7 @@ const LIVEPATH=['landing','name','predict','lobby','live','review','break','game
     const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
     await p.route('**/site.api.espn.com/**', r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(F.PRE)}));
     await p.route('**/assets.mailerlite.com/**', r=>r.fulfill({status:200,body:'{}'}));
-    await p.goto(URL,{waitUntil:'domcontentloaded'}); await p.waitForTimeout(2200);
+    await p.goto(URL,{waitUntil:'domcontentloaded'}); await waitReady(p);   /* was await p.waitForTimeout(2200); — a guess at boot */
 
     // Drive a full practice night so the later screens have real content.
     await p.evaluate(()=>{ startDemo(); S.name='QA'; startPredict(); });
@@ -43,9 +44,20 @@ const LIVEPATH=['landing','name','predict','lobby','live','review','break','game
       const L=await p.evaluate(()=>predOrderList().length);
       await p.evaluate(()=>{ const L=predOrderList(); const blank=L.findIndex(x=>!S.predChoices[x.id]);
         if(blank>=0){ PD.i=blank; buildPred(); } });
-      const opt=await p.$('#predCard .pdopt'); if(!opt) break;
-      await opt.click(); await p.waitForTimeout(260);
-      const bi=await p.$('#predCard .pdbonus input'); if(bi) await bi.fill('9');
+      /* A LOCATOR, NOT AN ELEMENT HANDLE. p.$() grabs the node ONCE; if the
+         card repaints between the grab and the click — and buildPred()
+         above repaints it — the handle points at a node that is no longer
+         in the document and Playwright throws "Element is not attached to
+         the DOM", killing the whole suite rather than failing one check.
+         It survived only because the old boot guess of 2,200ms happened to
+         let the repaint finish first; waiting on the app's real readiness
+         signal is faster, and exposed it. A locator re-queries at click
+         time, which is what this always meant. */
+      const opt=p.locator('#predCard .pdopt').first();
+      if(!await opt.count()) break;
+      await opt.click({timeout:5000}); await p.waitForTimeout(260);
+      const bi=p.locator('#predCard .pdbonus input').first();
+      if(await bi.count()) await bi.fill('9');
       const done=await p.evaluate(()=>preds.filter(x=>S.predChoices[x.id]).length===preds.length);
       if(done) break;
     }

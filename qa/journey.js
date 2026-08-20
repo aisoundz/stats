@@ -27,6 +27,7 @@
      node qa/journey.js --headed                     # watch it
    ================================================================== */
 const PW=require('playwright'); const path=require('path');
+const { waitReady } = require('./ready.js');
 const F=require('./fixtures.js');
 const ARG=(k,d)=>{const i=process.argv.indexOf('--'+k); return i>=0?process.argv[i+1]:d;};
 const URL_=ARG('url', 'file://'+path.resolve(__dirname,'..','index-test.html'));
@@ -183,7 +184,7 @@ const FAKE_SLATE=[
 
   await p.goto(URL_+cb(),{waitUntil:'domcontentloaded'});
   await p.waitForFunction(()=>typeof window.paintGameRail==='function',{timeout:20000});
-  await p.waitForTimeout(LIVE?5000:1800);
+  await waitReady(p);   /* was await p.waitForTimeout(LIVE?5000:1800); — a guess at boot */
   await seedConfigs();
   await seed();
 

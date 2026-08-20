@@ -40,6 +40,7 @@ const fs = require('fs');
 const http = require('http');
 const { chromium } = require(path.join(__dirname, '..', 'node_modules', 'playwright'));
 const ROOT = path.join(__dirname, '..');
+const { waitReady } = require('./ready.js');
 
 /* ============ IT SERVES ITSELF ======================================
    The first version of this suite needed a static server somebody had
@@ -110,7 +111,11 @@ const ROOM_B = {
      it' is the sentence that hides a real defect, so this is the defect. */
   const urlFile = path.basename(argFile);
   await pg.goto('http://127.0.0.1:' + port + '/' + urlFile, { waitUntil: 'domcontentloaded' });
-  await pg.waitForTimeout(1400);
+  /* WAS waitForTimeout(1400) — a guess that boot had finished, and one that
+     lost twice on 20 Aug while another gate was running. Both times this
+     suite reported a real check RED and both times the product was fine.
+     The app states its own readiness now. */
+  await waitReady(pg);
 
   const r = await pg.evaluate(async ({ A, B }) => {
     const out = {};

@@ -99,6 +99,7 @@ const TIER={
      neither run nor reported as untiered — "ALL 16 SUITES PASS" used to be
      14 suites and 2 module loads. */
   'fakebase.js':      {tier:'lib'},
+  'ready.js':         {tier:'lib'},
   'fixtures.js':      {tier:'lib'},
   'host-banks.js':    {tier:'static'},
   'host-block.js':    {tier:'static'},

@@ -16,6 +16,7 @@
        node qa/host-sportsreg.js
    ================================================================== */
 const { chromium } = require('playwright');
+const { waitReady } = require('./ready.js');
 const path=require('path');
 /* The build under test, not always the live one — see qa/all.js. */
 const PLAYER=(function(){ const a=process.argv.find(x=>/\.html$/.test(x));
@@ -30,7 +31,7 @@ const F=require(path.join(__dirname,'fixtures.js'));
     const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
     await p.route('**/site.api.espn.com/**',r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(F.PRE)}));
     await p.goto('file://'+PLAYER+'?sport='+sport,{waitUntil:'domcontentloaded'});
-    await p.waitForTimeout(1200);
+    await waitReady(p);   /* was await p.waitForTimeout(1200); — a guess at boot */
     const r=await p.evaluate(()=>{
       let started=false, qtext=null, opts=0;
       try{ startDemo(); S.name='QA'; lockPredictions(); startQuarter(0); started=true;

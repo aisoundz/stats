@@ -42,6 +42,7 @@
        node qa/chrome.js --json                # machine-readable
    ================================================================== */
 const PW=require('playwright'); const path=require('path'); const fs=require('fs');
+const { waitReady } = require('./ready.js');
 const F=require('./fixtures.js');
 const ARGS=process.argv.slice(2);
 const FILE=ARGS.find(a=>/\.html$/.test(a))||'index-test.html';
@@ -166,7 +167,7 @@ function occlusion(ids, screen, sel){
                         + 'window.__occlusion='+occlusion.toString()+';');
     await p.goto(URL,{waitUntil:'domcontentloaded'});
     await p.waitForFunction(()=>typeof window.go==='function',{timeout:25000}).catch(()=>{});
-    await p.waitForTimeout(2000);
+    await waitReady(p);   /* was await p.waitForTimeout(2000); — a guess at boot */
 
     /* A FOUR-GAME NIGHT, WHICH IS WHAT 29 AUGUST IS. Measuring against a
        one-game rail measures the product we stopped shipping on 18 Aug. */

@@ -22,6 +22,7 @@
        node qa/i18n.js [index-test.html]
    ================================================================== */
 const {chromium}=require('playwright');
+const { waitReady } = require('./ready.js');
 const path=require('path');
 const TARGET=path.resolve(process.argv.find(a=>/\.html$/.test(a)) || path.join(__dirname,'..','index-test.html'));
 
@@ -34,7 +35,7 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
   const errs=[]; p.on('pageerror',e=>errs.push(String(e).slice(0,140)));
   await p.goto('file://'+TARGET);
   await p.waitForFunction(()=>typeof window.applyLang==='function',{timeout:15000});
-  await p.waitForTimeout(1500);
+  await waitReady(p);   /* was await p.waitForTimeout(1500); — a guess at boot */
 
   /* THE SUITE OWNS ITS OWN FIXTURE, and this is not fussiness — the first
      version asserted against the LIVE RAIL ("Which game are you watching?",
@@ -194,7 +195,7 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
   const fresh = await b.newPage({viewport:{width:390,height:844}});
   await fresh.goto('file://'+TARGET);
   await fresh.waitForFunction(()=>typeof window.applyLang==='function',{timeout:15000});
-  await fresh.waitForTimeout(1200);
+  await waitReady(fresh);   /* was await fresh.waitForTimeout(1200); — a guess at boot */
   const cost = await fresh.evaluate(async ()=>{
     const t0=performance.now();
     for(let i=0;i<200;i++) applyLang();

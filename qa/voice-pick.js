@@ -25,6 +25,7 @@
      node qa/voice-pick.js [index-test.html]
    ================================================================== */
 const {chromium}=require('playwright'); const path=require('path');
+const { waitReady } = require('./ready.js');
 const F=require('./fixtures.js');
 const TARGET=path.resolve(process.argv[2]||path.join(__dirname,'..','index-test.html'));
 
@@ -57,7 +58,7 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
   });
   await p.goto('file://'+TARGET);
   await p.waitForFunction(()=>typeof window.VX==='object'||typeof VX==='object',{timeout:15000}).catch(()=>{});
-  await p.waitForTimeout(1800);
+  await waitReady(p);   /* was await p.waitForTimeout(1800); — a guess at boot */
 
   /* WAIT FOR QUIET, DO NOT GUESS A DELAY. The app pauses the microphone
      while its own voice is in the room — correctly, or it answers itself —

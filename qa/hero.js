@@ -137,8 +137,24 @@ const NFL = {
     };
     out.cardAll = Object.keys(out.card).map(k => out.card[k]).join(' | ');
 
-    /* ---- 2. it must NOT move a player who is inside a room ---- */
+    /* ---- 2a. A STALE SAVED PLACE MUST NOT BLOCK TONIGHT ----
+       THE CASE THAT SHIPPED BROKEN TWICE. S.place is persisted, so the one
+       device that actually played last night wakes up with S.place='review'
+       from a game that ended fourteen hours ago. The first guard refused to
+       run whenever S.place was set, so on that device — the founder's, the
+       only one that matters for this — the hero said "No game tonight" over
+       a rail listing two games, while every headless check passed because a
+       fresh profile has no saved place to be stale. */
+    try { window.ACTIVE_ROOM = ''; } catch (_) {}
     GAME.nightId = 'gn13-mystics-tempo'; GAME.espnEvent = '401857157';
+    S.place = 'review';                       // yesterday's, still on disk
+    out.staleReturn = featureTonight();
+    out.staleTonight = String((window.TONIGHT || {}).nightId || '');
+    try { window.TONIGHT = null; TONIGHT = null; } catch (_) {}
+
+    /* ---- 2b. but a player mid-question in a room that IS tonight's
+       must be left completely alone ---- */
+    GAME.nightId = MLB.nightId; GAME.espnEvent = String(MLB.espnEvent);
     S.place = 'live';
     out.inFlowReturn = featureTonight();
     out.inFlowEvent  = String(GAME.espnEvent);
@@ -233,10 +249,18 @@ const NFL = {
        !/quarter/i.test(r.card && r.card.chip3 || '') || (r.card.chip3||'').length > 0,
        `cadence chip reads ${JSON.stringify(r.card && r.card.chip3)}`);
 
+    ok('hero.a-stale-saved-place-does-not-block-tonight',
+       r.staleReturn === NFL.nightId && r.staleTonight === NFL.nightId,
+       `with S.place="review" left over from last night's room it returned "${r.staleReturn}" and ` +
+       `TONIGHT is "${r.staleTonight}" — both must be "${NFL.nightId}". S.place is PERSISTED, so ` +
+       `treating "S.place is set" as "this person is mid-question" makes the fix inert on the one ` +
+       `device that played last night. That shipped twice.`);
+
     ok('hero.never-moves-a-player-mid-game',
-       r.inFlowReturn === '' && r.inFlowEvent === '401857157',
-       `with S.place="live" it returned "${r.inFlowReturn}" and left the event at ${r.inFlowEvent}. ` +
-       `A player answering a question must not have the featured game recomputed under them.`);
+       r.inFlowReturn === '' && r.inFlowEvent === MLB.espnEvent,
+       `mid-question in the baseball room — one of TONIGHT's — it returned "${r.inFlowReturn}" and ` +
+       `left the event at ${r.inFlowEvent}. Somebody answering a question in a room that is on ` +
+       `tonight's slate must be left completely alone.`);
 
     ok('hero.never-overrides-a-room-you-picked',
        r.alreadyReturn === '' && r.alreadyEvent === MLB.espnEvent,

@@ -20,6 +20,7 @@
        node qa/voice-wiring.js [index.html]
    ================================================================== */
 const {chromium}=require('playwright'); const path=require('path');
+const { waitReady } = require('./ready.js');
 /* RESOLVE IT. A bare filename ("index-marquee.html") became
    file://index-marquee.html/ — a HOST, not a path — and Playwright threw
    something that reads like a browser fault rather than a typo. Caught by
@@ -67,7 +68,10 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     def('__micThrows', false);
   });
   await p.goto('file://'+TARGET,{waitUntil:'domcontentloaded'});
-  await p.waitForFunction(()=>document.body.classList.contains('booted'),{timeout:25000});
+  /* WAS waiting on body.booted — which is added ~3,700 lines before the
+     script ends, so it fires while every let/const below it is still
+     unset. That is this suite's long-standing flake, not a voice defect. */
+  await waitReady(p);
   await p.evaluate(()=>{ try{SB.verified=()=>true;}catch(_){} });
 
   const R={};

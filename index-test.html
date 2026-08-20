@@ -3015,6 +3015,39 @@ window.STATS_FIREBASE = {
 
       authMod.onAuthStateChanged(auth, function (u) { SB.refreshMe(u); });
 
+      /* ============ A ROOM ASKED FOR BEFORE WE WERE UP IS STILL ASKED FOR
+         B27's shape, and qa/journey.js has a check named after it: SB.enabled
+         true while SB.room() is null. Every room operation is guarded on
+         SB.enabled, so in that window the network layer ADVERTISES itself as
+         working while nightId is null.
+
+         The cause is one line in SB.setRoom: `if (!SB.enabled) return false`.
+         The app binds its room from observe(), joinNight() and chooseGame(),
+         and all three can run before Firebase has finished connecting — the
+         config comes off disk in milliseconds, the SDK does not. When they
+         do, the request is DROPPED ON THE FLOOR and silently returns false.
+         Then this line runs, enabled goes true, and the room the app asked
+         for half a second ago is simply gone. On a fast machine the gap is
+         nothing; under load it widens, which is why this only ever failed
+         during a busy gate — and a busy gate is a fair imitation of a cheap
+         phone on stadium wifi.
+
+         So the fix is to stop dropping the request, not to invent one here.
+         Two earlier attempts guessed a room at this point instead — first
+         from GAME.nightId, which bound the layer to the built-in practice
+         night and set qa/i18n.js off at 108 mutations in 1.5s, then from
+         ACTIVE_ROOM, which broke qa.js's receipt checks: a player who never
+         joined had their answers written into a room they were not in,
+         instead of being HELD AND RETRIED the way B3 requires.
+
+         A session with no room is a real state and the app already handles
+         it correctly by queueing. Only a room somebody actually asked for
+         gets bound. */
+      if (!nightId && SB._wantRoom) {
+        nightId = String(SB._wantRoom);
+        try { console.info('[STATS] network layer bound the room asked for before connect: ' + nightId); } catch (_) {}
+      }
+
       setState('on', 'connected');
     } catch (e) {
       setState('error', (e && e.message) || String(e));
@@ -4351,7 +4384,14 @@ try{ window.prefetchSlateConfigs = prefetchSlateConfigs; }catch(_){}
   SB.room = function () { return nightId || null; };
 
   SB.setRoom = function (nid) {
-    if (!SB.enabled || !nid) return false;
+    if (!nid) return false;
+    /* REMEMBER IT EVEN IF WE CANNOT ACT ON IT YET. Returning false here and
+       forgetting is what left the layer connected-but-roomless: the app had
+       already said which room it was in, and the answer was thrown away for
+       being half a second early. Recorded before the guard, so the connect
+       path above can honour it. */
+    SB._wantRoom = String(nid);
+    if (!SB.enabled) return false;
     if (nightId === nid) return true;
     try { budgetReset(); } catch (_) {}      // a new night is a new allowance
     nightId    = nid;
@@ -5713,16 +5753,29 @@ function tonightCadence(g){
 
    Returns the nightId it featured, or '' if it left GAME alone. */
 function featureTonight(){
-  /* DELIBERATELY NARROW. Never while somebody is inside the game flow, and
-     never over a room they already picked — GAME being one of tonight's
-     rooms already is the whole guard. Moving a player's night out from
-     under them would be far worse than a stale hero. */
-  var inFlow = false;
-  try{ inFlow = GAME_SCREENS.indexOf((S && S.place) || '') >= 0; }catch(_){}
-  if(inFlow) return '';
-  var haveTonight = false;
-  try{ haveTonight = !!(GAME && GAME.nightId && slateGame(GAME.nightId)); }catch(_){}
-  if(haveTonight) return '';
+  /* ============ "MID-GAME" MEANS TONIGHT'S GAME =======================
+     The first version refused to run whenever S.place was a game screen,
+     full stop — the idea being that moving somebody's night out from under
+     them mid-question is worse than a stale hero. That part is true.
+
+     But S.place is PERSISTED. It survives the night it belongs to, and the
+     next morning it still says 'review' or 'live' from a game that ended
+     fourteen hours ago. So on the one device that had actually played the
+     night before — the founder's — this guard fired every time, TONIGHT
+     stayed null, the hero fell back to GAME, and the page said "No game
+     tonight" over a rail listing two games. Every headless check passed
+     because a fresh profile has no saved place to be stale.
+
+     A saved place from a finished night is not somebody mid-question. So
+     the question is not "is S.place set?" but "is the room it belongs to
+     one of TONIGHT's?". If it is, leave them completely alone — in the
+     flow or not. If it is not, they are holding yesterday, and yesterday
+     is exactly what this function exists to replace. */
+  var here = '';
+  try{ here = (typeof ACTIVE_ROOM !== 'undefined' && ACTIVE_ROOM) || (GAME && GAME.nightId) || ''; }catch(_){}
+  var hereIsTonight = false;
+  try{ hereIsTonight = !!(here && slateGame(here)); }catch(_){}
+  if(hereIsTonight) return '';
   if(!SLATE.games || !SLATE.games.length) return '';
 
   /* WHICH game is tonight's, in the marquee's own order of preference.
@@ -6784,6 +6837,16 @@ try{ window.paintSurface=paintSurface; }catch(_){}
 
 function landingTipLine(){
   try{
+    /* THE MARQUEE CASE LIVES HERE, not at the call site. It was written as
+       a ternary in applySport() — set('landingTip', marquee ? a : b) — and
+       qa.js caught it, because that check demands this element have exactly
+       ONE writer and names the function that owns it. It is right to: the
+       defect it remembers is a landing page that read "Tip-off 8:00 ET" in
+       gold through the middle of the second quarter, and that happened
+       because the tip line had a second author. Branching at the call site
+       is how a second author starts. */
+    var hg = heroGame();
+    if(typeof GAME !== 'undefined' && hg !== GAME) return tonightTipLine(hg);
     var ph=''; try{ ph=phaseNow(); }catch(_){}
     if(ph!=='live' && ph!=='final') return GAME.tip;
     var A=null,B=null;
@@ -16887,7 +16950,7 @@ function applySport(){
      read once, and every line on this card comes from it. */
   var _hg = heroGame();
   var _marquee = (_hg !== GAME);
-  set('landingTip', _marquee ? tonightTipLine(_hg) : landingTipLine());
+  set('landingTip', landingTipLine());
   if(_marquee){ html('landingMatch','<b style="color:var(--ink)">'
       + esc(String(_hg.awayName || _hg.awayAbbr || '')) + ' @ '
       + esc(String(_hg.homeName || _hg.homeAbbr || '')) + '</b>'); }
@@ -17450,7 +17513,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-20-onecard.172';
+const STATS_BUILD='2026-08-20-ready.173';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -17482,9 +17545,41 @@ async function checkForUpdate(){
     if(!r.ok) return;
     const t=await r.text();
     const m=t.match(/const STATS_BUILD='([^']+)'/);
-    if(m && m[1] && m[1]!==STATS_BUILD) showUpdateBar();
+    if(!(m && m[1] && m[1]!==STATS_BUILD)) return;
+
+    /* ============ A BAR IS NOT ENOUGH ON A GAME NIGHT ==================
+       20 Aug 2026. Two fixes to the landing page were deployed and verified
+       live inside two minutes, and the founder went on looking at the old
+       one — reporting behaviour from a build that had been replaced twice.
+       GitHub Pages serves this file with max-age=600 and there is no
+       service worker, so a tab that has been open all day can hold a stale
+       copy, and the only thing offering a way out was a button somebody has
+       to notice and tap.
+
+       If they are just LOOKING at the page — not in a room, not answering
+       anything — there is nothing to lose by taking the new one, and a
+       whole game night to lose by not. So reload, once, silently.
+
+       The bar stays for everybody who IS in a game flow: interrupting a
+       player mid-question to install an update is the one thing worse than
+       showing them a stale landing page, and reloading under them could
+       cost points. They get the choice; a spectator does not need one. */
+    var busy = false;
+    try{ busy = !!(S && GAME_SCREENS.indexOf(S.place||'') >= 0); }catch(_){ busy = true; }
+    try{ if(document.hidden) busy = true; }catch(_){}
+    if(!busy && !UPDATE_RELOADED){
+      UPDATE_RELOADED = true;                 // once per page, never a loop
+      try{ console.info('[STATS] build '+m[1]+' is live, this tab has '+STATS_BUILD+' — reloading'); }catch(_){}
+      location.replace(location.pathname + '?v=' + encodeURIComponent(m[1]));
+      return;
+    }
+    showUpdateBar();
   }catch(e){}
 }
+/* Guards against a reload loop if the fetched copy and the running copy
+   somehow never agree — one attempt per page load, then fall back to the
+   bar, which is visible and honest rather than an infinite refresh. */
+var UPDATE_RELOADED = false;
 try{ setTimeout(checkForUpdate, 4000); setInterval(checkForUpdate, 180000); }catch(e){}
 
 /* Boot the front door + ribbon. Identity arrives asynchronously, so the
@@ -17527,6 +17622,13 @@ try{
    line ever throws, the timeout still opens the app rather than leaving a
    player staring at nothing. A safety curtain that can jam shut is worse
    than no curtain. */
+/* `booted` UNHIDES THE SCREENS. It is not a readiness signal, and using it
+   as one is why qa/voice-wiring.js flaked: this line runs with roughly
+   3,700 lines of script still to execute below it. Function declarations
+   are hoisted so the page LOOKS complete, but every let/const initialised
+   after this point is still unset — a test that waits on `booted` and then
+   reaches for one of them gets undefined and blames the feature.
+   Readiness is window.STATS_READY, set as the last statement in this file. */
 try{ document.body.classList.add('booted'); }catch(e){}
 try{ setTimeout(function(){ try{ document.body.classList.add('booted'); }catch(_){ } }, 2000); }catch(e){}
 try{backendBadge();}catch(e){}
@@ -21276,6 +21378,42 @@ try{ setInterval(function(){ try{
    twelve-nothing run is worth knowing about from the Board too. It polices
    its own rarity; see TAKE.MIN_GAP. */
 try{ setInterval(function(){ try{ takeoverTick(); }catch(_){} }, 15000); }catch(e){}
+
+/* ============ THE APP SAYS WHEN IT IS READY ==========================
+   Written 20 Aug 2026. Nineteen browser suites across twelve files each
+   waited a hardcoded number of milliseconds after load and then reached
+   straight for app globals: 900, 1200, 1400, 1500, 1800, 2200, 2500, 4000,
+   6000. Nineteen guesses at one fact.
+
+   Every one of them is a bet that boot finished, and on a busy machine the
+   bet loses. It lost three times in one morning: qa/switch.js went red on a
+   real check twice and qa/devices.js crashed outright, all three while
+   another gate was running — and the first instinct each time was to go
+   looking for a defect in the product. A gate that cries wolf under load
+   is worse than no gate, because the next red gets shrugged at.
+
+   So the app states it, once, and the suites wait on the statement. This
+   is the last statement in the last script block, so every function above
+   is defined; the DOMContentLoaded hop lets the boot handlers registered
+   above actually run; the setTimeout yields one task so their first paint
+   has landed.
+
+   DELIBERATELY NOT a promise about the NETWORK. Firestore may be stubbed,
+   offline, or slow, and a readiness flag that waits on it would hang every
+   suite that fakes the backend. This means exactly "the app's code is
+   loaded and it has rendered once" — which is precisely what those
+   nineteen timeouts were trying to say. */
+try{
+  var _statsReady = function(){
+    try{ window.STATS_READY = true; }catch(_){}
+    try{ document.documentElement.setAttribute('data-stats-ready','1'); }catch(_){}
+  };
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(_statsReady, 0); }, {once:true});
+  } else {
+    setTimeout(_statsReady, 0);
+  }
+}catch(_){}
 
 </script>
 
