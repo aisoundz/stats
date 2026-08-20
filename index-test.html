@@ -888,6 +888,21 @@
     font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto;font-weight:700}
   .grTile[aria-current="true"] .grWhen{color:var(--teal)}
   .grStar{color:var(--gold);font-size:12px}
+  /* The game number, on the tile you pick from. Quiet — it is a reference,
+     not a ranking, and the star still has to read as the louder mark. */
+  .grGn{color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.02em}
+  /* The practice sport chooser. Chips, because this is a choice between
+     five known things and not a form field. */
+  .tryPick{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 12px}
+  /* 44px MINIMUM, and it is not a nicety. The first cut of these was 31px
+     tall — padding 8px around a 13px line — and qa/platforms.js failed all
+     four chips on an iPhone 15. This is the control a stranger uses to try
+     the product for the first time; a target they have to aim at is the
+     worst possible place to save eleven pixels. */
+  .tryPick button{background:var(--card2);border:1px solid var(--line2);color:var(--muted);
+    border-radius:999px;min-height:44px;padding:0 16px;font-size:14px;font-weight:800;
+    line-height:1;cursor:pointer;display:inline-flex;align-items:center}
+  .tryPick button.on{background:rgba(40,224,208,.13);border-color:var(--teal);color:var(--teal)}
   /* The overflow control reads as a tile so it wraps with them, but it is
      plainly not a game — no colours, no time. */
   /* A FULL-WIDTH THIN ROW, NOT A TILE. As a tile it occupied a whole grid
@@ -1479,6 +1494,14 @@
 
       <b class="doorLbl">Never played? Start here</b>
       <p class="sub" style="margin:6px 0 13px">A practice game, right now — real questions, simulated players. No account needed, just a name to play under.</p>
+      <!-- PICK THE SPORT YOU CAME FOR. Practice used to run whatever sport
+           the page happened to be on — basketball at the front door, always
+           — so a football fan on an NFL night tried the product and was
+           handed basketball questions. Five leagues are built; there was no
+           way to reach four of them without knowing to type ?sport= into
+           the URL. Founder, 20 Aug: "if a guest wants to try a sport they
+           can select the sport and try it. We dont limit everyone." -->
+      <div id="tryPick" class="tryPick" role="group" aria-label="Choose a sport to practise"></div>
       <button class="btn" onclick="startDemo()">Try it now</button>
 
       <div class="doorSplit"><span>when you want a seat</span></div>
@@ -4889,27 +4912,53 @@ const SC_PREDS=[
    You set these before kickoff and then you do NOTHING. They flip themselves
    as the match happens. No buzzing phone during a counter-attack — which is
    the whole reason a basketball-style quiz doesn't work for this sport. */
+/* ============ A PRACTICE CAUGHT IT FOR EVERY SPORT ====================
+   Until 20 Aug only soccer had one. The other four sports carried
+   catches:[], so the Caught It card fell through to a hardcoded warm-up
+   asking "how many QUARTERS does a game night run?" — on a baseball night
+   whose own chip says 3 ROUNDS. The founder found it in the MLB and NFL
+   rooms hours before the first live baseball game this product has run.
+
+   Each is a real, checkable moment in that sport, in the order it happens,
+   with the label in both languages. `at` is the clock the practice run
+   shows it against — a first corner at 7', a first strikeout in the 1st.
+   qa/practice.js fails the gate on any sport that has none, and on any
+   entry missing a language the app offers. */
+const BB_CATCHES=[
+  {id:"c_first2",  icon:"🏀", label:"First bucket",              label_es:"Primera canasta",              teams:true, opts:[BB_GAME.homeAbbr,BB_GAME.awayAbbr], answer:BB_GAME.awayAbbr, at:"Q1 9:12"},
+  {id:"c_three",   icon:"🎯", label:"First three",               label_es:"Primer triple",                teams:true, opts:[BB_GAME.homeAbbr,BB_GAME.awayAbbr], answer:BB_GAME.homeAbbr, at:"Q1 7:40"},
+  {id:"c_foul",    icon:"✋", label:"First team foul",           label_es:"Primera falta de equipo",      teams:true, opts:[BB_GAME.homeAbbr,BB_GAME.awayAbbr], answer:BB_GAME.homeAbbr, at:"Q1 6:05"},
+  {id:"c_to",      icon:"⏱️", label:"First timeout",             label_es:"Primer tiempo muerto",         teams:true, opts:[BB_GAME.homeAbbr,BB_GAME.awayAbbr], answer:BB_GAME.awayAbbr, at:"Q1 4:18"},
+  {id:"c_lead",    icon:"📈", label:"Lead at the first break",   label_es:"Ventaja al final del 1er cuarto", opts:["Under 5","5 or more"], opts_es:["Menos de 5","5 o más"], answer:"Under 5", at:"Q1 0:00"},
+  {id:"c_block",   icon:"🛡️", label:"First blocked shot",        label_es:"Primer tapón",                 teams:true, opts:[BB_GAME.homeAbbr,BB_GAME.awayAbbr], answer:BB_GAME.homeAbbr, at:"Q2 10:31"}
+];
 const SC_CATCHES=[
-  {id:"c_corner", icon:"🚩", label:"First corner",            teams:true, opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.awayAbbr, at:"7'"},
-  {id:"c_sot",    icon:"🎯", label:"First shot on target",    teams:true, opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.homeAbbr, at:"12'"},
-  {id:"c_card",   icon:"🟨", label:"First yellow card",       teams:true, opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.homeAbbr, at:"31'"},
-  {id:"c_off",    icon:"🚫", label:"First offside",           teams:true, opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.awayAbbr, at:"38'"},
-  {id:"c_stop",   icon:"⏱️", label:"Added time, 1st half",    opts:["Under 2 min","2 min or more"], answer:"2 min or more", at:"45'"},
-  {id:"c_sub",    icon:"🔄", label:"First substitution",      teams:true, opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.awayAbbr, at:"58'"}
+  {id:"c_corner", icon:"🚩", label:"First corner", label_es:"Primer córner",            teams:true, opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.awayAbbr, at:"7'"},
+  {id:"c_sot",    icon:"🎯", label:"First shot on target", label_es:"Primer remate a puerta",    teams:true, opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.homeAbbr, at:"12'"},
+  {id:"c_card",   icon:"🟨", label:"First yellow card", label_es:"Primera tarjeta amarilla",       teams:true, opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.homeAbbr, at:"31'"},
+  {id:"c_off",    icon:"🚫", label:"First offside", label_es:"Primer fuera de juego",           teams:true, opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.awayAbbr, at:"38'"},
+  {id:"c_stop",   icon:"⏱️", label:"Added time, 1st half", label_es:"Tiempo añadido, 1er tiempo",    opts:["Under 2 min","2 min or more"], opts_es:["Menos de 2 min","2 min o más"], answer:"2 min or more", at:"45'"},
+  {id:"c_sub",    icon:"🔄", label:"First substitution", label_es:"Primer cambio",      teams:true, opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.awayAbbr, at:"58'"}
 ];
 // 2 rounds × 3 questions. Halftime = 3 pts each (9), full-time = 5 pts each (15).
 // 50 predictions + 6 catches + 24 live = 80. Same spine as basketball, so the
 // leaderboard stays comparable across every sport.
 const SOCCER_ROUNDS=[
   {home:0,away:1, q:[
-    {t:"Who took the first shot on target?", o:["Inter Miami","Club América","Nobody did"], a:"Inter Miami"},
-    {t:"How many corners in the first half (both teams)?", o:["0–2","3–4","5–6","7+"], a:"3–4"},
-    {t:"How many minutes of added time at the end of the half?", o:["1","2","3","4+"], a:"2"}
+    {t:"Who took the first shot on target?", o:["Inter Miami","Club América","Nobody did"], a:"Inter Miami",
+     t_es:"¿Quién hizo el primer remate a puerta?", o_es:["Inter Miami","Club América","Nadie remató"]},
+    {t:"How many corners in the first half (both teams)?", o:["0–2","3–4","5–6","7+"], a:"3–4",
+     t_es:"¿Cuántos córners en el primer tiempo (entre los dos equipos)?", o_es:["0–2","3–4","5–6","7+"]},
+    {t:"How many minutes of added time at the end of the half?", o:["1","2","3","4+"], a:"2",
+     t_es:"¿Cuántos minutos de tiempo añadido al final del primer tiempo?", o_es:["1","2","3","4+"]}
   ]},
   {home:2,away:1, q:[
-    {t:"Who won the second half on goals?", o:["Inter Miami","Club América","Drawn"], a:"Inter Miami"},
-    {t:"How many yellow cards in the whole match?", o:["0–1","2–3","4–5","6+"], a:"2–3"},
-    {t:"How many minutes of added time at the end of the match?", o:["1–2","3–4","5–6","7+"], a:"5–6"}
+    {t:"Who won the second half on goals?", o:["Inter Miami","Club América","Drawn"], a:"Inter Miami",
+     t_es:"¿Quién ganó el segundo tiempo en goles?", o_es:["Inter Miami","Club América","Empatado"]},
+    {t:"How many yellow cards in the whole match?", o:["0–1","2–3","4–5","6+"], a:"2–3",
+     t_es:"¿Cuántas tarjetas amarillas en todo el partido?", o_es:["0–1","2–3","4–5","6+"]},
+    {t:"How many minutes of added time at the end of the match?", o:["1–2","3–4","5–6","7+"], a:"5–6",
+     t_es:"¿Cuántos minutos de tiempo añadido al final del partido?", o_es:["1–2","3–4","5–6","7+"]}
   ]}
 ];
 
@@ -4935,24 +4984,44 @@ const BA_GAME={
   night:"MLB (sample)",
   tip:"No MLB night scheduled yet — this is a practice fixture"
 };
+/* SPANISH IS NOT OPTIONAL ON A PRACTICE BANK. Until 20 Aug only basketball
+   carried t_es/o_es — 46 questions across the other four sports had none,
+   so a Spanish player who picked baseball got English mid-sentence and
+   learned that the language switch is decoration. qa/practice.js fails the
+   gate on any question in any sport that is missing a language the app
+   offers, so this cannot go quiet again.
+   Terms are the ones Spanish-language broadcasts actually use: hit, jonrón,
+   ponche, entrada, base robada. */
 const BA_ROUNDS=[
   {home:1,away:0, q:[
-    {t:"First hit of the game — what was it?", o:["Single","Double","Triple","Home run"], a:"Single"},
-    {t:"How many strikeouts through three?", o:["0–2","3–4","5–6","7 or more"], a:"7 or more"},
-    {t:"Hardest pitch so far — how fast?", o:["93 or under","94–96","97–98","99 and up"], a:"94–96"},
-    {t:"Who got on the board first?", o:["Arizona Diamondbacks","Atlanta Braves"], a:"Atlanta Braves"}
+    {t:"First hit of the game — what was it?", o:["Single","Double","Triple","Home run"], a:"Single",
+     t_es:"El primer hit del partido — ¿qué fue?", o_es:["Sencillo","Doble","Triple","Jonrón"]},
+    {t:"How many strikeouts through three?", o:["0–2","3–4","5–6","7 or more"], a:"7 or more",
+     t_es:"¿Cuántos ponches en las primeras tres entradas?", o_es:["0–2","3–4","5–6","7 o más"]},
+    {t:"Hardest pitch so far — how fast?", o:["93 or under","94–96","97–98","99 and up"], a:"94–96",
+     t_es:"El lanzamiento más rápido hasta ahora — ¿a cuánto?", o_es:["93 o menos","94–96","97–98","99 o más"]},
+    {t:"Who got on the board first?", o:["Arizona Diamondbacks","Atlanta Braves"], a:"Atlanta Braves",
+     t_es:"¿Quién anotó primero?", o_es:["Arizona Diamondbacks","Atlanta Braves"]}
   ]},
   {home:2,away:1, q:[
-    {t:"Runs scored in the fourth, fifth and sixth?", o:["None","1–2","3–4","5 or more"], a:"1–2"},
-    {t:"More strikeouts or more hits in those three?", o:["Strikeouts","Hits","Dead even"], a:"Hits"},
-    {t:"Any home runs in there?", o:["None","One","Two","Three or more"], a:"One"},
-    {t:"Was there a one-two-three inning?", o:["Yes","No"], a:"Yes"}
+    {t:"Runs scored in the fourth, fifth and sixth?", o:["None","1–2","3–4","5 or more"], a:"1–2",
+     t_es:"¿Cuántas carreras en la cuarta, quinta y sexta entrada?", o_es:["Ninguna","1–2","3–4","5 o más"]},
+    {t:"More strikeouts or more hits in those three?", o:["Strikeouts","Hits","Dead even"], a:"Hits",
+     t_es:"En esas tres entradas, ¿más ponches o más hits?", o_es:["Ponches","Hits","Empatados"]},
+    {t:"Any home runs in there?", o:["None","One","Two","Three or more"], a:"One",
+     t_es:"¿Hubo algún jonrón?", o_es:["Ninguno","Uno","Dos","Tres o más"]},
+    {t:"Was there a one-two-three inning?", o:["Yes","No"], a:"Yes",
+     t_es:"¿Hubo una entrada de tres outs seguidos?", o_es:["Sí","No"]}
   ]},
   {home:5,away:3, q:[
-    {t:"Who leads after nine?", o:["Arizona Diamondbacks","Atlanta Braves","Tied"], a:"Atlanta Braves"},
-    {t:"Runs in the last three innings?", o:["None","1–2","3–4","5 or more"], a:"5 or more"},
-    {t:"Bases stolen late?", o:["None","One","Two","Three or more"], a:"None"},
-    {t:"Strikeouts in the last three?", o:["0–2","3–4","5–6","7 or more"], a:"5–6"}
+    {t:"Who leads after nine?", o:["Arizona Diamondbacks","Atlanta Braves","Tied"], a:"Atlanta Braves",
+     t_es:"¿Quién gana después de nueve entradas?", o_es:["Arizona Diamondbacks","Atlanta Braves","Empatados"]},
+    {t:"Runs in the last three innings?", o:["None","1–2","3–4","5 or more"], a:"5 or more",
+     t_es:"¿Cuántas carreras en las últimas tres entradas?", o_es:["Ninguna","1–2","3–4","5 o más"]},
+    {t:"Bases stolen late?", o:["None","One","Two","Three or more"], a:"None",
+     t_es:"¿Bases robadas al final del partido?", o_es:["Ninguna","Una","Dos","Tres o más"]},
+    {t:"Strikeouts in the last three?", o:["0–2","3–4","5–6","7 or more"], a:"5–6",
+     t_es:"¿Cuántos ponches en las últimas tres entradas?", o_es:["0–2","3–4","5–6","7 o más"]}
   ]}
 ];
 
@@ -4973,28 +5042,44 @@ const FO_GAME={
 };
 const FO_ROUNDS=[
   {home:7,away:3, q:[
-    {t:"How did the opening drive end?", o:["Touchdown","Field goal","Punt","Turnover","Downs","Missed FG"], a:"Touchdown"},
-    {t:"Punts in the first?", o:["0–1","Two","Three","Four or more"], a:"Three"},
-    {t:"More runs or more passes?", o:["Rush","Pass","Dead even"], a:"Dead even"},
-    {t:"First points of the game came how?", o:["Touchdown","Field goal","Safety","Nobody scored"], a:"Touchdown"}
+    {t:"How did the opening drive end?", o:["Touchdown","Field goal","Punt","Turnover","Downs","Missed FG"], a:"Touchdown",
+     t_es:"¿Cómo terminó la serie ofensiva inicial?", o_es:["Touchdown","Gol de campo","Despeje","Pérdida de balón","Cuarta y sin avance","Gol de campo fallado"]},
+    {t:"Punts in the first?", o:["0–1","Two","Three","Four or more"], a:"Three",
+     t_es:"¿Cuántos despejes en el primer cuarto?", o_es:["0–1","Dos","Tres","Cuatro o más"]},
+    {t:"More runs or more passes?", o:["Rush","Pass","Dead even"], a:"Dead even",
+     t_es:"¿Más jugadas por tierra o por aire?", o_es:["Por tierra","Por aire","Empatadas"]},
+    {t:"First points of the game came how?", o:["Touchdown","Field goal","Safety","Nobody scored"], a:"Touchdown",
+     t_es:"¿Cómo llegaron los primeros puntos del partido?", o_es:["Touchdown","Gol de campo","Safety","Nadie anotó"]}
   ]},
   {home:14,away:10, q:[
-    {t:"Touchdowns in the second?", o:["None","One","Two","Three or more"], a:"Two"},
-    {t:"Flags thrown in the second?", o:["0–1","2–3","4–5","Six or more"], a:"4–5"},
-    {t:"Longest drive of the quarter?", o:["Under 20 yards","21–45","46–70","71 or more"], a:"46–70"},
-    {t:"Who leads at the half?", o:["Denver Broncos","Atlanta Falcons","Tied"], a:"Denver Broncos"}
+    {t:"Touchdowns in the second?", o:["None","One","Two","Three or more"], a:"Two",
+     t_es:"¿Cuántos touchdowns en el segundo cuarto?", o_es:["Ninguno","Uno","Dos","Tres o más"]},
+    {t:"Flags thrown in the second?", o:["0–1","2–3","4–5","Six or more"], a:"4–5",
+     t_es:"¿Cuántos pañuelos por castigo en el segundo cuarto?", o_es:["0–1","2–3","4–5","Seis o más"]},
+    {t:"Longest drive of the quarter?", o:["Under 20 yards","21–45","46–70","71 or more"], a:"46–70",
+     t_es:"¿La serie ofensiva más larga del cuarto?", o_es:["Menos de 20 yardas","21–45","46–70","71 o más"]},
+    {t:"Who leads at the half?", o:["Denver Broncos","Atlanta Falcons","Tied"], a:"Denver Broncos",
+     t_es:"¿Quién gana al medio tiempo?", o_es:["Denver Broncos","Atlanta Falcons","Empatados"]}
   ]},
   {home:17,away:17, q:[
-    {t:"Turnovers in the third?", o:["None","One","Two","Three or more"], a:"One"},
-    {t:"Drives that ended in points?", o:["None","One","Two","Three or more"], a:"One"},
-    {t:"How did the first drive of the half end?", o:["Touchdown","Field goal","Punt","Turnover","Downs","Missed FG"], a:"Punt"},
-    {t:"More runs or more passes in the third?", o:["Rush","Pass","Dead even"], a:"Rush"}
+    {t:"Turnovers in the third?", o:["None","One","Two","Three or more"], a:"One",
+     t_es:"¿Cuántas pérdidas de balón en el tercer cuarto?", o_es:["Ninguna","Una","Dos","Tres o más"]},
+    {t:"Drives that ended in points?", o:["None","One","Two","Three or more"], a:"One",
+     t_es:"¿Cuántas series ofensivas terminaron en puntos?", o_es:["Ninguna","Una","Dos","Tres o más"]},
+    {t:"How did the first drive of the half end?", o:["Touchdown","Field goal","Punt","Turnover","Downs","Missed FG"], a:"Punt",
+     t_es:"¿Cómo terminó la primera serie de la segunda mitad?", o_es:["Touchdown","Gol de campo","Despeje","Pérdida de balón","Cuarta y sin avance","Gol de campo fallado"]},
+    {t:"More runs or more passes in the third?", o:["Rush","Pass","Dead even"], a:"Rush",
+     t_es:"En el tercer cuarto, ¿más por tierra o por aire?", o_es:["Por tierra","Por aire","Empatadas"]}
   ]},
   {home:24,away:20, q:[
-    {t:"Touchdowns in the fourth?", o:["None","One","Two","Three or more"], a:"None"},
-    {t:"Who moved the ball further tonight?", o:["Denver Broncos","Atlanta Falcons","Dead even"], a:"Denver Broncos"},
-    {t:"Who picked up more first downs?", o:["Denver Broncos","Atlanta Falcons","Dead even"], a:"Denver Broncos"},
-    {t:"Who leads after four?", o:["Denver Broncos","Atlanta Falcons","Tied"], a:"Denver Broncos"}
+    {t:"Touchdowns in the fourth?", o:["None","One","Two","Three or more"], a:"None",
+     t_es:"¿Cuántos touchdowns en el cuarto periodo?", o_es:["Ninguno","Uno","Dos","Tres o más"]},
+    {t:"Who moved the ball further tonight?", o:["Denver Broncos","Atlanta Falcons","Dead even"], a:"Denver Broncos",
+     t_es:"¿Quién avanzó más yardas esta noche?", o_es:["Denver Broncos","Atlanta Falcons","Empatados"]},
+    {t:"Who picked up more first downs?", o:["Denver Broncos","Atlanta Falcons","Dead even"], a:"Denver Broncos",
+     t_es:"¿Quién consiguió más primeros downs?", o_es:["Denver Broncos","Atlanta Falcons","Empatados"]},
+    {t:"Who leads after four?", o:["Denver Broncos","Atlanta Falcons","Tied"], a:"Denver Broncos",
+     t_es:"¿Quién gana después de cuatro cuartos?", o_es:["Denver Broncos","Atlanta Falcons","Empatados"]}
   ]}
 ];
 
@@ -5013,24 +5098,69 @@ const HO_GAME={
   night:"NHL (sample)",
   tip:"No NHL night scheduled yet — this is a practice fixture"
 };
+
+/* THESE THREE LIVE HERE, BELOW THE FIXTURES THEY NAME, and that is not a
+   style choice. They were written above BA_GAME/FO_GAME/HO_GAME, and a
+   `const` read before its declaration is a ReferenceError — which killed
+   the whole script block, so SPORTS never existed and the app did not boot
+   at all. Every check went "the app never reported ready", which is
+   qa/ready.js saying, correctly, that this is a BOOT failure and not a
+   defect in the feature under test. A parse check cannot see this; only
+   running it can. */
+const BA_CATCHES=[
+  {id:"c_k",       icon:"⚾", label:"First strikeout",           label_es:"Primer ponche",                teams:true, opts:[BA_GAME.homeAbbr,BA_GAME.awayAbbr], answer:BA_GAME.homeAbbr, at:"1st"},
+  {id:"c_hit",     icon:"💥", label:"First hit",                 label_es:"Primer hit",                   teams:true, opts:[BA_GAME.homeAbbr,BA_GAME.awayAbbr], answer:BA_GAME.awayAbbr, at:"1st"},
+  {id:"c_walk",    icon:"🚶", label:"First walk",                label_es:"Primera base por bolas",       teams:true, opts:[BA_GAME.homeAbbr,BA_GAME.awayAbbr], answer:BA_GAME.homeAbbr, at:"2nd"},
+  {id:"c_run",     icon:"🏃", label:"First run scored",          label_es:"Primera carrera",              teams:true, opts:[BA_GAME.homeAbbr,BA_GAME.awayAbbr], answer:BA_GAME.homeAbbr, at:"3rd"},
+  {id:"c_123",     icon:"🔁", label:"A one-two-three inning?",   label_es:"¿Una entrada de tres outs seguidos?", opts:["Yes","No"], opts_es:["Sí","No"], answer:"Yes", at:"4th"},
+  {id:"c_xbh",     icon:"↔️", label:"First extra-base hit",      label_es:"Primer hit de extrabase",      teams:true, opts:[BA_GAME.homeAbbr,BA_GAME.awayAbbr], answer:BA_GAME.awayAbbr, at:"5th"}
+];
+const FO_CATCHES=[
+  {id:"c_1st",     icon:"🏈", label:"First first down",          label_es:"Primer primer down",           teams:true, opts:[FO_GAME.homeAbbr,FO_GAME.awayAbbr], answer:FO_GAME.awayAbbr, at:"Q1 13:22"},
+  {id:"c_punt",    icon:"🦶", label:"First punt",                label_es:"Primer despeje",               teams:true, opts:[FO_GAME.homeAbbr,FO_GAME.awayAbbr], answer:FO_GAME.homeAbbr, at:"Q1 10:44"},
+  {id:"c_flag",    icon:"🚩", label:"First penalty flag",        label_es:"Primer castigo",               teams:true, opts:[FO_GAME.homeAbbr,FO_GAME.awayAbbr], answer:FO_GAME.homeAbbr, at:"Q1 8:03"},
+  {id:"c_pts",     icon:"🎯", label:"First points",              label_es:"Primeros puntos",              opts:["Touchdown","Field goal"], opts_es:["Touchdown","Gol de campo"], answer:"Field goal", at:"Q1 5:19"},
+  {id:"c_sack",    icon:"💥", label:"First sack",                label_es:"Primera captura",              teams:true, opts:[FO_GAME.homeAbbr,FO_GAME.awayAbbr], answer:FO_GAME.awayAbbr, at:"Q2 12:07"},
+  {id:"c_third",   icon:"📏", label:"Third down converted?",     label_es:"¿Convirtieron el tercer down?", opts:["Yes","No"], opts_es:["Sí","No"], answer:"No", at:"Q2 9:31"}
+];
+const HO_CATCHES=[
+  {id:"c_sog",     icon:"🏒", label:"First shot on goal",        label_es:"Primer tiro a puerta",         teams:true, opts:[HO_GAME.homeAbbr,HO_GAME.awayAbbr], answer:HO_GAME.awayAbbr, at:"P1 18:40"},
+  {id:"c_hit",     icon:"💢", label:"First big hit",             label_es:"Primer golpe fuerte",          teams:true, opts:[HO_GAME.homeAbbr,HO_GAME.awayAbbr], answer:HO_GAME.homeAbbr, at:"P1 15:12"},
+  {id:"c_pen",     icon:"⛔", label:"First penalty",             label_es:"Primera penalización",         teams:true, opts:[HO_GAME.homeAbbr,HO_GAME.awayAbbr], answer:HO_GAME.homeAbbr, at:"P1 11:55"},
+  {id:"c_goal",    icon:"🚨", label:"First goal",                label_es:"Primer gol",                   teams:true, opts:[HO_GAME.homeAbbr,HO_GAME.awayAbbr], answer:HO_GAME.homeAbbr, at:"P1 7:26"},
+  {id:"c_pp",      icon:"⚡", label:"Power play converted?",     label_es:"¿Aprovecharon el poder de juego?", opts:["Yes","No"], opts_es:["Sí","No"], answer:"No", at:"P1 4:02"},
+  {id:"c_block",   icon:"🛡️", label:"First blocked shot",        label_es:"Primer tiro bloqueado",        teams:true, opts:[HO_GAME.homeAbbr,HO_GAME.awayAbbr], answer:HO_GAME.awayAbbr, at:"P2 17:38"}
+];
 const HO_ROUNDS=[
   {home:1,away:0, q:[
-    {t:"Who scored first?", o:["Vegas Golden Knights","Carolina Hurricanes","Still scoreless"], a:"Vegas Golden Knights"},
-    {t:"Shots on goal in the first?", o:["0–8","9–12","13–16","17 or more"], a:"9–12"},
-    {t:"How many hits landed?", o:["0–12","13–20","21–28","29 or more"], a:"21–28"},
-    {t:"Goals in the opening period?", o:["None","One","Two","Three or more"], a:"One"}
+    {t:"Who scored first?", o:["Vegas Golden Knights","Carolina Hurricanes","Still scoreless"], a:"Vegas Golden Knights",
+     t_es:"¿Quién anotó primero?", o_es:["Vegas Golden Knights","Carolina Hurricanes","Aún sin goles"]},
+    {t:"Shots on goal in the first?", o:["0–8","9–12","13–16","17 or more"], a:"9–12",
+     t_es:"¿Cuántos tiros a puerta en el primer periodo?", o_es:["0–8","9–12","13–16","17 o más"]},
+    {t:"How many hits landed?", o:["0–12","13–20","21–28","29 or more"], a:"21–28",
+     t_es:"¿Cuántos golpes conectados?", o_es:["0–12","13–20","21–28","29 o más"]},
+    {t:"Goals in the opening period?", o:["None","One","Two","Three or more"], a:"One",
+     t_es:"¿Cuántos goles en el primer periodo?", o_es:["Ninguno","Uno","Dos","Tres o más"]}
   ]},
   {home:2,away:1, q:[
-    {t:"Shots blocked in the second?", o:["0–4","5–8","9–12","13 or more"], a:"13 or more"},
-    {t:"Pucks given away?", o:["0–4","5–8","9–12","13 or more"], a:"9–12"},
-    {t:"Goals in the middle period?", o:["None","One","Two","Three or more"], a:"One"},
-    {t:"Who leads after two?", o:["Vegas Golden Knights","Carolina Hurricanes","Tied"], a:"Vegas Golden Knights"}
+    {t:"Shots blocked in the second?", o:["0–4","5–8","9–12","13 or more"], a:"13 or more",
+     t_es:"¿Cuántos tiros bloqueados en el segundo periodo?", o_es:["0–4","5–8","9–12","13 o más"]},
+    {t:"Pucks given away?", o:["0–4","5–8","9–12","13 or more"], a:"9–12",
+     t_es:"¿Cuántos discos perdidos?", o_es:["0–4","5–8","9–12","13 o más"]},
+    {t:"Goals in the middle period?", o:["None","One","Two","Three or more"], a:"One",
+     t_es:"¿Cuántos goles en el periodo intermedio?", o_es:["Ninguno","Uno","Dos","Tres o más"]},
+    {t:"Who leads after two?", o:["Vegas Golden Knights","Carolina Hurricanes","Tied"], a:"Vegas Golden Knights",
+     t_es:"¿Quién gana después de dos periodos?", o_es:["Vegas Golden Knights","Carolina Hurricanes","Empatados"]}
   ]},
   {home:3,away:2, q:[
-    {t:"Who threw more at the net tonight?", o:["Vegas Golden Knights","Carolina Hurricanes","Dead even"], a:"Dead even"},
-    {t:"Who won more faceoffs?", o:["Vegas Golden Knights","Carolina Hurricanes","Dead even"], a:"Carolina Hurricanes"},
-    {t:"Penalties called all game?", o:["0–2","3–4","5–7","Eight or more"], a:"Eight or more"},
-    {t:"Who was the more physical side?", o:["Vegas Golden Knights","Carolina Hurricanes","Dead even"], a:"Carolina Hurricanes"}
+    {t:"Who threw more at the net tonight?", o:["Vegas Golden Knights","Carolina Hurricanes","Dead even"], a:"Dead even",
+     t_es:"¿Quién tiró más a portería esta noche?", o_es:["Vegas Golden Knights","Carolina Hurricanes","Empatados"]},
+    {t:"Who won more faceoffs?", o:["Vegas Golden Knights","Carolina Hurricanes","Dead even"], a:"Carolina Hurricanes",
+     t_es:"¿Quién ganó más saques neutrales?", o_es:["Vegas Golden Knights","Carolina Hurricanes","Empatados"]},
+    {t:"Penalties called all game?", o:["0–2","3–4","5–7","Eight or more"], a:"Eight or more",
+     t_es:"¿Cuántas penalizaciones en todo el partido?", o_es:["0–2","3–4","5–7","Ocho o más"]},
+    {t:"Who was the more physical side?", o:["Vegas Golden Knights","Carolina Hurricanes","Dead even"], a:"Carolina Hurricanes",
+     t_es:"¿Qué equipo jugó más fuerte?", o_es:["Vegas Golden Knights","Carolina Hurricanes","Empatados"]}
   ]}
 ];
 
@@ -5098,7 +5228,7 @@ const SC_ROSTER=sportRoster(SC_GAME), BA_ROSTER=sportRoster(BA_GAME),
 const SPORTS={
   basketball:{
     key:"basketball", emoji:"🏀", word:"basketball",
-    game:BB_GAME, roster:BB_ROSTER, groups:BB_GROUPS, landingFromGame:true, preds:BB_PREDS, rounds:BBALL_ROUNDS, catches:[],
+    game:BB_GAME, roster:BB_ROSTER, groups:BB_GROUPS, landingFromGame:true, preds:BB_PREDS, rounds:BBALL_ROUNDS, catches:BB_CATCHES,
     // 4 questions a quarter × these weights = 40+80+120+160 = 400 live pts.
     // (The old comment here said 30. It was wrong the day it was written.)
     worth:[10,20,30,40],                              // Q1=10 … Q4=40  → 400 pts
@@ -5159,7 +5289,7 @@ const SPORTS={
    its own cadence, because a sport's rounds belong to the sport. */
 SPORTS.baseball={
   key:"baseball", emoji:"\u26BE\uFE0F", word:"baseball",
-  game:BA_GAME, roster:BA_ROSTER, groups:BA_ROSTER.groups, landingFromGame:true, preds:BA_PREDS, rounds:BA_ROUNDS, catches:[],
+  game:BA_GAME, roster:BA_ROSTER, groups:BA_ROSTER.groups, landingFromGame:true, preds:BA_PREDS, rounds:BA_ROUNDS, catches:BA_CATCHES,
   worth:[30,50,70], tags:["1st-3rd","4th-6th","7th-9th"],
   names:["Innings 1\u20133","Innings 4\u20136","Innings 7\u20139"],
   L:{ start:"first pitch", Start:"First pitch", starting:"Warming up",
@@ -5177,7 +5307,7 @@ SPORTS.baseball={
 };
 SPORTS.football={
   key:"football", emoji:"\uD83C\uDFC8", word:"football",
-  game:FO_GAME, roster:FO_ROSTER, groups:FO_ROSTER.groups, landingFromGame:true, preds:FO_PREDS, rounds:FO_ROUNDS, catches:[],
+  game:FO_GAME, roster:FO_ROSTER, groups:FO_ROSTER.groups, landingFromGame:true, preds:FO_PREDS, rounds:FO_ROUNDS, catches:FO_CATCHES,
   worth:[10,20,30,40], tags:["Q1","Q2","Q3","Q4"],
   names:["Quarter 1","Quarter 2","Quarter 3","Quarter 4"],
   L:{ start:"kickoff", Start:"Kickoff", starting:"Kicking off",
@@ -5195,7 +5325,7 @@ SPORTS.football={
 };
 SPORTS.hockey={
   key:"hockey", emoji:"\uD83C\uDFD2", word:"hockey",
-  game:HO_GAME, roster:HO_ROSTER, groups:HO_ROSTER.groups, landingFromGame:true, preds:HO_PREDS, rounds:HO_ROUNDS, catches:[],
+  game:HO_GAME, roster:HO_ROSTER, groups:HO_ROSTER.groups, landingFromGame:true, preds:HO_PREDS, rounds:HO_ROUNDS, catches:HO_CATCHES,
   worth:[15,30,45], tags:["1st","2nd","3rd"],
   names:["1st period","2nd period","3rd period"],
   L:{ start:"puck drop", Start:"Puck drop", starting:"Dropping the puck",
@@ -5326,7 +5456,8 @@ function setSport(key){
   roster    = SPORT.roster;
   preds     = SPORT.preds;
   rounds    = SPORT.rounds;
-  CATCHES   = SPORT.catches;
+  /* LEAN applies to EVERY sport, not just the one loaded at boot. */
+  CATCHES   = (typeof leanCatches==='function') ? leanCatches(SPORT.catches) : SPORT.catches;
 
   try{ LS_BASE = "stats_gamenight_v1_" + SPORT_KEY; }catch(_){}
   sportTotals();
@@ -5754,6 +5885,42 @@ function fixStartWord(line, sportKey){
   }catch(_){ return line; }
 }
 
+/* ============ EVERY GAME NIGHT HAS A NUMBER, AND MUST SAY IT ==========
+   host/marquee.js numbers every main game in tip order and continues the
+   run across days — tonight is Game Night #14 (Nationals at Rangers) and
+   #15 (49ers at Chargers). The number reaches the marquee file and the
+   slate tile, and then STOPS: build-slate.js writes the room's config with
+   night:"Nationals @ Rangers" and no number at all, so a room could not
+   tell you which night it was.
+
+   Founder, 20 Aug: "each game that goes into stats gametime be marked...
+   its important that we have each game numbered so we know which game to
+   reference to." He is right, and it is not cosmetic — the debrief, the
+   backlog, the content pipeline and every conversation about a night name
+   it by number. A room that cannot say its own number cannot be referred
+   to afterwards.
+
+   Reads the SLATE TILE first on purpose. The tile carries `gn` today, so
+   this works on configs already published — tonight's included — without
+   waiting for a rebuild. The config is the fallback for anything not on
+   the slate. */
+function gnOf(g){
+  try{
+    var id = (g && g.nightId) || '';
+    if(id){
+      var tile = (SLATE.games || []).filter(function(x){ return x && x.nightId === id; })[0];
+      if(tile && tile.gn) return String(tile.gn);
+    }
+  }catch(_){}
+  try{ if(g && g.gn) return String(g.gn); }catch(_){}
+  /* A hand-written flagship carries its number in the id: gn13-2026-08-19-... */
+  try{
+    var m = String((g && g.nightId) || '').match(/^gn(\d+)-/i);
+    if(m) return m[1];
+  }catch(_){}
+  return '';
+}
+
 /* ============ IS THE FEED CACHE ABOUT *THIS* GAME? ===================
    GS is one shared stats cache keyed on an event id. phaseNow() and the
    score line both read it WITHOUT asking which game it is of, so a card can
@@ -5953,6 +6120,51 @@ function featureTonight(){
 }
 try{ window.featureTonight = featureTonight; }catch(_){}
 
+/* ============ CHOOSE THE SPORT YOU CAME TO TRY =======================
+   Five leagues are built and practice could only ever reach the one the
+   page happened to be on — basketball at the front door. A football fan
+   arriving on an NFL night tried the product and got basketball questions,
+   and the only way to any of the other four was knowing to type ?sport=
+   into the address bar.
+
+   Reads the list FROM SPORTS, so a sixth league appears here the day it is
+   registered rather than the day somebody remembers to add a button. The
+   label is the sport's own word for itself. */
+function paintTryPick(){
+  var w = document.getElementById('tryPick'); if(!w) return;
+  var keys = [];
+  try{ keys = Object.keys(SPORTS); }catch(_){ return; }
+  /* A sport with no practice round is not offered — an empty room is worse
+     than an absent button, and qa/practice.js fails the gate on one anyway. */
+  keys = keys.filter(function(k){
+    try{ return SPORTS[k] && (SPORTS[k].rounds||[]).length > 0; }catch(_){ return false; }
+  });
+  if(keys.length < 2){ w.style.display='none'; return; }
+  w.style.display = 'flex';
+  w.innerHTML = '';
+  keys.forEach(function(k){
+    var b = document.createElement('button');
+    b.type = 'button';
+    var name = k;
+    try{ name = (SPORTS[k].L && SPORTS[k].L.leagueLabel) || SPORTS[k].word || k; }catch(_){}
+    b.textContent = String(name).replace(/^./, function(c){ return c.toUpperCase(); });
+    b.className = (k === SPORT_KEY) ? 'on' : '';
+    b.setAttribute('aria-pressed', k === SPORT_KEY ? 'true' : 'false');
+    b.onclick = function(){
+      try{ if(!setSport(k)) return; }catch(_){ return; }
+      /* The practice card, the pick sheet and the copy all come off SPORT,
+         so repaint rather than assume. */
+      try{ applySport(); }catch(_){}
+      try{ paintTryPick(); }catch(_){}
+      try{ if(typeof paintHeroRibbon==='function') paintHeroRibbon(); }catch(_){}
+      try{ var u=new URL(location.href); u.searchParams.set('sport',k);
+           history.replaceState(null,'',u.toString()); }catch(_){}
+    };
+    w.appendChild(b);
+  });
+}
+try{ window.paintTryPick = paintTryPick; }catch(_){}
+
 function slateGame(id){
   return (SLATE.games || []).filter(function(g){ return g && g.nightId === id; })[0] || null;
 }
@@ -6138,6 +6350,10 @@ function paintGameRail(){
          to a chooser. Two lines gets it back without hiding anything, which
          was the whole problem with the version before this one. */
       + '<span class="grLg"><i></i>'+esc(String(g.league||'').toUpperCase())
+      /* The number belongs HERE most of all: this is the list somebody
+         picks from, and "which game to reference" is exactly the question
+         the rail is asking. */
+      +   (g.gn ? ' <span class="grGn">#'+esc(String(g.gn))+'</span>' : '')
       +   (g.flagship ? ' <span class="grStar">★</span>' : '')
       /* THE CLOCK REPLACES THE TIP TIME ONCE THERE IS A CLOCK. "6:30 PM" is
          the most useful thing to say before kickoff and the least useful
@@ -6727,8 +6943,29 @@ function emptyRounds(){return Array.from({length:NR},()=>[]);}
 /* LEAN empties the watchlist rather than hiding it, so every downstream
    count, cap and denominator that reads CATCHES.length agrees there is
    nothing there — a hidden card whose points still exist in MAXPTS is the
-   kind of half-off that produces a wrong total. */
-if(typeof LEAN_ON!=='undefined' && LEAN_ON){ try{ CATCHES.length=0; }catch(_){} }
+   kind of half-off that produces a wrong total.
+
+   ============ IT USED TO DO THAT BY EMPTYING THE BANK ITSELF ==========
+   `CATCHES.length = 0` mutates the ARRAY, and at boot CATCHES *is*
+   SPORTS[sport].catches — the same object. So this permanently destroyed
+   one sport's watchlist bank for the life of the page. It was invisible
+   only because every sport except soccer shipped `catches:[]`, so emptying
+   it was a no-op; the moment the banks were filled in on 20 Aug, basketball
+   came back with 0 of 6 and qa/practice.js caught it.
+
+   And it ran ONCE, at load, for whichever sport happened to be loaded. Any
+   sport switched to afterwards got its watchlist BACK — with its points
+   still in MAXPTS — which is the precise failure the paragraph above is
+   about, arriving through the door that was supposed to prevent it.
+
+   So: rebind, never mutate, and let leanCatches() be the one place that
+   decides. setSport() calls it too, so the rule holds in every room. */
+function leanCatches(bank){
+  try{ if(typeof LEAN_ON!=='undefined' && LEAN_ON) return []; }catch(_){}
+  return bank || [];
+}
+try{ window.leanCatches = leanCatches; }catch(_){}
+CATCHES = leanCatches(CATCHES);
 let CATCH_PTS=CATCHES.length*10;                    // 10 pts per catch
 
 const bots=[
@@ -14574,13 +14811,34 @@ function demoCiSet(){
       options:[{k:'Under 5',v:'u'},{k:'5 or more',v:'o'}], answer:(margin<5?'u':'o'),
       resolveText:'It’s '+margin+' point'+(margin===1?'':'s')+'. On game night these land the moment something happens.' });
   } else {
-    // No feed yet — ask something the player can still answer from the app.
-    out.push({ qid:'demo-ci-1', prompt:'Warm-up — how many quarters does a game night run?',
-      options:[{k:'Four',v:'4'},{k:'Two',v:'2'}], answer:'4',
-      resolveText:'Four quarters, and the last is worth four times the first. That’s Caught It — one tap, straight back to the game.' });
-    out.push({ qid:'demo-ci-2', prompt:'Which quarter is worth the most points?',
-      options:[{k:'Q1',v:'1'},{k:'Q4',v:'4'}], answer:'4',
-      resolveText:'Q4 — 40 points a question. Nobody is out of it until the buzzer.' });
+    /* ============ NO FEED YET, AND STILL NOT A BASKETBALL QUESTION =====
+       This asked "how many QUARTERS does a game night run?" answer FOUR,
+       whatever sport you were in. The founder hit it in the baseball room
+       at 9am — hours before first pitch, so there was no feed and this is
+       all there was — on a card whose own chip said 3 ROUNDS.
+
+       Two hardcoded facts about basketball, in the one place that runs when
+       the app knows least. Built from the sport now: how many ROUNDS this
+       sport's night has, and which one pays most, both read from the live
+       config rather than asserted. */
+    var _n = 0, _lastTag = '', _lastWorth = 0, _firstWorth = 0;
+    try{ _n = rounds.length; }catch(_){}
+    try{ _lastTag = roundTag(Math.max(0, _n - 1)); }catch(_){}
+    try{ _lastWorth = roundWorth(Math.max(0, _n - 1)); _firstWorth = roundWorth(0); }catch(_){}
+    var _per = 'round';
+    try{ _per = (SPORT.L && SPORT.L.period) || 'round'; }catch(_){}
+    if(_n >= 2){
+      var _wrong = String(_n === 4 ? 2 : 4);
+      out.push({ qid:'demo-ci-1', prompt:'Warm-up — how many rounds does a STATS night run?',
+        options:[{k:String(_n),v:String(_n)},{k:_wrong,v:_wrong}], answer:String(_n),
+        resolveText: _n + ' ' + _per + (_n===1?'':'s') + ', and the last is worth the most.'
+          + ' That’s Caught It — one tap, straight back to the game.' });
+      out.push({ qid:'demo-ci-2', prompt:'Which round is worth the most points?',
+        options:[{k:_lastTag||'The last',v:'last'},{k:(function(){try{return roundTag(0);}catch(_){return 'The first';}})(),v:'first'}],
+        answer:'last',
+        resolveText:(_lastTag||'The last') + ' — ' + _lastWorth + ' points a question against '
+          + _firstWorth + ' in the first. Nobody is out of it until the end.' });
+    }
   }
   return out;
 }
@@ -17088,8 +17346,12 @@ function applySport(){
       + esc(String(_hg.awayName || _hg.awayAbbr || '')) + ' @ '
       + esc(String(_hg.homeName || _hg.homeAbbr || '')) + '</b>'); }
   else { html('landingMatch',SPORT.landing); }
+  /* THE EYEBROW NAMES THE NIGHT, the huge type below names the teams —
+     they were both naming the teams, and neither was naming the night. */
+  var _gn = gnOf(_hg);
   set('landingHead', _marquee ? tonightHeadLine(_hg)
-                              : `${GAME.night} · ${GAME.date}`.replace(' · ·',' ·'));
+      : (_gn ? `Game Night #${_gn} · ${GAME.date}`
+             : `${GAME.night} · ${GAME.date}`).replace(' · ·',' ·'));
   /* THE LEAGUE IS THE NIGHT'S, NOT THE SPORT'S. SPORT.L.league is a
      per-SPORT constant, so every soccer room in the product was chipped
      "Leagues Cup" — including two live MLS matches. One sport has many
@@ -17116,6 +17378,7 @@ function applySport(){
                             : (GAME.awayNick||GAME.awayName||GAME.awayAbbr||''));
   set('mqHomeNick', _marquee ? String(_hg.homeName||_hg.homeAbbr||'')
                             : (GAME.homeNick||GAME.homeName||GAME.homeAbbr||''));
+  try{ paintTryPick(); }catch(_){}
   set('landingBtn',`Play ${GAME.night}`);
   set('landingDemoBtn',`Practice with a simulated ${L.unit}`);
   set('step1h',`Predict before ${L.start}`);
@@ -17657,7 +17920,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-20-nogap.178';
+const STATS_BUILD='2026-08-20-everysport.180';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

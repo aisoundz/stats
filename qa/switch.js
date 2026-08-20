@@ -127,6 +127,30 @@ const ROOM_B = {
       preds: (SPORTS[g.sport] && SPORTS[g.sport].preds) || []
     });
 
+    /* ============ TURN LEAN OFF TO SEE THE WATCHLIST AT ALL ===========
+       This suite checks that the watchlist follows the room — that a WNBA
+       room never renders soccer's card, and that the demo fixture's MIA/AME
+       teams never reach a live room. Both are real invariants.
+
+       But LEAN suppresses the watchlist entirely, and until 20 Aug it did so
+       by emptying a SHARED array once at boot, for whichever sport happened
+       to load first. So basketball came back empty and soccer did not — and
+       this check asserted exactly that: `aCatches === 0 && bCatches > 0`.
+       It was green because of the bug, and it went red the moment LEAN was
+       fixed to apply to every sport.
+
+       The invariant is about the BANK, not about the flag. So drive it with
+       the feature ON, where the watchlist exists and the question "whose
+       teams are on it?" can actually be asked. qa/practice.js owns the LEAN
+       behaviour itself, in both directions. */
+    try{ LEAN_ON = false; }catch(_){}
+    /* setSport() early-returns when you ask for the sport you are already on,
+       so flipping the flag alone leaves CATCHES holding the value LEAN gave
+       it at boot. Move away and back — which is what a player does anyway —
+       so the change actually takes. Deliberately NOT assigning CATCHES here:
+       the harness must not do the app's job. */
+    try{ setSport(B.sport); setSport(A.sport); }catch(_){}
+
     /* ---- land in room A ---- */
     setSport(A.sport);
     hydrateNight(cfgFor(A));
@@ -203,8 +227,11 @@ const ROOM_B = {
 
   /* ---- 3. the watchlist follows the room ---- */
   ok('switch.the-watchlist-belongs-to-this-sport',
-     r.aCatches === 0 && r.bCatches > 0,
-     `basketball had ${r.aCatches} watchlist rows (must be 0), soccer has ${r.bCatches} (must be > 0)`);
+     r.aCatches > 0 && r.bCatches > 0,
+     `with LEAN off, basketball had ${r.aCatches} watchlist rows and soccer has ${r.bCatches} — ` +
+     `both must be > 0. Every sport carries a bank now; a sport with an empty one means the ` +
+     `switch did not bring its watchlist with it. (This used to demand basketball be 0, which ` +
+     `was LEAN destroying the shared bank of whichever sport booted first.)`);
 
   const teamsWrong = (r.bCatchTeams || []).filter(t => !/LAFC/.test(t) || !/COL/.test(t));
   ok('switch.the-watchlist-uses-this-match-teams',

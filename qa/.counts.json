@@ -18,6 +18,7 @@
   "chrome.js": 40,
   "places.js": 3,
   "switch.js": 10,
-  "hero.js": 16,
-  "listeners.js": 8
+  "hero.js": 23,
+  "listeners.js": 8,
+  "practice.js": 9
 }
