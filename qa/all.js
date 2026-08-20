@@ -128,7 +128,12 @@ const TIER={
   'hero.js':          {tier:'browser'},
   'listeners.js':     {tier:'browser'},
   'practice.js':      {tier:'browser'},
-  'spanish.js':       {tier:'browser'},
+  /* --max 0. The backlog went to zero on 20 Aug, and a reporting-only check
+     is how it got to 76 in the first place: nothing was lying, nobody was
+     counting. From here a single untranslated string on any screen a player
+     can reach turns the gate red. Sabotage-tested by deleting one entry, and
+     it failed naming the string, so this can actually fail. */
+  'spanish.js':       {tier:'browser', args:['--max','0']},
   'bank-shadow.js':   {tier:'static'},
   'devices.js':       {tier:'browser'},
   'host-sportsreg.js':{tier:'browser'},
