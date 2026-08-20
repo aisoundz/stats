@@ -5584,6 +5584,21 @@ function hydrateNight(cfg){
        promising the built-in sport's total over a published card of a
        different size. */
     try{ sportTotals(); }catch(_){}
+    /* ============ THE HERO WAS HIDDEN BEFORE THIS NIGHT EXISTED =========
+       paintHeroRibbon() runs at boot, when GAME is still the BUILT-IN night
+       — whose tip time is already in the past. `ms <= 0` hides the ribbon,
+       and the only thing that ever painted it again was a 30-second
+       interval. So opening a room showed no countdown at all for up to half
+       a minute: the single most persuasive thing on the page, blank, on the
+       screen a stranger is being invited to.
+
+       Measured 20 Aug in the baseball room — display:none at 14s with a
+       perfectly good 7h48m to first pitch sitting in GAME.tipISO, and
+       correct at 38s.
+
+       This is the moment the tip time becomes real, so this is where the
+       ribbon gets told. */
+    try{ if(typeof paintHeroRibbon==='function') paintHeroRibbon(); }catch(_){}
     NIGHT_CFG_SOURCE = 'database';
     return true;
   }catch(e){
@@ -17642,7 +17657,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-20-yourroom.177';
+const STATS_BUILD='2026-08-20-nogap.178';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

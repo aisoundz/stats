@@ -95,6 +95,10 @@ const NFL = {
   const r = await page.evaluate(({ MLB, NFL }) => {
     const out = {};
     out.exported = (typeof window.featureTonight === 'function');
+    /* read INSIDE the page — hydrateNight is a page function, and asking for
+       it from node gets "window is not defined" rather than an answer. */
+    try { out.hydratePaints = /paintHeroRibbon/.test(String(hydrateNight)); }
+    catch (_) { out.hydratePaints = false; }
     if (!out.exported) return out;
 
     /* ---- 1. a fresh morning: GAME still holds YESTERDAY's night ---- */
@@ -289,6 +293,12 @@ const NFL = {
        loadGameStats() already invalidates on an event change and
        qa/switch.js already proves it. Asserting it a second time here
        would be a check that can only ever be green. */
+    ok('hero.hydrating-a-night-paints-the-countdown',
+       r.hydratePaints === true,
+       `hydrateNight() does not repaint the hero. It runs at boot against the BUILT-IN night, ` +
+       `whose tip is already past, so the ribbon hides itself — and the only thing that painted ` +
+       `it again was a 30s interval. Opening a room showed no countdown for up to half a minute.`);
+
     ok('hero.the-whole-card-names-tonight',
        r.card && r.card.away === 'SF' && r.card.home === 'LAC' &&
        /49ers/.test(r.card.match) && /Chargers/.test(r.card.match),
