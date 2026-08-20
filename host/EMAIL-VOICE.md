@@ -139,3 +139,20 @@ into Chicago". A team is singular in American English, which is the English
 this product is written in: *Seattle has won seven*, *Indiana walks into
 Chicago*. This slips in constantly and reads as foreign rather than as wrong,
 which is why it survives.
+
+## 9. The three asks are numbered
+
+Anis, 20 Aug 2026: *"the three things that help use a number or bullet point."*
+
+Number them 1, 2, 3. The numeral goes in the asks section's amber (`#ffc54d`),
+hanging in its own narrow table column so the text lines up under itself rather
+than wrapping back under the digit.
+
+**This overrides the older instruction in the weekly routine** that said the
+asks should not be "a bolded numbered marketing listicle". The objection there
+was to the *bolding*, which is gone, and to marketing-copy phrasing, which still
+stands. The numbering was never the problem: without it the only thing dividing
+one ask from the next was where a sentence happened to break.
+
+The copy inside each one stays plain and in the founder's voice, worded fresh
+every week, never copy-pasted from the last edition.
