@@ -180,3 +180,27 @@ card's closing line, "the answer is in tomorrow's edition."
 
 The heading is exactly `STATS`, uppercase, in the gold eyebrow style. Never
 `Stat`, never `Stats of the Day`, never `TONIGHT'S STATS`.
+
+## 11. The design comes from a FILE, not from the last thing we sent
+
+Both routine prompts say to fetch the most recent sent campaign and copy its
+HTML as the template. **Ignore that. Read the file instead.**
+
+| Email | Template |
+|---|---|
+| Tip-off, Mon to Sat | `host/email-tipoff-template.html` |
+| Sunday note | `host/email-weekly-template.html` |
+
+A routine that learns its design from its own last output can only ever be one
+edition behind, and it drifts toward whatever was wrong. Every correction made
+today, the STATS heading, the matched card frames, the numbered asks, the
+Gametime card existing at all, would have to be re-made every single morning
+from a stale copy, and the first morning one of them was missed it would be
+baked in for good.
+
+The files carry the finished shape, with comments marking what to replace. Copy
+the file, change the content, change nothing structural.
+
+**Still check the sent campaigns** for the subject lines and names already used,
+so a subject is not repeated and the Weekly number is right. Just do not take
+the design from them.
