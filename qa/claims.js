@@ -191,11 +191,41 @@ claim('rail.offers-only-hosted-rooms',
       return [...document.querySelectorAll('#gameRail [data-slate]')].map(x=>x.getAttribute('data-slate'));
     });
     if(!rail.length) return {state:'UNVERIFIABLE', detail:'the rail did not load'};
-    /* Everything offered must be a league the launcher actually runs, or
-       the flagship (which is hosted by its own cron line). */
+    /* ============ THIS CHECK USED TO RETURN VERIFIED, ALWAYS ==========
+       It read RUN_LEAGUES, printed it, and returned VERIFIED with no
+       condition attached. The comment above it said "everything offered
+       must be a league the launcher actually runs, or the flagship" and
+       the code compared nothing at all — so the one claim standing between
+       a player and a room nobody is hosting could not fail. Found 20 Aug
+       2026 while asking whether tonight's two rooms were covered; a
+       neighbouring check said they were not, and this one could not
+       disagree because it could not do anything else.
+
+       Now it does the comparison the comment describes. The pick file is
+       the stronger authority when there is one — leagues.env turns a
+       league ON, but the pick file is what says WHICH of that league's
+       fifteen games are rooms tonight. */
     const env=fs.readFileSync(path.resolve(__dirname,'..','host','leagues.env'),'utf8');
-    const run=(env.match(/^RUN_LEAGUES="([^"]*)"/m)||[])[1]||'';
-    return {state:'VERIFIED', detail:`${rail.length} offered · RUN_LEAGUES="${run}" · ${rail.join(', ')}`};
+    const run=((env.match(/^RUN_LEAGUES="([^"]*)"/m)||[])[1]||'').split(/\s+/).filter(Boolean);
+    const today=new Date();
+    const stamp=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+    const pickPath=path.join(process.env.HOME||'','gamenight-logs','slate-pick-'+stamp+'.txt');
+    let picked=null;
+    try{ picked=fs.readFileSync(pickPath,'utf8').split(/\r?\n/).map(x=>x.trim()).filter(Boolean); }catch(_){}
+
+    const unpicked = picked ? rail.filter(id=>picked.indexOf(id)<0) : [];
+    /* the league is the 4th dash-field of a slate id: slate-YYYY-MM-DD-away-home
+       carries no league, so fall back to the pick file as the only authority. */
+    if(picked && unpicked.length){
+      return {state:'FALSE',
+        detail:`offered but NOT in tonight's pick file, so nothing starts them: ${unpicked.join(', ')} · pick=${pickPath}`};
+    }
+    if(!picked){
+      return {state:'UNVERIFIABLE',
+        detail:`no pick file at ${pickPath} — the rail offers ${rail.join(', ')} and RUN_LEAGUES="${run.join(' ')}" alone cannot say which of a league's games are rooms tonight`};
+    }
+    return {state:'VERIFIED',
+      detail:`${rail.length} offered, all named in tonight's pick file · ${rail.join(', ')}`};
   });
 
 claim('voice.spanish-recogniser-listens-in-spanish',
@@ -322,11 +352,39 @@ function cronClaims(){
     const dueTonight=night.filter(l=>{
       const f=l.trim().split(/\s+/); return Number(f[2])===d && Number(f[3])===mo;
     });
+    /* ============ THERE ARE TWO WAYS A ROOM GETS HOSTED ===============
+       This demanded exactly ONE cron-start-night.sh line dated today, and
+       reported FALSE otherwise. That was true while every night was a
+       hand-written flagship with its own cron line. It stopped being true
+       when the Game of the Night became a SLATE room: tonight's two rooms
+       (Nationals @ Rangers, 49ers @ Chargers) are both slate rooms, hosted
+       by start-slate.sh reading the pick file every thirty minutes, and
+       there is no night cron line for either — correctly.
+
+       So on 20 Aug this check called a correctly-configured night FALSE.
+       A check that cries wolf on a good night is worse than no check: the
+       next person reads red and shrugs.
+
+       The claim is "something will host tonight's rooms", and there are
+       two honest ways to satisfy it. */
+    const today2=new Date();
+    const stamp=today2.getFullYear()+'-'+String(today2.getMonth()+1).padStart(2,'0')+'-'+String(today2.getDate()).padStart(2,'0');
+    const pickPath=path.join(process.env.HOME||'','gamenight-logs','slate-pick-'+stamp+'.txt');
+    let picked=null;
+    try{ picked=fs.readFileSync(pickPath,'utf8').split(/\r?\n/).map(x=>x.trim()).filter(Boolean); }catch(_){}
+    const slateRuns=slate.filter(l=>!/--build/.test(l)).length>0;
+    const viaSlate = !!(picked && picked.length && slateRuns);
+    const viaCron  = dueTonight.length===1;
     return [
       {id:'cron.runner', sentence:'a runner is scheduled to host tonight',
-       state: dueTonight.length===1?'VERIFIED':(dueTonight.length?'FALSE':'FALSE'),
-       detail: dueTonight.length? dueTonight.map(l=>l.trim().split(/\s+/).slice(0,5).join(' ')+' …').join(' · ')
-                                : 'no cron-start-night.sh line for '+mo+'/'+d},
+       state: (viaSlate||viaCron)?'VERIFIED':'FALSE',
+       detail: viaSlate
+         ? `${picked.length} room(s) in tonight's pick file + a start-slate run line: ${picked.join(', ')}`
+         : viaCron
+           ? dueTonight.map(l=>l.trim().split(/\s+/).slice(0,5).join(' ')+' …').join(' · ')
+           : `nothing will host tonight — no cron-start-night.sh line for ${mo}/${d}, and ` +
+             (picked ? 'the pick file names no rooms' : 'no pick file at '+pickPath) +
+             (slateRuns ? '' : ', and no start-slate.sh run line in cron')},
       {id:'cron.watchdog', sentence:'the watchdog is scheduled', 
        state: watch.length?'VERIFIED':'FALSE', detail: watch.length+' watch line(s)'},
       {id:'cron.slate', sentence:'the slate builds and starts on its own each day',
