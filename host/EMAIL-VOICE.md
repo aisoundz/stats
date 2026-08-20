@@ -123,3 +123,19 @@ printed under it says the answer is in tomorrow's edition.
 
 Monday's tip-off then settles Sunday's question as normal, so the chain runs
 unbroken through the week.
+
+## 8. Two tells I keep producing anyway
+
+**Uncontracted forms.** "It is", "that is", "I am", "do not", "there is". Nobody
+types those in an email to four people they know. Anis does not: Week 1 read
+*"Ten nights in and I'm still finding things I did to myself."* Write `it's`,
+`that's`, `I'm`, `don't`, `there's`. This one is quiet enough to survive every
+other pass, and it is the difference between a person and a press release.
+
+Semicolons belong to the same family. A full stop is nearly always better.
+
+**British collective plurals.** "Seattle have won seven games", "Indiana walk
+into Chicago". A team is singular in American English, which is the English
+this product is written in: *Seattle has won seven*, *Indiana walks into
+Chicago*. This slips in constantly and reads as foreign rather than as wrong,
+which is why it survives.
