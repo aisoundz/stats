@@ -5664,6 +5664,31 @@ function heroGame(){
 }
 try{ window.heroGame = heroGame; }catch(_){}
 
+/* The marquee's own tip line. NEVER a score: TONIGHT carries no feed, and
+   inventing one from GS would print the ROOM's game under the marquee's
+   teams — which is the exact contradiction this exists to stop. */
+function tonightTipLine(g){
+  try{
+    var d = new Date(g.tipISO); if(isNaN(d)) return '';
+    var t = d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    return '\uD83D\uDD50 ' + t + (g.net ? (' \u00B7 ' + g.net) : '');
+  }catch(_){ return ''; }
+}
+/* "GAME NIGHT #15 · THU · AUGUST 20", in the reader's own zone — a tip at
+   7pm Pacific is already tomorrow in UTC, so the date must come from the
+   parsed instant and not from slicing the ISO string. */
+function tonightHeadLine(g){
+  try{
+    var d = new Date(g.tipISO); if(isNaN(d)) return '';
+    var day = d.toLocaleDateString('en-US',{weekday:'short'});
+    var mon = d.toLocaleDateString('en-US',{month:'long', day:'numeric'});
+    return (g.gn ? ('Game Night #' + g.gn + ' · ') : '') + day + ' · ' + mon;
+  }catch(_){ return ''; }
+}
+function tonightCadence(g){
+  try{ var sp = SPORTS[g.sport]; return (sp && sp.L && sp.L.cadence) || ''; }catch(_){ return ''; }
+}
+
 /* ============ THE HERO HAS TO LEARN WHAT TONIGHT IS ==================
    host/marquee.js picks a Game of the Night every single day and stamps
    `gotn` on it — and until now NOTHING on this page read that. The flags
@@ -5739,6 +5764,8 @@ function featureTonight(){
     espnEvent:star.espnEvent ? String(star.espnEvent) : '',
     tipISO:   star.tipISO || '',
     sport:    want || '',
+    league:   String(star.league || '').toUpperCase(),
+    gn:       star.gn ? String(star.gn) : '',
     net:      star.net || '',
     homeName: star.home || '', awayName: star.away || '',
     homeAbbr: star.homeAbbr || '', awayAbbr: star.awayAbbr || ''
@@ -16847,9 +16874,26 @@ function applySport(){
 
      One line, three states, derived from the same phase clock everything else
      reads. Never a fourth opinion. */
-  set('landingTip', landingTipLine());
-  html('landingMatch',SPORT.landing);
-  set('landingHead',`${GAME.night} · ${GAME.date}`.replace(' · ·',' ·'));
+  /* ============ THE WHOLE CARD MEANS ONE GAME ========================
+     20 Aug 2026. featureTonight() fixed the CLOCK and nothing else, so the
+     hero read "TIPS IN 11:48:48" — tonight's kickoff — directly above
+     "Final · TOR 82 – 93 WSH", yesterday's Mystics result, under a
+     headline saying WED · AUGUST 19. A card that contradicts itself is
+     worse than one that is uniformly stale: stale looks like a bug, and
+     self-contradiction looks like the product does not know what it is.
+
+     The clock reads heroGame(). Everything around it read GAME. Same
+     disease as the original bug, one element smaller. So: one variable,
+     read once, and every line on this card comes from it. */
+  var _hg = heroGame();
+  var _marquee = (_hg !== GAME);
+  set('landingTip', _marquee ? tonightTipLine(_hg) : landingTipLine());
+  if(_marquee){ html('landingMatch','<b style="color:var(--ink)">'
+      + esc(String(_hg.awayName || _hg.awayAbbr || '')) + ' @ '
+      + esc(String(_hg.homeName || _hg.homeAbbr || '')) + '</b>'); }
+  else { html('landingMatch',SPORT.landing); }
+  set('landingHead', _marquee ? tonightHeadLine(_hg)
+                              : `${GAME.night} · ${GAME.date}`.replace(' · ·',' ·'));
   /* THE LEAGUE IS THE NIGHT'S, NOT THE SPORT'S. SPORT.L.league is a
      per-SPORT constant, so every soccer room in the product was chipped
      "Leagues Cup" — including two live MLS matches. One sport has many
@@ -16857,20 +16901,25 @@ function applySport(){
      league label read off the sport is a fact with the wrong owner. The
      night config already carries it; fall back to the sport's word only
      when a night does not say. */
-  set('landingChip1', nightLeagueLabel());
-  set('landingChip3',SPORT.L.cadence);
+  set('landingChip1', _marquee ? (_hg.league || nightLeagueLabel()) : nightLeagueLabel());
+  /* The cadence belongs to the FEATURED game's sport, not to the page's.
+     "4 quarters" under a baseball marquee is a small lie that costs
+     nothing to avoid. */
+  set('landingChip3', _marquee ? tonightCadence(_hg) : SPORT.L.cadence);
   /* The two codes are the headline now. Their COLOUR is not set here and
      must not be: --away/--home have exactly one writer, paintTeamColours(),
      which reads the feed and already lifts a near-black team hex and splits
      a two-navy matchup. The :root defaults hold until it lands. */
   try{ paintSurface(); }catch(_){}
-  set('mqAway',(GAME.awayAbbr||''));
-  set('mqHome',(GAME.homeAbbr||''));
+  set('mqAway',(_hg.awayAbbr||GAME.awayAbbr||''));
+  set('mqHome',(_hg.homeAbbr||GAME.homeAbbr||''));
   /* The nickname is what a person calls the team out loud. Falls back to
      the full name and then to the code, so a feed that ships no nickname
      leaves a poster with a smaller word on it rather than an empty one. */
-  set('mqAwayNick',(GAME.awayNick||GAME.awayName||GAME.awayAbbr||''));
-  set('mqHomeNick',(GAME.homeNick||GAME.homeName||GAME.homeAbbr||''));
+  set('mqAwayNick', _marquee ? String(_hg.awayName||_hg.awayAbbr||'')
+                            : (GAME.awayNick||GAME.awayName||GAME.awayAbbr||''));
+  set('mqHomeNick', _marquee ? String(_hg.homeName||_hg.homeAbbr||'')
+                            : (GAME.homeNick||GAME.homeName||GAME.homeAbbr||''));
   set('landingBtn',`Play ${GAME.night}`);
   set('landingDemoBtn',`Practice with a simulated ${L.unit}`);
   set('step1h',`Predict before ${L.start}`);
@@ -17401,7 +17450,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-20-tonight.171';
+const STATS_BUILD='2026-08-20-onecard.172';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

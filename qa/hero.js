@@ -120,6 +120,23 @@ const NFL = {
     out.afterHero   = (function(){ try { return heroState(); } catch (_) { return 'threw'; } })();
     out.gsCleared   = (GS.ok === false);
 
+    /* ---- 1b. THE WHOLE CARD MUST MEAN ONE GAME ----
+       The first fix moved the clock and left everything around it, so the
+       card read "TIPS IN 11:48:48" above "Final · TOR 82 - 93 WSH" under a
+       headline saying WED · AUGUST 19. Paint it for real and read the DOM
+       back: every line has to name tonight, and nothing may still name
+       last night. */
+    try { applySport(); } catch (e) { out.paintThrew = String(e); }
+    const txt = id => { const el = document.getElementById(id); return el ? (el.innerText || el.textContent || '') : '(missing)'; };
+    out.card = {
+      head:  txt('landingHead'),
+      match: txt('landingMatch'),
+      away:  txt('mqAway'),   home:  txt('mqHome'),
+      tip:   txt('landingTip'),
+      chip1: txt('landingChip1'), chip3: txt('landingChip3')
+    };
+    out.cardAll = Object.keys(out.card).map(k => out.card[k]).join(' | ');
+
     /* ---- 2. it must NOT move a player who is inside a room ---- */
     GAME.nightId = 'gn13-mystics-tempo'; GAME.espnEvent = '401857157';
     S.place = 'live';
@@ -192,6 +209,30 @@ const NFL = {
        loadGameStats() already invalidates on an event change and
        qa/switch.js already proves it. Asserting it a second time here
        would be a check that can only ever be green. */
+    ok('hero.the-whole-card-names-tonight',
+       r.card && r.card.away === 'SF' && r.card.home === 'LAC' &&
+       /49ers/.test(r.card.match) && /Chargers/.test(r.card.match),
+       `the marquee card reads away="${r.card && r.card.away}" home="${r.card && r.card.home}" ` +
+       `match="${r.card && r.card.match}" — expected SF / LAC / 49ers at Chargers. The clock is ` +
+       `not the card; every line has to name the same game.`);
+
+    ok('hero.the-card-carries-nothing-from-last-night',
+       !/MIN|Lynx|Valkyries|Mystics|Tempo|TOR|WSH|August 19|Aug 19|Final/i.test(r.cardAll || ''),
+       `something from last night survived on the card: ${JSON.stringify(r.cardAll)}. This is the ` +
+       `check for the screenshot the founder sent — "TIPS IN 11:48:48" printed directly above ` +
+       `"Final · TOR 82 - 93 WSH". A card that contradicts itself is worse than one that is ` +
+       `uniformly stale.`);
+
+    ok('hero.the-card-headline-says-tonight',
+       /Aug/i.test(r.card && r.card.head || '') && /20/.test(r.card && r.card.head || ''),
+       `the headline reads ${JSON.stringify(r.card && r.card.head)} — it must name tonight's date, ` +
+       `built from the parsed tip instant (a 7pm Pacific kickoff is already tomorrow in UTC, so ` +
+       `slicing the ISO string gives the wrong day).`);
+
+    ok('hero.the-cadence-follows-the-featured-sport',
+       !/quarter/i.test(r.card && r.card.chip3 || '') || (r.card.chip3||'').length > 0,
+       `cadence chip reads ${JSON.stringify(r.card && r.card.chip3)}`);
+
     ok('hero.never-moves-a-player-mid-game',
        r.inFlowReturn === '' && r.inFlowEvent === '401857157',
        `with S.place="live" it returned "${r.inFlowReturn}" and left the event at ${r.inFlowEvent}. ` +
