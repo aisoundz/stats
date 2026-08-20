@@ -156,3 +156,27 @@ one ask from the next was where a sentence happened to break.
 
 The copy inside each one stays plain and in the founder's voice, worded fresh
 every week, never copy-pasted from the last edition.
+
+## 10. The gold card is called STATS. Not "STATS of the Day".
+
+Anis, 20 Aug 2026, having weighed both: **STATS**.
+
+**This supersedes rule 4 above and every mention of "STATS of the Day" in either
+routine prompt.** Wherever a routine says that phrase, read `STATS`. This file
+is read first and outranks them, which is the whole reason it exists.
+
+Two reasons it is better:
+
+1. **The two cards are the wordmark.** Read down the page and you get STATS,
+   then GAMETIME, which is the product's name and also the middle two tabs of
+   the nav. The email and the app now use identical vocabulary, and a reader
+   sees the brand every day without being sold anything.
+2. **They finally balance.** One four-word eyebrow beside a one-word partner is
+   why the pair still read uneven even after they were given matching frames.
+   Two single words in gold and teal read as deliberate.
+
+The daily cadence is not lost. It lives where it always did, in the Gametime
+card's closing line, "the answer is in tomorrow's edition."
+
+The heading is exactly `STATS`, uppercase, in the gold eyebrow style. Never
+`Stat`, never `Stats of the Day`, never `TONIGHT'S STATS`.
