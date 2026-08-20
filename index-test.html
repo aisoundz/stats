@@ -6120,6 +6120,76 @@ function featureTonight(){
 }
 try{ window.featureTonight = featureTonight; }catch(_){}
 
+/* ============ THE EMAIL'S GAMETIME QUESTION ARRIVES AS A LINK =========
+   Built 20 Aug 2026. The tip-off email carries a GAMETIME card — one
+   question about tonight — and each answer is a tappable button linking to
+   ?gt=<question>&pick=<answer>.
+
+   WHY A LINK AND NOT A FORM. Real interactivity inside an email is not
+   reliably possible: Gmail strips the CSS that fakes it, and AMP for Email
+   is Gmail-only and needs the sender registered. A link works in every mail
+   client ever made, and it is BETTER than a form would be — it does not
+   leave the reader in their inbox, it puts them in the room with their call
+   already made. The email stops being something you read and becomes the
+   first move of the game.
+
+   The pick is kept locally so it survives without an account, and written
+   to the server as well when there is somebody to attach it to. It is
+   create-only per question: the first answer stands, so the link cannot be
+   used to change a call after the game has started.
+
+   The parameters are stripped from the address bar afterwards, because a
+   URL that re-applies a pick every time it is opened is a URL that lies
+   about when the pick was made. */
+function gametimeFromLink(){
+  var qid='', pick='';
+  try{
+    var u = new URLSearchParams(location.search);
+    qid  = String(u.get('gt')   || '').slice(0,64);
+    pick = String(u.get('pick') || '').slice(0,64);
+  }catch(_){}
+  if(!qid || !pick) return null;
+
+  var KEY = 'stats_gametime_calls_v1';
+  var all = {};
+  try{ all = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; }catch(_){}
+
+  var already = all[qid];
+  if(!already){
+    all[qid] = { pick: pick, at: Date.now() };
+    try{ localStorage.setItem(KEY, JSON.stringify(all)); }catch(_){}
+    /* Server-side too, when there is an identity to hang it on. Create-only,
+       same as a pre-game card: the first call is the call. */
+    try{
+      if(window.SB && SB.enabled && SB.saveCall) SB.saveCall(qid, pick);
+    }catch(_){}
+    try{ trk('gametime_call',{qid:qid, pick:pick, via:'email'}); }catch(_){}
+  }
+
+  /* Say what happened, in the reader's language, and never pretend a later
+     tap changed anything. */
+  try{
+    var said = already
+      ? (i18nT('Your call is already in') + ': ' + String(already.pick))
+      : (i18nT('Call made') + ' — ' + String(pick));
+    toast('\u2705 ' + said + '. ' + i18nT('The answer is in tomorrow\u2019s email.'));
+  }catch(_){}
+
+  try{
+    var u2 = new URL(location.href);
+    u2.searchParams.delete('gt'); u2.searchParams.delete('pick');
+    history.replaceState(null, '', u2.toString());
+  }catch(_){}
+  return { qid: qid, pick: (already ? already.pick : pick), repeat: !!already };
+}
+try{ window.gametimeFromLink = gametimeFromLink; }catch(_){}
+
+/* A tiny passthrough so the toast speaks Spanish when the app does. */
+function i18nT(t){
+  try{ var d = i18nDict(); return (d && d[t]) || t; }catch(_){ return t; }
+}
+
+
 /* ============ CHOOSE THE SPORT YOU CAME TO TRY =======================
    Five leagues are built and practice could only ever reach the one the
    page happened to be on — basketball at the front door. A football fan
@@ -6610,6 +6680,9 @@ async function loadSlate(db, F){
     }
 
     try{ featureTonight(); }catch(_){}
+    /* After the slate, so the toast lands on a page that already knows what
+       tonight is rather than on a half-painted one. */
+    try{ gametimeFromLink(); }catch(_){}
 
     return SLATE.games.length > 0;
   }catch(e){
