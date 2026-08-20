@@ -3320,7 +3320,15 @@ window.STATS_FIREBASE = {
       if (document.hidden){ try{ trkMinsSave(); }catch(_){} trk('hide', { mins: trkMins() }); trkFlush(true); }
       else trk('show');
     });
-    window.addEventListener('pagehide', function(){ try{ trkFlush(true); }catch(_){} });
+    window.addEventListener('pagehide', function(){
+      try{ trkFlush(true); }catch(_){}
+      /* AND LET GO OF THE ROOM. A closed tab's listeners are not closed
+         listeners — the server holds them until the stream times out,
+         which is why the overnight count sat at ~100 for six hours and
+         then fell to zero all at once when the last one aged out. On iOS
+         `pagehide` is the only event that reliably fires at all. */
+      try{ roomListenersStop('pagehide'); }catch(_){}
+    });
   }catch(_){}
 
   /* READ IT WITHOUT A DASHBOARD. Type STATS_TRK() in any console. */
@@ -5181,6 +5189,16 @@ SPORTS.hockey={
    object SPORTS[key].game is, which is what lets hydrateNight write a
    night into the sport it belongs to and nowhere else (B39). */
 let SPORT_KEY=(()=>{try{return (new URLSearchParams(location.search).get('sport')||'basketball').toLowerCase();}catch(e){return 'basketball';}})();
+/* DID THE PERSON ASK FOR THIS SPORT, or is it just the default?
+   'basketball' means both things above and the difference matters: the
+   landing now features tonight's Game of the Night, and on a football
+   night that moves the whole page to football. Correct for somebody who
+   opened the front door — and wrong for somebody who typed ?sport=
+   basketball, or followed a practice link, and got moved to a sport they
+   did not ask for. Recorded once, here, because deriving it a second time
+   later is how this codebase breaks. */
+let SPORT_EXPLICIT=(()=>{try{return !!new URLSearchParams(location.search).get('sport');}catch(e){return false;}})();
+try{ window.SPORT_EXPLICIT = SPORT_EXPLICIT; }catch(_){}
 let SPORT=SPORTS[SPORT_KEY]||SPORTS.basketball;
 if(!SPORTS[SPORT_KEY]) SPORT_KEY='basketball';
 let L=SPORT.L;
@@ -5624,6 +5642,122 @@ function slateParam(){
 function slatePickSet(id){
   try{ if(id) localStorage.setItem(SLATE_PICK_KEY, id); else localStorage.removeItem(SLATE_PICK_KEY); }catch(_){}
 }
+/* Tonight's featured game, as a fact in its own right — never GAME, which
+   is the room this player is actually in. Null until the slate lands. */
+var TONIGHT = null;
+try{ window.TONIGHT = TONIGHT; }catch(_){}
+
+/* WHICH GAME IS THE HERO TALKING ABOUT? The room, if the player is in one
+   — their own game always outranks the marquee. Otherwise tonight's
+   featured game. One reader, so the countdown, the state and the team line
+   can never disagree about which game they mean. */
+function heroGame(){
+  /* ONE GUARD, NOT TWO. This used to re-derive "is the player in a room?"
+     from ACTIVE_ROOM and S.place — but featureTonight() has already asked
+     exactly that question and refuses to set TONIGHT when the answer is
+     yes. Asking again here meant two tests of one fact that could
+     disagree, and they did: a stale ACTIVE_ROOM left over from yesterday's
+     remembered pick sent the hero back to the room it was trying to
+     escape. TONIGHT being set IS the answer. */
+  try{ if(TONIGHT && TONIGHT.tipISO) return TONIGHT; }catch(_){}
+  return (typeof GAME !== 'undefined') ? GAME : {};
+}
+try{ window.heroGame = heroGame; }catch(_){}
+
+/* ============ THE HERO HAS TO LEARN WHAT TONIGHT IS ==================
+   host/marquee.js picks a Game of the Night every single day and stamps
+   `gotn` on it — and until now NOTHING on this page read that. The flags
+   were used for two things, both cosmetic: rail ordering, and the ★.
+
+   So the hero showed whatever night GAME happened to be holding, which on
+   a fresh morning is YESTERDAY's — hydrated from the config cache of the
+   last room anybody opened. heroState() then read a tip that was hours
+   gone, correctly concluded there was nothing to count down to, and
+   printed "No game tonight" over a slate with two games on it.
+
+   Founder, 06:00 on 20 Aug, looking at a rail that said Tempo at Mystics
+   4:30 PM and a hero that said no game: "This the home page its not
+   working."
+
+   Two facts about tonight, and neither of them knew about the other.
+
+   A NAMED FUNCTION, not a block inside loadSlate(), because the only way
+   to test a block buried in a network call is to re-implement it in the
+   test — and a test that recomputes the app's own logic passes whatever
+   the app does. That already happened once this week in qa/switch.js.
+
+   Returns the nightId it featured, or '' if it left GAME alone. */
+function featureTonight(){
+  /* DELIBERATELY NARROW. Never while somebody is inside the game flow, and
+     never over a room they already picked — GAME being one of tonight's
+     rooms already is the whole guard. Moving a player's night out from
+     under them would be far worse than a stale hero. */
+  var inFlow = false;
+  try{ inFlow = GAME_SCREENS.indexOf((S && S.place) || '') >= 0; }catch(_){}
+  if(inFlow) return '';
+  var haveTonight = false;
+  try{ haveTonight = !!(GAME && GAME.nightId && slateGame(GAME.nightId)); }catch(_){}
+  if(haveTonight) return '';
+  if(!SLATE.games || !SLATE.games.length) return '';
+
+  /* WHICH game is tonight's, in the marquee's own order of preference.
+     `gotn` is the Game of the Night and there is at most one a day.
+     `flagship` is a WEAKER flag — on 20 Aug it is true on BOTH games, so
+     filtering on it alone and taking [0] would have featured the 5:05
+     baseball game on a night whose marquee is the 7:00 football game.
+     Earliest tip is the last resort so this still does something sensible
+     on a slate the marquee never stamped. */
+  var star = SLATE.games.filter(function(g){ return g && g.gotn; })[0]
+          || SLATE.games.filter(function(g){ return g && g.flagship; })[0]
+          || SLATE.games.slice().sort(function(a,b){
+               return String(a.tipISO||'').localeCompare(String(b.tipISO||'')); })[0];
+  if(!star || !star.nightId) return '';
+
+  /* THE SPORT MOVES FIRST, ALWAYS. hydrateNight() refuses a config whose
+     sport disagrees with the page (B39-a) and returns false, which would
+     leave the hero exactly as stale as it started. And in the fallback
+     below, skipping this would stamp football teams onto the basketball
+     fixture — a half-applied night, the worse of the two failures. */
+  var want = String(star.sport || '').toLowerCase();
+  /* ============ TONIGHT IS NOT THE SAME FACT AS THE ROOM YOU ARE IN ===
+     The first version of this called setSport() and hydrateNight() to move
+     GAME onto the marquee. It fixed the hero and broke ten checks in
+     qa/voice-pick.js, which opened the front door, asked for a player card
+     and was handed "Total points, both teams?" — because the marquee that
+     night was NFL and the whole app had quietly become football.
+
+     That is the same disease this fix was written to cure, one level up:
+     the featured game and the room the player is in are TWO facts, and I
+     had made one of them overwrite the other. Somebody who opens the site
+     to practice basketball must not be handed a football card because of
+     what happens to be on television.
+
+     So the hero gets its own source of truth and touches nothing else.
+     No setSport, no hydrateNight, no writing into GAME. */
+  TONIGHT = {
+    nightId:  star.nightId,
+    espnEvent:star.espnEvent ? String(star.espnEvent) : '',
+    tipISO:   star.tipISO || '',
+    sport:    want || '',
+    net:      star.net || '',
+    homeName: star.home || '', awayName: star.away || '',
+    homeAbbr: star.homeAbbr || '', awayAbbr: star.awayAbbr || ''
+  };
+  try{ window.TONIGHT = TONIGHT; }catch(_){}
+  /* NO CACHE CLEAR HERE ON PURPOSE. The obvious next line is to drop the
+     stats cache because the event just changed — and it was written, and
+     sabotaging it away changed nothing, because loadGameStats() ALREADY
+     invalidates on an event change (that was last night's room-switch fix,
+     and qa/switch.js owns it). A second copy of an invariant that is
+     already held and already tested elsewhere is precisely the disease
+     this file keeps catching, so the copy is gone rather than kept
+     "for safety". */
+  try{ if(typeof paintHeroRibbon==='function') paintHeroRibbon(); }catch(_){}
+  try{ if(typeof paintChrome==='function') paintChrome(); }catch(_){}
+  return star.nightId;
+}
+try{ window.featureTonight = featureTonight; }catch(_){}
+
 function slateGame(id){
   return (SLATE.games || []).filter(function(g){ return g && g.nightId === id; })[0] || null;
 }
@@ -6063,6 +6197,9 @@ async function loadSlate(db, F){
       try{ console.info('the remembered game ('+p+') is not on tonight\'s slate — forgetting it'); }catch(_){}
       slatePickSet(null);
     }
+
+    try{ featureTonight(); }catch(_){}
+
     return SLATE.games.length > 0;
   }catch(e){
     try{ console.error('could not read tonight\'s slate:', e); }catch(_){}
@@ -6241,6 +6378,18 @@ async function chooseGame(db, F, nightId){
     try{ toast('Still connecting — tap ' + ((g&&(g.away||g.awayAbbr))||'it') + ' again in a second'); }catch(_){}
     return false;
   }
+
+  /* CLOSE THE OLD ROOM'S LISTENERS BEFORE OPENING THE NEW ROOM'S.
+     Not after, and not never — which is what this did until 20 Aug. The
+     queries captured the old nightId when they attached, so SB.setRoom()
+     below moves future reads without moving these: they stay bound to the
+     room being left, keep pushing its rounds into this one, and count
+     against a ceiling of 78 for as long as the tab lives. */
+  try{ roomListenersStop('switch'); }catch(_){}
+
+  /* The player has chosen a game, so the hero stops speaking for the
+     marquee and starts speaking for their room. */
+  try{ TONIGHT = null; window.TONIGHT = null; }catch(_){}
 
   /* AFTER the config lands, so a restored room is restored over the right
      game rather than the one being left. */
@@ -13290,6 +13439,50 @@ try{
   });
 }catch(_){}
 
+/* ============ EVERY LISTENER THIS ROOM OPENED, CLOSED =================
+   Written 20 Aug 2026 after measuring the overnight snapshot-listener
+   count: a flat plateau of ~100 for six hours against a ceiling near 78,
+   collapsing to 0 only when the last client aged out server-side.
+
+   FOUR listeners are opened per room — the hosted round, Caught It, the
+   leaderboard and the talk feed. Before today:
+
+     · HR.unsub and PCI.unsub were released ONLY inside manualReconnect(),
+       a button a player has to find and press;
+     · ttUnsub was released only when the talk modal closed;
+     · bdUnsub, the leaderboard, was assigned in boardRefresh() and NEVER
+       CALLED ANYWHERE — grep the file, there was no second reference;
+     · and nothing at all was released when the tab closed.
+
+   That was survivable while switching rooms RELOADED the page, because a
+   reload drops the connection and the server tears the listeners down for
+   you. Last night switching became a state swap — the right change, and it
+   is what makes the slate feel like one product — but it removed the only
+   thing that was collecting these. chooseGame() moved the network layer
+   with SB.setRoom() and left four live listeners bound to the room the
+   player had just walked out of, then attached four more.
+
+   So the cost of a switch was +4 listeners AND the room you left still
+   pushing rounds at you. Four rooms on Saturday, beta testers told to move
+   freely between them, and a ceiling of 78.
+
+   Re-arming is deliberately NOT done here. Every one of these attaches
+   lazily behind an `if (!handle)` guard, so dropping the handle is the
+   whole re-arm; doing it here as well would race the room swap. */
+function roomListenersStop(why){
+  var n = 0;
+  try{ if(typeof HR.unsub==='function'){ HR.unsub(); n++; } }catch(_){}
+  try{ HR.unsub=null; HR.doc=null; }catch(_){}
+  try{ if(typeof PCI.unsub==='function'){ PCI.unsub(); n++; } }catch(_){}
+  try{ PCI.unsub=null; }catch(_){}
+  try{ if(typeof bdUnsub==='function'){ bdUnsub(); n++; } }catch(_){}
+  try{ bdUnsub=null; bdLive=false; }catch(_){}
+  try{ if(typeof ttRoomStop==='function'){ if(ttUnsub) n++; ttRoomStop(); } }catch(_){}
+  try{ trk('listeners_stop',{why:why||'', n:n}); }catch(_){}
+  return n;
+}
+try{ window.roomListenersStop = roomListenersStop; }catch(_){}
+
 /* ============ RECONNECT, ON PURPOSE ==================================
    B-59, GN8. The actual fix for a dead-but-quiet listener tonight was
    three console commands, typed by hand, mid-game: tear down the old
@@ -13300,10 +13493,10 @@ try{
    only does the fixing once asked. */
 function manualReconnect(){
   try{ toast('🔄 Reconnecting…'); }catch(_){}
-  try{ if(typeof HR.unsub==='function') HR.unsub(); }catch(_){}
-  HR.unsub=null; HR.doc=null;
-  try{ if(typeof PCI.unsub==='function') PCI.unsub(); }catch(_){}
-  PCI.unsub=null;
+  /* All four, not the two this used to release — a reconnect that leaves
+     the board and the talk feed attached to the old connection is half a
+     reconnect, and it was the half nobody could see. */
+  try{ roomListenersStop('reconnect'); }catch(_){}
   joinNight().then(function(ok){
     try{
       if(ok){ toast('✅ Back online.'); if(typeof refreshRoom==='function') refreshRoom(); }
@@ -17045,9 +17238,14 @@ async function portalGoogle(){
 var REST_AFTER_MS = 6 * 3600 * 1000;
 
 function heroTipMs(){
-  var d = NaN;
-  try{ d = Date.parse((GS.info && GS.info.date) || (typeof GAME!=='undefined' && GAME.tipISO) || ''); }catch(_){}
-  if(!isFinite(d)){ try{ d = Date.parse((typeof GAME!=='undefined' && GAME.tipISO) || ''); }catch(_2){} }
+  var d = NaN, hg = heroGame();
+  /* GS.info.date is the FEED's tip, and the feed is fetched for the room's
+     event — so it must only be trusted when the hero is talking about the
+     room. On the marquee it would be last night's date, which is the bug
+     this whole function was implicated in. */
+  var feedOk = (typeof GAME!=='undefined' && hg === GAME);
+  try{ d = Date.parse((feedOk && GS.info && GS.info.date) || hg.tipISO || ''); }catch(_){}
+  if(!isFinite(d)){ try{ d = Date.parse(hg.tipISO || ''); }catch(_2){} }
   return isFinite(d) ? (d - Date.now()) : NaN;
 }
 
@@ -17055,6 +17253,11 @@ function heroTipMs(){
    the one thing it cannot know, which is whether the CONFIG is stale. */
 function heroState(){
   var ph = ''; try{ ph = phaseNow(); }catch(_){}
+  /* phaseNow() describes the ROOM. If the hero is showing the marquee
+     instead, the room's phase says nothing about it — and inheriting
+     yesterday's 'final' is exactly how "No game tonight" got printed over
+     a slate with two games on it. */
+  try{ if(heroGame() !== GAME) ph = ''; }catch(_){}
   if(ph === 'live') return 'live';
   var ms = heroTipMs();
   if(!isFinite(ms)) return (ph === 'final') ? 'final' : 'pre';
@@ -17089,7 +17292,11 @@ function heroCountdown(ms){
 async function paintHeroRibbon(){
   const el = document.getElementById('heroRibbon'); if(!el) return;
   try{
-    const ev = (typeof GAME !== 'undefined') && GAME.espnEvent;
+    /* Only ask the feed when the hero is describing the ROOM. loadGameStats
+       is keyed on GAME's event; asking it about the marquee would either
+       fetch the wrong game or evict the room's cache. The marquee shows a
+       countdown, which needs no feed at all. */
+    const ev = (heroGame() === GAME) && GAME.espnEvent;
     /* Unforced — loadGameStats() has its own 25s cache and a backoff, so
        this rides whatever the rest of the app already fetched instead of
        adding a request per surface. */
@@ -17135,8 +17342,8 @@ async function paintHeroRibbon(){
          not allowed to guess. Fall back to the state, never to a number. */
       if(!home || !away || home.score == null || away.score == null){
         put((st === 'live' ? '<i class="mq-dot"></i>' : '') + lab(st === 'live' ? 'Live now' : 'Final')
-            + '<b class="mq-cbig">' + esc(String((typeof GAME!=='undefined' && GAME.awayAbbr) || '')) + ' at '
-            + esc(String((typeof GAME!=='undefined' && GAME.homeAbbr) || '')) + '</b>', st);
+            + '<b class="mq-cbig">' + esc(String(heroGame().awayAbbr || '')) + ' at '
+            + esc(String(heroGame().homeAbbr || '')) + '</b>', st);
         return;
       }
       var det = ''; try{ det = String(GS.detail || ''); }catch(_){}
@@ -17194,7 +17401,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-20-fourports.170';
+const STATS_BUILD='2026-08-20-tonight.171';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

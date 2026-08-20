@@ -104,13 +104,31 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
   try{ await p.waitForFunction(()=>!!document.querySelector('#gameRail [data-slate]'),{timeout:20000}); railSeen=true; }catch(_){}
   if(railSeen){
     await p.waitForTimeout(500);
+    /* ============ COMPARE THE RAIL TO ITSELF, NOT TO A TEAM NAME =======
+       This asserted /Valkyries/ — the WNBA built-in's home side. That is
+       not the invariant; it is a bet on who is playing. It held only while
+       the rail happened to be showing the built-in night, and on 20 Aug
+       2026, with a real slate of Nationals-Rangers and 49ers-Chargers, it
+       went red and reported "a real team name was rewritten" when nothing
+       had been rewritten at all. A check that fails because the schedule
+       changed teaches everyone to ignore it.
+
+       The actual promise is: whatever team names the rail is showing, the
+       translation layer does not touch them. So read them in English
+       FIRST, then switch, then demand the same set back. Date-independent,
+       sport-independent, and it now fails for exactly one reason. */
     const live = await p.evaluate(()=>{
       const t=(document.getElementById('gameRail')||{}).innerText||'';
       return { es:/qu. partido est.s viendo/i.test((document.getElementById('app')||document.body).innerText),
-               teams:/Valkyries/.test(t) };
+               teams:(window.SLATE&&SLATE.games||[]).map(g=>String(g.home||g.homeAbbr||'')).filter(Boolean),
+               railText:t };
     });
+    const kept = live.teams.length>0 && live.teams.every(n=>live.railText.indexOf(n)>=0);
     ok('i18n.the-real-rail-is-translated-too', live.es, 'the live rail header stayed English');
-    ok('i18n.the-real-rail-keeps-its-team-names', live.teams, 'a real team name was rewritten');
+    ok('i18n.the-real-rail-keeps-its-team-names', kept,
+       live.teams.length===0
+         ? 'the slate carried no team names to check — the rail loaded but is empty, which is its own bug'
+         : `the rail should still name ${JSON.stringify(live.teams)} after switching to Spanish; it reads ${JSON.stringify(live.railText.slice(0,120))}`);
   }else{
     console.log('       (the rail did not load — its two checks were not run)');
   }

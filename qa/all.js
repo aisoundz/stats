@@ -61,7 +61,7 @@ const TARGET_ABS=path.resolve(__dirname,'..',TARGET);
    not read argv[2] is harmless, but claiming it was targeted would not be. */
 const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-lang.js',
   'board-order.js','payoff.js','slate.js','acceptance.js','host-sportsreg.js','localise.js','i18n.js','season.js',
-  'devices.js','night-config.js','overtime.js','platforms.js','change-it.js','chrome.js','places.js','switch.js']);
+  'devices.js','night-config.js','overtime.js','platforms.js','change-it.js','chrome.js','places.js','switch.js','hero.js','listeners.js']);
 /* Suites that read admin.html rather than the player file. The player half
    of the gate was split across two builds and fixed; the ADMIN half is
    split the same way and is NOT fixed — these seven read admin.html even
@@ -124,6 +124,8 @@ const TIER={
      baked answer, the stats cache key or the rail collapse, and it goes
      red naming which one. */
   'switch.js':        {tier:'browser'},
+  'hero.js':          {tier:'browser'},
+  'listeners.js':     {tier:'browser'},
   'bank-shadow.js':   {tier:'static'},
   'devices.js':       {tier:'browser'},
   'host-sportsreg.js':{tier:'browser'},
