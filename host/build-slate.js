@@ -298,7 +298,18 @@ function tipLine(iso, net, sport){
     const ab = (t) => String(t.abbreviation || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const nightId = owner || `slate-${DATE}-${ab(A.team)}-${ab(H.team)}`;
     const pd = prettyDate(e.date, DATE);
-    const net = (c.broadcasts || []).flatMap(b => b.names || []).join(' · ');
+    /* WHERE TO TUNE IN. Founder, 20 Aug: "when showing the games make sure to
+       add the network so people know where to tune into, the one NFL game has
+       no network. we should always make sure of that."
+       Saints at Rams went out with a blank channel while ESPN was carrying the
+       answer the whole time, in `geoBroadcasts` rather than `broadcasts`. A
+       preseason game with only regional carriage often populates ONLY the geo
+       list, so reading one field and not the other loses exactly the games
+       nobody knows where to find. Read both, keep the order, drop duplicates. */
+    const net = [
+      ...(c.broadcasts || []).flatMap(b => b.names || []),
+      ...(c.geoBroadcasts || []).map(b => (b.media || {}).shortName).filter(Boolean),
+    ].filter((v, i, a) => v && a.indexOf(v) === i).join(' · ');
 
     const g = {
       nightId, espnEvent: String(e.id), tipISO: e.date,
@@ -475,6 +486,75 @@ function tipLine(iso, net, sport){
     log('marquee', `${MARQ.size} main game(s) for ${DATE}`
       + (ns.length ? ` · Game Night #${ns.join(', #')}` : ' · no numbers yet'));
   }
+
+  /* ---- THE TWO FILES MUST AGREE ------------------------------------
+     Found 20 Aug, two days before it would have gone live. Saturday's pick
+     file was curated down to four rooms and the WNBA room was dropped for
+     being Prime-only. The MARQUEE file was not touched, so it still handed
+     Game Night #21 to a room that would no longer exist, and gave the
+     10:00 opener no number at all. Saturday would have run 19, 20, 22 with
+     a hole in the middle and one unnumbered room.
+
+     The pick file and the marquee file are edited by hand, minutes apart,
+     and nothing made them agree. That is the same class of bug as the
+     manifest-versus-slate one forty lines up: one fact, two copies, and no
+     check that they say the same thing. So: say it loudly, every build.
+     Not fatal, because a number is cosmetic and a night must still run
+     without one, but it can never again be silent. */
+  if(PICK && MARQ.size){
+    const ghosts = [...MARQ.keys()].filter(id => !PICK.has(id));
+    const unnumbered = [...PICK].filter(id => !MARQ.has(id));
+    const seen = new Map();
+    [...MARQ.entries()].forEach(([id, v]) => {
+      if(!v.gn) return;
+      if(seen.has(v.gn)) log('WARN', `Game Night #${v.gn} is claimed by TWO rooms: ${seen.get(v.gn)} and ${id}`);
+      seen.set(v.gn, id);
+    });
+    ghosts.forEach(id => log('WARN',
+      `marquee names ${id}` + (MARQ.get(id).gn ? ` as Game Night #${MARQ.get(id).gn}` : '')
+      + ', but the pick file does not host it. That number would be spent on a room nobody opens.'));
+    unnumbered.forEach(id => log('WARN',
+      `${id} is hand-picked to run and has NO Game Night number. Add it to slate-marquee-${DATE}.txt.`));
+    if(!ghosts.length && !unnumbered.length)
+      log('marquee', `pick file and marquee agree · ${PICK.size} room(s), all numbered`);
+  }
+
+  /* WE ONLY HOST GAMES THE WHOLE COUNTRY CAN WATCH -------------------
+     Founder, 20 Aug: "then we dont use that game. Make sure they are
+     national games. our schedule should reflect that and be around that."
+
+     Saints at Rams was picked for Saturday's 1:00 PT slot and its only
+     carriage was ESPN Unlimited plus two local affiliates, KCBS in Los
+     Angeles and Fox 8 in New Orleans. Everyone outside those two markets
+     without that subscription would have been sent to a room for a game
+     they could not see. Giants at Dolphins is the same kickoff on NFL
+     Network, so the swap cost nothing.
+
+     NATIONAL LINEAR is the bar. The one exception is a league that has no
+     linear option AT ALL: every MLS game is Apple TV and Friday MLB is
+     Apple TV, so refusing streamers there would refuse the sport. A
+     streamer alongside local affiliates, when the same league has a linear
+     game the same day, is NOT good enough. Prime is excluded separately by
+     the WNBA rule in leagues.env. */
+  const NATIONAL = [
+    'NFL Net','NFL Network','FOX','FS1','FS2','CBS','CBS Sports Network','NBC','ABC','ION',
+    'ESPN','ESPN2','ESPNU','TNT','TBS','truTV','MLB Network','NBA TV','CW','The CW','Peacock','Netflix',
+  ];
+  const LEAGUE_ONLY_STREAMER = { mls: ['Apple TV'], mlb: ['Apple TV'] };
+  const isNational = g => {
+    const parts = String(g.net || '').split('·').map(x => x.trim()).filter(Boolean);
+    if(parts.some(n => NATIONAL.includes(n))) return true;
+    const ok = LEAGUE_ONLY_STREAMER[String(g.league||'').toLowerCase()] || [];
+    return parts.some(n => ok.includes(n));
+  };
+  const picked = offered.filter(g => PICK ? PICK.has(g.nightId) : true);
+  picked.filter(g => !String(g.net || '').trim()).forEach(g => log('WARN',
+    `${g.nightId} has NO channel in the feed at all. Do not host it; nobody can be told where to watch.`));
+  picked.filter(g => String(g.net || '').trim() && !isNational(g)).forEach(g => log('WARN',
+    `${g.nightId} is NOT nationally carried (${g.net}). Local affiliates and a paid streamer are not `
+    + `national. Swap it for a game on a national network at the same slot.`));
+  if(picked.length && picked.every(isNational))
+    log('national', `all ${picked.length} picked room(s) are nationally carried`);
 
   const RUN = String(process.env.RUN_LEAGUES || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
   /* THE FLAGSHIP IS ALWAYS OFFERED, whatever RUN_LEAGUES says.

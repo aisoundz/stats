@@ -79,3 +79,17 @@ in this voice yet.
 
 Read the finished copy back and search it for `—`. If there is one, you have
 not followed rule 1, and rule 1 is the one Anis asked for by name.
+
+## 6. Every room card names where to watch
+
+Founder, 20 Aug 2026: *"when showing the games make sure to add the network so
+people know where to tune into, the one NFL game has no network. we should
+always make sure of that."*
+
+A room card without a channel fails the whole premise, which is play along with
+the game you are watching. Write it as `on NFL Network`, not with a dash.
+
+If the slate entry has no `net`, do not quietly print the card without one and
+do not invent a channel. Say so in the notification to Anis instead, because a
+room with no national carrier should not have been picked in the first place
+(see rule 7 in `host/leagues.env`).
