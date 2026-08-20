@@ -5739,6 +5739,33 @@ function fixStartWord(line, sportKey){
   }catch(_){ return line; }
 }
 
+/* ============ IS THE FEED CACHE ABOUT *THIS* GAME? ===================
+   GS is one shared stats cache keyed on an event id. phaseNow() and the
+   score line both read it WITHOUT asking which game it is of, so a card can
+   show one match's teams above another match's score.
+
+   Founder, 20 Aug, in the baseball room on the first live MLB night:
+
+       NATIONALS @ RANGERS · THU · AUGUST 20
+       TIPS IN 08:00:17
+       Final · MIN 77 - 66 GS          <- last night's WNBA result
+
+   GS still held the Lynx-Valkyries game because nothing had asked
+   loadGameStats() about the new event yet, and loadGameStats is the only
+   thing that invalidates it. Anything reading GS directly, before that
+   call, reads the room the player LEFT.
+
+   Never trust GS for a game whose event it does not name. Falling back
+   costs a countdown instead of a score, which is the safe direction: a
+   missing score is a gap, a wrong score is a lie. */
+function gsIsAbout(g){
+  try{
+    var want = String((g && g.espnEvent) || '');
+    if(!want) return false;
+    return !!(GS && GS.ok && String(GS.ev||'') === want);
+  }catch(_){ return false; }
+}
+
 /* The marquee's own tip line. NEVER a score: TONIGHT carries no feed, and
    inventing one from GS would print the ROOM's game under the marquee's
    teams — which is the exact contradiction this exists to stop. */
@@ -6906,8 +6933,14 @@ function landingTipLine(){
     /* Before the phase branches: if this is still the pre-game line, it is
        GAME.tip — the string a builder baked — so correct its word to this
        sport's. */
+    /* Not live/final, OR the feed is still describing another room: either
+       way say when THIS game starts. The second condition is the one that
+       put "Final · MIN 77 - 66 GS" under Nationals at Rangers.
+       (A duplicate `return GAME.tip` sat here — dead, since the line above
+       already returns on the same condition — and it would have returned
+       the baked word uncorrected if it had ever run.) */
     if(ph!=='live' && ph!=='final') return fixStartWord(GAME.tip, SPORT_KEY);
-    if(ph!=='live' && ph!=='final') return GAME.tip;
+    if(!gsIsAbout(GAME))            return fixStartWord(GAME.tip, SPORT_KEY);
     var A=null,B=null;
     try{ A=GS.teams.find(function(t){return !t.home;}); B=GS.teams.find(function(t){return t.home;}); }catch(_){}
     if(!A||!B||A.score==null||B.score==null){
@@ -11020,6 +11053,14 @@ var I18N = {
     "Resume my game":"Retomar mi partida",
     "Start a new game":"Empezar de nuevo",
     "Tips in":"Empieza en",
+    /* The countdown label is the sport's own word now, so every form of it
+       needs Spanish or a Spanish player gets an English label. Soccer is
+       the audience this work exists for, so "Kickoff in" takes the football
+       AND soccer sense - SPORT.L.Start is "Kickoff" for both. */
+    "Tip-off in":"Salto inicial en",
+    "Kickoff in":"Saque inicial en",
+    "First pitch in":"Primer lanzamiento en",
+    "Puck drop in":"Saque inicial en",
     "Tonight":"Esta noche",
     "Tipping off":"Por empezar",
     "Loading the matchup…":"Cargando el partido…",
@@ -17498,6 +17539,10 @@ async function paintHeroRibbon(){
     const lab = function(t){ return '<span class="mq-clab">' + t + '</span>'; };
 
     var st = heroState();
+    /* Same guard as the tip line: a live/final hero is built from GS.teams,
+       and GS may still be describing the room the player left. Fall back to
+       the countdown rather than print another game's score. */
+    try{ if((st === 'live' || st === 'final') && !gsIsAbout(heroGame())) st = 'pre'; }catch(_){}
     if(st === 'rest'){
       /* No feed has been asked about a next game and none has been
          configured, so this says what is true and stops. Naming a date we
@@ -17526,7 +17571,14 @@ async function paintHeroRibbon(){
 
     var ms = heroTipMs();
     if(!isFinite(ms) || ms <= 0){ el.style.display = 'none'; return; }
-    put(lab('Tips in') + '<b class="mq-cbig">' + heroCountdown(ms) + '</b>', 'pre');
+    /* "Tips in" is a basketball phrase, and it sat directly above a tip line
+       that had just been corrected to say Kickoff. Same bug as the line
+       below it, one element over — fixed as a class rather than where it
+       was pointed out. Built from SPORT.L.Start so there is still exactly
+       one place that decides what a sport calls its own beginning:
+       "Tip-off in" / "Kickoff in" / "First pitch in" / "Puck drop in". */
+    put(lab(startWordFor(heroGame().sport || SPORT_KEY) + ' in')
+        + '<b class="mq-cbig">' + heroCountdown(ms) + '</b>', 'pre');
   }catch(e){ try{ el.style.display = 'none'; }catch(_){} }
 }
 
@@ -17572,7 +17624,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-20-kickoff.175';
+const STATS_BUILD='2026-08-20-ownscore.176';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

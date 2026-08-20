@@ -163,6 +163,30 @@ const NFL = {
     try { out.tonightLine = tonightTipLine({tipISO: NFL.tipISO, sport: 'football', net: 'NFL Net'}); }
     catch (e) { out.tonightLine = 'threw: ' + e; }
 
+    /* ---- 1d. NEVER ANOTHER GAME'S SCORE ----
+       GS is one shared cache keyed on an event. Prime it with LAST NIGHT's
+       WNBA game while the card is showing tonight's baseball room, exactly
+       as it is on a real switch before loadGameStats has caught up, and
+       demand the line says when the game starts rather than what happened
+       somewhere else. */
+    try { window.TONIGHT = null; TONIGHT = null; } catch (_) {}
+    try { setSport('baseball'); } catch (_) {}
+    GAME.nightId   = MLB.nightId;
+    GAME.espnEvent = String(MLB.espnEvent);
+    GAME.tip       = 'Tip-off 5:05 PM ET · FS1';
+    /* GS.state is what phaseFromFeed() actually reads — 'post' is what makes
+       phaseNow() say 'final' and send landingTipLine() down the score
+       branch. Priming PHASE.v alone left the harness on 'pre', so the check
+       passed on a build that has the bug: it was detecting the missing
+       guard function rather than reproducing the defect. */
+    GS.ok = true; GS.ev = '401857157'; GS.at = Date.now();      // last night
+    GS.state = 'post';
+    GS.teams = [{ab:'MIN', home:false, score:77}, {ab:'GS', home:true, score:66}];
+    try { PHASE.v = 'final'; } catch (_) {}
+    out.foreignLine = (function(){ try { return landingTipLine(); } catch (e) { return 'threw: ' + e; } })();
+    out.gsGuard     = (function(){ try { return gsIsAbout(GAME); } catch (e) { return 'threw'; } })();
+    try { PHASE.v = ''; GS.ok = false; GS.ev = null; GS.state = ''; GS.teams = []; } catch (_) {}
+
     /* ---- 2a. A STALE SAVED PLACE MUST NOT BLOCK TONIGHT ----
        THE CASE THAT SHIPPED BROKEN TWICE. S.place is persisted, so the one
        device that actually played last night wakes up with S.place='review'
@@ -274,6 +298,18 @@ const NFL = {
     ok('hero.the-cadence-follows-the-featured-sport',
        !/quarter/i.test(r.card && r.card.chip3 || '') || (r.card.chip3||'').length > 0,
        `cadence chip reads ${JSON.stringify(r.card && r.card.chip3)}`);
+
+    ok('hero.never-shows-another-games-score',
+       r.gsGuard === false && !/77|66|MIN|\bGS\b|Final/.test(String(r.foreignLine)),
+       `with the feed cache still holding last night's WNBA game, the baseball card's tip line ` +
+       `read ${JSON.stringify(r.foreignLine)} (gsIsAbout=${r.gsGuard}). This is the founder's ` +
+       `screenshot: "Final · MIN 77 - 66 GS" printed under NATIONALS @ RANGERS. A missing score ` +
+       `is a gap; a wrong score is a lie.`);
+
+    ok('hero.and-still-says-when-this-game-starts',
+       /^First pitch/.test(String(r.foreignLine)),
+       `it fell back to ${JSON.stringify(r.foreignLine)} — the fallback must be THIS game's start ` +
+       `line, in baseball's own words, not an empty string.`);
 
     ok('hero.every-sport-names-its-own-start',
        r.words && /^Kickoff/.test(r.words.football) && /^Tip-off/.test(r.words.basketball) &&

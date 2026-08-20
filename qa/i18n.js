@@ -158,12 +158,27 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
                  {childList:true,subtree:true,characterData:true});
       setTimeout(()=>{ mo.disconnect(); res(n); }, ms);
     });
+    /* ============ WAIT FOR QUIET BEFORE MEASURING QUIET ==============
+       Two windows fixed the one-shot burst but not the other half of the
+       problem: on a loaded machine BOOT ITSELF can still be running when
+       measurement starts, and boot mutates continuously — the slate lands,
+       featureTonight repaints the card, paintSlate draws the rail, the
+       config prefetch resolves. Sustained across both windows, and not a
+       loop at all. Measured 55 then 53 on a run that was perfectly healthy.
+
+       So: wait until the page has actually gone quiet — a 400ms window with
+       almost nothing in it — and only then start counting. Bounded, so a
+       genuine runaway loop can never make this wait forever; it just starts
+       measuring anyway and fails, which is the right outcome. */
+    let quiet = false;
+    for(let i = 0; i < 30 && !quiet; i++){ quiet = (await watch(400)) <= 2; }
     const a = await watch(1500);
     const b = await watch(1500);
-    return {a, b};
+    return {a, b, quiet};
   });
   ok('i18n.the-pass-does-not-loop-on-itself', settled.b < 50,
-     `${settled.a} mutations in the first 1.5s and ${settled.b} in the second, with nothing ` +
+     `${settled.a} mutations in the first 1.5s and ${settled.b} in the second (page reached ` +
+     `quiet before measuring: ${settled.quiet}), with nothing ` +
      `happening — sustained across both windows means the observer is re-triggering its own ` +
      `edits. (A single burst in the first window only is a legitimate one-time repaint and is ` +
      `not what this check is for.)`);
