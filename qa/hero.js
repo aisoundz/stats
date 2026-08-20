@@ -142,6 +142,27 @@ const NFL = {
     };
     out.cardAll = Object.keys(out.card).map(k => out.card[k]).join(' | ');
 
+    /* ---- 1c. EVERY SPORT CALLS THE START OF A GAME BY ITS OWN NAME ----
+       host/build-slate.js mapped soccer and baseball and put everything
+       else — including FOOTBALL — on "Tip-off", so the first live NFL night
+       this product ever ran announced a basketball tip-off. Checked for
+       ALL FIVE sports, not just the one that was reported: hockey had the
+       identical bug sitting behind it, unreported only because no hockey
+       night has run yet. */
+    out.words = {};
+    try {
+      out.words.basketball = fixStartWord('Tip-off 7:00 PM ET · ABC', 'basketball');
+      out.words.football   = fixStartWord('Tip-off 7:00 PM ET · NFL Net', 'football');
+      out.words.baseball   = fixStartWord('Tip-off 7:00 PM ET · FS1', 'baseball');
+      out.words.soccer     = fixStartWord('Tip-off 7:00 PM ET · Apple TV', 'soccer');
+      out.words.hockey     = fixStartWord('Tip-off 7:00 PM ET · ESPN', 'hockey');
+      /* and it must not maul a broadcaster that happens to contain the word */
+      out.words.midline    = fixStartWord('Kickoff 7:00 PM ET · Kickoff FC Radio', 'football');
+    } catch (e) { out.words.threw = String(e); }
+    /* the marquee's own composed line carries the word too */
+    try { out.tonightLine = tonightTipLine({tipISO: NFL.tipISO, sport: 'football', net: 'NFL Net'}); }
+    catch (e) { out.tonightLine = 'threw: ' + e; }
+
     /* ---- 2a. A STALE SAVED PLACE MUST NOT BLOCK TONIGHT ----
        THE CASE THAT SHIPPED BROKEN TWICE. S.place is persisted, so the one
        device that actually played last night wakes up with S.place='review'
@@ -253,6 +274,25 @@ const NFL = {
     ok('hero.the-cadence-follows-the-featured-sport',
        !/quarter/i.test(r.card && r.card.chip3 || '') || (r.card.chip3||'').length > 0,
        `cadence chip reads ${JSON.stringify(r.card && r.card.chip3)}`);
+
+    ok('hero.every-sport-names-its-own-start',
+       r.words && /^Kickoff/.test(r.words.football) && /^Tip-off/.test(r.words.basketball) &&
+       /^First pitch/.test(r.words.baseball) && /^Kickoff/.test(r.words.soccer) &&
+       /^Puck drop/.test(r.words.hockey),
+       `football="${r.words && r.words.football}" basketball="${r.words && r.words.basketball}" ` +
+       `baseball="${r.words && r.words.baseball}" soccer="${r.words && r.words.soccer}" ` +
+       `hockey="${r.words && r.words.hockey}". A football card that says "Tip-off" is telling a ` +
+       `player about a sport they are not watching.`);
+
+    ok('hero.fixing-the-word-does-not-maul-the-rest',
+       r.words && r.words.midline === 'Kickoff 7:00 PM ET · Kickoff FC Radio',
+       `got "${r.words && r.words.midline}" — only the LEADING word may be replaced; the times and ` +
+       `the broadcast list are not ours to rewrite.`);
+
+    ok('hero.the-marquee-line-carries-the-word-too',
+       /^Kickoff/.test(r.tonightLine || ''),
+       `the marquee's composed tip line reads "${r.tonightLine}" — it must open with the featured ` +
+       `sport's own word, or the fix only covers rooms that were already hydrated.`);
 
     ok('hero.a-stale-saved-place-does-not-block-tonight',
        r.staleReturn === NFL.nightId && r.staleTonight === NFL.nightId,

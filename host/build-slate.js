@@ -249,8 +249,21 @@ function tipLine(iso, net, sport){
   const d = new Date(iso);
   const fmt = (tz) => d.toLocaleTimeString('en-US',
     { timeZone: tz, hour: 'numeric', minute: '2-digit' });
-  const word = sport === 'soccer' ? 'Kickoff'
-             : sport === 'baseball' ? 'First pitch' : 'Tip-off';
+  /* EVERY SPORT'S OWN WORD. This was soccer/baseball/else, and "else" is
+     where FOOTBALL lived — so the NFL card said "Tip-off", a basketball
+     word, on the first live football night this product ever ran. Hockey
+     was in there too. Founder, 20 Aug: "on the football card it should be
+     kick off".
+
+     The word is declared properly in the player app, once per sport, as
+     SPORT.L.Start. This is a SECOND COPY and it drifted, which is the
+     disease this codebase keeps catching. It is kept only because the
+     builder is a separate process that cannot read the app's SPORTS
+     object — so it must stay in step, and the app now normalises the
+     leading word anyway rather than trusting whatever is baked here. */
+  const START_WORD = { soccer:'Kickoff', football:'Kickoff', baseball:'First pitch',
+                       hockey:'Puck drop', basketball:'Tip-off' };
+  const word = START_WORD[sport] || 'Tip-off';
   return `${word} ${fmt('America/New_York')} ET · ${fmt('America/Chicago')} CT · `
        + `${fmt('America/Los_Angeles')} PT` + (net ? ` · ${net}` : '');
 }

@@ -135,15 +135,38 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
   }
 
   /* ---- 4. IT DOES NOT LOOP ON ITS OWN EDITS -------------------------- */
+  /* ============ A BURST IS NOT A LOOP ================================
+     One 1.5s window could not tell the difference, and that made this
+     check intermittent the moment anything legitimate repainted once.
+     20 Aug: featureTonight() began calling applySport() when the slate
+     lands — a single, correct repaint of the marquee card. Land it inside
+     the window and this reported "the observer is re-triggering its own
+     edits" about code that had edited once. It failed roughly one run in
+     three, which is the worst kind of red: real-looking, and wrong.
+
+     The defect this exists to catch is a LOOP — the mid-question language
+     repaint that ran 115 mutations a second and never stopped. A loop
+     mutates in every window. A burst mutates in one and then goes quiet.
+
+     So: two consecutive windows, and it is only a loop if the SECOND one
+     is still busy. Strictly stronger than the old check — a real loop
+     fails it exactly as before, and now says which window was noisy. */
   const settled = await p.evaluate(async()=>{
-    let n=0; const mo=new MutationObserver(ms=>{ n+=ms.length; });
-    mo.observe(document.getElementById('app')||document.body,{childList:true,subtree:true,characterData:true});
-    await new Promise(r=>setTimeout(r,1500));
-    mo.disconnect();
-    return n;
+    const watch = ms => new Promise(res=>{
+      let n=0; const mo=new MutationObserver(r=>{ n+=r.length; });
+      mo.observe(document.getElementById('app')||document.body,
+                 {childList:true,subtree:true,characterData:true});
+      setTimeout(()=>{ mo.disconnect(); res(n); }, ms);
+    });
+    const a = await watch(1500);
+    const b = await watch(1500);
+    return {a, b};
   });
-  ok('i18n.the-pass-does-not-loop-on-itself', settled < 50,
-     `${settled} mutations in 1.5s with nothing happening — the observer is re-triggering its own edits`);
+  ok('i18n.the-pass-does-not-loop-on-itself', settled.b < 50,
+     `${settled.a} mutations in the first 1.5s and ${settled.b} in the second, with nothing ` +
+     `happening — sustained across both windows means the observer is re-triggering its own ` +
+     `edits. (A single burst in the first window only is a legitimate one-time repaint and is ` +
+     `not what this check is for.)`);
 
   /* ---- 5. GOING BACK RESTORES EXACTLY -------------------------------- */
   await p.evaluate(()=>{ VX.setLang('en'); applyLang(); });

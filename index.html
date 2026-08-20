@@ -5704,14 +5704,52 @@ function heroGame(){
 }
 try{ window.heroGame = heroGame; }catch(_){}
 
+/* ============ WHAT DOES THIS SPORT CALL THE START OF A GAME? =========
+   Tip-off, Kickoff, First pitch, Puck drop. Declared once per sport in
+   SPORTS[..].L.Start, and this is the only thing that reads it for a card.
+
+   It exists because the string baked into a published night config had its
+   OWN copy of this word in host/build-slate.js, and that copy mapped
+   soccer and baseball and put everything else — including FOOTBALL — on
+   "Tip-off". So the first live NFL night this product ever ran told players
+   about a basketball tip-off. Founder, 20 Aug: "on the football card it
+   should be kick off".
+
+   The builder is fixed, but tonight's config is already published with the
+   wrong word in it, and a config is a fact on a server rather than
+   something a deploy can reach. So the app stops trusting the baked word
+   and normalises it from the sport, which repairs every config already
+   written as well as every one still to come. */
+function startWordFor(sportKey){
+  try{
+    var sp = SPORTS[String(sportKey||'').toLowerCase()];
+    if(sp && sp.L && sp.L.Start) return sp.L.Start;
+  }catch(_){}
+  try{ return SPORT.L.Start; }catch(_){}
+  return 'Tip-off';
+}
+/* Swap a leading start-word for the right one, leaving the times and the
+   broadcast list exactly as they are. Matches only at the very start, so a
+   team called "Kickoff FC" in the network list is untouched. */
+function fixStartWord(line, sportKey){
+  try{
+    if(!line) return line;
+    return String(line).replace(/^\s*(Tip-?off|Kick-?off|First pitch|Puck drop)\b/i,
+                                startWordFor(sportKey));
+  }catch(_){ return line; }
+}
+
 /* The marquee's own tip line. NEVER a score: TONIGHT carries no feed, and
    inventing one from GS would print the ROOM's game under the marquee's
    teams — which is the exact contradiction this exists to stop. */
 function tonightTipLine(g){
   try{
     var d = new Date(g.tipISO); if(isNaN(d)) return '';
-    var t = d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-    return '\uD83D\uDD50 ' + t + (g.net ? (' \u00B7 ' + g.net) : '');
+    var fmt = function(tz){ return d.toLocaleTimeString('en-US',
+      {timeZone:tz, hour:'numeric', minute:'2-digit'}); };
+    return startWordFor(g.sport) + ' ' + fmt('America/New_York') + ' ET \u00B7 '
+         + fmt('America/Chicago') + ' CT \u00B7 ' + fmt('America/Los_Angeles') + ' PT'
+         + (g.net ? (' \u00B7 ' + g.net) : '');
   }catch(_){ return ''; }
 }
 /* "GAME NIGHT #15 · THU · AUGUST 20", in the reader's own zone — a tip at
@@ -6865,6 +6903,10 @@ function landingTipLine(){
     var hg = heroGame();
     if(typeof GAME !== 'undefined' && hg !== GAME) return tonightTipLine(hg);
     var ph=''; try{ ph=phaseNow(); }catch(_){}
+    /* Before the phase branches: if this is still the pre-game line, it is
+       GAME.tip — the string a builder baked — so correct its word to this
+       sport's. */
+    if(ph!=='live' && ph!=='final') return fixStartWord(GAME.tip, SPORT_KEY);
     if(ph!=='live' && ph!=='final') return GAME.tip;
     var A=null,B=null;
     try{ A=GS.teams.find(function(t){return !t.home;}); B=GS.teams.find(function(t){return t.home;}); }catch(_){}
@@ -17530,7 +17572,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-20-onepaint.174';
+const STATS_BUILD='2026-08-20-kickoff.175';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
