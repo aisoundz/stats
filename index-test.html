@@ -11323,6 +11323,74 @@ var I18N = {
     "Resume my game":"Retomar mi partida",
     "Start a new game":"Empezar de nuevo",
     "Tips in":"Empieza en",
+
+    /* ============ THE APP AROUND THE QUESTIONS ========================
+       Added 20 Aug 2026. Every question in every sport was already
+       translated and the product around them was not — a Spanish player
+       read a Spanish question inside an English app, which reads as
+       breakage rather than as a half-finished feature.
+
+       qa/spanish.js walks all 17 screens and reports what is still English,
+       so this stopped being "about 360 strings" (an estimate nobody had
+       measured) and became a list. Team names, nicknames, league
+       abbreviations and broadcasters are exempt and must stay exempt —
+       "Golden State Valkyries" is a name, not copy. --- */
+
+    /* --- the sport chooser on the practice card --- */
+    "Basketball":"Baloncesto", "Soccer":"Fútbol", "Baseball":"Béisbol",
+    "Football":"Fútbol americano", "Hockey":"Hockey",
+
+    /* --- the front door --- */
+    "No game tonight":"No hay partido esta noche",
+    "The next game night lands here. Practice is open — no account needed.":
+      "La próxima noche de juego aparece aquí. La práctica está abierta — sin cuenta.",
+    "One tap. A seat and a score have to belong to somebody — that is the only reason this is here.":
+      "Un toque. Un lugar y un puntaje tienen que ser de alguien — esa es la única razón de esto.",
+    "Sign in with Google":"Entrar con Google",
+    "Use email instead":"Usar correo",
+    "We’re having trouble reaching the game server.":
+      "Estamos teniendo problemas para conectar con el servidor.",
+    "Signing in still works — give it a tap. If it doesn’t take, reloading the page usually fixes it.":
+      "Entrar sigue funcionando — dale un toque. Si no entra, recargar la página suele arreglarlo.",
+    "Reload and try again":"Recargar e intentar de nuevo",
+    "Email me when the next game night is on. One a game, unsubscribe any time.":
+      "Avísame por correo cuando haya noche de juego. Uno por partido, cancela cuando quieras.",
+    "Notify me":"Avísame",
+    "Take me off the list":"Quítame de la lista",
+
+    /* --- the round flow --- */
+    "End of Q1":"Fin del 1er cuarto",
+    "Quarter 1 in the books":"Primer cuarto terminado",
+    "Start Quarter 2 ▶":"Empezar el 2º cuarto ▶",
+    "Question 1 of 3":"Pregunta 1 de 3",
+    "Worth 1 pt":"Vale 1 punto",
+    "Score Q1":"Puntuar 1er cuarto",
+    "When the host posts the answers in the group chat, tap the correct answer for each question. Your picks are marked 🔵.":
+      "Cuando el anfitrión publique las respuestas en el chat, toca la respuesta correcta de cada pregunta. Tus elecciones están marcadas 🔵.",
+    "OUT OF 1000":"DE 1000",
+
+    /* --- the list and the consent copy. A legal sentence translated
+           loosely is worse than one left in English, so these keep their
+           exact meaning and their STOP/HELP keywords, which are the
+           carrier's and are not ours to translate. --- */
+    "One email before each game night — when it's on, who's playing, what's up for grabs. Then tell us what you actually watch, so we build nights you'd show up for.":
+      "Un correo antes de cada noche de juego — cuándo es, quién juega y qué se puede ganar. Después cuéntanos qué ves de verdad, para armar noches a las que vendrías.",
+    "Name":"Nombre",
+    "Phone":"Teléfono",
+    "A number means you can play by text later, without the app. We're not texting anyone yet.":
+      "Un número significa que después podrás jugar por mensaje, sin la app. Todavía no enviamos mensajes a nadie.",
+    "What do you watch?":"¿Qué ves?",
+    "Tap everything that's true. This is how we pick the next game night.":
+      "Toca todo lo que aplique. Así elegimos la próxima noche de juego.",
+    "Your teams":"Tus equipos",
+    "📺 How do you watch?":"📺 ¿Cómo lo ves?",
+    "📅 How often is a game actually on?":"📅 ¿Cada cuánto hay partido de verdad?",
+    "🎁 What would make you play every week?":"🎁 ¿Qué te haría jugar cada semana?",
+    "We don't sell your info. We're not texting anyone yet — the number just means you're on the list when we start.":
+      "No vendemos tu información. Todavía no enviamos mensajes — el número solo significa que estarás en la lista cuando empecemos.",
+    "Prizes awarded to the sponsor's verified top scorers after the final box score is confirmed. Winning never requires payment.":
+      "Los premios se entregan a los mejores puntajes verificados del patrocinador después de confirmarse el marcador final. Ganar nunca requiere pago.",
+
     /* The countdown label is the sport's own word now, so every form of it
        needs Spanish or a Spanish player gets an English label. Soccer is
        the audience this work exists for, so "Kickoff in" takes the football
