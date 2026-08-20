@@ -204,3 +204,28 @@ the file, change the content, change nothing structural.
 **Still check the sent campaigns** for the subject lines and names already used,
 so a subject is not repeated and the Weekly number is right. Just do not take
 the design from them.
+
+## 12. What the cloud can and cannot see
+
+The routines do not run on the Jetson. They run in a fresh cloud sandbox that
+clones the public repo and has nothing else: **no `~/gamenight-logs`, no
+`~/.secrets`, no Firebase admin key, no runner logs.**
+
+So anything a routine needs must be either in the repo or readable without
+credentials.
+
+| What you need | Where to get it |
+|---|---|
+| Tonight's rooms | `slate/{YYYY-MM-DD}` over the Firestore REST API. The `slate` collection is world-readable, and the web API key is in `index.html` under `window.STATS_FIREBASE`. |
+| **The Game Night number** | **the `gn` field on each entry in that same slate document.** |
+| What shipped | `journal/` in the repo, and `git log`. The clone is shallow, so `git fetch --unshallow` first if you need more than a day. |
+| Broadcast, records, leaders | the ESPN summary for that event |
+
+**Do NOT try to read `~/gamenight-logs/slate-marquee-*.txt` or the pick files.**
+They are the Jetson's own working files and they do not exist where you are
+running. An earlier instruction in the weekly routine's STEP 2 named them as the
+source for game night numbers, and that instruction is wrong: take `gn` from the
+slate.
+
+Found by test-firing the tip-off routine on 20 Aug rather than assuming it
+worked. It reached for those files, found nothing, and had to work it out.
