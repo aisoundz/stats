@@ -210,6 +210,20 @@ const NFL = {
     out.inFlowEvent  = String(GAME.espnEvent);
     S.place = '';
 
+    /* ---- 2c. AN EXPLICIT ?game= LINK OUTRANKS THE MARQUEE ----
+       featureTonight() runs at the tail of loadSlate(); chooseGame() binds
+       a linked room later. So with ?game= in the URL the marquee can win a
+       race it has no business winning, and somebody who followed a link to
+       the baseball room lands on the football card. Measured live. */
+    try { window.TONIGHT = null; TONIGHT = null; } catch (_) {}
+    GAME.nightId = 'gn13-mystics-tempo'; GAME.espnEvent = '401857157';
+    S.place = '';
+    try { window.__origSlateParam = window.slateParam; } catch (_) {}
+    try { slateParam = function(){ return MLB.nightId; }; } catch (_) {}
+    out.linkedReturn  = featureTonight();
+    out.linkedTonight = String((window.TONIGHT || {}).nightId || '');
+    try { slateParam = window.__origSlateParam || slateParam; } catch (_) {}
+
     /* ---- 3. it must NOT override a room already on tonight's slate ---- */
     GAME.nightId = MLB.nightId; GAME.espnEvent = String(MLB.espnEvent);
     out.alreadyReturn = featureTonight();
@@ -342,6 +356,12 @@ const NFL = {
        `mid-question in the baseball room — one of TONIGHT's — it returned "${r.inFlowReturn}" and ` +
        `left the event at ${r.inFlowEvent}. Somebody answering a question in a room that is on ` +
        `tonight's slate must be left completely alone.`);
+
+    ok('hero.an-explicit-game-link-outranks-the-marquee',
+       r.linkedReturn === '' && r.linkedTonight === '',
+       `with ?game=${MLB.nightId} in the URL it returned "${r.linkedReturn}" and set TONIGHT to ` +
+       `"${r.linkedTonight}" — both must be empty. A link to the baseball room must open the ` +
+       `baseball room, not the night's headline act.`);
 
     ok('hero.never-overrides-a-room-you-picked',
        r.alreadyReturn === '' && r.alreadyEvent === MLB.espnEvent,

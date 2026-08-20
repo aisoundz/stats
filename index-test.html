@@ -5836,6 +5836,24 @@ function featureTonight(){
      one of TONIGHT's?". If it is, leave them completely alone — in the
      flow or not. If it is not, they are holding yesterday, and yesterday
      is exactly what this function exists to replace. */
+  /* AN EXPLICIT ?game= WINS, and it has to be checked HERE rather than
+     relied on downstream. This runs at the tail of loadSlate(); chooseGame()
+     binds the linked room a moment LATER. So with ?game= in the URL there is
+     a window where ACTIVE_ROOM and GAME still describe nothing in
+     particular, featureTonight() wins the race, and TONIGHT — the marquee —
+     outranks the room the player actually asked for.
+
+     Measured on the live site: opening
+     ?game=slate-2026-08-20-wsh-tex&sport=baseball showed the 49ers at
+     Chargers card. Somebody who followed a link to the baseball room must
+     get the baseball room, not the night's headline act.
+
+     Same rule as ?sport=: what the URL names, the player chose. */
+  try{
+    var linked = slateParam();
+    if(linked && slateGame(linked)) return '';
+  }catch(_){}
+
   var here = '';
   try{ here = (typeof ACTIVE_ROOM !== 'undefined' && ACTIVE_ROOM) || (GAME && GAME.nightId) || ''; }catch(_){}
   var hereIsTonight = false;
@@ -17624,7 +17642,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-20-ownscore.176';
+const STATS_BUILD='2026-08-20-yourroom.177';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
