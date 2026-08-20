@@ -126,6 +126,27 @@
      to be asked out loud instead of answered by the screen. */
   .gamebtn.hosted{border-color:color-mix(in srgb,var(--teal) 45%,var(--line))}
   .gamebtn .onair{color:var(--teal);font-weight:700;letter-spacing:.04em}
+  /* THE TIP LINE. The clock is the fact the host acts on, so it is the
+     second-biggest thing on the card after the matchup — bigger than the
+     rail status, which they read once and then know. */
+  .gamebtn .tipline{display:flex;align-items:baseline;gap:7px;margin-top:5px;flex-wrap:wrap}
+  .gamebtn .tipclock{font-family:var(--d);font-weight:700;font-size:15px;color:var(--ink)}
+  .gamebtn .tiprel{font-style:normal;font-size:12px;font-weight:600;letter-spacing:.03em;
+    padding:1px 6px;border-radius:5px;background:var(--bg3,rgba(255,255,255,.05));color:var(--muted)}
+  /* Colour carries the same meanings it does everywhere else in this
+     product: teal is live/now, gold is about to need you, dim is done. */
+  .gamebtn .tiprel.imminent{color:var(--gold);background:color-mix(in srgb,var(--gold) 16%,transparent)}
+  .gamebtn .tiprel.underway{color:var(--teal);background:color-mix(in srgb,var(--teal) 16%,transparent)}
+  .gamebtn .tiprel.past{color:var(--dim)}
+  /* The group headings. These carry the distinction the founder had been
+     holding in his head across thirty-one identical cards: four rooms are
+     played, the rest are collected. */
+  .grouphead{grid-column:1/-1;margin:14px 0 2px;display:flex;align-items:baseline;
+    gap:10px;flex-wrap:wrap}
+  .grouphead:first-child{margin-top:0}
+  .grouphead b{font-family:var(--d);font-size:14px;font-weight:700;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ink)}
+  .grouphead i{font-style:normal;font-size:12px;color:var(--dim)}
   .adv{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
   .adv summary{cursor:pointer;font-size:14px;color:var(--dim);list-style:none}
   .adv summary::-webkit-details-marker{display:none}
@@ -671,7 +692,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-19-admin.59-gamenumbers';
+window.ADMIN_BUILD='2026-08-20-admin.60-fourports';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -745,7 +766,7 @@ const NIGHTS = [
      Before that build the round would have opened, scored, and reached
      nobody's phone, which is why this was not here sooner. */
   { id:'gn13-2026-08-19-min-gs', label:'Game Night #13 — Lynx @ Valkyries (Wed Aug 19, 10:00 ET · USA Network)',
-    away:'MIN', home:'GS', espn:'401857157',
+    away:'MIN', home:'GS', espn:'401857157', tipISO:'2026-08-20T02:00Z',
     tags:['Q1','Q2','Q3','Q4','OT'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4','Overtime'],
     worth:[10,20,30,40,40] },
@@ -774,17 +795,17 @@ const NIGHTS = [
      gn12-2026-08-19-min-gs would silently start describing a different
      game. */
   { id:'gn12-2026-08-17-dal-gs', label:'Game Night #12 — Wings @ Valkyries (Mon Aug 17, 10:00 ET · Peacock)',
-    away:'DAL', home:'GS', espn:'401857151',
+    away:'DAL', home:'GS', espn:'401857151', tipISO:'2026-08-18T02:00Z',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
     worth:[10,20,30,40] },
   { id:'gn11-2026-08-16-ind-atl', label:'Game Night #11 — Fever @ Dream (Sun Aug 16, 5:00 ET · ESPN)',
-    away:'IND', home:'ATL', espn:'401857150',
+    away:'IND', home:'ATL', espn:'401857150', tipISO:'2026-08-16T21:00Z',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
     worth:[10,20,30,40] },
   { id:'gn10-2026-08-15-min-lv', label:'Game Night #10 — Lynx @ Aces (Sat Aug 15, 8:00 ET · CBS)',
-    away:'MIN', home:'LV', espn:'401857147',
+    away:'MIN', home:'LV', espn:'401857147', tipISO:'2026-08-16T00:00Z',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
     worth:[10,20,30,40] },
@@ -795,7 +816,7 @@ const NIGHTS = [
      Arena. Set up in a hurry, minutes before tip — if anything here reads
      off, check it against the scoreboard before the first round opens. */
   { id:'gn9-2026-08-14-pdx-sea', label:'Game Night #9 — Fire @ Storm (Fri Aug 14, 10:00 ET · ION)',
-    away:'PDX', home:'SEA', espn:'401857144',
+    away:'PDX', home:'SEA', espn:'401857144', tipISO:'2026-08-15T02:00Z',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
     worth:[10,20,30,40] },
@@ -805,16 +826,16 @@ const NIGHTS = [
      2026-08-14: event 401857143, ION, Gainbridge Fieldhouse. Indiana are
      home so they are drawn on the right. */
   { id:'gn8-2026-08-14-dal-ind', label:'Game Night #8 — Wings @ Fever (Fri Aug 14, 7:30 ET · ION)',
-    away:'DAL', home:'IND', espn:'401857143',
+    away:'DAL', home:'IND', espn:'401857143', tipISO:'2026-08-14T23:30Z',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
     worth:[10,20,30,40] },
   { id:'gn7-2026-08-12-tor-dal', label:'Game Night #7 — Tempo @ Wings (Wed Aug 12, 8:00 ET · USA Network)',
-    away:'TOR', home:'DAL', espn:'401857137',
+    away:'TOR', home:'DAL', espn:'401857137', tipISO:'2026-08-13T00:00Z',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
     worth:[10,20,30,40] },
-  { id:'gn6-2026-08-11-ny-ind', espn:'401857132', label:'Game Night #6 — Liberty @ Fever (Tue Aug 11, 7:30 ET · ESPN)',
+  { id:'gn6-2026-08-11-ny-ind', espn:'401857132', tipISO:'2026-08-11T00:00Z', label:'Game Night #6 — Liberty @ Fever (Tue Aug 11, 7:30 ET · ESPN)',
     away:'NY', home:'IND',
     tags:['Q1','Q2','Q3','Q4'],
     names:['Quarter 1','Quarter 2','Quarter 3','Quarter 4'],
@@ -1855,6 +1876,51 @@ function nightDate(n){
 }
 let DAY_SEL = null;
 
+/* ============ THE NUMBER HAS ONE READER =============================
+   The sort ranked on `n.gn` while the badge two lines below read the
+   number out of the id (`gn13-...`). A hand-written flagship sets the id
+   and not the field, so THE MAIN GAME RANKED LAST — behind three slate
+   rooms — on the very screen whose comment says "THE MAIN GAME GOES
+   FIRST". Founder, 19 Aug, looking at it: Game Night #13 was the fourth
+   card. One fact, two readers, and they disagreed. Now there is one. */
+function nightNum(n){
+  const m = String((n&&n.id)||'').match(/^gn(\d+)/i);
+  return m ? m[1] : ((n&&n.gn) || '');
+}
+
+/* ============ WHEN, NOT JUST WHAT ===================================
+   Founder, 19 Aug, setting up a four-room night: "I need to have the
+   times on the write because I need to turn on each games score and
+   caught it. So we need to organize this."
+
+   The tip was already on every slate card as `tipISO` and was read only
+   to break sort ties — never once shown. The hand-written flagship had it
+   worse: its tip existed ONLY as prose inside its label, "(Wed Aug 19,
+   10:00 ET · USA Network)", which nothing can read. So the one game the
+   email is about was the one game that could not display a time. Every
+   hand-written night now carries a real tipISO, verified against the
+   ESPN feed rather than retyped from the sentence.
+
+   These say when the ball is up and nothing else. They deliberately do
+   NOT claim "live" or "final" — that is the feed's word, not the clock's,
+   and a card that says LIVE because a clock passed is the same class of
+   lie as a bank reporting a stat it did not read. */
+function tipMs(n){ const t=Date.parse((n&&n.tipISO)||''); return isFinite(t)?t:0; }
+function tipClock(n){
+  const ms=tipMs(n); if(!ms) return '';
+  try{ return new Date(ms).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}); }
+  catch(_){ return ''; }
+}
+function tipRel(n){
+  const ms=tipMs(n); if(!ms) return {cls:'', txt:''};
+  const d = ms - Date.now();
+  const mins = Math.round(Math.abs(d)/60000);
+  const span = mins<60 ? (mins+'m') : (Math.floor(mins/60)+'h '+(mins%60)+'m');
+  if(d>0) return {cls:(d<=30*60000?'imminent':'later'), txt:'in '+span};
+  return {cls:(Math.abs(d)<3.5*3600000?'underway':'past'), txt:'tipped '+span+' ago'};
+}
+
+
 function paintDayStrip(){
   const strip = $('dayStrip'), grid = $('dayGames');
   if(!strip || !grid) return;
@@ -1888,38 +1954,85 @@ function paintDayStrip(){
      "I dont know which is the main game." It was in there — it was just the
      eleventh card in slate order. A numbered game leads, then anything else
      with a runner, then the built-only rooms; ties keep tip order. */
-  const rank = n => (n.gotn ? 0 : n.gn ? 1 : n.hosted ? 2 : 3);
-  const games = (byDay[DAY_SEL]||[]).slice().sort((a,b) =>
-    (rank(a)-rank(b)) || String(a.tipISO||'').localeCompare(String(b.tipISO||'')));
-  grid.innerHTML = games.length
-    ? games.map(n=>{
-        const flag = !n.fromSlate;
-        const gn = String(n.id||'').match(/^gn(\d+)/i);
-        /* THE NUMBER, WHEREVER IT COMES FROM. It used to be read only out
-           of a hand-written night's id (gn13-...), so a slate room chosen as
-           the night's marquee had no number even though it is the same
-           thing. Founder: "I love how we have a game of the night and we
-           number it. Please dont stop that." */
-        const num = gn ? gn[1] : (n.gn || '');
-        /* ONE NUMBER PER GAME, NOT PER NIGHT. Founder, 19 Aug: "each game of
-           the night its own number based on its order of being live... so we
-           can correspond to it instead of sharing the same number each
-           night." So the number IS the badge, and the ★ is a separate fact:
-           which of the day's main games is the main event. */
-        const badge = num ? ((n.gotn ? '★ ' : '') + 'Game Night #' + num)
-                    : n.marquee ? '★ Featured' : '';
-        return '<button type="button" class="gamebtn'+(n.id===night?' on':'')+(n.hosted?' hosted':'')+'" data-night="'+esc(n.id)+'">'
-          + '<span class="gl"><span>'+esc(String(n.league||'wnba').toUpperCase())+'</span>'
-          +   (badge ? '<span class="star">'+esc(badge)+'</span>' : '') + '</span>'
-          + '<span class="gn">'+esc(n.away||'')+' <s>at</s> '+esc(n.home||'')+'</span>'
-          + '<span class="gt">'
-          +   (n.hosted ? '<b class="onair">ON THE RAIL</b> · a runner hosts this'
-                        : 'built only · no runner, not on the rail')
-          +   ' · ' + (flag ? 'hand-written bank' : 'template bank')
-          + '</span>'
-          + '</button>';
-      }).join('')
+  /* ============ PLAYING vs COLLECTING ===============================
+     Founder, 19 Aug: "We only need the rooms for the games that we are
+     playing. The other games are the games we are collecting information
+     to test if the system is working. But tonight we have 4 games."
+
+     Thirty-one cards in one flat grid asked the host to hold that
+     distinction in their head. It is already a fact on the object —
+     `hosted` for a slate room with a runner behind it, and a
+     hand-written night is a flagship hosted by its own cron line — so the
+     screen can just say it. Four rooms tonight, twenty-seven collecting.
+
+     Chronological inside the playing group, deliberately: the earlier
+     rank put the main game first because it was lost as "the eleventh
+     card in slate order". Four cards, each with a number badge and a
+     clock, is not a haystack — and on a night with four tip times the
+     order the host needs is the order the evening happens in. */
+  const dayAll = (byDay[DAY_SEL]||[]).slice();
+  const byTip = (a,b) => (tipMs(a)||8.64e15)-(tipMs(b)||8.64e15)
+                      || String(a.id||'').localeCompare(String(b.id||''));
+  const playing   = dayAll.filter(n => n.hosted || !n.fromSlate).sort(byTip);
+  const collecting= dayAll.filter(n => !(n.hosted || !n.fromSlate)).sort(byTip);
+
+  const card = n => {
+    const flag = !n.fromSlate;
+    const num  = nightNum(n);
+    /* ONE NUMBER PER GAME, NOT PER NIGHT. Founder, 19 Aug: "each game of
+       the night its own number based on its order of being live... so we
+       can correspond to it instead of sharing the same number each
+       night." So the number IS the badge, and the ★ is a separate fact:
+       which of the day's main games is the main event. */
+    const badge = num ? ((n.gotn ? '★ ' : '') + 'Game Night #' + num)
+                : n.marquee ? '★ Featured' : '';
+    const clock = tipClock(n), rel = tipRel(n);
+    return '<button type="button" class="gamebtn'+(n.id===night?' on':'')+(n.hosted?' hosted':'')+'" data-night="'+esc(n.id)+'">'
+      + '<span class="gl"><span>'+esc(String(n.league||'wnba').toUpperCase())+'</span>'
+      +   (badge ? '<span class="star">'+esc(badge)+'</span>' : '') + '</span>'
+      + '<span class="gn">'+esc(n.away||'')+' <s>at</s> '+esc(n.home||'')+'</span>'
+      + (clock
+          ? '<span class="tipline" data-tip="'+esc(n.id)+'">'
+            + '<b class="tipclock">'+esc(clock)+'</b>'
+            + '<i class="tiprel '+esc(rel.cls)+'">'+esc(rel.txt)+'</i></span>'
+          : '<span class="tipline"><i class="tiprel">no tip time on this room</i></span>')
+      + '<span class="gt">'
+      +   (n.hosted ? '<b class="onair">ON THE RAIL</b> · a runner hosts this'
+                    : (flag ? '<b class="onair">FLAGSHIP</b> · its own cron line'
+                            : 'built only · no runner, not on the rail'))
+      +   ' · ' + (flag ? 'hand-written bank' : 'template bank')
+      + '</span>'
+      + '</button>';
+  };
+
+  const head = (t,s2) => '<p class="grouphead"><b>'+esc(t)+'</b><i>'+esc(s2)+'</i></p>';
+  grid.innerHTML = dayAll.length
+    ? (playing.length
+         ? head('Playing — '+playing.length+' room'+(playing.length===1?'':'s'),
+                'a runner hosts these; these are the ones you sit in')
+           + playing.map(card).join('')
+         : '')
+      + (collecting.length
+         ? head('Collecting only — '+collecting.length+' game'+(collecting.length===1?'':'s'),
+                'built and banked so the resolvers get tested; nobody hosts them and nobody plays them')
+           + collecting.map(card).join('')
+         : '')
     : '<p class="sub tip" style="margin:0">No games built for this day. The slate is built each morning at 08:10.</p>';
+
+  /* The clock moves whether or not anything is clicked. Only the two
+     spans change — re-rendering the grid under a host's finger mid-night
+     is how you lose a tap. */
+  try{ clearInterval(window.__tipT); }catch(_){}
+  try{
+    window.__tipT = setInterval(function(){
+      dayAll.forEach(function(n){
+        var e = document.querySelector('[data-tip="'+n.id+'"] .tiprel');
+        if(!e) return;
+        var r = tipRel(n);
+        e.textContent = r.txt; e.className = 'tiprel '+r.cls;
+      });
+    }, 30000);
+  }catch(_){}
 }
 try{
   document.addEventListener('click', function(e){
@@ -2424,12 +2537,40 @@ function initUI(){
   document.querySelectorAll('nav button').forEach(b=>{
     b.onclick = () => {
       document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on', x===b));
-      ['tonight','write','run','grade','room','auto'].forEach(t=>$('t-'+t).classList.toggle('hide', t!==b.dataset.tab));
+      /* ============ THE TAB LIST HAS ONE WRITER NOW =====================
+         This was a hand-typed array of six names beside a nav of SEVEN
+         buttons. 'stats' — the Analytics tab — was missing from it. So
+         clicking Analytics lit the button, hid the six sections named in
+         the array, and never touched #t-stats, which kept the class="hide"
+         it is born with. Every section hidden, nothing shown: a completely
+         blank screen with a highlighted tab above it.
+
+         Founder, 19 Aug, looking at it: "Theres no analytics in the
+         control room." There is. It has been unreachable since the tab
+         was added.
+
+         Two hand-written lists of the same fact, disagreeing — the eleventh
+         instance of that shape found on this one night. So the list is now
+         DERIVED from the buttons themselves. A new tab cannot be added
+         without its section being switched, because there is no second
+         place to forget. */
+      var TABS=[]; try{
+        TABS=Array.prototype.map.call(document.querySelectorAll('nav button'),
+          function(x){ return x.dataset.tab; }).filter(Boolean);
+      }catch(_){ TABS=[]; }
+      TABS.forEach(function(t){
+        var el=$('t-'+t); if(el) el.classList.toggle('hide', t!==b.dataset.tab);
+      });
       if(b.dataset.tab==='tonight'){ watchTonight(); renderTonight(); }
       if(b.dataset.tab==='run'){ renderRun(); loadScore(); }
       if(b.dataset.tab==='room') refreshRoom();
       if(b.dataset.tab==='grade'){ fillGradeSel(); watchGradeSubs(); renderGrade(); }
       if(b.dataset.tab==='auto'){ try{ AUTO.render(); }catch(e){} }
+      /* Analytics counts on a button, never on open — roughly fifty reads
+         for the whole history, and a screen that spends reads every time
+         somebody glances at it is a screen that gets switched off. Repaint
+         a previous count if there is one, so it is not blank twice. */
+      if(b.dataset.tab==='stats'){ try{ if(STATS_CACHE) renderStatsTab(); }catch(e){} }
     };
   });
 
@@ -2572,6 +2713,8 @@ function renderStatsTab(){
 /* Hand Caught It back before anything else re-points at the new room. */
 const _onNightChange_pre = function(newNight){
   try{ if(typeof CI!=='undefined' && CI.handOver) CI.handOver(newNight); }catch(_){}
+  /* And the feed loops, which followed the room without being told. */
+  try{ if(typeof ESPN!=='undefined' && ESPN.forgetRoom) ESPN.forgetRoom(); }catch(_){}
 };
 
 function onNightChange(){
@@ -2823,11 +2966,55 @@ function tonightAgo(ms){
 let ROOM_STATE = {};
 let roomPollT = null;
 
+/* ============ POLL WHAT IS HOSTED, NOT WHAT IS BUILT ================
+   This is the read cost that ended Game Night #13, and it is not the rooms.
+
+   tonightRooms() is SLATE_ROOMS — every room BUILT for today plus the next
+   six days. On 19 Aug that was thirty-one, of which four were hosted. The
+   loop below ran every twenty seconds for as long as the tab was open,
+   whatever tab was showing, and cost per tick:
+
+     31 night docs + 4 x (players count + the whole rounds collection)
+     = 51 reads / 20s = 153/min = ~9,200 an hour, per open Control Room tab
+
+   50,000 / 9,200 is about five and a half hours of Control Room with
+   nothing else running at all. Two tabs halves it. That is the shape of
+   what happened: the ceiling was never in the number of ROOMS, it was in
+   Control-Room-tab-hours against a thirty-game slate.
+
+   Two changes, and the second is not an optimisation:
+
+   1. Only rooms that are HOSTED and inside their own window. A room built
+      for next Tuesday has nothing to report and never did.
+   2. `total` comes from the night's own tag count, not from rd.size.
+      rd.size is the number of round documents that EXIST, so after two
+      quarters were scored the card read "final · 2 scored · 2/2" during
+      the third — the founder reported exactly that. Worse, roomsBoard()
+      tests `done` BEFORE the heartbeat branch, so a room whose runner died
+      at half time showed a calm grey "final" instead of a red "runner
+      silent". The only screen watching every room at once went quiet
+      precisely when a room was half broken.
+
+   Dropping the rounds getDocs is what makes it cheap; taking `total` from
+   the config is what makes it honest. Same edit. */
+function pollWindowOk(r){
+  try{
+    var t = Date.parse(r.tipISO||''); if(!isFinite(t)) return true;   // no tip known: watch it
+    var now = Date.now();
+    return now > (t - 45*60000) && now < (t + 5.5*3600000);
+  }catch(_){ return true; }
+}
 async function pollRooms(){
   const F = FB.F, db = FB.db;
   if(!F || !db) return;
-  const rooms = tonightRooms();
-  for(const r of rooms){
+  /* A hidden tab is not being read by anybody. */
+  try{ if(document.hidden) return; }catch(_){}
+  const all = tonightRooms();
+  const rooms = all.filter(function(r){ return r && r.hosted && pollWindowOk(r); });
+  /* Never poll nothing: if the filter empties, fall back to the room the
+     Control Room is actually on, so this screen cannot go blind. */
+  const list = rooms.length ? rooms : all.filter(function(r){ return r && r.id===night; });
+  for(const r of list){
     try{
       const nd = await F.getDoc(F.doc(db,'nights',r.id));
       if(!nd.exists()){ ROOM_STATE[r.id] = {exists:false}; continue; }
@@ -2840,7 +3027,11 @@ async function pollRooms(){
       ]);
       let scored=0, live=0;
       rd.forEach(x=>{ const v=x.data()||{}; if(v.state==='scored') scored++; if(v.state==='live') live++; });
-      ROOM_STATE[r.id] = { exists:true, seats:pl.data().count, scored, live, total:rd.size,
+      /* THE NIGHT'S OWN SIZE, not the number of documents that happen to
+         exist yet. See the note above pollRooms. */
+      let total = rd.size;
+      try{ const _c = nightCfg(r.id); if(_c && _c.tags && _c.tags.length) total = _c.tags.length; }catch(_){}
+      ROOM_STATE[r.id] = { exists:true, seats:pl.data().count, scored, live, total:total,
                            beat: at ? Date.now()-at : null,
                            period: sc.period || '', away: sc.away, home: sc.home };
     }catch(e){ ROOM_STATE[r.id] = {err:String(e.message).slice(0,40)}; }
@@ -5329,10 +5520,33 @@ boot();
   };
   ESPN.toggleLive = function(){
     if(liveTimer){ ESPN.stopLive(); return; }
-    var b=$('espnLive'); if(b) b.textContent='⏸ Stop auto score';
+  /* ============ TEAL MEANS IT IS RUNNING ==============================
+     Founder, 19 Aug, forty minutes before the flagship tipped, looking at
+     an armed Control Room: "its on but the blue tabs make it look off."
+
+     He was reading it correctly and the screen was wrong. This panel used
+     .btn — the SAME blue as "Pull answers for finished quarters" and "Run
+     tonight on autopilot", which are ACTIONS. So a thing that was RUNNING
+     and a button you had not pressed yet were the same colour, and the
+     only evidence of state was a verb flip in the label ("Auto live score"
+     -> "Stop auto score") and a small chip.
+
+     This Control Room already has one colour for live, used everywhere
+     else without exception: nav button.on, .daybtn.on, .gamebtn.on,
+     .gamebtn.hosted and the ON THE RAIL badge are all teal. The two most
+     important state buttons in the product were the only ones not obeying
+     it. So:
+
+         teal  = this is running right now
+         blue  = press me, this does something
+         ghost = available, not running
+
+     No new colour, no new rule — the existing one, applied where it was
+     missing. */
+    var b=$('espnLive'); if(b){ b.textContent='⏸ Stop auto score'; b.className='btn teal'; }
     ESPN.liveTick(); liveTimer=setInterval(ESPN.liveTick, 20000);
   };
-  ESPN.stopLive = function(){ if(liveTimer){ clearInterval(liveTimer); liveTimer=null; } var b=$('espnLive'); if(b) b.textContent='▶ Auto live score'; };
+  ESPN.stopLive = function(){ if(liveTimer){ clearInterval(liveTimer); liveTimer=null; } var b=$('espnLive'); if(b){ b.textContent='▶ Auto live score'; b.className='btn ghost'; } };
 
   /* =====================================================================
      CALL IT — the live, in-game predictive layer (ISOLATED)
@@ -5412,7 +5626,7 @@ function lockMsFor(kind){
   CI.setOn = async function(on){
     CI.on = !!on;
     CI.owner = CI.on ? night : null;
-    var b=$('ciBtn'); if(b){ b.textContent = CI.on?'⏸ Call It: ON':'▶ Call It: OFF'; b.className = CI.on?'btn':'btn ghost'; b.style.flex='0 0 auto'; }
+    var b=$('ciBtn'); if(b){ b.textContent = CI.on?'⏸ Call It: ON':'▶ Call It: OFF'; b.className = CI.on?'btn teal':'btn ghost'; b.style.flex='0 0 auto'; }
     CI.setState(CI.on?'armed — watching the feed':'off');
     try{ await FB.F.setDoc(FB.F.doc(FB.db,'nights',night), { callit: CI.on }, {merge:true}); }catch(e){}
     if(!CI.on){ try{ clearTimeout(CI.relT); }catch(e){} CI.pending=null; }
@@ -5450,7 +5664,331 @@ function lockMsFor(kind){
     var m=t.match(/^(.+?)\s+(?:makes|made)\b/i);
     return m ? m[1].trim() : '';
   };
+  /* ============ WHAT SPORT IS THIS ROOM ==============================
+     CI had no idea. Everything below it assumed basketball because every
+     room had been basketball. */
+  CI.sport = function(){
+    try{ return String((nightCfg(night)||{}).sport||'basketball').toLowerCase(); }
+    catch(_){ return 'basketball'; }
+  };
+
+  /* ============ CAUGHT IT, BASEBALL =================================
+     Built 20 Aug 2026 for the first live baseball room this product has
+     ever hosted. Founder: "Can we promote up to get the caught it
+     question on either football or baseball. Just one game."
+
+     Baseball, and not football, and the feed is the whole reason. Measured
+     on a real finished game (401816574): MLB carries 560 plays at the TOP
+     LEVEL of the summary — 103 Ball, 89 Play Result, 54 Foul Ball, 43
+     Strike Looking, 43 Strike Swinging — each with sequenceNumber, which
+     is exactly what CI.tick already keys freshness on. Football buries its
+     plays inside drives.previous, so sum.plays is EMPTY and Caught It on
+     an NFL room is silent all night with a green ARMED badge over it.
+     Soccer has no plays key at all.
+
+     So one sport, tonight, on the evidence — and the accessor problem for
+     football is named rather than half-fixed in the dark.
+
+     Every question here is RETROSPECTIVE and its answer is computed at
+     build time from plays that have already happened, the same shape as
+     the quarter-retrospective basketball questions. Nothing predicts.
+
+     Two feed facts worth writing down, because they are not obvious and
+     getting them backwards would ask the wrong team:
+       · on a PITCH (summaryType 'P') `team` is the team PITCHING
+       · on a RESULT (summaryType 'N') `team` is the team BATTING
+     Verified on the game above: Grisham (NYY, id 10) struck out and the
+     Play Result carried team 10, while the pitches to him carried team 1
+     (BAL, at home, fielding). */
+  /* ============ CAUGHT IT, FOOTBALL =================================
+     Measured on references/multisport/nfl.json — a real finished game:
+     24 drives, 213 plays. Rush 68 · Pass Reception 41 · Pass Incompletion
+     38 · Punt 11 · Kickoff 8 · Interception 3 · Field Goal Good 3 ·
+     touchdowns 4. Each play carries sequenceNumber, type.text, period,
+     clock, scoringPlay, statYardage, isTurnover, isPenalty and start.down.
+     Drive results: Touchdown, Punt, Interception, Downs, Field Goal.
+
+     All retrospective, all answered at build time from plays that have
+     already happened. */
+  CI.buildFootball = function(plays, T, per){
+    var typ=function(p){ return String((p.type&&p.type.text)||''); };
+    var here = plays.filter(function(p){ return p.period && Number(p.period.number)===Number(per); });
+    if(!here.length) return null;
+    /* Kickoffs, timeouts and administrative rows are not "a play" to a
+       person watching. Asking "run or pass?" about an official timeout is
+       the kind of question that makes somebody close the app. */
+    var real = here.filter(function(p){
+      var t=typ(p);
+      return !/timeout|end period|end of|kickoff|two-minute/i.test(t);
+    });
+    var last = real[real.length-1] || null;
+    if(!last) return null;
+
+    var rot=(CI.countPer[per]||0)%4;
+    var qid='ci_'+per+'_'+(CI.countPer[per]||0)+'_'+(last.sequenceNumber||0);
+
+    /* 0. RUN OR PASS — football's "two or three". */
+    if(rot===0){
+      var t0=typ(last), a0=null;
+      if(/^rush|rushing/i.test(t0)) a0='r';
+      else if(/pass|sack/i.test(t0)) a0='p';
+      if(a0) return { qid:qid, kind:'sawRunPass', per:per, runTeam:null,
+        prompt:'👀 That last play — a run or a pass?',
+        options:[{k:'Run',v:'r'},{k:'Pass',v:'p'}],
+        ans:a0, atext:(last.text||t0) };
+    }
+
+    /* 1. HOW FAR. statYardage is on the play and needs no prose. */
+    if(rot===1 && last.statYardage!=null && isFinite(Number(last.statYardage))){
+      var y=Number(last.statYardage), a1;
+      if(y<=0) a1='a'; else if(y<=4) a1='b'; else if(y<=10) a1='c'; else a1='d';
+      return { qid:qid, kind:'sawGain', per:per, runTeam:null,
+        prompt:'👀 That play — how many yards?',
+        options:[{k:'Lost yards or none',v:'a'},{k:'1 to 4',v:'b'},{k:'5 to 10',v:'c'},{k:'11 or more',v:'d'}],
+        ans:a1, atext:(last.text||'')+' ('+y+' yards)' };
+    }
+
+    /* 2. THE DRIVE THAT JUST ENDED. Read off the drive, not the prose. */
+    if(rot===2){
+      var drives=[]; try{ drives = AUTO.feedDrives ? AUTO.feedDrives({drives:{previous:[]}}) : []; }catch(_){ drives=[]; }
+      var dv=null;
+      try{
+        var prev=(CI._lastSum && CI._lastSum.drives && CI._lastSum.drives.previous) || [];
+        for(var i=prev.length-1;i>=0;i--){
+          var d=prev[i];
+          var lp=(d.plays||[])[(d.plays||[]).length-1];
+          if(lp && lp.period && Number(lp.period.number)===Number(per)){ dv=d; break; }
+        }
+      }catch(_){ dv=null; }
+      if(dv){
+        var res=String(dv.displayResult||dv.result||'').toLowerCase(), a2=null;
+        if(/touchdown/.test(res)) a2='td';
+        else if(/field goal/.test(res)) a2='fg';
+        else if(/punt/.test(res)) a2='pt';
+        else if(/interception|fumble|downs/.test(res)) a2='to';
+        if(a2) return { qid:qid, kind:'sawDriveEnd', per:per, runTeam:null,
+          prompt:'⏪ That drive just ended — how?',
+          options:[{k:'Touchdown',v:'td'},{k:'Field goal',v:'fg'},{k:'Punt',v:'pt'},{k:'Turnover or downs',v:'to'}],
+          ans:a2, atext:(dv.displayResult||dv.result||'') };
+      }
+    }
+
+    /* 3. HOW BUSY WAS THE QUARTER. Countable, no prose. */
+    if(rot===3){
+      var n=real.length, a3;
+      if(n<=12) a3='a'; else if(n<=20) a3='b'; else a3='c';
+      return { qid:qid, kind:'sawQtrPlays', per:per, runTeam:null,
+        prompt:'⏪ Plays run this quarter so far — how many?',
+        options:[{k:'12 or fewer',v:'a'},{k:'13 to 20',v:'b'},{k:'21 or more',v:'c'}],
+        ans:a3, atext:n+' plays this quarter so far.' };
+    }
+    return null;
+  };
+
+  /* ============ CAUGHT IT, SOCCER ===================================
+     Soccer has NO plays key. What it has, measured on
+     references/multisport/mls.json, is 185 commentary rows of which 165
+     carry a fully structured `play` object — Foul 70 · Corner Awarded 20 ·
+     Shot Off Target 12 · Substitution 10 · Shot On Target 9 · Yellow Card 9
+     · Shot Blocked 7 · Offside 4 · Goal 3 — each with type, team,
+     participants and clock. And commentary[].sequence is monotone, which is
+     exactly the freshness key CI.tick already uses.
+
+     So the stream is normalised into play shape once, here, and everything
+     downstream works unchanged.
+
+     Founder, watching a match on 19 Aug: "I feel sad we cant do cool things
+     as things happen like who was offside." That sentence is in this feed,
+     by name, minute-stamped, and nothing was reading it.
+
+     THE CADENCE IS DIFFERENT AND MUST BE. Nine key events in 31 minutes of
+     real football. Basketball's question-every-80-seconds would ask about
+     nothing; the trigger below fires on events, not on a clock. */
+  CI.soccerEvents = function(sum){
+    var out=[];
+    try{
+      (sum.commentary||[]).forEach(function(c){
+        var p=c.play; if(!p) return;
+        out.push({
+          sequenceNumber: Number(c.sequence)||0,
+          id: p.id,
+          soccer: true,
+          type: p.type || {},
+          text: p.text || c.text || '',
+          period: p.period || (c.period||null),
+          clockText: ((p.clock&&p.clock.displayValue)||((c.time&&c.time.displayValue))||''),
+          teamName: (p.team&&p.team.displayName)||'',
+          who: (((p.participants||[])[0]||{}).athlete||{}).displayName || '',
+          scoringPlay: !!p.scoringPlay
+        });
+      });
+    }catch(_){}
+    return out;
+  };
+  CI.buildSoccer = function(plays, T, per){
+    var typ=function(p){ return String((p.type&&(p.type.text||p.type.type))||''); };
+    var sideOf=function(name){
+      var n=String(name||'').toLowerCase(); if(!n) return null;
+      var h=String(T.homeName||'').toLowerCase(), a=String(T.awayName||'').toLowerCase();
+      var ha=String(T.homeAbbr||'').toLowerCase(), aa=String(T.awayAbbr||'').toLowerCase();
+      if(n===h||n===ha||(h&&h.indexOf(n)>=0)||(n.indexOf(ha)>=0&&ha)) return 'home';
+      if(n===a||n===aa||(a&&a.indexOf(n)>=0)||(n.indexOf(aa)>=0&&aa)) return 'away';
+      return null;
+    };
+    var here=plays.filter(function(p){ return p.period && Number(p.period.number)===Number(per); });
+    if(!here.length) return null;
+    var last=here[here.length-1];
+    var rot=(CI.countPer[per]||0)%3;
+    var qid='ci_'+per+'_'+(CI.countPer[per]||0)+'_'+(last.sequenceNumber||0);
+
+    /* 0. THE EVENT THAT JUST HAPPENED, by team. Offsides, cards, corners —
+          all of them are "were you watching" and all of them name a side. */
+    if(rot===0){
+      var t0=typ(last), lbl=null;
+      if(/offside/i.test(t0)) lbl='caught offside';
+      else if(/yellow card/i.test(t0)) lbl='booked';
+      else if(/corner/i.test(t0)) lbl='won that corner';
+      else if(/foul/i.test(t0)) lbl='gave that foul away';
+      if(lbl){
+        var side=sideOf(last.teamName);
+        if(side) return { qid:qid, kind:'sawEventTeam', per:per, runTeam:null,
+          prompt:'👀 Who just '+lbl+'?',
+          options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}],
+          ans: side==='home'?String(T.homeId):String(T.awayId),
+          atext:(last.text||t0)+(last.clockText?(' ('+last.clockText+')'):'') };
+      }
+    }
+
+    /* 1. THE LAST SHOT. Soccer's purest watching question. */
+    if(rot===1){
+      var shot=null;
+      for(var i=here.length-1;i>=0;i--){ if(/shot|goal/i.test(typ(here[i]))){ shot=here[i]; break; } }
+      if(shot){
+        var ts=typ(shot), a1=null;
+        if(/goal/i.test(ts) && !/no goal/i.test(ts)) a1='g';
+        else if(/on target/i.test(ts)) a1='s';
+        else if(/off target|woodwork/i.test(ts)) a1='o';
+        else if(/blocked/i.test(ts)) a1='b';
+        if(a1) return { qid:qid, kind:'sawShot', per:per, runTeam:null,
+          prompt:'👀 That last shot — what happened to it?',
+          options:[{k:'Goal',v:'g'},{k:'Saved / on target',v:'s'},{k:'Off target',v:'o'},{k:'Blocked',v:'b'}],
+          ans:a1, atext:(shot.text||ts)+(shot.clockText?(' ('+shot.clockText+')'):'') };
+      }
+    }
+
+    /* 2. HOW THE HALF IS GOING. Countable, no prose. */
+    if(rot===2){
+      var corners=here.filter(function(p){ return /corner/i.test(typ(p)); }).length;
+      var a2 = corners<=1?'a':(corners<=3?'b':'c');
+      return { qid:qid, kind:'sawCorners', per:per, runTeam:null,
+        prompt:'⏪ Corners won this half so far — how many?',
+        options:[{k:'One or fewer',v:'a'},{k:'Two or three',v:'b'},{k:'Four or more',v:'c'}],
+        ans:a2, atext:corners+' corner'+(corners===1?'':'s')+' this half so far.' };
+    }
+    return null;
+  };
+
+  CI.buildBaseball = function(plays, T, per){
+    var isP = function(p){ return String(p.summaryType||'')==='P'; };
+    var isN = function(p){ return String(p.summaryType||'')==='N'; };
+    var typ = function(p){ return String((p.type&&p.type.text)||''); };
+
+    /* only this inning, and only what has actually happened */
+    var here = plays.filter(function(p){
+      return p.period && Number(p.period.number)===Number(per);
+    });
+    if(!here.length) return null;
+
+    var pitches = here.filter(isP);
+    var results = here.filter(isN);
+    var lastPitch  = pitches[pitches.length-1] || null;
+    var lastResult = results[results.length-1] || null;
+
+    var rot = (CI.countPer[per]||0) % 4;
+    var seq = (lastPitch && lastPitch.sequenceNumber) || (lastResult && lastResult.sequenceNumber) || 0;
+    var qid = 'ci_'+per+'_'+(CI.countPer[per]||0)+'_'+seq;
+
+    /* 0. THE LAST PITCH. The purest "were you watching" question baseball
+          has, and it comes round roughly every twenty seconds. */
+    if(rot===0 && lastPitch){
+      var t = typ(lastPitch), ans;
+      if(/^ball/i.test(t)) ans='b';
+      else if(/foul/i.test(t)) ans='f';
+      else if(/strike/i.test(t)) ans='s';
+      else ans=null;
+      if(ans) return { qid:qid, kind:'sawPitch', per:per, runTeam:null,
+        prompt:'👀 That last pitch — what was it?',
+        options:[{k:'Ball',v:'b'},{k:'Strike',v:'s'},{k:'Foul',v:'f'}],
+        ans:ans,
+        atext:(lastPitch.text||t) };
+    }
+
+    /* 1. THE AT-BAT THAT JUST ENDED. Three buckets the text supports
+          cleanly — anything cleverer means parsing prose, and a resolver
+          that guesses at prose is the bug that graded a 1-0 half as
+          "nobody scored". */
+    if(rot===1 && lastResult){
+      /* WORD BOUNDARIES, BECAUSE A SURNAME IS NOT AN OUTCOME.
+         The first version tested /walk/ and a replay of a real game
+         immediately graded "Walker grounded into double play" as a WALK —
+         the batter's name. Two lines above this, the comment I had just
+         written said a resolver that guesses at prose is the bug that
+         graded a 1-0 half as "nobody scored". It took one replay to prove
+         the point against its own author.
+
+         \b anchors both, and "walked" rather than "walk" so no name and no
+         "walk-off" can reach it. Verified against 89 Play Result rows. */
+      var tx = String(lastResult.text||'').toLowerCase(), a2;
+      if(/\bstruck out\b/.test(tx)) a2='k';
+      else if(/\bwalked\b/.test(tx)) a2='w';
+      else if(tx) a2='p';
+      else a2=null;
+      if(a2) return { qid:qid, kind:'sawAtBat', per:per, runTeam:null,
+        prompt:'👀 That at-bat just ended — how?',
+        options:[{k:'Strikeout',v:'k'},{k:'Walk',v:'w'},{k:'Put in play',v:'p'}],
+        ans:a2,
+        atext:(lastResult.text||'') };
+    }
+
+    /* 2. WHO IS BATTING. Reads the half-inning, not a team field, because
+          the team field means opposite things on the two play kinds. */
+    if(rot===2 && here[here.length-1] && here[here.length-1].period){
+      var half = String(here[here.length-1].period.type||'');
+      if(/^top$/i.test(half) || /^bot/i.test(half)){
+        var battingAway = /^top$/i.test(half);
+        return { qid:qid, kind:'sawBatting', per:per, runTeam:null,
+          prompt:'👀 Who is at the plate right now?',
+          options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}],
+          ans: battingAway ? String(T.awayId) : String(T.homeId),
+          atext:(battingAway?T.awayName:T.homeName)+' are batting in the '+
+                (battingAway?'top':'bottom')+' of the '+per+'.' };
+      }
+    }
+
+    /* 3. RUNS THIS INNING. Retrospective and countable — no prose. */
+    if(rot===3){
+      var runs = 0;
+      here.forEach(function(p){ if(p.scoringPlay) runs += (Number(p.scoreValue)||0); });
+      return { qid:qid, kind:'sawInningRuns', per:per, runTeam:null,
+        prompt:'⏪ Runs scored so far this inning — how many?',
+        options:[{k:'None',v:'0'},{k:'One',v:'1'},{k:'Two or more',v:'2'}],
+        ans: runs<=0?'0':(runs===1?'1':'2'),
+        atext: runs+' run'+(runs===1?'':'s')+' this inning so far.' };
+    }
+
+    /* Nothing sensible yet — say so rather than invent one. */
+    return null;
+  };
+
   CI.build = function(plays, T, per){
+    /* ONE DOOR, THEN THE SPORT. Everything below this line is basketball —
+       it opens by looking for a made field goal worth 2 or more and asks
+       "two or three?" — so it must never be reached by another sport. */
+    var _sp = CI.sport();
+    if(_sp==='baseball') return CI.buildBaseball(plays, T, per);
+    if(_sp==='football') return CI.buildFootball(plays, T, per);
+    if(_sp==='soccer')   return CI.buildSoccer(plays, T, per);
+    if(_sp!=='basketball') return null;   // hockey: not built yet, and silent is honest
     var scoring = plays.filter(function(p){return p.scoringPlay;});
     var last = null;
     for(var k=scoring.length-1;k>=0;k--){ if(E.isMadeFG(scoring[k])){ last=scoring[k]; break; } }
@@ -5605,16 +6143,76 @@ function lockMsFor(kind){
     var cap = CI.capPer || 8;
     if((CI.countPer[per]||0) >= cap) return;             // cap per quarter
 
-    var timeout = fresh.find(CI.isTimeout);
-    var madeFG  = fresh.find(function(p){ return E.isMadeFG(p); });
-    var reason  = timeout ? 'timeout' : (madeFG ? 'basket' : null);
+    /* ============ THE TRIGGER IS A SPORT FACT TOO =====================
+       CI.build was made sport-aware and this was not, which made the whole
+       thing a half-fix worth less than nothing: baseball would have shown
+       "armed — watching the feed" all night and fired ONCE.
+
+       Measured on the real fixture references/multisport/mlb.json:
+         604 plays · 10 scoringPlay · scoringPlay && scoreValue>=2 -> 1
+         scoreValue histogram on scoring plays: {"1":9,"2":1}
+         plays matching /timeout/i -> 0
+       So isMadeFG matches a two-run play and nothing else, and baseball has
+       no timeouts in its feed. One question per game, behind a green badge.
+
+       Baseball's dead-ball pause is the END OF AN AT-BAT — summaryType 'N',
+       eighty-nine of them in that game, roughly one every ninety seconds,
+       which is the rhythm this pace control was built around anyway. The
+       moment a run scores is the other one worth interrupting for. */
+    /* ============ EVERY SPORT NAMES ITS OWN TWO MOMENTS ==============
+       A STOPPAGE (skips the spacing rule — the room is already paused) and
+       an ORDINARY MOMENT (waits out the gap so we never machine-gun it).
+       Measured counts from the real fixtures in references/multisport, so
+       the cadence is a number rather than a hope:
+
+         basketball  made FG            · timeouts
+         baseball    79 at-bat ends     · 3 runs            (was 1 trigger/game)
+         football    213 plays, 24 drive ends · 4 TDs, 3 INTs
+         soccer      165 events, 20 corners, 9 cards ·  3 goals, 1 red
+
+       Soccer is the one that must not borrow basketball's rhythm: nine key
+       events in 31 minutes of real football. It fires on events, never on a
+       clock, which is why its ordinary moment is any structured event at
+       all and its cap does the limiting. */
+    var sp = CI.sport();
+    var timeout, moment, reason;
+    if(sp === 'baseball'){
+      timeout = fresh.find(function(p){ return !!p.scoringPlay; });
+      moment  = fresh.find(function(p){ return String(p.summaryType||'') === 'N'; });
+      reason  = timeout ? 'run' : (moment ? 'atbat' : null);
+    }else if(sp === 'football'){
+      timeout = fresh.find(function(p){ return !!p.scoringPlay || !!p.isTurnover; });
+      moment  = fresh.find(function(p){
+        var t=String((p.type&&p.type.text)||'');
+        return /rush|pass|punt|sack|field goal/i.test(t) && !/timeout/i.test(t);
+      });
+      reason  = timeout ? 'score' : (moment ? 'snap' : null);
+    }else if(sp === 'soccer'){
+      timeout = fresh.find(function(p){
+        var t=String((p.type&&(p.type.text||p.type.type))||'');
+        return !!p.scoringPlay || /goal|red card|penalty/i.test(t);
+      });
+      moment  = fresh.find(function(p){
+        var t=String((p.type&&(p.type.text||p.type.type))||'');
+        return /offside|corner|yellow card|shot|foul|substitution/i.test(t);
+      });
+      reason  = timeout ? 'goal' : (moment ? 'event' : null);
+    }else{
+      timeout = fresh.find(CI.isTimeout);
+      moment  = fresh.find(function(p){ return E.isMadeFG(p); });
+      reason  = timeout ? 'timeout' : (moment ? 'basket' : null);
+    }
     if(!reason) return;
 
     // A timeout is itself the dead-ball pause, so it skips the spacing rule.
     // Everything else waits out the gap so we never machine-gun the room.
+    /* Two tiers, named per sport but meaning the same two things: the
+       stoppage that skips the spacing rule, and the ordinary moment that
+       waits it out. */
     var gap = Date.now()-CI.lastOpenAt;
-    if(reason==='basket' && gap < (CI.gapMs||80000)) return;
-    if(reason==='timeout' && gap < 25000) return;        // a short floor, so back-to-back stoppages don't double-fire
+    var isStoppage = (reason==='timeout' || reason==='run' || reason==='score' || reason==='goal');
+    if(!isStoppage && gap < (CI.gapMs||80000)) return;
+    if(isStoppage && gap < 25000) return;                // a short floor, so back-to-back stoppages don't double-fire
 
     var q = CI.build(plays, T, per); if(!q) return;
     q.moment = reason;
@@ -5684,7 +6282,25 @@ function lockMsFor(kind){
   /* Called from liveTick with the same summary the score uses. */
   CI.tick = async function(sum, T){
     if(!CI.on) return;
-    var plays = sum.plays||[]; if(!plays.length) return;
+    /* ============ THE ACCESSOR, NOT THE RAW FIELD ====================
+       This read sum.plays directly. Only basketball and baseball put their
+       plays there — football nests them inside drives.previous[].plays and
+       soccer has no plays key at all. So Caught It on an NFL room returned
+       on line two, every tick, all night, behind a green "armed" badge.
+
+       AUTO.feedPlays() exists precisely for this and host-resolvers.js
+       asserts it; CI simply never used it. Soccer still has nothing here,
+       which is why CI.soccerEvents() below builds a play-shaped stream out
+       of the commentary instead. */
+    var sp0 = CI.sport();
+    /* The football builder reads drive RESULTS, which live beside the plays
+       rather than inside them. Held here so the builder does not need a
+       second argument on a signature five other call sites share. */
+    CI._lastSum = sum;
+    var plays;
+    if(sp0==='soccer'){ plays = CI.soccerEvents(sum); }
+    else { try{ plays = AUTO.feedPlays(sum) || []; }catch(_){ plays = sum.plays||[]; } }
+    if(!plays || !plays.length) return;
     var maxSeq=0; plays.forEach(function(p){ var s=+(p.sequenceNumber||0); if(s>maxSeq)maxSeq=s; });
     if(!CI.seeded){ CI.lastSeq=maxSeq; CI.seeded=true; CI.lastPlayAt=Date.now(); return; }   // don't fire on the backlog
     var fresh = plays.filter(function(p){ return (+(p.sequenceNumber||0)) > CI.lastSeq; });
@@ -5694,6 +6310,30 @@ function lockMsFor(kind){
     if(!CI.openQid){ await CI.maybeTrigger(fresh, plays, T); }
   };
   ESPN.CI = CI;   // exposed for the shadow test + manual poke
+
+  /* ============ THE ROOM CHANGED, SO THE GAME DID ====================
+     `eventId` is resolved once and was never cleared — not by
+     onNightChange(), not anywhere; a grep for it finds no reset at all. It
+     lives in this closure, so nothing outside could clear it even if it
+     tried.
+
+     What that costs on a two-room night: start Auto live score on the
+     baseball room at 5:05, tap the football room on the rail at 7:00, and
+     writeScore() keeps writing to nights/{night} — the NEW room — with the
+     OLD game's score, every twenty seconds, while the button still reads
+     "Stop auto score". The NFL runner is writing that same document, so
+     every phone in the football room watches the score flicker between two
+     different games.
+
+     Same shape, same switch: HOST.event and the AUTO.ui shadow timer.
+     onNightChange() handed over only CI. Three long-lived loops quietly
+     followed the room switch while their buttons said ON. */
+  ESPN.forgetRoom = function(){
+    eventId = null;
+    try{ ESPN.stopLive(); }catch(_){}
+    try{ if(HOST && HOST.event) HOST.event = null; }catch(_){}
+    try{ if(typeof shadowTimer!=='undefined' && shadowTimer){ clearInterval(shadowTimer); shadowTimer=null; } }catch(_){}
+  };
 
   /* ---- Mount the panel at the top of the RUN tab ---- */
   ESPN.mount = function(){
@@ -6649,22 +7289,53 @@ var AUTO = (function(){
     return mlsEvents(j).some(function(e){ return want.test(mlsEvType(e)); });
   }
 
-  var MLS_GOAL = /^goal/i;                    // Goal, Goal - Header, Goal - Penalty
+  /* ============ AN OWN GOAL IS A GOAL ================================
+     This was /^goal/i and the comment listed "Goal, Goal - Header, Goal -
+     Penalty" — every name that starts with the word. ESPN's type text for
+     an own goal is "Own Goal", which starts with "Own", so it matched
+     nothing.
+
+     Caught in production on 19 Aug, LAFC at Colorado, the first live
+     soccer room this product ever ran. Jeremy Ebobisse put one into his
+     own net at 22'; the half-time score was Colorado 1, LAFC 0; and the
+     key this engine posted for the first half was:
+
+         ["Nobody scored", "None", "Four or more", "Rapids"]
+
+     Two of four questions graded wrong — "who scored first" answered
+     nobody, and "how many goals" answered none — for a half a player could
+     see on the television with a 1 on it. It cost no points only because
+     nobody in that room answered.
+
+     Matching on ESPN's own scoringPlay flag rather than on the spelling of
+     a label: the flag is true on that same own-goal event and false on the
+     yellow card beside it. The name test stays as a fallback, widened, so
+     a feed that omits the flag still counts a goal — the failure direction
+     that matters is missing one, not counting one twice.
+
+     The team field needs no change: on an own goal ESPN already credits
+     the team that BENEFITS (Colorado), not the player's team (LAFC), which
+     is what optForTeam wants. */
+  function mlsIsGoal(e){
+    try{ if(e && e.scoringPlay === true) return true; }catch(_){}
+    return /^(own\s+)?goal/i.test(mlsEvType(e));
+  }
+  var MLS_GOAL = /^(own\s+)?goal/i;          // kept: some callers test the pattern directly
   var MLS_CARD = /card$/i;                    // Yellow Card, Red Card
 
   R.mlsFirstGoalTeam = function(j, p, o){
-    var g = mlsInPeriod(j,p).find(function(e){ return MLS_GOAL.test(mlsEvType(e)); });
+    var g = mlsInPeriod(j,p).find(function(e){ return mlsIsGoal(e); });
     if(!g) return o.find(function(x){ return /no goal|nobody|neither|none/i.test(x); }) || null;
     return optForTeam(j, String(((g.team)||{}).id||''), o);
   };
 
   R.mlsGoalsBand = function(j, p, o){
-    var n = mlsInPeriod(j,p).filter(function(e){ return MLS_GOAL.test(mlsEvType(e)); }).length;
+    var n = mlsInPeriod(j,p).filter(function(e){ return mlsIsGoal(e); }).length;
     return band(n, [0,1,2], o);
   };
 
   R.mlsFirstGoalKind = function(j, p, o){
-    var g = mlsInPeriod(j,p).find(function(e){ return MLS_GOAL.test(mlsEvType(e)); });
+    var g = mlsInPeriod(j,p).find(function(e){ return mlsIsGoal(e); });
     if(!g) return null;
     var t = mlsEvType(g).toLowerCase(), tx = String(g.text||'').toLowerCase();
     if(/penalty/.test(t) || /penalty/.test(tx)) return o.find(function(x){ return /penalty/i.test(x); }) || null;
@@ -6677,7 +7348,7 @@ var AUTO = (function(){
   /* clock.value is SECONDS as a float (316.0 = 6th minute) and displayValue
      is already "6'". Use the number; never parse the apostrophe string. */
   R.mlsFirstGoalWindow = function(j, p, o){
-    var g = mlsInPeriod(j,p).find(function(e){ return MLS_GOAL.test(mlsEvType(e)); });
+    var g = mlsInPeriod(j,p).find(function(e){ return mlsIsGoal(e); });
     if(!g) return null;
     var sec = Number((((g.clock)||{}).value));
     if(!isFinite(sec) || sec <= 0) return null;
@@ -6737,8 +7408,8 @@ var AUTO = (function(){
   };
 
   R.mlsScoreline = function(j, p, o){
-    var g = mlsInPeriod(j, 1).filter(function(e){ return MLS_GOAL.test(mlsEvType(e)); });
-    if(Number(p) === 2) g = g.concat(mlsInPeriod(j, 2).filter(function(e){ return MLS_GOAL.test(mlsEvType(e)); }));
+    var g = mlsInPeriod(j, 1).filter(function(e){ return mlsIsGoal(e); });
+    if(Number(p) === 2) g = g.concat(mlsInPeriod(j, 2).filter(function(e){ return mlsIsGoal(e); }));
     var s = sides(j), h = 0, a = 0;
     g.forEach(function(e){
       var id = String(((e.team)||{}).id||'');

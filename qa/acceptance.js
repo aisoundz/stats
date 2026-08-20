@@ -26,24 +26,52 @@
      · free entry, no wager, ever
      · the four tabs spell the product
 
-   WHAT THIS DOES NOT COVER, said plainly so it is not read as more than
-   it is: it exercises the pure scoring function and the shipped markup.
-   It does not drive a live night, does not test the security rules from a
-   phone (qa/journey.js and a browser do that), and cannot prove a resolver
-   is CORRECT — only that scoring treats its output the way the product
-   says it will.
+   TWO KINDS OF CHECK LIVE HERE, and the split is deliberate.
+
+   The first eleven are PURE: the shared tally, and regexes over the
+   shipped markup. They are fast, they need nothing, and they are the
+   right shape for a promise that is arithmetic or is copy.
+
+   The last five need A REAL NIGHT — a browser, the app's own boot, its
+   own sign-in, its own listeners, against qa/fakebase.js standing in for
+   Firestore. They exist because Game Night #13 produced a promise that
+   CANNOT be checked any other way. The founder, after playing:
+
+     "If you sign out you should be able to sign back in and you keep
+      your points."
+     "When I signed out and signed back in I was able to make all new
+      picks, so I could watch the game then log out and then pick the
+      right people because they already know what happened."
+
+   Nothing in the pure half of this file can see that. AUTO.tally is
+   handed submissions and players and grades them correctly; it has no
+   idea WHEN the card was filled in. The promise "this pays you for
+   paying attention" is not a property of the tally, it is a property of
+   the door — and a door has to be opened to be tested.
+
+   WHAT THIS STILL DOES NOT COVER, said plainly so it is not read as more
+   than it is: fakebase does not run firestore.rules. A rule that would
+   refuse a write in production is simply allowed here, so this file can
+   prove what the APP tries to do and never what the SERVER permits.
+   Where that difference matters below, it is named at the check.
 
        node qa/acceptance.js
+       node qa/acceptance.js index-test.html
+       node qa/acceptance.js --no-browser      # prints what it did not test
    ================================================================== */
 const path = require('path');
 const RUN  = require(path.join(__dirname, '..', 'host', 'run.js'));
 const fs   = require('fs');
 
-let pass = 0, fail = 0; const bad = [];
+let pass = 0, fail = 0, untested = 0; const bad = [], skipped = [];
 function promise(name, cond, detail){
   if (cond) { pass++; }
   else { fail++; bad.push({ name, detail }); }
 }
+/* A promise nobody checked is not a promise anybody held. Suites in this
+   repo have reported success while running nothing; this counts the gap
+   out loud and the exit code takes it seriously. */
+function notTested(name, why){ untested++; skipped.push({ name, why }); }
 const AUTO = RUN.loadShared();
 
 /* A night, in the shapes AUTO.tally is really handed.
@@ -185,11 +213,364 @@ promise('acceptance.the-four-tabs-spell-the-product',
     'the app offers a betting line as a choice rather than showing it as a benchmark');
 }
 
+/* =====================================================================
+   THE PROMISES THAT NEED A NIGHT
+   ---------------------------------------------------------------------
+   Everything above can be decided from a pure function and a string. The
+   five below cannot, and pretending otherwise is how qa/platforms.js was
+   green for a year: it drove the app into S.place='play', a value that is
+   not in GAME_SCREENS and never has been, so the test and the bug agreed
+   with each other about an impossible state and neither was ever wrong.
+
+   The defence against writing that again is that every check here asserts
+   something a PLAYER can see — the screen the app landed on, the number
+   on the scoreboard, the label on the button — and reaches it through the
+   app's own entry points (doSignOut, startPredict, the lobby button, the
+   real round listener), never by setting a flag and believing it.
+   ================================================================== */
+const WANT_BROWSER = !process.argv.includes('--no-browser');
+
+/* TWO SHIMS, AND WHY NEITHER OF THEM IS A WORKAROUND.
+
+   qa/fakebase.js is a stand-in for Google's SDK, and in two places it is
+   LESS capable than the real one rather than differently capable:
+
+     · the real GoogleAuthProvider has setCustomParameters(); the fake's
+       does not, and SB.googleSignIn() calls it on line one. So every
+       Google sign-in in every suite in this repo has been throwing and
+       returning {ok:false} — which means no test here has ever executed a
+       successful sign-in, and VERIFY_REQUIRED has never been satisfied in
+       a test. That is worth reporting on its own.
+
+     · the real linkWithPopup upgrades auth.currentUser IN PLACE (that is
+       the entire point of it — index.html says so at SB.googleSignIn).
+       The fake returns a user object and leaves currentUser anonymous.
+
+   Rather than patch the fake's exports (ES module bindings are read-only
+   from outside, and reaching into another suite's harness is how these
+   things rot), the second gap is stepped around FAITHFULLY: the device is
+   told it has held a real account before — which is true of every device
+   in this report, the founder's included — so googleSignIn takes the
+   signInWithPopup branch, which the fake does implement correctly. */
+const AUTH_SHIM = async () => {
+  const m = await import('https://fakebase.local/10.12.2/firebase-auth.js');
+  if (!m.GoogleAuthProvider.prototype.setCustomParameters) {
+    m.GoogleAuthProvider.prototype.setCustomParameters = function(){};
+  }
+};
+
+async function browserPromises(){
+  const PW   = require('playwright');
+  const FAKE = require('./fakebase.js');
+  const F    = require('./fixtures.js');
+  const browser = await PW.chromium.launch();
+
+  /* One page = one device. Three of the five checks below need a second
+     visit to the same device, which is what a sign-out and a sign-in IS. */
+  const device = async () => {
+    const ctx = await browser.newContext({ viewport:{width:393,height:852} });
+    const pg  = await ctx.newPage();
+    const errs = []; pg.on('pageerror', e => errs.push(String(e).split('\n')[0]));
+    await FAKE.install(pg, { uid:'player-1' });
+    /* A device that has signed in before. See AUTH_SHIM. */
+    await pg.addInitScript(() => {
+      try { localStorage.setItem('stats_has_account_v1','1'); } catch(_){}
+    });
+    await pg.route('**/site.api.espn.com/**', r => r.fulfill({
+      status:200, contentType:'application/json', body:JSON.stringify(F.LIVE) }));
+    await pg.route('**/site.web.api.espn.com/**', r => r.abort());
+    await pg.goto('file://' + TARGET, { waitUntil:'domcontentloaded' });
+    await pg.waitForTimeout(2500);
+    await pg.evaluate(AUTH_SHIM);
+    /* The one helper the page gets. __FB.docs is a plain Map, so writing
+       to it does NOT wake a listener — a round has to be published the way
+       the host publishes one or the app never hears it, and a check that
+       poked the Map would be testing nothing. */
+    await pg.evaluate(() => {
+      window.__publish = function(rid, doc){
+        const p = 'nights/' + GAME.nightId + '/rounds/' + rid;
+        window.__FB.docs.set(p, doc); window.__FB.fire(p);
+      };
+    });
+    return { pg, ctx, errs };
+  };
+  const signIn = pg => pg.evaluate(async () => {
+    const r = await SB.googleSignIn();
+    return { ok:!!(r&&r.ok), verified:SB.verified(), uid:SB.me && SB.me.uid };
+  });
+
+  /* ---------------------------------------------------------------
+     PROMISE: "A sportsbook pays you for being RIGHT. This pays you for
+     PAYING ATTENTION."
+
+     The prediction card is 600 of the 1,000 points on a night and every
+     line on it is a question about a game that has not happened. A card
+     filled in during the fourth quarter is not a prediction, it is a
+     transcript — it pays for having been RIGHT, with certainty, which is
+     the one thing this product exists not to do.
+
+     GN13, the founder: "I could watch the game then log out and then pick
+     the right people because they already know what happened."
+     --------------------------------------------------------------- */
+  {
+    const { pg, ctx } = await device();
+    await signIn(pg);
+    await pg.evaluate(async () => {
+      setMode('live'); S.name='QA'; S.color='#fff';
+      await joinNight();
+      startPredict();
+    });
+    await pg.waitForTimeout(600);
+    const locked = await pg.evaluate(async () => {
+      preds.forEach(p => { S.predChoices[p.id] = 'BEFORE-' + p.id; });
+      lockPredictions();                      // the card is locked, pre-tip
+      S.qi = 2; ledgerSet('live_r0', 80, 25, 'live'); recomputeScore(); save();
+      await new Promise(x => setTimeout(x, 500));
+      const d = window.__FB.docs.get('nights/' + GAME.nightId + '/rounds/rP/subs/player-1');
+      return d ? d.picks : null;
+    });
+    /* The premise, asserted rather than assumed: the card WAS submitted
+       before tip. subs/{uid} is create-only in firestore.rules, so from
+       this moment the server holds a fact about this night that no
+       sign-out can clear — and that is what the lock should be made of. */
+    promise('acceptance.the-locked-card-reaches-the-server-before-tip-off',
+      Array.isArray(locked) && locked.length === 6 && locked.every(x => /^BEFORE-/.test(x)),
+      `the card was locked and the server holds ${JSON.stringify(locked)} — without a submission `
+      + 'there is nothing to lock the card against, and the pre-game sheet becomes unauditable');
+    /* Three quarters go by. Then the player uses the app's own sign-out
+       button — the rare, non-negotiable one on the account row. */
+    await Promise.all([
+      pg.waitForNavigation({ waitUntil:'domcontentloaded' }).catch(()=>{}),
+      pg.evaluate(() => { doSignOut(); })
+    ]);
+    await pg.waitForTimeout(2600);
+    await pg.evaluate(AUTH_SHIM);
+    const back = await signIn(pg);
+
+    /* THE PREMISE, ASSERTED. This is the qa/platforms.js trap and it is
+       pointed straight at this check: startPredict() refuses to open the
+       card at all unless VERIFY_REQUIRED is satisfied, so a sign-in that
+       quietly failed would leave the app on the landing page and the
+       exploit check would go GREEN for the exact reason the exploit is
+       impossible to perform — nobody was signed in. The founder signed
+       back in. So must this. */
+    promise('acceptance.signing-back-in-returns-you-to-the-same-account',
+      back.ok && back.verified && back.uid === 'player-1',
+      `after signing out, signing back in gave ok=${back.ok} verified=${back.verified} `
+      + `uid=${back.uid}. Every check below this line is meaningless without it: the card only `
+      + 'opens for a verified account, so an unverified session would prove the exploit safe by '
+      + 'proving nobody could play at all');
+
+    const r = await pg.evaluate(async (was) => {
+      /* fakebase's store lives on `window`, so the reload empties it the
+         way a new browser session would. Firestore does not forget, and
+         neither may this check: the pre-tip submission is put back so the
+         app is asked the question a real server would be asked. */
+      window.__FB.docs.set('nights/' + GAME.nightId + '/rounds/rP/subs/player-1',
+        { name:'QA', picks:was, banks:[100,50,50,50,50,50] });
+      S.name='QA'; S.color='#fff'; setMode('live');
+      await joinNight();
+      startPredict();                         // the app's own front door
+      await new Promise(x => setTimeout(x, 900));
+      return { screen:S.screen, place:S.place,
+               picksOnTheCard:Object.keys(S.predChoices||{}).length };
+    }, locked);
+    promise('acceptance.the-pre-game-card-cannot-be-filled-in-after-tip-off',
+      !(r.screen === 'predict' && r.picksOnTheCard === 0),
+      `three quarters into the night, the same signed-in account was handed the prediction sheet `
+      + `again (screen=${r.screen}, ${r.picksOnTheCard} picks on it). The card is 600 of the 1,000 `
+      + 'points and the only thing holding it shut is S.place in localStorage — which signing out '
+      + 'deletes. A lock that lives in a browser is not a lock, and this one pays for being right.');
+    await ctx.close();
+  }
+
+  /* ---------------------------------------------------------------
+     PROMISE: "Submissions are the source of truth; the player document
+     is a cache." A cache may be rebuilt; the truth may not be lost. The
+     founder states the player-facing half of it exactly: "If you sign out
+     you should be able to sign back in and you keep your points."
+
+     Two checks, because there are two different failures hiding in one
+     symptom: the score not COMING BACK, and the score being DESTROYED.
+     --------------------------------------------------------------- */
+  {
+    const { pg, ctx } = await device();
+    await signIn(pg);
+    await pg.evaluate(async () => {
+      setMode('live'); S.name='QA'; S.color='#fff'; await joinNight();
+    });
+    await Promise.all([
+      pg.waitForNavigation({ waitUntil:'domcontentloaded' }).catch(()=>{}),
+      pg.evaluate(() => { doSignOut(); })
+    ]);
+    await pg.waitForTimeout(2600);
+    await pg.evaluate(AUTH_SHIM);
+
+    const r = await pg.evaluate(async () => {
+      /* The night as the SERVER holds it: three rounds graded from this
+         player's submissions, plus forty Caught It points they resolved on
+         their phone. fakebase loses its store on a reload the way a new
+         browser session would, so the seat is restored here to stand for
+         a server that never forgot. */
+      const nid = GAME.nightId;
+      window.__FB.docs.set('nights/' + nid + '/players/player-1',
+        { name:'QA', color:'#fff', pts:80, speed:25,
+          predPts:0, catchPts:0, caughtPts:40, roundsDone:3 });
+      const r = await SB.googleSignIn();
+      S.name='QA'; S.color='#fff'; setMode('live');
+      await joinNight();
+      await new Promise(x => setTimeout(x, 1000));
+      const onScreen = { pts:S.pts, speed:S.speed, caughtPts:S.caughtPts||0 };
+      /* And now they carry on playing, which is what a person does. */
+      await pushScore();
+      await new Promise(x => setTimeout(x, 600));
+      const seat = window.__FB.docs.get('nights/' + nid + '/players/player-1') || {};
+      return { signedIn:!!(r&&r.ok), onScreen,
+               seat:{ pts:seat.pts, speed:seat.speed, caughtPts:seat.caughtPts } };
+    });
+    /* NOT `=== 80`. S.pts is the whole night — live + pred + catch + caught —
+       and the seat's `pts` is the graded live lane alone, so an equality
+       here would fail on a correct app the moment the Caught It lane came
+       back too. The promise is "you keep your points": nothing the server
+       holds may be MISSING from the screen. */
+    promise('acceptance.a-night-belongs-to-the-person-not-the-browser-session',
+      r.onScreen.pts >= 80 && r.onScreen.speed >= 25,
+      `the seat held 80 pts / 25 speed and the same signed-in account came back to `
+      + `${r.onScreen.pts} pts / ${r.onScreen.speed} speed on screen. The server never lost them — `
+      + 'SB.myScore() returns them on request — but the only caller is doResume(), which needs a '
+      + 'local save, and signing out deletes it. The score is bound to a session, not to a person '
+      + 'and a night, and the screen is the only place a player ever looks.');
+    promise('acceptance.signing-out-never-destroys-points-already-earned',
+      r.seat.caughtPts === 40,
+      `40 Caught It points were on the seat before the sign-out and the seat now holds `
+      + `${r.seat.caughtPts}. This is worse than a score that fails to come back: the zeroed local `
+      + 'state is pushed over the real one, so signing out and back in DELETES a client lane from '
+      + 'the server. predPts and catchPts are on the same push and are lost the same way.');
+    await ctx.close();
+  }
+
+  /* ---------------------------------------------------------------
+     PROMISE: the lobby says, in the product's own words, "The host is
+     pushing questions straight to your phone and scoring them here."
+     GN13: "The questions were not pushed to my laptop and my tablet at
+     the end of Q1. It was sent to my iPhone."
+
+     A round is worth points and points are the night. So the assertion is
+     REACHABILITY, not takeover: a device that is signed in and joined may
+     be sitting on the Board tab — a screen this app offers and invites
+     people to use — and the round must still be answerable when they come
+     back. Asserting "the round took over the screen" would be wrong; not
+     yanking somebody off the board is deliberate and correct.
+     --------------------------------------------------------------- */
+  {
+    const { pg, ctx } = await device();
+    await signIn(pg);
+    const r = await pg.evaluate(async () => {
+      setMode('live'); S.name='QA'; S.color='#fff'; await joinNight();
+      const Q = [{t:'Who scores first?',o:['A','B']},{t:'Lead at the buzzer?',o:['A','B']}];
+      go('board');                                   // the laptop, on the Board tab
+      await new Promise(x => setTimeout(x, 300));
+      __publish('r0', { id:'r0', idx:0, seq:1, state:'live', tag:'Q1',
+                        name:'Quarter 1', worth:10, questions:Q });
+      await new Promise(x => setTimeout(x, 3400));
+      const consumed = !!HR.started['r0'];
+      /* They come back to the lobby, which is what the toast told them. */
+      renderLobby(0); go('lobby');
+      await new Promise(x => setTimeout(x, 400));
+      const label = (document.getElementById('lobbyBtn')||{}).textContent || '';
+      document.getElementById('lobbyBtn').click();
+      await new Promise(x => setTimeout(x, 1200));
+      const asked = (rounds[0].q||[]).map(q=>q.t).join(' | ');
+      const shown = (document.getElementById('qText')||{}).textContent || '';
+      return { consumed, label, screen:S.screen, shown, asked };
+    });
+    promise('acceptance.a-round-the-host-pushed-stays-answerable',
+      r.screen === 'live' && !!r.shown && r.asked.indexOf(r.shown) === 0,
+      `a round pushed while this device sat on the Board tab was consumed (HR.started=${r.consumed}) `
+      + `and the walk back to the lobby ended on screen "${r.screen}" showing "${r.shown}". The lobby `
+      + `button read "${r.label}". A round that reaches a device and cannot be answered on it is a `
+      + 'round the player was never offered, and the lobby footer promises the opposite.');
+    await ctx.close();
+  }
+
+  /* ---------------------------------------------------------------
+     PROMISE: scoring twice must not pay twice. The suite already asserts
+     this of AUTO.tally, which is the RUNNER's half. The phone has its own
+     scoring path — applyHostedScore, the ledger, the save — and it has
+     never been asserted at all, while the runner scores at the buzzer and
+     again after the phones settle, and Firestore re-delivers a document
+     on every touch.
+
+     GN13: "it pushed the answer then it did it again after we put our
+     answer." The points survived that; this is the check that says so,
+     and the one that would notice the day they stop.
+     --------------------------------------------------------------- */
+  {
+    const { pg, ctx } = await device();
+    await signIn(pg);
+    const r = await pg.evaluate(async () => {
+      setMode('live'); S.name='QA'; S.color='#fff'; await joinNight();
+      const Q = [{t:'Who scores first?',o:['A','B']},{t:'Lead at the buzzer?',o:['A','B']}];
+      S.screen='lobby'; S.place='lobby';
+      __publish('r0', { id:'r0', idx:0, seq:1, state:'live', tag:'Q1',
+                        name:'Quarter 1', worth:10, questions:Q });
+      await new Promise(x => setTimeout(x, 3400));
+      S.liveAnswers[0] = [{choice:'A',bank:9},{choice:'A',bank:8}];   // both right
+      S.screen='lobby'; go('lobby');
+      const seen = [];
+      for (let i = 0; i < 3; i++){
+        __publish('r0', { id:'r0', idx:0, seq:1, state:'scored', tag:'Q1',
+                          name:'Quarter 1', worth:10, key:['A','A'], touched:i,
+                          questions:Q });
+        await new Promise(x => setTimeout(x, 700));
+        seen.push({ pts:S.pts, speed:S.speed });
+      }
+      return { seen };
+    });
+    const [a, b, c] = r.seen;
+    promise('acceptance.the-same-key-posted-twice-pays-once',
+      a.pts > 0 && a.pts === b.pts && b.pts === c.pts
+              && a.speed === b.speed && b.speed === c.speed,
+      `the host posted one key three times and the phone paid ${r.seen.map(x=>x.pts+'/'+x.speed).join(' → ')}. `
+      + 'A round is scored at the buzzer and again when the phones settle, and a re-delivered '
+      + 'document is normal Firestore behaviour, so paying per delivery pays for attention nobody paid.');
+    await ctx.close();
+  }
+
+  await browser.close();
+}
+
 /* -------------------------------------------------------------------- */
-console.log('\n  ACCEPTANCE — the promises, not the incidents\n');
-bad.forEach(b => {
-  console.log(`  ✗ ${b.name}`);
-  console.log(`      ${b.detail}\n`);
-});
-console.log(`  ${fail ? 'RED' : 'GREEN'}   ${pass} promise(s) held, ${fail} broken\n`);
-process.exit(fail ? 1 : 0);
+const BROWSER_PROMISES = [
+  'acceptance.the-locked-card-reaches-the-server-before-tip-off',
+  'acceptance.signing-back-in-returns-you-to-the-same-account',
+  'acceptance.the-pre-game-card-cannot-be-filled-in-after-tip-off',
+  'acceptance.a-night-belongs-to-the-person-not-the-browser-session',
+  'acceptance.signing-out-never-destroys-points-already-earned',
+  'acceptance.a-round-the-host-pushed-stays-answerable',
+  'acceptance.the-same-key-posted-twice-pays-once'
+];
+
+(async () => {
+  if (WANT_BROWSER) {
+    try { await browserPromises(); }
+    catch (e) {
+      /* An exploded harness is NOT a held promise. Three suites in this
+         repo have reported success while running nothing. */
+      BROWSER_PROMISES.forEach(n => notTested(n, 'the harness threw: ' + (e && e.message)));
+    }
+  } else {
+    BROWSER_PROMISES.forEach(n => notTested(n, '--no-browser'));
+  }
+
+  console.log('\n  ACCEPTANCE — the promises, not the incidents\n');
+  bad.forEach(b => {
+    console.log(`  ✗ ${b.name}`);
+    console.log(`      ${b.detail}\n`);
+  });
+  skipped.forEach(s => console.log(`  ? ${s.name}\n      NOT TESTED — ${s.why}\n`));
+  const verdict = (fail || untested) ? 'RED' : 'GREEN';
+  console.log(`  ${verdict}   ${pass} promise(s) held, ${fail} broken`
+              + (untested ? `, ${untested} NOT TESTED` : '') + '\n');
+  process.exit((fail || untested) ? 1 : 0);
+})();

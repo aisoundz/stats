@@ -40,7 +40,7 @@ const ok=(n,c,d)=>{ if(c){pass++; console.log('  ✓ '+n);} else {fail++; bad.pu
     /* Same route qa/payoff.js uses: practice, on the play screen, with the
        question panel rendered — a hidden panel has no options and reads as
        "nothing on screen" rather than as a failure. */
-    S.mode='practice'; S.place='play'; S.qi=0; S.ni=0; S.answered=false; S.results=[[]];
+    S.mode='practice'; S.place='live' /* was 'play' — not a member of GAME_SCREENS, so this drove the app into a state production cannot reach */; S.qi=0; S.ni=0; S.answered=false; S.results=[[]];
     try{ go('gametime'); }catch(_){}
     document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
     document.getElementById('s-gametime').classList.add('active');

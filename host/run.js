@@ -212,8 +212,47 @@ function periodLabel(sum, plan){
        progress" on every phone during the most exciting five minutes of
        the night. There is no fifth round to play, but the scoreboard still
        has to tell the truth about where the game is. */
-    if(per > plan.rounds.length) return (per - plan.rounds.length > 1 ? 'OT' + (per - plan.rounds.length) : 'OT') + ' in progress';
-    const tag = per >= 1 && plan.rounds[per - 1] ? plan.rounds[per - 1].tag : (plan.rounds[0] || {}).tag;
+    /* ============ A ROUND IS NOT A PERIOD =============================
+       These two lines assumed one round per period. That is true of
+       basketball (4/4), football (4/4), hockey (3/3) and soccer (2/2) —
+       and false of BASEBALL, which is 3 rounds across 9 innings.
+
+       So on the first live baseball night this product ever hosted, every
+       phone in the room would have read:
+
+           inning 4 -> "OT in progress"      inning 7 -> "OT4 in progress"
+           inning 5 -> "OT2 in progress"     inning 9 -> "OT6 in progress"
+
+       Wrong in eight innings of nine, from about the fourth inning until
+       the last out, on the scoreboard the player is looking at while the
+       game they can see on television is in the 9th.
+
+       roundPeriodsFor() already knows the mapping — run.js walks it to
+       decide when a round OPENS — and this function never asked. Note it
+       is only meaningful ON a round boundary: roundTagFor(mlb,1) returns
+       "-1th-1st". So the label is derived by finding which round's window
+       this period falls inside, and overtime is anything past the LAST
+       round's period rather than past the round COUNT. */
+    var per_ = Number(per) || 0;
+    var bounds = null;
+    try{ bounds = AUTO.roundPeriodsFor(sum, 0); }catch(_){ bounds = null; }
+    if(Array.isArray(bounds) && bounds.length === plan.rounds.length){
+      var lastPer = bounds[bounds.length - 1];
+      if(per_ > lastPer){
+        var extra = per_ - lastPer;
+        return (extra > 1 ? 'OT' + extra : 'OT') + ' in progress';
+      }
+      for(var bi = 0; bi < bounds.length; bi++){
+        if(per_ <= bounds[bi]){
+          return ((plan.rounds[bi] || {}).tag || 'Q1') + ' in progress';
+        }
+      }
+    }
+    /* No mapping available — fall back to the old one-round-per-period
+       reading, which is correct for every sport except baseball and is
+       what shipped. */
+    if(per_ > plan.rounds.length) return (per_ - plan.rounds.length > 1 ? 'OT' + (per_ - plan.rounds.length) : 'OT') + ' in progress';
+    const tag = per_ >= 1 && plan.rounds[per_ - 1] ? plan.rounds[per_ - 1].tag : (plan.rounds[0] || {}).tag;
     return (tag || 'Q1') + ' in progress';
   }catch(_){ return ''; }
 }

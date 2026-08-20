@@ -178,8 +178,23 @@ const ok=(dev,n,c,d)=>{ if(c) pass++; else { fail++; bad.push(dev+' · '+n+(d?' 
            the number worth holding to a ceiling. */
         let railPlayH = railH;
         try{
+          /* ============ 'play' IS NOT A PLACE ==========================
+             This drove the app with S.place='play' — and 'play' is not a
+             member of GAME_SCREENS, which is
+             ["predict","lobby","live","review","predreview","break"].
+             S.place is only ever assigned from that list or ''.
+
+             So this check was green for the worst possible reason: the app
+             ALSO tested for 'play', so the test and the bug agreed with
+             each other about a state production can never be in. The
+             collapse it certifies has never run once on a real phone. The
+             founder found it the hard way on an iPad, with the question
+             scrolled into the gap between three sticky bars.
+
+             'live' is a real place — the screen with a question on it,
+             which is precisely what this check is about. */
           const sp=S.place, ss=S.screen;
-          S.place='play'; S.screen='gametime'; paintGameRail();
+          S.place='live'; S.screen='live'; paintGameRail();
           railPlayH = railEl && railEl.offsetParent ? Math.round(railEl.getBoundingClientRect().height) : 0;
           S.place=sp; S.screen=ss; paintGameRail();
         }catch(_){}

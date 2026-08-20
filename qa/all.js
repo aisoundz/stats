@@ -61,7 +61,7 @@ const TARGET_ABS=path.resolve(__dirname,'..',TARGET);
    not read argv[2] is harmless, but claiming it was targeted would not be. */
 const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-lang.js',
   'board-order.js','payoff.js','slate.js','acceptance.js','host-sportsreg.js','localise.js','i18n.js','season.js',
-  'devices.js','night-config.js','overtime.js','platforms.js','change-it.js']);
+  'devices.js','night-config.js','overtime.js','platforms.js','change-it.js','chrome.js','places.js','switch.js']);
 /* Suites that read admin.html rather than the player file. The player half
    of the gate was split across two builds and fixed; the ADMIN half is
    split the same way and is NOT fixed — these seven read admin.html even
@@ -111,6 +111,19 @@ const TIER={
   'voice.js':         {tier:'static'},
   'voice-lang.js':    {tier:'static'},
   'feed-path.js':     {tier:'static'},   // static by default; --live asks ESPN
+  /* STRUCTURAL, not behavioural. Every other suite in this gate asks "does
+     it do the right thing"; this one asks "can this line ever run at all".
+     It exists because on 19-20 Aug the same defect — a comparison against a
+     state value that is not in GAME_SCREENS — was found in the app twice
+     and in five suites, and every one of those files passed its own checks
+     while the code under them had never executed. */
+  'places.js':        {tier:'static'},
+  /* Room-switching, end to end, in a real browser. Every check in it is a
+     defect that reached a live game night, and all five were sabotage-
+     tested on 20 Aug: break the sport swap, the watchlist rebuild, the
+     baked answer, the stats cache key or the rail collapse, and it goes
+     red naming which one. */
+  'switch.js':        {tier:'browser'},
   'bank-shadow.js':   {tier:'static'},
   'devices.js':       {tier:'browser'},
   'host-sportsreg.js':{tier:'browser'},
@@ -128,6 +141,10 @@ const TIER={
   /* Three engines x 11 device profiles — the slowest suite by far, so it
      is browser-tier and runs in the full gate rather than --static. */
   'platforms.js':     {tier:'browser'},
+  /* THE CHROME BUDGET. Browser-tier and in the default gate, because the
+     bug it catches — 41% of an iPad given to three sticky bars that know
+     nothing about each other — was live through 538 green checks. */
+  'chrome.js':        {tier:'browser'},
   'claims.js':        {tier:'live'},
   /* THE ONLY SUITE THAT READS THE WORDS. Live-tier because a placeholder
      that only appears once the real slate is on the page is exactly the one

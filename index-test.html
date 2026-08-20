@@ -796,6 +796,56 @@
      iPad, more on a desktop, and NOTHING EVER HIDDEN at any width. The
      150px floor is the same measurement the old min-width was set from —
      below it "Tempo at Mystics" wraps mid-word. */
+  /* THE TICKER. The score is the second-biggest thing on a tile after the
+     matchup, because it is what a person is actually scanning for. Teal on
+     the clock means the game is ON now — the same meaning teal carries
+     everywhere else in this product. */
+  /* THE ONE-LINE STRIP — what the rail becomes once a question is up.
+     Every game, scores and clocks, in the height of a single row. It
+     scrolls sideways rather than wrapping, because wrapping is how this
+     rail grew to 599px on a phone the first time. */
+  /* 62px on the right, the same reservation .grTop makes, because the
+     hamburger is fixed to that corner and covered the third chip. The strip
+     scrolls, so this costs nothing: the last chip slides out from under the
+     button instead of living beneath it. */
+  .grStrip{display:flex;gap:6px;padding:6px 62px 7px 12px;overflow-x:auto;
+    scrollbar-width:none;-ms-overflow-style:none}
+  .grStrip::-webkit-scrollbar{display:none}
+  .grChip{flex:0 0 auto;display:flex;align-items:baseline;gap:4px;cursor:pointer;
+    background:var(--bg2);border:1px solid var(--line);border-radius:8px;
+    padding:5px 9px;font-family:inherit;white-space:nowrap;
+    font-variant-numeric:tabular-nums}
+  .grChip i{font-style:normal;font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.03em}
+  .grChip b{font-size:14px;font-weight:800;color:var(--ink)}
+  .grChip s{text-decoration:none;color:var(--line2);font-size:12px}
+  .grChip em{font-style:normal;font-size:12px;color:var(--muted);margin-left:3px}
+  .grChip.live em{color:var(--teal);font-weight:700}
+  /* The room you are standing in, marked the same way the tiles mark it. */
+  .grChip.on{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 12%,var(--bg2))}
+  .grChip.on i{color:var(--teal)}
+  /* The score row on a full tile: score first, clock after it. */
+  /* WRAPS RATHER THAN CLIPS. This was one nowrap flex row and the clock,
+     as the last child, fell off the end of a narrow tile — with the
+     scrollbar hidden, so nothing said it was there. qa/platforms.js:
+     "grScore: 1 of 4 child(ren) cut off — a player cannot see or reach it".
+     Exactly the disease the rail itself was rebuilt to cure, reintroduced
+     one level down by the thing that replaced it. */
+  .grTile .grScore{display:flex;align-items:baseline;gap:5px;margin-top:3px;flex-wrap:wrap;min-width:0;
+    font-family:var(--d);font-weight:800;font-size:17px;color:var(--ink);
+    font-variant-numeric:tabular-nums}
+  .grTile .grScore s{text-decoration:none;color:var(--dim);font-weight:600;font-size:12px}
+  /* No margin-left:auto — pushing the clock to the far edge is what put it
+     off the end. It sits after the score with a normal gap and wraps under
+     it when the tile is too narrow to hold both. */
+  .grTile .grScore .grWhen{font-style:normal;font-size:12px;
+    font-weight:700;color:var(--muted);letter-spacing:.02em;white-space:nowrap}
+  .grTile .grWhen.grLive{color:var(--teal);font-weight:800}
+  @media (prefers-reduced-motion:no-preference){
+    .grTile .grWhen.grLive::after{content:"";display:inline-block;width:5px;height:5px;
+      border-radius:50%;background:var(--teal);margin-left:5px;vertical-align:middle;
+      animation:grPulse 2s ease-in-out infinite}
+  }
+  @keyframes grPulse{0%,100%{opacity:1}50%{opacity:.25}}
   .grTiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));
     gap:7px;padding:0 14px 10px;align-items:stretch}
   /* WIDE ENOUGH FOR A REAL NAME. At 126px "Tempo at Mystics" and its tip
@@ -1441,8 +1491,9 @@
       </button>
       <button class="btn ghost sm" id="portalEmailBtn" style="margin-top:8px" onclick="portalEmailPath()">Use email instead</button>
       <div id="portalDown" style="display:none;margin-top:10px;background:rgba(255,197,77,.10);border:1px solid rgba(255,197,77,.35);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)">
-        <b>Our sign-in server isn’t answering right now.</b><br>
-        <span style="color:var(--muted,#93a0bd)">Nothing you do here would save, so we’ve switched the buttons off rather than let you lose a night’s points. Try a refresh in a minute.</span>
+        <b>We’re having trouble reaching the game server.</b><br>
+        <span style="color:var(--muted,#93a0bd)">Signing in still works — give it a tap. If it doesn’t take, reloading the page usually fixes it.</span>
+        <button type="button" class="btn ghost sm" style="margin-top:9px;width:100%" onclick="location.reload()">Reload and try again</button>
       </div>
       <label style="display:flex;gap:9px;align-items:flex-start;margin-top:12px;cursor:pointer">
         <input type="checkbox" id="portalConsent" checked style="margin-top:1px;width:26px;height:26px;padding:6px;flex:0 0 auto;accent-color:#28e0d0">
@@ -4791,12 +4842,12 @@ const SC_PREDS=[
    as the match happens. No buzzing phone during a counter-attack — which is
    the whole reason a basketball-style quiz doesn't work for this sport. */
 const SC_CATCHES=[
-  {id:"c_corner", icon:"🚩", label:"First corner",            opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.awayAbbr, at:"7'"},
-  {id:"c_sot",    icon:"🎯", label:"First shot on target",    opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.homeAbbr, at:"12'"},
-  {id:"c_card",   icon:"🟨", label:"First yellow card",       opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.homeAbbr, at:"31'"},
-  {id:"c_off",    icon:"🚫", label:"First offside",           opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.awayAbbr, at:"38'"},
+  {id:"c_corner", icon:"🚩", label:"First corner",            teams:true, opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.awayAbbr, at:"7'"},
+  {id:"c_sot",    icon:"🎯", label:"First shot on target",    teams:true, opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.homeAbbr, at:"12'"},
+  {id:"c_card",   icon:"🟨", label:"First yellow card",       teams:true, opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.homeAbbr, at:"31'"},
+  {id:"c_off",    icon:"🚫", label:"First offside",           teams:true, opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.awayAbbr, at:"38'"},
   {id:"c_stop",   icon:"⏱️", label:"Added time, 1st half",    opts:["Under 2 min","2 min or more"], answer:"2 min or more", at:"45'"},
-  {id:"c_sub",    icon:"🔄", label:"First substitution",      opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.awayAbbr, at:"58'"}
+  {id:"c_sub",    icon:"🔄", label:"First substitution",      teams:true, opts:[SC_GAME.homeAbbr,SC_GAME.awayAbbr], answer:SC_GAME.awayAbbr, at:"58'"}
 ];
 // 2 rounds × 3 questions. Halftime = 3 pts each (9), full-time = 5 pts each (15).
 // 50 predictions + 6 catches + 24 live = 80. Same spine as basketball, so the
@@ -5242,20 +5293,50 @@ function setSport(key){
 }
 try{ window.setSport = setSport; }catch(_){}
 
+/* ============ ONE hydrateBuiltIn, AND IT SWITCHES THE SPORT ==========
+   This function was DECLARED TWICE, back to back, and JavaScript does not
+   report that: the second declaration silently replaced the first, so the
+   version with the sport switch in it had never run once. The copy that
+   won looked like this, and the missing call is the whole bug:
+
+     function hydrateBuiltIn(want){
+       if(!want || !BUILTIN_NIGHT.cfg || want !== BUILTIN_NIGHT.id) return false;
+       if(!hydrateNight(BUILTIN_NIGHT.cfg)) return false;   // no setSport, ever
+
+   What it cost, live, on 19 Aug with four rooms up. The founder opened the
+   soccer practice game, walked into the WNBA flagship, and the WNBA card
+   rendered the SOCCER watchlist: "First corner", "First yellow card",
+   "First offside", with MIA and AME buttons. Inter Miami and Club America,
+   who are the soccer PRACTICE fixture (sn1-2026-08-04-mia-ame) and are not
+   playing anybody tonight. SPORT was never switched back, so CATCHES was
+   still SC_CATCHES, so a basketball room offered soccer questions about a
+   match that does not exist. Every sport except soccer has catches:[],
+   which is why this could only ever surface in one direction.
+
+   It also narrowed the lookup: the id equality test refuses any built-in
+   night that is not the CURRENT sport’s, so walking into another sport’s
+   practice game returned false and did nothing rather than switching to
+   it. Both halves of the regression arrived together.
+
+   This file has now lost a function to a duplicate name twice — see
+   paintGameRail, which is named that way precisely BECAUSE paintRail
+   already existed and the second declaration had silently won. Twice is a
+   pattern, and a check for it is WORTH BUILDING — but it does not exist
+   yet. An earlier draft of this comment said "qa/dupefn.js now fails the
+   gate on any top-level function declared more than once", and there is no
+   such file. A comment claiming a gate that was never built is the exact
+   disease this comment is about, committed in the act of describing it.
+   Caught by the CTO review the same evening. */
 function hydrateBuiltIn(want){
   if(!want) return false;
   var b = BUILTIN_NIGHTS[want];
   if(!b || !b.cfg) return false;
   /* A built-in night may belong to another sport — walking back into it
-     means walking back into that sport, or hydrateNight will refuse it. */
-  if(b.sport !== SPORT_KEY && !setSport(b.sport)) return false;
+     means walking back into that sport, or hydrateNight will refuse it.
+     setSport recomputes BUILTIN_NIGHT, so it lines up with `want` after
+     this rather than needing its own assignment: one writer, not two. */
+  if(b.sport && b.sport !== SPORT_KEY && !setSport(b.sport)) return false;
   if(!hydrateNight(b.cfg)) return false;
-  NIGHT_CFG_SOURCE = 'built-in';
-  return true;
-}
-function hydrateBuiltIn(want){
-  if(!want || !BUILTIN_NIGHT.cfg || want !== BUILTIN_NIGHT.id) return false;
-  if(!hydrateNight(BUILTIN_NIGHT.cfg)) return false;
   NIGHT_CFG_SOURCE = 'built-in';
   return true;
 }
@@ -5366,6 +5447,44 @@ function hydrateNight(cfg){
       if(GR && GR.length >= 2){
         GR[0].ab = GAME.homeAbbr; GR[0].name = GAME.homeName;
         GR[1].ab = GAME.awayAbbr; GR[1].name = GAME.awayName;
+      }
+    }catch(_){}
+
+    /* 3b. THE WATCHLIST IS A SHEET TOO, AND IT WAS NEVER REBUILT.
+          Steps 3 and 4 refresh the groups and the pick sheet from the real
+          night. CATCHES was not in that list, so a live MLS room drew its
+          watchlist from SC_GAME — the PRACTICE fixture — and offered
+          "First corner: MIA / AME". Inter Miami and Club América, who were
+          not playing, in a room about LAFC at Colorado.
+
+          Founder, 19 Aug, on a live WNBA card: "im on the WNBA game and it
+          still has the soccer features on it." That sighting was the sport
+          not switching (see hydrateBuiltIn); this is the other half — even
+          in the RIGHT sport the teams were the demo's.
+
+          Only the two-team rows are rebuilt. "Added time, 1st half" is
+          Under 2 min / 2 min or more and has no teams in it, which is why
+          the rows carry `teams:true` rather than this guessing from the
+          shape of an array. */
+    try{
+      if(Array.isArray(CATCHES) && GAME.homeAbbr && GAME.awayAbbr){
+        CATCHES.forEach(function(c){
+          if(!c || !c.teams) return;
+          c.opts = [GAME.homeAbbr, GAME.awayAbbr];
+          /* AND THE BAKED ANSWER HAS TO GO WITH THEM. Rebuilding opts and
+             leaving `answer` was worse than leaving both alone: SC_CATCHES
+             bakes answer:SC_GAME.awayAbbr — "AME" — at load, so a player
+             would pick from the REAL teams and be graded against Club
+             América, who are not on the field. Guaranteed zero, where the
+             old bug at least looked obviously wrong. Caught by the
+             web-architect review, 19 Aug, before it reached anyone.
+
+             Null rather than a guess: a live night's watchlist is settled
+             by the host's marks (prCatchMarks), never by this field, and
+             anything downstream that would grade against it must fail
+             closed instead of inventing a winner. */
+          c.answer = null;
+        });
       }
     }catch(_){}
 
@@ -5526,6 +5645,86 @@ function slateGame(id){
    reports: the second declaration silently replaces the first, so mine
    was never called and the rail simply never appeared. Twenty minutes to
    find, and the only symptom was a component that did nothing. */
+/* ============ THE LIVE TICKER ========================================
+   Founder, 19 Aug, mid-flagship with a soccer match running beside it:
+   "Id like to watch the basketball game but still see the score and ticker
+   and info as it happens live... itll feel like a sports app."
+
+   The rail already owns the top of every screen and was the thing he
+   resented most — a chooser eating 41% of an iPad to ask a question he had
+   already answered. Same pixels, carrying live scores, are the pixels a
+   sports app spends there on purpose. So the chooser becomes a scoreboard.
+
+   IT READS ESPN, NOT FIRESTORE. This is the whole design decision and it
+   comes straight out of tonight: four rooms died at 16:01 on a listener
+   concurrency ceiling, not the read cap. A ticker built on four Firestore
+   listeners would have been four more of exactly the thing that broke.
+   ESPN's scoreboard endpoint returns EVERY game in a league in one call —
+   two calls covers tonight's whole slate — at zero Firestore reads and
+   zero listeners. It is also public, cached, and cannot take a room down.
+
+   Failure is silent by design: no data means the tile renders exactly what
+   it rendered before. A ticker that cannot reach the feed must never be
+   the reason somebody cannot pick a game. */
+var TICK={ at:0, by:{}, loading:false };
+function tickPath(g){
+  try{
+    var lg=String((g&&g.league)||'').toLowerCase();
+    if(SPORT_CFG[lg] && SPORT_CFG[lg].path) return SPORT_CFG[lg].path;
+  }catch(_){}
+  return '';
+}
+async function tickLoad(force){
+  if(TICK.loading) return;
+  if(!force && Date.now()-TICK.at < 25000) return;
+  var gs=(SLATE.games||[]); if(!gs.length) return;
+  /* One call per LEAGUE, not per game. Sixteen NFL games on a Sunday is
+     still one request. */
+  var paths={}, ymd='';
+  try{ ymd=(SLATE.date||'').replace(/-/g,''); }catch(_){}
+  if(!ymd) return;
+  gs.forEach(function(g){ var p=tickPath(g); if(p) paths[p]=1; });
+  var list=Object.keys(paths); if(!list.length) return;
+  TICK.loading=true;
+  try{
+    var out={};
+    await Promise.all(list.map(function(p){
+      return fetch('https://site.api.espn.com/apis/site/v2/sports/'+p+'/scoreboard?dates='+ymd+'&_='+Date.now())
+        .then(function(r){ return r.json(); })
+        .then(function(j){
+          (j.events||[]).forEach(function(e){
+            try{
+              var c=(e.competitions||[])[0]||{}, st=(c.status&&c.status.type)||{};
+              var cs=(c.competitors||[]);
+              var home=cs.find(function(x){return x.homeAway==='home';})||cs[0]||{};
+              var away=cs.find(function(x){return x.homeAway==='away';})||cs[1]||{};
+              out[String(e.id)]={
+                state: st.state||'',
+                detail: st.shortDetail||st.detail||'',
+                hs: home.score==null?null:String(home.score),
+                as: away.score==null?null:String(away.score)
+              };
+            }catch(_){}
+          });
+        }).catch(function(){});
+    }));
+    if(Object.keys(out).length){ TICK.by=out; TICK.at=Date.now(); }
+  }catch(_){}
+  TICK.loading=false;
+  try{ paintGameRail(); }catch(_){}
+}
+/* Every 25s while the page is visible. Hidden tabs stop — a backgrounded
+   phone polling a scoreboard is battery somebody else is paying for. */
+try{
+  setInterval(function(){
+    try{ if(document.hidden) return; }catch(_){}
+    tickLoad();
+  }, 25000);
+  document.addEventListener('visibilitychange', function(){
+    try{ if(!document.hidden) tickLoad(true); }catch(_){}
+  }, false);
+}catch(_){}
+
 function paintGameRail(){
   var el = document.getElementById('gameRail');
   if(!el) return;
@@ -5562,9 +5761,27 @@ function paintGameRail(){
      So the rail collapses to the current game plus the expander, and opens
      again the moment they are not mid-question. Nothing is removed — the
      count is still on screen and one tap brings it all back. */
+  /* ============ THE DEAD CONDITION, AND WHAT REPLACES IT =============
+     This read `S.place==='play'`. There is no such place. GAME_SCREENS is
+     ["predict","lobby","live","review","predreview","break"] and S.place is
+     only ever assigned from that list or ''. So the collapse this rail was
+     given — with a comment explaining that a chooser must not eat the
+     screen mid-question — HAS NEVER RUN ONCE. The founder felt it on an
+     iPad: three sticky bars taking 41% of the viewport and the question
+     scrolled into the gap between them.
+
+     The old fix was to shrink to a single tile. That is now the wrong
+     answer, because the tiles carry live scores and the whole point is
+     seeing the other games while you play this one. Founder, 19 Aug:
+     "Id like to watch the basketball game but still see the score and
+     ticker and info as it happens live."
+
+     So mid-game it becomes ONE LINE — every game, scores and clocks, in
+     the height of a single row instead of a grid. Nothing is hidden and
+     the question gets its screen back. */
   var playing = false;
-  try{ playing = (S && S.place==='play' && S.screen==='gametime'); }catch(_){}
-  var RAIL_MAX = playing ? 1 : 4;
+  try{ playing = (typeof GAME_SCREENS!=='undefined') && GAME_SCREENS.indexOf(S && S.place || '') >= 0; }catch(_){}
+  var RAIL_MAX = playing ? gs.length : 4;
   var showAll = !!window.__railOpen;
   var shown = gs;
   var hidden = 0;
@@ -5581,6 +5798,8 @@ function paintGameRail(){
   var rows = shown.map(function(g){
     var on = (g.nightId === cur);
     var live = !!g.live;
+    var tk = null; try{ tk = TICK.by[String(g.espnEvent||'')] || null; }catch(_){}
+    if(tk && tk.state==='in') live = true;   // the feed knows better than the flag
     return '<button type="button" class="grTile'+(live?' onair':'')+'" data-slate="'+esc(g.nightId)+'"'
       + ' style="--gA:'+esc(g.awayColor||'#666')+';--gH:'+esc(g.homeColor||'#666')+'"'
       + (on ? ' aria-current="true" disabled' : '') + '>'
@@ -5591,17 +5810,64 @@ function paintGameRail(){
          was the whole problem with the version before this one. */
       + '<span class="grLg"><i></i>'+esc(String(g.league||'').toUpperCase())
       +   (g.flagship ? ' <span class="grStar">★</span>' : '')
-      +   '<em class="grWhen">'+esc(g.tipLabel || tipShort(g.tipISO) || '')+'</em>'
+      /* THE CLOCK REPLACES THE TIP TIME ONCE THERE IS A CLOCK. "6:30 PM" is
+         the most useful thing to say before kickoff and the least useful
+         thing to say at 51 minutes. */
       + '</span>'
       /* REAL SPACES AROUND "at". The margin came from CSS, so the text
          itself read "TempoatMystics" — which is what a screen reader says
          out loud, and what any text-based check sees. Spacing that only
          exists in the styling is not spacing. */
       + '<span class="grWho">'+esc(g.away||g.awayAbbr||'')+' <s>at</s> '+esc(g.home||g.homeAbbr||'')+'</span>'
+      /* The score line only exists once there IS a score. A row of dashes
+         before kickoff is noise pretending to be information. */
+      /* ============ NOTHING IMPORTANT IN THE TOP-RIGHT CORNER ==========
+         The clock used to sit up beside the league, and the fixed hamburger
+         menu is pinned to that same corner — so on the top-right tile it
+         sliced the clock in half. "31'" rendered as "3⌷". Pre-existing (it
+         clipped "6:30 PM" in the founder's own iPad screenshots) but the
+         ticker made it cost more: a tip time you cannot read is an
+         annoyance, a live clock you cannot read is the feature failing.
+
+         .grTop already reserves 62px for that button. .grTiles reserves
+         nothing, and cannot easily — the grid is auto-fit, so which cell
+         lands in the corner changes with width.
+
+         So the clock moves down beside the score, which is where every
+         scoreboard ever built puts it anyway. The corner now holds only the
+         league name, which is the one thing on the tile that can be clipped
+         without costing anybody anything. */
+      + '<span class="grScore">'
+      +   ((tk && tk.as!=null && tk.hs!=null)
+            ? '<b>'+esc(tk.as)+'</b><s>–</s><b>'+esc(tk.hs)+'</b>' : '')
+      +   '<em class="grWhen'+(tk && tk.state==='in' ? ' grLive' : '')+'">'
+      +     esc((tk && tk.state!=='pre' && tk.detail) ? tk.detail
+                 : (g.tipLabel || tipShort(g.tipISO) || ''))
+      +   '</em>'
+      + '</span>'
 
       + '</button>';
   }).join('');
 
+  if(playing){
+    /* One row, horizontally scrollable, no header. The room you are in is
+       marked and not tappable; everything else stays one tap away. */
+    el.innerHTML = '<div class="grStrip">' + gs.map(function(g){
+      var tk=null; try{ tk=TICK.by[String(g.espnEvent||'')]||null; }catch(_){}
+      var on=(g.nightId===cur);
+      var when=(tk && tk.state!=='pre' && tk.detail) ? tk.detail : (tipShort(g.tipISO)||'');
+      return '<button type="button" class="grChip'+(on?' on':'')+(tk&&tk.state==='in'?' live':'')+'"'
+        + ' data-slate="'+esc(g.nightId)+'"'+(on?' aria-current="true" disabled':'')+'>'
+        + '<i>'+esc(String(g.awayAbbr||g.away||'').slice(0,3).toUpperCase())+'</i>'
+        + (tk&&tk.as!=null ? '<b>'+esc(tk.as)+'</b>' : '')
+        + '<s>·</s>'
+        + '<i>'+esc(String(g.homeAbbr||g.home||'').slice(0,3).toUpperCase())+'</i>'
+        + (tk&&tk.hs!=null ? '<b>'+esc(tk.hs)+'</b>' : '')
+        + '<em>'+esc(when)+'</em>'
+        + '</button>';
+    }).join('') + '</div>';
+    return;
+  }
   el.innerHTML =
       /* THE HEADER IS A QUESTION, AND MID-GAME IT HAS BEEN ANSWERED.
        "Which game are you watching?" is exactly right on the landing
@@ -5642,6 +5908,11 @@ function paintSlate(){
      it; making it draw the rail keeps every one of them correct rather
      than turning a rename into a hunt. */
   paintGameRail();
+  /* AND KICK THE TICKER. Without this the scores only appear on the first
+     25s interval, so the rail a person sees when the page opens is the one
+     with no scores on it — the exact screen this feature exists to replace.
+     tickLoad is idempotent and its own cache decides whether to fetch. */
+  try{ tickLoad(); }catch(_){}
   var el = document.getElementById('slateCard');
   if(!el) return;
   var gs = (SLATE.games || []);
@@ -6580,6 +6851,9 @@ function LS_KEY(){
    be. Adding a new TAB must never require touching this list; adding a new
    game PHASE must. */
 const GAME_SCREENS=["predict","lobby","live","review","predreview","break"];
+/* Guards the mid-question language repaint against re-entering through the
+   observer that watches for its own edits. See applyLang's caller. */
+var LANG_REPAINTING = false;
 let resumeData=null;
 /* ====================================================================
    LIVE ENERGY — the room changes colour with the game
@@ -7101,6 +7375,14 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
   document.getElementById(map[k]).classList.add('active');
   document.getElementById('app').scrollTop=0; window.scrollTo(0,0);
   S.screen=k;
+  /* THE RAIL HAS TO BE TOLD. Its shape depends on where the player is —
+     full tiles while choosing, one line while a question is up — and
+     nothing repainted it when that changed, so the collapse only ever
+     applied if some other event happened to redraw it. qa/platforms.js
+     caught it on six platforms: "mid-question the rail is 205px of a 664px
+     viewport". go() is the single writer of S.screen, so it is the honest
+     place to do this rather than adding a second caller somewhere. */
+  try{ if(typeof paintGameRail==='function') paintGameRail(); }catch(_){}
   /* ============ GAME POSITION vs VIEW — the Game #5 data-loss fix =========
      The save blob used to record only `screen`, and the resume path only
      recognised game screens. The night I added Gametime / Stats / Board /
@@ -8369,7 +8651,26 @@ function renderCatchStrip(qi){
   const card=document.getElementById('catchCard');
   if(!CATCHES.length){card.style.display='none';return;}
   card.style.display='';
-  const locked=(qi>0);
+  /* ============ LOCKED AT KICKOFF, NOT AT ROUND ONE =================
+     Founder, 19 Aug, mid-match: "I can change the Your Watchlist on the
+     soccer match in between games, theres no way to lock it in."
+
+     `qi>0` locks on the ROUND INDEX. Soccer has two rounds — 1H and FT —
+     so round 0 is the whole first half, and the watchlist stayed editable
+     through 45 minutes of live football plus half time. You could set
+     "first corner: LAFC" after watching LAFC take the first corner.
+
+     On basketball the same line looks fine, because Q1 ends and qi moves.
+     It is the same bug in both sports; only soccer is slow enough to show
+     it. The card has always promised "Set these before kickoff" — so it
+     locks on KICKOFF, which is what phaseNow() reports off the feed.
+
+     Fails CLOSED on purpose: if the feed cannot be reached phaseNow()
+     returns something other than 'pre', and a scoring control that cannot
+     prove the match has not started must not stay open. */
+  var started=false;
+  try{ started = (typeof phaseNow==='function') && phaseNow()!=='pre'; }catch(_){ started=true; }
+  const locked=(qi>0)||started;
   const set=CATCHES.filter(c=>S.catchChoices[c.id]).length;
   const done=CATCHES.filter(c=>S.catchResults&&S.catchResults[c.id]!==undefined).length;
   const pend=CATCHES.length-done;
@@ -11529,8 +11830,36 @@ function applySettlement(st){
     if(!mine) return;
     /* A line the box score could not resolve is NOT a wrong answer. It is
        an unsettled line: no points, and the final screen says so, rather
-       than telling a player they got it wrong when nobody knows. */
-    if((st.missing||[]).indexOf(p.id)>=0){ (S.predMissing=S.predMissing||[]).push(p.id); return; }
+       than telling a player they got it wrong when nobody knows.
+
+       ============ AND "ABSENT" COUNTS AS UNRESOLVED ====================
+       This tested ONLY the explicit missing list, and that list is built
+       from basketball's five pick ids. settleFromFeed reads
+       `sportCfg().box` — which is {} for mlb, nfl, nhl and mls
+       (index.html SPORT_CFG) — so on any sport but basketball
+       st.truth holds `winner` and nothing else, and st.missing holds five
+       ids that sport does not use.
+
+       So a baseball pick like `runs` or `hr` was in NEITHER list. It fell
+       through to the pool test, matched nothing, and was graded WRONG with
+       a blank correct answer beside it. Measured against real final feeds:
+       100 of 600 points obtainable. Five of six picks, every player, on
+       every non-basketball night this product has ever run — including
+       both MLS rooms on 19 Aug, and both rooms scheduled for 20 Aug.
+
+       The honest reading of an id the settlement never mentioned is "the
+       feed did not answer this", which is precisely what predMissing means
+       and what finalCardNote already has the words for. Absence of truth
+       is not evidence of a wrong pick.
+
+       This does NOT win anybody their points back — the real resolvers for
+       ten non-basketball picks still have to be written. It stops the app
+       telling a player they were wrong about something it never checked. */
+    var _known = st.truth && Object.prototype.hasOwnProperty.call(st.truth, p.id)
+                 && st.truth[p.id] !== null && st.truth[p.id] !== '';
+    if((st.missing||[]).indexOf(p.id)>=0 || !_known){
+      (S.predMissing=S.predMissing||[]).push(p.id); return;
+    }
     var pool=st.tied[p.id]||[];
     var hit=pool.some(function(n){ return sameName(n, mine); });
     if(hit){
@@ -12832,6 +13161,73 @@ async function joinNight(){
       try{ if(typeof paintRail==='function') paintRail(); }catch(_){}
     }
   }catch(_){}
+  /* ============ A NIGHT BELONGS TO A PERSON, NOT TO A BROWSER =========
+     Two reports from Game Night #13, one omission behind both.
+
+     THE EXPLOIT, in the founder's words: "I could watch the game then log
+     out and then pick the right people because they already know what
+     happened." Reproduced through the front door on the live build, no
+     console, no tampering: a verified account, same uid, same night, a
+     blank six-line card handed back in the fourth quarter, and 600 points
+     landing on the player row.
+
+     The lock on the pre-game card was `S.place`, which lives ONLY in
+     localStorage. doSignOut() ends in freshStart('') -> clearSave() ->
+     removeItem(LS_KEY()). So the guard in startPredict() reads '' and falls
+     through to buildPred(); go('predict'). There was no deadline of any
+     kind on that card — no lock timestamp, no tip-off check, nothing
+     server-side. The only thing that ever stopped a refill was a key the
+     app itself deletes.
+
+     THE OTHER HALF, and it is worse: signing back in did not merely fail
+     to show your points, it DELETED them. SB.myScore() returns the seat
+     correctly, but its only caller sat inside doResume(), which runs only
+     when a local save exists — and freshStart had just removed it. The
+     zeroed local state was then pushed back over the server: caughtPts
+     measured going 40 -> 0 in the database.
+
+     Both halves are the same sentence: every restore in this app hung off
+     a LOCAL SAVE. So ask the server, on every join, for the two things it
+     holds under this uid — the seat and the submission.
+
+     The card lock becomes the SUBMISSION. subs/{uid} is create-only in
+     firestore.rules:140, so its existence is a server fact no sign-out can
+     clear, and the honest pre-tip picks cannot be overwritten. That last
+     part is also why GN1-GN13 remain auditable: any seat whose predPts
+     disagrees with grading its own subs/rP was refilled after the fact.
+
+     The floor is a MAX, never an overwrite — a device that legitimately
+     has more (it just scored and has not pushed yet) keeps it. */
+  if(ok && window.SB){
+    try{
+      var sv = SB.myScore ? await SB.myScore() : null;
+      if(sv){
+        try{ ledgerServerFloor(sv); }catch(_){}
+        /* The client lanes too. ledgerServerFloor covers what the tally
+           owns; these three are computed on the device, and they are
+           exactly the ones that got written back as zeros. */
+        if((Number(sv.caughtPts)||0) > (Number(S.caughtPts)||0))
+          ledgerSet('caught', Number(sv.caughtPts)||0, 0, 'caught');
+        if((Number(sv.predPts)||0)   > (Number(S.predPts)||0))
+          ledgerSet('pred',   Number(sv.predPts)||0,   0, 'pred');
+        if((Number(sv.catchPts)||0)  > (Number(S.catchPts)||0))
+          ledgerSet('catch',  Number(sv.catchPts)||0,  0, 'catch');
+        try{ recomputeScore(); }catch(_){}
+        try{ save(); }catch(_){}
+      }
+    }catch(_){}
+    try{
+      var ps = SB.mySub ? await SB.mySub('rP') : null;
+      if(ps && Array.isArray(ps.picks) && ps.picks.some(function(x){ return !!x; })){
+        preds.forEach(function(pp,i){ if(ps.picks[i]) S.predChoices[pp.id]=String(ps.picks[i]); });
+        /* Anywhere in the game flow is enough to make startPredict()'s
+           guard bite. 'lobby' is the honest one: the card is done, the
+           night is not. */
+        if(GAME_SCREENS.indexOf(S.place||'') < 0) S.place='lobby';
+        try{ save(); }catch(_){}
+      }
+    }catch(_){}
+  }
   if(ok){ startRoomPolling(); startHostedWatch(); }
   return ok;
 }
@@ -16403,18 +16799,56 @@ function renderPortal(){
      what is on tonight, where do I stand, what do I do next, and how do I
      get back into a game I have already started. */
   try{ document.body.classList.toggle('member', !!v); }catch(_){}
-  /* If the backend never came up, the sign-in buttons are decoration: they
-     can only ever toast an apology. Say so on the card itself. A player who
-     taps a dead button twice and gets nothing decides the app is broken;
-     a player who is told the server is down decides to come back. */
+  /* ============ THE DOOR MUST NEVER LOCK ==============================
+     This used to DISABLE the sign-in buttons whenever SB.state was 'error'.
+     Three facts made that the most expensive defect of 19 Aug 2026:
+
+       1. SB.state==='error' is STICKY. Look at the state machine: 'error'
+          is set in two places and NOTHING ever sets it back. Only a full
+          page reload clears it. So one transient blip at any point in an
+          evening disabled sign-in for the rest of the session.
+       2. The buttons were disabled rather than allowed to try — so the
+          player could not even attempt it, and the recovery was a refresh
+          they had to invent for themselves.
+       3. It was pointless. portalGoogle() ALREADY fails safe: its first
+          line is "if(!window.SB || !SB.enabled || !SB.googleSignIn) {
+          toast('Can't reach the server right now — give it a second and
+          tap again.'); return; }". Nobody can lose a night's points by
+          tapping a button that returns a toast. The disabling protected
+          against nothing and cost the entrance.
+
+     It hit the founder's iPhone at 18:48 during GN13, with the room open
+     and four people seated. Practice needs no account but a live night
+     does, so this is a closed door with no handle on the only entrance.
+     Every other defect that night cost a player POINTS. This one costs
+     you the player.
+
+     So: the buttons always work. A tap that tries and reports is strictly
+     better than a control that refuses to try — the same rule this
+     codebase already applies to the voice check and to a blocked control
+     anywhere else: "a blocked control explains and navigates; it never
+     goes dead."
+
+     THE MESSAGE ALSO NAMED THE WRONG SYSTEM. It said "our sign-in server
+     isn't answering" while the condition tests the whole Firestore layer,
+     so anyone debugging from it goes to Firebase Auth and finds nothing
+     wrong. It now says what is actually true and offers the one thing that
+     genuinely clears a sticky state.
+
+     STILL OPEN, deliberately not done tonight: SB's connect path is an
+     anonymous IIFE, so there is no function to call to retry in place.
+     Extracting it into a named, re-runnable connect() is the real fix and
+     it belongs in daylight, not the night before two first-ever sports. */
   try{
     if(!v){
       const dead = !window.SB || SB.state==='off' || SB.state==='error';
       const warn = document.getElementById('portalDown');
       if(warn) warn.style.display = dead ? 'block' : 'none';
+      /* NEVER disabled. Left fully live, at full opacity, so the door looks
+         like a door. */
       ['portalGsi','portalEmailBtn'].forEach(function(id){
         const b=document.getElementById(id);
-        if(b){ b.disabled=!!dead; b.style.opacity=dead?.45:1; b.style.pointerEvents=dead?'none':''; }
+        if(b){ b.disabled=false; b.style.opacity=1; b.style.pointerEvents=''; }
       });
     }
   }catch(_){}
@@ -16760,7 +17194,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-19-heard.169';
+const STATS_BUILD='2026-08-20-fourports.170';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -17223,10 +17657,45 @@ var MENU_GO={
          loadQuestion() — so switching mid-question left the question in the
          old language. This used to call rerenderCurrent(), which has never
          existed anywhere in this file: a comment describing behaviour that
-         never ran, guarded so nobody would find out. */
+         never ran, guarded so nobody would find out.
+
+         AND THE FIX FOR IT WAS ITSELF DEAD. The replacement guarded on
+         `S.place==='play'` — and 'play' is not a member of GAME_SCREENS,
+         which is ["predict","lobby","live","review","predreview","break"].
+         So the repaint has never run either. Two generations of fix for one
+         bug, both dead, with a comment congratulating the first for finding
+         the second's ancestor.
+
+         The founder felt it directly, 19 Aug: "There's no way for me to
+         switch it into spanish mode when im on the app. I go to the menu
+         and do the voice. It does it for one second and then stops." The
+         dictionary updated and the question did not, because this line
+         could never fire.
+
+         Found by qa/places.js, written the same night precisely because
+         this defect had already been found three times in three files. */
+      /* ============ AND IT MUST NOT REPAINT ITS OWN REPAINT =============
+         Turning this on for the first time immediately produced a loop, and
+         qa/i18n.js caught it inside two minutes: 115 DOM mutations in 1.5
+         seconds with nobody touching the page.
+
+         The cycle is loadQuestion() -> it rewrites the question and options
+         -> the language observer sees those mutations -> applyLang() runs
+         again -> this line calls loadQuestion() again. The dead guard was
+         hiding it: a line that never ran could never loop.
+
+         So the repaint is re-entrant-guarded and fires at most once per
+         language change. A flag rather than a debounce, because the
+         question is a discrete thing that needs painting once, not a
+         stream that needs rate-limiting. */
       try{
-        if(S && S.place==='play' && !S.answered && typeof loadQuestion==='function') loadQuestion();
-      }catch(_){}
+        if(!LANG_REPAINTING && S && GAME_SCREENS.indexOf(S.place||'')>=0 &&
+           !S.answered && typeof loadQuestion==='function'){
+          LANG_REPAINTING = true;
+          try{ loadQuestion(); }
+          finally{ setTimeout(function(){ LANG_REPAINTING = false; }, 0); }
+        }
+      }catch(_){ LANG_REPAINTING = false; }
       try{ openMenu(); }catch(_){}
     }catch(_){}
   },
@@ -17482,7 +17951,8 @@ function sportCfg(){
    loop on any device with no signal, which is the exact moment you least
    want the radio hammered. Failures now back off and the screen offers a
    button instead of spinning forever. */
-var GS={ok:false,at:0,loading:false,state:'pre',teams:[],leaders:[],box:{},plays:[],
+/* `ev` IS PART OF THE CACHE KEY, NOT DECORATION. See loadGameStats. */
+var GS={ok:false,at:0,ev:'',loading:false,state:'pre',teams:[],leaders:[],box:{},plays:[],
         wp:[],info:{},line:null,series:[],form:[],seriesSummary:'',err:'',fails:0,lastTry:0};
 /* THE CLOCK, AS A CLOCK. ESPN hands back "30.5" inside the last minute —
    thirty and a half seconds — and printing that raw put a decimal point in
@@ -17510,10 +17980,33 @@ function gsNum(v){ var n=parseFloat(String(v==null?'':v).replace(/[^0-9.\-]/g,''
 async function loadGameStats(force){
   if(GS.loading && GS._p) return GS._p;
   if(GS.loading) return GS;
-  if(!force && GS.ok && Date.now()-GS.at<25000) return GS;
+  /* ============ A CACHE THAT DOES NOT KNOW WHAT IT CACHED ============
+     Founder, 19 Aug, standing in the GN13 flagship room during the game:
+     "Im currently in the lynx on the stats page and its on the tempo game
+     stats."
+
+     The event was read AFTER the cache was consulted, and the cache key
+     was time alone. So switching rooms left GS holding the previous
+     room's summary and handing it straight back — and because the live
+     score ribbon re-polls inside the 25s window, GS.at kept refreshing,
+     so the stale entry never aged out. The Stats tab could show the room
+     you LEFT for the whole night.
+
+     Both rooms were WNBA, so the sport never changed and nothing else
+     could catch it. This is not the hardcoded-league bug at API; it is
+     the same disease one level down — a cache identified by when it was
+     taken instead of by what it is of.
+
+     So: read the event first, and make it part of the key. A different
+     event is a cache MISS, however fresh it is. */
+  var ev=null; try{ ev=(typeof GAME!=='undefined')&&GAME.espnEvent; }catch(_){}
+  ev = ev ? String(ev) : '';
+  if(!force && GS.ok && GS.ev===ev && Date.now()-GS.at<25000) return GS;
+  /* A new room must not inherit the old room's backoff either — that would
+     hold a fresh, healthy game hostage to a previous game's failures. */
+  if(GS.ev!==ev){ GS.fails=0; GS.ok=false; }
   // Exponential-ish backoff after failures: 3s, 6s, 12s, 24s, capped at 60s.
   if(!force && GS.fails>0 && Date.now()-GS.lastTry < Math.min(60000, 3000*Math.pow(2,GS.fails-1))) return GS;
-  var ev=null; try{ ev=(typeof GAME!=='undefined')&&GAME.espnEvent; }catch(_){}
   if(!ev){ GS.err='no event'; GS.fails++; GS.lastTry=Date.now(); return GS; }
   GS.loading=true; GS.lastTry=Date.now();
   var _resolve; GS._p=new Promise(function(r){ _resolve=r; });
@@ -17676,7 +18169,7 @@ async function loadGameStats(force){
        surface that needs something exotic reads it from here instead of
        going out on its own. */
     GS.raw=j;
-    GS.ok=teams.length>0; GS.at=Date.now();
+    GS.ok=teams.length>0; GS.at=Date.now(); GS.ev=ev;
     if(GS.ok){ GS.err=''; GS.fails=0; } else { GS.err='no teams in feed'; GS.fails++; }
     try{ paintTeamColours(); }catch(_){}
   }catch(e){ GS.err=e.message||'feed unavailable'; GS.fails++; }

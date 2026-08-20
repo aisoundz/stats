@@ -81,7 +81,17 @@ const PHONE={width:390, height:844};
        answering made ledgerSet recompute it to 10 — so the payoff counted
        310 DOWN to 10 and the suite happily called that "the total moves".
        Let the app own its own number and the count is real. */
-    S.mode='practice'; S.place='play'; S.qi=0; S.ni=0; S.answered=false;
+    /* ============ 'play' IS NOT A PLACE ==========================
+       Third suite found doing this. GAME_SCREENS is
+       ["predict","lobby","live","review","predreview","break"] and S.place
+       is only ever assigned from that list or "". So this harness drove the
+       app into a state production cannot reach — and on 20 Aug that made
+       this check RED for the wrong reason: the game rail collapses to a
+       one-line ticker on any real game screen, but not on "play", so it
+       stayed at full height and pushed the payoff total below the fold.
+       The product was fine; the stage direction was wrong.
+       "live" is the screen a question and its reveal actually live on. */
+    S.mode='practice'; S.place='live'; S.qi=0; S.ni=0; S.answered=false;
     S.results=[[]];
     try{ go('gametime'); }catch(_){}
     document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));

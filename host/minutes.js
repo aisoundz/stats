@@ -68,6 +68,23 @@ const dateOf = (id) => (String(id).match(/(\d{4}-\d{2}-\d{2})/) || [])[1] || '';
      person's history and not about this night's document count. */
   const seenBefore = new Set();
   const rows = [];
+  /* ============ A ROOM IS A NIGHT ID, SO "PER NIGHT" WAS PER ROOM =====
+     The comment at the top of this file says minutes are summed ACROSS
+     ROOMS per human, "because reading one understates exactly the
+     room-switchers the slate was built for". The code then grouped inside
+     the per-id loop — and every ROOM has its own night id. So a person who
+     played two rooms was counted once in each, `rooms` could never exceed
+     1, and `switchers` was structurally always zero.
+
+     It printed "nobody has ever moved between rooms; the slate is unproven
+     from the player side" — a CONSTANT, dressed as a finding. That sentence
+     was quoted into two published documents on 19 Aug and used as the
+     load-bearing argument for cutting a nine-room Saturday to two. The
+     trk('slate_pick') events for the same evening number 95.
+
+     The intent in the comment was right. This is the accumulator it needed:
+     one bucket per DATE, so every room of the same evening lands together. */
+  const byDate = new Map();   // 'YYYY-MM-DD' -> uid -> {mins, rooms:Set, sessions, name}
 
   for (const id of ids) {
     const tel = await db.collection(`nights/${id}/telemetry`).get();
@@ -86,6 +103,16 @@ const dateOf = (id) => (String(id).match(/(\d{4}-\d{2}-\d{2})/) || [])[1] || '';
       cur.name = cur.name || v.name || '';
       cur.build = v.build || cur.build;
       byUid.set(uid, cur);
+
+      /* and the cross-room bucket for this DATE */
+      const dk = dateOf(id) || id;
+      let dm = byDate.get(dk); if(!dm){ dm = new Map(); byDate.set(dk, dm); }
+      let dv = dm.get(uid);
+      if(!dv){ dv = { mins:0, rooms:new Set(), sessions:0, name:'' }; dm.set(uid, dv); }
+      dv.mins += Number(v.mins) || 0;
+      dv.rooms.add(id);
+      dv.sessions = Math.max(dv.sessions, Number(v.sessions) || 1);
+      dv.name = dv.name || v.name || '';
     });
 
     const mins = [...byUid.values()].map(v => v.mins);
@@ -131,8 +158,26 @@ const dateOf = (id) => (String(id).match(/(\d{4}-\d{2}-\d{2})/) || [])[1] || '';
   console.log(`nights with telemetry : ${live.length} of ${rows.length}`);
   console.log(`distinct humans ever  : ${seenBefore.size}`);
   console.log(`median session, typical night : ${pct(allMed, 50)} min`);
-  const sw = live.reduce((a, r) => a + r.switchers, 0);
+  /* SWITCHERS, COUNTED ACROSS THE ROOMS OF ONE EVENING. The per-row
+     `switchers` column above is per-room and is therefore always 0 by
+     construction; it stays only so the two numbers can be compared and the
+     old one is never quoted again by mistake. */
+  let sw = 0, multi = [];
+  byDate.forEach((dm, dk) => {
+    dm.forEach((v, uid) => {
+      if (v.rooms.size > 1) { sw++; multi.push(dk + '  ' + (v.name || uid) + '  ' + v.rooms.size + ' rooms, ' + Math.round(v.mins) + ' min'); }
+    });
+  });
   console.log(`room-switchers, all nights    : ${sw}` +
-    (sw === 0 ? '   ← nobody has ever moved between rooms; the slate is unproven from the player side' : ''));
+    (sw === 0 ? '   ← no evening has a person in two rooms YET (counted across rooms, not within one)' : '   ← counted across the rooms of one evening'));
+  multi.slice(0, 8).forEach(m => console.log('    ' + m));
+
+  /* THE PER-HUMAN EVENING, which is what a session actually is. */
+  const evenings = [];
+  byDate.forEach(dm => dm.forEach(v => { if (v.mins > 0) evenings.push(v.mins); }));
+  if (evenings.length) {
+    console.log(`median EVENING per human      : ${pct(evenings, 50)} min   (n=${evenings.length}, summed across that night's rooms)`);
+    console.log(`longest evening               : ${Math.round(Math.max.apply(null, evenings))} min`);
+  }
   console.log('');
 })().catch(e => { console.error('FATAL:', e.message); process.exit(1); });

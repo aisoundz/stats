@@ -1,5 +1,5 @@
 {
-  "acceptance.js": 13,
+  "acceptance.js": 20,
   "board-order.js": 14,
   "feed-path.js": 14,
   "voice-lang.js": 55,
@@ -14,5 +14,8 @@
   "localise.js": 16,
   "i18n.js": 23,
   "season.js": 12,
-  "change-it.js": 6
+  "change-it.js": 6,
+  "chrome.js": 40,
+  "places.js": 3,
+  "switch.js": 10
 }

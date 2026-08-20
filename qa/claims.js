@@ -154,7 +154,7 @@ claim('payoff.is-not-the-smallest-thing',
   async ({page})=>{
     const r=await page.evaluate(async()=>{
       try{ VX.setLang('en'); }catch(_){}
-      S.mode='practice'; S.place='play'; S.qi=0; S.ni=0; S.answered=false; S.results=[[]];
+      S.mode='practice'; S.place='live' /* was 'play' — not a member of GAME_SCREENS, so this drove the app into a state production cannot reach */; S.qi=0; S.ni=0; S.answered=false; S.results=[[]];
       try{ go('gametime'); }catch(_){}
       document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
       const g=document.getElementById('s-gametime'); if(g) g.classList.add('active');

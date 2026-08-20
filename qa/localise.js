@@ -81,7 +81,7 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
     const res={};
     for(const lang of ['en','es']){
       VX.lang = lang;
-      S.mode='practice'; S.place='play'; S.qi=0; S.ni=0; S.answered=false; S.results=[[]];
+      S.mode='practice'; S.place='live' /* was 'play' — not a member of GAME_SCREENS, so this drove the app into a state production cannot reach */; S.qi=0; S.ni=0; S.answered=false; S.results=[[]];
       try{ go('gametime'); }catch(_){}
       document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
       document.getElementById('s-gametime').classList.add('active');
@@ -134,7 +134,7 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
     const res={};
     for(const lang of ['en','es']){
       VX.lang=lang;
-      S.mode='practice'; S.place='play'; S.qi=0; S.ni=0; S.answered=false; S.results=[[]];
+      S.mode='practice'; S.place='live' /* was 'play' — not a member of GAME_SCREENS, so this drove the app into a state production cannot reach */; S.qi=0; S.ni=0; S.answered=false; S.results=[[]];
       try{ go('gametime'); }catch(_){}
       document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
       document.getElementById('s-gametime').classList.add('active');
@@ -169,7 +169,7 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
     const out={};
     for(const lang of ['en','es']){
       VX.lang=lang;
-      S.mode='practice'; S.place='play'; S.qi=0; S.ni=0; S.answered=false;
+      S.mode='practice'; S.place='live' /* was 'play' — not a member of GAME_SCREENS, so this drove the app into a state production cannot reach */; S.qi=0; S.ni=0; S.answered=false;
       S.lifelineHalf1=false; S.lifelineHalf2=false;
       const real=rounds[0].q[0];
       const keep=JSON.parse(JSON.stringify(real));
