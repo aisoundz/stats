@@ -6043,17 +6043,55 @@ function featureTonight(){
   if(hereIsTonight) return '';
   if(!SLATE.games || !SLATE.games.length) return '';
 
-  /* WHICH game is tonight's, in the marquee's own order of preference.
-     `gotn` is the Game of the Night and there is at most one a day.
-     `flagship` is a WEAKER flag — on 20 Aug it is true on BOTH games, so
-     filtering on it alone and taking [0] would have featured the 5:05
-     baseball game on a night whose marquee is the 7:00 football game.
-     Earliest tip is the last resort so this still does something sensible
-     on a slate the marquee never stamped. */
-  var star = SLATE.games.filter(function(g){ return g && g.gotn; })[0]
-          || SLATE.games.filter(function(g){ return g && g.flagship; })[0]
-          || SLATE.games.slice().sort(function(a,b){
-               return String(a.tipISO||'').localeCompare(String(b.tipISO||'')); })[0];
+  /* ============ THE MARQUEE FOLLOWS THE CLOCK ========================
+     Founder, 20 Aug, looking at the live front door at 4pm: the hero was
+     the 7:00 football game while the 5:05 baseball game was the next thing
+     to start. "Yes that should be the case, it should always be in order."
+
+     He is right, and the old rule was wrong in a way that gets worse as the
+     slate grows. It ranked by `gotn`, then `flagship`, then earliest tip.
+     On a four-room Saturday running 10:00 to 7:30 that would have pinned
+     the marquee to one game for nine and a half hours, so a reader opening
+     the site at noon would be counted down to something six hours away
+     while the room they could actually join went unmentioned.
+
+     THE MARQUEE IS "WHAT IS ON NOW, OR NEXT". In tip order:
+       · a game that has started and has not finished wins outright. If two
+         are live, the one that started most recently, because that is the
+         one the rail has just moved to.
+       · otherwise the next one to tip.
+       · once everything is over, the last one, so the page reads as a
+         result rather than a countdown to nothing.
+
+     The star is NOT gone. It still marks the Game of the Night on its tile
+     in the rail, which is the thing he actually likes. It just stopped
+     deciding what the countdown is counting down to. It now only breaks a
+     tie between games that tip at the same minute, which is the only place
+     a preference is still meaningful. */
+  var NOW = Date.now();
+  var ordered = SLATE.games.filter(function(g){ return g && g.nightId; })
+    .slice().sort(function(a,b){
+      var d = String(a.tipISO||'').localeCompare(String(b.tipISO||''));
+      if(d) return d;
+      /* same minute: the starred one goes first */
+      return (b.gotn?2:b.flagship?1:0) - (a.gotn?2:a.flagship?1:0);
+    });
+  if(!ordered.length) return '';
+
+  var tipOf = function(g){ var t = Date.parse(g.tipISO||''); return isNaN(t) ? Infinity : t; };
+  /* A game is "done" when the feed says final, or failing that when enough
+     time has passed that it cannot still be on. The window is deliberately
+     generous: a marquee that moves on too early is a page announcing the
+     wrong game while the right one is still being played. */
+  var RUN_MS = 4*60*60*1000;
+  var doneOf = function(g){
+    try{ if(g.state && /final|post/i.test(String(g.state))) return true; }catch(_){}
+    return NOW > tipOf(g) + RUN_MS;
+  };
+
+  var live = ordered.filter(function(g){ return NOW >= tipOf(g) && !doneOf(g); });
+  var star = live.length ? live[live.length-1]
+           : (ordered.filter(function(g){ return NOW < tipOf(g); })[0] || ordered[ordered.length-1]);
   if(!star || !star.nightId) return '';
 
   /* THE SPORT MOVES FIRST, ALWAYS. hydrateNight() refuses a config whose
