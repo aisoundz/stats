@@ -5832,6 +5832,23 @@ function featureTonight(){
      already held and already tested elsewhere is precisely the disease
      this file keeps catching, so the copy is gone rather than kept
      "for safety". */
+  /* ============ REPAINT THE CARD, NOT JUST THE CLOCK =================
+     THE BUG THAT SHIPPED THREE TIMES. applySport() owns every line of the
+     marquee card — headline, matchup, both codes, both nicknames, the tip
+     line, both chips — and it runs ONCE, at boot, long before the slate has
+     come back from Firestore. So it painted with TONIGHT still null, and
+     nothing ever painted it again. Only the clock was repainted here, which
+     is why the founder's screen read "TIPS IN 10:20:48" — tonight's kickoff,
+     correct — directly under "GAME NIGHT #13 · WED · AUGUST 19" and LYNX at
+     VALKYRIES.
+
+     qa/hero.js did not catch it because the TEST called applySport() itself,
+     immediately after featureTonight(). The harness did the work the app was
+     supposed to do, so the check passed while the product stayed broken —
+     the precise failure documented in the skill's verification reference,
+     walked into an hour after writing it down. The test no longer paints;
+     it asserts that this line did. */
+  try{ if(typeof applySport==='function') applySport(); }catch(_){}
   try{ if(typeof paintHeroRibbon==='function') paintHeroRibbon(); }catch(_){}
   try{ if(typeof paintChrome==='function') paintChrome(); }catch(_){}
   return star.nightId;
@@ -17513,7 +17530,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-20-ready.173';
+const STATS_BUILD='2026-08-20-onepaint.174';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

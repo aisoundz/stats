@@ -126,7 +126,12 @@ const NFL = {
        headline saying WED · AUGUST 19. Paint it for real and read the DOM
        back: every line has to name tonight, and nothing may still name
        last night. */
-    try { applySport(); } catch (e) { out.paintThrew = String(e); }
+    /* THE TEST DOES NOT PAINT. It used to call applySport() right here,
+       which meant the harness was doing the app's job: featureTonight()
+       changed TONIGHT and never repainted, the test painted for it, every
+       check went green, and the founder's screen kept showing last night
+       under tonight's countdown — three deploys running. If the app does
+       not repaint, these checks must go red. */
     const txt = id => { const el = document.getElementById(id); return el ? (el.innerText || el.textContent || '') : '(missing)'; };
     out.card = {
       head:  txt('landingHead'),
