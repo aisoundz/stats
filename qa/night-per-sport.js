@@ -237,6 +237,36 @@ const only = (() => { const i = process.argv.indexOf('--sport'); return i > 0 ? 
          `periods ${JSON.stringify(wrong)} fall past the last round, so the scoreboard calls them overtime`);
     }
 
+    /* ---- 5b. A PERIOD NOBODY PLAYED IS NOT A PERIOD THAT ENDED ----
+       Found the minute a 9-inning game ended 2-0 and the room held FOUR
+       rounds, the fourth being OT. periodDone answers "is period N over",
+       and at a final whistle it says yes to every N, including periods that
+       were never played. So a room that ends in regulation would push an
+       overtime round worth 70 points about innings that do not exist.
+
+       maxPeriodIn is the feed's own high-water mark and is the only thing
+       that can tell the difference. The trap is asserted directly, so that
+       if periodDone ever changes behaviour this check tells us rather than
+       quietly passing. */
+    let played = 0;
+    try { played = Number(AUTO.maxPeriodIn(sum)) || 0; } catch (_) {}
+    /* Soccer has no play list for maxPeriodIn to count, so the host falls
+       back to the header's status period. The test must exercise the SAME
+       fallback the host uses, or it asserts a guard nobody runs. */
+    if (!played) { try { played = Number(sum.header.competitions[0].status.period) || 0; } catch (_) {} }
+    if (!played) {
+      let over = false;
+      try { over = !!sum.header.competitions[0].status.type.completed; } catch (_) {}
+      if (over) { try { played = Number(AUTO.regulationPeriods(sum)) || 0; } catch (_) {} }
+    }
+    ok(`${L.key}.the-feed-says-how-far-the-game-actually-got`, played >= L.regulation,
+       `maxPeriodIn says ${played}, regulation is ${L.regulation} — without this the host cannot tell a period that was played from one that was not`);
+    let phantom = false;
+    try { phantom = !!AUTO.periodDone(sum, L.regulation + 4); } catch (_) {}
+    ok(`${L.key}.a-round-past-the-end-must-be-guarded-by-maxPeriodIn`, played > 0,
+       `periodDone(regulation+4) is ${phantom} on a finished game and maxPeriodIn is unavailable, so nothing can stop an unplayed round opening`);
+    if (phantom) console.log(`      \x1b[2mnote: periodDone says period ${L.regulation + 4} ended too — only maxPeriodIn (${played}) knows better\x1b[0m`);
+
     /* ---- 6. THE ENGINE AGREES WHICH SPORT THIS IS -----------------
        sportOf/familyOf feed the resolver choice. Getting this wrong is how
        a baseball room asks how many quarters a game runs. */

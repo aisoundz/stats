@@ -708,10 +708,58 @@ async function main(){
         }
       }
 
+      /* ============ A PERIOD NOBODY PLAYED IS NOT A PERIOD THAT ENDED ==
+         Found 20 Aug, minutes after the final out of a 9-inning game that
+         finished 2-0: the room held FOUR rounds, and the fourth was OT.
+
+         periodDone answers "is period N over", and at Final it says yes to
+         every N, including innings that were never played. Nothing had ever
+         noticed because in basketball the OT round only exists in the plan
+         when a hand-written night added it, and no automated night had
+         reached a final buzzer in a sport with a standing OT template.
+
+         So a room that ends in regulation would push an overtime round to
+         every phone, worth 70 points, about innings that do not exist. The
+         resolvers would then be asked to read them, and the honest ones
+         would void while the band questions answered "none" for a period
+         that never happened.
+
+         maxPeriodIn is the feed's own high-water mark. A round whose period
+         is past it did not happen, whatever the status says. */
+      let playedTo = 0;
+      try{ playedTo = Number(AUTO.maxPeriodIn(sum)) || 0; }catch(_){}
+      /* SOCCER HAS NO PLAY LIST, so maxPeriodIn has nothing to count and
+         returns 0 — which would have made the guard above silently inert
+         for MLS, protecting four sports out of five. Caught by
+         qa/night-per-sport.js on its first run, which is the entire reason
+         that suite exists.
+
+         Three fallbacks, in descending order of directness. The header's
+         status period is what the scoreboard reads, and it is present in
+         most feeds. It is NOT present in soccer's, whose status carries a
+         type and nothing else — so the last resort is the only inference
+         that is always safe: a match the feed calls completed played at
+         least its regulation periods. */
+      if(!playedTo){
+        try{ playedTo = Number(sum.header.competitions[0].status.period) || 0; }catch(_){}
+      }
+      if(!playedTo){
+        let over = false;
+        try{ over = !!sum.header.competitions[0].status.type.completed; }catch(_){}
+        if(over){ try{ playedTo = Number(AUTO.regulationPeriods(sum)) || 0; }catch(_){} }
+      }
+
       for(const sl of slots){
         const i = sl.i;
         const rid = 'r' + i, doc = live[rid] || null, R = sl.def;
         if(!R) continue;                       // overtime with no template
+        if(playedTo && Number(sl.per) > playedTo){
+          if(!acted['unplayed' + i]){
+            acted['unplayed' + i] = true;
+            log('skip', `${R.tag} covers period ${sl.per}, and this game only reached ${playedTo} — not opening a round for innings nobody played`);
+          }
+          continue;
+        }
         let done = false;
         try{ done = AUTO.periodDone(sum, sl.per); }catch(_){}
 
