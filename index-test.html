@@ -10291,23 +10291,55 @@ var VX=(function(){
      on load is how it got here. */
   try{ V.on = V.hasOut && localStorage.getItem(KEY)==='1'; }catch(_){}
   V.primed = false;
+  V.primeEvents = ['pointerdown','keydown','touchend'];
+  V.primeArm = function(){
+    try{ V.primeEvents.forEach(function(ev){
+      window.addEventListener(ev, V.primeOnGesture, true); }); }catch(_){}
+  };
+  V.primeDisarm = function(){
+    try{ V.primeEvents.forEach(function(ev){
+      window.removeEventListener(ev, V.primeOnGesture, true); }); }catch(_){}
+  };
   V.primeOnGesture = function(){
     if(V.primed || !V.on || !V.hasOut) return;
-    V.primed = true;
-    try{ ['pointerdown','keydown','touchend'].forEach(function(ev){
-      window.removeEventListener(ev, V.primeOnGesture, true); }); }catch(_){}
-    /* Short, and said from inside the gesture. Its job is to unlock the
-       engine, not to be informative; the question that follows is the
-       informative part. */
-    try{ V.say(V.L().tag && /^es/.test(V.L().tag) ? 'Voz activada.' : 'Voice is on.'); }catch(_){}
+    /* ============ PROVE IT, DO NOT ASSUME IT ==========================
+       The old version set V.primed and removed the listeners BEFORE it
+       spoke, and nothing in this file ever set an onstart handler. So if
+       that first utterance was dropped — a busy audio session, a voice list
+       that had not populated yet, iOS contention with the Caught It chime —
+       the prime was spent and there was no second chance. On, and mute,
+       for the rest of the night: "The voice doesnt work on any device. You
+       cant hear it eventhough its on."
+
+       That is the same one-shot-with-no-failure-detection shape as the bug
+       this mechanism was written to fix, one layer down. The gesture is
+       only consumed once the engine has actually started speaking. */
+    V.primeDisarm();
+    var say = (V.L().tag && /^es/.test(V.L().tag)) ? 'Voz activada.' : 'Voice is on.';
+    try{
+      window.speechSynthesis.cancel();
+      var u = new window.SpeechSynthesisUtterance(say);
+      u.lang = V.L().tag;
+      try{ var vv=V.voice(); if(vv){ u.voice=vv; u.lang=vv.lang||V.L().tag; } }catch(_){}
+      u.onstart = function(){ V.primed = true; };
+      u.onerror = function(){ if(!V.primed) V.primeArm(); };
+      window.speechSynthesis.speak(u);
+      /* Nothing started within a second and a half: the engine did not take
+         it. Put the door back so the next touch can try again. */
+      setTimeout(function(){ if(!V.primed) V.primeArm(); }, 1500);
+    }catch(_){ V.primeArm(); }
   };
-  try{
-    if(V.on && V.hasOut){
-      ['pointerdown','keydown','touchend'].forEach(function(ev){
-        window.addEventListener(ev, V.primeOnGesture, true);
-      });
-    }
-  }catch(_){}
+  try{ if(V.on && V.hasOut) V.primeArm(); }catch(_){}
+  /* A BACKGROUNDED TAB STOPS THE MOUTH, NOT ONLY THE EAR. Chrome pauses the
+     synthesis queue when a tab is hidden and does not restart it, so the app
+     comes back with the bar reading "Reading the question…" over silence —
+     word for word "you cant hear it eventhough its on". There was a
+     visibilitychange handler for the recogniser and none for this. */
+  try{ document.addEventListener('visibilitychange', function(){
+    if(document.hidden || !V.on || !V.hasOut) return;
+    try{ if(window.speechSynthesis.paused) window.speechSynthesis.resume(); }catch(_){}
+    if(!V.primed) V.primeArm();
+  }); }catch(_){}
 
   /* FOLD THE ACCENTS BEFORE STRIPPING, NOT AFTER. The old line deleted
      every character outside [a-z0-9' ], which in Spanish is not punctuation
@@ -10732,7 +10764,16 @@ var VX=(function(){
              something, and the 350ms floor keeps the tail of our own
              utterance from counting. */
           try{
-            if(V.speaking && String(res[0].transcript||'').trim().length>1
+            /* NOT ON A CAUGHT IT. Barge-in is right on a round question:
+               the player knows the answer, so we stop talking. It is wrong
+               here. This card is short and most of it is the options; on a
+               laptop the recogniser transcribes our own loudspeaker,
+               produces an interim, and we cut ourselves off — leaving the
+               player holding half a list he cannot answer. Content cannot
+               tell our echo from his answer, because he is saying the words
+               we just read out. The surface can. */
+            var _onCI=false; try{ _onCI=V.onCatch(); }catch(_){}
+            if(!_onCI && V.speaking && String(res[0].transcript||'').trim().length>1
                && (Date.now()-(V.spokeAt||0))>350){
               window.speechSynthesis.cancel(); V.speaking=false; V.paint();
             }
@@ -10901,7 +10942,12 @@ var VX=(function(){
        on top of everything, so it hears first. Then the pick sheet, then
        the quarter question. Global commands go LAST so that a sport whose
        option is the word "board" can never be stolen by navigation. */
-    try{ if(V.onCatch()){ if(V.heardCatch(raw)) return true; } }catch(_){}
+    /* onCatchCard, not onCatch: a card that locked while the player was
+       still speaking is the case worth handling, and onCatch() is already
+       false by then. heardCatch decides what to do with it, and bounds
+       itself so a stale locked card cannot swallow a navigation word
+       minutes later. */
+    try{ if(V.onCatchCard()){ if(V.heardCatch(raw)) return true; } }catch(_){}
     try{ if(V.onPickCard()){ if(V.heardPick(raw)) return true; } }catch(_){}
     var opts=curOpts();
     if(!opts.length){ try{ if(V.globalCmd(_t)) return true; }catch(_){} return false; }
@@ -11184,6 +11230,31 @@ var VX=(function(){
       return !!c.querySelector('.ciopt:not([disabled])');
     }catch(_){ return false; }
   };
+  /* ============ ON SCREEN IS NOT THE SAME AS STILL OPEN ==============
+     onCatch() means "there is something here I can still answer", which is
+     the right question for whether to announce a card or open the ear. It
+     is the wrong question for what to do with an answer that has just
+     arrived, because the interesting case is precisely the one where the
+     window closed while the player was speaking — and there onCatch() is
+     already false and catchOpts() already returns nothing.
+
+     So the first version of the too-late message was unreachable in exactly
+     the situation it was written for. The check that drives a locked card
+     and asserts the player is told found that in one run. */
+  V.onCatchCard=function(){
+    try{
+      var c=document.getElementById('ciCard');
+      if(!c || c.style.display==='none') return false;
+      return !!c.querySelector('.ciopt');
+    }catch(_){ return false; }
+  };
+  V.catchOptsAll=function(){
+    try{
+      return Array.prototype.map.call(document.querySelectorAll('#ciCard .ciopt'),
+        function(b){ return { label:(b.textContent||'').trim(), v:b.getAttribute('data-civ') }; })
+        .filter(function(x){ return x.label; });
+    }catch(_){ return []; }
+  };
   V.askCatch=function(){
     if(!V.on || !V.onCatch()) return;
     var q=''; try{ q=(document.querySelector('#ciCard .ciq')||{}).textContent||''; }catch(_){}
@@ -11191,22 +11262,102 @@ var VX=(function(){
     var o=V.catchOpts(); if(!o.length) return;
     /* Announced, because it arrives unasked. A player watching the game
        has no reason to look down and every reason not to. */
+    /* ============ EVERY SYLLABLE IS SPENT OUT OF THE WINDOW ===========
+       The window does not pause while we talk. Three things went, and
+       together they are about two seconds of a card:
+
+         · the "Caught It." preamble — ciChime() has already announced the
+           card with a sound, and saying it as well spends a second
+           repeating what the ear already knows;
+         · the leading marker glyph, which a synthesiser either mangles or
+           reads aloud as a word;
+         · the numbering, on short sets. "Fastball, breaking ball, or
+           changeup?" is shorter than "1. Fastball. 2. Breaking ball. 3.
+           Changeup." and it is how a person actually asks a question.
+           Numbering stays for longer or numeric sets, where "say the
+           number" is genuinely the easier reply.
+
+       This is the conversational half of the fix; the window raise is the
+       other half. Both were needed: the window alone would still have left
+       a card that sounds like a form being read out. */
+    var labels=o.map(function(x){ return x.label; });
+    var lead=String(q).replace(/^[^A-Za-z0-9¿¡]+/,'').trim();
+    var numeric=labels.some(function(l){ return /^[\d]/.test(String(l).trim()); });
+    var line=(labels.length<=3 && !numeric)
+      ? (labels.slice(0,-1).join(', ')+', or '+labels[labels.length-1]+'?')
+      : V.optionLine(labels);
+    /* THE MARKER IS SAID ONCE A NIGHT, NOT ONCE A CARD. A Caught It arrives
+       unasked, so the first one has to say what it is — otherwise a voice
+       lands out of nowhere and the player does not know a card is open.
+       After that the chime carries the same meaning in a tenth of a second
+       and the words are pure cost, eight times a game, out of a window the
+       player needs to answer in. Teach it once, then get out of the way. */
+    var mark = V.saidCaughtOnce ? '' : (V.L().LINES.caught || '');
+    V.saidCaughtOnce = true;
     V.wantEar=true;
-    V.say(V.L().LINES.caught+q+' \u2026 '+V.optionLine(o.map(function(x){return x.label;})),
-      function(){ V.ear(); });
+    V.say(mark+lead+' \u2026 '+line, function(){ V.ear(); });
     V.paint();
   };
   V.heardCatch=function(raw){
-    if(!V.on || !V.onCatch()) return false;
-    var o=V.catchOpts(); if(!o.length) return false;
+    if(!V.on) return false;
+    var live=V.onCatch();
+    if(!live && !V.onCatchCard()) return false;
+    var o = live ? V.catchOpts() : V.catchOptsAll();
+    if(!o.length) return false;
     var m=V.match(raw, o.map(function(x){ return x.label; }));
     if(!m) return false;
-    if(m.kind==='ambiguous'){ V.deafSay('Say the number instead.'); return true; }
+    /* THE WINDOW CLOSED WHILE HE WAS TALKING. He was recognised and he was
+       understood; the only thing that went wrong is that reading the
+       question aloud costs seconds the card was counting. Say that, mark
+       it, and let the resolved view say "too late" instead of "you sat this
+       one out" — which is the app blaming a player for its own arithmetic. */
+    if(!live){
+      /* ONLY IF IT JUST CLOSED. An answer arriving three seconds after the
+         lock is a late answer and deserves an explanation. The same words
+         two minutes later are somebody talking about something else, and a
+         locked card sitting on screen must not eat them. */
+      var _ds=null, _lockAt=0;
+      try{ _ds=(document.getElementById('ciCard')||{}).dataset||{}; }catch(_){}
+      try{ _lockAt=Number((_ds&&_ds.cilockat)||0)||0; }catch(_){}
+      if(!_lockAt || (Date.now()-_lockAt) > 25000) return false;
+      try{
+        var _lq=(_ds&&_ds.ciqid)||'';
+        if(_lq){ V.lateSaid=V.lateSaid||{}; V.lateSaid[_lq]=true; }
+      }catch(_){}
+      V.deafSay('Too late on that one, the window had closed.');
+      return true;
+    }
+    /* AN ECHO OF OUR OWN OPTION LIST IS ALWAYS "AMBIGUOUS", because every
+       option is contained in it. V.isEcho cannot catch it — it demands a
+       contiguous substring longer than half of what we said, and a
+       recogniser never returns one that clean — so the echo arrived here,
+       and V.deafSay aborts the microphone and cancels the read-out. The app
+       could therefore, inside one card: stop reading the question, close
+       the ear, and spend a second telling the player to say the number.
+       If we are still speaking, that was us. */
+    if(m.kind==='ambiguous'){
+      if(V.speaking) return true;
+      V.deafSay('Say the number instead.'); return true;
+    }
     if(m.kind!=='pick') return false;
     var hit=o[m.i]; if(!hit) return false;
     var btn=null;
     try{ btn=document.querySelector('#ciCard .ciopt[data-civ="'+CSS.escape(String(hit.v))+'"]'); }catch(_){}
-    if(!btn || btn.disabled) return false;
+    if(!btn) return false;
+    /* TOO LATE IS NOT THE SAME AS NOT HEARD. This returned false in
+       complete silence for an answer that was recognised correctly and
+       matched correctly, and the resolved card then read "You sat this one
+       out" — the app blaming the player for a window it had spent reading
+       the question aloud. Say what happened, and leave a mark so the card
+       does not accuse him. It never clicks: a locked card is locked. */
+    if(btn.disabled){
+      try{
+        var _cq=((document.getElementById('ciCard')||{}).dataset||{}).ciqid||'';
+        if(_cq){ V.lateSaid=V.lateSaid||{}; V.lateSaid[_cq]=true; }
+      }catch(_){}
+      V.deafSay('Too late on that one, the window had closed.');
+      return true;
+    }
     V.pause(); V.hush();
     try{ btn.click(); }catch(_){}
     /* No read-back of an answer here and no result: the card locks the
@@ -12638,6 +12789,12 @@ function answer(choice,btn){
     /* Same easing and duration the round summary uses, so the two moments
        feel like the same product. */
     try{ countTo('revNow', wasPts, S.pts, 900); }catch(e){}
+    /* THE BIGGER MOMENT. A round question is worth many times a Caught It
+       and there are only a handful a night, so this one gets more than the
+       in-play burst does — and more again on a run, which is the behaviour
+       the whole game is trying to grow. The number counting up and the
+       screen celebrating are the same event; they should arrive together. */
+    try{ celebrate((Number(S.streak)||0) >= 3 ? 3 : 2); }catch(_){}
   }else{
     const miss=choice?`You picked <b>${choice}</b>.`:`Time's up — no answer locked.`;
     rb.innerHTML=`<div class="reveal bad"><div class="r1">✕ ${choice?'NOT QUITE':'MISSED IT'}</div>
@@ -15668,6 +15825,18 @@ function ciRecapCard(){
 }
 
 function ensureCiCard(){
+  /* A CARD WITHOUT ITS INNER CAN NEVER PAINT, AND SAYS NOTHING ABOUT IT.
+     This returned early whenever #ciCard existed, on the assumption that
+     if the outer element is there the whole card is. ciShow() then looks
+     for #ciInner, does not find it, and returns — so every Caught It for
+     the rest of the session is drawn into nothing, with no error, no
+     warning and a card element sitting in the DOM to prove it "exists".
+     That is the same silent-no-op the comment in ciShow() was written
+     about, one level up. If the inner is gone, rebuild the lot. */
+  try{
+    var _c=document.getElementById('ciCard');
+    if(_c && !document.getElementById('ciInner')) _c.remove();
+  }catch(_){}
   if(document.getElementById('ciCard')) return;
   var css=document.createElement('style');
   css.textContent =
@@ -16160,7 +16329,151 @@ function ciFlush(){
   PCI.pending=null;
   try{ renderCiCard(q); }catch(_){}
 }
+
+/* ============ THE PART THAT MAKES IT A GAME ==========================
+   Founder, 21 Aug: "Think of what type of dopamine can we provide to the
+   user in the game from confeti to celbrations and more. This has to be
+   the game that everyone who loves sports wants to play."
+
+   Everything else in this file is about being CORRECT. This is the only
+   thing in it that exists to be FUN, and it is not decoration — the whole
+   product is a bet that paying attention is worth something, and the
+   moment you were right is the moment that bet pays. Until now that moment
+   was a green tick and a number.
+
+   Three deliberate rules:
+
+     · IT NEVER BLOCKS. pointer-events:none, no modal, no dismissal. The
+       game on the television is the thing being watched; a celebration
+       that has to be closed is a punishment.
+     · IT ESCALATES. One right answer is a small burst. Three in a row is
+       bigger and gold. Five is the whole screen. A reward that is the same
+       size every time stops being a reward by the third one, and the
+       streak is the behaviour worth growing.
+     · IT RESPECTS prefers-reduced-motion. Not a nicety: this fires during
+       a live broadcast, and for some people a screenful of moving
+       particles is genuinely unpleasant. They get a single calm pulse of
+       the same colour instead, so the payoff still lands.
+
+   No library — the CSP forbids one, and a few dozen rectangles on a canvas
+   is less code than importing something would be. */
+var CELEB = { cv:null, ctx:null, parts:[], raf:0, until:0 };
+
+function celebReduced(){
+  try{ return window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches; }
+  catch(_){ return false; }
+}
+
+function celebCanvas(){
+  if(CELEB.cv && CELEB.cv.isConnected) return CELEB.cv;
+  var cv=document.createElement('canvas');
+  cv.id='celebCv';
+  cv.style.cssText='position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9200;display:block';
+  cv.setAttribute('aria-hidden','true');
+  document.body.appendChild(cv);
+  CELEB.cv=cv; CELEB.ctx=cv.getContext('2d');
+  return cv;
+}
+
+/* The room's own colours if we have them, so the confetti belongs to the
+   game being watched rather than to the app. Falls back to the brand. */
+function celebColours(){
+  var c=[];
+  try{
+    if(GAME && GAME.awayColor) c.push('#'+String(GAME.awayColor).replace(/^#/,''));
+    if(GAME && GAME.homeColor) c.push('#'+String(GAME.homeColor).replace(/^#/,''));
+  }catch(_){}
+  c.push('#28e0d0','#ffc54d','#ffffff');
+  return c.filter(function(x){ return /^#[0-9a-f]{3,8}$/i.test(x); });
+}
+
+/* level 1 = a right answer · 2 = three in a row · 3 = five or more */
+function celebrate(level){
+  try{
+    level = Math.max(1, Math.min(3, Number(level)||1));
+    if(celebReduced()){
+      /* One calm pulse, no particles. */
+      try{
+        var f=document.createElement('div');
+        f.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:9200;'+
+          'background:radial-gradient(circle at 50% 62%,rgba(40,224,208,.30),transparent 62%);'+
+          'opacity:0;transition:opacity .35s ease';
+        document.body.appendChild(f);
+        requestAnimationFrame(function(){ f.style.opacity='1';
+          setTimeout(function(){ f.style.opacity='0';
+            setTimeout(function(){ try{ f.remove(); }catch(_){} }, 420); }, 260); });
+      }catch(_){}
+      return;
+    }
+
+    var cv=celebCanvas(), ctx=CELEB.ctx;
+    var dpr=Math.min(2, window.devicePixelRatio||1);
+    var W=cv.clientWidth, H=cv.clientHeight;
+    cv.width=Math.floor(W*dpr); cv.height=Math.floor(H*dpr);
+    try{ ctx.setTransform(dpr,0,0,dpr,0,0); }catch(_){}
+
+    var cols=celebColours();
+    var n=[26, 60, 120][level-1];
+    var power=[9, 13, 17][level-1];
+    /* From just under the scoreboard, which is where the eye already is. */
+    var ox=W*0.5, oy=H*0.62;
+    for(var i=0;i<n;i++){
+      var a=(Math.PI*2)*(i/n) + (Math.random()-0.5)*0.6;
+      var sp=power*(0.55+Math.random()*0.75);
+      CELEB.parts.push({
+        x:ox+(Math.random()-0.5)*40, y:oy+(Math.random()-0.5)*20,
+        vx:Math.cos(a)*sp, vy:Math.sin(a)*sp - 4,
+        w:4+Math.random()*5, h:6+Math.random()*8,
+        rot:Math.random()*Math.PI, vr:(Math.random()-0.5)*0.4,
+        col:cols[(Math.random()*cols.length)|0], life:1
+      });
+    }
+    CELEB.until=Date.now()+[1500,2100,2800][level-1];
+    if(!CELEB.raf) CELEB.raf=requestAnimationFrame(celebTick);
+  }catch(_){}
+}
+
+function celebTick(){
+  CELEB.raf=0;
+  var ctx=CELEB.ctx, cv=CELEB.cv;
+  if(!ctx||!cv) return;
+  var W=cv.clientWidth, H=cv.clientHeight;
+  ctx.clearRect(0,0,W,H);
+  var alive=0;
+  for(var i=0;i<CELEB.parts.length;i++){
+    var p=CELEB.parts[i];
+    if(p.life<=0) continue;
+    p.vy+=0.34;                 // gravity
+    p.vx*=0.995; p.vy*=0.995;
+    p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr;
+    if(p.y>H+40) { p.life=0; continue; }
+    p.life-=0.006;
+    alive++;
+    ctx.save();
+    ctx.globalAlpha=Math.max(0,Math.min(1,p.life));
+    ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+    ctx.fillStyle=p.col;
+    ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+    ctx.restore();
+  }
+  if(alive>0 && Date.now()<CELEB.until+2600){
+    CELEB.raf=requestAnimationFrame(celebTick);
+  }else{
+    CELEB.parts.length=0;
+    try{ ctx.clearRect(0,0,W,H); }catch(_){}
+    try{ cv.remove(); CELEB.cv=null; CELEB.ctx=null; }catch(_){}
+  }
+}
+try{ window.celebrate = celebrate; }catch(_){}
+
 function renderCiCard(q){
+  /* MOUNT BEFORE READING. This returned at its first line on a page where
+     the card had never been built — so the FIRST Caught It of a night
+     depended on something else having mounted the card earlier, and did
+     nothing at all if nothing had. ciShow() was given mount-on-demand for
+     exactly this reason; this function bailed before it could ever reach
+     it. Working by luck is not working. */
+  try{ ensureCiCard(); }catch(_){}
   var c=document.getElementById('ciCard'); if(!c) return;
   if(PCI.muted){ c.style.display='none'; return; }
   // Not now — hold it, and let ciFlush bring it back when the coast clears.
@@ -16204,7 +16517,13 @@ function renderCiCard(q){
        A ceiling you hit is an achievement, not a malfunction. Say which
        one it is. */
     var capped = right && paid===0 && (Number(PCI.pts)||0) >= CAUGHT_NIGHT_CAP;
-    var head = pk==null ? 'You sat this one out'
+    /* A LATE SPOKEN ANSWER IS NOT SITTING IT OUT. If the voice layer
+       recognised and matched an answer after the card had locked, it left a
+       mark; say what actually happened rather than telling somebody who
+       spoke that he stayed quiet. */
+    var _late=false;
+    try{ _late = !!(typeof VX!=='undefined' && VX.lateSaid && VX.lateSaid[q.qid]); }catch(_){}
+    var head = pk==null ? (_late ? 'Too late \u00B7 the window had closed' : 'You sat this one out')
              : (right ? (capped ? 'Nice call \u00B7 maxed out' : 'Nice call \u00B7 +'+paid)
                       : 'Not this time');
     var icon = pk==null ? '—' : (right?'✅':'✕');
@@ -16232,6 +16551,14 @@ function renderCiCard(q){
                 gb.classList.add(right?'cihit':'cimiss');
                 setTimeout(function(){ try{ gb.classList.remove('cihit','cimiss'); }catch(_){} }, 1100); }
       }
+      /* AND THE CELEBRATION. The flash tells you WHERE the points went; this
+         tells you that being right felt like something. Scaled by the
+         streak, because the third right answer in a row is a different
+         feeling from the first and the screen should agree. */
+      if(right){
+        var _st=Number(PCI.streak)||1;
+        celebrate(_st>=5 ? 3 : (_st>=3 ? 2 : 1));
+      }
     }catch(_){}
     try{ var cc=document.getElementById('ciCard');
          if(cc){ cc.classList.remove('cidone'); cc.setAttribute('data-heat',String(heat)); } }catch(_){}
@@ -16241,11 +16568,15 @@ function renderCiCard(q){
   // open / locked
   clearTimeout(PCI.hideT);
   var opensMs=(q.opensAt&&q.opensAt.toMillis)?q.opensAt.toMillis():Date.now();
-  var locksMs=opensMs+(q.locksMs||6000);
+  /* THE FALLBACK MOVES WITH THE OWNER. A document written before the
+     window was raised, or one that lost the field, must not silently drop
+     the player back to a six-second card. These two must stay equal or the
+     progress bar counts down to a different moment than the lock. */
+  var locksMs=opensMs+(q.locksMs||20000);
   var now=Date.now();
   var pick=PCI.picked[q.qid];
   var locked = now>=locksMs || pick!=null;
-  var msLeft=Math.max(0,locksMs-now), pctLeft=Math.max(0,Math.min(100,(msLeft/(q.locksMs||6000))*100));
+  var msLeft=Math.max(0,locksMs-now), pctLeft=Math.max(0,Math.min(100,(msLeft/(q.locksMs||20000))*100));
 
   /* ONCE YOU HAVE ANSWERED, THE CARD SHRINKS. It stops being a question —
      it is a receipt. Keeping the full prompt and four dead buttons on
@@ -16262,6 +16593,8 @@ function renderCiCard(q){
            '<div class="ciwait"><i></i></div>'+
            '<div class="cistat">Answer lands when the play settles. You can keep watching.</div>'+
            '<div class="cifoot"><button class="cimute" data-cimute="1">mute Caught It</button>'+
+           ((function(){ try{ return (typeof VX!=='undefined') && VX.on && VX.hasEar; }catch(_){ return false; } })()
+              ? '<button class="cimute cimic" data-cimic="1">\ud83c\udf99 say it</button>' : '')+
            '<button class="cimute" data-cihide="1">hide this</button></div>');
   } else {
     var opts=(q.options||[]).map(function(o){
@@ -16286,11 +16619,49 @@ function renderCiCard(q){
      lock bar moves and would otherwise read the prompt over and over. */
   try{
     if(!locked && typeof VX!=='undefined' && VX.on){
-      var _k=String((q&&q.id)||(q&&q.prompt)||'');
+      /* THE QID, NOT THE PROMPT TEXT. A live Caught It document has no
+         `.id` — SB.watchCallIt sets `qid`, and the runner writes no `id`
+         field at all — so this always fell through to the prompt. And
+         thirteen of the eighteen Caught It kinds carry a CONSTANT prompt
+         string: "That last pitch — what was it?", "That play — how many
+         yards?". Every NFL and MLB kind is constant.
+
+         So on Thursday, an NFL night and an MLB night, the voice announced
+         at most the first card of each kind and was silent for every card
+         after it, because spokeCatch already held that exact string. That
+         is the founder's "on the caught it the voice acceptance does not
+         work" — it was not acceptance, it was that most cards were never
+         read out at all. One token. */
+      var _k=String((q&&q.qid)||(q&&q.id)||(q&&q.prompt)||'');
       if(_k && VX.spokeCatch!==_k){ VX.spokeCatch=_k; VX.mount(); VX.askCatch(); }
     }
   }catch(_){}
-  var mb=card.querySelector('.cimute'); if(mb) mb.onclick=function(){ PCI.muted=true; card.style.display='none'; try{ document.body.classList.remove('ciopen'); }catch(_){} };
+  /* THE QID, ON THE CARD. The voice layer needs to name the question it
+     was too late for, without reaching into PCI from the other side of the
+     app. */
+  try{
+    card.dataset.ciqid=String((q&&q.qid)||'');
+    /* When this card's window shuts, as an absolute instant, so the voice
+       layer can tell "you just missed it" from "that was ages ago". */
+    card.dataset.cilockat=String(locksMs||0);
+  }catch(_){}
+  /* ============ THE ONLY DOOR iOS WILL OPEN =========================
+     Barge-in — the path that opens the microphone by itself — is desktop
+     only, deliberately, because Safari refuses a microphone that was not
+     asked for by a gesture. So on iPhone and iPad the only way into a
+     Caught It by voice is a button, and the one that existed lives in
+     #vxBar, which V.mount() hosts on #revealBox, which sits inside
+     #gtQuestion — display:none on every screen a Caught It appears on.
+
+     There has never been a reachable microphone for this card on iOS, and
+     the founder tests on an iPad. */
+  var vmb=card.querySelector('[data-cimic]');
+  if(vmb) vmb.onclick=function(ev){
+    try{ ev.stopPropagation(); }catch(_){}
+    try{ VX.mount(); }catch(_){}
+    try{ VX.listenNow ? VX.listenNow() : VX.ear(); }catch(_){}
+  };
+  var mb=card.querySelector('[data-cimute]'); if(mb) mb.onclick=function(){ PCI.muted=true; card.style.display='none'; try{ document.body.classList.remove('ciopen'); }catch(_){} };
   var hb=card.querySelector('[data-cihide]'); if(hb) hb.onclick=function(){ card.style.display='none'; try{ if(typeof renderGametime==='function') renderGametime(); }catch(_){} };
   /* YOUR ANSWER IS IN — THE CARD GETS OUT OF THE WAY. A locked card that
      sits on screen until a host somewhere remembers to resolve it is how a
@@ -18704,7 +19075,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-21-tonight.182';
+const STATS_BUILD='2026-08-21-voice.183';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

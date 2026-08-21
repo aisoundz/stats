@@ -640,6 +640,105 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     return /No spoken answers yet/.test(VX.statLine());
   });
 
+  /* ============ THE TWO THINGS THE OTHER CHECKS CANNOT SEE ===========
+     Every Caught It check above builds a card by hand with no opensAt, no
+     locksMs and no disabled state, and stubs speech to return instantly.
+     They prove the wiring, and the wiring was never broken. They are
+     structurally incapable of seeing either bug the founder actually hit
+     on 20 August, and they stayed green through both.
+
+     These two drive the REAL renderer with a REAL lock time. */
+
+  /* ciScreenOk() refuses a Caught It on the screens in CI_BLOCKED, and a
+     cold page is on 'landing' — which is blocked. The first draft of these
+     checks did not know that, so renderCiCard() returned before painting
+     anything, there were no buttons to click, and "the voice layer did not
+     click a locked button" passed for the reason that there was no button.
+     A check that passes because nothing happened is the thing this file
+     exists to prevent, so each one below proves the card is really on
+     screen before it asserts anything about it. */
+  const ciSetup = (qid, ageMs) => ({ qid, ageMs });
+
+  R['the-harness-can-actually-open-a-caught-it'] = await p.evaluate(()=>{
+    try{ S.screen='lobby'; }catch(_){ return false; }
+    /* LET THE APP MOUNT ITS OWN CARD. An earlier check in this file builds a
+       bare <div id="ciCard"> by hand, and ciShow() paints into #ciInner —
+       which only ensureCiCard() creates. A hand-made outer div therefore
+       satisfies the "does the card exist" test and silently blocks every
+       real render for the rest of the suite: ciShow finds no inner, returns,
+       and nothing is drawn or thrown. Drop any stub that has no inner and
+       let the app build the real thing. */
+    if(typeof renderCiCard!=='function' || typeof ciScreenOk!=='function') return false;
+    try{ PCI.muted=false; PCI.picked={}; PCI.pending=null; }catch(_){}
+    const q={ qid:'live-1', kind:'saw-pitch', state:'open',
+              prompt:'That last pitch, what was it?',
+              options:[{v:'a',k:'Fastball'},{v:'b',k:'Breaking ball'}],
+              opensAt:{ toMillis:()=>Date.now() }, locksMs:20000 };
+    try{ PCI.active=q; }catch(_){}
+    renderCiCard(q);
+    window.__ciBtns = document.querySelectorAll('#ciCard .ciopt').length;
+    return ciScreenOk()===true && !!document.getElementById('ciInner') && window.__ciBtns===2;
+  });
+
+  R['a-card-that-has-locked-refuses-the-click'] = await p.evaluate(()=>{
+    /* A window that closed a minute ago. The voice layer must not click a
+       locked button: that would be answering after the answer is public. */
+    try{ S.screen='lobby'; PCI.muted=false; PCI.picked={}; PCI.pending=null; }catch(_){}
+    const q={ qid:'late-1', kind:'saw-pitch', state:'open',
+              prompt:'That last pitch, what was it?',
+              options:[{v:'a',k:'Fastball'},{v:'b',k:'Breaking ball'}],
+              /* Opened 25s ago with a 20s window: it shut five seconds
+                 ago, which is a player who was still talking when the card
+                 closed. A card that locked a minute ago is deliberately NOT
+                 this case — heardCatch bounds itself so a stale card cannot
+                 swallow a word meant for something else. */
+              opensAt:{ toMillis:()=>Date.now()-25000 }, locksMs:20000 };
+    try{ PCI.active=q; }catch(_){}
+    renderCiCard(q);
+    const btns=document.querySelectorAll('#ciCard .ciopt');
+    if(!btns.length) return false;                 // never vacuous again
+    let allDisabled=true; btns.forEach(b=>{ if(!b.disabled) allDisabled=false; });
+    if(!allDisabled) return false;                 // the card must really be locked
+    let clicked=null;
+    btns.forEach(b=>{ b.addEventListener('click',()=>{ clicked=b.getAttribute('data-civ'); }); });
+    window.__said=[];
+    VX.enable();
+    VX.heard('Fastball');
+    return clicked===null;
+  });
+
+  await p.waitForTimeout(150);
+  R['and-tells-the-player-it-was-too-late'] = await p.evaluate(()=>{
+    /* ASSERT THE MOVE, NOT THE ABSENCE OF A COMPLAINT. Returning false in
+       silence is what made this invisible: a correctly recognised and
+       correctly matched answer vanished, and the resolved card then read
+       "You sat this one out" — the app blaming the player for a window it
+       spent reading the question aloud. */
+    return /too late/i.test((window.__said||[]).join(' '));
+  });
+
+  R['every-card-is-announced-even-when-the-prompt-repeats'] = await p.evaluate(()=>{
+    /* Thirteen of the eighteen Caught It kinds carry a CONSTANT prompt
+       string, and every NFL and MLB kind does. The announce guard keyed off
+       the prompt text, so the second card of a kind — and every one after
+       it — was never read out. On an NFL night and an MLB night that is
+       voice going quiet after the first few questions, which is exactly
+       what was reported. Two different questions, identical words. */
+    try{ S.screen='lobby'; PCI.muted=false; PCI.picked={}; PCI.pending=null; }catch(_){}
+    VX.enable(); VX.spokeCatch=null; VX.saidCaughtOnce=true;
+    const mk=(qid)=>({ qid, kind:'saw-pitch', state:'open',
+      prompt:'That last pitch, what was it?',
+      options:[{v:'a',k:'Fastball'},{v:'b',k:'Breaking ball'}],
+      opensAt:{ toMillis:()=>Date.now() }, locksMs:20000 });
+    window.__said=[];
+    const a=mk('same-1'); try{ PCI.active=a; }catch(_){} renderCiCard(a);
+    if(!document.querySelectorAll('#ciCard .ciopt').length) return false;
+    const afterFirst=(window.__said||[]).length;
+    const b=mk('same-2'); try{ PCI.active=b; }catch(_){} renderCiCard(b);
+    const afterSecond=(window.__said||[]).length;
+    return afterFirst>0 && afterSecond>afterFirst;
+  });
+
   await p.evaluate(()=>{ VX.disable(); window.__said=[]; window.__recStarts=0;
                          VX.askQuestion(); VX.reveal('x'); VX.roundOpen(1,true); VX.locked('y'); });
   await p.waitForTimeout(200);

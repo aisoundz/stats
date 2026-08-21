@@ -10,7 +10,7 @@
   "qa.js": 103,
   "slate.js": 25,
   "voice-pick.js": 33,
-  "voice-wiring.js": 74,
+  "voice-wiring.js": 78,
   "localise.js": 16,
   "i18n.js": 23,
   "season.js": 12,
@@ -25,5 +25,6 @@
   "night-per-sport.js": 82,
   "spanish.js": 5,
   "silence.js": 1,
-  "phantom-ot.js": 7
+  "phantom-ot.js": 7,
+  "celebrate.js": 8
 }

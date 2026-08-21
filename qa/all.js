@@ -147,6 +147,11 @@ const TIER={
      against synthetic feeds where the scoreboard and the plays disagree,
      which is the one condition no archived feed reproduces. */
   'phantom-ot.js': {tier:'static'},
+  /* The only suite here that tests whether the game is FUN. It is in
+     the gate for the same reason as the rest: a celebration that quietly
+     stops firing, or starts swallowing taps over a live card, is not
+     something a player will ever file a bug about. */
+  'celebrate.js': {tier:'player'},
   /* Reads source, not a browser. Guards the shape of bug this repo produces
      more than any other: something that fails and tells nobody. */
   'silence.js':       {tier:'static'},

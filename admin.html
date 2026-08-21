@@ -692,7 +692,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-21-admin.61-opens-on-tonight';
+window.ADMIN_BUILD='2026-08-21-admin.62-twenty-second-window';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -5790,7 +5790,14 @@ boot();
 
    One predicate, one owner. */
 function lockMsFor(kind){
-  return /^(saw|qtr)/.test(String(kind||'')) ? 9000 : 6000;
+  /* ONE OWNER. This was a verbatim second copy of AUTO.CI.lockMsFor and the
+     two were free to drift — a Control-Room-hosted room and a runner-hosted
+     room would then disagree about when the answer goes public, which is
+     B23 exactly, the bug the comment above this one describes. The literal
+     below is only a floor for the case where the shared block failed to
+     load, and it must never be the smaller number again. */
+  try{ if(window.AUTO && AUTO.CI && AUTO.CI.lockMsFor) return AUTO.CI.lockMsFor(kind); }catch(_){}
+  return /^(saw|qtr)/.test(String(kind||'')) ? 20000 : 15000;
 }
   var CI = { on:false, seeded:false, lastSeq:0, openQid:null, lastOpenAt:0, lastPlayAt:0, countPer:{}, pending:null, relT:null,
              pace:'normal', gapMs:80000, capPer:8 };
@@ -9003,7 +9010,36 @@ AUTO.CI = (function(){
   /* How long the room has before the answer is published. Retrospective
      questions name a score and sometimes a player, so they need the extra
      beat to read. */
-  C.lockMsFor = function(kind){ return /^(saw|qtr)/.test(String(kind||'')) ? 9000 : 6000; };
+  /* ============ NINE SECONDS IS A TAPPER'S WINDOW ====================
+     Founder, 21 Aug: "lets raise the time to fit the voice its a must…
+     the key to this game is that it can be played screenless."
+
+     The old window was 9 seconds from the runner's own server timestamp.
+     Reading a Caught It prompt and its options aloud takes six to seven of
+     them, and the recogniser then needs about a second and a half of
+     silence before it will call a result final. So a player answering out
+     loud reached the button at roughly 8.9 seconds on the best run
+     measured and about twelve typically, against a nine-second deadline.
+     The card was already locked, no submission was ever attempted, and the
+     resolved view told him he had sat it out — which is exactly what he
+     reported: "when we have call it and you answer a question with voice
+     it automatically says you didnt answer in time." The app was correctly
+     reporting a question it had made unanswerable.
+
+     Practice mode has always run 20000 (see demoCallIt in index.html),
+     which is why voice worked in rehearsal and could not work in a room.
+     Live now matches practice.
+
+     It also answers his other note from the same night: "caught it happened
+     faster than was on the TV… give it a little time to make sure we get it
+     on the tv and then ask, but keep that speedy signal in mind." The fast
+     signal is kept — the runner still fires the instant the play lands —
+     and the window around it is now wide enough for a broadcast to catch up.
+
+     THE RUNNER READS THIS SAME FUNCTION, so the publish delay (locks +
+     1200) moves with it and the B23 gap between "the answer is public" and
+     "the card is still live" does not reopen. */
+  C.lockMsFor = function(kind){ return /^(saw|qtr)/.test(String(kind||'')) ? 20000 : 15000; };
 
   /* ============ EIGHT A GAME, IN EVERY SPORT ==========================
      Founder, 20 Aug: "And for the questions across game they all should be 8."
