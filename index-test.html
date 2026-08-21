@@ -19203,6 +19203,44 @@ var SPORT_CFG={
    League first, because that is what the table is keyed by. Family only as
    a fallback, mapped to its default league rather than used as a key. */
 var FAMILY_LEAGUE={ basketball:'wnba', baseball:'mlb', football:'nfl', hockey:'nhl', soccer:'mls' };
+/* ============ THE STATS TAB WAS SPEAKING BASKETBALL ==================
+   Founder, in a baseball room in the 7th inning: the Stats tab told him
+   "4 of 4 quarters settled" on a night with three rounds across nine
+   innings, and offered "Runs, shooting splits and the deep cuts" in a
+   sport with no shooting in it.
+
+   Both strings were written when there was one sport. This is the same
+   family of mistake as every other one found on 20 August — something
+   correct for basketball, never asked to be correct for anything else —
+   except that this one is only words, so it made the product look careless
+   rather than making it wrong.
+
+   Rounds, not periods: baseball's three rounds cover nine innings, so
+   "3 of 3 innings" would be a lie in the other direction. Where a sport's
+   rounds ARE its periods, it says so. */
+var ROUND_WORD  = { basketball:'quarters', football:'quarters', hockey:'periods',
+                    soccer:'halves',       baseball:'rounds' };
+var ROUND_COUNT = { basketball:4, football:4, hockey:3, soccer:2, baseball:3 };
+var THIN_LINE   = {
+  basketball:'Runs, shooting splits and the deep cuts',
+  football:  'Drives, yardage and the deep cuts',
+  baseball:  'Runs, pitching lines and the deep cuts',
+  hockey:    'Shots, saves and the deep cuts',
+  soccer:    'Shots, possession and the deep cuts'
+};
+function famNow(){
+  try{ var c = sportCfg(); return String((c && c.family) || 'basketball'); }
+  catch(_){ return 'basketball'; }
+}
+/* Stripping the trailing s turned "halves" into "halve", which is not a
+   word. English has exactly one irregular here, so it gets named rather
+   than inferred. */
+var ROUND_WORD_ONE = { quarters:'quarter', periods:'period', halves:'half', rounds:'round' };
+function roundWord(n){
+  var w = ROUND_WORD[famNow()] || 'rounds';
+  return (n === 1) ? (ROUND_WORD_ONE[w] || w) : w;
+}
+function roundCountNow(){ return ROUND_COUNT[famNow()] || 4; }
 function sportCfg(){
   var g=null; try{ g=(typeof GAME!=='undefined'&&GAME)||null; }catch(_){}
   /* Before a room is bound — a fresh arrival on ?game= — the marquee already
@@ -20697,8 +20735,8 @@ function stYourCard(){
           if(S.qleadDone && S.qleadDone[qn]){ qDone++; qEarned += (L['qlead-q'+qn]||{}).p||0; }
         }
         if(qDone){
-          out+=stCard('', '<div style="font-size:14px;color:var(--ink);font-weight:800">⚡ +'+qEarned+' pts from leading at the quarter'+(qDone===1?'':'s')+'</div>'
-            + '<div class="sub" style="font-size:12px;margin-top:5px">'+qDone+' of 4 quarters settled so far — every category your pick was actually leading at that break paid out right then, on top of what the card pays at the final buzzer.</div>');
+          out+=stCard('', '<div style="font-size:14px;color:var(--ink);font-weight:800">⚡ +'+qEarned+' pts from leading at the '+roundWord(qDone)+'</div>'
+            + '<div class="sub" style="font-size:12px;margin-top:5px">'+qDone+' of '+roundCountNow()+' '+roundWord(roundCountNow())+' settled so far — every category your pick was actually leading at that break paid out right then, on top of what the card pays at the final buzzer.</div>');
         }
       }catch(_){}
       // Your picks who aren't playing — the only injury news that matters to you.
@@ -21017,7 +21055,7 @@ function renderStats(){
 
     if(!run && !zones && !ast && !rest.length){
       out += stEmpty('📈', 'Not enough has happened yet',
-        'Runs, shooting splits and the deep cuts need a few minutes of play behind them. This fills in as the game goes.');
+        (THIN_LINE[famNow()] || THIN_LINE.basketball) + ' need a few minutes of play behind them. This fills in as the game goes.');
     }
   }
 
