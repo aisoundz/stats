@@ -75,6 +75,22 @@ service cloud.firestore {
       allow delete:         if isOwner();
     }
 
+    /* ============ THE FEED THE STATS TAB READS =======================
+       Added 20 Aug 2026, live, after the Stats tab said "Can't reach the
+       league feed" for a player whose browser cannot reach ESPN at all.
+       The runner fetches the summary server-side, where nothing blocks it,
+       and publishes it here; the app reads it when its own fetch fails.
+
+       World-readable on purpose. It is public sports data, it is what the
+       scoreboard on the same screen already shows, and a rule that made it
+       private would recreate the exact failure it exists to end. Only the
+       owner writes it, which in practice means the runner's service
+       account. */
+    match /nights/{nightId}/feed/{docId} {
+      allow read:  if true;
+      allow write: if isOwner();
+    }
+
     match /nights/{nightId}/callitboard/{uid} {
       allow read:           if true;
       allow create, update: if signedIn() && request.auth.uid == uid;

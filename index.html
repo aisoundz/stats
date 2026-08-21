@@ -3737,6 +3737,41 @@ window.STATS_FIREBASE = {
      questions, writes ONE create-only pick per question, and a self-
      updated streak board. None of this touches pts, rounds, or the HR
      hosted-round flow — if it all failed, the main game is untouched. */
+  /* ============ THE FEED, READ FROM OUR OWN DATABASE =================
+     Founder, mid-game: "why do i not see anything in my stats tab."
+     It said "Can't reach the league feed".
+
+     The app fetches ESPN straight from the phone. Measured on the live site
+     tonight: ESPN answers curl from a server with 200 and
+     `access-control-allow-origin: *`, and the identical request from a
+     browser dies with net::ERR_FAILED — from statsgametime.com AND from
+     example.com, which is what proves it is neither our page nor their
+     CORS. Tracking protection, an ad blocker, a VPN or a locked-down
+     network sits in between, and any of them silently empties every stat
+     and chart in the product for a player who cannot know why.
+
+     The runner already fetches that exact summary server-side, twenty
+     seconds apart, where nothing blocks it, and now publishes it to
+     nights/{night}/feed/latest. Read it when the direct fetch fails. The
+     JSON is the same shape, so the parser above does not change.
+
+     Second, not first: when the phone CAN reach ESPN the live response is
+     fresher than a document written on a tick boundary. This is the safety
+     net, not the road. */
+  SB.feedFor = async function (nid) {
+    if (!SB.enabled || !F || !db) return null;
+    var id = String(nid || nightId || '');
+    if (!id) return null;
+    try {
+      var snap = await F.getDoc(F.doc(db, 'nights', id, 'feed', 'latest'));
+      if (!snap || !snap.exists()) return null;
+      var v = snap.data() || {};
+      if (!v.json) return null;
+      SB.feedAt = v.at || null;
+      return JSON.parse(v.json);
+    } catch (e) { SB.lastFeedError = (e && (e.code || e.message)) || 'unknown'; return null; }
+  };
+
   SB.watchCallIt = function (cb) {
     if (!SB.enabled) { SB.lastCallItWatchError = 'disabled'; return function () {}; }
     if (!nightId) { SB.lastCallItWatchError = 'no-night'; return function () {}; }
@@ -18810,7 +18845,23 @@ async function loadGameStats(force){
   GS.loading=true; GS.lastTry=Date.now();
   var _resolve; GS._p=new Promise(function(r){ _resolve=r; });
   try{
-    var j=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sportCfg().path+'/summary?event='+ev+'&_='+Date.now()).then(function(r){return r.json();});
+    /* Try the live feed first, because it is fresher. If the phone cannot
+       reach ESPN — and a great many phones cannot — fall back to the copy
+       the runner published to our own database. GS.via records which one
+       answered, so "no stats" and "stale stats" stop looking the same. */
+    var j=null, via='espn';
+    try{
+      j=await fetch('https://site.api.espn.com/apis/site/v2/sports/'+sportCfg().path+'/summary?event='+ev+'&_='+Date.now()).then(function(r){return r.json();});
+    }catch(_){ j=null; }
+    if(!j || !j.header){
+      try{
+        var room=''; try{ room=(GAME&&GAME.nightId)||''; }catch(_){}
+        if(!room){ try{ var _r=slateGame(slateParam()); room=_r&&_r.nightId||''; }catch(_){} }
+        if(window.SB && SB.feedFor){ var f=await SB.feedFor(room); if(f && f.header){ j=f; via='room'; } }
+      }catch(_){}
+    }
+    if(!j || !j.header) throw new Error('no feed');
+    GS.via=via;
     var bs=j.boxscore||{}, comp=(j.header&&j.header.competitions&&j.header.competitions[0])||{};
     var stat=(comp.status&&comp.status.type)||{};
     var teams=(bs.teams||[]).map(function(t){
