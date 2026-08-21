@@ -135,6 +135,12 @@ const TIER={
      it failed naming the string, so this can actually fail. */
   'spanish.js':       {tier:'browser', args:['--max','0']},
   'marquee-order.js': {tier:'browser'},
+  /* NODE ONLY, and that is the point: it drives the real host engine over
+     the real recorded feed for all five leagues with no browser at all, so
+     it can be run during a live game night on the machine that is hosting
+     it. It is also the only suite in this file that has ever asked the
+     host a question about a sport that is not basketball. */
+  'night-per-sport.js': {tier:'static'},
   'bank-shadow.js':   {tier:'static'},
   'devices.js':       {tier:'browser'},
   'host-sportsreg.js':{tier:'browser'},
