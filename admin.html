@@ -4296,7 +4296,29 @@ async function hostTick(){
     for(var i=0; i<n; i++){
       var doc = liveDocs[roundDocId(i)] || null;
       var done = false;
-      try{ done = AUTO.periodDone(sum, i+1); }catch(_){}
+      /* ============ A ROUND IS NOT ALWAYS ONE PERIOD ==================
+         Founder, live: "it turned on the questions at the bottom of the 2nd."
+
+         This asked periodDone(sum, i+1): "has period 1 ended?" for round 0.
+         True for basketball, where a round IS a quarter. False for baseball,
+         where round 0 is INNINGS 1 TO 3. periodDone returns true as soon as
+         the feed's period exceeds the number asked about, so the moment the
+         2nd inning began it reported the 1st-3rd stretch finished, and
+         autopilot pushed four questions about three innings, two of which
+         had not been played.
+
+         That is unanswerable by construction, which is the one thing the
+         Push step's own on-screen warning says never to do.
+
+         The right period is the LAST one the round covers, and the config
+         has carried it the whole time: TEMPLATES.baseball.periods is
+         [3,6,9,10] and slateToNight copies it onto the night. FAMILY also
+         holds rounds:[3,6,9]. Two copies of the fact, and the robot used
+         neither. Falls back to i+1, which is correct for any sport whose
+         rounds really are single periods. */
+      var lastPer = (cfg.periods && cfg.periods[i] != null && Number(cfg.periods[i]))
+                    ? Number(cfg.periods[i]) : (i+1);
+      try{ done = AUTO.periodDone(sum, lastPer); }catch(_){}
 
       /* ---- OPEN ---------------------------------------------------- */
       if(!doc && done){
