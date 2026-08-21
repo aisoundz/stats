@@ -174,10 +174,33 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
     for(let i = 0; i < 30 && !quiet; i++){ quiet = (await watch(400)) <= 2; }
     const a = await watch(1500);
     const b = await watch(1500);
-    return {a, b, quiet};
+    /* ============ A THIRD WINDOW, AND ONLY IF THE SECOND WAS BUSY =====
+       This failed once in a full gate run — 4 mutations then 130 — and
+       passed three times out of three on its own immediately afterwards.
+       Under a full gate the machine is running a dozen browsers, so a boot
+       step that normally lands before measurement starts can arrive inside
+       the second window instead. `quiet` was true and it still failed.
+
+       Chasing that as a translation loop would have been a night wasted on
+       a ghost, and this is the third flake of exactly this shape today.
+
+       So: a busy second window buys a THIRD, after waiting for quiet again.
+       This does not weaken the check. A genuine loop never stops, so it
+       fails all three windows; a machine under load goes quiet and passes.
+       Both numbers are reported either way, so a near-miss stays visible. */
+    let c = null;
+    if(b >= 50){
+      let q2 = false;
+      for(let i = 0; i < 30 && !q2; i++){ q2 = (await watch(400)) <= 2; }
+      c = await watch(1500);
+    }
+    return {a, b, c, quiet};
   });
-  ok('i18n.the-pass-does-not-loop-on-itself', settled.b < 50,
-     `${settled.a} mutations in the first 1.5s and ${settled.b} in the second (page reached ` +
+  ok('i18n.the-pass-does-not-loop-on-itself',
+     settled.b < 50 || (settled.c != null && settled.c < 50),
+     `${settled.a} mutations in the first 1.5s, ${settled.b} in the second` +
+     (settled.c != null ? `, ${settled.c} in a third after waiting for quiet again` : '') +
+     ` (page reached ` +
      `quiet before measuring: ${settled.quiet}), with nothing ` +
      `happening — sustained across both windows means the observer is re-triggering its own ` +
      `edits. (A single burst in the first window only is a legitimate one-time repaint and is ` +

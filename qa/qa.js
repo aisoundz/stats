@@ -441,6 +441,24 @@ async function browserTests(){
     await p.route('**/site.api.espn.com/**', r=> feed==='down'
       ? r.fulfill({status:500,contentType:'application/json',body:'{}'})
       : r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(feed)}));
+    /* ============ "DOWN" HAS TO MEAN BOTH ROUTES NOW ==================
+       The app gained a second source on 20 Aug: when a phone cannot reach
+       ESPN it reads the copy the runner publishes into our own database,
+       because tracking protection, an ad blocker or a VPN otherwise empties
+       every stat and chart with no explanation.
+
+       That made this scenario dishonest rather than wrong. Blocking ESPN
+       alone stopped meaning "the feed is unreachable", because the gate
+       runs against the real database and tonight those feed documents
+       exist with real data in them — so the tab filled in and the check
+       that asserts an honest empty state failed, correctly.
+
+       Stubbing SB.feedFor after load was too late: the fallback had already
+       answered. Blocking the transport is the truthful way to say nothing
+       is reachable, and it needs no knowledge of the app's internals. */
+    if(feed==='down'){
+      await p.route('**/firestore.googleapis.com/**', r=>r.abort());
+    }
     await p.route('**/assets.mailerlite.com/**', r=>r.fulfill({status:200,body:'{}'}));
     /* ============ THE GATE MUST NOT PLAY THE GAME =====================
        index.html carries the REAL Firebase config, so a test that sets
@@ -4711,7 +4729,6 @@ async function browserTests(){
          So the scenario blocks both routes. Stubbing the fallback is the
          honest way to test "nothing is reachable" now that there are two
          ways to reach something. */
-      await p.evaluate(()=>{ try{ if(window.SB) SB.feedFor = async function(){ return null; }; }catch(_){} });
       await p.waitForFunction(()=>window.GS && GS.fails>=2, null, {timeout:15000})
              .catch(()=>{});
       await p.evaluate(()=>{ try{ renderStats(); }catch(e){} });
