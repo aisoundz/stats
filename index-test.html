@@ -6815,7 +6815,37 @@ async function loadSlate(db, F){
     /* A link wins, if it names a game that is actually on tonight. */
     var link = slateParam();
     if(link){
-      if(slateGame(link)){ slatePickSet(link); }
+      if(slateGame(link)){
+        slatePickSet(link);
+        /* ============ A LINK IS A DOOR INTO A ROOM, NOT A NOTE ========
+           Founder, live, having opened the football room from a link while
+           already seated in the baseball one: a screen headed "Quarter 1
+           scored" before kickoff, a scoreboard reading SF 0 LAC 1, and four
+           football questions answered Single, One or two, Seven or more,
+           Rangers. Both rooms checked on the server at that moment:
+           football had no score, no rounds and no key. Every one of those
+           values belonged to the baseball room.
+
+           Because this line only REMEMBERED the pick. chooseGame() is what
+           actually enters a room: it stops the old room's listeners, clears
+           the marquee, restores the room, sets ACTIVE_ROOM and moves the
+           network layer with SB.setRoom(). It was called from exactly one
+           place in the file, the tile in the rail. A URL never reached it.
+
+           So the live layer stayed pointed at whichever room it bound
+           first and kept streaming that room's rounds into this one, which
+           is why clearing local storage changed nothing: the wrong
+           subscription was re-established on every load.
+
+           Two doors into the same room and only one of them wired. The
+           link goes through the same door now. */
+        try{
+          var already = (typeof ACTIVE_ROOM !== 'undefined' && ACTIVE_ROOM === link);
+          if(!already){
+            Promise.resolve(chooseGame(db, F, link)).catch(function(){});
+          }
+        }catch(_){}
+      }
       else { try{ console.error('?game='+link+' is not on tonight\'s slate — ignoring it'); }catch(_){} }
     }
 
