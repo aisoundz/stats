@@ -588,6 +588,7 @@ async function main(){
   log('boot', `night ${NIGHT} · event ${EVENT} · ${N} rounds · running for up to ${MINUTES}m`);
 
   const acted = {}, seenDone = {};
+  let lastFeedSig = '';
   let lastScoreSig = '';
   const until = Date.now() + MINUTES * 60000;
 
@@ -609,6 +610,68 @@ async function main(){
       catch(e){ die('lost the lease — ' + ((e && e.message) || e)); }
 
       lastScoreSig = await writeLiveScore(AUTO, db, FieldValue, sum, plan, lastScoreSig);
+
+      /* ============ THE FEED, PUBLISHED WHERE A PHONE CAN REACH IT =====
+         Founder, mid-game, opening the Stats tab: "why do i not see
+         anything in my stats tab. It should have the cool stats and charts
+         and progress." It showed "Can't reach the league feed".
+
+         The player app fetched ESPN DIRECTLY FROM THE PHONE. Measured on
+         the live site tonight: ESPN answers curl from this machine with a
+         200 and an `access-control-allow-origin: *`, and the same request
+         from a browser dies with net::ERR_FAILED — from statsgametime.com
+         AND from example.com, which is what proves it is not our page and
+         not their CORS. Something between a browser and ESPN blocks it:
+         tracking protection, an ad blocker, a VPN, a school or office
+         network. Any one of those silently kills every stat and chart in
+         the product, for a player who has no way to know why.
+
+         The ticker kept working the whole time, because the ticker reads
+         OUR database. This runner is already holding the exact JSON the
+         Stats tab wanted, fetched server-side where nothing blocks it, and
+         it was throwing it away every twenty seconds.
+
+         So publish it. Stored as a STRING on purpose: Firestore rejects an
+         array that directly contains another array, and an ESPN summary is
+         full of them. A string has no shape rules, and the app parses it
+         with the same code it already uses on the live response.
+
+         Trimmed to what the app actually reads — boxscore teams and
+         players, the header, leaders, and the tail of the play list —
+         because the whole summary can approach the 1MB document ceiling
+         and the plays are most of it. */
+      try{
+        const trimmed = {
+          boxscore: { teams: (sum.boxscore || {}).teams || [],
+                      players: (sum.boxscore || {}).players || [] },
+          header:   sum.header || {},
+          leaders:  sum.leaders || [],
+          injuries: sum.injuries || [],
+          /* Newest last, same order the app expects; 60 is more than any
+             screen shows and keeps the document comfortably small. */
+          plays:    (sum.plays || []).slice(-60)
+        };
+        const json = JSON.stringify(trimmed);
+        /* Never write something the server will reject: a document over the
+           ceiling fails the whole write and takes the score with it. Drop
+           the plays first, they are the biggest and the least needed. */
+        let payload = json;
+        if(payload.length > 900000){
+          delete trimmed.plays;
+          payload = JSON.stringify(trimmed);
+        }
+        if(payload.length <= 900000 && payload !== lastFeedSig){
+          lastFeedSig = payload;
+          await db.doc(`nights/${NIGHT}/feed/latest`).set({
+            at: FieldValue.serverTimestamp(),
+            event: String(ESPN_EVENT || ''),
+            sport: String(SPORT || ''),
+            bytes: payload.length,
+            json: payload
+          });
+          log('feed', `published ${Math.round(payload.length/1024)}kB for the Stats tab`);
+        }
+      }catch(e){ log('feed', 'could not publish the feed: ' + ((e && e.message) || e)); }
 
       const roundsSnap = await db.collection(`nights/${NIGHT}/rounds`).get();
       const live = {}; roundsSnap.forEach(d => { live[d.id] = d.data(); });
