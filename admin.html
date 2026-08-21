@@ -6463,10 +6463,44 @@ function lockMsFor(kind){
     if(sp0==='soccer'){ plays = CI.soccerEvents(sum); }
     else { try{ plays = AUTO.feedPlays(sum) || []; }catch(_){ plays = sum.plays||[]; } }
     if(!plays || !plays.length) return;
-    var maxSeq=0; plays.forEach(function(p){ var s=+(p.sequenceNumber||0); if(s>maxSeq)maxSeq=s; });
-    if(!CI.seeded){ CI.lastSeq=maxSeq; CI.seeded=true; CI.lastPlayAt=Date.now(); return; }   // don't fire on the backlog
-    var fresh = plays.filter(function(p){ return (+(p.sequenceNumber||0)) > CI.lastSeq; });
-    if(fresh.length){ CI.lastSeq=maxSeq; CI.lastPlayAt=Date.now(); }
+    /* ============ BASEBALL'S SEQUENCE NUMBER RESETS EVERY AT-BAT ====
+       Founder, live: "im not getting any caught it question on the mlb
+       room", while football in the next tab was producing them.
+
+       Measured against both live feeds at that moment:
+
+         football  sequenceNumber  3900 -> 43500, monotonic, max 43500
+         baseball  sequenceNumber  1,2,3,4,5,6,7, then 1 again. Max 14.
+
+       Baseball numbers the PITCHES WITHIN AN AT-BAT. It is not a clock and
+       it does not increase across a game. So this filter, which decides
+       what is new by "sequenceNumber greater than the highest we have
+       seen", set lastSeq to 14 on the first tick and then never saw another
+       play above it. `fresh` was empty for the rest of the night, every
+       twenty seconds, behind a badge reading ARMED.
+
+       Not rarely. Never: Caught It could not fire on baseball at all, and
+       nothing anywhere said so.
+
+       So freshness is by play IDENTITY, not by a number that happens to
+       ascend in two sports out of five. Remember the last play seen, find
+       it, take everything after it. If it cannot be found — a feed that
+       rewrote its history, or a tab asleep through a whole half — fall back
+       to the tail rather than replaying the game. */
+    var idOf = function(p){
+      return String((p && (p.id != null ? p.id : (p.sequenceNumber != null ? p.sequenceNumber : ''))) || '');
+    };
+    if(!CI.seeded){
+      CI.lastPlayKey = idOf(plays[plays.length-1]);
+      CI.seeded=true; CI.lastPlayAt=Date.now();
+      return;                                        // don't fire on the backlog
+    }
+    var at = -1;
+    if(CI.lastPlayKey){
+      for(var pi=plays.length-1; pi>=0; pi--){ if(idOf(plays[pi])===CI.lastPlayKey){ at=pi; break; } }
+    }
+    var fresh = (at >= 0) ? plays.slice(at+1) : plays.slice(-4);
+    if(fresh.length){ CI.lastPlayKey = idOf(plays[plays.length-1]); CI.lastPlayAt=Date.now(); }
     if(CI.openQid){ await CI.tryResolve(CI.openQid, fresh, T); }
     if(CI.openQid){ await CI.voidIfStuck(CI.openQid); }
     if(!CI.openQid){ await CI.maybeTrigger(fresh, plays, T); }
