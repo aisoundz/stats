@@ -233,13 +233,32 @@ const NFL = {
     out.alreadyReturn = featureTonight();
     out.alreadyEvent  = String(GAME.espnEvent);
 
-    /* ---- 4. no gotn anywhere: fall back to flagship, then to tip ---- */
+    /* ---- 4. no flags anywhere: the CLOCK decides -------------------
+       This used to assert "earliest tip wins" against fixtures carrying
+       tonight's real tip times, so it passed all afternoon and failed at
+       8:50pm when one of those games had finished and the other was live.
+       A check whose answer depends on the hour it runs is not a check.
+
+       And the rule it asserted is the one the founder changed on 20 Aug:
+       "Yes that should be the case, it should always be in order." The
+       marquee is what is ON NOW, or NEXT. So both cases are driven here
+       with times relative to now, and neither depends on the wall clock. */
+    var isoIn = function(ms){ return new Date(Date.now() + ms).toISOString(); };
     GAME.nightId = 'gn13-mystics-tempo'; GAME.espnEvent = '401857157';
     SLATE.games = [
-      Object.assign({}, MLB, { gotn: false, flagship: false }),
-      Object.assign({}, NFL, { gotn: false, flagship: false })
+      Object.assign({}, NFL, { gotn:false, flagship:false, tipISO: isoIn(3*3600e3) }),
+      Object.assign({}, MLB, { gotn:false, flagship:false, tipISO: isoIn(1*3600e3) })
     ];
     out.noFlagFeatured = featureTonight();
+
+    /* And with one of them already under way, the live game outranks a
+       game that has not started, whatever the order in the array. */
+    GAME.nightId = 'gn13-mystics-tempo'; GAME.espnEvent = '401857157';
+    SLATE.games = [
+      Object.assign({}, MLB, { gotn:false, flagship:false, tipISO: isoIn(2*3600e3) }),
+      Object.assign({}, NFL, { gotn:false, flagship:false, tipISO: isoIn(-30*60e3) })
+    ];
+    out.liveWinsFeatured = featureTonight();
 
     /* ---- 5. an empty slate must change nothing ---- */
     GAME.nightId = 'gn13-mystics-tempo'; GAME.espnEvent = '401857157';
@@ -379,10 +398,18 @@ const NFL = {
        `"${r.alreadyReturn}" leaving event ${r.alreadyEvent}. A player who chose the baseball room ` +
        `must not be yanked to the football one.`);
 
-    ok('hero.still-picks-something-with-no-flags',
+    ok('hero.with-no-flags-the-next-to-tip-wins',
        r.noFlagFeatured === MLB.nightId,
-       `with neither gotn nor flagship on any game it featured "${r.noFlagFeatured}", expected the ` +
-       `earliest tip "${MLB.nightId}". A slate the marquee never stamped must still light the hero.`);
+       `with neither gotn nor flagship and both games ahead, it featured "${r.noFlagFeatured}", ` +
+       `expected the one tipping first, "${MLB.nightId}". A slate the marquee never stamped must ` +
+       `still light the hero, and it must light the one people can join soonest.`);
+
+    ok('hero.a-live-game-outranks-one-that-has-not-started',
+       r.liveWinsFeatured === NFL.nightId,
+       `with the football game already under way and the baseball one two hours off, it featured ` +
+       `"${r.liveWinsFeatured}", expected "${NFL.nightId}". Founder, 20 Aug: "it should always be ` +
+       `in order" — the marquee is what is ON NOW, or next. On a four-room Saturday the old rule ` +
+       `pinned the hero to one game for nine and a half hours.`);
 
     ok('hero.an-empty-slate-changes-nothing',
        r.emptyReturn === '' && r.emptyEvent === '401857157',

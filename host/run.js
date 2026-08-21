@@ -757,7 +757,7 @@ async function main(){
                  between questions tightens when the room is behind it. */
               let regPer = 4; try{ regPer = Number(AUTO.regulationPeriods(sum)) || 4; }catch(_){}
               const askedTotal = Object.keys(ciCounts).reduce((n,k)=>n+(ciCounts[k]||0),0);
-              const allowed = AUTO.CI.quota(pace.perGame, per, regPer);
+              const allowed = AUTO.CI.quota(AUTO.CI.perGameFor(sportFam, pace), per, regPer);
               const gap = Date.now() - ciOpenedAt;
               const mo = AUTO.CI.moment(sportFam, step.fresh);
               const spacedOut = mo && gap >= AUTO.CI.floorMs(mo.stoppage, askedTotal, allowed, pace);

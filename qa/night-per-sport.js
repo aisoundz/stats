@@ -66,6 +66,10 @@ function loadAuto(){
    app has to be reflected deliberately in the test. */
 const LEAGUES = [
   { key:'wnba', path:'basketball/wnba', family:'basketball', rounds:4, regulation:4 },
+  /* NBA is not a different sport, it is the same family on a different
+     path, and it has its own recorded feed. Running it proves the league
+     table and the family lookup do not quietly disagree. */
+  { key:'nba',  path:'basketball/nba',  family:'basketball', rounds:4, regulation:4 },
   { key:'mlb',  path:'baseball/mlb',    family:'baseball',   rounds:3, regulation:9 },
   { key:'nfl',  path:'football/nfl',    family:'football',   rounds:4, regulation:4 },
   { key:'mls',  path:'soccer/usa.1',    family:'soccer',     rounds:2, regulation:2 },
@@ -316,7 +320,7 @@ const only = (() => { const i = process.argv.indexOf('--sport'); return i > 0 ? 
         const mo = AUTO.CI.moment(L.family, step.fresh);
         if (!mo) continue;
         const askedTotal = Object.keys(counts).reduce((n, k) => n + (counts[k] || 0), 0);
-        const allowed = AUTO.CI.quota(pace.perGame, per, L.regulation);
+        const allowed = AUTO.CI.quota(AUTO.CI.perGameFor(L.family, pace), per, L.regulation);
         if (askedTotal >= allowed) continue;
         const gap = now - openedAt;
         if (gap < AUTO.CI.floorMs(mo.stoppage, askedTotal, allowed, pace)) continue;
@@ -341,9 +345,10 @@ const only = (() => { const i = process.argv.indexOf('--sport'); return i > 0 ? 
          the same NIGHT whether that is four quarters or nine innings.
          The floor is six rather than eight so a quiet fixture does not fail
          the gate, and the count prints on every run so drift is visible. */
-      ok(`${L.key}.reaches-a-full-night-of-live-questions`, asked >= 6,
-         `only ${asked} live questions across the whole game — the target is 8 in every sport, and a night that thin is not the product`);
-      if (asked > 0 && asked < 8) console.log(`      \x1b[33mnote\x1b[0m ${asked} of a target 8`);
+      const target = AUTO.CI.perGameFor(L.family, pace);
+      ok(`${L.key}.reaches-a-full-night-of-live-questions`, asked >= Math.max(3, target - 2),
+         `only ${asked} live questions across the whole game — the target for ${L.family} is ${target}, and a night that thin is not the product`);
+      if (asked > 0 && asked < target) console.log(`      \x1b[33mnote\x1b[0m ${asked} of a target ${target}`);
       if (asked) console.log(`      \x1b[2m${asked} live question(s) across the game · ${Object.keys(counts).map(k => 'P' + k + '=' + counts[k]).join(' ')}\x1b[0m`);
     }
 

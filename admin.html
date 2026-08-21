@@ -6640,9 +6640,35 @@ var AUTO = (function(){
      inches above it showed the game live.
 
      When a caller does not name a path, use the night's. */
-  function sumUrl(sportPath){
+  /* ============ THE SHARED BLOCK CANNOT REACH OUT OF ITSELF =========
+     Caught by the gate: qa/host-sports.js died with
+
+         ReferenceError: pathForNight is not defined
+             at Object.sumUrl (host-shared:43:13)
+
+     pathForNight() is a top-level function in admin.html and this file is
+     INSIDE @host-shared, which host/run.js lifts out and evaluates in a
+     bare Node sandbox with no page around it. Fixing the second hardcoded
+     league earlier tonight, I reached from inside the sentinels to a
+     function outside them — the one thing the block's own contract forbids,
+     and the reason it is fenced at all.
+
+     It only threw when sumUrl was called WITHOUT a path, which the runner
+     never does and a test does, so it would have sat here waiting for the
+     first caller that forgot the argument.
+
+     The block resolves it itself now, from the summary it was handed. */
+  function sumUrl(sportPath, sum){
+    var pth = sportPath;
+    if(!pth && sum){
+      try{
+        var fam = AUTO.familyOf(sum);
+        pth = { basketball:'basketball/wnba', baseball:'baseball/mlb', football:'football/nfl',
+                hockey:'hockey/nhl', soccer:'soccer/usa.1' }[fam] || '';
+      }catch(_){ pth = ''; }
+    }
     return 'https://site.api.espn.com/apis/site/v2/sports/'
-         + (sportPath || pathForNight()) + '/summary?event=';
+         + (pth || 'basketball/wnba') + '/summary?event=';
   }
 
   /* Never wired to a button anywhere. It exists so that the day somebody
@@ -8855,6 +8881,27 @@ AUTO.CI = (function(){
 
      The result is the same NIGHT everywhere — eight moments that reward
      watching — whether that is four quarters or nine innings. */
+  /* ============ HOW MANY IS A FULL NIGHT, PER SPORT ==================
+     Founder, 20 Aug: "for the questions across game they all should be 8",
+     then "mls should be more than 2, NFL has the best potential cause there
+     is down time", then "you can also set up the NBA and NHL with the same
+     number count. Since NHL is 3 quarters you can make it 2 questions per
+     period and that will be 6."
+
+     Eight everywhere except hockey, which has three periods rather than
+     four and lands on six at the same two-per-period rhythm. NBA is not a
+     separate row: it is the basketball family and inherits eight, two a
+     quarter, exactly as the WNBA does. */
+  C.PER_GAME = { basketball:8, baseball:8, football:8, soccer:8, hockey:6 };
+  C.perGameFor = function(sport, pace){
+    var fromPace = pace && Number(pace.perGame);
+    var base = C.PER_GAME[String(sport||'basketball')] || 8;
+    /* The pacing dial scales the sport's own number rather than replacing
+       it, so Hype on hockey is more hockey questions, not basketball ones. */
+    if(fromPace && fromPace !== 8) return Math.max(1, Math.round(base * (fromPace / 8)));
+    return base;
+  };
+
   C.quota = function(perGame, per, regPeriods){
     perGame = Number(perGame) || 8;
     regPeriods = Math.max(1, Number(regPeriods) || 4);

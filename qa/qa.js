@@ -4697,6 +4697,21 @@ async function browserTests(){
        than no gate: people start re-running it until it passes, which is
        the same as not having one. */
     if(feed==='down'){
+      /* ============ "UNREACHABLE" NOW MEANS BOTH ROUTES ===============
+         The app gained a second source on 20 Aug: when the phone cannot
+         reach ESPN it reads the copy the runner publishes to our own
+         database, because tracking protection, an ad blocker or a VPN
+         silently empties every stat and chart otherwise.
+
+         That is the right behaviour and it made this check fail, correctly:
+         blocking ESPN alone no longer leaves the tab with nothing to show.
+         But the thing being asserted still matters — when there is genuinely
+         nothing to show, the tab must SAY SO rather than invent a number.
+
+         So the scenario blocks both routes. Stubbing the fallback is the
+         honest way to test "nothing is reachable" now that there are two
+         ways to reach something. */
+      await p.evaluate(()=>{ try{ if(window.SB) SB.feedFor = async function(){ return null; }; }catch(_){} });
       await p.waitForFunction(()=>window.GS && GS.fails>=2, null, {timeout:15000})
              .catch(()=>{});
       await p.evaluate(()=>{ try{ renderStats(); }catch(e){} });
