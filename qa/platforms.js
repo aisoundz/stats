@@ -48,6 +48,19 @@ const MATRIX=[
   {name:'iPhone 14',        dev:'iPhone 14',           kind:'phone',   engine:'webkit'},
   {name:'iPhone SE-ish',    dev:'Galaxy S9+',          kind:'phone',   engine:'chromium', note:'320px — the narrowest screen anyone still uses'},
   {name:'Pixel 7',          dev:'Pixel 7',             kind:'phone',   engine:'chromium'},
+  /* ============ DAN'S PHONE, BY NAME ================================
+     The only outside human who has ever come back. Six nights, 134 awake
+     minutes on 19 August, eight answers, through a product that went deaf
+     every time he pocketed it — his telemetry carries a 103-second
+     background gap immediately before a round opened.
+
+     412x915, Android, Chrome. The Pixel 7 profile above is 412x839, which
+     is the same width class and a different Chrome UI, so the layout
+     checks covered him and the exact viewport never did. He is the single
+     most valuable instrument this company owns and his screen is now in
+     the default matrix by name, not by approximation. */
+  {name:"Dan's Android",    viewport:{width:412,height:915}, dsf:2.625, kind:'phone', engine:'chromium',
+   note:'412x915 — the one returning outside player'},
   {name:'iPad Pro 11',      dev:'iPad Pro 11',         kind:'tablet',  engine:'webkit'},
   {name:'iPad Mini',        dev:'iPad Mini',           kind:'tablet',  engine:'webkit'},
   {name:'Galaxy Tab S9',    dev:'Galaxy Tab S9',       kind:'tablet',  engine:'chromium'},

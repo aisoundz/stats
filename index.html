@@ -10691,7 +10691,33 @@ var VX=(function(){
          for one audio session and a mic opened under a live utterance
          opens deaf — no error, no onspeechstart — which is the exact bug
          the serialised path was built to fix. iOS keeps tap-to-talk. */
-      if(!V.ios && V.wantEar && V.hasEar && !V.listening){
+      /* ============ NOT WHILE WE ARE READING A CAUGHT IT ==============
+         Opening the ear alongside the speech is right for a round
+         question: the player already knows the answer, and waiting out the
+         read-out is the thing that made voice feel slow.
+
+         It is wrong for a Caught It, and on ANDROID it is actively
+         dangerous, because Android is the platform where the mic opens by
+         itself. The card reads its own options aloud, the loudspeaker is
+         in the microphone, and the recogniser hands back "fastball" — one
+         clean word, matching exactly one option, indistinguishable from a
+         real answer by content. qa/voice-android.js drives precisely that
+         and it answered the question for the player, twice.
+
+         An echo filter cannot separate those two, because on this platform
+         a player is EXPECTED to answer while the app is still talking, and
+         "fastball" is a legitimate reply to a question about a fastball.
+         Content will not tell them apart. Order will.
+
+         So on a Caught It the ear opens when the read-out FINISHES — the
+         callback V.askCatch already passes to V.say. That was impossible
+         at a nine-second window, where seven seconds of reading left
+         nothing to answer in. At twenty it is comfortable, and it is the
+         same serialised path iOS has always used.
+
+         Everywhere else, barge-in stays exactly as it was. */
+      var _onCICard=false; try{ _onCICard = V.onCatch(); }catch(_){}
+      if(!V.ios && !_onCICard && V.wantEar && V.hasEar && !V.listening){
         setTimeout(function(){
           try{ if(V.speaking && V.wantEar) V.ear({barge:true}); }catch(_){}
         }, 220);
@@ -10731,6 +10757,40 @@ var VX=(function(){
       return mine.length?mine:all;
     }catch(_){ return []; }
   };
+  /* ============ THE API IS NOT THE VOICE ============================
+     Founder, 21 Aug: "The voice audio doesnt work on the laptop either."
+     And on 20 Aug: "The voice doesnt work on any device. You cant hear it
+     eventhough its on."
+
+     V.hasOut only asks whether speechSynthesis EXISTS. It does, on every
+     browser we support. What it does not ask is whether the machine has
+     any voices installed — and on Linux without speech-dispatcher, and on
+     some stripped Chrome and Firefox builds, getVoices() returns an empty
+     list for ever. speak() then succeeds, fires no error, and produces
+     silence.
+
+     So the app says voice is on, the bar says "STATS is reading the
+     question", and nothing comes out of the speakers. From the outside
+     that is indistinguishable from a broken app, and it is why the same
+     report has come back three times.
+
+     The list arrives asynchronously — Chrome populates it after a
+     voiceschanged event — so an empty list on the first read means
+     nothing. Only an empty list AFTER the browser has had its chance is
+     news. */
+  V.voicesReady=false;
+  try{
+    window.speechSynthesis.addEventListener('voiceschanged', function(){ V.voicesReady=true; });
+  }catch(_){}
+  try{ setTimeout(function(){ V.voicesReady=true; }, 2500); }catch(_){}
+  V.noVoices=function(){
+    try{
+      if(!V.hasOut) return false;          // a different problem, already reported
+      if(!V.voicesReady) return false;     // too early to accuse anybody
+      return (window.speechSynthesis.getVoices()||[]).length === 0;
+    }catch(_){ return false; }
+  };
+
   V.voice=function(){
     var list=V.voices(); if(!list.length) return null;
     var want=''; try{ want=localStorage.getItem(VKEY)||''; }catch(_){}
@@ -11570,6 +11630,27 @@ var VX=(function(){
   };
   V.heardCatch=function(raw){
     if(!V.on) return false;
+    /* ============ WHILE WE ARE READING IT, NOTHING IS AN ANSWER ======
+       The ear is deliberately not opened during a Caught It read-out (see
+       V.say). So anything arriving here while we are still speaking is one
+       of two things: a recogniser left open by the PREVIOUS question that
+       nobody closed, or the room — the television, or our own loudspeaker.
+
+       It is not the player. On this card the player has not been invited
+       to speak yet.
+
+       This matters most on Android, where the mic opens by itself and the
+       app is loud: the recogniser hands back "fastball", one clean word
+       matching exactly one option, and no content-based filter can tell it
+       from a real answer, because "fastball" is a perfectly good reply to
+       a question about a fastball. Content cannot separate them. Order
+       can. Consume it and carry on reading. */
+    /* onCatch, not onCatchCard: this guard is about the READ-OUT of an
+       OPEN card, which is the only moment the app is talking over its own
+       live microphone. A card that has already locked is never being read,
+       and consuming results there would swallow the late answer the player
+       deserves to be told about — which is what the first version did. */
+    try{ if(V.speaking && V.onCatch()) return true; }catch(_){}
     var live=V.onCatch();
     if(!live && !V.onCatchCard()) return false;
     var o = live ? V.catchOpts() : V.catchOptsAll();
@@ -12105,6 +12186,17 @@ var VX=(function(){
   V.enable=function(){
     if(!V.hasOut){ V.note=V.L().LINES.noVoice; V.paint(); return; }
     V.on=true; V.armed=true; V.errs=0; V.primed=true;
+    /* AND IF THERE IS NOTHING TO SPEAK WITH, SAY SO IN TEXT. This is the
+       one failure the voice layer cannot report by talking. */
+    try{
+      setTimeout(function(){
+        if(!V.on || !V.noVoices()) return;
+        try{ V.note='This browser has no speech voices installed, so nothing will be read aloud. ' +
+                    'The game still works, and you can still answer by tapping.'; }catch(_){}
+        try{ toast('No speech voices installed on this device — STATS cannot read out loud here. Tapping still works.'); }catch(_){}
+        try{ V.paint(); }catch(_){}
+      }, 2600);
+    }catch(_){}
     try{ localStorage.setItem(KEY,'1'); }catch(_){}
     V.note = V.hasEar ? '' : 'This browser can read the questions but cannot hear answers — tap to answer.';
     try{ trk('voice_on',{ear:!!V.hasEar}); }catch(_){}
@@ -19570,7 +19662,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-21-overwhen.186';
+const STATS_BUILD='2026-08-21-android.187';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

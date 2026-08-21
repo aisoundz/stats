@@ -164,6 +164,10 @@ const TIER={
      play. It didnt stop and say the game is over." phaseNow() knew the
      whole time and nothing asked it. */
   'finished.js': {tier:'player'},
+  /* Dan is on Android, and Android is where the microphone opens by
+     ITSELF — so the app's own loudspeaker is in its own recogniser.
+     Different platform, different failures, its own suite. */
+  'voice-android.js': {tier:'player'},
   /* Reads source, not a browser. Guards the shape of bug this repo produces
      more than any other: something that fails and tells nobody. */
   'silence.js':       {tier:'static'},
