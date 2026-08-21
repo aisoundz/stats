@@ -6098,17 +6098,55 @@ function featureTonight(){
   if(hereIsTonight) return '';
   if(!SLATE.games || !SLATE.games.length) return '';
 
-  /* WHICH game is tonight's, in the marquee's own order of preference.
-     `gotn` is the Game of the Night and there is at most one a day.
-     `flagship` is a WEAKER flag — on 20 Aug it is true on BOTH games, so
-     filtering on it alone and taking [0] would have featured the 5:05
-     baseball game on a night whose marquee is the 7:00 football game.
-     Earliest tip is the last resort so this still does something sensible
-     on a slate the marquee never stamped. */
-  var star = SLATE.games.filter(function(g){ return g && g.gotn; })[0]
-          || SLATE.games.filter(function(g){ return g && g.flagship; })[0]
-          || SLATE.games.slice().sort(function(a,b){
-               return String(a.tipISO||'').localeCompare(String(b.tipISO||'')); })[0];
+  /* ============ THE MARQUEE FOLLOWS THE CLOCK ========================
+     Founder, 20 Aug, looking at the live front door at 4pm: the hero was
+     the 7:00 football game while the 5:05 baseball game was the next thing
+     to start. "Yes that should be the case, it should always be in order."
+
+     He is right, and the old rule was wrong in a way that gets worse as the
+     slate grows. It ranked by `gotn`, then `flagship`, then earliest tip.
+     On a four-room Saturday running 10:00 to 7:30 that would have pinned
+     the marquee to one game for nine and a half hours, so a reader opening
+     the site at noon would be counted down to something six hours away
+     while the room they could actually join went unmentioned.
+
+     THE MARQUEE IS "WHAT IS ON NOW, OR NEXT". In tip order:
+       · a game that has started and has not finished wins outright. If two
+         are live, the one that started most recently, because that is the
+         one the rail has just moved to.
+       · otherwise the next one to tip.
+       · once everything is over, the last one, so the page reads as a
+         result rather than a countdown to nothing.
+
+     The star is NOT gone. It still marks the Game of the Night on its tile
+     in the rail, which is the thing he actually likes. It just stopped
+     deciding what the countdown is counting down to. It now only breaks a
+     tie between games that tip at the same minute, which is the only place
+     a preference is still meaningful. */
+  var NOW = Date.now();
+  var ordered = SLATE.games.filter(function(g){ return g && g.nightId; })
+    .slice().sort(function(a,b){
+      var d = String(a.tipISO||'').localeCompare(String(b.tipISO||''));
+      if(d) return d;
+      /* same minute: the starred one goes first */
+      return (b.gotn?2:b.flagship?1:0) - (a.gotn?2:a.flagship?1:0);
+    });
+  if(!ordered.length) return '';
+
+  var tipOf = function(g){ var t = Date.parse(g.tipISO||''); return isNaN(t) ? Infinity : t; };
+  /* A game is "done" when the feed says final, or failing that when enough
+     time has passed that it cannot still be on. The window is deliberately
+     generous: a marquee that moves on too early is a page announcing the
+     wrong game while the right one is still being played. */
+  var RUN_MS = 4*60*60*1000;
+  var doneOf = function(g){
+    try{ if(g.state && /final|post/i.test(String(g.state))) return true; }catch(_){}
+    return NOW > tipOf(g) + RUN_MS;
+  };
+
+  var live = ordered.filter(function(g){ return NOW >= tipOf(g) && !doneOf(g); });
+  var star = live.length ? live[live.length-1]
+           : (ordered.filter(function(g){ return NOW < tipOf(g); })[0] || ordered[ordered.length-1]);
   if(!star || !star.nightId) return '';
 
   /* THE SPORT MOVES FIRST, ALWAYS. hydrateNight() refuses a config whose
@@ -6174,6 +6212,130 @@ function featureTonight(){
   return star.nightId;
 }
 try{ window.featureTonight = featureTonight; }catch(_){}
+
+/* ============ THE EMAIL'S GAMETIME QUESTION ARRIVES AS A LINK =========
+   Built 20 Aug 2026. The tip-off email carries a GAMETIME card — one
+   question about tonight — and each answer is a tappable button linking to
+   ?gt=<question>&pick=<answer>.
+
+   WHY A LINK AND NOT A FORM. Real interactivity inside an email is not
+   reliably possible: Gmail strips the CSS that fakes it, and AMP for Email
+   is Gmail-only and needs the sender registered. A link works in every mail
+   client ever made, and it is BETTER than a form would be — it does not
+   leave the reader in their inbox, it puts them in the room with their call
+   already made. The email stops being something you read and becomes the
+   first move of the game.
+
+   The pick is kept locally so it survives without an account, and written
+   to the server as well when there is somebody to attach it to. It is
+   create-only per question: the first answer stands, so the link cannot be
+   used to change a call after the game has started.
+
+   The parameters are stripped from the address bar afterwards, because a
+   URL that re-applies a pick every time it is opened is a URL that lies
+   about when the pick was made. */
+function gametimeFromLink(){
+  var qid='', pick='';
+  try{
+    var u = new URLSearchParams(location.search);
+    qid  = String(u.get('gt')   || '').slice(0,64);
+    pick = String(u.get('pick') || '').slice(0,64);
+  }catch(_){}
+  if(!qid || !pick) return null;
+
+  var KEY = 'stats_gametime_calls_v1';
+  var all = {};
+  try{ all = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; }catch(_){}
+
+  var already = all[qid];
+  if(!already){
+    all[qid] = { pick: pick, at: Date.now() };
+    try{ localStorage.setItem(KEY, JSON.stringify(all)); }catch(_){}
+    /* Server-side too, when there is an identity to hang it on. Create-only,
+       same as a pre-game card: the first call is the call. */
+    try{
+      if(window.SB && SB.enabled && SB.saveCall) SB.saveCall(qid, pick);
+    }catch(_){}
+    try{ trk('gametime_call',{qid:qid, pick:pick, via:'email'}); }catch(_){}
+  }
+
+  /* Say what happened, in the reader's language, and never pretend a later
+     tap changed anything. */
+  try{
+    var said = already
+      ? (i18nT('Your call is already in') + ': ' + String(already.pick))
+      : (i18nT('Call made') + ' — ' + String(pick));
+    toast('\u2705 ' + said + '. ' + i18nT('The answer is in tomorrow\u2019s email.'));
+  }catch(_){}
+
+  try{
+    var u2 = new URL(location.href);
+    u2.searchParams.delete('gt'); u2.searchParams.delete('pick');
+    history.replaceState(null, '', u2.toString());
+  }catch(_){}
+  return { qid: qid, pick: (already ? already.pick : pick), repeat: !!already };
+}
+try{ window.gametimeFromLink = gametimeFromLink; }catch(_){}
+
+/* ============ AND THE APP TELLS YOU IF YOU WERE RIGHT =================
+   Founder, 20 Aug: "Where is the answer going to be the next day for who
+   the answer was the day before?"
+
+   The EMAIL can state the answer, but it is the same email for everybody on
+   the list, so it cannot tell one reader they personally got it. The app
+   can, because it is holding their tap: gametimeFromLink() wrote the pick
+   to stats_gametime_calls_v1 the moment they chose it.
+
+   So the split is: the email says WHAT the answer was, the app says WHETHER
+   YOU CALLED IT. That is also the better place for it — the payoff pulls
+   somebody back into the product instead of ending in an inbox.
+
+   The answer itself is published to gametime/{qid} when the next morning's
+   email settles the question. Until that document exists there is nothing
+   to say and this does nothing, which is the correct behaviour on a game
+   that has not finished. */
+async function gametimeResult(db, F){
+  var KEY = 'stats_gametime_calls_v1';
+  var calls = {};
+  try{ calls = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; }catch(_){}
+  var open = Object.keys(calls).filter(function(q){ return calls[q] && !calls[q].told; });
+  if(!open.length || !db || !F) return null;
+
+  /* Oldest unresolved first, and only one a visit — a stack of toasts about
+     three different nights is noise, not a payoff. */
+  open.sort(function(a,b){ return (calls[a].at||0) - (calls[b].at||0); });
+  for(var i=0;i<open.length;i++){
+    var qid = open[i];
+    var snap = null;
+    try{ snap = await F.getDoc(F.doc(db,'gametime',qid)); }catch(_){ return null; }
+    if(!snap || !snap.exists()) continue;            // not settled yet
+    var d = snap.data() || {};
+    if(!d.answer) continue;
+
+    var mine = String(calls[qid].pick || '');
+    var right = mine && String(d.answer) === mine;
+
+    calls[qid].told = true;
+    calls[qid].right = !!right;
+    try{ localStorage.setItem(KEY, JSON.stringify(calls)); }catch(_){}
+    try{ trk('gametime_result',{qid:qid, pick:mine, answer:String(d.answer), right:!!right}); }catch(_){}
+
+    try{
+      var head = right ? ('\u2705 ' + i18nT('You called it')) : ('\u2716 ' + i18nT('Not this time'));
+      var line = String(d.line || '');
+      toast(head + (line ? (' \u2014 ' + line) : ''));
+    }catch(_){}
+    return { qid: qid, right: !!right };
+  }
+  return null;
+}
+try{ window.gametimeResult = gametimeResult; }catch(_){}
+
+/* A tiny passthrough so the toast speaks Spanish when the app does. */
+function i18nT(t){
+  try{ var d = i18nDict(); return (d && d[t]) || t; }catch(_){ return t; }
+}
+
 
 /* ============ CHOOSE THE SPORT YOU CAME TO TRY =======================
    Five leagues are built and practice could only ever reach the one the
@@ -6653,7 +6815,37 @@ async function loadSlate(db, F){
     /* A link wins, if it names a game that is actually on tonight. */
     var link = slateParam();
     if(link){
-      if(slateGame(link)){ slatePickSet(link); }
+      if(slateGame(link)){
+        slatePickSet(link);
+        /* ============ A LINK IS A DOOR INTO A ROOM, NOT A NOTE ========
+           Founder, live, having opened the football room from a link while
+           already seated in the baseball one: a screen headed "Quarter 1
+           scored" before kickoff, a scoreboard reading SF 0 LAC 1, and four
+           football questions answered Single, One or two, Seven or more,
+           Rangers. Both rooms checked on the server at that moment:
+           football had no score, no rounds and no key. Every one of those
+           values belonged to the baseball room.
+
+           Because this line only REMEMBERED the pick. chooseGame() is what
+           actually enters a room: it stops the old room's listeners, clears
+           the marquee, restores the room, sets ACTIVE_ROOM and moves the
+           network layer with SB.setRoom(). It was called from exactly one
+           place in the file, the tile in the rail. A URL never reached it.
+
+           So the live layer stayed pointed at whichever room it bound
+           first and kept streaming that room's rounds into this one, which
+           is why clearing local storage changed nothing: the wrong
+           subscription was re-established on every load.
+
+           Two doors into the same room and only one of them wired. The
+           link goes through the same door now. */
+        try{
+          var already = (typeof ACTIVE_ROOM !== 'undefined' && ACTIVE_ROOM === link);
+          if(!already){
+            Promise.resolve(chooseGame(db, F, link)).catch(function(){});
+          }
+        }catch(_){}
+      }
       else { try{ console.error('?game='+link+' is not on tonight\'s slate — ignoring it'); }catch(_){} }
     }
 
@@ -6665,6 +6857,12 @@ async function loadSlate(db, F){
     }
 
     try{ featureTonight(); }catch(_){}
+    /* After the slate, so the toast lands on a page that already knows what
+       tonight is rather than on a half-painted one. */
+    try{ gametimeFromLink(); }catch(_){}
+    /* And if a call they made earlier has since been settled, tell them —
+       after a beat, so it never collides with the toast above. */
+    try{ setTimeout(function(){ gametimeResult(db, F); }, 4000); }catch(_){}
 
     return SLATE.games.length > 0;
   }catch(e){
@@ -8807,6 +9005,28 @@ function startPredict(){
   saveGateEmail();
   try{ rememberProfile(); }catch(_){}
   if(S.mode==="live") ensureJoined();   // B-62: retries; joinNight() alone gave up after 6s
+  /* ============ THE DECK OPENS WHERE THE WORK IS ======================
+     Founder, live: "When you start with your selection of your picks for
+     the pregame questions. It starts with question 6 and then goes to
+     question 1."
+
+     PD.i is the cursor and nothing ever reset it. It is module state, so a
+     player who walked to the end of the deck and came back — which is what
+     the Home button and a phone waking up both do — reopened on card six,
+     with the counter reading one thing and the summary another.
+
+     Open on the first pick with no answer in it. If they are all answered,
+     open at the top, because then the deck is a review rather than a task. */
+  try{
+    var _L = predOrderList();
+    var _first = -1;
+    for(var _k = 0; _k < _L.length; _k++){
+      var _pk = _L[_k];
+      if(_pk && !S.predChoices[_pk.id]){ _first = _k; break; }
+    }
+    PD.i = (_first >= 0) ? _first : 0;
+    PD.scrolled = false;
+  }catch(_){ PD.i = 0; }
   buildPred();go('predict');
   try{ loadInactives(); }catch(e){}
 }
@@ -8946,11 +9166,28 @@ function predPick(id,val){
       setTimeout(function(){ try{ row.classList.remove('ask'); }catch(_){} }, 1800);
     }catch(_){}
   }, 200); }
-  if(p && !p.bonus){ setTimeout(function(){
-    const nb=predBlankIdx(PD.i);
-    if(nb>=0) predJump(nb);
-    else { const L=predOrderList(); if(PD.i<L.length-1) predGo(1); }
-  }, 220); }
+  /* ============ 220ms IS NOT LONG ENOUGH TO CHANGE YOUR MIND =========
+     Founder, live: "When you pick a question it automatically moves you to
+     the next question without letting you change or press next. It moves
+     it fast."
+
+     He is right, and 220ms is the number. A tap registers and the card is
+     gone before a person has finished reading their own choice, which also
+     makes the Next button decorative: it is on screen and the deck has
+     already moved past it.
+
+     Two changes. The beat is long enough to see what you picked and undo
+     it, and ANY further tap on this card cancels the move — so changing
+     your mind is a tap, not a race. */
+  if(p && !p.bonus){
+    try{ clearTimeout(PD._adv); }catch(_){}
+    PD._adv = setTimeout(function(){
+      PD._adv = null;
+      const nb=predBlankIdx(PD.i);
+      if(nb>=0) predJump(nb);
+      else { const L=predOrderList(); if(PD.i<L.length-1) predGo(1); }
+    }, 1100);
+  }
 }
 function buildPred(){
   const c=document.getElementById('predCard'); if(!c) return;
@@ -9875,7 +10112,51 @@ var VX=(function(){
      microphone that cannot exist. */
   V.iosNotSafari = V.ios && /CriOS|FxiOS|EdgiOS|OPiOS/.test((navigator.userAgent||''));
 
+  /* ============ REMEMBERED IS NOT THE SAME AS UNLOCKED ==============
+     Founder, testing on a live game night: "The voice doesn't work on any
+     device. You can't hear it even though it's on."
+
+     He is right, and the file already knew why. V.enable() carries the
+     comment "no browser will speak except from inside a gesture, so
+     enabling speaks immediately from within the handler. That first
+     sentence is not decoration, it is what unlocks audio for the rest of
+     the session."
+
+     And then this line restored V.on from localStorage at load, with no
+     gesture anywhere near it. So on every device where voice had ever been
+     switched on, the app booted with the toggle showing ON, painted it ON,
+     and the first thing it tried to speak was a question arriving on a
+     timer. No gesture in scope, so the browser dropped it silently, and
+     the engine stayed locked for the whole session. On, and mute, forever.
+
+     The fix is to separate the two facts the one flag was carrying. WANTED
+     is remembered. UNLOCKED is earned, once per session, from the first
+     real gesture. Until that gesture arrives the toggle still reads ON,
+     because it IS on and the player asked for it, and the first tap
+     anywhere on the page primes the engine with the same sentence
+     V.enable() would have said.
+
+     Never prime from a timer. That is the bug, and doing it "just in case"
+     on load is how it got here. */
   try{ V.on = V.hasOut && localStorage.getItem(KEY)==='1'; }catch(_){}
+  V.primed = false;
+  V.primeOnGesture = function(){
+    if(V.primed || !V.on || !V.hasOut) return;
+    V.primed = true;
+    try{ ['pointerdown','keydown','touchend'].forEach(function(ev){
+      window.removeEventListener(ev, V.primeOnGesture, true); }); }catch(_){}
+    /* Short, and said from inside the gesture. Its job is to unlock the
+       engine, not to be informative; the question that follows is the
+       informative part. */
+    try{ V.say(V.L().tag && /^es/.test(V.L().tag) ? 'Voz activada.' : 'Voice is on.'); }catch(_){}
+  };
+  try{
+    if(V.on && V.hasOut){
+      ['pointerdown','keydown','touchend'].forEach(function(ev){
+        window.addEventListener(ev, V.primeOnGesture, true);
+      });
+    }
+  }catch(_){}
 
   /* FOLD THE ACCENTS BEFORE STRIPPING, NOT AFTER. The old line deleted
      every character outside [a-z0-9' ], which in Spanish is not punctuation
@@ -10960,7 +11241,32 @@ var VX=(function(){
        on a dead mic. Founder: "It also doesnt allow me to lock my card."
        Never V.deaf() here. The mic belongs to the sheet until the sheet is
        finished with it. */
-    if(/^(?:lock|lock it|lock it in|lock in|lock my card|lock the card|lock my picks|submit|submit my card|finished|i'm done|im done|that's my card|thats my card)$/.test(t)){
+    /* ============ SPEECH RECOGNITION MANGLES THIS PHRASE ============
+       Founder, on a phone, mid-round: "When talking to the device on the
+       smart phone at the end it doesnt except lock it in."
+
+       "lock it in" was already in this list and in the LOCK grammar, so the
+       phrase was never the problem. The problem is that an anchored
+       exact-match list is the wrong shape for a speech recogniser. Say
+       "lock it in" to a phone and it comes back "log it in", "locket in",
+       "lock it and", "lucky tin" — and a leading "ok" or "alright" is
+       enough on its own to miss, because ^ and $ do not forgive a single
+       extra syllable.
+
+       So: allow the fillers a person actually says around a command, and
+       spell out the mishearings this phrase reliably produces. The anchors
+       STAY. Loosening them to a substring match is how "I'm not ready to
+       lock it in" locks the card, which is worse than not hearing it. */
+    var _fill = "(?:ok(?:ay)?|alright|all right|right|so|and|um|uh|hey|please)";
+    var _lockRe = new RegExp(
+      "^(?:" + _fill + "\\s+)*" +
+      "(?:lock|locked|locks|log|logged)" +
+      "(?:\\s+(?:it|em|them|this|that|my|the))?" +
+      "(?:\\s+(?:in|and|end|n|card|cards|picks|pick|sheet))?" +
+      "(?:\\s+(?:in|card|picks))?" +
+      "(?:\\s+" + _fill + ")*$");
+    if(_lockRe.test(t)
+       || /^(?:submit|submit my card|submit it|finished|finish|i'm done|im done|done with my card|that's my card|thats my card|locket in|locket|lucky tin)$/.test(t)){
       var lk=document.getElementById('pdLock');
       if(!lk){
         V.deafSay('Pick at least one first, then say lock my card.');
@@ -11118,7 +11424,7 @@ var VX=(function(){
      decoration, it is what unlocks audio for the rest of the session. */
   V.enable=function(){
     if(!V.hasOut){ V.note=V.L().LINES.noVoice; V.paint(); return; }
-    V.on=true; V.armed=true; V.errs=0;
+    V.on=true; V.armed=true; V.errs=0; V.primed=true;
     try{ localStorage.setItem(KEY,'1'); }catch(_){}
     V.note = V.hasEar ? '' : 'This browser can read the questions but cannot hear answers — tap to answer.';
     try{ trk('voice_on',{ear:!!V.hasEar}); }catch(_){}
@@ -11378,6 +11684,78 @@ var I18N = {
     "Resume my game":"Retomar mi partida",
     "Start a new game":"Empezar de nuevo",
     "Tips in":"Empieza en",
+    /* the Gametime payoff */
+    "You called it":"Lo acertaste", "Not this time":"Esta vez no",
+    "Call made":"Elección registrada", "Your call is already in":"Tu elección ya está registrada",
+    "The answer is in tomorrow\u2019s email.":"La respuesta llega en el correo de mañana.",
+
+    /* ============ THE APP AROUND THE QUESTIONS ========================
+       Added 20 Aug 2026. Every question in every sport was already
+       translated and the product around them was not — a Spanish player
+       read a Spanish question inside an English app, which reads as
+       breakage rather than as a half-finished feature.
+
+       qa/spanish.js walks all 17 screens and reports what is still English,
+       so this stopped being "about 360 strings" (an estimate nobody had
+       measured) and became a list. Team names, nicknames, league
+       abbreviations and broadcasters are exempt and must stay exempt —
+       "Golden State Valkyries" is a name, not copy. --- */
+
+    /* --- the sport chooser on the practice card --- */
+    "Basketball":"Baloncesto", "Soccer":"Fútbol", "Baseball":"Béisbol",
+    "Football":"Fútbol americano", "Hockey":"Hockey",
+
+    /* --- the front door --- */
+    "No game tonight":"No hay partido esta noche",
+    "The next game night lands here. Practice is open — no account needed.":
+      "La próxima noche de juego aparece aquí. La práctica está abierta — sin cuenta.",
+    "One tap. A seat and a score have to belong to somebody — that is the only reason this is here.":
+      "Un toque. Un lugar y un puntaje tienen que ser de alguien — esa es la única razón de esto.",
+    "Sign in with Google":"Entrar con Google",
+    "Use email instead":"Usar correo",
+    "We’re having trouble reaching the game server.":
+      "Estamos teniendo problemas para conectar con el servidor.",
+    "Signing in still works — give it a tap. If it doesn’t take, reloading the page usually fixes it.":
+      "Entrar sigue funcionando — dale un toque. Si no entra, recargar la página suele arreglarlo.",
+    "Reload and try again":"Recargar e intentar de nuevo",
+    "Email me when the next game night is on. One a game, unsubscribe any time.":
+      "Avísame por correo cuando haya noche de juego. Uno por partido, cancela cuando quieras.",
+    "Notify me":"Avísame",
+    "Take me off the list":"Quítame de la lista",
+
+    /* --- the round flow --- */
+    "End of Q1":"Fin del 1er cuarto",
+    "Quarter 1 in the books":"Primer cuarto terminado",
+    "Start Quarter 2 ▶":"Empezar el 2º cuarto ▶",
+    "Question 1 of 3":"Pregunta 1 de 3",
+    "Worth 1 pt":"Vale 1 punto",
+    "Score Q1":"Puntuar 1er cuarto",
+    "When the host posts the answers in the group chat, tap the correct answer for each question. Your picks are marked 🔵.":
+      "Cuando el anfitrión publique las respuestas en el chat, toca la respuesta correcta de cada pregunta. Tus elecciones están marcadas 🔵.",
+    "OUT OF 1000":"DE 1000",
+
+    /* --- the list and the consent copy. A legal sentence translated
+           loosely is worse than one left in English, so these keep their
+           exact meaning and their STOP/HELP keywords, which are the
+           carrier's and are not ours to translate. --- */
+    "One email before each game night — when it's on, who's playing, what's up for grabs. Then tell us what you actually watch, so we build nights you'd show up for.":
+      "Un correo antes de cada noche de juego — cuándo es, quién juega y qué se puede ganar. Después cuéntanos qué ves de verdad, para armar noches a las que vendrías.",
+    "Name":"Nombre",
+    "Phone":"Teléfono",
+    "A number means you can play by text later, without the app. We're not texting anyone yet.":
+      "Un número significa que después podrás jugar por mensaje, sin la app. Todavía no enviamos mensajes a nadie.",
+    "What do you watch?":"¿Qué ves?",
+    "Tap everything that's true. This is how we pick the next game night.":
+      "Toca todo lo que aplique. Así elegimos la próxima noche de juego.",
+    "Your teams":"Tus equipos",
+    "📺 How do you watch?":"📺 ¿Cómo lo ves?",
+    "📅 How often is a game actually on?":"📅 ¿Cada cuánto hay partido de verdad?",
+    "🎁 What would make you play every week?":"🎁 ¿Qué te haría jugar cada semana?",
+    "We don't sell your info. We're not texting anyone yet — the number just means you're on the list when we start.":
+      "No vendemos tu información. Todavía no enviamos mensajes — el número solo significa que estarás en la lista cuando empecemos.",
+    "Prizes awarded to the sponsor's verified top scorers after the final box score is confirmed. Winning never requires payment.":
+      "Los premios se entregan a los mejores puntajes verificados del patrocinador después de confirmarse el marcador final. Ganar nunca requiere pago.",
+
     /* The countdown label is the sport's own word now, so every form of it
        needs Spanish or a Spanish player gets an English label. Soccer is
        the audience this work exists for, so "Kickoff in" takes the football
@@ -11557,7 +11935,92 @@ var I18N = {
     "Set these before kickoff. They score themselves while you watch — no tapping during the match.":
       "Configúralas antes del saque inicial. Se puntúan solas mientras ves el partido — sin tocar nada durante el juego.",
     "Tap to copy. If this is behind, pull down to refresh.":
-      "Toca para copiar. Si va atrasado, desliza hacia abajo para actualizar."
+      "Toca para copiar. Si va atrasado, desliza hacia abajo para actualizar.",
+
+    /* ---- THE LAST 76, 20 Aug 2026 -----------------------------------
+       Coverage sat at 73% for a week because nobody had counted what was
+       left. qa/spanish.js --list printed the backlog in ninety seconds and
+       it was one afternoon of work, not a project. The rules page, the
+       consent copy, the season pass and the host toolkit: every screen a
+       Spanish speaker could reach while reading Spanish questions.
+       With this in, qa/all.js runs spanish.js with --max 0, so the number
+       can never quietly climb again. ------------------------------------ */
+    "Q1": "C1",
+    "6 × 1 pt": "6 × 1 pto",
+    "The engine room ⚙️": "La sala de máquinas ⚙️",
+    "This is what": "Esto es lo que",
+    "you": "tú",
+    "(or an automation) control on game night. It's the seed of the \"auto-post & auto-score\" pipeline.": "(o una automatización) controlas en la noche de juego. Es la semilla del sistema de publicar y puntuar solo.",
+    "🔴 Game Night #13 toolkit — August 19": "🔴 Herramientas de la Noche de Juego #13 · 19 de agosto",
+    "You're the host. At each quarter break: (1) tell the crew to answer in the app, (2) check the broadcast + box score, (3) post the answers in the group chat. ~60 seconds of work per quarter.": "Tú eres el anfitrión. En cada descanso de cuarto: (1) dile al grupo que responda en la app, (2) revisa la transmisión y la hoja de estadísticas, (3) publica las respuestas en el chat. Unos 60 segundos de trabajo por cuarto.",
+    "Tap a quarter to copy its questions for the group chat. Answers come from watching + the live box score.": "Toca un cuarto para copiar sus preguntas al chat del grupo. Las respuestas salen de ver el partido y de la hoja de estadísticas en vivo.",
+    "1 · Live data feed (play-by-play)": "1 · Datos en vivo (jugada a jugada)",
+    "Every quarter, the stats feed streams in events like these. This is the raw material — no human watching required.": "Cada cuarto, el feed de estadísticas envía eventos como estos. Esta es la materia prima, sin que nadie tenga que mirar.",
+    "2 · Question Engine ⚙️": "2 · Motor de preguntas ⚙️",
+    "Tap it. Templates scan the feed above and write the quarter's questions — with the correct answer already computed. Answers auto-lock from the same feed; every player is scored instantly.": "Tócalo. Las plantillas leen el feed de arriba y escriben las preguntas del cuarto, con la respuesta correcta ya calculada. Las respuestas se fijan solas desde ese mismo feed y cada jugador se puntúa al instante.",
+    "⚡ Generate this quarter's questions": "⚡ Generar las preguntas de este cuarto",
+    "3 · Auto-post everywhere": "3 · Publicar en todas partes",
+    "One tap fans results out to your channels + updates the live leaderboard.": "Un toque envía los resultados a tus canales y actualiza la tabla en vivo.",
+    "📸 Instagram Story": "📸 Historia de Instagram",
+    "🎵 TikTok": "🎵 TikTok",
+    "🐦 X / Twitter": "🐦 X / Twitter",
+    "🌐 Web app": "🌐 App web",
+    "Post result + leaderboard": "Publicar resultado y tabla",
+    "After the final buzzer, collect everyone's scores from the group chat and enter them here to rank the crew and name the winner.": "Después de la chicharra final, reúne los puntajes del chat y anótalos aquí para ordenar al grupo y nombrar al ganador.",
+    "You asked about rewinding — this is the question that tells us who can.": "Preguntaste por rebobinar. Esta es la pregunta que nos dice quién puede.",
+    "Yes — email me about upcoming STATS game nights. If I enter a phone number, I also agree to receive recurring automated texts from STATS at that number once texting starts. Consent is": "Sí, quiero recibir correos sobre las próximas noches de juego de STATS. Si escribo un número de teléfono, también acepto recibir mensajes automáticos y recurrentes de STATS a ese número cuando empiecen los envíos. El consentimiento",
+    "not": "no",
+    "a condition of playing, scoring, or winning anything. Message & data rates may apply. Reply STOP to any text to stop, HELP for help. You can delete your email and phone yourself any time from the end-of-game screen, or email": "es condición para jugar, puntuar ni ganar nada. Pueden aplicar tarifas de mensajes y datos. Responde STOP a cualquier mensaje para darte de baja, o HELP para ayuda. Puedes borrar tu correo y tu teléfono cuando quieras desde la pantalla final del juego, o escribe a",
+    "Tip-off 10:00 ET · 9:00 CT · 7:00 PT · USA Network": "Inicio 10:00 ET · 9:00 CT · 7:00 PT · USA Network",
+    "or just want to know when a game is on": "o solo quieres saber cuándo hay partido",
+    "Play Game Night #13": "Juega la Noche de Juego #13",
+    "One tap on what just happened, while it is happening.": "Un toque sobre lo que acaba de pasar, mientras está pasando.",
+    "Free to play. No purchase necessary. Friends & family beta — see the Rules page for scoring and fair play.": "Gratis para jugar. No hace falta comprar nada. Beta para amigos y familia. Consulta la página de Reglas para la puntuación y el juego limpio.",
+    "Preview —": "Vista previa:",
+    "this is a sample of how Leagues will look. The members below are a demo; real friend leagues go live after the beta.": "así se verán las Ligas. Los miembros de abajo son una demostración; las ligas reales con amigos llegan después de la beta.",
+    "The Barbershop": "La Barbería",
+    "Sample league · 6 members · Week 7 of the season": "Liga de ejemplo · 6 miembros · Semana 7 de la temporada",
+    "😤 Marcus is 6 pts ahead of you this season. Tonight's your shot.": "😤 Marcus te lleva 6 puntos esta temporada. Esta noche es tu oportunidad.",
+    "+ Invite a friend to the league": "+ Invita a un amigo a la liga",
+    "Leagues are free to join. STATS+ members can create unlimited leagues with custom names & trash-talk boards.": "Entrar a una liga es gratis. Los miembros de STATS+ pueden crear ligas ilimitadas con nombre propio y tablón para picarse.",
+    "Predictions locked. When each quarter ends, questions drop here — be fast, points are live.": "Predicciones bloqueadas. Cuando termine cada cuarto, las preguntas aparecen aquí. Sé rápido, los puntos corren.",
+    "Start Quarter 1 ▶": "Empezar el cuarto 1 ▶",
+    "In a real live run this waits for the game to reach the break. Here you drive it.": "En una noche real esto espera a que el partido llegue al descanso. Aquí lo controlas tú.",
+    "So your card has a name on it when the host settles the night. No password, and we only ask once.": "Para que tu tarjeta lleve un nombre cuando el anfitrión cierre la noche. Sin contraseña, y solo te lo pedimos una vez.",
+    "Email me when the next STATS game night is on — one heads-up, nothing else. Not required to play, score, or win. You can delete yourself from the list any time on the end-of-game screen.": "Avísame por correo cuando haya otra noche de juego de STATS. Un aviso y nada más. No hace falta para jugar, puntuar ni ganar. Puedes borrarte de la lista cuando quieras desde la pantalla final.",
+    "Sign in to save your handle, your points and your card across phones. One tap with Google — or use your inbox.": "Inicia sesión para guardar tu nombre, tus puntos y tu tarjeta en cualquier teléfono. Un toque con Google, o usa tu correo.",
+    "Season pass": "Pase de temporada",
+    "Go STATS+ ⭐": "Hazte STATS+ ⭐",
+    "The game stays free. STATS+ is for the fans who want the full season experience — and it's what funds the prize pool.": "El juego sigue siendo gratis. STATS+ es para quienes quieren la temporada completa, y es lo que financia el bote de premios.",
+    "Free": "Gratis",
+    "forever": "para siempre",
+    "— full predictions + live questions": "· predicciones completas y preguntas en vivo",
+    "Win any prize": "Gana cualquier premio",
+    "— every player is always prize-eligible": "· todos los jugadores siempre pueden ganar premios",
+    "✅ Join one league · global leaderboard": "✅ Entra a una liga · tabla global",
+    "SEASON PASS": "PASE DE TEMPORADA",
+    "/ month": "/ mes",
+    "Create unlimited private leagues": "Crea ligas privadas ilimitadas",
+    "+ trash-talk board": "+ tablón para picarse",
+    "— your accuracy by category, streak history, rating graph": "· tu precisión por categoría, historial de rachas, gráfico de nivel",
+    "Badge & name flair": "Insignia y estilo de nombre",
+    "on every leaderboard": "en todas las tablas",
+    "Quarter recap clips": "Clips de resumen por cuarto",
+    "+ host's picks before tip-off": "+ los pronósticos del anfitrión antes del inicio",
+    "Vote on next week's featured game": "Vota el partido destacado de la próxima semana",
+    "Start my season pass": "Empezar mi pase de temporada",
+    "STATS+ buys features, never advantage — subscribers get zero extra points, easier questions, or better prize odds. Contest entry and prize eligibility are 100% free for everyone, always. That separation is what keeps STATS a free skill-and-attention game with prizes, not gambling.": "STATS+ compra funciones, nunca ventaja. Los suscriptores no reciben puntos extra, ni preguntas más fáciles, ni mejores probabilidades de premio. Participar y optar a los premios es 100% gratis para todos, siempre. Esa separación es lo que mantiene a STATS como un juego gratuito de habilidad y atención con premios, y no como una apuesta.",
+    "Enter the official results (host announces from the final box score). Your picks are shown under each.": "Introduce los resultados oficiales (el anfitrión los anuncia desde la hoja final). Tus elecciones aparecen debajo de cada uno.",
+    "STATS is a free skill-and-attention game played along with a live basketball broadcast. You score by predicting the game before tip-off and by answering questions about what just happened at each break. No wagers, no entry fee — ever.": "STATS es un juego gratuito de habilidad y atención que se juega junto a una transmisión de baloncesto en vivo. Puntúas prediciendo el partido antes del inicio y respondiendo preguntas sobre lo que acaba de pasar en cada descanso. Sin apuestas y sin cuota de entrada, nunca.",
+    "Lock 6 picks before tip-off: winning team (100 pts) and the leader in points, assists, steals, rebounds & blocks (50 pts each). Nail the leader's exact stat total for a +50 bonus per category — so a category you fully nail is worth 100. Predictions can't be changed after tip-off.": "Fija 6 elecciones antes del inicio: el equipo ganador (100 ptos) y el líder en puntos, asistencias, robos, rebotes y tapones (50 ptos cada uno). Acierta el total exacto del líder y ganas 50 ptos extra por categoría, así que una categoría clavada del todo vale 100. Las predicciones no se pueden cambiar después del inicio.",
+    "At the end of each quarter, answer 4 questions about the quarter you just watched. They are not box-score trivia — they're the stuff you only catch if the game is actually on in front of you. Correct answers are worth 10 pts each in Q1, 20 in Q2, 30 in Q3, and 40 in Q4 — 400 points across the night, and the fourth quarter alone is worth 160 of them. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.": "Al final de cada cuarto respondes 4 preguntas sobre el cuarto que acabas de ver. No son trivia de hoja de estadísticas: son cosas que solo captas si tienes el partido delante. Cada acierto vale 10 ptos en el 1.º cuarto, 20 en el 2.º, 30 en el 3.º y 40 en el 4.º, o sea 400 puntos en la noche, y el último cuarto solo ya vale 160 de ellos. Tienes 20 segundos por pregunta. Nada de buscar: todo el juego consiste en que estabas atento.",
+    "Every correct quarter answer also banks the seconds you had left on the clock as Speed points. Example: answer correctly with 14 seconds left → +14 ⚡. Ties in total points are broken by Speed. Speed never beats accuracy — it only settles ties.": "Cada respuesta correcta también guarda los segundos que te quedaban en el reloj como puntos de velocidad. Ejemplo: aciertas con 14 segundos restantes → +14 ⚡. Los empates en puntos totales se deciden por velocidad. La velocidad nunca le gana a la precisión, solo desempata.",
+    "Once per half you can fire your Lifeline: in Practice mode it removes wrong options; on Game Night it adds +15 seconds to the clock (time to ask the room — just like the arena timeout).": "Una vez por mitad puedes usar tu comodín: en modo práctica elimina opciones incorrectas; en la noche de juego suma 15 segundos al reloj, tiempo para preguntarle a la sala, como el tiempo muerto en la cancha.",
+    "When the host posts each quarter's answers (from the broadcast + official box score), your quarter scores itself on your phone — there is nothing for you to tap in. After the final buzzer the host settles the official stat leaders and your prediction sheet scores too. Max score: 1000. Post your result card to the group chat — highest score wins the night, ⚡ Speed breaks ties.": "Cuando el anfitrión publica las respuestas del cuarto (desde la transmisión y la hoja oficial), tu cuarto se puntúa solo en tu teléfono y no tienes que escribir nada. Después de la chicharra final el anfitrión confirma los líderes oficiales y tu hoja de predicciones también se puntúa. Puntaje máximo: 1000. Publica tu tarjeta de resultado en el chat del grupo: el puntaje más alto gana la noche y ⚡ la velocidad desempata.",
+    "Answer from what you watched — not from a box score mid-question. The 20-second clock exists so lookups don't pay. Host's announced answers are final (official box score settles disputes). Be cool: it's game night, not the SEC.": "Responde con lo que viste, no con una hoja de estadísticas a media pregunta. El reloj de 20 segundos existe para que buscar no valga la pena. Las respuestas que anuncia el anfitrión son definitivas y la hoja oficial resuelve cualquier disputa. Tómatelo con calma: es noche de juego, no una auditoría.",
+    "Free to play; no purchase or payment ever required to play or win. 18+. This beta is for entertainment among friends; any prizes are provided by the host/sponsor and awarded on final verified stats. STATS is not affiliated with any league, club or broadcaster — we're a game about watching the game. Full sweepstakes rules will govern public seasons.": "Gratis para jugar; nunca hace falta comprar ni pagar nada para jugar o ganar. Mayores de 18. Esta beta es entretenimiento entre amigos; los premios los pone el anfitrión o el patrocinador y se entregan según las estadísticas finales verificadas. STATS no está afiliado a ninguna liga, club ni cadena: somos un juego sobre ver el partido. Las temporadas públicas se regirán por las bases completas del sorteo.",
+    "Enter each player's final score from their result card. Highest points wins — ⚡ Speed breaks ties automatically.": "Introduce el puntaje final de cada jugador desde su tarjeta de resultado. Gana quien tenga más puntos; ⚡ la velocidad desempata automáticamente.",
+    "+ Add another player": "+ Añadir otro jugador"
   }
 };
 
@@ -16136,7 +16599,18 @@ function copyShareText(){
   // The award is the line people actually screenshot, so it goes above the grid.
   const aw = AW_LAST && AW_LAST.list && AW_LAST.list[0];
   const awLine = aw ? `\n${awardEmoji(aw)} ${awardName(aw)}` : '';
-  const txt=`${head}${awLine}\n${shareEmoji()}\n🔥 ${S.streak}-game streak\nPlay free → statsgametime.com`;
+  /* ============ THE ONLY GROWTH SURFACE THIS PRODUCT HAS ============
+     Every share this app has ever produced ended in a bare domain, so a
+     card pasted into a group chat could bring somebody back and there was
+     no way on earth to know it had. The app has READ ?ref= since the
+     attribution block was written; nothing had ever written one.
+
+     Short, and derived from the player rather than stored, so there is no
+     new state to keep in sync. If there is no signed-in id there is no
+     code, and the link still works. */
+  var _ref='';
+  try{ var _u = (window.SB && SB.uid && SB.uid()) || ''; if(_u) _ref = '/?ref=' + String(_u).slice(0,8); }catch(_){}
+  const txt=`${head}${awLine}\n${shareEmoji()}\n🔥 ${S.streak}-game streak\nPlay free → statsgametime.com${_ref}`;
   try{navigator.clipboard&&navigator.clipboard.writeText(txt);}catch(e){}
   toast('📋 Result card copied — paste it in the group chat.');
 }
@@ -17975,7 +18449,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-20-everysport.180';
+const STATS_BUILD='2026-08-21-everyroom.181';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -18755,32 +19229,75 @@ var SPORT_CFG={
    gsRows() already returns []||[] so the block hides itself rather than
    rendering a guess. */
 /* ============ SPORT_CFG IS KEYED BY LEAGUE, NOT BY FAMILY ===========
-   Founder, live, four players in a baseball room in the 4th inning: "fix
-   the score not showing on the player app."
+   Founder, live, four players in a baseball room: "fix the score not
+   showing on the player app." The ticker read WSH 0 TEX 0 Bot 2nd and the
+   card above it read NOT STARTED.
 
-   Measured on the live site: sportCfg().path returned basketball/wnba on a
-   night whose own game object said sport baseball, league mlb, event
-   401816609. Every key in SPORT_CFG is a LEAGUE — wnba, nba, mlb, nfl,
-   nhl, mls — and a slate room's `sport` is the FAMILY, "baseball". So the
-   lookup missed, fell through to SPORT_CFG.wnba, and every baseball room
-   fetched its scoreboard from the WNBA feed using a baseball event id. The
-   request fails, GS never fills, and the card reads NOT STARTED over a
-   game that is on television.
+   Reproduced on the live site: GS.ok false, GS.fails 1, and the feed path
+   resolving to basketball/wnba on a night whose own hero object correctly
+   said sport baseball, league mlb, event 401816609.
 
-   Same conflation this codebase already has a name for: basketball is a
-   family, basketball/wnba is a path. It muted every slate room once
-   before. It was fixed where rooms are built and left standing here, in
-   the one function that decides which feed to read.
+   Because this line looked SPORT_CFG up by `GAME.sport`. Every key in that
+   table is a LEAGUE — wnba, nba, mlb, nfl, nhl, mls — and a slate room's
+   `sport` is the FAMILY, "baseball". SPORT_CFG['baseball'] is undefined, so
+   it fell through to SPORT_CFG.wnba and every baseball room fetched its
+   scoreboard from the WNBA feed with a baseball event id. The request
+   fails, GS never fills, and the card says NOT STARTED for a game in the
+   second inning.
 
-   League first. Family only as a fallback, mapped to its default league
-   rather than used as a key. */
+   This is the exact conflation this codebase has a name for: basketball is
+   a family, basketball/wnba is a path. It muted every slate room once
+   before, was fixed where the rooms are built, and was still sitting here
+   in the one function that decides which feed to read.
+
+   League first, because that is what the table is keyed by. Family only as
+   a fallback, mapped to its default league rather than used as a key. */
 var FAMILY_LEAGUE={ basketball:'wnba', baseball:'mlb', football:'nfl', hockey:'nhl', soccer:'mls' };
+/* ============ THE STATS TAB WAS SPEAKING BASKETBALL ==================
+   Founder, in a baseball room in the 7th inning: the Stats tab told him
+   "4 of 4 quarters settled" on a night with three rounds across nine
+   innings, and offered "Runs, shooting splits and the deep cuts" in a
+   sport with no shooting in it.
+
+   Both strings were written when there was one sport. This is the same
+   family of mistake as every other one found on 20 August — something
+   correct for basketball, never asked to be correct for anything else —
+   except that this one is only words, so it made the product look careless
+   rather than making it wrong.
+
+   Rounds, not periods: baseball's three rounds cover nine innings, so
+   "3 of 3 innings" would be a lie in the other direction. Where a sport's
+   rounds ARE its periods, it says so. */
+var ROUND_WORD  = { basketball:'quarters', football:'quarters', hockey:'periods',
+                    soccer:'halves',       baseball:'rounds' };
+var ROUND_COUNT = { basketball:4, football:4, hockey:3, soccer:2, baseball:3 };
+var THIN_LINE   = {
+  basketball:'Runs, shooting splits and the deep cuts',
+  football:  'Drives, yardage and the deep cuts',
+  baseball:  'Runs, pitching lines and the deep cuts',
+  hockey:    'Shots, saves and the deep cuts',
+  soccer:    'Shots, possession and the deep cuts'
+};
+function famNow(){
+  try{ var c = sportCfg(); return String((c && c.family) || 'basketball'); }
+  catch(_){ return 'basketball'; }
+}
+/* Stripping the trailing s turned "halves" into "halve", which is not a
+   word. English has exactly one irregular here, so it gets named rather
+   than inferred. */
+var ROUND_WORD_ONE = { quarters:'quarter', periods:'period', halves:'half', rounds:'round' };
+function roundWord(n){
+  var w = ROUND_WORD[famNow()] || 'rounds';
+  return (n === 1) ? (ROUND_WORD_ONE[w] || w) : w;
+}
+function roundCountNow(){ return ROUND_COUNT[famNow()] || 4; }
 function sportCfg(){
   var g=null; try{ g=(typeof GAME!=='undefined'&&GAME)||null; }catch(_){}
-  /* Before the room is bound — a fresh arrival on ?game= — the URL already
-     names it. Reading it here stops the first polls going to the wrong
-     league and burning the backoff on failures that were never real. */
+  /* Before a room is bound — a fresh arrival on ?game= — the marquee already
+     knows the night. Reading it here stops the first few polls going to the
+     wrong league and burning the backoff on failures that were never real. */
   if(!g || !g.espnEvent){ try{ var _lk=slateGame(slateParam()); if(_lk && _lk.espnEvent) g=_lk; }catch(_){} }
+  if(!g || !g.espnEvent){ try{ var h=heroGame(); if(h && h.espnEvent) g=h; }catch(_){} }
   var k=''; try{ k=String((g&&g.league)||'').toLowerCase().trim(); }catch(_){}
   if(!SPORT_CFG[k]){
     var fam=''; try{ fam=String((g&&g.sport)||'').toLowerCase().trim(); }catch(_){}
@@ -18850,10 +19367,11 @@ async function loadGameStats(force){
      So: read the event first, and make it part of the key. A different
      event is a cache MISS, however fresh it is. */
   /* THE EVENT AND THE PATH MUST DESCRIBE THE SAME GAME. Taking the id from
-     one place and the league from another is how a baseball event ends up
-     fetched from the WNBA feed. */
+     GAME and the league from somewhere else is how a baseball event id ends
+     up being fetched from the WNBA feed. Same source, both facts. */
   var ev=null; try{ ev=(typeof GAME!=='undefined')&&GAME.espnEvent; }catch(_){}
   if(!ev){ try{ var _lk2=slateGame(slateParam()); if(_lk2 && _lk2.espnEvent) ev=_lk2.espnEvent; }catch(_){} }
+  if(!ev){ try{ var _h=heroGame(); if(_h && _h.espnEvent) ev=_h.espnEvent; }catch(_){} }
   ev = ev ? String(ev) : '';
   if(!force && GS.ok && GS.ev===ev && Date.now()-GS.at<25000) return GS;
   /* ============ THE FAILURE COUNT BELONGED TO THE WRONG EVENT =======
@@ -20285,8 +20803,8 @@ function stYourCard(){
           if(S.qleadDone && S.qleadDone[qn]){ qDone++; qEarned += (L['qlead-q'+qn]||{}).p||0; }
         }
         if(qDone){
-          out+=stCard('', '<div style="font-size:14px;color:var(--ink);font-weight:800">⚡ +'+qEarned+' pts from leading at the quarter'+(qDone===1?'':'s')+'</div>'
-            + '<div class="sub" style="font-size:12px;margin-top:5px">'+qDone+' of 4 quarters settled so far — every category your pick was actually leading at that break paid out right then, on top of what the card pays at the final buzzer.</div>');
+          out+=stCard('', '<div style="font-size:14px;color:var(--ink);font-weight:800">⚡ +'+qEarned+' pts from leading at the '+roundWord(qDone)+'</div>'
+            + '<div class="sub" style="font-size:12px;margin-top:5px">'+qDone+' of '+roundCountNow()+' '+roundWord(roundCountNow())+' settled so far — every category your pick was actually leading at that break paid out right then, on top of what the card pays at the final buzzer.</div>');
         }
       }catch(_){}
       // Your picks who aren't playing — the only injury news that matters to you.
@@ -20605,7 +21123,7 @@ function renderStats(){
 
     if(!run && !zones && !ast && !rest.length){
       out += stEmpty('📈', 'Not enough has happened yet',
-        'Runs, shooting splits and the deep cuts need a few minutes of play behind them. This fills in as the game goes.');
+        (THIN_LINE[famNow()] || THIN_LINE.basketball) + ' need a few minutes of play behind them. This fills in as the game goes.');
     }
   }
 
