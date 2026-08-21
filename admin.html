@@ -8837,8 +8837,45 @@ AUTO.CI = (function(){
      beat to read. */
   C.lockMsFor = function(kind){ return /^(saw|qtr)/.test(String(kind||'')) ? 9000 : 6000; };
 
+  /* ============ EIGHT A GAME, IN EVERY SPORT ==========================
+     Founder, 20 Aug: "And for the questions across game they all should be 8."
+
+     Replaying whole games gave 8 for basketball, 7 for baseball, 4 for
+     football and 2 for soccer — because the old rule was a per-PERIOD cap
+     plus a fixed 80-second gap, and a sport whose moments are rare simply
+     never reached the cap. Basketball has a made basket every minute;
+     soccer has nine key events in half an hour. The same dial produces
+     wildly different nights.
+
+     So the budget is per GAME, and it is paced against how far the game has
+     got rather than against the clock. quota() says how many questions are
+     allowed to have been asked by the end of period N: eight spread evenly
+     across regulation. A sport that is behind its quota gets a shorter
+     floor between questions so it can catch up; one that is ahead waits.
+
+     The result is the same NIGHT everywhere — eight moments that reward
+     watching — whether that is four quarters or nine innings. */
+  C.quota = function(perGame, per, regPeriods){
+    perGame = Number(perGame) || 8;
+    regPeriods = Math.max(1, Number(regPeriods) || 4);
+    var through = Math.min(Number(per) || 1, regPeriods);
+    return Math.min(perGame, Math.ceil(perGame * (through / regPeriods)));
+  };
+
+  /* The floor between questions. Behind quota it tightens so a slow sport
+     can still get its eight; ahead of quota it opens up so a fast one does
+     not machine-gun the room. A stoppage always uses the short floor,
+     because the stoppage IS the pause. */
+  C.floorMs = function(stoppage, asked, allowed, pace){
+    if(stoppage) return 25000;
+    var behind = allowed - asked;
+    if(behind >= 2) return 30000;
+    if(behind === 1) return Math.min(45000, (pace && pace.gapMs) || 80000);
+    return (pace && pace.gapMs) || 80000;
+  };
+
   /* The pacing dial, same three settings the Control Room offers. */
-  C.PACES = { chill:{gapMs:150000, capPer:5}, normal:{gapMs:80000, capPer:8}, hype:{gapMs:45000, capPer:12} };
+  C.PACES = { chill:{gapMs:150000, perGame:5}, normal:{gapMs:80000, perGame:8}, hype:{gapMs:45000, perGame:12} };
 
   /* Freshness by IDENTITY, never by a sequence number. Baseball's restarts
      every at-bat, which is what kept Caught It silent on it for a whole

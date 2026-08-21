@@ -292,7 +292,21 @@ const only = (() => { const i = process.argv.indexOf('--sport'); return i > 0 ? 
                   awayScore:aw.score, homeScore:hm.score };
       let key = null, counts = {}, open = null, openedAt = 0, pending = null, asked = 0, now = 0;
       const pace = AUTO.CI.PACES.normal;
-      for (let cut = 20; cut <= stream.length; cut += 20) {
+      /* STEP BY TIME, NOT BY PLAYS. The first version advanced twenty plays
+         per poll, which is roughly right for basketball and wildly wrong for
+         football: 213 plays spread over three hours means a twenty-second
+         poll usually sees NONE. Simulating football at twenty plays a poll
+         gave it ten chances all night and made a pacing rule look broken
+         when it was the test that was.
+
+         So each sport is walked at its real density: total plays divided by
+         the number of twenty-second polls in a game of that length. */
+      const MINUTES = { basketball:130, baseball:180, football:190, soccer:115, hockey:150 };
+      const polls = Math.max(1, Math.round((MINUTES[L.family] || 150) * 3));
+      const stepBy = Math.max(1, stream.length / polls);
+      for (let poll = 1; poll <= polls; poll++) {
+        const cut = Math.min(stream.length, Math.round(poll * stepBy));
+        if (cut < 2) continue;
         now += 20000;
         const seen = stream.slice(0, cut);
         const step = AUTO.CI.freshAfter(seen, key); const first = !key; key = step.key;
@@ -300,9 +314,12 @@ const only = (() => { const i = process.argv.indexOf('--sport'); return i > 0 ? 
         if (first || open || !step.fresh.length) continue;
         const per = AUTO.CI.curPeriod(seen);
         const mo = AUTO.CI.moment(L.family, step.fresh);
-        if (!mo || (counts[per] || 0) >= pace.capPer) continue;
+        if (!mo) continue;
+        const askedTotal = Object.keys(counts).reduce((n, k) => n + (counts[k] || 0), 0);
+        const allowed = AUTO.CI.quota(pace.perGame, per, L.regulation);
+        if (askedTotal >= allowed) continue;
         const gap = now - openedAt;
-        if (!(mo.stoppage ? gap >= 25000 : gap >= pace.gapMs)) continue;
+        if (gap < AUTO.CI.floorMs(mo.stoppage, askedTotal, allowed, pace)) continue;
         let q = null; try { q = AUTO.CI.build(L.family, seen, T, per, counts, sum); } catch (_) {}
         if (!q || !q.qid) continue;
         open = q.qid; openedAt = now; counts[per] = (counts[per] || 0) + 1; asked++;
@@ -317,6 +334,16 @@ const only = (() => { const i = process.argv.indexOf('--sport'); return i > 0 ? 
          though it does not fail the gate. */
       ok(`${L.key}.live-questions-can-actually-fire`, asked > 0,
          `replaying the whole game produced ZERO live questions — the badge would say ARMED all night and nothing would ever come`);
+      /* Founder, 20 Aug: "for the questions across game they all should be 8",
+         and "mls should be more than 2, NFL has the best potential cause
+         there is down time". Eight is the target in every sport, which is
+         the whole point of a per-game budget rather than a per-period cap:
+         the same NIGHT whether that is four quarters or nine innings.
+         The floor is six rather than eight so a quiet fixture does not fail
+         the gate, and the count prints on every run so drift is visible. */
+      ok(`${L.key}.reaches-a-full-night-of-live-questions`, asked >= 6,
+         `only ${asked} live questions across the whole game — the target is 8 in every sport, and a night that thin is not the product`);
+      if (asked > 0 && asked < 8) console.log(`      \x1b[33mnote\x1b[0m ${asked} of a target 8`);
       if (asked) console.log(`      \x1b[2m${asked} live question(s) across the game · ${Object.keys(counts).map(k => 'P' + k + '=' + counts[k]).join(' ')}\x1b[0m`);
     }
 

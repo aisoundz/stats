@@ -50,7 +50,14 @@ const NIGHT   = process.env.NIGHT_ID   || '';
 const EVENT   = process.env.ESPN_EVENT || '';
 const MINUTES = Number(process.env.RUN_MINUTES || 240);
 const SPORT   = process.env.SPORT_PATH || 'basketball/wnba';
-const ANSWER_MS = Number(process.env.ANSWER_MS || 150000);   // 2m30
+/* HOW LONG A ROUND STAYS OPEN. Founder, at half time: "the second quarter
+   questions never went off. It showed the end score with it having nothing
+   on the laptop and tablet." The round HAD opened and scored — the runner's
+   own log has `key Q2 scored` — but it was open for two and a half minutes
+   and he was watching the game. A player looking at a television is not
+   refreshing a phone, and 2m30 is shorter than the break itself.
+   Six minutes, and it still closes the moment everyone has answered. */
+const ANSWER_MS = Number(process.env.ANSWER_MS || 360000);   // 6m
 const GRACE_MS  = Number(process.env.GRACE_MS  || 20000);
 /* Caught It is ON by default now that the runner can host it. A room with
    no host for it is a room where `callit:true` tells every phone to watch
@@ -743,11 +750,18 @@ async function main(){
             if(!firstLook && !ciOpen && step.fresh.length){
               const per = AUTO.CI.curPeriod(cplays);
               const pace = AUTO.CI.PACES[CALLIT_PACE] || AUTO.CI.PACES.normal;
-              const asked = ciCounts[per] || 0;
+              /* EIGHT A GAME, PACED AGAINST THE GAME. The old rule was a
+                 per-period cap and a fixed gap, which gave basketball eight
+                 and soccer two: a sport whose moments are rare never
+                 reached the cap. The budget is per GAME now and the floor
+                 between questions tightens when the room is behind it. */
+              let regPer = 4; try{ regPer = Number(AUTO.regulationPeriods(sum)) || 4; }catch(_){}
+              const askedTotal = Object.keys(ciCounts).reduce((n,k)=>n+(ciCounts[k]||0),0);
+              const allowed = AUTO.CI.quota(pace.perGame, per, regPer);
               const gap = Date.now() - ciOpenedAt;
               const mo = AUTO.CI.moment(sportFam, step.fresh);
-              const spacedOut = mo && (mo.stoppage ? gap >= 25000 : gap >= pace.gapMs);
-              if(mo && asked < pace.capPer && spacedOut){
+              const spacedOut = mo && gap >= AUTO.CI.floorMs(mo.stoppage, askedTotal, allowed, pace);
+              if(mo && askedTotal < allowed && spacedOut){
                 const comp = ((sum.header || {}).competitions || [])[0] || {};
                 const cs = comp.competitors || [];
                 const aw = cs.find(c => c.homeAway === 'away') || cs[0] || {};
@@ -772,7 +786,7 @@ async function main(){
                     opensAt: FieldValue.serverTimestamp(), locksMs: locks, seq: Date.now()
                   }, { merge:true });
                   ciOpen = q.qid; ciOpenedAt = Date.now();
-                  ciCounts[per] = asked + 1;
+                  ciCounts[per] = (ciCounts[per] || 0) + 1;
                   ciPending = (q.ans != null)
                     ? { qid:q.qid, ans:String(q.ans), text:q.atext || '', at: Date.now() + locks + 1200 }
                     : null;
