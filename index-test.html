@@ -19068,8 +19068,43 @@ var SPORT_CFG={
    A league with no rows and no same-family donor gets empty rows, and
    gsRows() already returns []||[] so the block hides itself rather than
    rendering a guess. */
+/* ============ SPORT_CFG IS KEYED BY LEAGUE, NOT BY FAMILY ===========
+   Founder, live, four players in a baseball room: "fix the score not
+   showing on the player app." The ticker read WSH 0 TEX 0 Bot 2nd and the
+   card above it read NOT STARTED.
+
+   Reproduced on the live site: GS.ok false, GS.fails 1, and the feed path
+   resolving to basketball/wnba on a night whose own hero object correctly
+   said sport baseball, league mlb, event 401816609.
+
+   Because this line looked SPORT_CFG up by `GAME.sport`. Every key in that
+   table is a LEAGUE — wnba, nba, mlb, nfl, nhl, mls — and a slate room's
+   `sport` is the FAMILY, "baseball". SPORT_CFG['baseball'] is undefined, so
+   it fell through to SPORT_CFG.wnba and every baseball room fetched its
+   scoreboard from the WNBA feed with a baseball event id. The request
+   fails, GS never fills, and the card says NOT STARTED for a game in the
+   second inning.
+
+   This is the exact conflation this codebase has a name for: basketball is
+   a family, basketball/wnba is a path. It muted every slate room once
+   before, was fixed where the rooms are built, and was still sitting here
+   in the one function that decides which feed to read.
+
+   League first, because that is what the table is keyed by. Family only as
+   a fallback, mapped to its default league rather than used as a key. */
+var FAMILY_LEAGUE={ basketball:'wnba', baseball:'mlb', football:'nfl', hockey:'nhl', soccer:'mls' };
 function sportCfg(){
-  var k='wnba'; try{ k=(GAME&&GAME.sport)||'wnba'; }catch(_){}
+  var g=null; try{ g=(typeof GAME!=='undefined'&&GAME)||null; }catch(_){}
+  /* Before a room is bound — a fresh arrival on ?game= — the marquee already
+     knows the night. Reading it here stops the first few polls going to the
+     wrong league and burning the backoff on failures that were never real. */
+  if(!g || !g.espnEvent){ try{ var _lk=slateGame(slateParam()); if(_lk && _lk.espnEvent) g=_lk; }catch(_){} }
+  if(!g || !g.espnEvent){ try{ var h=heroGame(); if(h && h.espnEvent) g=h; }catch(_){} }
+  var k=''; try{ k=String((g&&g.league)||'').toLowerCase().trim(); }catch(_){}
+  if(!SPORT_CFG[k]){
+    var fam=''; try{ fam=String((g&&g.sport)||'').toLowerCase().trim(); }catch(_){}
+    k = SPORT_CFG[fam] ? fam : (FAMILY_LEAGUE[fam] || 'wnba');
+  }
   var c=SPORT_CFG[k]||SPORT_CFG.wnba;
   if(c.pre && c.pre.length) return c;
   var fam=c.family||'basketball', donor=null;
@@ -19133,7 +19168,12 @@ async function loadGameStats(force){
 
      So: read the event first, and make it part of the key. A different
      event is a cache MISS, however fresh it is. */
+  /* THE EVENT AND THE PATH MUST DESCRIBE THE SAME GAME. Taking the id from
+     GAME and the league from somewhere else is how a baseball event id ends
+     up being fetched from the WNBA feed. Same source, both facts. */
   var ev=null; try{ ev=(typeof GAME!=='undefined')&&GAME.espnEvent; }catch(_){}
+  if(!ev){ try{ var _lk2=slateGame(slateParam()); if(_lk2 && _lk2.espnEvent) ev=_lk2.espnEvent; }catch(_){} }
+  if(!ev){ try{ var _h=heroGame(); if(_h && _h.espnEvent) ev=_h.espnEvent; }catch(_){} }
   ev = ev ? String(ev) : '';
   if(!force && GS.ok && GS.ev===ev && Date.now()-GS.at<25000) return GS;
   /* A new room must not inherit the old room's backoff either — that would

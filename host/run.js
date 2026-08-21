@@ -194,7 +194,23 @@ async function claimLease(db, FieldValue){
    shape — and because it is a whole-object merge rather than a set of
    fields, the last writer wins cleanly instead of leaving a half-updated
    score behind. */
-function periodLabel(sum, plan){
+/* AUTO ARRIVES AS AN ARGUMENT, BECAUSE IT WAS NEVER IN SCOPE HERE.
+   Found live on 20 Aug, in the 4th inning, with four people in the room and
+   the scoreboard reading "OT in progress".
+
+   The mapping fix forty lines below was written for exactly this bug and
+   has never once run. It calls AUTO.roundPeriodsFor(...), AUTO is created
+   inside main() at the foot of this file, and every other function that
+   needs it takes it as a PARAMETER — resolveRound(AUTO, ...),
+   earlyAnswers(AUTO, ...), roundSlots(AUTO, ...). This one did not. So it
+   threw ReferenceError on the first line of the try, the catch set bounds
+   to null, and it fell through to the one-round-per-period fallback the
+   comment itself calls wrong for baseball.
+
+   A try/catch that swallows a ReferenceError turns a fix into decoration.
+   The catch stays, because a feed in an unreadable shape must not kill the
+   score, but AUTO is now passed in so the good path can actually be taken. */
+function periodLabel(AUTO, sum, plan){
   try{
     const st = sum.header.competitions[0].status;
     const state = (st.type && st.type.state) || '';
@@ -257,8 +273,8 @@ function periodLabel(sum, plan){
   }catch(_){ return ''; }
 }
 
-async function writeLiveScore(db, FieldValue, sum, plan, last){
-  const label = periodLabel(sum, plan);
+async function writeLiveScore(AUTO, db, FieldValue, sum, plan, last){
+  const label = periodLabel(AUTO, sum, plan);
   /* No label means the game has not started, or the feed came back in a
      shape this cannot read. Either way the honest move is to leave the
      score document alone rather than overwrite it with a guess. */
@@ -592,7 +608,7 @@ async function main(){
       try{ await claimLease(db, FieldValue); }
       catch(e){ die('lost the lease — ' + ((e && e.message) || e)); }
 
-      lastScoreSig = await writeLiveScore(db, FieldValue, sum, plan, lastScoreSig);
+      lastScoreSig = await writeLiveScore(AUTO, db, FieldValue, sum, plan, lastScoreSig);
 
       const roundsSnap = await db.collection(`nights/${NIGHT}/rounds`).get();
       const live = {}; roundsSnap.forEach(d => { live[d.id] = d.data(); });
@@ -750,7 +766,7 @@ async function main(){
           /* Force the final score out even if it matched the last one —
              the difference between "Q4 in progress" and "Final" is the
              whole reason a phone stops waiting. */
-          await writeLiveScore(db, FieldValue, sum, plan, '');
+          await writeLiveScore(AUTO, db, FieldValue, sum, plan, '');
           /* One last pass. A round a human settled by hand while the runner
              was up would otherwise never be added to anyone's total, and
              the night would end with the board quietly short. */
