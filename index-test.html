@@ -9005,6 +9005,28 @@ function startPredict(){
   saveGateEmail();
   try{ rememberProfile(); }catch(_){}
   if(S.mode==="live") ensureJoined();   // B-62: retries; joinNight() alone gave up after 6s
+  /* ============ THE DECK OPENS WHERE THE WORK IS ======================
+     Founder, live: "When you start with your selection of your picks for
+     the pregame questions. It starts with question 6 and then goes to
+     question 1."
+
+     PD.i is the cursor and nothing ever reset it. It is module state, so a
+     player who walked to the end of the deck and came back — which is what
+     the Home button and a phone waking up both do — reopened on card six,
+     with the counter reading one thing and the summary another.
+
+     Open on the first pick with no answer in it. If they are all answered,
+     open at the top, because then the deck is a review rather than a task. */
+  try{
+    var _L = predOrderList();
+    var _first = -1;
+    for(var _k = 0; _k < _L.length; _k++){
+      var _pk = _L[_k];
+      if(_pk && !S.predChoices[_pk.id]){ _first = _k; break; }
+    }
+    PD.i = (_first >= 0) ? _first : 0;
+    PD.scrolled = false;
+  }catch(_){ PD.i = 0; }
   buildPred();go('predict');
   try{ loadInactives(); }catch(e){}
 }
@@ -9144,11 +9166,28 @@ function predPick(id,val){
       setTimeout(function(){ try{ row.classList.remove('ask'); }catch(_){} }, 1800);
     }catch(_){}
   }, 200); }
-  if(p && !p.bonus){ setTimeout(function(){
-    const nb=predBlankIdx(PD.i);
-    if(nb>=0) predJump(nb);
-    else { const L=predOrderList(); if(PD.i<L.length-1) predGo(1); }
-  }, 220); }
+  /* ============ 220ms IS NOT LONG ENOUGH TO CHANGE YOUR MIND =========
+     Founder, live: "When you pick a question it automatically moves you to
+     the next question without letting you change or press next. It moves
+     it fast."
+
+     He is right, and 220ms is the number. A tap registers and the card is
+     gone before a person has finished reading their own choice, which also
+     makes the Next button decorative: it is on screen and the deck has
+     already moved past it.
+
+     Two changes. The beat is long enough to see what you picked and undo
+     it, and ANY further tap on this card cancels the move — so changing
+     your mind is a tap, not a race. */
+  if(p && !p.bonus){
+    try{ clearTimeout(PD._adv); }catch(_){}
+    PD._adv = setTimeout(function(){
+      PD._adv = null;
+      const nb=predBlankIdx(PD.i);
+      if(nb>=0) predJump(nb);
+      else { const L=predOrderList(); if(PD.i<L.length-1) predGo(1); }
+    }, 1100);
+  }
 }
 function buildPred(){
   const c=document.getElementById('predCard'); if(!c) return;
@@ -16560,7 +16599,18 @@ function copyShareText(){
   // The award is the line people actually screenshot, so it goes above the grid.
   const aw = AW_LAST && AW_LAST.list && AW_LAST.list[0];
   const awLine = aw ? `\n${awardEmoji(aw)} ${awardName(aw)}` : '';
-  const txt=`${head}${awLine}\n${shareEmoji()}\n🔥 ${S.streak}-game streak\nPlay free → statsgametime.com`;
+  /* ============ THE ONLY GROWTH SURFACE THIS PRODUCT HAS ============
+     Every share this app has ever produced ended in a bare domain, so a
+     card pasted into a group chat could bring somebody back and there was
+     no way on earth to know it had. The app has READ ?ref= since the
+     attribution block was written; nothing had ever written one.
+
+     Short, and derived from the player rather than stored, so there is no
+     new state to keep in sync. If there is no signed-in id there is no
+     code, and the link still works. */
+  var _ref='';
+  try{ var _u = (window.SB && SB.uid && SB.uid()) || ''; if(_u) _ref = '/?ref=' + String(_u).slice(0,8); }catch(_){}
+  const txt=`${head}${awLine}\n${shareEmoji()}\n🔥 ${S.streak}-game streak\nPlay free → statsgametime.com${_ref}`;
   try{navigator.clipboard&&navigator.clipboard.writeText(txt);}catch(e){}
   toast('📋 Result card copied — paste it in the group chat.');
 }
@@ -19324,9 +19374,27 @@ async function loadGameStats(force){
   if(!ev){ try{ var _h=heroGame(); if(_h && _h.espnEvent) ev=_h.espnEvent; }catch(_){} }
   ev = ev ? String(ev) : '';
   if(!force && GS.ok && GS.ev===ev && Date.now()-GS.at<25000) return GS;
-  /* A new room must not inherit the old room's backoff either — that would
-     hold a fresh, healthy game hostage to a previous game's failures. */
-  if(GS.ev!==ev){ GS.fails=0; GS.ok=false; }
+  /* ============ THE FAILURE COUNT BELONGED TO THE WRONG EVENT =======
+     The intent here is right: a new room must not inherit the old room's
+     backoff, or a fresh healthy game is held hostage by a previous game's
+     failures.
+
+     But it compared against GS.ev, and GS.ev is only assigned on SUCCESS.
+     So while a feed is failing, GS.ev stays whatever last worked — usually
+     empty — and this line resets the counter on EVERY call. GS.fails could
+     never reach 2, `dead` in renderStats could never become true, and the
+     Stats tab sat on "Pulling the numbers…" forever instead of admitting it
+     could not reach anything. Measured: ten renders over ten seconds,
+     fails=0 the whole way, err='no feed' each time, loading stuck true.
+
+     It was invisible until tonight because in this state `ev` used to be
+     empty too, so the comparison was ''!=='' and never fired. Making the
+     event resolve properly is what exposed it — the older bug, not the
+     newer change.
+
+     So the failures are tracked against the event they are failures OF. */
+  if(GS.failEv !== ev){ GS.fails=0; GS.failEv=ev; }
+  if(GS.ev!==ev){ GS.ok=false; }
   // Exponential-ish backoff after failures: 3s, 6s, 12s, 24s, capped at 60s.
   if(!force && GS.fails>0 && Date.now()-GS.lastTry < Math.min(60000, 3000*Math.pow(2,GS.fails-1))) return GS;
   if(!ev){ GS.err='no event'; GS.fails++; GS.lastTry=Date.now(); return GS; }

@@ -18856,9 +18856,27 @@ async function loadGameStats(force){
   if(!ev){ try{ var _lk2=slateGame(slateParam()); if(_lk2 && _lk2.espnEvent) ev=_lk2.espnEvent; }catch(_){} }
   ev = ev ? String(ev) : '';
   if(!force && GS.ok && GS.ev===ev && Date.now()-GS.at<25000) return GS;
-  /* A new room must not inherit the old room's backoff either — that would
-     hold a fresh, healthy game hostage to a previous game's failures. */
-  if(GS.ev!==ev){ GS.fails=0; GS.ok=false; }
+  /* ============ THE FAILURE COUNT BELONGED TO THE WRONG EVENT =======
+     The intent here is right: a new room must not inherit the old room's
+     backoff, or a fresh healthy game is held hostage by a previous game's
+     failures.
+
+     But it compared against GS.ev, and GS.ev is only assigned on SUCCESS.
+     So while a feed is failing, GS.ev stays whatever last worked — usually
+     empty — and this line resets the counter on EVERY call. GS.fails could
+     never reach 2, `dead` in renderStats could never become true, and the
+     Stats tab sat on "Pulling the numbers…" forever instead of admitting it
+     could not reach anything. Measured: ten renders over ten seconds,
+     fails=0 the whole way, err='no feed' each time, loading stuck true.
+
+     It was invisible until tonight because in this state `ev` used to be
+     empty too, so the comparison was ''!=='' and never fired. Making the
+     event resolve properly is what exposed it — the older bug, not the
+     newer change.
+
+     So the failures are tracked against the event they are failures OF. */
+  if(GS.failEv !== ev){ GS.fails=0; GS.failEv=ev; }
+  if(GS.ev!==ev){ GS.ok=false; }
   // Exponential-ish backoff after failures: 3s, 6s, 12s, 24s, capped at 60s.
   if(!force && GS.fails>0 && Date.now()-GS.lastTry < Math.min(60000, 3000*Math.pow(2,GS.fails-1))) return GS;
   if(!ev){ GS.err='no event'; GS.fails++; GS.lastTry=Date.now(); return GS; }
