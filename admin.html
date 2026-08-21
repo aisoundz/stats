@@ -2145,6 +2145,36 @@ async function loadSlateRooms(){
   }
 }
 
+/* ============ WHICH ESPN LEAGUE IS THIS NIGHT? ======================
+   Defined ONCE, here, above every block that needs it. It was hardcoded to
+   basketball/wnba in the ESPN block and hardcoded AGAIN as SPORT_DEFAULT in
+   the AUTO block, and fixing only the first is exactly what happened at
+   17:29 tonight: the badge went live and autopilot still said "Feed
+   unreachable — will try again", because it fetches through its own copy.
+
+   Two copies of one fact is the disease this whole file keeps catching. A
+   third copy must not be possible, so nothing below defines its own. */
+var LEAGUE_PATH = {
+  wnba:'basketball/wnba', nba:'basketball/nba', mlb:'baseball/mlb',
+  nfl:'football/nfl',     nhl:'hockey/nhl',     mls:'soccer/usa.1'
+};
+var SPORT_FALLBACK = {
+  basketball:'basketball/wnba', baseball:'baseball/mlb', football:'football/nfl',
+  hockey:'hockey/nhl',          soccer:'soccer/usa.1'
+};
+function pathForCfg(cfg){
+  cfg = cfg || {};
+  var lg = String(cfg.league||'').toLowerCase().trim();
+  if(LEAGUE_PATH[lg]) return LEAGUE_PATH[lg];
+  var sp = String(cfg.sport||'').toLowerCase().trim();
+  if(SPORT_FALLBACK[sp]) return SPORT_FALLBACK[sp];
+  return 'basketball/wnba';
+}
+/* The path for whatever night the Control Room is pointed at right now. */
+function pathForNight(){
+  try{ return pathForCfg(nightCfg(night)); }catch(_){ return 'basketball/wnba'; }
+}
+
 function nightCfg(id){ return allNights().find(n=>n.id===id) || NIGHTS[0]; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function saveDraft(){ try{ localStorage.setItem(LS, JSON.stringify(draft)); }catch(e){} }
@@ -5194,29 +5224,13 @@ boot();
      eventId is cleared with it, because an event id from one league is
      meaningless in another and reusing it is how you fetch a WNBA game with
      a baseball id and get a feed that looks merely empty. */
-  var LEAGUE_PATH = {
-    wnba:'basketball/wnba', nba:'basketball/nba', mlb:'baseball/mlb',
-    nfl:'football/nfl',     nhl:'hockey/nhl',     mls:'soccer/usa.1'
-  };
-  var SPORT_FALLBACK = {
-    basketball:'basketball/wnba', baseball:'baseball/mlb', football:'football/nfl',
-    hockey:'hockey/nhl',          soccer:'soccer/usa.1'
-  };
-  function pathForCfg(cfg){
-    cfg = cfg || {};
-    var lg = String(cfg.league||'').toLowerCase().trim();
-    if(LEAGUE_PATH[lg]) return LEAGUE_PATH[lg];
-    var sp = String(cfg.sport||'').toLowerCase().trim();
-    if(SPORT_FALLBACK[sp]) return SPORT_FALLBACK[sp];
-    return 'basketball/wnba';
-  }
   var API_PATH = 'basketball/wnba';
   var API = 'https://site.api.espn.com/apis/site/v2/sports/' + API_PATH;
   /* Call before ANY ESPN read. Cheap, idempotent, and the only thing that
      keeps the base honest when the host switches rooms mid-evening. */
   function syncApi(){
     try{
-      var want = pathForCfg(nightCfg(night));
+      var want = pathForNight();
       if(want !== API_PATH){
         API_PATH = want;
         API = 'https://site.api.espn.com/apis/site/v2/sports/' + API_PATH;
@@ -6502,10 +6516,17 @@ var AUTO = (function(){
      setting SPORT_PATH=baseball/mlb would have been accepted in silence and
      then fetched a WNBA game anyway — a wrong-sport night that looks like a
      feed carrying nothing rather than like a misconfiguration. */
-  var SPORT_DEFAULT = 'basketball/wnba';
+  /* NO DEFAULT LEAGUE. There is no such thing as a sensible one: every
+     caller here is about a specific night, and guessing basketball for a
+     baseball night produces a 404 that surfaces as "Feed unreachable" and
+     reads like a network problem rather than a misconfiguration. That is
+     exactly how autopilot sat there retrying tonight while the badge two
+     inches above it showed the game live.
+
+     When a caller does not name a path, use the night's. */
   function sumUrl(sportPath){
     return 'https://site.api.espn.com/apis/site/v2/sports/'
-         + (sportPath || SPORT_DEFAULT) + '/summary?event=';
+         + (sportPath || pathForNight()) + '/summary?event=';
   }
 
   /* Never wired to a button anywhere. It exists so that the day somebody
