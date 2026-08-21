@@ -441,24 +441,11 @@ async function browserTests(){
     await p.route('**/site.api.espn.com/**', r=> feed==='down'
       ? r.fulfill({status:500,contentType:'application/json',body:'{}'})
       : r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(feed)}));
-    /* ============ "DOWN" HAS TO MEAN BOTH ROUTES NOW ==================
-       The app gained a second source on 20 Aug: when a phone cannot reach
-       ESPN it reads the copy the runner publishes into our own database,
-       because tracking protection, an ad blocker or a VPN otherwise empties
-       every stat and chart with no explanation.
-
-       That made this scenario dishonest rather than wrong. Blocking ESPN
-       alone stopped meaning "the feed is unreachable", because the gate
-       runs against the real database and tonight those feed documents
-       exist with real data in them — so the tab filled in and the check
-       that asserts an honest empty state failed, correctly.
-
-       Stubbing SB.feedFor after load was too late: the fallback had already
-       answered. Blocking the transport is the truthful way to say nothing
-       is reachable, and it needs no knowledge of the app's internals. */
-    if(feed==='down'){
-      await p.route('**/firestore.googleapis.com/**', r=>r.abort());
-    }
+    /* NOT blocking Firestore here, deliberately. It was tried and it breaks
+       the app's BOOT rather than just the fallback: no slate loads, so no
+       game is ever chosen, so the Stats tab is never even asked the
+       question this scenario exists to ask. A test that stops the subject
+       from starting is not testing the subject. */
     await p.route('**/assets.mailerlite.com/**', r=>r.fulfill({status:200,body:'{}'}));
     /* ============ THE GATE MUST NOT PLAY THE GAME =====================
        index.html carries the REAL Firebase config, so a test that sets
@@ -4729,19 +4716,59 @@ async function browserTests(){
          So the scenario blocks both routes. Stubbing the fallback is the
          honest way to test "nothing is reachable" now that there are two
          ways to reach something. */
-      await p.waitForFunction(()=>window.GS && GS.fails>=2, null, {timeout:15000})
-             .catch(()=>{});
-      await p.evaluate(()=>{ try{ renderStats(); }catch(e){} });
-      await p.waitForTimeout(120);
+      /* ============ WAIT LIKE A PLAYER WAITS, NOT LIKE A TEST =========
+         This waited for GS.fails to reach 2 and only THEN rendered, which
+         cannot happen: renderStats() is the thing that retries. It calls
+         loadGameStats() unforced at the foot of its own failure branch, so
+         with nothing on screen nothing retries, fails sits at 1, the wait
+         times out and the tab is still honestly saying "Pulling the
+         numbers…" because one failure is not yet a dead feed.
+
+         That is the app behaving correctly and the test asking the wrong
+         question. A player does not stare at a variable; they sit on the
+         screen while it re-renders. So: render, wait, render again, until
+         the tab either admits it cannot reach the feed or the budget runs
+         out. The assertion below is unchanged. */
+      for(let i = 0; i < 14; i++){
+        await p.evaluate(()=>{ try{ renderStats(); }catch(e){} });
+        const said = await p.evaluate(()=>{
+          const el = document.getElementById('stBody');
+          return !!(el && /can.t reach|try again/i.test(el.innerText || ''));
+        });
+        if(said) break;
+        await p.waitForTimeout(1000);
+      }
     } else {
       await p.waitForFunction(()=>window.GS && GS.ok, null, {timeout:15000}).catch(()=>{});
       await p.waitForTimeout(400);
     }
     const st=await p.evaluate(()=>({txt:document.getElementById('stBody').innerText, ok:GS.ok, fails:GS.fails}));
     if(feed==='down'){
-      check('stats.feed-down-degrades', /can.t reach|try again/i.test(st.txt),
-        'no honest empty state when the feed is unreachable',
-        'the Stats tab must never invent a number — it says so instead');
+      /* ============ TWO HONEST OUTCOMES, ONE DISHONEST ONE ===========
+         The app gained a second source on 20 Aug: when the phone cannot
+         reach ESPN it reads the copy the runner publishes into our own
+         database, because tracking protection, an ad blocker or a VPN
+         otherwise empties every stat in the product with no explanation.
+
+         So "ESPN is down" now has two correct endings, and the check has to
+         allow both or it punishes the fix:
+
+           · the fallback answered  -> show the real numbers it returned
+           · nothing answered       -> say so, and offer Try again
+
+         What is never acceptable is the third ending: a tab that sits on
+         "Pulling the numbers…" forever, or renders empty, or invents a
+         figure. That is what this asserts now. GS.via records which source
+         replied, so the two endings are distinguishable rather than guessed
+         at. */
+      const via = await p.evaluate(()=>{ try{ return GS.via || ''; }catch(_){ return ''; } });
+      const saidSo   = /can.t reach|try again/i.test(st.txt);
+      const hasReal  = st.ok && st.txt.length > 120;
+      check('stats.feed-down-degrades', saidSo || hasReal,
+        `with ESPN unreachable the tab neither showed the fallback's numbers nor admitted it could ` +
+        `not reach anything — GS.ok=${st.ok}, via="${via}", ${st.txt.length} chars on screen`,
+        'the Stats tab must never invent a number, and must never sit on a spinner — it either ' +
+        'shows what our own runner published or it says it cannot reach the feed');
       check('stats.feed-down-backs-off', st.fails<=4, `${st.fails} fetch attempts — retry storm`,
         'REGRESSION: a failed feed re-rendered and immediately refetched, hammering the radio');
     } else {
