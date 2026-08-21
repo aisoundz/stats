@@ -664,7 +664,7 @@ async function main(){
           lastFeedSig = payload;
           await db.doc(`nights/${NIGHT}/feed/latest`).set({
             at: FieldValue.serverTimestamp(),
-            event: String(ESPN_EVENT || ''),
+            event: String(EVENT || ''),
             sport: String(SPORT || ''),
             bytes: payload.length,
             json: payload
