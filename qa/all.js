@@ -160,6 +160,10 @@ const TIER={
   /* STATS answering the question that was asked — and staying out of
      the way of the broadcast when it was not being spoken to. */
   'stats-answers.js': {tier:'player'},
+  /* "Even after the game i could still go to the home page and still
+     play. It didnt stop and say the game is over." phaseNow() knew the
+     whole time and nothing asked it. */
+  'finished.js': {tier:'player'},
   /* Reads source, not a browser. Guards the shape of bug this repo produces
      more than any other: something that fails and tells nobody. */
   'silence.js':       {tier:'static'},

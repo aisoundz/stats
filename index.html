@@ -6117,6 +6117,35 @@ function gsIsAbout(g){
    teams — which is the exact contradiction this exists to stop. */
 function tonightTipLine(g){
   try{
+    /* ============ IF IT HAS STARTED, SAY THE SCORE ===================
+       Founder, 20 Aug: "The home page should have the score while its
+       going. It should be live."
+
+       landingTipLine() already shows a live score, but only for the room
+       the player is actually IN — it reads GS, and GS holds exactly one
+       event. On the home page the marquee follows the clock and features
+       whatever is on NOW, which is usually a game you are not in, so it
+       fell through to here and printed a tip time for a game that kicked
+       off an hour ago.
+
+       The score was already on the page. TICK.by is the live ticker that
+       fills the rail tiles, keyed by ESPN event id, refreshed for every
+       game on tonight's slate. Reading it costs nothing that is not
+       already being paid — no extra fetch, no extra Firestore read — and
+       it means the biggest card on the front door stops lying about a
+       game in progress. */
+    try{
+      var tk = TICK.by[String(g.espnEvent||'')] || null;
+      if(tk && tk.state && tk.state !== 'pre'){
+        var live = (tk.state === 'in');
+        if(tk.as != null && tk.hs != null){
+          var mark = live ? '\uD83D\uDD34 ' : '\uD83C\uDFC1 ';
+          var who  = (g.awayAbbr || g.away || '') + ' ' + tk.as + ' \u2013 ' + tk.hs + ' ' + (g.homeAbbr || g.home || '');
+          return mark + who + (tk.detail ? (' \u00B7 ' + tk.detail) : (live ? '' : ' \u00B7 Final'));
+        }
+        return live ? '\uD83D\uDD34 Live now' : '\uD83C\uDFC1 Final';
+      }
+    }catch(_){}
     var d = new Date(g.tipISO); if(isNaN(d)) return '';
     var fmt = function(tz){ return d.toLocaleTimeString('en-US',
       {timeZone:tz, hour:'numeric', minute:'2-digit'}); };
@@ -8884,6 +8913,24 @@ function paintAccountRow(){
 /* Leaving is part of trusting a product — and a shared phone with no way
    out is a real problem on game night. Rare button, non-negotiable. */
 async function doSignOut(){
+  /* SIGNING OUT OF AN UNVERIFIED SEAT IS NOT REVERSIBLE, and the player
+     cannot be expected to know that. A verified account can sign back in
+     and find its night exactly where it was. An anonymous one cannot:
+     SB.signOut drops straight into a fresh anonymous session with a brand
+     new uid, and the old seat, its points and its submissions belong to an
+     id nobody can reach any more.
+
+     So say so, once, and only when there is something to lose. Somebody
+     who has not scored anything gets no dialogue at all. */
+  try{
+    var _pts=0; try{ _pts=Math.round(Number(S.pts)||0); }catch(_){}
+    if(!signedInNow() && _pts>0){
+      var _msg='You are playing without an account, so signing out will not keep tonight.\n\n' +
+               'Your ' + _pts + ' point' + (_pts===1?'':'s') + ' and your place on the board go with it, ' +
+               'and there is no way to get them back.\n\nSign out anyway?';
+      if(!window.confirm(_msg)) return;
+    }
+  }catch(_){}
   let ok=false;
   try{ ok = !!(window.SB && SB.signOut && await SB.signOut()); }catch(e){ ok=false; }
   if(!ok){ toast('Couldn’t sign you out just now — try again in a second.'); return; }
@@ -9190,8 +9237,82 @@ function saveGateEmail(force){
 }
 
 /* ---------------- PREDICTIONS ---------------- */
+/* ============ A GAME THAT IS OVER SAYS SO ============================
+   Founder, in his 20 Aug notes: "I sat through the whole baseball game and
+   it didn't work well. Even after the game i could still go to the home
+   page and still play. It didnt stop and say the game is over."
+
+   phaseNow() has known the answer the whole time — it returns 'final' off
+   the feed's own status — and nothing ever asked it. So a finished room
+   stayed as inviting as a live one: the pick sheet opened, picks were
+   taken, and they settled against a game that had already been decided.
+   This is not hypothetical. At 08:48 this morning somebody filed a
+   prediction card into last night's completed football room.
+
+   Tonight has three rooms an hour apart, so a player finishing the
+   football and wandering back into it during the WNBA game is not an edge
+   case, it is the shape of the evening.
+
+   PRACTICE IS EXEMPT, deliberately. A practice deck has no real game
+   behind it and is meant to be replayable. */
+function nightIsOver(){
+  try{
+    if(S.mode !== 'live') return false;           // practice replays forever
+    /* ============ ABOUT THIS ROOM, OR IT PROVES NOTHING ==============
+       phaseFromFeed() reads GS with no event guard, and GS is one global
+       keyed to ONE event. So "final" means "the feed we happen to be
+       holding says final" — not "this room is finished".
+
+       Tonight makes that concrete: the football ends around 7:15 and the
+       basketball tips at 7:00. A player leaving the football room for the
+       basketball, in the seconds before loadGameStats catches up, would
+       carry a finished football feed into a live basketball room — and the
+       first draft of this function would have locked them out of a game
+       that had barely started. That is a worse bug than the one it fixes,
+       and it is the same one-global-two-rooms shape as everything else
+       found today.
+
+       So: if the feed is not about THIS game, say nothing. Fail towards
+       leaving the door open — a room that stays playable a few seconds too
+       long costs nobody anything, and a room that shuts on a live game
+       costs somebody their night. */
+    try{ if(typeof gsIsAbout === 'function' && !gsIsAbout(GAME)) return false; }catch(_){}
+    return phaseNow() === 'final';
+  }catch(_){ return false; }
+}
+try{ window.nightIsOver = nightIsOver; }catch(_){}
+
+/* What to say, with the score if we have it, because "this game is over"
+   and "this game finished 41 to 17" are different sentences to a person
+   who just walked in. */
+function overSay(){
+  var line = 'This game has finished.';
+  try{
+    var A=GS.teams[0], B=GS.teams[1];
+    if(GS.ok && A && B && A.score!=null && B.score!=null){
+      var a=Number(A.score)||0, b=Number(B.score)||0;
+      line = (a===b) ? ('This game finished level, ' + a + ' each.')
+                     : ('This game finished ' + Math.max(a,b) + ' to ' + Math.min(a,b) +
+                        ', ' + ((a>=b?A:B).name || (a>=b?A:B).ab) + '.');
+    }
+  }catch(_){}
+  return line;
+}
+
 function startPredict(){
   try{ trk('card_start'); }catch(_){}
+  /* THE DOOR IS SHUT. Taking picks for a decided game is worse than
+     refusing them: the player spends the time, and then the card settles
+     against a result that was already public before they started. */
+  try{
+    if(nightIsOver()){
+      try{ trk('blocked_finished',{where:'predict'}); }catch(_){}
+      toast(overSay() + ' Nothing left to pick.');
+      try{ if(typeof paintSlate==='function') paintSlate(); }catch(_){}
+      try{ go('landing'); }catch(_){}
+      return;
+    }
+  }catch(_){}
   /* "Play Game Night #5" is a START button. Pressed mid-night — which is
      exactly what a player does after their phone wakes on the home screen —
      it used to hand back a blank pick sheet for a card that was already
@@ -12813,11 +12934,35 @@ try{
    option text out of the DOM and V.match returns an INDEX, so it already
    hears what is on the screen and acts on the row, not the wording. */
 function qLang(){ try{ return VX.lang || 'en'; }catch(_){ return 'en'; } }
+/* ============ A SILENT FALLBACK IS STILL A BROKEN PROMISE ===========
+   Founder, 20 Aug: "when we do in spanish some of the words are still in
+   english."
+
+   The language picker already labels a half-built language honestly —
+   'beta', 'questions only', 'voice only' — but it reads a STATIC table of
+   what has been translated, not what tonight's rooms actually shipped. And
+   tonight's rooms shipped nothing: fifty published questions across the
+   three games, not one carrying a t_es.
+
+   So a Spanish player gets a Spanish interface, a Spanish voice, Spanish
+   practice questions, and then the live round arrives in English with no
+   explanation. Falling back to English is the RIGHT behaviour — a
+   half-translated question is worse than an English one — but doing it
+   without a word makes the app look broken rather than honest.
+
+   The flag is set here, where the fallback actually happens, and read once
+   per night by loadQuestion. Not per question: eight apologies a game is
+   its own insult. */
+var QLANG_FELL_BACK = false;
+var QLANG_TOLD = false;
+
 function qText(q){
   if(!q) return '';
   var L=qLang(); if(L==='en') return q.t;
   var t=q['t_'+L];
-  return (typeof t==='string' && t.trim()) ? t : q.t;
+  if(typeof t==='string' && t.trim()) return t;
+  QLANG_FELL_BACK = true;
+  return q.t;
 }
 function qOptsFor(q){
   if(!q || !Array.isArray(q.o)) return [];
@@ -12835,6 +12980,21 @@ function loadQuestion(){
   S.answered=false; pastTime=false;
   const q=rounds[S.qi].q[S.ni];const worth=roundWorth(S.qi);
   document.getElementById('qText').textContent=qText(q);
+  /* SAY IT ONCE, IN THEIR LANGUAGE. qText sets the flag when it had to fall
+     back; this is the only place that reads it, and only the first time.
+     The interface, the voice and the practice questions really are
+     translated — it is tonight's live bank that is not — so the sentence
+     has to be specific about which part, or it reads as "Spanish does not
+     work" when most of it does. */
+  try{
+    if(QLANG_FELL_BACK && !QLANG_TOLD && S.mode==='live'){
+      QLANG_TOLD = true;
+      var _l=''; try{ _l=qLang(); }catch(_){}
+      toast(_l==='es'
+        ? 'Las preguntas de esta noche todavía están en inglés. El resto del juego sigue en español.'
+        : 'Tonight’s questions are still in English. The rest of the game stays in your language.');
+    }
+  }catch(_){}
   document.getElementById('qCount').textContent=`Question ${S.ni+1} of ${nq()}`;
   document.getElementById('qWorth').textContent=`Worth ${worth} pt${worth>1?'s':''}${S.mode==="live"?' + ⚡':''}`;
   document.getElementById('revealBox').innerHTML='';
@@ -13180,6 +13340,10 @@ try{
 
 function lockPicks(idx, tries){
   if(S.mode!=="live") return false;
+  /* Belt and braces for the same rule. startPredict shuts the front door;
+     this shuts the one a stale timer or a re-armed listener could still
+     come through after the buzzer. */
+  try{ if(nightIsOver()) return false; }catch(_){}
   const rid = 'r'+idx;
   if(LOCKED[rid]) return false;
   const qs = (rounds[idx] && rounds[idx].q) || [];
@@ -19406,7 +19570,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-21-listening.185';
+const STATS_BUILD='2026-08-21-overwhen.186';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -19887,7 +20051,24 @@ function menuRows(){
   R.push('<div class="mgrp">Yours</div>');
   row('👤','Me &amp; my season','me');
   row('📬','Email me about game nights','join');
-  try{ if(signedInNow()) row('🚪','Sign out','signout'); }catch(_){}
+  /* ============ THERE IS ALWAYS A WAY OUT ==========================
+     Founder, 20 Aug: "On the menu theres no way to sign out."
+
+     There was a row, and it was gated on signedInNow() — which means
+     SB.verified(), a VERIFIED account. But most sessions are anonymous:
+     practice needs no account at all, and a player can pick a name, take a
+     seat and build up a score without ever verifying an email. That person
+     is signed in as far as they are concerned. They have a name on a
+     board. And the one row that would let them off the device was hidden
+     from them precisely because the app did not consider them anybody.
+
+     Anyone with a session gets the row. What the row DOES then depends on
+     what it would cost them, which is the next block down. */
+  try{
+    var _anyone=false;
+    try{ _anyone = !!(window.SB && SB.uid && SB.uid()); }catch(_){}
+    if(signedInNow() || _anyone) row('🚪','Sign out','signout');
+  }catch(_){}
   return R.join('');
 }
 var MENU_GO={

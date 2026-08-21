@@ -55,8 +55,18 @@ const ok = (id, cond, why) => {
     out.recent = pick();
     SLATE.games = [mk('first', -9 * 3600e3), mk('last', -6 * 3600e3)];
     out.done = pick();
-    SLATE.games = [mk('plain', 90 * 60e3), mk('starred', 90 * 60e3, { gotn: true })];
+    /* A GENUINE TIE, not two calls to Date.now() a millisecond apart.
+       iso() is evaluated once per game, so passing the same offset twice
+       produced tips that differed by a millisecond or two — and the sort
+       compares tipISO as a STRING before it ever reaches the star, so the
+       one built first always won and the tie-break was never exercised.
+       The check passed or failed on whether both calls landed inside the
+       same millisecond, which is why it went green for weeks and then red.
+       Compute the instant once and give it to both. */
+    const tieAt = iso(90 * 60e3);
+    SLATE.games = [mk('plain', 0, { tipISO: tieAt }), mk('starred', 0, { tipISO: tieAt, gotn: true })];
     out.tie = pick();
+    out.tieWasReal = SLATE.games[0].tipISO === SLATE.games[1].tipISO;
     return out;
   });
 
@@ -68,6 +78,9 @@ const ok = (id, cond, why) => {
      `featured "${r.recent}"; with two under way the rail has just moved to the newer one`);
   ok('marquee.after-everything-ends-it-holds-the-last', r.done === 'last',
      `featured "${r.done}"; once the night is over the page reads as a result, not a countdown to nothing`);
+  ok('marquee.the-tie-fixture-is-actually-tied', r.tieWasReal === true,
+     `the two games do not share a tip instant, so the star tie-break below is never reached and ` +
+     `the check passes for the wrong reason.`);
   ok('marquee.same-minute-is-broken-by-the-star', r.tie === 'starred',
      `featured "${r.tie}"; the Game of the Night still wins a genuine tie`);
   ok('marquee.no-page-errors', errs.length === 0, `errors: ${errs.slice(0, 2).join(' | ')}`);
