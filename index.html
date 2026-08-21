@@ -9818,7 +9818,40 @@ function paintLiveRank(){
   paintLiveStrip();
 }
 
-function liveRank(){ return (typeof roomLast!=='undefined' && roomLast) ? roomLast.rank : null; }
+/* ============ THE FOURTH SURFACE THAT ANSWERED "WHAT RANK AM I" =====
+   Founder, 20 Aug, one screenshot: the YOUR NIGHT tile reading "#4 OF 4"
+   directly above a line reading "you're #2", with the board below listing
+   him second.
+
+   myRank() was written to end exactly this — its own comment describes
+   GN12, where a tile said #2 OF 3, the room bar said #3 and the list said
+   third. It unified three surfaces. This was the fourth, and it was not
+   touched, because it lives in the live-score painter rather than beside
+   the others.
+
+   The two read different things. myRank() reads `lastStand`, the ordered
+   list the board is actually drawn from. liveRank() reads `roomLast.rank`,
+   a number cached from a server poll. They update at different moments, so
+   the disagreement is not a bug in either one — it is the inevitable
+   consequence of asking two sources the same question.
+
+   The board's own ordering wins, because that is the list the player can
+   see and count for themselves. The cached poll stays as the fallback for
+   when the list has not arrived, and for when the player is outside the
+   slice the board holds. */
+function liveRank(){
+  try{
+    var m = myRank();
+    if(m != null){
+      /* One sanity rule: a rank cannot exceed the room. If the ordered list
+         and the server's count disagree that badly, the server's pair is
+         the coherent one and gets used together. */
+      var n = (typeof roomLast!=='undefined' && roomLast) ? roomLast.count : null;
+      if(n == null || m <= n) return m;
+    }
+  }catch(_){}
+  return (typeof roomLast!=='undefined' && roomLast) ? roomLast.rank : null;
+}
 function liveCount(){ return (typeof roomLast!=='undefined' && roomLast) ? roomLast.count : null; }
 
 /* How many points to the nearest player ahead of me. Computed off the cached

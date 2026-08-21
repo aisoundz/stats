@@ -159,3 +159,55 @@ the round render is reading whatever it last held.
 
 **Until it is fixed, a second room must be opened in a NEW TAB.** Switching
 inside a tab is not safe.
+
+---
+
+## 9. Resolved, and one that could not be reproduced
+
+**#5 the Control Room never said which room Caught It was on** — fixed, and superseded: the runner
+hosts Caught It now, with no browser at all.
+
+**#4 the card opening on question 6** — fixed. `PD.i` is the cursor and nothing reset it, so walking
+to the end of the deck and coming back reopened on card six. It opens on the first pick with no
+answer in it.
+
+**#1 the pick auto-advancing** — fixed. The delay was 220ms, which is shorter than reading your own
+choice. Longer beat, and any further tap on the card cancels the move.
+
+**#3 Spanish inside the round flow** — partly. Every screen the walker reaches is at 100% and capped
+at zero so it cannot regrow. The live round flow is not among those screens, because reaching it
+needs a running night with published rounds. The walker is the fix, not the dictionary, and it is
+still outstanding.
+
+### #2 — "no way to get to the menu or go back home. The tabs disappear."
+
+**Could not reproduce on the current build, and the history says why.**
+
+`NAV_HIDE_ON` is `['tally']`. Only the final tally screen hides the nav, and that screen carries its
+own explicit door, `goHomeFromFinal()`. Driven live through the front door, the practice start, the
+Gametime tab and a round: **all four tabs visible on every screen, plus the menu.**
+
+The nav DID once hide during play. `c6f4401 Build .15 — five-tab bottom nav (hides during live
+play)`, removed later by `5fdec96 ONE PAGE (.78)` when the question moved onto the Gametime tab —
+because hiding the nav then would hide the tab you are standing on.
+
+Two candidates remain and they need the founder to say which:
+- he was on the **tally** screen, which is the one screen that legitimately hides the nav. His own
+  words were "it showed the end score", which fits.
+- or the tab was carrying a stale build, which is independently established for that session: the
+  same tab showed "FINAL OUT" over a game that had not started, and question 6 of a card he had not
+  filled in.
+
+Recording it as unreproduced rather than inventing a fix for it.
+
+### And a fourth surface answering "what rank am I"
+
+Not on the original list, spotted in the founder's own screenshot: the YOUR NIGHT tile read
+**"#4 OF 4"** directly above a line reading **"you're #2"**, with the board below listing him second.
+
+`myRank()` exists specifically to end this and its comment describes GN12, where a tile said #2 OF 3,
+the room bar said #3 and the list said third. It unified three surfaces. `liveRank()` was the fourth
+and was never touched, because it lives in the live-score painter rather than beside the others. It
+read `roomLast.rank`, a number cached from a server poll, while `myRank()` reads the ordered list the
+board is drawn from. Fixed: the board's own ordering wins, because that is the list a player can
+count for themselves.
