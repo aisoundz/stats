@@ -141,6 +141,9 @@ const TIER={
      it. It is also the only suite in this file that has ever asked the
      host a question about a sport that is not basketball. */
   'night-per-sport.js': {tier:'static'},
+  /* Reads source, not a browser. Guards the shape of bug this repo produces
+     more than any other: something that fails and tells nobody. */
+  'silence.js':       {tier:'static'},
   'bank-shadow.js':   {tier:'static'},
   'devices.js':       {tier:'browser'},
   'host-sportsreg.js':{tier:'browser'},
