@@ -4123,7 +4123,27 @@ window.STATS_FIREBASE = {
         if (!e || !e.nid || !e.rid) continue;
         e.tries = (e.tries || 0) + 1;
         var sent = false;
+        /* ============ ASK BEFORE SHOUTING ==============================
+           Founder, mid-game, with a screenshot: "Why does it say saving 2
+           answers out of nowere? It just popped up." His answers were
+           already in Firestore. The bar said they were not.
+
+           A submission is CREATE-ONLY in firestore.rules — that is the
+           property that makes a filed answer auditable, and it is
+           deliberate. But this retries with setDoc, so the moment an answer
+           has actually landed, every retry is an UPDATE, and every update
+           is denied. The outbox reads that denial as "still failing",
+           keeps the row, and nags for up to 200 tries about answers that
+           are safe on the server.
+
+           It cannot tell "the write failed" from "the write already
+           worked". So ask. One read per entry per attempt, and only while
+           the outbox is non-empty, which on a healthy night is never. */
         try {
+          var ex = await F.getDoc(F.doc(db, 'nights', e.nid, 'rounds', e.rid, 'subs', uid()));
+          if (ex && ex.exists()) sent = true;
+        } catch (_) {}
+        if (!sent) try {
           var body = {}; for (var k in e.row) if (Object.prototype.hasOwnProperty.call(e.row, k)) body[k] = e.row[k];
           body.at = F.serverTimestamp(); body.queued = true; body.tries = e.tries;
           await F.setDoc(F.doc(db, 'nights', e.nid, 'rounds', e.rid, 'subs', uid()), body);
@@ -10678,17 +10698,80 @@ var VX=(function(){
       if(V.sayTurn === myTurn) V.speaking=false;
       if(then) try{ then(); }catch(_){} };
     try{
+      /* ============ ACCEPTED, AND NEVER SPOKEN =========================
+         Founder, three times: "you cant hear it eventhough its on", "it can
+         hear, but it doesnt say voice", and after the barge-in fix, "its
+         still doing it."
+
+         The tell is that onend NEVER FIRES — the bar stays on "STATS is
+         reading the question" for ever. A cancelled utterance is not that.
+         An utterance the browser accepted and silently dropped is exactly
+         that, and there are four well-known ways to make Chrome do it. All
+         four were in this block:
+
+           1. cancel() and speak() in the SAME TURN. The queue is being torn
+              down as the new utterance arrives and it is dropped. Speak on
+              the next tick instead.
+           2. NOTHING HOLDS THE UTTERANCE. `var u` is function-local, so once
+              speak() returns it is garbage — and a collected utterance stops
+              or never starts. It needs a reference that outlives the call.
+           3. A PAUSED QUEUE. Chrome pauses synthesis when a tab is hidden
+              and does not always resume. Everything after it is swallowed.
+           4. A STALE VOICE OBJECT. A SpeechSynthesisVoice held across a
+              navigation or a voiceschanged event can be rejected silently.
+              His screenshots show "Fred" selected, which is why the voice
+              list being non-empty told us nothing.
+
+         And because being wrong twice is enough: if it still has not
+         STARTED after all that, the app says so on screen instead of
+         leaving a bar that claims to be reading. */
       window.speechSynthesis.cancel();
+      try{ if(window.speechSynthesis.paused) window.speechSynthesis.resume(); }catch(_){}
       var u=new window.SpeechSynthesisUtterance(t);
       u.rate=1.06; u.pitch=1; u.volume=1; u.lang=V.L().tag;
       try{ var vv=V.voice(); if(vv){ u.voice=vv; u.lang=vv.lang||V.L().tag; } }catch(_){}
       u.onend=fire; u.onerror=fire;
+      u.onstart=function(){ V.started=myTurn; };
+      V._u = u;                          // (2) outlive the call
       V.speaking=true;
       V.spokeAt=Date.now();
       /* WHAT WE ARE SAYING, so the recogniser can be told not to answer it.
          An open mic under a live loudspeaker hears the app. See V.isEcho. */
       try{ V.saidNorm=norm(t); }catch(_){ V.saidNorm=''; }
-      window.speechSynthesis.speak(u);
+      setTimeout(function(){                                   // (1) next tick
+        /* AND OFF MUST MEAN OFF. Speaking on the next tick opened a gap
+           that did not exist before: an utterance queued a moment ago now
+           fires AFTER the player has switched voice off, so the app talks
+           once more on its way out. qa/voice-wiring caught it as a flake —
+           one run in three — which is exactly how a real race looks from
+           the outside. */
+        if(!V.on || V.sayTurn!==myTurn || done) return;
+        try{ window.speechSynthesis.speak(u); }catch(_){ fire(); return; }
+        setTimeout(function(){
+          if(V.sayTurn!==myTurn || done || V.started===myTurn) return;
+          /* It took the sentence and did nothing. Commonest cause is (4),
+             so try once more with the browser's own default voice. */
+          try{
+            window.speechSynthesis.cancel();
+            try{ if(window.speechSynthesis.paused) window.speechSynthesis.resume(); }catch(_){}
+            var u2=new window.SpeechSynthesisUtterance(t);
+            u2.rate=1.06; u2.pitch=1; u2.volume=1; u2.lang=V.L().tag;
+            u2.onend=fire; u2.onerror=fire;
+            u2.onstart=function(){ V.started=myTurn; V.voiceFellBack=true; };
+            V._u = u2;
+            window.speechSynthesis.speak(u2);
+          }catch(_){}
+          setTimeout(function(){
+            if(V.sayTurn!==myTurn || done || V.started===myTurn) return;
+            /* Say it where it can be read, because this is the one failure
+               the voice layer cannot report by talking. */
+            try{ V.note='This browser took the sentence and never spoke it. '+
+                        'Voice input still works, so you can answer out loud. '+
+                        'For the read-out, try Chrome, or check the system voice.'; }catch(_){}
+            try{ V.paint(); }catch(_){}
+          }, 1400);
+        }, 400);
+      }, 0);
       /* ---- BARGE-IN ---------------------------------------------------
          FOUNDER, TESTING TONIGHT'S GAME: "when i start talking its still
          talking. When I talk it should start being quiet and listen for
@@ -19752,7 +19835,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-21-itspeaks.188';
+const STATS_BUILD='2026-08-21-outloud.190';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

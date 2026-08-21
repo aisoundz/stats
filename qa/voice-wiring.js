@@ -504,13 +504,19 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     VX.heard(last);
     return S.predChoices[VX.pickId()]===full;
   });
-  R['a-shared-surname-refuses-rather-than-guesses'] = await p.evaluate(()=>{
+  /* SPEECH IS DEFERRED BY ONE TICK NOW. V.say() calls speak() from a
+     setTimeout, because cancel() and speak() in the same turn is one of the
+     four ways Chrome silently drops an utterance. Anything that reads
+     window.__said straight after calling into the voice layer has to let
+     that tick happen first. */
+  R['a-shared-surname-refuses-rather-than-guesses'] = await p.evaluate(async ()=>{
     const opts=VX.pickOpts();
     const counts={}; opts.forEach(o=>{const l=o.split(' ').pop(); counts[l]=(counts[l]||0)+1;});
     const dupe=Object.keys(counts).find(k=>counts[k]>1);
     if(!dupe) return true;                       // nothing to disambiguate on this card
     const before=S.predChoices[VX.pickId()]||null;
     window.__said=[]; VX.heard(dupe);
+    await new Promise(z=>setTimeout(z,60));   // V.say speaks on the next tick now
     return S.predChoices[VX.pickId()]===before
         && window.__said.some(u=>/more than one player/i.test(u));
   });
@@ -527,7 +533,7 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
 
   /* ---- CAUGHT IT. "There's no voice for when the questions for Caught
      It are asked." The mechanic where audio matters most had none. ---- */
-  R['a-caught-it-card-announces-itself'] = await p.evaluate(()=>{
+  R['a-caught-it-card-announces-itself'] = await p.evaluate(async ()=>{
     /* #ciCard mounts on demand — "ciShow was a silent no-op on a cold
        page" is a named incident here — so the harness has to create it
        rather than assume a page that has never shown one. */
@@ -551,6 +557,7 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
       const q={id:'t1',prompt:'Who scored that?'};
       if(VX.spokeCatch!==q.id){ VX.spokeCatch=q.id; VX.askCatch(); }
     }
+    await new Promise(z=>setTimeout(z,60));   // V.say speaks on the next tick now
     const said=window.__said.join(' ');
     return /Caught It/i.test(said) && /Who scored that/.test(said)
         && /Collier/.test(said) && /Howard/.test(said);
@@ -587,7 +594,7 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
      the same words now answer with the teams' score, because answering
      "you have 135 points" to a man watching basketball is the bug that
      started this. qa/stats-answers.js covers that side. */
-  R['it-can-say-who-is-winning'] = await p.evaluate(()=>{
+  R['it-can-say-who-is-winning'] = await p.evaluate(async ()=>{
     { const c=document.getElementById('ciCard'); if(c) c.style.display='none'; }
     try{ document.getElementById('qOpts').innerHTML=''; }catch(_){}
     /* LIVE, because myRank() ranks against the practice bots in demo and
@@ -597,6 +604,7 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     S.mode='live'; go('board'); S.pts=135;
     lastStand=[{name:'Smakk',total:440,pts:440},{name:'You',total:135,pts:135,me:true}];
     window.__said=[]; const ok=VX.heard("who's winning");
+    await new Promise(z=>setTimeout(z,60));   // V.say speaks on the next tick now
     const said=window.__said.join(' ');
     return ok && /135 points/.test(said) && /number 2 of 2/.test(said) && /Smakk/.test(said);
   });

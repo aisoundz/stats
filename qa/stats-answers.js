@@ -101,9 +101,13 @@ function serve(){
     /* Twice in a row, addressed to us: must not lecture. */
     VX.lastUnknownAt = 0;
     VX.unknown('who won the title in eighty six');
+    /* LET THE FIRST ONE LAND FIRST. V.say speaks on the next tick now, so
+       clearing the buffer immediately catches the FIRST reply after the
+       clear and reads it as a second one. */
+    await new Promise(z=>setTimeout(z,60));
     window.__said=[];
     VX.unknown('who won the title in eighty seven');
-    await new Promise(z=>setTimeout(z,40));
+    await new Promise(z=>setTimeout(z,60));
     out.unknownTwice = (window.__said||[]).join(' ');
     return out;
   });
