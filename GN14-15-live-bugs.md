@@ -113,3 +113,49 @@ tonight with baseball at 5:05 and football at 7:00.
 
 Nothing was changed during the night. Every fix goes on index-test.html and
 through the full gate.
+
+---
+
+## 8. Switching rooms shows you the OTHER room's scored answers
+
+Founder, 18:28, having just opened the football room and entered his picks:
+a screen headed **"Quarter 1 scored ✅"** for a game that kicks off at 7:00,
+a scoreboard reading **SF 0 LAC 1**, and four football questions answered with
+**Single · One or two · Seven or more · Rangers**.
+
+**The server is clean.** Checked both rooms at the moment of the screenshot:
+
+    slate-2026-08-20-sf-lac    score: null    rounds: 0
+    slate-2026-08-20-wsh-tex   score: {home:1, "4th-6th in progress"}
+                               rounds: 1  r0 scored
+                               key: ["Single","One or two","Seven or more","Rangers"]
+
+That key is character-for-character what the football room displayed. The `1`
+in `LAC 1` is the baseball game's home score. Football has never had a round,
+a key or a score written to it.
+
+So this is entirely client-side: **opening a second room in a session that has
+already been in another room renders the FIRST room's scored round and score
+against the SECOND room's questions.** Football question text, baseball answers.
+Two facts from two rooms fused into one screen.
+
+### Why this is the most serious bug on the list
+
+Every plan made this week assumes **one score that follows you between rooms**:
+three rooms a weekday, four on Saturday, "start in one and finish in another".
+That premise is the product. If moving between rooms shows a player a round they
+never played, graded against another sport's answer key, then multi-room does
+not work — and it has never been tested by a human until tonight, which is
+exactly why it survived a 508-check gate.
+
+It also silently teaches a player they went 0 of 4 on questions they never saw.
+
+### Where to look
+
+The 18 Aug room-store rebuild introduced per-room state, `ACTIVE_ROOM` and
+`SB.setRoom`, and the switch is meant to be a swap. The swap is not clearing the
+scored-round view state or `GS`. `GS` is one global keyed to a single event, and
+the round render is reading whatever it last held.
+
+**Until it is fixed, a second room must be opened in a NEW TAB.** Switching
+inside a tab is not safe.
