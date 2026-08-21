@@ -5166,7 +5166,66 @@ boot();
 <script>
 (function(){
   var ESPN = window.STATS_ESPN = {};
-  var API = 'https://site.api.espn.com/apis/site/v2/sports/basketball/wnba';
+  /* ============ THE CONTROL ROOM WAS HARDCODED TO ONE LEAGUE ==========
+     Founder, 20 Aug, live, with four people sitting in a baseball room and
+     nothing happening: "No, I don't want to do anything manual so fix it."
+
+     This was one line: the ESPN base was pinned to basketball/wnba and it
+     never switched. So on a baseball night resolveEvent() searched the WNBA
+     scoreboard for WSH and TEX, found nothing, returned null, and liveTick
+     stopped at "no game found". Everything downstream is gated on that one
+     lookup, so ALL of it was dead on any sport but the WNBA:
+
+       · Autopilot never saw an inning end, so no round was ever pushed
+       · Call It armed, said "watching the feed", and watched nothing
+       · Pull answers for finished quarters found no game
+
+     The Control Room has therefore only ever worked for basketball, and
+     every sport added since has been unhostable in exactly this way. It is
+     the same bug as the feed-path one in the player app: basketball is a
+     family, basketball/wnba is a path, and conflating them mutes a room in
+     total silence.
+
+     The file already had everything needed to avoid it. There is a LEAGUE
+     table of paths and a sumUrl(sportPath) helper further down, written for
+     precisely this. This block simply never used them.
+
+     API is now derived from the night, so switching rooms switches leagues.
+     eventId is cleared with it, because an event id from one league is
+     meaningless in another and reusing it is how you fetch a WNBA game with
+     a baseball id and get a feed that looks merely empty. */
+  var LEAGUE_PATH = {
+    wnba:'basketball/wnba', nba:'basketball/nba', mlb:'baseball/mlb',
+    nfl:'football/nfl',     nhl:'hockey/nhl',     mls:'soccer/usa.1'
+  };
+  var SPORT_FALLBACK = {
+    basketball:'basketball/wnba', baseball:'baseball/mlb', football:'football/nfl',
+    hockey:'hockey/nhl',          soccer:'soccer/usa.1'
+  };
+  function pathForCfg(cfg){
+    cfg = cfg || {};
+    var lg = String(cfg.league||'').toLowerCase().trim();
+    if(LEAGUE_PATH[lg]) return LEAGUE_PATH[lg];
+    var sp = String(cfg.sport||'').toLowerCase().trim();
+    if(SPORT_FALLBACK[sp]) return SPORT_FALLBACK[sp];
+    return 'basketball/wnba';
+  }
+  var API_PATH = 'basketball/wnba';
+  var API = 'https://site.api.espn.com/apis/site/v2/sports/' + API_PATH;
+  /* Call before ANY ESPN read. Cheap, idempotent, and the only thing that
+     keeps the base honest when the host switches rooms mid-evening. */
+  function syncApi(){
+    try{
+      var want = pathForCfg(nightCfg(night));
+      if(want !== API_PATH){
+        API_PATH = want;
+        API = 'https://site.api.espn.com/apis/site/v2/sports/' + API_PATH;
+        eventId = null;
+        try{ ESPN.__API = API; }catch(_){}
+      }
+    }catch(_){}
+    return API;
+  }
   var liveTimer = null, eventId = null;
 
   /* ---- ESPN derive engine (validated against IND@SEA, box-score exact) ---- */
@@ -5406,11 +5465,18 @@ boot();
   try{ ESPN.__ruleFor = ruleFor; ESPN.__QMAP = QMAP; ESPN.__E = E; ESPN.__API = API; }catch(e){}
 
   /* ---- ESPN fetch ---- */
-  ESPN.summary = function(id){ return fetch(API+'/summary?event='+id+'&_='+Date.now()).then(function(r){return r.json();}); };
+  ESPN.summary = function(id){ return fetch(syncApi()+'/summary?event='+id+'&_='+Date.now()).then(function(r){return r.json();}); };
   ESPN.resolveEvent = async function(cfg, nid){
+    syncApi();
+    /* A ROOM FROM THE SLATE ALREADY CARRIES ITS EVENT ID. slateToNight()
+       puts it on `espn`, straight from the schedule the runner is hosting,
+       so searching a scoreboard by team abbreviation is both slower and the
+       exact step that was failing. Trust the id we were given; only fall
+       back to the search for a hand-written night that has none. */
+    if(cfg && String(cfg.espn||'').trim()) return String(cfg.espn).trim();
     var m=(nid||'').match(/(\d{4})-(\d{2})-(\d{2})/); if(!m) throw new Error('no date in night id');
     var date=m[1]+m[2]+m[3];
-    var j=await fetch(API+'/scoreboard?dates='+date).then(function(r){return r.json();});
+    var j=await fetch(syncApi()+'/scoreboard?dates='+date).then(function(r){return r.json();});
     var want=[cfg.away,cfg.home].map(function(s){return String(s||'').toUpperCase();});
     var hit=(j.events||[]).find(function(e){var nm=String(e.shortName||'').toUpperCase();return want.every(function(w){return w&&nm.indexOf(w)>=0;});});
     return hit?hit.id:null;

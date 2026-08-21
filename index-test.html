@@ -9988,7 +9988,51 @@ var VX=(function(){
      microphone that cannot exist. */
   V.iosNotSafari = V.ios && /CriOS|FxiOS|EdgiOS|OPiOS/.test((navigator.userAgent||''));
 
+  /* ============ REMEMBERED IS NOT THE SAME AS UNLOCKED ==============
+     Founder, testing on a live game night: "The voice doesn't work on any
+     device. You can't hear it even though it's on."
+
+     He is right, and the file already knew why. V.enable() carries the
+     comment "no browser will speak except from inside a gesture, so
+     enabling speaks immediately from within the handler. That first
+     sentence is not decoration, it is what unlocks audio for the rest of
+     the session."
+
+     And then this line restored V.on from localStorage at load, with no
+     gesture anywhere near it. So on every device where voice had ever been
+     switched on, the app booted with the toggle showing ON, painted it ON,
+     and the first thing it tried to speak was a question arriving on a
+     timer. No gesture in scope, so the browser dropped it silently, and
+     the engine stayed locked for the whole session. On, and mute, forever.
+
+     The fix is to separate the two facts the one flag was carrying. WANTED
+     is remembered. UNLOCKED is earned, once per session, from the first
+     real gesture. Until that gesture arrives the toggle still reads ON,
+     because it IS on and the player asked for it, and the first tap
+     anywhere on the page primes the engine with the same sentence
+     V.enable() would have said.
+
+     Never prime from a timer. That is the bug, and doing it "just in case"
+     on load is how it got here. */
   try{ V.on = V.hasOut && localStorage.getItem(KEY)==='1'; }catch(_){}
+  V.primed = false;
+  V.primeOnGesture = function(){
+    if(V.primed || !V.on || !V.hasOut) return;
+    V.primed = true;
+    try{ ['pointerdown','keydown','touchend'].forEach(function(ev){
+      window.removeEventListener(ev, V.primeOnGesture, true); }); }catch(_){}
+    /* Short, and said from inside the gesture. Its job is to unlock the
+       engine, not to be informative; the question that follows is the
+       informative part. */
+    try{ V.say(V.L().tag && /^es/.test(V.L().tag) ? 'Voz activada.' : 'Voice is on.'); }catch(_){}
+  };
+  try{
+    if(V.on && V.hasOut){
+      ['pointerdown','keydown','touchend'].forEach(function(ev){
+        window.addEventListener(ev, V.primeOnGesture, true);
+      });
+    }
+  }catch(_){}
 
   /* FOLD THE ACCENTS BEFORE STRIPPING, NOT AFTER. The old line deleted
      every character outside [a-z0-9' ], which in Spanish is not punctuation
@@ -11231,7 +11275,7 @@ var VX=(function(){
      decoration, it is what unlocks audio for the rest of the session. */
   V.enable=function(){
     if(!V.hasOut){ V.note=V.L().LINES.noVoice; V.paint(); return; }
-    V.on=true; V.armed=true; V.errs=0;
+    V.on=true; V.armed=true; V.errs=0; V.primed=true;
     try{ localStorage.setItem(KEY,'1'); }catch(_){}
     V.note = V.hasEar ? '' : 'This browser can read the questions but cannot hear answers — tap to answer.';
     try{ trk('voice_on',{ear:!!V.hasEar}); }catch(_){}
