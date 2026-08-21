@@ -5600,8 +5600,47 @@ boot();
     var label = '';
     if(state==='post') label = 'Final';
     else if(state==='in'){
-      if(per > cfg.tags.length) label = (per-cfg.tags.length>1 ? 'OT'+(per-cfg.tags.length) : 'OT') + ' in progress';
-      else label = (per>=1 && cfg.tags[per-1] ? cfg.tags[per-1] : cfg.tags[0]) + ' in progress';
+      /* ============ AND HERE IS THE THIRD COPY =======================
+         The comment above says "the argument for fixing BOTH copies or
+         neither". There were three. run.js was fixed this morning, this
+         one was left, and tonight the room read "OT in progress" in the
+         fourth inning of a nine-inning game.
+
+         cfg.tags[per-1] assumes one round per period. Baseball is three
+         rounds across nine innings, so inning 4 indexes tags[3], which is
+         the OT round. Wrong in eight innings of nine.
+
+         cfg.periods is the round's LAST period and has been on the night
+         config the whole time: [3,6,9,10] for baseball. Find the first
+         boundary the current period falls within. Past the last one is
+         genuinely overtime. If a night has no periods list, or it does not
+         line up with the tags, fall back to the old reading, which is
+         correct for every sport whose rounds really are single periods.
+
+         Founder was about to turn Auto live score on to run Caught It,
+         which would have posted this label straight over the runner's
+         correct one and undone the fix live. */
+      var bnd = (cfg.periods||[]).map(Number).filter(function(n){ return n>0; });
+      if(bnd.length === cfg.tags.length){
+        if(per > bnd[bnd.length-1]){
+          /* Baseball's LAST tag is itself the OT round, and its period is
+             the FIRST extra inning (10). Basketball's last tag is Q4, a
+             regulation period. So the count of extra frames differs by one
+             between the two shapes, and reading it wrong turns the 11th
+             inning into "OT" for the second time rather than "OT2". */
+          var otLast = /^ot/i.test(String(cfg.tags[cfg.tags.length-1]||''));
+          var xtra = per - bnd[bnd.length-1] + (otLast ? 1 : 0);
+          label = (xtra>1 ? 'OT'+xtra : 'OT') + ' in progress';
+        }else{
+          for(var bi=0; bi<bnd.length; bi++){
+            if(per <= bnd[bi]){ label = (cfg.tags[bi]||cfg.tags[0]) + ' in progress'; break; }
+          }
+        }
+      }
+      if(!label){
+        if(per > cfg.tags.length) label = (per-cfg.tags.length>1 ? 'OT'+(per-cfg.tags.length) : 'OT') + ' in progress';
+        else label = (per>=1 && cfg.tags[per-1] ? cfg.tags[per-1] : cfg.tags[0]) + ' in progress';
+      }
     }
     if($('scAway')) $('scAway').value = T.awayScore;
     if($('scHome')) $('scHome').value = T.homeScore;
