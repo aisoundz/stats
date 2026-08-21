@@ -5650,13 +5650,13 @@ boot();
          screen rather than silently doing nothing, so the panel reading
          "waiting" is a fact and not a symptom. */
       setState('waiting for tip-off — nothing posted to the room yet');
-      try{ await CI.tick(sum, T); }catch(e){}
+      try{ await CI.tick(sum, T); }catch(e){ CI.blame(e); }
       return;
     }
     try{ await writeScore(T.awayScore, T.homeScore, label, ($('scNote')&&$('scNote').value)||''); }catch(e){}
     setState((state==='post'?'Final':'live')+' · '+cfg.away+' '+T.awayScore+' — '+cfg.home+' '+T.homeScore+' ('+(st.type?.shortDetail||label)+')');
     /* Call It rides this same tick — isolated, never touches the score above. */
-    try{ await CI.tick(sum, T); }catch(e){}
+    try{ await CI.tick(sum, T); }catch(e){ CI.blame(e); }
     if(state==='post'){ try{ if(CI.on) CI.setOn(false); }catch(e){} ESPN.stopLive(); }
   };
   ESPN.toggleLive = function(){
@@ -5732,6 +5732,27 @@ function lockMsFor(kind){
     CI.setState(CI.on?('armed · '+p.label.toLowerCase()+' pace'):'off');
   };
   CI.setState = function(t){ var e=$('ciState'); if(e) e.textContent=t; };
+  /* ============ A BARE CATCH IS HOW A FEATURE DIES IN SILENCE ========
+     Founder, 20 Aug: "Just so you know as well the caught it questions
+     never showed."
+
+     CI.tick has been called on every single live tick all night, wrapped in
+     `catch(e){}`. If it throws — and on a sport it has never run on before,
+     it very likely does — the badge keeps saying ARMED, the host keeps
+     waiting, and nothing anywhere records why. That is the same shape as
+     periodLabel swallowing a ReferenceError and the feed publisher
+     swallowing a bad variable name, both found tonight.
+
+     The catch has to stay: a throw in here must never take down the live
+     score it rides on. But it must SAY SO. The badge is the one surface a
+     host is already looking at, so the badge gets the truth. */
+  CI.blame = function(e){
+    var msg = (e && (e.message || e.code)) || String(e || 'unknown');
+    CI.lastError = msg;
+    CI.errCount = (CI.errCount || 0) + 1;
+    try{ console.error('[Call It] tick threw:', e); }catch(_){}
+    try{ CI.setState('ERROR · ' + String(msg).slice(0, 90)); }catch(_){}
+  };
   CI.abbr = function(id,T){ return String(id)===String(T.homeId)?T.homeAbbr:(String(id)===String(T.awayId)?T.awayAbbr:''); };
   CI.teamName = function(id,T){ return String(id)===String(T.homeId)?T.homeName:(String(id)===String(T.awayId)?T.awayName:'They'); };
   CI.curPeriod = function(plays){ var m=1; plays.forEach(function(p){ var n=(p.period&&p.period.number)||0; if(n>m)m=n; }); return m; };
