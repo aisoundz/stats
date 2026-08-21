@@ -3758,17 +3758,37 @@ window.STATS_FIREBASE = {
      Second, not first: when the phone CAN reach ESPN the live response is
      fresher than a document written on a tick boundary. This is the safety
      net, not the road. */
+  /* CACHED, BECAUSE THIS DOCUMENT IS A QUARTER OF A MEGABYTE.
+     Founder, minutes after this shipped: "Now the page gets stuck when I go
+     between tabs", and Firefox put up "This page is slowing down Firefox".
+     That is on me and it is this function.
+
+     A baseball feed document is ~245kB of JSON. loadGameStats has a 25s
+     cache, but renderStats and the tab switcher call it with force=true,
+     which is exactly right for a live fetch and exactly wrong for this:
+     every tab switch was a fresh read of 245kB and a JSON.parse of it on
+     the main thread, and the hero ribbon repaints on a timer besides.
+
+     So the FALLBACK gets its own short cache, keyed by room. A document the
+     runner rewrites every twenty seconds cannot be staler than twenty
+     seconds, so serving one for fifteen costs nothing and turns a tab
+     switch back into a repaint. */
+  SB._feedCache = {};
   SB.feedFor = async function (nid) {
     if (!SB.enabled || !F || !db) return null;
     var id = String(nid || nightId || '');
     if (!id) return null;
+    var c = SB._feedCache[id];
+    if (c && (Date.now() - c.at) < 15000) return c.data;
     try {
       var snap = await F.getDoc(F.doc(db, 'nights', id, 'feed', 'latest'));
       if (!snap || !snap.exists()) return null;
       var v = snap.data() || {};
       if (!v.json) return null;
       SB.feedAt = v.at || null;
-      return JSON.parse(v.json);
+      var parsed = JSON.parse(v.json);
+      SB._feedCache[id] = { at: Date.now(), data: parsed };
+      return parsed;
     } catch (e) { SB.lastFeedError = (e && (e.code || e.message)) || 'unknown'; return null; }
   };
 
