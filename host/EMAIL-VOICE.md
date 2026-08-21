@@ -52,7 +52,45 @@ scores and ranges: `4–1`, `50–77`, `.310`.
 - **Emoji as section markers.**
 - **Rhetorical questions** the email then answers itself.
 
-## 3. What it should sound like instead
+## 3. The schedule goes at the top, and the reader should want to watch
+
+Anis, 21 Aug 2026, on an edition that opened with two paragraphs about a stale
+database pointer:
+
+> *"I dont like the news letter today. It was too technical. The one from
+> yesterday was better and sounded more personal. We should excite the reader.
+> And we should have a header part for where we show today's schedule."*
+
+He is right, and the open rates agree. The edition that led with the fixtures
+was opened by **4 of 4**. The one that led with the engineering, **1 of 5**.
+
+**This reverses an earlier rule.** The tip-off template used to say "the
+headline: one line, the build story, never the fixture list." That was written
+when building in the open was the only interesting thing we had. It is not the
+rule any more.
+
+The order, top to bottom:
+
+1. **TONIGHT** and the schedule. One row per room: time, matchup, channel.
+   Before a single word of prose. It is what the reader opened the email for.
+2. **A headline about the games.** Something a fan would repeat out loud.
+   Never "shipped", never the hour you found a bug.
+3. **Two short paragraphs, warm, about tonight.** Why this evening is worth
+   sitting down for.
+4. **The STATS and GAMETIME cards.**
+5. **The build note, if there is one — ONE sentence, near the bottom.** The
+   test is whether a player will *feel* it. "Voice gives you twenty seconds
+   now instead of nine" earns its line. "The home page was reading a stale
+   pointer" does not, however hard the night was.
+
+**Why this matters more than it looks.** The engineering detail is genuinely
+interesting to the person who wrote it and to almost nobody else. A reader who
+has to scroll past a changelog to find out what is on television has been told,
+politely, that the email is about us. It is supposed to be about their evening.
+
+---
+
+## 4. What it should sound like instead
 
 Short declaratives. Concrete nouns. Real numbers with their source. A specific
 day rather than "recently". The occasional sentence fragment, because people
@@ -62,7 +100,7 @@ happened.
 If a sentence could sit unchanged in any other company's newsletter, it is not
 in this voice yet.
 
-## 4. Everything already settled, which still holds
+## 5. Everything already settled, which still holds
 
 - **Every** email signs off `STATS GAMETIME`. No email is signed `Anis`.
   This changed on 21 Aug: the Sunday note was the last exception and he
@@ -77,12 +115,12 @@ in this voice yet.
 - The email says WHAT the answer was. It never says who got it right. The app
   does that, because it kept their tap.
 
-## 5. Before you create the draft
+## 6. Before you create the draft
 
 Read the finished copy back and search it for `—`. If there is one, you have
 not followed rule 1, and rule 1 is the one Anis asked for by name.
 
-## 6. Every room card names where to watch
+## 7. Every room card names where to watch
 
 Founder, 20 Aug 2026: *"when showing the games make sure to add the network so
 people know where to tune into, the one NFL game has no network. we should
@@ -96,7 +134,7 @@ do not invent a channel. Say so in the notification to Anis instead, because a
 room with no national carrier should not have been picked in the first place
 (see rule 7 in `host/leagues.env`).
 
-## 7. One email a day, and which one owns the day
+## 8. One email a day, and which one owns the day
 
 Both routines fire on their own schedule and neither knew about the other. The
 daily tip-off runs at 9:13am PT **every** morning and drafts whenever the slate
@@ -126,7 +164,7 @@ printed under it says the answer is in tomorrow's edition.
 Monday's tip-off then settles Sunday's question as normal, so the chain runs
 unbroken through the week.
 
-## 8. Two tells I keep producing anyway
+## 9. Two tells I keep producing anyway
 
 **Uncontracted forms.** "It is", "that is", "I am", "do not", "there is". Nobody
 types those in an email to four people they know. Anis does not: Week 1 read
@@ -142,7 +180,7 @@ this product is written in: *Seattle has won seven*, *Indiana walks into
 Chicago*. This slips in constantly and reads as foreign rather than as wrong,
 which is why it survives.
 
-## 9. The three asks are numbered
+## 10. The three asks are numbered
 
 Anis, 20 Aug 2026: *"the three things that help use a number or bullet point."*
 
@@ -159,7 +197,7 @@ one ask from the next was where a sentence happened to break.
 The copy inside each one stays plain and in the founder's voice, worded fresh
 every week, never copy-pasted from the last edition.
 
-## 10. The gold card is called STATS. Not "STATS of the Day".
+## 11. The gold card is called STATS. Not "STATS of the Day".
 
 Anis, 20 Aug 2026, having weighed both: **STATS**.
 
@@ -183,7 +221,7 @@ card's closing line, "the answer is in tomorrow's edition."
 The heading is exactly `STATS`, uppercase, in the gold eyebrow style. Never
 `Stat`, never `Stats of the Day`, never `TONIGHT'S STATS`.
 
-## 11. The design comes from a FILE, not from the last thing we sent
+## 12. The design comes from a FILE, not from the last thing we sent
 
 Both routine prompts say to fetch the most recent sent campaign and copy its
 HTML as the template. **Ignore that. Read the file instead.**
@@ -207,7 +245,7 @@ the file, change the content, change nothing structural.
 so a subject is not repeated and the Weekly number is right. Just do not take
 the design from them.
 
-## 12. What the cloud can and cannot see
+## 13. What the cloud can and cannot see
 
 The routines do not run on the Jetson. They run in a fresh cloud sandbox that
 clones the public repo and has nothing else: **no `~/gamenight-logs`, no
