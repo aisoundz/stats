@@ -82,7 +82,14 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     VX.hasOut=o; return quiet;                       // says why, does not pretend
   });
   await p.evaluate(()=>{ VX.enable(); });
-  R['switching-it-on-speaks-inside-the-click'] = await p.evaluate(()=>window.__said.some(s=>/Voice is on/i.test(s)));
+  /* It must SAY something from inside the click, because that gesture is
+     the only thing a browser will accept as permission to speak — prime
+     from a timer and the engine silently refuses for the rest of the
+     session. The words themselves are not the property; the assistant
+     naming itself is, since a player who hears a voice out of nowhere has
+     no idea what just spoke to them. */
+  R['switching-it-on-speaks-inside-the-click'] = await p.evaluate(()=>
+    window.__said.some(s=>/STATS/i.test(s)));
 
   /* THE LIVE PATH — the one a game night actually runs. */
   await p.evaluate(()=>{ S.mode='live'; S.qi=0; S.ni=0; S.answered=false;

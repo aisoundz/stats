@@ -692,7 +692,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-21-admin.62-twenty-second-window';
+window.ADMIN_BUILD='2026-08-21-admin.63-server-grades-caught';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -9040,6 +9040,57 @@ AUTO.CI = (function(){
      1200) moves with it and the B23 gap between "the answer is public" and
      "the card is still live" does not reopen. */
   C.lockMsFor = function(kind){ return /^(saw|qtr)/.test(String(kind||'')) ? 20000 : 15000; };
+
+  /* ============ THE CAUGHT IT LANE, GRADED BY THE SERVER =============
+     The written promise is "submissions are the source of truth", and for
+     the round lane that is exactly what happens: scoreRoom recomputes it
+     from the subs every time, which is why running it twice cannot double
+     anybody. The Caught It lane never got the same treatment. The phone
+     graded itself and wrote `caughtPts` onto the player document, and
+     AUTO.tally read that number back verbatim.
+
+     The server has everything it needs to do this itself: every question
+     in nights/{id}/callit carries its own resolved `answer`, and every
+     pick is a document under it. Two independent recounts of 20 August
+     found stored values the server's own record cannot justify — 50 where
+     the picks are worth 55, 45 where they are worth 100, 5 where they are
+     worth 15 — and every divergence was in the same direction.
+
+     This is the same arithmetic the phone runs, in one place, so the two
+     cannot drift:
+       · a question you did not answer breaks the streak and is not a miss
+         (called and hit are untouched — GN11: "it says two in a row even
+         when I didn't get them in a row");
+       · a right answer pays 5 x the streak, that multiplier capped at 5;
+       · the night is capped at 100.
+
+     `qs` must arrive in the order the questions were ASKED. A streak is a
+     claim about consecutive answers, so grading them out of order does not
+     produce a slightly wrong number, it produces a different game. */
+  C.CAUGHT_BASE = 5; C.CAUGHT_STREAK_CAP = 5; C.CAUGHT_NIGHT_CAP = 100;
+  C.caughtWorth = function(streak){
+    var m = Math.max(1, Math.min(C.CAUGHT_STREAK_CAP, Number(streak) || 1));
+    return C.CAUGHT_BASE * m;
+  };
+  /* qs:    [{qid, answer}] in the order they were asked
+     picks: { qid: value }  for ONE player
+     -> { pts, called, hit, best } */
+  C.caughtFor = function(qs, picks){
+    var pts = 0, streak = 0, best = 0, called = 0, hit = 0;
+    (qs || []).forEach(function(q){
+      if(!q || q.answer === undefined || q.answer === null || q.answer === '') return;
+      var pk = (picks || {})[q.qid];
+      if(pk === undefined || pk === null || pk === ''){ streak = 0; return; }
+      called++;
+      if(String(pk) === String(q.answer)){
+        hit++; streak++; if(streak > best) best = streak;
+        pts = Math.min(C.CAUGHT_NIGHT_CAP, pts + C.caughtWorth(streak));
+      }else{
+        streak = 0;
+      }
+    });
+    return { pts: pts, called: called, hit: hit, best: best };
+  };
 
   /* ============ EIGHT A GAME, IN EVERY SPORT ==========================
      Founder, 20 Aug: "And for the questions across game they all should be 8."

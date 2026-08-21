@@ -362,6 +362,76 @@ async function scoreRoom(db, FieldValue, AUTO){
   });
   if(!Object.keys(players).length) return 0;
 
+  /* ============ THE SERVER GRADES WHAT THE SERVER HOLDS ==============
+     The promise on record is "submissions are the source of truth", and
+     the round lane has always honoured it — recomputed from the subs every
+     time, which is why running this twice cannot double anybody. The
+     Caught It lane never did. The phone graded itself against its own copy
+     of the answer, wrote `caughtPts` onto the player document, and tally()
+     read that number straight back out.
+
+     Two independent recounts of 20 August found stored values the server's
+     own record of picks cannot justify, all in the same direction: 5 where
+     the picks are worth 10, 45 where they are worth 80. The phone is not
+     lying — it is a device that backgrounds, loses listeners, misses
+     resolutions and keeps a streak across a room switch. It is simply not
+     in a position to know.
+
+     Every fact needed is already here: each question in callit carries its
+     own resolved `answer`, and every pick is a document under it. So grade
+     it, with the same arithmetic the phone uses, from AUTO.CI.caughtFor —
+     one definition, so the two cannot drift.
+
+     Ordered by opensAt, because a streak is a claim about CONSECUTIVE
+     answers and grading them out of order is a different game, not a
+     rounding error. */
+  try{
+    const ciSnap = await db.collection(`nights/${NIGHT}/callit`).get();
+    const qs = [], picksByUid = {};
+    const resolved = [];
+    ciSnap.forEach(d => {
+      const v = d.data() || {};
+      if(v.state !== 'resolved') return;
+      if(v.answer === undefined || v.answer === null || v.answer === '') return;
+      /* No try/catch: a guarded read cannot throw, and a swallowed one here
+         would silently sort the questions into the wrong order, which turns
+         a streak into a different number rather than an error. */
+      const at = (v.opensAt && typeof v.opensAt.toMillis === 'function') ? v.opensAt.toMillis() : 0;
+      resolved.push({ qid: d.id, answer: v.answer, at });
+    });
+    resolved.sort((a,b) => (a.at - b.at) || String(a.qid).localeCompare(String(b.qid)));
+    for(const q of resolved){
+      qs.push({ qid: q.qid, answer: q.answer });
+      const pk = await db.collection(`nights/${NIGHT}/callit/${q.qid}/picks`).get();
+      pk.forEach(pd => {
+        const pv = pd.data() || {};
+        const val = (pv.v !== undefined) ? pv.v : pv.pick;
+        (picksByUid[pd.id] = picksByUid[pd.id] || {})[q.qid] = val;
+      });
+    }
+    if(qs.length){
+      let moved = 0;
+      for(const uid of Object.keys(players)){
+        const r = AUTO.CI.caughtFor(qs, picksByUid[uid] || {});
+        const was = players[uid].caughtPts;
+        if(r.pts !== was){
+          moved++;
+          log('caught', `${uid.slice(0,8)} caught lane ${was} → ${r.pts}  ` +
+                        `(${r.hit}/${r.called} called, best run ${r.best})`);
+        }
+        players[uid].caughtPts = r.pts;
+      }
+      log('caught', `graded ${qs.length} resolved question(s) from the server's own picks` +
+                    (moved ? ` — ${moved} player total(s) corrected` : ' — every phone agreed'));
+    }
+  }catch(e){
+    /* Loud. If this fails we fall back to the phone's number, which is the
+       old behaviour and not a disaster — but silently trusting the device
+       again is exactly the thing being fixed, so it has to be visible. */
+    log('warn', 'could not grade the caught lane server-side, falling back to the ' +
+                'device figure: ' + (e && e.message));
+  }
+
   const subs = {};
   for(const rd of scored){
     const ss = await db.collection(`nights/${NIGHT}/rounds/${rd.id}/subs`).get();
@@ -645,7 +715,25 @@ async function main(){
   let ciPending = null;      // {qid, ans, text, at} — the answer, held back
   let lastFeedSig = '';
   let lastScoreSig = '';
-  const until = Date.now() + MINUTES * 60000;
+  /* ============ FOUR HOURS OF THE GAME, NOT OF THE PROCESS ==========
+     start-slate.sh opens a room LEAD_MIN (30) before its own tip, and this
+     counted from the moment the process started — so RUN_MINUTES=240 meant
+     tip plus 210, and the last half hour of the budget was spent waiting
+     for the game to begin.
+
+     A preseason NFL game runs 3h05 to 3h20. Tonight's 4:00 kickoff would
+     have left ten to twenty minutes of margin on the Q4 round and the final
+     settlement, and by then the host is in the 7:00 room and nobody is
+     watching this log. Extra innings would have eaten the baseball room's
+     margin outright.
+
+     When the loop simply exits, nothing opens and nothing is logged as an
+     error: the exact silent-success failure this codebase keeps finding.
+     Count from the tip when we know it, which is whenever start-slate
+     launched us. */
+  const until = (TIP_MS || Date.now()) + MINUTES * 60000;
+  log('boot', 'this runner will work until ' + new Date(until).toISOString() +
+              (TIP_MS ? '  (tip + ' + MINUTES + 'm)' : '  (start + ' + MINUTES + 'm — no TIP_ISO given)'));
 
   while(Date.now() < until){
     try{

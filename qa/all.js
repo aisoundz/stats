@@ -152,6 +152,11 @@ const TIER={
      stops firing, or starts swallowing taps over a live card, is not
      something a player will ever file a bug about. */
   'celebrate.js': {tier:'player'},
+  /* "Dan is always refreshing his phone. So am I." Backgrounding the
+     app tore down the round listener and nothing re-armed it, so the
+     only cure was a reload. qa/listeners.js proves every listener is
+     CLOSED; nothing proved one is ever re-opened. */
+  'rearm.js': {tier:'player'},
   /* Reads source, not a browser. Guards the shape of bug this repo produces
      more than any other: something that fails and tells nobody. */
   'silence.js':       {tier:'static'},

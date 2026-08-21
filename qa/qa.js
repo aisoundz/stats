@@ -4319,7 +4319,7 @@ async function browserTests(){
            the push itself is missing the lane. It did exactly that to me. */
         const fn = player.match(/SB\.push = async function[\s\S]*?\n  \};/);
         if(!fn) return false;
-        const push = fn[0].match(/F\.setDoc\(meRef, \{[\s\S]*?\}, \{ merge: true \}\)/);
+        const push = fn[0].match(/F\.setDoc\((?:meRef|myRef\(\)), \{[\s\S]*?\}, \{ merge: true \}\)/);
         return !!push && /caughtPts: mine\.caughtPts/.test(push[0]);
       })(),
       'the caught lane is missing from the scored total, or the phone is no longer reporting it',
@@ -4331,14 +4331,14 @@ async function browserTests(){
         const m = src.match(/SB\.push = async function[\s\S]*?\n  \};/);
         if(!m) return false;
         const body = m[0];
-        const write = body.match(/F\.setDoc\(meRef, \{[\s\S]*?\}, \{ merge: true \}\)/);
+        const write = body.match(/F\.setDoc\((?:meRef|myRef\(\)), \{[\s\S]*?\}, \{ merge: true \}\)/);
         if(!write) return false;
         const w = write[0];
         if(/\bpts:/.test(w) || /\bspeed:/.test(w) || /roundsDone:/.test(w)) return false;
         return /predPts:/.test(w) && /catchPts:/.test(w);
       })(),
       'the player app is still pushing pts / speed / roundsDone from the device',
-      'B15. Those three are graded from the submissions by the Control Room and the runner. A phone that reports its own total is a phone that can be told to report any total from a console. predPts and catchPts stay client-reported because only the phone can know them \u2014 they are bounded in the rules instead, which is a smaller hole and not no hole');
+      'B15. Those three are graded from the submissions by the Control Room and the runner. A phone that reports its own total is a phone that can be told to report any total from a console. predPts and catchPts stay client-reported because only the phone can know them \u2014 they are bounded in the rules instead, which is a smaller hole and not no hole. NOTE 21 Aug: caughtPts is no longer in that category. The runner now recomputes it server-side from nights/{id}/callit picks (AUTO.CI.caughtFor), so the phone value is a preview and the server figure overwrites it. The phone still SENDS it, which is what this check asserts, and that is deliberate \u2014 it is what the player sees before the next scoring pass lands');
 
     check('host.the-autopilot-does-not-borrow-another-scope',
       (function(){

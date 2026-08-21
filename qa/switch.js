@@ -210,6 +210,37 @@ const ROOM_B = {
     S.place = 'live'; paintGameRail();
     out.railPlaying = rail ? rail.innerText : '';
     out.railChips = document.querySelectorAll('#gameRail .grChip').length;
+
+    /* ============ THE CAUGHT IT LANE IS PART OF THE ROOM ==============
+       S was made per-room in August. PCI — how many calls you made, how
+       many you hit, the streak you are protecting and what it has paid —
+       was not, and it is the same kind of fact. Points earned in one room
+       therefore walked into the next one and kept accumulating.
+
+       Driven through the real roomSnapshot/roomRestore rather than by
+       poking the object, because the bug was never in PCI itself: it was
+       that the functions which move a player between rooms did not know
+       PCI existed. */
+    out.pci = (function(){
+      try{
+        if(typeof roomSnapshot!=='function' || typeof roomRestore!=='function') return 'no-fns';
+        var ROOM_A='qa-room-a', ROOM_B='qa-room-b';
+        /* Bank a run in room A. */
+        PCI.pts=45; PCI.streak=3; PCI.called=7; PCI.hit=4;
+        PCI.picked={'q1':'a','q2':'b'}; PCI.paid={'q1':5};
+        roomSnapshot(ROOM_A);
+        /* Walk into a room this session has never seen. */
+        roomRestore(ROOM_B);
+        var fresh = { pts:PCI.pts, streak:PCI.streak, called:PCI.called,
+                      hit:PCI.hit, picked:Object.keys(PCI.picked||{}).length };
+        /* Score something different in B, then walk back to A. */
+        PCI.pts=10; PCI.streak=1;
+        roomSnapshot(ROOM_B);
+        roomRestore(ROOM_A);
+        var back = { pts:PCI.pts, streak:PCI.streak, called:PCI.called, hit:PCI.hit };
+        return { fresh:fresh, back:back };
+      }catch(e){ return 'threw: ' + e.message; }
+    })();
     out.railH_playing = rail ? Math.round(rail.getBoundingClientRect().height) : 0;
     out.viewportH = window.innerHeight;
     return out;
@@ -260,6 +291,22 @@ const ROOM_B = {
   ok('switch.mid-question-no-game-disappears',
      r.railChips >= 2,
      `only ${r.railChips} games on the strip mid-question — shrinking must not cost you the other scores`);
+
+  ok('switch.a-new-room-starts-the-caught-it-lane-at-zero',
+     r.pci && r.pci.fresh && r.pci.fresh.pts === 0 && r.pci.fresh.streak === 0 &&
+     r.pci.fresh.called === 0 && r.pci.fresh.hit === 0 && r.pci.fresh.picked === 0,
+     `walking into a room this session has never seen carried the last room's Caught It lane in: ` +
+     JSON.stringify(r.pci && r.pci.fresh) + `. Points, the streak, the already-paid map and the ` +
+     `night cap all accumulated across rooms — which is "the points on the football switches ` +
+     `between players" in the one lane nobody had made per-room.`);
+
+  ok('switch.going-back-restores-that-rooms-own-caught-it',
+     r.pci && r.pci.back && r.pci.back.pts === 45 && r.pci.back.streak === 3 &&
+     r.pci.back.called === 7 && r.pci.back.hit === 4,
+     `coming back to a room you already played gave ` + JSON.stringify(r.pci && r.pci.back) +
+     `, expected 45 points on a 3 streak from 7 calls and 4 hits. Zeroing on the way in is only ` +
+     `half the fix: a player who leaves the football room to look at the baseball one and comes ` +
+     `back must find their night where they left it.`);
 
   ok('switch.no-page-errors', errs.length === 0, errs.slice(0, 2).join(' · '));
 

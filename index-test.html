@@ -2694,6 +2694,33 @@ window.STATS_FIREBASE = {
   }
 
   var db, auth, F, nightId = null, meRef = null, hbTimer = null;
+
+  /* ============ THE SEAT IS DERIVED, NOT REMEMBERED ==================
+     `meRef` is a cached document reference built once at join. `uid()`
+     carries an explicit comment nearby saying it must never be cached —
+     and this is that cache, one level up.
+
+     The two can end up pointing at different people inside one session. An
+     email-link verify links the anonymous account and keeps its uid; a
+     second device verifying the same address INHERITS the first device's
+     uid; signing out mints a brand new one. Submissions always go to
+     `uid()` and are correct. The SCORE went to this cached reference.
+
+     On 20 August a prediction card worth 100 points was filed by an
+     anonymous account created four minutes after the final buzzer, and the
+     points landed on a seat whose own immutable card had picked the losing
+     team. That is "the points on the football switches between players",
+     and the mechanism is one stale pointer.
+
+     Derive it at the moment of the write. `meRef` stays as the "am I
+     seated" flag it also serves as, and falling back to it means this can
+     only ever be more correct than before, never less. */
+  function myRef(){
+    try{
+      if(!db || !nightId || !uid()) return meRef;
+      return F.doc(db, 'nights', nightId, 'players', uid());
+    }catch(_){ return meRef; }
+  }
   /* The live uid. Never cache this in a variable that outlives a call:
      the signed-in user can change mid-session (email verification
      upgrades an anonymous player into a real account) and a stale copy
@@ -3160,7 +3187,7 @@ window.STATS_FIREBASE = {
       var existing = null, readOk = false, readErr = '';
       for (var joinTry = 0; joinTry < 3 && !readOk; joinTry++) {
         if (joinTry) { try { await new Promise(function(r){ setTimeout(r, 500 * joinTry); }); } catch (_) {} }
-        try { existing = await F.getDoc(meRef); readOk = true; }
+        try { existing = await F.getDoc(myRef()); readOk = true; }
         catch (e) { readErr = (e && (e.code || e.message)) || 'read-failed'; }
       }
       if (!readOk) {
@@ -3184,14 +3211,14 @@ window.STATS_FIREBASE = {
         if (had && String(d0.color||'').trim() && (!o.color || o.color === '#888')) mine.color = d0.color;
         SB.joinedAs = { name: mine.name, color: mine.color };
         var okA = await writeTry('join-restore', function () {
-          return F.setDoc(meRef, {
+          return F.setDoc(myRef(), {
             name: mine.name, color: mine.color, lastSeen: F.serverTimestamp()
           }, { merge: true });            // preserve pts/speed — do NOT rewrite them
         });
         if (!okA) return false;
       } else {
         var okB = await writeTry('join-new', function () {
-          return F.setDoc(meRef, {
+          return F.setDoc(myRef(), {
             name: mine.name, color: mine.color,
             pts: 0, speed: 0, predPts: 0, catchPts: 0, roundsDone: 0,
             joinedAt: F.serverTimestamp(), lastSeen: F.serverTimestamp()
@@ -3212,7 +3239,7 @@ window.STATS_FIREBASE = {
   SB.myScore = async function () {
     try {
       if (!SB.enabled || !nightId || !meRef) return null;
-      var snap = await F.getDoc(meRef);
+      var snap = await F.getDoc(myRef());
       if (!snap.exists()) return null;
       var d = snap.data() || {}, out = {};
       SCORE_LANES.forEach(function (k) {
@@ -3234,12 +3261,12 @@ window.STATS_FIREBASE = {
     if (hbTimer) clearInterval(hbTimer);
     hbTimer = setInterval(function () {
       if (!meRef || !visible() || !budgetChore('heartbeat')) return;
-      F.setDoc(meRef, { lastSeen: F.serverTimestamp() }, { merge: true }).catch(function () {});
+      F.setDoc(myRef(), { lastSeen: F.serverTimestamp() }, { merge: true }).catch(function () {});
     }, HEARTBEAT_MS);
     // stop burning quota when the tab is backgrounded, resume on return
     document.addEventListener('visibilitychange', function () {
       if (visible() && meRef && budgetChore('heartbeat')) {
-        F.setDoc(meRef, { lastSeen: F.serverTimestamp() }, { merge: true }).catch(function () {});
+        F.setDoc(myRef(), { lastSeen: F.serverTimestamp() }, { merge: true }).catch(function () {});
       }
     });
   }
@@ -3483,7 +3510,7 @@ window.STATS_FIREBASE = {
          the server cannot derive them. They are bounded in the rules
          instead of trusted. That is a smaller hole, not no hole. */
       return await writeTry('push-score', function () {
-        return F.setDoc(meRef, {
+        return F.setDoc(myRef(), {
           predPts: mine.predPts,
           catchPts: mine.catchPts,
           /* B16 — CAUGHT IT WAS ABOUT TO STOP COUNTING. It reached the board
@@ -3782,6 +3809,35 @@ window.STATS_FIREBASE = {
       SB.roundWatchOk = false; SB.lastRoundWatchError = code2;
       try { console.error('[STATS] round watch could not start:', code2); } catch (_) {}
       return function () {};
+    }
+  };
+
+  /* ============ WHAT HAPPENED WHILE YOU WERE AWAY ====================
+     watchRound is orderBy(seq desc).limit(1) — the newest round and
+     nothing else. That is right for a live stream and catastrophic for a
+     device that was detached for two minutes: a round that OPENED and
+     CLOSED while the listener was gone is invisible for ever, and the
+     newest document then arrives already scored, so the app grades a round
+     whose questions it never showed. That is exactly the report — told you
+     went 0 for 4 on questions you never saw.
+
+     One extra read on the way back in, and the night is whole again. */
+  SB.recentRounds = async function (n) {
+    if (!SB.enabled || !nightId) return [];
+    try {
+      var q = F.query(
+        F.collection(db, 'nights', nightId, 'rounds'),
+        F.orderBy('seq', 'desc'),
+        F.limit(Math.max(1, Math.min(12, Number(n) || 8)))
+      );
+      var snap = await F.getDocs(q);
+      var out = [];
+      snap.forEach(function (d) { var v = d.data() || {}; v.id = d.id; out.push(v); });
+      /* Oldest first, so rounds replay in the order they were asked. */
+      return out.reverse();
+    } catch (e) {
+      try { console.error('[STATS] could not replay rounds:', e && e.message); } catch (_) {}
+      return [];
     }
   };
 
@@ -6624,7 +6680,7 @@ function paintGameRail(){
          picks from, and "which game to reference" is exactly the question
          the rail is asking. */
       +   (g.gn ? ' <span class="grGn">#'+esc(String(g.gn))+'</span>' : '')
-      +   (g.flagship ? ' <span class="grStar">★</span>' : '')
+      +   (g.gotn ? ' <span class="grStar">★</span>' : '')
       /* THE CLOCK REPLACES THE TIP TIME ONCE THERE IS A CLOCK. "6:30 PM" is
          the most useful thing to say before kickoff and the least useful
          thing to say at 51 minutes. */
@@ -6745,7 +6801,17 @@ function paintSlate(){
       + '<span class="slateWho"><b>'+esc(g.away||g.awayAbbr||'')+'</b> at <b>'+esc(g.home||g.homeAbbr||'')+'</b>'
       +   (g.net ? '<span class="slateNet">'+esc(String(g.net).split('·')[0].trim())+'</span>' : '')
       + '</span>'
-      + (g.flagship ? '<span class="slateStar" title="Tonight’s featured game">★</span>' : '')
+      /* ============ THE STAR MEANS ONE GAME ==========================
+         This read `flagship`, and build-slate stamps flagship on EVERY room
+         it hosts — so tonight all three carried a star and "tonight's
+         featured game" pointed at everything, which is the same as pointing
+         at nothing. The founder has raised this shape before, looking at a
+         screen of identical cards: "I dont know which is the main game."
+
+         `gotn` is the field host/marquee.js actually writes for the Game of
+         the Night, one a day. If a slate never stamped one, nothing gets a
+         star, which is honest — better than three. */
+      + (g.gotn ? '<span class="slateStar" title="Tonight’s Game of the Night">★</span>' : '')
       + '<span class="slateGo">'+(on?'Playing':'Play')+'</span>'
       + '</button>';
   }).join('');
@@ -7377,9 +7443,43 @@ var SESSION_KEYS = ['name','color','seasonPts','sport','totalPlayers','streak','
 var ACTIVE_ROOM = null;
 try{ ACTIVE_ROOM = (typeof GAME!=='undefined' && GAME) ? GAME.nightId : null; }catch(_){}
 
+/* ============ CAUGHT IT IS PER ROOM TOO ==============================
+   S was made per-room on 18 August. PCI was not, and it is a second store
+   of exactly the same kind of fact: how many calls you made, how many you
+   hit, the streak you are protecting and the points it has paid.
+
+   So Caught It points earned in the baseball room walked into the football
+   room and kept accumulating there — the streak, the night cap, the
+   already-paid map, all of it. Two independent audits of Thursday's
+   archive found stored `caughtPts` that the server's own record of picks
+   cannot justify for the two players who moved rooms, and this is the
+   mechanism. It is the founder's "the points on the football switches
+   between players" and "I think my points decreased" in the lane nobody
+   had made per-room yet.
+
+   Tonight is three rooms with staggered tips, so moving between them is
+   the design rather than an edge case.
+
+   WHAT DOES NOT MOVE: `muted` is a decision the PERSON made about whether
+   they want these cards at all, and re-asking in every room would be
+   obnoxious. `unsub`, `active`, `tick` and `hideT` are live handles for
+   the card on screen right now; they belong to the moment, not the room,
+   and roomListenersStop already tears them down. */
+var ROOM_PCI = {};
+var PCI_ROOM_KEYS = ['picked','graded','paid','streak','best','called','hit','heat','pts','ptsBefore'];
+
+function pciBlank(){
+  return { picked:{}, graded:{}, paid:{}, streak:0, best:0, called:0, hit:0, heat:0, pts:0, ptsBefore:0 };
+}
+
 function roomSnapshot(id){
   if(!id) return;
   try{ ROOMS[id] = JSON.parse(JSON.stringify(S)); }catch(_){}
+  try{
+    var snap = {};
+    PCI_ROOM_KEYS.forEach(function(k){ snap[k] = PCI[k]; });
+    ROOM_PCI[id] = JSON.parse(JSON.stringify(snap));
+  }catch(_){}
 }
 function roomRestore(id){
   var keep = {};
@@ -7389,6 +7489,13 @@ function roomRestore(id){
   catch(_){ next = freshS(); }
   Object.keys(S).forEach(function(k){ delete S[k]; });
   Object.assign(S, next, keep);
+  /* And the Caught It lane, from this room's own record or from zero. */
+  try{
+    var p;
+    try{ p = ROOM_PCI[id] ? JSON.parse(JSON.stringify(ROOM_PCI[id])) : pciBlank(); }
+    catch(_){ p = pciBlank(); }
+    PCI_ROOM_KEYS.forEach(function(k){ PCI[k] = (p[k] === undefined) ? pciBlank()[k] : p[k]; });
+  }catch(_){}
 }
 try{ window.ROOMS = ROOMS; window.roomSnapshot = roomSnapshot; window.roomRestore = roomRestore; }catch(_){}
 let secondsLeft=0, timerDur=15;
@@ -10116,9 +10223,23 @@ var VX=(function(){
               [/\bFG\b/g,'field goal'], [/\bFT\b/g,'free throw'], [/\b3PT\b/gi,'three point'],
               [/\bRBI\b/g,'runs batted in'], [/\bK\b/g,'strikeout'], [/\bTD\b/g,'touchdown'] ],
       OT:function(n){ return n? ('overtime '+n) : 'overtime'; },
+      /* ============ THE VOICE HAS A NAME, AND IT IS STATS =============
+         Founder, 21 Aug: "the name of the voice, his name is STATS."
+
+         It stops being a browser feature the moment it is a someone. "Voice
+         is on" describes a setting; "STATS is listening" describes a
+         companion, and the difference matters most for the player this is
+         aimed at — an older fan who loves sport and does not want to
+         operate software. He is not enabling text-to-speech, he is asking
+         somebody a question about the game.
+
+         The name is deliberately the company's. This is not a mascot bolted
+         on the side; the assistant IS the product speaking. */
       LINES:{ voicePick:'This is the voice for tonight.',
               timeUp:'Time is up.',
               caught:'Caught It. ',
+              hello:'STATS is listening.',
+              dunno:'I do not have that one yet.',
               micBlocked:'Microphone blocked — tap your answers, or allow the mic in your browser settings.',
               tapToTalk:'Tap 🎙 to answer out loud — this browser only opens the mic when you ask it to.',
               noVoice:'This browser cannot read questions out loud. Try Chrome or Safari.',
@@ -10150,6 +10271,8 @@ var VX=(function(){
               [/\bRBI\b/g,'carreras impulsadas'], [/\bK\b/g,'ponche'], [/\bTD\b/g,'anotacion'] ],
       OT:function(n){ return n? ('tiempo extra '+n) : 'tiempo extra'; },
       LINES:{ voicePick:'Esta es la voz de esta noche.',
+              hello:'STATS te escucha.',
+              dunno:'Esa todavía no la tengo.',
               timeUp:'Se acabó el tiempo.',
               caught:'Lo captaste. ',
               micBlocked:'Micrófono bloqueado — toca tus respuestas, o permite el micrófono en tu navegador.',
@@ -10315,7 +10438,8 @@ var VX=(function(){
        this mechanism was written to fix, one layer down. The gesture is
        only consumed once the engine has actually started speaking. */
     V.primeDisarm();
-    var say = (V.L().tag && /^es/.test(V.L().tag)) ? 'Voz activada.' : 'Voice is on.';
+    var say = (V.L().LINES && V.L().LINES.hello) ||
+              ((V.L().tag && /^es/.test(V.L().tag)) ? 'STATS te escucha.' : 'STATS is listening.');
     try{
       window.speechSynthesis.cancel();
       var u = new window.SpeechSynthesisUtterance(say);
@@ -11731,8 +11855,8 @@ var VX=(function(){
     V.note = V.hasEar ? '' : 'This browser can read the questions but cannot hear answers — tap to answer.';
     try{ trk('voice_on',{ear:!!V.hasEar}); }catch(_){}
     V.say(V.hasEar
-      ? 'Voice is on. I will read each question. Say the number of your answer, then say lock.'
-      : 'Voice is on. I will read each question out loud. Tap your answer.');
+      ? 'STATS here. I will read each question. Say the number of your answer, then say lock.'
+      : 'STATS here. I will read each question out loud. Tap your answer.');
     /* Mid-question? Then start doing the job now rather than next question. */
     try{
       var open=document.getElementById('gtQuestion');
@@ -11879,7 +12003,7 @@ var VX=(function(){
       var txt = !V.on ? 'Voice off'
               : V.note ? V.note
               : halfLang ? halfLang
-              : V.speaking ? 'Reading the question…'
+              : V.speaking ? 'STATS is reading the question…'
               : V.listening ? (V.onPickCard() ? 'Listening — say a name, then “next”'
                                              : 'Listening — say your answer, then “next”')
               : deafNow ? '🎙 Tap anywhere to talk — I can’t hear you yet'
@@ -14831,6 +14955,68 @@ function roomListenersStop(why){
 }
 try{ window.roomListenersStop = roomListenersStop; }catch(_){}
 
+/* ============ COMING BACK MUST NOT COST YOU THE GAME =================
+   Founder, 21 Aug: "Dan is always refreshing his phone. So am I."
+
+   That is not a habit, it is a diagnosis, and this is the mechanism.
+   `pagehide` calls roomListenersStop, which is correct — a closed tab's
+   listeners are not closed listeners, and that leak took four rooms down
+   on 19 August. But on iOS `pagehide` fires when you BACKGROUND the app,
+   not only when you close it. Lock your phone during a timeout, come back,
+   and the rounds listener is gone.
+
+   Nothing re-armed it. startHostedWatch() has exactly one caller, inside
+   joinNight(), and joinNight is guarded by ensureJoined() -> SB.seated(),
+   which is still true because the teardown only dropped the handle and
+   never the seat. So the one function that could have fixed this could not
+   be reached. There is no pageshow handler anywhere in this file.
+
+   The comment on roomListenersStop says re-arming is "deliberately NOT
+   done here… every one of these attaches lazily behind an if(!handle)
+   guard, so dropping the handle is the whole re-arm". That is true of
+   three of the four listeners and false of the one that matters.
+
+   So: when the page comes back, re-arm — and replay anything that opened
+   while we were away, because the live stream only carries the newest
+   round and cannot tell you what you missed. */
+function roomListenersRearm(why){
+  try{
+    if(!window.SB || !SB.enabled) return 0;
+    if(S.mode !== 'live') return 0;          // practice owns its own screen
+    var wasDeaf = !HR.unsub;
+    try{ startHostedWatch(); }catch(_){}
+    try{ startRoomPolling(); }catch(_){}
+    try{ trk('listeners_rearm', { why: why||'', wasDeaf: wasDeaf }); }catch(_){}
+    /* Only replay if we had actually gone deaf. Re-arming a live listener
+       is a no-op behind its own guard; replaying on top of one would
+       re-offer a round the player is already answering. */
+    if(wasDeaf){ try{ replayMissedRounds(); }catch(_){} }
+    return wasDeaf ? 1 : 0;
+  }catch(_){ return 0; }
+}
+try{ window.roomListenersRearm = roomListenersRearm; }catch(_){}
+
+async function replayMissedRounds(){
+  try{
+    if(!window.SB || !SB.recentRounds) return;
+    var list = await SB.recentRounds(8);
+    /* onHostedRound already refuses a round this device has served,
+       submitted or scored, and asks the SERVER for an existing submission
+       before it opens anything — so replaying cannot double-answer. */
+    (list||[]).forEach(function(v){ try{ onHostedRound(v); }catch(_){} });
+  }catch(_){}
+}
+
+/* pageshow fires on a real return, INCLUDING a back-forward-cache restore,
+   which is the case on iOS where nothing else fires at all.
+   visibilitychange covers a tab switch that never unloaded. */
+try{
+  window.addEventListener('pageshow', function(){ roomListenersRearm('pageshow'); });
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden) roomListenersRearm('visible');
+  });
+}catch(_){}
+
 /* ============ RECONNECT, ON PURPOSE ==================================
    B-59, GN8. The actual fix for a dead-but-quiet listener tonight was
    three console commands, typed by hand, mid-game: tear down the old
@@ -14980,6 +15166,18 @@ async function refreshRoom(){
       const roundDead = SB.roundWatchOk===false || (!HR.unsub && SB.enabled && pastGrace);
       const ciDead = SB.callItWatchOk===false;
       if(roundDead || ciDead){
+        /* TRY TO FIX IT BEFORE ASKING A HUMAN TO. This branch has painted a
+           banner since it was written and never once attempted the repair,
+           so the only cure on offer was the reload the founder and his one
+           returning player have both been doing all night. Re-arm first;
+           only say something if that did not take. */
+        var healed = 0;
+        try{ healed = roomListenersRearm('watchdog'); }catch(_){}
+        if(healed && HR.unsub){
+          setRoomBar('Reconnected — you are back on the live questions.');
+          try{ setTimeout(function(){ try{ setRoomBar(''); }catch(_){} }, 4000); }catch(_){}
+          return;
+        }
         setRoomBar('No connection for live questions — '+RECONNECT_LINK+'.');
         return;
       }
@@ -19075,7 +19273,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-21-voice.183';
+const STATS_BUILD='2026-08-21-stats.184';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

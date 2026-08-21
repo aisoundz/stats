@@ -28,7 +28,14 @@ const SLATE_DOC = {
       awayColor:'#33476D', homeColor:'#e03a3e', venue:'CareFirst Arena', net:'TSN · MNMT', flagship:false },
     { nightId:'gn13-2026-08-19-min-gs', espnEvent:'401857157', tipISO:'2026-08-20T02:00Z',
       away:'Lynx', home:'Valkyries', awayAbbr:'MIN', homeAbbr:'GS',
-      awayColor:'#266092', homeColor:'#b38fcf', venue:'Chase Center', net:'USA Net', flagship:true }
+      awayColor:'#266092', homeColor:'#b38fcf', venue:'Chase Center', net:'USA Net',
+      /* BOTH FLAGS, because a real slate carries both and they mean
+         different things. build-slate stamps `flagship` on every room it
+         HOSTS — all three of tonight's carry it — while marquee.js stamps
+         `gotn` on the one Game of the Night, once a day. The star used to
+         read flagship, so on a three-room night every game was starred and
+         "tonight's featured game" pointed at all of them. */
+      flagship:true, gotn:true }
   ],
   flagship:['gn13-2026-08-19-min-gs']
 };
@@ -109,8 +116,10 @@ const FAKE = `(function(store){
        r.rows.includes('slate-2026-08-19-tor-wsh') && r.rows.includes('gn13-2026-08-19-min-gs'),
        JSON.stringify(r.rows));
     /* THE ONE THAT MATTERS MOST FOR THE EMAIL. */
-    ok('slate.the-flagship-is-in-the-picker', r.rows.includes('gn13-2026-08-19-min-gs') && r.stars===1,
-       `stars=${r.stars} rows=${JSON.stringify(r.rows)}`);
+    ok('slate.exactly-one-game-wears-the-star', r.rows.includes('gn13-2026-08-19-min-gs') && r.stars===1,
+       `stars=${r.stars} rows=${JSON.stringify(r.rows)} — the star marks the Game of the Night, ` +
+       `which is one game a day. Two stars and it means nothing; zero and the main game is ` +
+       `indistinguishable from the rest, which the founder has reported twice.`);
     ok('slate.names-the-teams-a-person-would-recognise',
        /Tempo at Mystics/.test(r.text) && /Lynx at Valkyries/.test(r.text), r.text.slice(0,120));
     ok('slate.no-page-errors', errs.length===0, errs.join(' / '));
