@@ -186,6 +186,92 @@ function serve(){
      `nastier half: one word matches exactly one option and is indistinguishable from a real ` +
      `answer by content. Only the fact that WE were speaking tells them apart.`);
 
+  /* ============ IT MUST FINISH ITS OWN SENTENCE =====================
+     The founder tests with the game on television, which is the entire
+     premise of the product. Two things then produce interim transcripts
+     constantly: the broadcast, and the app's own loudspeaker. Barge-in
+     cancelled the utterance on ANY of them, so on every laptop and most
+     phones the app shouted itself down 350ms in and nothing was ever
+     heard. Three reports, all chased as a synthesis bug. */
+  const talk = await p.evaluate(async ()=>{
+    const out = {};
+    S.mode='live'; S.qi=0; S.ni=0; S.answered=false;
+    try{ go('live'); loadQuestion(); }catch(_){}
+    await new Promise(z=>setTimeout(z,80));
+
+    const speakThen = async (noise)=>{
+      window.__cancels=0;
+      VX.wantEar = true;
+      VX.say('Who takes it tonight, the Lynx or the Valkyries?');
+      await new Promise(z=>setTimeout(z,400));      // past the 350ms floor
+      const before = window.__cancels;
+      window.__hear(noise, false);                   // an INTERIM, as the mic gives it
+      await new Promise(z=>setTimeout(z,60));
+      return { cancelled: window.__cancels > before, speaking: VX.speaking };
+    };
+
+    /* The television, mid-sentence. */
+    out.tv = await speakThen('and the handoff inside to the running back');
+    /* Our own voice, coming back through the microphone. */
+    out.self = await speakThen('who takes it tonight the lynx');
+    /* A single word of our own, which is the nastier one. */
+    out.selfWord = await speakThen('valkyries');
+    /* AND THE FEATURE ITSELF. The founder asked for this by name: "when i
+       start talking its still talking. When I talk it should start being
+       quiet and listen for the answer." A real answer, in words we are NOT
+       currently saying, must still stop the sentence dead. Silencing the
+       room is only half the job; the other half is still working. */
+    return out;
+  });
+
+  ok('android.the-television-does-not-cut-it-off',
+     talk.tv && talk.tv.cancelled === false,
+     'commentary from the broadcast cancelled the utterance. The game being on is the premise of ' +
+     'this product, so any interim from the room silencing the app means voice can never work ' +
+     'where it is meant to be used.');
+
+  ok('android.it-does-not-shout-itself-down',
+     talk.self && talk.self.cancelled === false,
+     'the app cancelled its own speech after hearing itself through the microphone. On every ' +
+     'laptop and most phones the mic can hear the speaker, so this made speech output ' +
+     'structurally impossible — "it can hear, but it doesnt say voice".');
+
+  /* ON A FRESH PAGE, DELIBERATELY. Barge-in is skipped while a Caught It
+     is open, and the echo checks above leave one on screen — so running
+     this after them measures that rule instead of this one and reads as
+     "barge-in is broken" when it is not. A reload is cheaper and more
+     honest than unpicking the state by hand. */
+  await p.reload({ waitUntil:'domcontentloaded' });
+  await p.waitForTimeout(2600);
+  const bargeOk = await p.evaluate(async ()=>{
+    VX.enable();
+    let card = document.getElementById('predCard');
+    if(!card){ card = document.createElement('div'); card.id='predCard'; document.body.appendChild(card); }
+    card.innerHTML = '<button class="pdopt" data-pd="Seattle Storm">Seattle Storm</button>' +
+                     '<button class="pdopt" data-pd="Dallas Wings">Dallas Wings</button>';
+    window.__cancels = 0;
+    VX.wantEar = true;
+    VX.say('Pick one of them.');
+    await new Promise(z=>setTimeout(z,400));
+    const before = window.__cancels;
+    window.__hear('seattle storm', false);
+    await new Promise(z=>setTimeout(z,80));
+    return { cancelled: window.__cancels > before, speaking: VX.speaking,
+             echo: VX.selfEcho('seattle storm') };
+  });
+
+  ok('android.but-a-real-answer-still-stops-it-talking',
+     bargeOk.cancelled === true,
+     `saying "Seattle Storm" while it was speaking did not interrupt it ` +
+     `(speaking=${bargeOk.speaking}, readAsEcho=${bargeOk.echo}). Founder, by name: "when i start ` +
+     `talking its still talking. When I talk it should start being quiet and listen for the ` +
+     `answer." Filtering out the room must not cost the feature — if this is red, barge-in has ` +
+     `been disabled rather than fixed.`);
+
+  ok('android.nor-on-one-word-of-its-own',
+     talk.selfWord && talk.selfWord.cancelled === false,
+     'a single word of our own option list, coming back through the mic, cancelled the sentence.');
+
   /* ---- THE FAILURE THE VOICE LAYER CANNOT REPORT BY TALKING ---- */
   const mute = await p.evaluate(async ()=>{
     /* A browser with the API and no installed voices: Linux without

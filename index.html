@@ -10658,7 +10658,24 @@ var VX=(function(){
     if(!V.on || !V.hasOut){ if(then) try{ then(); }catch(_){} return; }
     var t=speakable(text);
     if(!t){ if(then) try{ then(); }catch(_){} return; }
-    var done=false, fire=function(){ if(done) return; done=true; V.speaking=false;
+    /* ============ A STALE TIMER MUST NOT END A LIVE SENTENCE ========
+       Every utterance arms a failsafe that clears V.speaking if onend never
+       comes. The failsafe belongs to ITS utterance — but it was clearing
+       the flag unconditionally, so a timer armed by a long sentence three
+       questions ago fires in the middle of the current one and reports that
+       the app has stopped talking when it has not.
+
+       Everything downstream reads that flag: barge-in decides whether to
+       interrupt, the echo guard decides whether a transcript is our own
+       voice, and the bar decides whether to say "STATS is reading the
+       question". All three quietly get the wrong answer.
+
+       Take a ticket. Only the utterance that is actually current may
+       declare itself finished. */
+    var myTurn = (V.sayTurn = (V.sayTurn||0) + 1);
+    var done=false, fire=function(){
+      if(done) return; done=true;
+      if(V.sayTurn === myTurn) V.speaking=false;
       if(then) try{ then(); }catch(_){} };
     try{
       window.speechSynthesis.cancel();
@@ -11077,10 +11094,56 @@ var VX=(function(){
                player holding half a list he cannot answer. Content cannot
                tell our echo from his answer, because he is saying the words
                we just read out. The surface can. */
+            /* ============ ONLY A REAL ANSWER INTERRUPTS ==============
+               This cancelled our own speech on ANY interim longer than one
+               character. Two things produce those constantly:
+
+                 · the television. The founder tests with the game on, which
+                   is the entire premise of the product, and the recogniser
+                   transcribes the commentary;
+                 · US. The laptop reads the question through its speakers,
+                   the microphone hears the laptop, and 350ms later the app
+                   cancels itself mid-sentence.
+
+               So on any device where the microphone can hear the speaker —
+               which is every laptop and most phones — speech output was
+               structurally impossible. "It can hear, but it doesnt say
+               voice", reported three separate times and chased as a
+               synthesis bug each time. It was never synthesis. The app was
+               shouting itself down.
+
+               The 350ms floor was meant to cover this and cannot: an
+               utterance lasts seconds, so we are still talking, still
+               audible, and still being transcribed long after it expires.
+
+               Now the bar is meaning. We stop talking when the player says
+               something that is actually an ANSWER and is not just our own
+               words coming back. Anything else is the room. */
             var _onCI=false; try{ _onCI=V.onCatch(); }catch(_){}
-            if(!_onCI && V.speaking && String(res[0].transcript||'').trim().length>1
-               && (Date.now()-(V.spokeAt||0))>350){
-              window.speechSynthesis.cancel(); V.speaking=false; V.paint();
+            if(!_onCI && V.speaking && (Date.now()-(V.spokeAt||0))>350){
+              var _t=String(res[0].transcript||'').trim();
+              var _real=false;
+              try{
+                if(_t && !V.selfEcho(_t)){
+                  /* WHICHEVER CARD IS ACTUALLY IN FRONT OF THEM. curOpts()
+                     is the live round question; the PICK SHEET has its own
+                     options and its own handler, and the founder's own
+                     screenshots of this failing are the pick sheet — "1 of
+                     6", WINNING TEAM — not a live round. Reading only
+                     curOpts() there finds nothing to match, so a genuine
+                     spoken answer would never interrupt on the one screen
+                     he was testing. */
+                  var _o=[];
+                  try{ _o=curOpts()||[]; }catch(_){}
+                  if(!_o.length){ try{ _o=V.pickOpts()||[]; }catch(_){} }
+                  if(!_o.length){ try{ _o=(V.catchOpts()||[]).map(function(x){ return x.label; }); }catch(_){} }
+                  if(_o.length){
+                    var _m=V.match(_t,_o);
+                    _real = !!(_m && (_m.kind==='pick' || _m.kind==='off' || _m.kind==='repeat'));
+                  }
+                }
+              }catch(_){}
+              if(_real){ window.speechSynthesis.cancel(); V.speaking=false; V.paint(); }
             }
           }catch(_){}
           continue;
@@ -11503,6 +11566,33 @@ var VX=(function(){
      Left unguarded on purpose: a short echo. The grammar already refuses
      it — read a four-option list back and every option is contained in it,
      which is `ambiguous`, which is a refusal. Annoying, never wrong. */
+  /* ============ THAT WAS US TALKING ==================================
+     isEcho below wants a contiguous substring longer than half of what we
+     said — a recogniser never returns anything that clean, so it has
+     effectively never fired.
+
+     This is the test that works: every meaningful word coming back is a
+     word we are currently saying. It catches "fastball breaking ball", and
+     it catches the single word "fastball", and it catches the broadcast
+     only when the broadcast happens to be repeating us.
+
+     It is deliberately allowed to be WRONG in one direction. A player who
+     answers using only words we just read aloud looks like an echo and
+     will not interrupt us — they simply get heard when the sentence
+     finishes, a beat later, because the final result still goes through
+     V.heard. Losing a barge-in costs a second. Cancelling our own voice
+     costs the entire feature. */
+  V.selfEcho=function(said){
+    try{
+      if(!V.saidNorm) return false;
+      if(!V.speaking && (Date.now()-(V.spokeAt||0))>900) return false;
+      var h=norm(said||''); if(!h) return false;
+      var w=h.split(/\s+/).filter(function(x){ return x.length>2; });
+      if(!w.length) return false;
+      for(var i=0;i<w.length;i++){ if(V.saidNorm.indexOf(w[i])<0) return false; }
+      return true;                       // everything you heard, we said
+    }catch(_){ return false; }
+  };
   V.isEcho=function(said){
     try{
       if(!V.saidNorm) return false;
@@ -19662,7 +19752,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-21-android.187';
+const STATS_BUILD='2026-08-21-itspeaks.188';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
