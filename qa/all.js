@@ -141,6 +141,12 @@ const TIER={
      it. It is also the only suite in this file that has ever asked the
      host a question about a sport that is not basketball. */
   'night-per-sport.js': {tier:'static'},
+  /* The 20 Aug phantom overtime: a 70-point round for innings nobody
+     played, opened 237ms after the real final round, in a game that
+     ended in regulation. Static because it drives the real roundSlots()
+     against synthetic feeds where the scoreboard and the plays disagree,
+     which is the one condition no archived feed reproduces. */
+  'phantom-ot.js': {tier:'static'},
   /* Reads source, not a browser. Guards the shape of bug this repo produces
      more than any other: something that fails and tells nobody. */
   'silence.js':       {tier:'static'},

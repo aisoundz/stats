@@ -1,4 +1,22 @@
 #!/usr/bin/env node
+
+/* ============ AN OVERTIME WITH PITCHES IN IT =========================
+   These fixtures used to raise status.period and stop there, which
+   describes a scoreboard rather than a game. As of 21 Aug the runner
+   refuses to open an overtime round for a period the PLAYS do not reach,
+   because on 20 Aug a scoreboard reading past the ninth inning produced a
+   70-point "Extra innings" round in a game that ended in regulation.
+
+   So a fixture that means "this game went to double overtime" now has to
+   say so the way a real feed says it: with plays in that period. Raising
+   the number alone is the bug, not the setup. */
+function playedThrough(j, upTo, per){
+  var list = Array.isArray(j.plays) ? j.plays : (j.plays = []);
+  for(var p = per; p <= upTo; p++)
+    for(var k = 0; k < 3; k++)
+      list.push({ id: 'fx-' + p + '-' + k, period: { number: p }, text: 'a play in period ' + p });
+  return j;
+}
 /* =====================================================================
    Every overtime period gets its own round — does it?
    ---------------------------------------------------------------------
@@ -224,6 +242,7 @@ console.log('\nthe runner walks a round list that grows');
        opened. A missing slot would be a silent skip. */
     const otFeed = JSON.parse(JSON.stringify(w));
     otFeed.header.competitions[0].status = { period: 6, type: { completed: true } };
+    playedThrough(otFeed, 6, 5);         // two overtimes, both with plays in them
     const noTpl = roundSlots(A, otFeed, plan4);
     eq('runner.two-overtimes-appear-as-slots', noTpl.length, 6);
     eq('runner.ot-without-a-template-has-no-questions', noTpl[4].def, null);
@@ -272,6 +291,7 @@ console.log('\nthe runner walks a round list that grows');
     eq('runner.real-extra-innings-grow-the-plan', bx.length > 3, true);
     const ext = JSON.parse(JSON.stringify(m));
     ext.header.competitions[0].status = { period: 11, type: { completed: true } };
+    playedThrough(ext, 11, 10);          // two extra innings that were actually played
     const be = roundSlots(A, ext, Object.assign({ ot: { qs: [{t:'q',o:['x']}] } }, plan3));
     same('runner.eleven-innings-adds-two-rounds', be.map(s => s.per), [3,6,9,10,11]);
     eq('runner.tenth-inning-tagged-OT', be[3].def.tag, 'OT');
@@ -295,6 +315,7 @@ console.log('\nthe runner walks a round list that grows');
     /* ...and a SECOND overtime still gets one from the template. */
     const ot2 = JSON.parse(JSON.stringify(w));
     ot2.header.competitions[0].status = { period: 6, type: { completed: true } };
+    playedThrough(ot2, 6, 5);
     const six = roundSlots(A, ot2, plan5);
     eq('runner.template-fills-only-the-gap', six.length, 6);
     eq('runner.gap-filled-round-is-OT2', six[5].def.tag, 'OT2');

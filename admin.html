@@ -692,7 +692,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-20-admin.60-fourports';
+window.ADMIN_BUILD='2026-08-21-admin.61-opens-on-tonight';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -1641,6 +1641,46 @@ const LS = 'stats_admin_v1';
 let FB = null;          // {app, auth, db, F, authMod}
 let user = null;
 let night = NIGHTS[0].id;
+/* ============ THE CONTROL ROOM OPENS ON TONIGHT =====================
+   Founder, 4:46am on the 21st: "When I get in the control room is should
+   be build and ready for todays game not the 19th wich is what its on."
+
+   It was on the 19th because THIS is where the opening night came from:
+   NIGHTS[0] — the first entry of a hand-written array near the top of
+   this file, whose own comment says "First in this list is the night the
+   Control Room opens on, so the live fixture goes at the top." That was
+   true when a night was hand-built and there was one a week. It stopped
+   being true the day the slate started building rooms every morning: the
+   schedule moved into Firestore and this constant did not follow, so the
+   Control Room opened on whatever night was last pasted into the source.
+
+   The same disease as every B-number in the catalogue — one fact, two
+   copies, and the copies disagree. The slate is the fact. So once the
+   slate lands we open on tonight's lead room, and NIGHTS[0] goes back to
+   being what it should have been all along: the fallback for a day with
+   no slate at all.
+
+   NIGHT_TOUCHED is the guard. A host who has already picked a room is
+   making a deliberate choice, and a late-arriving read must never yank
+   the screen out from under them mid-press. */
+let NIGHT_TOUCHED = false;
+
+/* Tonight's lead room: the numbered/marquee game if there is one, then
+   whatever is actually hosted, earliest tip first. Built-but-unhosted
+   rooms are last — a room nobody hosts is not what a host came here for. */
+function tonightsLead(){
+  try{
+    const today = new Date().toLocaleDateString('en-CA', { timeZone:'America/Los_Angeles' });
+    const mine = (SLATE_ROOMS||[]).filter(function(r){ return nightDate(r) === today; });
+    if(!mine.length) return '';
+    const rank = function(r){ return (r.gotn||r.marquee) ? 0 : (r.hosted ? 1 : 2); };
+    mine.sort(function(a,b){
+      const d = rank(a) - rank(b); if(d) return d;
+      return String(a.tipISO||'').localeCompare(String(b.tipISO||''));
+    });
+    return mine[0].id || '';
+  }catch(_){ return ''; }
+}
 let draft = {};         // nightId -> { rounds: [ {worth, qs:[{t,o:[],k:idx}]} ] }
 let liveDocs = {};      // roundId -> the pushed round document, as we last saw it
 let subCounts = {};     // roundId -> how many phones have answered
@@ -1936,8 +1976,14 @@ function paintDayStrip(){
   const days = [...new Set(Object.keys(byDay).concat([today, tomorrow]))].sort();
 
   if(!DAY_SEL){
-    const cur = nightDate(nightCfg(night));
-    DAY_SEL = (cur && days.includes(cur)) ? cur : (byDay[today] ? today : (days.find(d=>d>=today) || days[days.length-1]));
+    /* TODAY WINS. This preferred the SELECTED night's date, which on a
+       cold boot is NIGHTS[0] — a hardcoded night from last week — so the
+       strip opened on the 19th on the morning of the 21st. The selected
+       night only gets to steer the strip once a host has actually chosen
+       it; before that, a day with games today is the answer. */
+    const cur = NIGHT_TOUCHED ? nightDate(nightCfg(night)) : '';
+    DAY_SEL = (cur && days.includes(cur)) ? cur
+            : (byDay[today] ? today : (days.find(d=>d>=today) || days[days.length-1]));
   }
 
   const D=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -2066,11 +2112,25 @@ async function loadSlateRooms(){
        while being told it had two. Nothing but running it would have
        shown this. */
     const F = FB.F, db = FB.db;
-    const cur = await F.getDoc(F.doc(db,'slate','current'));
-    if(!cur.exists()) return false;
-    const date = (cur.data()||{}).date; if(!date) return false;
-    const snap = await F.getDoc(F.doc(db,'slate',date));
-    if(!snap.exists()) return false;
+    /* TODAY FIRST, THE POINTER SECOND — same fix as the player app.
+       slate/current is written by the 8:10 build. Between midnight and
+       that build it still names YESTERDAY, so a host opening the Control
+       Room early got yesterday's rooms and a day strip anchored on the
+       wrong day. Ask the clock, and fall back to the pointer only if
+       today has not been built yet. */
+    let date = null, snap = null;
+    try{ date = new Date().toLocaleDateString('en-CA', { timeZone:'America/Los_Angeles' }); }catch(_){ date = null; }
+    if(date){
+      try{ snap = await F.getDoc(F.doc(db,'slate',date)); }catch(_){ snap = null; }
+      if(!snap || !snap.exists()) snap = null;
+    }
+    if(!snap){
+      const cur = await F.getDoc(F.doc(db,'slate','current'));
+      if(!cur.exists()) return false;
+      date = (cur.data()||{}).date; if(!date) return false;
+      snap = await F.getDoc(F.doc(db,'slate',date));
+      if(!snap.exists()) return false;
+    }
     /* THE HOST SEES EVERY ROOM THAT EXISTS, NOT ONLY THE OFFERED ONES.
        `games` is the PLAYER's list — curated down to what something is
        actually hosting, because a room nobody hosts must never appear as a
@@ -2560,9 +2620,9 @@ function initUI(){
   window.paintNightSel = paintNightSel;
   paintNightSel();
   try{ paintDayStrip(); }catch(_){}
-  ns.onchange = () => { night = ns.value; $('nightId').value = night; onNightChange(); };
+  ns.onchange = () => { NIGHT_TOUCHED = true; night = ns.value; $('nightId').value = night; onNightChange(); };
   $('nightId').value = night;
-  $('nightId').onchange = () => { night = $('nightId').value.trim() || night; onNightChange(); };
+  $('nightId').onchange = () => { NIGHT_TOUCHED = true; night = $('nightId').value.trim() || night; onNightChange(); };
 
   document.querySelectorAll('nav button').forEach(b=>{
     b.onclick = () => {
@@ -2657,6 +2717,19 @@ function loadSlateIntoPicker(){
   try{
     loadSlateRooms().then(function(ok){
       if(!ok) return;
+      /* Now that we know what tonight is, open on it — unless the host
+         has already chosen for themselves. */
+      try{
+        if(!NIGHT_TOUCHED){
+          const lead = tonightsLead();
+          if(lead && lead !== night){
+            night = lead;
+            try{ const ns=$('nightSel'); if(ns) ns.value=lead; }catch(_){}
+            try{ const ni=$('nightId'); if(ni) ni.value=lead; }catch(_){}
+            try{ onNightChange(); }catch(_){}
+          }
+        }
+      }catch(_){}
       try{ window.paintNightSel && window.paintNightSel(); }catch(_){}
       try{ DAY_SEL=null; paintDayStrip(); }catch(_){}
       try{ toast(SLATE_ROOMS.length + ' room(s) from tonight\'s slate are in the picker'); }catch(_){}
@@ -2671,6 +2744,7 @@ try{
     if(!b) return;
     const id = b.getAttribute('data-room');
     if(!id || id === night) return;
+    NIGHT_TOUCHED = true;
     night = id;
     try{ const ns=$('nightSel'); if(ns) ns.value=id; }catch(_){}
     try{ const ni=$('nightId'); if(ni) ni.value=id; }catch(_){}
@@ -6701,6 +6775,17 @@ var AUTO = (function(){
       if(slug === 'nfl') return 'football';
       if(/^usa\.\d|^mls$/.test(slug)) return 'soccer';
       if(/^wnba$|^nba$/.test(slug)) return 'basketball';
+      /* NHL WAS MISSING HERE. Every real ESPN summary carries meta.gp_topic,
+         which the branch above reads first, so hockey has always resolved
+         in production and this gap has never bitten. But this branch exists
+         precisely for the feed that does NOT carry gp_topic, and with no
+         nhl case such a feed fell through to '' and familyOf() defaulted it
+         to BASKETBALL — three periods read as four, overtime from the 5th
+         instead of the 4th, and bballPeriodDone deciding when a period is
+         over. A silent default to another sport is the same disease as
+         basketball/wnba: the fallback has to know every league the product
+         ships, or it is not a fallback. */
+      if(slug === 'nhl') return 'hockey';
     }catch(_){}
     return '';
   }
@@ -8118,6 +8203,62 @@ var AUTO = (function(){
     return hi;
   }
 
+  /* ============ A NUMBER IS NOT AN INNING ============================
+     maxPeriodIn() takes the HIGHER of the header's status.period and the
+     plays' own period numbers. That is the right answer for "how far has
+     this game got", and it is the wrong answer for "did an extra period
+     actually happen", because status.period is a scoreboard field that can
+     read past the last period that was played.
+
+     On 20 Aug it did exactly that. Nationals at Rangers ended in nine
+     innings. At 02:30:29Z the runner opened the 7th-9th round and, 237
+     milliseconds later, a 70-point round called "Extra innings" — a third
+     of the night's regulation total — on innings nobody played. One player
+     answered it. The founder wrote it down that night: "It said extra
+     innings is live when extra innings was not live for baseball."
+
+     A guard for this already existed and could never fire: the overtime
+     slot was only created when its period was <= maxPeriodIn, and the
+     guard then rejected periods > maxPeriodIn. Same number on both sides
+     of the comparison, so the test was vacuous by construction — it read
+     like a safety net and was an assertion that 10 <= 10.
+
+     These two ask the plays instead, and the plays cannot be optimistic:
+     an inning that was played has pitches in it. */
+  /* NO try/catch IN EITHER OF THESE, deliberately. feedPlays() already
+     catches and falls back, so there is nothing here that can throw — and
+     a swallowed error would be far worse than a crash, because a silent 0
+     from playsInPeriod now SUPPRESSES an overtime round. That would turn
+     "the feed reader hiccupped" into "the extra innings never happened",
+     which is the same shape of failure as the bug this pair was written to
+     end, pointing the other way. qa/silence.js caught the first draft of
+     this doing exactly that. */
+  function playsInPeriod(j, p){
+    var want = Number(p), c = 0;
+    if(!isFinite(want)) return 0;
+    var list = feedPlays(j);
+    if(!list || !list.length) return 0;
+    for(var i = 0; i < list.length; i++){
+      var n = Number(((list[i].period)||{}).number);
+      if(isFinite(n) && n === want) c++;
+    }
+    return c;
+  }
+  /* The high-water mark according to the PLAYS ALONE. Deliberately does not
+     consult status.period, so it can be used to check status.period rather
+     than agreeing with it. Returns 0 for soccer, which has no play list —
+     callers must treat 0 as "unknown", never as "nothing was played". */
+  function playedPeriodMax(j){
+    var hi = 0;
+    var list = feedPlays(j);
+    if(!list || !list.length) return 0;
+    for(var i = 0; i < list.length; i++){
+      var n = Number(((list[i].period)||{}).number);
+      if(isFinite(n) && n > hi) hi = n;
+    }
+    return hi;
+  }
+
   /* Did this game go to overtime at all? Used to decide whether the runner
      should be looking for an OT template in the first place. */
   function wentToOvertime(j){
@@ -8334,6 +8475,7 @@ var AUTO = (function(){
            roundTagFor:roundTagFor, roundNameFor:roundNameFor,
            roundPeriodsFor:roundPeriodsFor, maxPeriodIn:maxPeriodIn,
            wentToOvertime:wentToOvertime, otWorthFor:otWorthFor,
+           playsInPeriod:playsInPeriod, playedPeriodMax:playedPeriodMax,
            isOtTag:isOtTag, splitOtRound:splitOtRound };
 })();
 

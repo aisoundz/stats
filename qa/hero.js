@@ -67,15 +67,70 @@ function ok(name, cond, detail) {
    NOTE `flagship` is true on BOTH and `gotn` on only the football game —
    that is not a contrivance, it is a verbatim copy of slate/2026-08-20, and
    it is the whole reason picking on `flagship` is wrong. */
+/* ============ THE FIXTURE TELLS THE TIME, NOT THE CALENDAR =========
+   These two tips were written as literals — 2026-08-21T00:05Z and
+   T02:00Z — and this suite went RED at midnight on 21 Aug because of it.
+   Nothing in the app changed. The fixture simply got old: heroState()
+   returns 'rest' once a tip is more than REST_AFTER_MS (6h) past, so a
+   slate pinned to last night correctly reads "No game tonight", and
+   `hero.stops-saying-no-game-tonight` was asserting that it must not.
+
+   Section 4 below already learned this and says so in its own comment:
+   "A check whose answer depends on the hour it runs is not a check."
+   Section 1 was never given the same treatment. Now it is.
+
+   The tips are the NEXT 5:00 and 7:00 in the evening, Pacific. Two
+   properties are being preserved deliberately:
+     · always in the future, so the hero is never legitimately at rest;
+     · always an EVENING Pacific time, which is the following day in UTC —
+       that is the whole point of `hero.the-card-headline-says-tonight`,
+       which exists because slicing the ISO string gives the wrong day. A
+       tip of "now + 4 hours" would pass that check at breakfast and stop
+       exercising the bug entirely. */
+function laTip(hour, dayOffset){
+  const base = new Date(Date.now() + (dayOffset || 0) * 86400000);
+  const day  = base.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+  const hh   = String(hour).padStart(2, '0');
+  for (const off of ['-07:00', '-08:00']) {           // PDT, then PST
+    const d = new Date(day + 'T' + hh + ':00:00' + off);
+    const back = Number(d.toLocaleString('en-US',
+      { timeZone: 'America/Los_Angeles', hour: '2-digit', hour12: false }));
+    if (back === hour) return d.toISOString();
+  }
+  return new Date(day + 'T' + hh + ':00:00-07:00').toISOString();
+}
+/* If the earlier of the two has already tipped, roll BOTH to tomorrow, so
+   the pair keeps its order and both stay ahead of the clock. */
+/* THE FOOTBALL GAME TIPS FIRST, and that is deliberate. Section 1 is
+   about the CARD — every line naming one game — not about which game
+   wins. Ranking is section 4's job and it drives its own times. Giving
+   the featured game the earlier tip means section 1 keeps asserting what
+   it was written to assert, under the rule the founder set on 20 Aug:
+   the marquee is what is on now, or next. */
+const TIP_DAY  = (Date.parse(laTip(17, 0)) <= Date.now() + 30 * 60000) ? 1 : 0;
+const NFL_TIP  = laTip(17, TIP_DAY);
+const MLB_TIP  = laTip(19, TIP_DAY);
+/* The night GAME is still holding when the app wakes: long past, so
+   heroState() starts at 'rest' — which is the bug being reproduced. */
+const STALE_TIP = new Date(Date.now() - 30 * 3600e3).toISOString();
+
+const _la = (iso, o) => new Date(iso).toLocaleDateString('en-US',
+  Object.assign({ timeZone: 'America/Los_Angeles' }, o));
+/* What the headline must say, and what it must NOT still say. */
+const WANT_DAY   = _la(NFL_TIP, { day: 'numeric' });
+const WANT_MONTH = _la(NFL_TIP, { month: 'long' });
+const STALE_LONG = _la(STALE_TIP, { month: 'long', day: 'numeric' });
+const STALE_SHRT = _la(STALE_TIP, { month: 'short', day: 'numeric' });
+
 const MLB = {
   nightId: 'slate-2026-08-20-wsh-tex', espnEvent: '401816609',
-  tipISO: '2026-08-21T00:05Z', away: 'Nationals', home: 'Rangers',
+  tipISO: MLB_TIP, away: 'Nationals', home: 'Rangers',
   awayAbbr: 'WSH', homeAbbr: 'TEX', net: 'MLB.TV · FS1',
   flagship: true, sport: 'baseball', marquee: true, gotn: false
 };
 const NFL = {
   nightId: 'slate-2026-08-20-sf-lac', espnEvent: '401873285',
-  tipISO: '2026-08-21T02:00Z', away: '49ers', home: 'Chargers',
+  tipISO: NFL_TIP, away: '49ers', home: 'Chargers',
   awayAbbr: 'SF', homeAbbr: 'LAC', net: 'NFL Net · CBS LA',
   flagship: true, sport: 'football', marquee: true, gotn: true
 };
@@ -92,7 +147,7 @@ const NFL = {
   await page.waitForFunction(() => typeof window.featureTonight === 'function', { timeout: 15000 })
     .catch(() => {});
 
-  const r = await page.evaluate(({ MLB, NFL }) => {
+  const r = await page.evaluate(({ MLB, NFL, STALE_TIP }) => {
     const out = {};
     out.exported = (typeof window.featureTonight === 'function');
     /* read INSIDE the page — hydrateNight is a page function, and asking for
@@ -105,7 +160,7 @@ const NFL = {
     try { setSport('basketball'); } catch (_) {}
     GAME.nightId   = 'gn13-mystics-tempo';
     GAME.espnEvent = '401857157';
-    GAME.tipISO    = '2026-08-19T23:30:00Z';   // last night
+    GAME.tipISO    = STALE_TIP;                // last night, 30h ago
     S.place = '';
     SLATE.date = '2026-08-20'; SLATE.loaded = true;
     SLATE.games = [MLB, NFL];
@@ -260,13 +315,29 @@ const NFL = {
     ];
     out.liveWinsFeatured = featureTonight();
 
+    /* ---- 4c. THE CLOCK BEATS THE FLAG ----
+       The rule the founder set on 20 Aug, and it was never pinned by a
+       check. `features-the-game-of-the-night` looked like it covered this
+       and did not: its fixture had the gotn game tipping first, so gotn
+       and the clock always agreed and no check could tell them apart.
+       Here they DISAGREE — gotn sits on a game five hours out while
+       another tips in one — and the near one must win, because the old
+       rule pinned the hero to a single game for nine and a half hours of
+       a four-room Saturday. */
+    GAME.nightId = 'gn13-mystics-tempo'; GAME.espnEvent = '401857157';
+    SLATE.games = [
+      Object.assign({}, NFL, { gotn:true,  flagship:true,  tipISO: isoIn(5*3600e3) }),
+      Object.assign({}, MLB, { gotn:false, flagship:false, tipISO: isoIn(1*3600e3) })
+    ];
+    out.clockBeatsFlag = featureTonight();
+
     /* ---- 5. an empty slate must change nothing ---- */
     GAME.nightId = 'gn13-mystics-tempo'; GAME.espnEvent = '401857157';
     SLATE.games = [];
     out.emptyReturn = featureTonight();
     out.emptyEvent  = String(GAME.espnEvent);
     return out;
-  }, { MLB, NFL });
+  }, { MLB, NFL, STALE_TIP });
 
   console.log('\n  HERO — the landing must feature tonight\'s Game of the Night\n');
   console.log('  judging ' + TARGET + '\n');
@@ -276,11 +347,11 @@ const NFL = {
      'so every check below would be measuring nothing.');
 
   if (r.exported) {
-    ok('hero.features-the-game-of-the-night',
+    ok('hero.features-what-is-on-now-or-next',
        r.featured === NFL.nightId,
-       `featured "${r.featured}" — expected "${NFL.nightId}". Both games carry flagship:true ` +
-       `and only the 7:00 football game carries gotn:true, so picking on flagship features the ` +
-       `5:05 baseball game instead of the marquee.`);
+       `featured "${r.featured}" — expected "${NFL.nightId}", the next game to tip. Every other ` +
+       `line on the card below is then asserted against that same game: the clock picks it, and ` +
+       `the whole card has to agree with the clock.`);
 
     ok('hero.the-hero-points-at-tonights-game',
        r.tonightEv === NFL.espnEvent && r.heroGameEv === NFL.espnEvent,
@@ -326,14 +397,17 @@ const NFL = {
        `not the card; every line has to name the same game.`);
 
     ok('hero.the-card-carries-nothing-from-last-night',
-       !/MIN|Lynx|Valkyries|Mystics|Tempo|TOR|WSH|August 19|Aug 19|Final/i.test(r.cardAll || ''),
+       !new RegExp('MIN|Lynx|Valkyries|Mystics|Tempo|TOR|WSH|Final|' +
+                   STALE_LONG.replace(' ', '\\s+') + '|' +
+                   STALE_SHRT.replace(' ', '\\s+'), 'i').test(r.cardAll || ''),
        `something from last night survived on the card: ${JSON.stringify(r.cardAll)}. This is the ` +
        `check for the screenshot the founder sent — "TIPS IN 11:48:48" printed directly above ` +
        `"Final · TOR 82 - 93 WSH". A card that contradicts itself is worse than one that is ` +
        `uniformly stale.`);
 
     ok('hero.the-card-headline-says-tonight',
-       /Aug/i.test(r.card && r.card.head || '') && /20/.test(r.card && r.card.head || ''),
+       new RegExp(WANT_MONTH.slice(0,3), 'i').test(r.card && r.card.head || '') &&
+       new RegExp('\\b' + WANT_DAY + '\\b').test(r.card && r.card.head || ''),
        `the headline reads ${JSON.stringify(r.card && r.card.head)} — it must name tonight's date, ` +
        `built from the parsed tip instant (a 7pm Pacific kickoff is already tomorrow in UTC, so ` +
        `slicing the ISO string gives the wrong day).`);
@@ -403,6 +477,13 @@ const NFL = {
        `with neither gotn nor flagship and both games ahead, it featured "${r.noFlagFeatured}", ` +
        `expected the one tipping first, "${MLB.nightId}". A slate the marquee never stamped must ` +
        `still light the hero, and it must light the one people can join soonest.`);
+
+    ok('hero.the-clock-beats-the-game-of-the-night-flag',
+       r.clockBeatsFlag === MLB.nightId,
+       `gotn sat on the game five hours away while the other tipped in one hour; it featured ` +
+       `"${r.clockBeatsFlag}", expected "${MLB.nightId}". Founder, 20 Aug: "it should always be ` +
+       `in order." The Game of the Night marks the night's headline act — it does not pin the ` +
+       `marquee to something nobody can join yet.`);
 
     ok('hero.a-live-game-outranks-one-that-has-not-started',
        r.liveWinsFeatured === NFL.nightId,

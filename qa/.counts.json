@@ -18,11 +18,12 @@
   "chrome.js": 40,
   "places.js": 3,
   "switch.js": 10,
-  "hero.js": 24,
+  "hero.js": 25,
   "listeners.js": 8,
   "practice.js": 9,
   "marquee-order.js": 6,
   "night-per-sport.js": 82,
   "spanish.js": 5,
-  "silence.js": 1
+  "silence.js": 1,
+  "phantom-ot.js": 7
 }

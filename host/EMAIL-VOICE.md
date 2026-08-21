@@ -64,7 +64,9 @@ in this voice yet.
 
 ## 4. Everything already settled, which still holds
 
-- Tip-off email signs off `STATS GAMETIME`. Only the Sunday note is `Anis`.
+- **Every** email signs off `STATS GAMETIME`. No email is signed `Anis`.
+  This changed on 21 Aug: the Sunday note was the last exception and he
+  removed it himself, in his 20 Aug notes.
 - No dash before the signature. It was removed once already.
 - `STATS of the Day`, plural, always. Never `Stat of the Day`.
 - The subject must not repeat the headline.
@@ -106,7 +108,7 @@ the same four people on the same day.
 |---|---|---|
 | Monday to Saturday, games on the slate | the tip-off routine | `STATS GAMETIME` |
 | Monday to Saturday, no games | nobody. Silence is correct. | |
-| **Sunday, always** | **the weekly note, and only the weekly note** | `Anis` |
+| **Sunday, always** | **the weekly note, and only the weekly note** | `STATS GAMETIME` |
 
 **The tip-off routine STOPS on a Sunday**, whatever the slate says. Check the
 day before anything else. This is not a preference, it is the difference

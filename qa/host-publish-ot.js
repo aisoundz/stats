@@ -107,6 +107,24 @@ console.log('\nboth publishers, one predicate');
   eq('publishers.script-warns-when-no-template',       /no overtime round configured/i.test(pubSrc), true);
 }
 
+
+/* ============ AN OVERTIME WITH PITCHES IN IT =========================
+   These fixtures used to raise status.period and stop there, which
+   describes a scoreboard rather than a game. As of 21 Aug the runner
+   refuses to open an overtime round for a period the PLAYS do not reach,
+   because on 20 Aug a scoreboard reading past the ninth inning produced a
+   70-point "Extra innings" round in a game that ended in regulation.
+
+   So a fixture that means "this game went to double overtime" now has to
+   say so the way a real feed says it: with plays in that period. Raising
+   the number alone is the bug, not the setup. */
+function playedThrough(j, upTo, per){
+  var list = Array.isArray(j.plays) ? j.plays : (j.plays = []);
+  for(var p = per; p <= upTo; p++)
+    for(var k = 0; k < 3; k++)
+      list.push({ id: 'fx-' + p + '-' + k, period: { number: p }, text: 'a play in period ' + p });
+  return j;
+}
 /* ---- the round the runner builds from that template ---------------- */
 console.log('\nthe published template reaches the runner');
 {
@@ -129,6 +147,7 @@ console.log('\nthe published template reaches the runner');
     /* And a double overtime reuses the same authored set. */
     const ot2 = JSON.parse(JSON.stringify(w));
     ot2.header.competitions[0].status = { period: 6, type: { completed: true } };
+    playedThrough(ot2, 6, 6);            // a second overtime that was actually played
     const six = roundSlots(A, ot2, plan);
     eq('endtoend.double-overtime-reuses-one-template', six.length, 6);
     const d5 = six[5] && six[5].def;

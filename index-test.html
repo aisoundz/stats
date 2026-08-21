@@ -893,16 +893,50 @@
   .grGn{color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.02em}
   /* The practice sport chooser. Chips, because this is a choice between
      five known things and not a form field. */
-  .tryPick{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 12px}
+  .tryPick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 14px}
+  /* NO FIVE-COLUMN BREAKPOINT. The first version widened to five columns
+     at a 520px VIEWPORT — but this card sits in a fixed ~400px column and
+     stays that width on a 1920px television, so five columns meant five
+     72px cells and "Basketball" overflowed its own grid on every screen
+     above a phone. qa/platforms.js caught it on six platforms at once:
+     "#tryPick: 1 of 5 children cut off". A media query on the viewport is
+     the wrong question whenever the thing being sized is not the viewport.
+     Three columns is right at every width this card is ever given. */
+  /* A GRID, NOT A WRAPPED ROW. As flex-wrap the five chips sized
+     themselves to their words — "Basketball" wide, "Hockey" narrow — and
+     broke 3 then 2 with a ragged right edge and two different target
+     sizes. It read as a tag cloud, which is a thing you skim, rather than
+     a choice, which is a thing you make. Equal columns give every sport
+     the same weight and the same size target, and the 3+2 break becomes
+     deliberate instead of accidental. Five across once there is room. */
+  /* The numbered steps. The card had a heading, a paragraph, five pills
+     and a button, four blocks with nothing saying they were a sequence.
+     Founder, 20 Aug, on the emails: "the three things that help use a
+     number or bullet point." Same instinct applies here. */
+  .tryStep{display:flex;align-items:center;gap:8px;margin:0 0 8px;
+    font-size:12px;letter-spacing:.10em;text-transform:uppercase;
+    font-weight:800;color:var(--muted)}
+  .tryStep i{flex:0 0 auto;width:20px;height:20px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:rgba(40,224,208,.14);color:var(--teal);
+    font-style:normal;font-size:12px;font-weight:900;letter-spacing:0}
   /* 44px MINIMUM, and it is not a nicety. The first cut of these was 31px
      tall — padding 8px around a 13px line — and qa/platforms.js failed all
      four chips on an iPhone 15. This is the control a stranger uses to try
      the product for the first time; a target they have to aim at is the
      worst possible place to save eleven pixels. */
   .tryPick button{background:var(--card2);border:1px solid var(--line2);color:var(--muted);
-    border-radius:999px;min-height:44px;padding:0 16px;font-size:14px;font-weight:800;
-    line-height:1;cursor:pointer;display:inline-flex;align-items:center}
+    border-radius:999px;min-height:46px;padding:0 5px;font-size:14px;font-weight:800;
+    line-height:1;cursor:pointer;display:inline-flex;align-items:center;
+    justify-content:center;text-align:center;width:100%}
   .tryPick button.on{background:rgba(40,224,208,.13);border-color:var(--teal);color:var(--teal)}
+  /* ONE ACCENT IN ONE CARD. The chip you just chose lit up teal and the
+     button underneath it was the generic blue every other .btn uses, so
+     the two controls that make up a single action were in two different
+     colour languages and the button read as unrelated furniture. It is
+     the end of the step the teal chip began; it should look like it. */
+  .btn.tryGo{background:var(--teal);color:#04201e;border:none;font-weight:900}
+  .btn.tryGo:hover{filter:brightness(1.06)}
   /* The overflow control reads as a tile so it wraps with them, but it is
      plainly not a game — no colours, no time. */
   /* A FULL-WIDTH THIN ROW, NOT A TILE. As a tile it occupied a whole grid
@@ -1493,7 +1527,12 @@
            about the next one. -->
 
       <b class="doorLbl">Never played? Start here</b>
-      <p class="sub" style="margin:6px 0 13px">A practice game, right now — real questions, simulated players. No account needed, just a name to play under.</p>
+      <!-- THE DASH IS OUT. Founder, 20 Aug: "take away the dashe and use ,
+           make it seem less Ai and more human no ai tells." That rule was
+           written for the emails and applied to the emails; this is the
+           first thing a stranger reads on the front door and it still had
+           one. -->
+      <p class="sub" style="margin:6px 0 14px">A practice game, right now, with real questions and simulated players. No account needed, just a name to play under.</p>
       <!-- PICK THE SPORT YOU CAME FOR. Practice used to run whatever sport
            the page happened to be on — basketball at the front door, always
            — so a football fan on an NFL night tried the product and was
@@ -1501,8 +1540,10 @@
            way to reach four of them without knowing to type ?sport= into
            the URL. Founder, 20 Aug: "if a guest wants to try a sport they
            can select the sport and try it. We dont limit everyone." -->
+      <div class="tryStep"><i>1</i><span>Pick a sport</span></div>
       <div id="tryPick" class="tryPick" role="group" aria-label="Choose a sport to practise"></div>
-      <button class="btn" onclick="startDemo()">Try it now</button>
+      <div class="tryStep"><i>2</i><span>Play a practice round</span></div>
+      <button class="btn tryGo" onclick="startDemo()">Try it now</button>
 
       <div class="doorSplit"><span>when you want a seat</span></div>
 
@@ -3475,6 +3516,18 @@ window.STATS_FIREBASE = {
           uid: uid(), name: String(o.name || '').slice(0, 24),
           build: String(o.build || '').slice(0, 40),
           screen: String(o.screen || '').slice(0, 16),
+          /* ============ THE ONE FIELD THAT MAKES A SHARE COUNTABLE =====
+             TRK_SRC has been computed at boot since the attribution block
+             was written — from ?utm_source, ?src, ?ref, or the referrer —
+             and it was passed into this function as `o.src` all along. It
+             was simply never written down. Across 49 telemetry documents
+             covering every night this product has ever run, `src` does not
+             appear once, so every arrival is indistinguishable from every
+             other arrival and the question "did a share bring anybody"
+             has been structurally unanswerable rather than merely
+             unanswered. One field, one line, and tomorrow morning has an
+             answer it could not have had this morning. */
+          src: String(o.src || '').slice(0, 40),
           mins: Number(o.mins) || 0,
           n: (o.events || []).length,
           events: (o.events || []).slice(-400),
@@ -6357,7 +6410,7 @@ function paintTryPick(){
     try{ return SPORTS[k] && (SPORTS[k].rounds||[]).length > 0; }catch(_){ return false; }
   });
   if(keys.length < 2){ w.style.display='none'; return; }
-  w.style.display = 'flex';
+  w.style.display = 'grid';
   w.innerHTML = '';
   keys.forEach(function(k){
     var b = document.createElement('button');
@@ -6777,12 +6830,41 @@ function activateSlateTile(b, e){
 async function loadSlate(db, F){
   if(!db || !F) return false;
   try{
-    var cur = await F.getDoc(F.doc(db,'slate','current'));
-    if(!cur.exists()) return false;
-    var date = (cur.data()||{}).nightDate || (cur.data()||{}).date || null;
-    if(!date) return false;
-    var snap = await F.getDoc(F.doc(db,'slate',date));
-    if(!snap.exists()) return false;
+    /* ============ TODAY FIRST, THE POINTER SECOND ====================
+       Founder, 4:46am on the 21st: "the home page isnt ready for tonights
+       game & the control room isnt ready."
+
+       He was right and the slate was fine. slate/2026-08-21 existed with
+       three rooms in it. What was stale was slate/current, which still said
+       2026-08-20 — and this function asked the POINTER what day it was
+       rather than asking the clock.
+
+       That makes the app structurally one build behind every single
+       morning: from midnight until the 8:10 build rewrites the pointer, the
+       home page shows last night's games, with last night's final score on
+       the card. On a game night that is the first thing the founder sees.
+
+       So: read today's slate directly, and fall back to the pointer only if
+       today has not been built yet. Today is resolved in the league's own
+       timezone rather than the device's, because a phone in New York at
+       1am must still be shown the same night as the runner is hosting.
+
+       It is not an extra read on a normal day — when today exists, the
+       pointer is never fetched at all. */
+    var date = null, snap = null;
+    try{ date = new Date().toLocaleDateString('en-CA', { timeZone:'America/Los_Angeles' }); }catch(_){ date = null; }
+    if(date){
+      try{ snap = await F.getDoc(F.doc(db,'slate',date)); }catch(_){ snap = null; }
+      if(!snap || !snap.exists()) snap = null;
+    }
+    if(!snap){
+      var cur = await F.getDoc(F.doc(db,'slate','current'));
+      if(!cur.exists()) return false;
+      date = (cur.data()||{}).nightDate || (cur.data()||{}).date || null;
+      if(!date) return false;
+      snap = await F.getDoc(F.doc(db,'slate',date));
+      if(!snap.exists()) return false;
+    }
     var d = snap.data() || {};
     SLATE.date   = date;
     SLATE.league = d.league || null;
@@ -7262,7 +7344,28 @@ let S=freshS();
    watching, and carrying a fresh room's blank name over them would look
    exactly like being signed out. */
 var ROOMS = {};
-var SESSION_KEYS = ['name','color','seasonPts','sport','totalPlayers','streak'];
+/* `mode` and `place` were missing, and their absence had a much larger
+   effect than a missing preference. freshS() returns mode:"demo", and
+   roomRestore() calls freshS() for any room this session has not seen. So
+   the FIRST time a player entered a room through the rail — which is the
+   only way into a room on a three-room night — S.mode became 'demo', and
+   onHostedRound() begins `if(S.mode!=="live") return;`. Every round the
+   host pushed was dropped on the floor, silently, and refreshRoom()'s "no
+   connection for live questions" banner is itself gated on S.mode, so the
+   one diagnostic that would have said so could not appear either.
+
+   Whether a person is playing for real or practising is a fact about the
+   person. It does not change because they walked into a different room.
+
+   `place` is NOT here, and that is deliberate. It was in the first draft
+   alongside `mode` and it is a different kind of fact: mode is who you
+   are, place is how far through THIS room's night you have got. Carrying
+   it across meant walking into a fresh room already standing on the
+   screen you left in the last one — qa.js caught it immediately, twice,
+   as an element vanishing from under a click. It is also the exact state
+   featureTonight() spends twenty lines defending against, because a saved
+   place outlives the night it belongs to. */
+var SESSION_KEYS = ['name','color','seasonPts','sport','totalPlayers','streak','mode'];
 
 /* WHICH ROOM AM I IN — TRACKED, NOT DERIVED. The first version keyed the
    store on GAME.nightId, which only changes when hydration SUCCEEDS. On a
@@ -9096,6 +9199,20 @@ function predFocus(){
   }catch(_){}
 }
 function predGo(d){
+  /* CANCEL THE PENDING AUTO-ADVANCE FIRST. Two things own this
+     transition — the beat that follows a pick, and the player's own Next
+     or Back — and neither knew about the other. Tapping an answer arms a
+     1100ms move; tapping Next inside that window moves one card and then
+     the timer fires from the NEW index and moves another, so a card is
+     silently skipped. Tap Back and the timer drags you forward again,
+     which is the founder's original report ("it moves the card on its
+     own") wearing a different mask.
+
+     At the old 220ms beat this window was too short to hit by hand. At
+     1100ms it is the normal tempo of somebody answering, so the fix for
+     his first bug made this one common. qa/qa.js found it as an input
+     vanishing mid-fill, twice, on two viewports. */
+  try{ clearTimeout(PD._adv); PD._adv=null; }catch(_){}
   const L=predOrderList();
   const before=PD.i;
   PD.i=Math.max(0,Math.min(L.length-1,PD.i+d));
@@ -9129,6 +9246,7 @@ function predBlankIdx(from){
   return -1;
 }
 function predJump(ix){
+  try{ clearTimeout(PD._adv); PD._adv=null; }catch(_){}   /* see predGo */
   const L=predOrderList();
   PD.i=Math.max(0,Math.min(L.length-1,ix));
   buildPred(); predFocusDeck();
@@ -11712,6 +11830,9 @@ var I18N = {
     "Which game are you watching?":"¿Qué partido estás viendo?",
     "Never played? Start here":"¿Primera vez? Empieza aquí",
     "Try it now":"Pruébalo ahora",
+    "Pick a sport":"Elige un deporte",
+    "Play a practice round":"Juega una ronda de práctica",
+    "A practice game, right now, with real questions and simulated players. No account needed, just a name to play under.":"Un juego de práctica, ahora mismo, con preguntas reales y jugadores simulados. No necesitas cuenta, solo un nombre para jugar.",
     "when you want a seat":"cuando quieras un lugar",
     "Playing a live game?":"¿Vas a jugar en vivo?",
     "Resume my game":"Retomar mi partida",
@@ -12654,7 +12775,38 @@ function lockPicks(idx, tries){
   LOCKED[rid] = true;
   subReceiptFor(rid);
   const mine = S.liveAnswers[idx] || [];
-  SB.submit(rid, {
+  /* ============ A PRACTICE DECK MUST NOT WEAR A HOSTED ROUND'S ID =====
+     This is the worst thing that happened on 20 Aug and it took two
+     independent audits of the archive to see it, because from the outside
+     it looks like a player getting questions wrong.
+
+     There are two submit paths. submitHosted() files answers to the
+     questions the RUNNER pushed. This one files answers to the deck built
+     into the app — the ARI @ ATL and DEN @ ATL practice fixtures — and it
+     carries its own answer key in `keys`.
+
+     When a hosted round failed to reach a device, `rounds[idx].q` still
+     held the built-in fixture, the lobby offered "Q2 ended? Answer now",
+     and this function wrote those answers into the LIVE room under the
+     real round's id `r1`, with the practice fixture's key attached. In the
+     49ers at Chargers room there is a submission whose options include
+     "Denver Broncos" and whose key says the right answer was Denver.
+
+     Three of the four devices in the room did this at least once. It is
+     the founder's "it asked a question that never happened", it is his
+     "my points decreased" (the phone scored the practice key, the server
+     later recomputed from the real one), and it is why a player was told
+     he went 0 for 4 on questions he never saw.
+
+     The submission is still worth keeping — it is a real record of what
+     the person answered. It just must not impersonate the hosted round.
+     A round the host actually served sets HR.started[rid]; anything else
+     in a live room is local content and files under its own id, where it
+     can never be graded against a key it never saw. */
+  var _hosted = false;
+  try{ _hosted = !!(HR && HR.started && HR.started[rid]); }catch(_){}
+  var _rid = _hosted ? rid : (rid + '-local');
+  SB.submit(_rid, {
     name:  S.name || 'player',
     picks: qs.map((q,i)=>{ const m=mine[i]; return (m&&m.choice)||''; }),
     banks: qs.map((q,i)=>{ const m=mine[i]; return (m&&m.bank)||0; }),
@@ -14489,6 +14641,34 @@ function roomListenersStop(why){
   try{ if(typeof bdUnsub==='function'){ bdUnsub(); n++; } }catch(_){}
   try{ bdUnsub=null; bdLive=false; }catch(_){}
   try{ if(typeof ttRoomStop==='function'){ if(ttUnsub) n++; ttRoomStop(); } }catch(_){}
+  /* ============ THE ROOM'S BOOKKEEPING LEAVES WITH THE ROOM ==========
+     Round ids are r0..r3 in EVERY room — host/run.js builds them from the
+     round index, not from the night. HR.started/submitted/scored/held are
+     keyed by that id and HR is a module global that nothing cleared, so
+     answering r0 in the baseball room set HR.started['r0'], and when the
+     football room later opened ITS r0, onHostedRound returned at its first
+     guard and the round never appeared. Silently. On a night with three
+     rooms and staggered tips, moving between rooms is the design, so this
+     would have hidden the first round of the second and third rooms.
+
+     Re-entry is still protected: onHostedRound asks the SERVER for an
+     existing submission (SB.mySub) before it opens anything, so clearing
+     the local memory cannot produce a double-answer.
+
+     lastStand is the same disease one layer up. It is the board cache
+     every score surface now reads — myRank(), liveRank(), shownTotal() and
+     the YOUR NIGHT tile all funnel through it — and it was never
+     room-scoped. Switching rooms painted the room you LEFT: the founder's
+     "the points on the football switches between players" and "I think my
+     points decreased" are both this cache outliving its room. Unifying the
+     four readers last night made them agree with each other, which meant
+     they became wrong together instead of separately. */
+  try{
+    HR.started={}; HR.submitted={}; HR.scored={}; HR.held={}; HR.heldQs={};
+    HR.pending=null; HR.pendingScore=null;
+  }catch(_){}
+  try{ lastStand=null; }catch(_){}
+  try{ roomLast=null; }catch(_){}
   try{ trk('listeners_stop',{why:why||'', n:n}); }catch(_){}
   return n;
 }
@@ -16200,6 +16380,14 @@ function openHostedRound(r, idx){
   notify('\ud83d\udd34 '+roundName(idx)+' is live',
          'Questions are up on STATS — get in before the clock runs.',
          'round-live');
+  /* AND PAINT THE BAR NOW. paintGameBar() had exactly one caller in the
+     file — paintNav() — which runs on navigation. A round opening while
+     somebody is standing still on the Board tab is not a navigation, so
+     the bar was only ever repainted if the player left the tab and came
+     back: the alert telling you to come back could only be seen by
+     someone who had already come back. This is the one place in the app
+     that knows a round just opened. */
+  try{ paintGameBar(); }catch(_){}
   if(S.screen==='lobby'){
     renderLobby(idx);
     toast(`🔴 Host pushed ${roundName(idx).toLowerCase()} — starting…`);
@@ -16625,6 +16813,38 @@ function shareEmoji(){
   }
   return rows.join('\n');
 }
+/* ============ ONE SHARE LINK, ONE DEFINITION ========================
+   There were two share surfaces and they disagreed with each other in
+   the worst possible pairing. The end-of-night result card appended
+   /?ref=<uid8> and fired no telemetry, so a share that COULD be
+   attributed was invisible. The one-tap share on every feed card fired
+   trk('share') and returned a bare domain, so the share that WAS counted
+   carried nothing to count it by. The product therefore had, on paper,
+   a referral mechanism and an analytics event, and between them they
+   could not answer whether a single share had ever produced a single
+   player. The database agrees: zero share events, and no src ever
+   stored.
+
+   One function now, used by both, so the two can never drift again.
+
+   It also carries the ROOM. A share sent during a game that lands the
+   recipient on the homepage asks them to work out which of tonight's
+   three rooms they were invited to; ?game= puts them in the one they
+   were actually watching. Only for a room that is on tonight's slate —
+   a link to a finished night is worse than a link to the front door. */
+function shareUrl(){
+  var parts = [];
+  try{
+    var g = (GAME && GAME.nightId) || '';
+    if(g && slateGame(g)) parts.push('game=' + encodeURIComponent(g));
+  }catch(_){}
+  try{
+    var id = (window.SB && SB.uid && SB.uid()) || '';
+    if(id) parts.push('ref=' + String(id).slice(0, 8));
+  }catch(_){}
+  return parts.length ? ('statsgametime.com/?' + parts.join('&')) : 'statsgametime.com';
+}
+
 function copyShareText(){
   const head = S.mode==="live"
     ? `STATS ${SPORT.emoji} ${GAME.night} · ${GAME.homeAbbr} vs ${GAME.awayAbbr}\n${S.name||'Me'}: ${S.pts} pts · ⚡${S.speed} speed`
@@ -16641,9 +16861,11 @@ function copyShareText(){
      Short, and derived from the player rather than stored, so there is no
      new state to keep in sync. If there is no signed-in id there is no
      code, and the link still works. */
-  var _ref='';
-  try{ var _u = (window.SB && SB.uid && SB.uid()) || ''; if(_u) _ref = '/?ref=' + String(_u).slice(0,8); }catch(_){}
-  const txt=`${head}${awLine}\n${shareEmoji()}\n🔥 ${S.streak}-game streak\nPlay free → statsgametime.com${_ref}`;
+  const txt=`${head}${awLine}\n${shareEmoji()}\n🔥 ${S.streak}-game streak\nPlay free → ${shareUrl()}`;
+  /* COUNTED, at last. This surface produced the only attributable links
+     the product has ever had and fired nothing, while the other surface
+     fired and carried nothing. Both are counted now. */
+  try{ trk('share'); }catch(_){}
   try{navigator.clipboard&&navigator.clipboard.writeText(txt);}catch(e){}
   toast('📋 Result card copied — paste it in the group chat.');
 }
@@ -18482,7 +18704,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-21-everyroom.181';
+const STATS_BUILD='2026-08-21-tonight.182';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -18778,8 +19000,19 @@ function gameBarState(){
     // Is a round open and unanswered right now?
     let open=false, tag='';
     try{
-      const d=(typeof hostedDoc==='function') && hostedDoc(S.qi);
-      if(d && d.state==='live' && !(HR.submitted&&HR.submitted[d.id])) { open=true; tag=roundTag(S.qi); }
+      /* ASK ABOUT THE ROUND BEING OFFERED. S.qi is the round last PLAYED;
+         openHostedRound sets S.nextQ and deliberately leaves S.qi alone. So
+         between rounds hostedDoc(S.qi) is null for exactly the round this
+         bar exists to announce, and the bar never appeared. That is B0
+         again — the same mismatch was found on Game Night #7 and fixed in
+         the lobby button; this reader was never touched.
+
+         Founder, 20 Aug: "When I'm on another page or tab I don't get an
+         alert when there is another question." The alert was built, styled
+         urgent and already written. It was asking about the wrong round. */
+      const _q = (S.nextQ!=null ? S.nextQ : S.qi) || 0;
+      const d=(typeof hostedDoc==='function') && hostedDoc(_q);
+      if(d && d.state==='live' && !(HR.submitted&&HR.submitted[d.id])) { open=true; tag=roundTag(_q); }
     }catch(_){}
     if(place==='live'){ open=true; try{ tag=roundTag(S.qi); }catch(_){} }
     if(open) return {urgent:true, text:'🔴 '+(tag||'A round')+' is open — tap to answer'};
@@ -20671,7 +20904,7 @@ function shareCardText(id){
     var rank=null; try{ if(lastStand&&lastStand.length) lastStand.forEach(function(x,i){ if(x.me) rank=i+1; }); }catch(_){}
     if(S&&S.mode==='live') me='Me: '+pts+' pts'+(rank?(' · #'+rank):'');
   }catch(_){}
-  return [head, score, '', line, sub, '', me, 'statsgametime.com']
+  return [head, score, '', line, sub, '', me, shareUrl()]
     .filter(function(x){ return x!==undefined && x!==null && String(x).length; }).join('\n');
 }
 function shareCard(id){

@@ -572,6 +572,22 @@ function roundSlots(AUTO, sum, plan){
     const ot = AUTO.otIndexOf(sum, per);
     if(ot <= 0) continue;
     if(covered[per]) continue;
+    /* THE PERIOD HAS TO HAVE BEEN PLAYED, and `mx` is not evidence of that.
+       mx takes the higher of status.period and the plays; status.period can
+       read past the last period actually played, and when it does, this loop
+       manufactures an overtime round out of a scoreboard field. That is how a
+       70-point "Extra innings" round reached every phone in a nine-inning
+       game on 20 Aug, 237ms after the real final round.
+
+       Asking the plays is the independent check. An inning that happened has
+       pitches in it. Soccer returns 0 plays for every period and has no
+       otFrom, so it never reaches this line. */
+    const played = Number(AUTO.playsInPeriod(sum, per)) || 0;
+    if(!played){
+      log('skip', `${AUTO.roundTagFor(sum, per)} would be period ${per}, but the feed has no plays in it — ` +
+                  `the scoreboard says ${mx} and the plays say ${AUTO.playedPeriodMax(sum)}. Not inventing an overtime.`);
+      continue;
+    }
     const tpl = plan.ot;
     slots.push({
       i: slots.length, per, ot,
@@ -851,8 +867,17 @@ async function main(){
 
          maxPeriodIn is the feed's own high-water mark. A round whose period
          is past it did not happen, whatever the status says. */
-      let playedTo = 0;
-      try{ playedTo = Number(AUTO.maxPeriodIn(sum)) || 0; }catch(_){}
+      /* THE PLAYS FIRST, and this is the whole point of the guard.
+         This used to read AUTO.maxPeriodIn(sum) — the same call that decides
+         which slots exist — so `sl.per > playedTo` compared a number with
+         itself and could not be false for any slot it was written to stop.
+         playedPeriodMax consults the plays alone, so when the scoreboard runs
+         ahead of the game the two disagree and the guard has something to
+         say. */
+      let playedTo = Number(AUTO.playedPeriodMax(sum)) || 0;
+      if(!playedTo){
+        try{ playedTo = Number(AUTO.maxPeriodIn(sum)) || 0; }catch(_){}
+      }
       /* SOCCER HAS NO PLAY LIST, so maxPeriodIn has nothing to count and
          returns 0 — which would have made the guard above silently inert
          for MLS, protecting four sports out of five. Caught by
