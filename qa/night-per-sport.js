@@ -267,6 +267,59 @@ const only = (() => { const i = process.argv.indexOf('--sport'); return i > 0 ? 
        `periodDone(regulation+4) is ${phantom} on a finished game and maxPeriodIn is unavailable, so nothing can stop an unplayed round opening`);
     if (phantom) console.log(`      \x1b[2mnote: periodDone says period ${L.regulation + 4} ended too — only maxPeriodIn (${played}) knows better\x1b[0m`);
 
+    /* ---- 5c. CAN THIS SPORT PRODUCE A LIVE QUESTION AT ALL? -------
+       Caught It fired ZERO times on baseball across a whole game, behind a
+       badge reading ARMED, because freshness was keyed on a sequence number
+       that restarts every at-bat. Nothing said so: the trigger returns
+       silently when no moment matches and the builder returns null
+       silently too, so the failure was indistinguishable from a quiet game.
+
+       So the night is replayed here in twenty-play steps, the way a
+       twenty-second poll would see it, through the same AUTO.CI the runner
+       and the Control Room both use — and the question is simply whether
+       any question ever comes out. Hockey is exempt because its builder is
+       honestly unwritten and says so. */
+    if (AUTO.CI && L.family !== 'hockey') {
+      let stream = plays;
+      if (L.family === 'soccer') { try { stream = AUTO.CI.soccerEvents(sum) || []; } catch (_) { stream = []; } }
+      const comp = ((sum.header || {}).competitions || [])[0] || {};
+      const cs = comp.competitors || [];
+      const aw = cs.find(c => c.homeAway === 'away') || cs[0] || {};
+      const hm = cs.find(c => c.homeAway === 'home') || cs[1] || {};
+      const T = { awayAbbr:(aw.team||{}).abbreviation||'', homeAbbr:(hm.team||{}).abbreviation||'',
+                  awayId:(aw.team||{}).id, homeId:(hm.team||{}).id,
+                  awayName:(aw.team||{}).displayName||'', homeName:(hm.team||{}).displayName||'',
+                  awayScore:aw.score, homeScore:hm.score };
+      let key = null, counts = {}, open = null, openedAt = 0, pending = null, asked = 0, now = 0;
+      const pace = AUTO.CI.PACES.normal;
+      for (let cut = 20; cut <= stream.length; cut += 20) {
+        now += 20000;
+        const seen = stream.slice(0, cut);
+        const step = AUTO.CI.freshAfter(seen, key); const first = !key; key = step.key;
+        if (pending && now >= pending.at) { pending = null; open = null; }
+        if (first || open || !step.fresh.length) continue;
+        const per = AUTO.CI.curPeriod(seen);
+        const mo = AUTO.CI.moment(L.family, step.fresh);
+        if (!mo || (counts[per] || 0) >= pace.capPer) continue;
+        const gap = now - openedAt;
+        if (!(mo.stoppage ? gap >= 25000 : gap >= pace.gapMs)) continue;
+        let q = null; try { q = AUTO.CI.build(L.family, seen, T, per, counts, sum); } catch (_) {}
+        if (!q || !q.qid) continue;
+        open = q.qid; openedAt = now; counts[per] = (counts[per] || 0) + 1; asked++;
+        pending = q.ans != null ? { at: now + AUTO.CI.lockMsFor(q.kind) + 1200 } : null;
+      }
+      /* WHAT THIS CATCHES, AND WHAT IT DOES NOT. Sabotage-tested three
+         ways. Breaking the builder outright turns it red. Breaking only
+         baseball's ordinary moment left three questions standing, from the
+         scoring path, and it stayed green — so this is a floor against
+         SILENCE, not a guard on cadence. The count is printed on every run
+         precisely so a drop from seven to three is visible to a person even
+         though it does not fail the gate. */
+      ok(`${L.key}.live-questions-can-actually-fire`, asked > 0,
+         `replaying the whole game produced ZERO live questions — the badge would say ARMED all night and nothing would ever come`);
+      if (asked) console.log(`      \x1b[2m${asked} live question(s) across the game · ${Object.keys(counts).map(k => 'P' + k + '=' + counts[k]).join(' ')}\x1b[0m`);
+    }
+
     /* ---- 6. THE ENGINE AGREES WHICH SPORT THIS IS -----------------
        sportOf/familyOf feed the resolver choice. Getting this wrong is how
        a baseball room asks how many quarters a game runs. */

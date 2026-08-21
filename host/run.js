@@ -52,6 +52,12 @@ const MINUTES = Number(process.env.RUN_MINUTES || 240);
 const SPORT   = process.env.SPORT_PATH || 'basketball/wnba';
 const ANSWER_MS = Number(process.env.ANSWER_MS || 150000);   // 2m30
 const GRACE_MS  = Number(process.env.GRACE_MS  || 20000);
+/* Caught It is ON by default now that the runner can host it. A room with
+   no host for it is a room where `callit:true` tells every phone to watch
+   for questions that will never come, which is the state that produced a
+   silent green ARMED badge all last night. */
+const CALLIT      = String(process.env.CALLIT || '1') !== '0';
+const CALLIT_PACE = String(process.env.CALLIT_PACE || 'normal');
 const TICK_MS   = Number(process.env.TICK_MS   || 20000);
 /* ---- THE EMPTY ROOM, AND WHY IT HAS TO BE ALLOWED TO END -----------
    Running every game of the slate means most rooms will have nobody in
@@ -587,7 +593,33 @@ async function main(){
   log('boot', `lease held as ${HOST_ID}`);
   log('boot', `night ${NIGHT} · event ${EVENT} · ${N} rounds · running for up to ${MINUTES}m`);
 
+  /* TELL THE PHONES SOMEBODY IS HOSTING IT. `callit` is the flag the app
+     watches; it has been left true on rooms nobody was hosting, which is
+     how four people sat waiting on questions that could not come. The
+     runner sets it when it takes the room and clears it when it walks
+     away, so the flag means what it says. */
+  if(CALLIT){
+    try{ await db.doc(`nights/${NIGHT}`).set({ callit:true }, { merge:true }); }
+    catch(_){}
+  }
+
   const acted = {}, seenDone = {};
+  /* ---- CAUGHT IT, HOSTED HERE ---------------------------------------
+     Founder, 20 Aug: "make the runner host every room end to end."
+
+     Until tonight Caught It could only run inside an open Control Room tab.
+     Close the laptop and it stopped for the night, whatever the runner was
+     doing, and one tab could only ever serve one room. On a four-room
+     Saturday that is four browser tabs that must all stay awake.
+
+     The decision and the questions now live in AUTO.CI inside the shared
+     block, so this is the same implementation the Control Room uses rather
+     than a second copy of it. All that is left here is state and writes. */
+  let ciKey = null;          // identity of the last play seen; never a sequence number
+  let ciCounts = {};         // questions asked per period, for the cap
+  let ciOpen = null;         // qid currently open
+  let ciOpenedAt = 0;
+  let ciPending = null;      // {qid, ans, text, at} — the answer, held back
   let lastFeedSig = '';
   let lastScoreSig = '';
   const until = Date.now() + MINUTES * 60000;
@@ -672,6 +704,85 @@ async function main(){
           log('feed', `published ${Math.round(payload.length/1024)}kB for the Stats tab`);
         }
       }catch(e){ log('feed', 'could not publish the feed: ' + ((e && e.message) || e)); }
+
+      /* ---- CAUGHT IT ------------------------------------------------
+         Runs on the same poll as everything else, writes only to its own
+         collection, and can never touch the round scores. Worst case if
+         anything in here misbehaves is one question voiding. */
+      if(CALLIT){
+        try{
+          const sportFam = String(SPORT || '').split('/')[0] || 'basketball';
+          let cplays = [];
+          if(sportFam === 'soccer'){ try{ cplays = AUTO.CI.soccerEvents(sum) || []; }catch(_){ cplays = []; } }
+          else { try{ cplays = AUTO.feedPlays(sum) || []; }catch(_){ cplays = []; } }
+
+          if(cplays.length){
+            const step = AUTO.CI.freshAfter(cplays, ciKey);
+            const firstLook = !ciKey;
+            ciKey = step.key;
+
+            /* Release a held answer once its lock window has passed. The
+               phones counted down against locksMs; publishing early would
+               show the answer to somebody still choosing. */
+            if(ciPending && Date.now() >= ciPending.at){
+              try{
+                const ref = db.doc(`nights/${NIGHT}/callit/${ciPending.qid}`);
+                const snap = await ref.get();
+                if(snap.exists && (snap.data() || {}).state === 'open'){
+                  await ref.set({ state:'resolved', answer: ciPending.ans,
+                                  resolveText: ciPending.text || null,
+                                  resolvedAt: FieldValue.serverTimestamp() }, { merge:true });
+                  log('callit', `answer published — ${ciPending.text || ciPending.ans}`);
+                }
+              }catch(e){ log('callit', 'could not publish the answer: ' + ((e && e.message) || e)); }
+              ciPending = null; ciOpen = null;
+            }
+
+            /* Never fire on the backlog: the first look only remembers where
+               the game is. Same rule the Control Room has always had. */
+            if(!firstLook && !ciOpen && step.fresh.length){
+              const per = AUTO.CI.curPeriod(cplays);
+              const pace = AUTO.CI.PACES[CALLIT_PACE] || AUTO.CI.PACES.normal;
+              const asked = ciCounts[per] || 0;
+              const gap = Date.now() - ciOpenedAt;
+              const mo = AUTO.CI.moment(sportFam, step.fresh);
+              const spacedOut = mo && (mo.stoppage ? gap >= 25000 : gap >= pace.gapMs);
+              if(mo && asked < pace.capPer && spacedOut){
+                const comp = ((sum.header || {}).competitions || [])[0] || {};
+                const cs = comp.competitors || [];
+                const aw = cs.find(c => c.homeAway === 'away') || cs[0] || {};
+                const hm = cs.find(c => c.homeAway === 'home') || cs[1] || {};
+                const T = {
+                  awayAbbr:(aw.team||{}).abbreviation||'', homeAbbr:(hm.team||{}).abbreviation||'',
+                  awayId:(aw.team||{}).id, homeId:(hm.team||{}).id,
+                  awayName:(aw.team||{}).displayName||'', homeName:(hm.team||{}).displayName||'',
+                  awayScore:aw.score, homeScore:hm.score
+                };
+                let q = null;
+                try{ q = AUTO.CI.build(sportFam, cplays, T, per, ciCounts, sum); }
+                catch(e){ log('callit', 'the builder threw: ' + ((e && e.message) || e)); }
+                if(q && q.qid){
+                  const locks = AUTO.CI.lockMsFor(q.kind);
+                  /* The answer NEVER goes in the document the phones read.
+                     It is held here and published when the clock is up. */
+                  await db.doc(`nights/${NIGHT}/callit/${q.qid}`).set({
+                    qid:q.qid, kind:q.kind, prompt:q.prompt, options:q.options,
+                    period:q.per, runTeam:q.runTeam || null,
+                    state:'open', answer:null, resolveText:null,
+                    opensAt: FieldValue.serverTimestamp(), locksMs: locks, seq: Date.now()
+                  }, { merge:true });
+                  ciOpen = q.qid; ciOpenedAt = Date.now();
+                  ciCounts[per] = asked + 1;
+                  ciPending = (q.ans != null)
+                    ? { qid:q.qid, ans:String(q.ans), text:q.atext || '', at: Date.now() + locks + 1200 }
+                    : null;
+                  log('callit', `${mo.reason} · ${String(q.prompt||'').slice(0,52)}`);
+                }
+              }
+            }
+          }
+        }catch(e){ log('callit', 'tick threw: ' + ((e && e.message) || e)); }
+      }
 
       const roundsSnap = await db.collection(`nights/${NIGHT}/rounds`).get();
       const live = {}; roundsSnap.forEach(d => { live[d.id] = d.data(); });
@@ -923,6 +1034,9 @@ async function main(){
              archive records the totals players actually finished on. */
           try{ await archiveNight(db, FieldValue, 'final-buzzer'); }
           catch(e){ log('err', 'archive at the buzzer failed: ' + ((e && e.message) || e)); }
+          if(CALLIT){
+            try{ await db.doc(`nights/${NIGHT}`).set({ callit:false }, { merge:true }); }catch(_){}
+          }
           log('done', 'final buzzer, every quarter scored — the runner is finished');
           return;
         }

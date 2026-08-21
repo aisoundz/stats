@@ -8310,6 +8310,553 @@ var AUTO = (function(){
            wentToOvertime:wentToOvertime, otWorthFor:otWorthFor,
            isOtTag:isOtTag, splitOtRound:splitOtRound };
 })();
+
+/* ============ CAUGHT IT, WITHOUT A BROWSER =========================
+   Founder, 20 Aug 2026, after a night in which the last two baseball
+   rounds were opened and scored by the runner while Caught It could only
+   ever run in an open Control Room tab:
+
+     "make the runner host every room end to end"
+
+   These four hundred lines decide WHICH moment deserves a question and
+   WHAT the question is. They were measured tonight and contain no DOM, no
+   Firestore and no timers — they take plays and give back an object. The
+   only reason they lived in the browser is that nobody had moved them.
+
+   Moved here, inside @host-shared, they are reachable by host/run.js the
+   same way every resolver already is. The Control Room keeps the timers,
+   the state chip and the writes; the runner does its own writes. One
+   implementation, two hosts, which is the opposite of the disease that
+   produced four separate bugs tonight.
+
+   Three signature changes, all forced by leaving the browser:
+     · sport arrives as an argument, because `night` and nightCfg do not
+       exist out here
+     · the per-period question count arrives as an argument rather than
+       being read off a singleton
+     · isMadeFG is inlined; it was one line on an object defined outside
+       the sentinels                                                     */
+AUTO.CI = (function(){
+  var C = {};
+  var isMadeFG = function(p){ return p && p.scoringPlay && p.scoreValue >= 2; };
+  /* Three helpers the builders lean on. Copied rather than referenced,
+     because they were one-liners hanging off the browser's CI object and
+     the whole point of this move is that nothing out here reaches back
+     into a page. `_lastSum` was a field on that object, held so the
+     football builder could read drive results without a sixth argument;
+     out here it is module state, set by build() on every call. */
+  var _lastSum = null;
+  C.abbr = function(id,T){ return String(id)===String(T.homeId)?T.homeAbbr:(String(id)===String(T.awayId)?T.awayAbbr:''); };
+  C.teamName = function(id,T){ return String(id)===String(T.homeId)?T.homeName:(String(id)===String(T.awayId)?T.awayName:'They'); };
+  C.curPeriod = function(plays){ var m=1; (plays||[]).forEach(function(p){ var n=(p.period&&p.period.number)||0; if(n>m)m=n; }); return m; };
+  C.scorerName = function(p){
+    var t=String((p&&p.text)||'');
+    var m=t.match(/^(.+?)\s+(?:makes|made)\b/i);
+    return m ? m[1].trim() : '';
+  };
+  /* ============ WHAT SPORT IS THIS ROOM ==============================
+     CI had no idea. Everything below it assumed basketball because every
+     room had been basketball. */
+
+  /* ============ CAUGHT IT, BASEBALL =================================
+     Built 20 Aug 2026 for the first live baseball room this product has
+     ever hosted. Founder: "Can we promote up to get the caught it
+     question on either football or baseball. Just one game."
+
+     Baseball, and not football, and the feed is the whole reason. Measured
+     on a real finished game (401816574): MLB carries 560 plays at the TOP
+     LEVEL of the summary — 103 Ball, 89 Play Result, 54 Foul Ball, 43
+     Strike Looking, 43 Strike Swinging — each with sequenceNumber, which
+     is exactly what the tick already keys freshness on. Football buries its
+     plays inside drives.previous, so sum.plays is EMPTY and Caught It on
+     an NFL room is silent all night with a green ARMED badge over it.
+     Soccer has no plays key at all.
+
+     So one sport, tonight, on the evidence — and the accessor problem for
+     football is named rather than half-fixed in the dark.
+
+     Every question here is RETROSPECTIVE and its answer is computed at
+     build time from plays that have already happened, the same shape as
+     the quarter-retrospective basketball questions. Nothing predicts.
+
+     Two feed facts worth writing down, because they are not obvious and
+     getting them backwards would ask the wrong team:
+       · on a PITCH (summaryType 'P') `team` is the team PITCHING
+       · on a RESULT (summaryType 'N') `team` is the team BATTING
+     Verified on the game above: Grisham (NYY, id 10) struck out and the
+     Play Result carried team 10, while the pitches to him carried team 1
+     (BAL, at home, fielding). */
+  /* ============ CAUGHT IT, FOOTBALL =================================
+     Measured on references/multisport/nfl.json — a real finished game:
+     24 drives, 213 plays. Rush 68 · Pass Reception 41 · Pass Incompletion
+     38 · Punt 11 · Kickoff 8 · Interception 3 · Field Goal Good 3 ·
+     touchdowns 4. Each play carries sequenceNumber, type.text, period,
+     clock, scoringPlay, statYardage, isTurnover, isPenalty and start.down.
+     Drive results: Touchdown, Punt, Interception, Downs, Field Goal.
+
+     All retrospective, all answered at build time from plays that have
+     already happened. */
+  C.buildFootball = function(sport, plays, T, per, counts){
+    var typ=function(p){ return String((p.type&&p.type.text)||''); };
+    var here = plays.filter(function(p){ return p.period && Number(p.period.number)===Number(per); });
+    if(!here.length) return null;
+    /* Kickoffs, timeouts and administrative rows are not "a play" to a
+       person watching. Asking "run or pass?" about an official timeout is
+       the kind of question that makes somebody close the app. */
+    var real = here.filter(function(p){
+      var t=typ(p);
+      return !/timeout|end period|end of|kickoff|two-minute/i.test(t);
+    });
+    var last = real[real.length-1] || null;
+    if(!last) return null;
+
+    var rot=(counts[per]||0)%4;
+    var qid='ci_'+per+'_'+(counts[per]||0)+'_'+(last.sequenceNumber||0);
+
+    /* 0. RUN OR PASS — football's "two or three". */
+    if(rot===0){
+      var t0=typ(last), a0=null;
+      if(/^rush|rushing/i.test(t0)) a0='r';
+      else if(/pass|sack/i.test(t0)) a0='p';
+      if(a0) return { qid:qid, kind:'sawRunPass', per:per, runTeam:null,
+        prompt:'👀 That last play — a run or a pass?',
+        options:[{k:'Run',v:'r'},{k:'Pass',v:'p'}],
+        ans:a0, atext:(last.text||t0) };
+    }
+
+    /* 1. HOW FAR. statYardage is on the play and needs no prose. */
+    if(rot===1 && last.statYardage!=null && isFinite(Number(last.statYardage))){
+      var y=Number(last.statYardage), a1;
+      if(y<=0) a1='a'; else if(y<=4) a1='b'; else if(y<=10) a1='c'; else a1='d';
+      return { qid:qid, kind:'sawGain', per:per, runTeam:null,
+        prompt:'👀 That play — how many yards?',
+        options:[{k:'Lost yards or none',v:'a'},{k:'1 to 4',v:'b'},{k:'5 to 10',v:'c'},{k:'11 or more',v:'d'}],
+        ans:a1, atext:(last.text||'')+' ('+y+' yards)' };
+    }
+
+    /* 2. THE DRIVE THAT JUST ENDED. Read off the drive, not the prose. */
+    if(rot===2){
+      var drives=[]; try{ drives = AUTO.feedDrives ? AUTO.feedDrives({drives:{previous:[]}}) : []; }catch(_){ drives=[]; }
+      var dv=null;
+      try{
+        var prev=(_lastSum && _lastSum.drives && _lastSum.drives.previous) || [];
+        for(var i=prev.length-1;i>=0;i--){
+          var d=prev[i];
+          var lp=(d.plays||[])[(d.plays||[]).length-1];
+          if(lp && lp.period && Number(lp.period.number)===Number(per)){ dv=d; break; }
+        }
+      }catch(_){ dv=null; }
+      if(dv){
+        var res=String(dv.displayResult||dv.result||'').toLowerCase(), a2=null;
+        if(/touchdown/.test(res)) a2='td';
+        else if(/field goal/.test(res)) a2='fg';
+        else if(/punt/.test(res)) a2='pt';
+        else if(/interception|fumble|downs/.test(res)) a2='to';
+        if(a2) return { qid:qid, kind:'sawDriveEnd', per:per, runTeam:null,
+          prompt:'⏪ That drive just ended — how?',
+          options:[{k:'Touchdown',v:'td'},{k:'Field goal',v:'fg'},{k:'Punt',v:'pt'},{k:'Turnover or downs',v:'to'}],
+          ans:a2, atext:(dv.displayResult||dv.result||'') };
+      }
+    }
+
+    /* 3. HOW BUSY WAS THE QUARTER. Countable, no prose. */
+    if(rot===3){
+      var n=real.length, a3;
+      if(n<=12) a3='a'; else if(n<=20) a3='b'; else a3='c';
+      return { qid:qid, kind:'sawQtrPlays', per:per, runTeam:null,
+        prompt:'⏪ Plays run this quarter so far — how many?',
+        options:[{k:'12 or fewer',v:'a'},{k:'13 to 20',v:'b'},{k:'21 or more',v:'c'}],
+        ans:a3, atext:n+' plays this quarter so far.' };
+    }
+    return null;
+  };
+
+  /* ============ CAUGHT IT, SOCCER ===================================
+     Soccer has NO plays key. What it has, measured on
+     references/multisport/mls.json, is 185 commentary rows of which 165
+     carry a fully structured `play` object — Foul 70 · Corner Awarded 20 ·
+     Shot Off Target 12 · Substitution 10 · Shot On Target 9 · Yellow Card 9
+     · Shot Blocked 7 · Offside 4 · Goal 3 — each with type, team,
+     participants and clock. And commentary[].sequence is monotone, which is
+     exactly the freshness key the tick already uses.
+
+     So the stream is normalised into play shape once, here, and everything
+     downstream works unchanged.
+
+     Founder, watching a match on 19 Aug: "I feel sad we cant do cool things
+     as things happen like who was offside." That sentence is in this feed,
+     by name, minute-stamped, and nothing was reading it.
+
+     THE CADENCE IS DIFFERENT AND MUST BE. Nine key events in 31 minutes of
+     real football. Basketball's question-every-80-seconds would ask about
+     nothing; the trigger below fires on events, not on a clock. */
+  C.soccerEvents = function(sum){
+    var out=[];
+    try{
+      (sum.commentary||[]).forEach(function(c){
+        var p=c.play; if(!p) return;
+        out.push({
+          sequenceNumber: Number(c.sequence)||0,
+          id: p.id,
+          soccer: true,
+          type: p.type || {},
+          text: p.text || c.text || '',
+          period: p.period || (c.period||null),
+          clockText: ((p.clock&&p.clock.displayValue)||((c.time&&c.time.displayValue))||''),
+          teamName: (p.team&&p.team.displayName)||'',
+          who: (((p.participants||[])[0]||{}).athlete||{}).displayName || '',
+          scoringPlay: !!p.scoringPlay
+        });
+      });
+    }catch(_){}
+    return out;
+  };
+  C.buildSoccer = function(sport, plays, T, per, counts){
+    var typ=function(p){ return String((p.type&&(p.type.text||p.type.type))||''); };
+    var sideOf=function(name){
+      var n=String(name||'').toLowerCase(); if(!n) return null;
+      var h=String(T.homeName||'').toLowerCase(), a=String(T.awayName||'').toLowerCase();
+      var ha=String(T.homeAbbr||'').toLowerCase(), aa=String(T.awayAbbr||'').toLowerCase();
+      if(n===h||n===ha||(h&&h.indexOf(n)>=0)||(n.indexOf(ha)>=0&&ha)) return 'home';
+      if(n===a||n===aa||(a&&a.indexOf(n)>=0)||(n.indexOf(aa)>=0&&aa)) return 'away';
+      return null;
+    };
+    var here=plays.filter(function(p){ return p.period && Number(p.period.number)===Number(per); });
+    if(!here.length) return null;
+    var last=here[here.length-1];
+    var rot=(counts[per]||0)%3;
+    var qid='ci_'+per+'_'+(counts[per]||0)+'_'+(last.sequenceNumber||0);
+
+    /* 0. THE EVENT THAT JUST HAPPENED, by team. Offsides, cards, corners —
+          all of them are "were you watching" and all of them name a side. */
+    if(rot===0){
+      var t0=typ(last), lbl=null;
+      if(/offside/i.test(t0)) lbl='caught offside';
+      else if(/yellow card/i.test(t0)) lbl='booked';
+      else if(/corner/i.test(t0)) lbl='won that corner';
+      else if(/foul/i.test(t0)) lbl='gave that foul away';
+      if(lbl){
+        var side=sideOf(last.teamName);
+        if(side) return { qid:qid, kind:'sawEventTeam', per:per, runTeam:null,
+          prompt:'👀 Who just '+lbl+'?',
+          options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}],
+          ans: side==='home'?String(T.homeId):String(T.awayId),
+          atext:(last.text||t0)+(last.clockText?(' ('+last.clockText+')'):'') };
+      }
+    }
+
+    /* 1. THE LAST SHOT. Soccer's purest watching question. */
+    if(rot===1){
+      var shot=null;
+      for(var i=here.length-1;i>=0;i--){ if(/shot|goal/i.test(typ(here[i]))){ shot=here[i]; break; } }
+      if(shot){
+        var ts=typ(shot), a1=null;
+        if(/goal/i.test(ts) && !/no goal/i.test(ts)) a1='g';
+        else if(/on target/i.test(ts)) a1='s';
+        else if(/off target|woodwork/i.test(ts)) a1='o';
+        else if(/blocked/i.test(ts)) a1='b';
+        if(a1) return { qid:qid, kind:'sawShot', per:per, runTeam:null,
+          prompt:'👀 That last shot — what happened to it?',
+          options:[{k:'Goal',v:'g'},{k:'Saved / on target',v:'s'},{k:'Off target',v:'o'},{k:'Blocked',v:'b'}],
+          ans:a1, atext:(shot.text||ts)+(shot.clockText?(' ('+shot.clockText+')'):'') };
+      }
+    }
+
+    /* 2. HOW THE HALF IS GOING. Countable, no prose. */
+    if(rot===2){
+      var corners=here.filter(function(p){ return /corner/i.test(typ(p)); }).length;
+      var a2 = corners<=1?'a':(corners<=3?'b':'c');
+      return { qid:qid, kind:'sawCorners', per:per, runTeam:null,
+        prompt:'⏪ Corners won this half so far — how many?',
+        options:[{k:'One or fewer',v:'a'},{k:'Two or three',v:'b'},{k:'Four or more',v:'c'}],
+        ans:a2, atext:corners+' corner'+(corners===1?'':'s')+' this half so far.' };
+    }
+    return null;
+  };
+
+  C.buildBaseball = function(sport, plays, T, per, counts){
+    var isP = function(p){ return String(p.summaryType||'')==='P'; };
+    var isN = function(p){ return String(p.summaryType||'')==='N'; };
+    var typ = function(p){ return String((p.type&&p.type.text)||''); };
+
+    /* only this inning, and only what has actually happened */
+    var here = plays.filter(function(p){
+      return p.period && Number(p.period.number)===Number(per);
+    });
+    if(!here.length) return null;
+
+    var pitches = here.filter(isP);
+    var results = here.filter(isN);
+    var lastPitch  = pitches[pitches.length-1] || null;
+    var lastResult = results[results.length-1] || null;
+
+    var rot = (counts[per]||0) % 4;
+    var seq = (lastPitch && lastPitch.sequenceNumber) || (lastResult && lastResult.sequenceNumber) || 0;
+    var qid = 'ci_'+per+'_'+(counts[per]||0)+'_'+seq;
+
+    /* 0. THE LAST PITCH. The purest "were you watching" question baseball
+          has, and it comes round roughly every twenty seconds. */
+    if(rot===0 && lastPitch){
+      var t = typ(lastPitch), ans;
+      if(/^ball/i.test(t)) ans='b';
+      else if(/foul/i.test(t)) ans='f';
+      else if(/strike/i.test(t)) ans='s';
+      else ans=null;
+      if(ans) return { qid:qid, kind:'sawPitch', per:per, runTeam:null,
+        prompt:'👀 That last pitch — what was it?',
+        options:[{k:'Ball',v:'b'},{k:'Strike',v:'s'},{k:'Foul',v:'f'}],
+        ans:ans,
+        atext:(lastPitch.text||t) };
+    }
+
+    /* 1. THE AT-BAT THAT JUST ENDED. Three buckets the text supports
+          cleanly — anything cleverer means parsing prose, and a resolver
+          that guesses at prose is the bug that graded a 1-0 half as
+          "nobody scored". */
+    if(rot===1 && lastResult){
+      /* WORD BOUNDARIES, BECAUSE A SURNAME IS NOT AN OUTCOME.
+         The first version tested /walk/ and a replay of a real game
+         immediately graded "Walker grounded into double play" as a WALK —
+         the batter's name. Two lines above this, the comment I had just
+         written said a resolver that guesses at prose is the bug that
+         graded a 1-0 half as "nobody scored". It took one replay to prove
+         the point against its own author.
+
+         \b anchors both, and "walked" rather than "walk" so no name and no
+         "walk-off" can reach it. Verified against 89 Play Result rows. */
+      var tx = String(lastResult.text||'').toLowerCase(), a2;
+      if(/\bstruck out\b/.test(tx)) a2='k';
+      else if(/\bwalked\b/.test(tx)) a2='w';
+      else if(tx) a2='p';
+      else a2=null;
+      if(a2) return { qid:qid, kind:'sawAtBat', per:per, runTeam:null,
+        prompt:'👀 That at-bat just ended — how?',
+        options:[{k:'Strikeout',v:'k'},{k:'Walk',v:'w'},{k:'Put in play',v:'p'}],
+        ans:a2,
+        atext:(lastResult.text||'') };
+    }
+
+    /* 2. WHO IS BATTING. Reads the half-inning, not a team field, because
+          the team field means opposite things on the two play kinds. */
+    if(rot===2 && here[here.length-1] && here[here.length-1].period){
+      var half = String(here[here.length-1].period.type||'');
+      if(/^top$/i.test(half) || /^bot/i.test(half)){
+        var battingAway = /^top$/i.test(half);
+        return { qid:qid, kind:'sawBatting', per:per, runTeam:null,
+          prompt:'👀 Who is at the plate right now?',
+          options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}],
+          ans: battingAway ? String(T.awayId) : String(T.homeId),
+          atext:(battingAway?T.awayName:T.homeName)+' are batting in the '+
+                (battingAway?'top':'bottom')+' of the '+per+'.' };
+      }
+    }
+
+    /* 3. RUNS THIS INNING. Retrospective and countable — no prose. */
+    if(rot===3){
+      var runs = 0;
+      here.forEach(function(p){ if(p.scoringPlay) runs += (Number(p.scoreValue)||0); });
+      return { qid:qid, kind:'sawInningRuns', per:per, runTeam:null,
+        prompt:'⏪ Runs scored so far this inning — how many?',
+        options:[{k:'None',v:'0'},{k:'One',v:'1'},{k:'Two or more',v:'2'}],
+        ans: runs<=0?'0':(runs===1?'1':'2'),
+        atext: runs+' run'+(runs===1?'':'s')+' this inning so far.' };
+    }
+
+    /* Nothing sensible yet — say so rather than invent one. */
+    return null;
+  };
+
+  C.build = function(sport, plays, T, per, counts, sum){
+    if(sum) _lastSum = sum;
+    /* ONE DOOR, THEN THE SPORT. Everything below this line is basketball —
+       it opens by looking for a made field goal worth 2 or more and asks
+       "two or three?" — so it must never be reached by another sport. */
+    var _sp = String(sport||"basketball");
+    if(_sp==='baseball') return C.buildBaseball(sport, plays, T, per, counts);
+    if(_sp==='football') return C.buildFootball(sport, plays, T, per, counts);
+    if(_sp==='soccer')   return C.buildSoccer(sport, plays, T, per, counts);
+    if(_sp!=='basketball') return null;   // hockey: not built yet, and silent is honest
+    var scoring = plays.filter(function(p){return p.scoringPlay;});
+    var last = null;
+    for(var k=scoring.length-1;k>=0;k--){ if(isMadeFG(scoring[k])){ last=scoring[k]; break; } }
+    if(!last) return null;
+    var runTeam=null, runLen=0;
+    for(var i=scoring.length-1;i>=0;i--){ if(runTeam==null){ runTeam=scoring[i].team&&scoring[i].team.id; runLen=1; } else if(String(scoring[i].team&&scoring[i].team.id)===String(runTeam)){ runLen++; } else break; }
+    var seq = last.sequenceNumber || 0;
+    var qid = 'ci_'+per+'_'+(counts[per]||0)+'_'+seq;
+    var lid = String(last.team&&last.team.id);
+    var at  = (last.awayScore!=null && last.homeScore!=null) ? (T.awayAbbr+' '+last.awayScore+'–'+last.homeScore+' '+T.homeAbbr) : '';
+    var anchor = at ? ('the one that made it '+at) : 'that last bucket';
+    var who = C.scorerName(last);
+    var rot = (counts[per]||0) % 6;
+
+    /* ==== QUARTER-RETROSPECTIVE, rotations 3–5 =======================
+       "We need questions of what happened EARLIER in the quarter."
+
+       Rotations 0–2 below ask about the bucket that just went in. They
+       work, they have graded four nights correctly, and they are not
+       going anywhere. But they only ever reward the last ten seconds of
+       attention — look up at the right moment and you score.
+
+       These three reward the whole quarter. Every answer is computed
+       here, at build time, from the plays inside THIS period only, so
+       the host never has to know it and the room cannot disagree about
+       it. Each one returns null rather than guessing when the quarter is
+       too young to have an answer, and rotation falls through to the
+       bucket questions when it does. */
+    var qp = plays.filter(function(p){ return p.period && Number(p.period.number)===Number(per); });
+    var qs = qp.filter(function(p){ return p.scoringPlay && Number(p.scoreValue)>0; });
+
+    if(rot>=3 && qs.length>=5){
+      // 3. who opened the quarter
+      if(rot===3){
+        var f=qs[0], fid=String(f.team&&f.team.id);
+        return { qid:qid, kind:'qtrFirst', per:per, runTeam:null,
+          prompt:'⏪ Think back — who scored FIRST in this quarter?',
+          options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}],
+          ans:fid,
+          atext:(f.text||C.teamName(fid,T)+' opened the quarter')+'.' };
+      }
+      // 4. how many threes have gone in since the quarter started
+      if(rot===4){
+        var n3=qs.filter(function(p){ return Number(p.scoreValue)===3; }).length;
+        return { qid:qid, kind:'qtrThrees', per:per, runTeam:null,
+          prompt:'⏪ How many threes have been made this quarter — both teams?',
+          options:[{k:'None or one',v:'a'},{k:'Two or three',v:'b'},{k:'Four or more',v:'c'}],
+          ans: n3<=1?'a':(n3<=3?'b':'c'),
+          atext:n3+' three'+(n3===1?'':'s')+' made in this quarter so far.' };
+      }
+      // 5. who has actually won the quarter to this point
+      if(rot===5){
+        var ph=0, pa=0;
+        qs.forEach(function(p){
+          var id=String(p.team&&p.team.id);
+          if(id===String(T.homeId)) ph+=Number(p.scoreValue);
+          else if(id===String(T.awayId)) pa+=Number(p.scoreValue);
+        });
+        if(ph!==pa) return { qid:qid, kind:'qtrMore', per:per, runTeam:null,
+          prompt:'⏪ Since this quarter started, which team has scored more?',
+          options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}],
+          ans: ph>pa?String(T.homeId):String(T.awayId),
+          atext:T.awayAbbr+' '+pa+', '+T.homeAbbr+' '+ph+' in this quarter.' };
+        // level on points is not a question with one right answer — fall through
+      }
+    }
+
+    // 1. Two or three — the purest "were you watching" question there is.
+    if(rot===0 || rot===4){
+      return { qid:qid, kind:'sawTwoOrThree', per:per, runTeam:null,
+        prompt:'👀 That bucket — '+anchor+'. Two or three?',
+        options:[{k:'2 · deuce',v:'2'},{k:'3 · triple',v:'3'}],
+        ans:String(last.scoreValue),
+        atext:C.abbr(lid,T)+' · '+last.scoreValue+' points'+(last.text?(' · '+last.text):'') };
+    }
+    // 2. Which side put it up.
+    if(rot===1 || rot===3 || rot===5){
+      return { qid:qid, kind:'sawWho', per:per, runTeam:null,
+        prompt:'👀 Who scored '+anchor+'?',
+        options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}],
+        ans:lid,
+        atext:C.abbr(lid,T)+(last.text?(' · '+last.text):'') };
+    }
+    // 3. Which player — needs a real decoy, so it degrades to #1 if we
+    //    cannot find one rather than inventing a name.
+    if(who){
+      var pool={}; scoring.forEach(function(p){ var n=C.scorerName(p); if(n && n!==who) pool[n]=String(p.team&&p.team.id); });
+      var names=Object.keys(pool);
+      var same=names.filter(function(n){ return pool[n]===lid; });
+      var decoy = same.length ? same[same.length-1] : (names.length ? names[names.length-1] : '');
+      if(decoy){
+        var opts = Math.random()<0.5 ? [{k:who,v:'a'},{k:decoy,v:'b'}] : [{k:decoy,v:'b'},{k:who,v:'a'}];
+        return { qid:qid, kind:'sawScorer', per:per, runTeam:null,
+          prompt:'👀 Who put up '+anchor+'?',
+          options:opts, ans:'a',
+          atext:(last.text||(who+' scored '+last.scoreValue)) };
+      }
+    }
+    // Fallback: the run that just happened, which is also retrospective.
+    if(runLen>=3){
+      return { qid:qid, kind:'sawRun', per:per, runTeam:String(runTeam),
+        prompt:'🔥 Somebody just scored '+runLen+' in a row — who?',
+        options:[{k:T.awayAbbr,v:String(T.awayId)},{k:T.homeAbbr,v:String(T.homeId)}],
+        ans:String(runTeam),
+        atext:C.teamName(runTeam,T)+' scored the last '+runLen+' buckets.' };
+    }
+    return { qid:qid, kind:'sawTwoOrThree', per:per, runTeam:null,
+      prompt:'👀 That bucket — '+anchor+'. Two or three?',
+      options:[{k:'2 · deuce',v:'2'},{k:'3 · triple',v:'3'}],
+      ans:String(last.scoreValue),
+      atext:C.abbr(lid,T)+' · '+last.scoreValue+' points'+(last.text?(' · '+last.text):'') };
+  };
+
+  /* ---- WHICH MOMENT DESERVES A QUESTION -------------------------------
+     Lifted out of maybeTrigger so the runner can ask the same thing the
+     Control Room asks. Two tiers per sport, both measured off the real
+     fixtures in references/multisport rather than guessed:
+
+       basketball  made FG                 · timeouts
+       baseball    at-bat ends             · runs
+       football    snaps and drive ends    · scores and turnovers
+       soccer      corners, cards, shots   · goals and red cards
+
+     A STOPPAGE is itself the pause, so it skips the spacing rule. An
+     ORDINARY MOMENT waits the gap out so the room is never machine-gunned. */
+  C.moment = function(sport, fresh){
+    var sp = String(sport||'basketball'), timeout=null, ordinary=null, reason=null;
+    fresh = fresh || [];
+    if(sp === 'baseball'){
+      timeout  = fresh.filter(function(p){ return !!p.scoringPlay; })[0];
+      ordinary = fresh.filter(function(p){ return String(p.summaryType||'')==='N'; })[0];
+      reason = timeout ? 'run' : (ordinary ? 'atbat' : null);
+    }else if(sp === 'football'){
+      timeout  = fresh.filter(function(p){ return !!p.scoringPlay || !!p.isTurnover; })[0];
+      ordinary = fresh.filter(function(p){
+        var t=String((p.type&&p.type.text)||'');
+        return /rush|pass|punt|sack|field goal/i.test(t) && !/timeout/i.test(t); })[0];
+      reason = timeout ? 'score' : (ordinary ? 'snap' : null);
+    }else if(sp === 'soccer'){
+      timeout  = fresh.filter(function(p){
+        var t=String((p.type&&(p.type.text||p.type.type))||'');
+        return !!p.scoringPlay || /goal|red card|penalty/i.test(t); })[0];
+      ordinary = fresh.filter(function(p){
+        var t=String((p.type&&(p.type.text||p.type.type))||'');
+        return /offside|corner|yellow card|shot|foul|substitution/i.test(t); })[0];
+      reason = timeout ? 'goal' : (ordinary ? 'event' : null);
+    }else{
+      timeout  = fresh.filter(function(p){ return /timeout/i.test(String((p.type&&p.type.text)||'')); })[0];
+      ordinary = fresh.filter(isMadeFG)[0];
+      reason = timeout ? 'timeout' : (ordinary ? 'basket' : null);
+    }
+    if(!reason) return null;
+    var stoppage = (reason==='timeout' || reason==='run' || reason==='score' || reason==='goal');
+    return { reason: reason, stoppage: stoppage };
+  };
+
+  /* How long the room has before the answer is published. Retrospective
+     questions name a score and sometimes a player, so they need the extra
+     beat to read. */
+  C.lockMsFor = function(kind){ return /^(saw|qtr)/.test(String(kind||'')) ? 9000 : 6000; };
+
+  /* The pacing dial, same three settings the Control Room offers. */
+  C.PACES = { chill:{gapMs:150000, capPer:5}, normal:{gapMs:80000, capPer:8}, hype:{gapMs:45000, capPer:12} };
+
+  /* Freshness by IDENTITY, never by a sequence number. Baseball's restarts
+     every at-bat, which is what kept Caught It silent on it for a whole
+     night. Returns the plays after the remembered one, or the tail if the
+     anchor has gone. */
+  C.freshAfter = function(plays, lastKey){
+    plays = plays || [];
+    var idOf = function(p){ return String((p && (p.id != null ? p.id : p.sequenceNumber)) || ''); };
+    if(!lastKey) return { fresh: [], key: idOf(plays[plays.length-1]) };
+    var at = -1;
+    for(var i=plays.length-1; i>=0; i--){ if(idOf(plays[i])===lastKey){ at=i; break; } }
+    var fresh = (at >= 0) ? plays.slice(at+1) : plays.slice(-4);
+    return { fresh: fresh, key: idOf(plays[plays.length-1]) || lastKey };
+  };
+
+  return C;
+})();
+
 /* @host-shared:end */
 
 
