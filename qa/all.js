@@ -157,6 +157,9 @@ const TIER={
      only cure was a reload. qa/listeners.js proves every listener is
      CLOSED; nothing proved one is ever re-opened. */
   'rearm.js': {tier:'player'},
+  /* STATS answering the question that was asked — and staying out of
+     the way of the broadcast when it was not being spoken to. */
+  'stats-answers.js': {tier:'player'},
   /* Reads source, not a browser. Guards the shape of bug this repo produces
      more than any other: something that fails and tells nobody. */
   'silence.js':       {tier:'static'},

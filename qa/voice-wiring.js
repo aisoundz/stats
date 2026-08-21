@@ -579,7 +579,14 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     return !/correct|right|wrong|nice|caught it\s*!|\+\d/i.test(said.replace(/Caught it\. /,''));
   });
 
-  /* ---- "WHO'S WINNING", AND GETTING OFF THE SCREEN ---------------- */
+  /* ---- "WHO'S WINNING", AND GETTING OFF THE SCREEN ----------------
+     NOTE 21 Aug: this check still holds and was NOT retargeted. It asks
+     from the BOARD, and on the board "who's winning" means the room — so
+     the leaderboard answer asserted below is the correct one and always
+     was. What changed is the other context: asked while watching a game,
+     the same words now answer with the teams' score, because answering
+     "you have 135 points" to a man watching basketball is the bug that
+     started this. qa/stats-answers.js covers that side. */
   R['it-can-say-who-is-winning'] = await p.evaluate(()=>{
     { const c=document.getElementById('ciCard'); if(c) c.style.display='none'; }
     try{ document.getElementById('qOpts').innerHTML=''; }catch(_){}

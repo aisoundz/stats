@@ -10917,6 +10917,23 @@ var VX=(function(){
         V.statBump('heard'); V.heardSomething=true;
         for(j=0;j<res.length;j++){ if(V.heard(res[j].transcript)){ V.statBump('matched'); return; } }
         V.statBump('nomatch');
+        /* ============ SAY SOMETHING, BUT NOT AT THE TELEVISION ========
+           This incremented a counter and returned into a void. Every
+           unmatched sentence — a real question, asked out loud, to a thing
+           that has a name — got nothing back. That silence is the moment a
+           person decides the product is broken, and it is the exact
+           complaint behind "the voice acceptance does not work".
+
+           But "never silent" cannot mean "answer every noise". The
+           microphone is open in a room with a live broadcast playing, and
+           an assistant that says "I did not catch that" at the commentary
+           every twenty seconds is worse than one that says nothing.
+
+           So it speaks when it was plainly being TALKED TO: a question
+           word, its own name, or a mic the player opened by hand. And no
+           more than once every eight seconds, so a bad run of recognition
+           cannot turn into a lecture. */
+        try{ V.unknown(V.lastHeard); }catch(_){}
       }
       if(fin){ V.miss=(V.miss||0)+1; V.paint(); }
     };
@@ -11023,6 +11040,14 @@ var VX=(function(){
        microphone — so it turns voice on and proceeds. A blocked control
        explains and navigates; it never goes dead. */
     if(!V.on){ V.enable(); if(!V.on) return; }
+    /* THEY PRESSED THE MICROPHONE. Whatever arrives in the next few
+       seconds was aimed at STATS, not at the television — so an answer we
+       do not know still gets a reply, rather than being filtered out as
+       room noise. It lapses on its own; a stale flag would turn the
+       broadcast back into a conversation. */
+    V.gestureEar=true;
+    try{ clearTimeout(V._gestT); }catch(_){}
+    try{ V._gestT=setTimeout(function(){ V.gestureEar=false; }, 15000); }catch(_){}
     V.micThrew=0; V.note=''; V.wantEar=true; V.errs=0;
     V.hush();            // stop reading, the player wants to talk
     V.clearHint();
@@ -11503,6 +11528,33 @@ var VX=(function(){
      and the reason they pick the phone up at all.
 
      It is also, exactly, the surface an Alexa skill needs. One build. */
+  /* Was that meant for us? A question word, our own name, or a mic the
+     player deliberately opened. Anything else is the room. */
+  V.addressedToUs=function(t){
+    var s=String(t||'').toLowerCase().trim();
+    if(!s) return false;
+    if(V.gestureEar) return true;                 // they tapped the mic
+    return /\b(who|what|when|where|how|why|which|score|stats|hello|hey)\b/.test(s);
+  };
+  V.unknown=function(heard){
+    if(!V.on) return false;
+    var h=String(heard||'').trim();
+    if(!V.addressedToUs(h)) return false;
+    var now=Date.now();
+    if(V.lastUnknownAt && (now - V.lastUnknownAt) < 8000) return false;
+    V.lastUnknownAt=now;
+    /* SAY WHAT YOU HEARD, AND ONE THING THAT WILL WORK. "I did not
+       understand" is a dead end and it puts the fault on the person. The
+       transcript tells them instantly whether it mis-heard them or simply
+       does not know the question, and those have completely different
+       fixes. The screen has printed `heard:` for months; the voice never
+       said it. */
+    var line = h ? ('I heard, ' + h + '. ') : '';
+    line += ((V.L().LINES && V.L().LINES.dunno) || 'I do not have that one yet.');
+    line += ' Try, what is the score. Or ask how you are doing.';
+    V.deafSay(line);
+    return true;
+  };
   V.navSay=function(){
     var me=null, n=null;
     try{ me=(typeof myRank==='function')?myRank():null; }catch(_){}
@@ -11517,9 +11569,90 @@ var VX=(function(){
     else if(me===1) line+=' You are leading.';
     return line;
   };
+  /* ============ THE GAME SCORE IS NOT YOUR SCORE ====================
+     "What's the score" and "how am I doing" were the same branch, and both
+     answered with the PLAYER'S points. So a man watching a basketball game
+     asked what the score was and was told he had 135 points and was second
+     of two. It is a confident answer to a question nobody asked, which is
+     worse than no answer — it teaches you the thing cannot understand you.
+
+     Two questions, two answers. */
+  V.gameSay=function(){
+    try{
+      if(!GS || !GS.ok || !GS.teams || GS.teams.length!==2) return '';
+      var A=GS.teams[0], B=GS.teams[1];
+      if(A.score==null || B.score==null) return '';
+      var a=Number(A.score)||0, b=Number(B.score)||0;
+      var hi = a>=b ? A : B, lo = a>=b ? B : A;
+      var line = (a===b)
+        ? ('Tied at ' + a + '.')
+        : ((hi.name||hi.ab||'They') + ' ' + (a===b?'':'lead ') + Math.max(a,b) + ' to ' + Math.min(a,b) + '.');
+      try{ if(GS.detail) line += ' ' + GS.detail + '.'; }catch(_){}
+      return line;
+    }catch(_){ return ''; }
+  };
+  /* Who put the last points on the board. GS.plays is already normalised
+     across every sport by loadGameStats. */
+  V.lastScoreSay=function(){
+    try{
+      var ps = (GS && GS.plays) || [];
+      for(var i=ps.length-1;i>=0;i--){
+        if(ps[i] && ps[i].scoring){
+          var txt = String(ps[i].text||'').trim();
+          if(txt) return txt + (ps[i].clock ? (' \u2014 ' + ps[i].clock) : '');
+        }
+      }
+      return '';
+    }catch(_){ return ''; }
+  };
+
   V.globalCmd=function(t){
-    if(/^(?:who.?s winning|whos winning|who is winning|what.?s the score|score|where am i|my score|how am i doing)$/.test(t)){
+    /* THE GAME */
+    /* "WHAT'S THE SCORE" IS ALWAYS THE GAME. No ambiguity: nobody watching
+       a broadcast means their own points by that. */
+    if(/^(?:what.?s the score|whats the score|what is the score|score)$/.test(t)){
+      var g0=V.gameSay();
+      V.deafSay(g0 || 'I do not have the score yet. It lands once the game is under way.');
+      return true;
+    }
+    /* "WHO'S WINNING" DEPENDS ON WHERE YOU ARE STANDING, and this is the
+       one place in the voice layer where that is true. Asked on the Board
+       — the leaderboard, the screen full of names — it means the room, and
+       answering with the game score there would be the same category of
+       wrong this whole change is fixing. Asked anywhere else, with a game
+       on the television in front of you, it means the teams.
+
+       The original branch answered "your points" everywhere, which is why
+       a man watching basketball asked who was winning and was told he had
+       135 points. Splitting it by screen keeps the board answer that was
+       already right and fixes the one that never was. */
+    if(/^(?:who.?s winning|whos winning|who is winning|who.?s leading|whos leading)$/.test(t)){
+      var onBoard=false; try{ onBoard = (S.screen==='board'); }catch(_){}
+      if(onBoard){ V.deafSay(V.navSay()); return true; }
+      var g1=V.gameSay();
+      V.deafSay(g1 || V.navSay());
+      return true;
+    }
+    if(/^(?:who scored last|who scored|what just happened|what happened)$/.test(t)){
+      var ls=V.lastScoreSay();
+      V.deafSay(ls || 'Nobody has scored yet that I can see.');
+      return true;
+    }
+    /* YOU */
+    if(/^(?:where am i|my score|my points|how am i doing|how am i going|what.?s my score|whats my score)$/.test(t)){
       V.deafSay(V.navSay()); return true;
+    }
+    if(/^(?:what.?s my streak|whats my streak|what is my streak|my streak|how.?s my streak)$/.test(t)){
+      var st=0; try{ st=Number(S.streak)||0; }catch(_){}
+      V.deafSay(st>0 ? ('You are on ' + st + ' in a row.') : 'No streak going right now.');
+      return true;
+    }
+    /* THE THING A PERSON SAYS BEFORE THEY PUT THE PHONE DOWN.
+       Dan is not tech-savvy. When a device goes quiet he does not open the
+       console, he says "hello" — and until now that was the one sentence
+       guaranteed to be met with more silence. */
+    if(/^(?:hello|hi|hey|are you there|you there|stats|hey stats|can you hear me|is this on)$/.test(t)){
+      V.deafSay('I am here. I am listening.'); return true;
     }
     if(/^(?:go home|home|take me home)$/.test(t)){ V.deaf(); try{ navGo('home'); }catch(_){} return true; }
     if(/^(?:board|the board|leaderboard|go to the board|show the board)$/.test(t)){ V.deaf(); try{ navGo('board'); }catch(_){} return true; }
@@ -19273,7 +19406,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-21-stats.184';
+const STATS_BUILD='2026-08-21-listening.185';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
