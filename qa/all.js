@@ -399,14 +399,57 @@ if(!process.argv.includes('--no-baseline')){
   try{ fs.writeFileSync(BASE_FILE, JSON.stringify(base,null,2)+'\n'); }catch(_){}
 }
 
+/* A RATCHET THAT CANNOT SEE A SUITE IS NOT PROTECTING IT.
+   The shrink check above only works on suites whose summary line contains a
+   number it can parse. Ten of the static suites end with "all good", "block
+   loads clean" or a sentence, so their check counts have never been recorded
+   and every one of them could quietly drop to a single assertion while the
+   line still said GREEN. That is the same shape as the three suites that
+   printed "no fixtures dir — skipping" and exited 0.
+
+   Two different findings, and only one of them is a failure:
+
+   REGRESSION, and it fails the gate. A suite that HAS a floor and stopped
+   producing a parseable count has just slipped out of the ratchet's hands.
+   Nothing on screen would say so: it still prints ok, and the recorded floor
+   simply stops being compared against anything.
+
+   NEVER COUNTABLE, and it is a note. These have no floor because none was
+   ever recorded. Failing on them would go red for work that is not the
+   change under test, so they are listed with their number and the number is
+   meant to go DOWN. Only suites that actually RAN this tier are listed, so
+   the note says nothing about browser suites during a --static run. */
+const lostCount = results.filter(r => r.how==='PASS' && !r.count
+                                   && typeof base[r.f]==='number'
+                                   && !COUNT_UNSTABLE.has(r.f));
+const neverCount = results.filter(r => r.how==='PASS' && !r.count
+                                    && typeof base[r.f]!=='number'
+                                    && !COUNT_UNSTABLE.has(r.f));
+
 const bad=results.filter(r=>r.how!=='PASS');
 console.log('\n'+'-'.repeat(62));
+if(lostCount.length){
+  console.log('A SUITE FELL OUT OF THE COVERAGE RATCHET — it had a recorded check');
+  console.log('count and no longer reports one, so its floor is now compared against');
+  console.log('nothing. It still prints ok. Restore a countable summary line:');
+  lostCount.forEach(r=>console.log('   ! '+r.f+'   floor was '+base[r.f]+', this run reported no number'));
+  console.log('     the line it printed: '+(lostCount[0].line||'').slice(0,70));
+  console.log('');
+}
+if(neverCount.length){
+  console.log('NOT COVERED BY THE SHRINK RATCHET — '+neverCount.length+' suite(s) that ran here');
+  console.log('end with a sentence rather than a count, so their coverage has no floor');
+  console.log('and could drop to one assertion while still printing ok. Not a failure,');
+  console.log('but this number is meant to go DOWN:');
+  console.log('   '+neverCount.map(r=>r.f).join(', '));
+  console.log('');
+}
 if(shrunk.length){
   console.log('COVERAGE SHRANK — these suites ran FEWER checks than they have before:');
   shrunk.forEach(x=>console.log('   ! '+x.f+'  '+x.was+' -> '+x.now+'   ('+(x.was-x.now)+' check(s) did not run; the line still said GREEN)'));
   console.log('');
 }
-if(!bad.length && !shrunk.length){
+if(!bad.length && !shrunk.length && !lostCount.length){
   console.log('ALL '+results.length+' SUITES PASS'+(ONLY_STATIC?'  (static only — browser suites not run)':''));
 }else if(!bad.length){
   console.log('every suite passed, but coverage shrank — treat as RED until explained');
@@ -429,4 +472,4 @@ if(unlisted.length){
   console.log('   a suite nobody runs is not a safety net; this is a failure, not a note.');
 }
 if(STAMP_STUCK) console.log('\nBUILD STAMP UNCHANGED — bump STATS_BUILD before promoting.');
-process.exit((bad.length||shrunk.length||unlisted.length||STAMP_STUCK)?1:0);
+process.exit((bad.length||shrunk.length||lostCount.length||unlisted.length||STAMP_STUCK)?1:0);

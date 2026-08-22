@@ -30,5 +30,9 @@
   "rearm.js": 6,
   "stats-answers.js": 11,
   "finished.js": 9,
-  "voice-android.js": 16
+  "voice-android.js": 16,
+  "room-position.js": 19,
+  "card-watch.js": 11,
+  "caught-stale.js": 21,
+  "bargein.js": 20
 }
