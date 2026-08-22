@@ -46,14 +46,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="STATS GAMETIME">
 <meta property="og:title" content="STATS GAMETIME — the game that pays to pay attention">
-<meta property="og:description" content="Free live play-along for people watching sport. Predict before tip, catch what happens during the game, climb the board.">
+<meta property="og:description" content="Free live play-along for people watching sport. Questions during the broadcast — answer as it happens and climb the board.">
 <meta property="og:url" content="https://statsgametime.com/">
 <meta property="og:image" content="https://statsgametime.com/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="STATS GAMETIME — the game that pays to pay attention">
-<meta name="twitter:description" content="Free live play-along for people watching sport. Predict before tip, catch what happens during the game, climb the board.">
+<meta name="twitter:description" content="Free live play-along for people watching sport. Questions during the broadcast — answer as it happens and climb the board.">
 <meta name="twitter:image" content="https://statsgametime.com/og.png">
 <title>STATS GAMETIME — The game that pays to pay attention</title>
 <style>
@@ -13207,6 +13207,7 @@ var I18N = {
        walker records a decision rather than an oversight. */
     "Language · Idioma":"Language · Idioma",
     "English":"Inglés",
+    "Pick a game above":"Elige un partido arriba",
     "How to play":"Cómo se juega",
     "Questions read out loud":"Preguntas en voz alta",
     "Microphone check":"Prueba de micrófono",
@@ -20171,7 +20172,30 @@ function applySport(){
   set('mqHomeNick', _marquee ? String(_hg.homeName||_hg.homeAbbr||'')
                             : (GAME.homeNick||GAME.homeName||GAME.homeAbbr||''));
   try{ paintTryPick(); }catch(_){}
-  set('landingBtn',`Play ${GAME.night}`);
+  /* ============ AND THE BUTTON WAS STILL OFFERING 19 AUGUST ==========
+     Founder's screenshot, 22 Aug, the front door with today's four rooms
+     correctly numbered #20-#23 in the rail directly above:
+
+         [ Play Game Night #13 ]
+
+     `GAME.night` again — the field that holds the MATCHUP on a published
+     night and the literal string "Game Night #13" on the built-in
+     fallback. The stale-default guard covered the headline, the dateline
+     and the matchup type, and this button was not on the list. The one
+     control on the page said the wrong thing loudest.
+
+     Three states, and each says something true:
+       an expired default, slate loaded  -> point at the rail
+       a real night with a number        -> name it
+       a real night without one          -> name the teams */
+  (function(){
+    var _stale=false; try{ _stale = bakedNightIsStale(GAME); }catch(_){}
+    if(_stale){ set('landingBtn','Pick a game above'); return; }
+    var g=''; try{ g=gnOf(GAME); }catch(_){}
+    if(g){ set('landingBtn','Play Game Night #'+g); return; }
+    var a=String(GAME.awayNick||GAME.awayAbbr||''), h=String(GAME.homeNick||GAME.homeAbbr||'');
+    set('landingBtn', (a&&h) ? ('Play '+a+' at '+h) : 'Play tonight\u2019s game');
+  })();
   set('landingDemoBtn',`Practice with a simulated ${L.unit}`);
   set('step1h',`Predict before ${L.start}`);
   set('step1p',SPORT.step1);
@@ -20715,7 +20739,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-22-inorder.205';
+const STATS_BUILD='2026-08-22-h2h.207';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -21134,7 +21158,17 @@ function paintRail(show){
   if(!show) return;
   var txt='—';
   try{
-    if(GS.ok && GS.teams && GS.teams.length===2){
+    /* NEVER A SCORE FROM A GAME THAT IS NOT THIS ONE. The same screenshot
+       showed "MIN 77 GS 66 Final" across the top — Minnesota at Golden
+       State, three days earlier, because GS had been filled from the
+       built-in night's espnEvent and nothing asked whether that event was
+       the room the player is in. A final score from a different game,
+       pinned above a live one, is the most confusing thing this bar can
+       possibly say. gsIsAbout() exists for exactly this. */
+    var _mine=true; try{ _mine = gsIsAbout(GAME); }catch(_){ _mine=true; }
+    var _old=false; try{ _old = bakedNightIsStale(GAME); }catch(_){}
+    if(_old || !_mine){ txt='—'; }
+    else if(GS.ok && GS.teams && GS.teams.length===2){
       var A=GS.teams[0], B=GS.teams[1];
       if(A.score!=null && B.score!=null)
         txt=esc(A.ab)+' <b>'+A.score+'</b>  '+esc(B.ab)+' <b>'+B.score+'</b>'
@@ -23563,8 +23597,22 @@ function stFlow(){
     var ac='var(--away)', hc='var(--home)';
     try{ var T=gtTeams(); if(T){ ac=T.a.color||ac; hc=T.h.color||hc; } }catch(_){}
 
+    /* SHOW THE WHOLE GAME'S SHAPE, not just the part that has happened.
+       One played quarter drew one lonely bar in an empty box, which reads
+       as broken rather than early. Draw every period the sport plays and
+       leave the unplayed ones as faint empty slots — the chart then has
+       its final shape from the first whistle and simply fills in. */
+    var full = n;
+    try{ full = Math.max(n, regulationPeriods()); }catch(_){}
     var cols='', runA=0, runH=0;
-    for(var k=0;k<n;k++){
+    for(var k=0;k<full;k++){
+      if(k>=n){
+        cols += '<div class="flCol flEmpty">'
+          + '<div class="flBars"><i class="flGhost"></i><i class="flGhost"></i></div>'
+          + '<div class="flNums"><b>&middot;</b><b>&middot;</b></div>'
+          + '<div class="flLbl">'+(k+1)+'</div></div>';
+        continue;
+      }
       var av=(away.vals[k]||{}), hv=(home.vals[k]||{});
       var an=(av.n==null?0:av.n), hn=(hv.n==null?0:hv.n);
       runA+=an; runH+=hn;
@@ -23580,7 +23628,9 @@ function stFlow(){
         + '<div class="flLbl">'+(k+1)+'</div>'
         + '</div>';
     }
-    return '<div class="card stFlow"><div class="stHd">'+esc(word)+' by '+esc(word.toLowerCase())+'</div>'
+    /* "Quarters by quarters". Mine. periodWordFor() returns the plural for
+       the axis labels and I used it for the sentence too. */
+    return '<div class="card stFlow"><div class="stHd">Scoring by '+esc(word)+'</div>'
       + '<div class="flKey">'
       +   '<span><i style="background:'+esc(ac)+'"></i>'+esc(away.ab||'Away')+' <b>'+runA+'</b></span>'
       +   '<span><i style="background:'+esc(hc)+'"></i>'+esc(home.ab||'Home')+' <b>'+runH+'</b></span>'
@@ -23590,14 +23640,26 @@ function stFlow(){
 }
 
 /* What this sport calls a chunk of a game. Used as a label only. */
+/* SINGULAR — this names one column and completes "Scoring by ___". */
 function periodWordFor(){
   try{
     var f = famNow();
-    if(f==='baseball') return 'Innings';
-    if(f==='soccer')   return 'Halves';
-    if(f==='hockey')   return 'Periods';
-    return 'Quarters';
-  }catch(_){ return 'Periods'; }
+    if(f==='baseball') return 'inning';
+    if(f==='soccer')   return 'half';
+    if(f==='hockey')   return 'period';
+    return 'quarter';
+  }catch(_){ return 'period'; }
+}
+/* How many periods this sport plays before overtime — so the flow chart
+   can draw its full shape before the game has filled it in. */
+function regulationPeriods(){
+  try{
+    var f = famNow();
+    if(f==='baseball') return 9;
+    if(f==='soccer')   return 2;
+    if(f==='hockey')   return 3;
+    return 4;
+  }catch(_){ return 4; }
 }
 
 /* ---- WHO IS WINNING WHAT ------------------------------------------- */
@@ -23651,15 +23713,32 @@ function stTeamBars(){
       /* Strip the group prefix that the nested-feed reader adds, so a
          baseball row reads "Hits" and not "Batting Hits". */
       var show = label.replace(/^(Batting|Pitching|Fielding)\s+/,'');
+      /* LABEL ON ITS OWN LINE. The first version put the stat name in a
+         flex item between the two numbers with `min-width:0` and
+         `overflow-wrap:anywhere` — which let it shrink to ONE CHARACTER
+         WIDE and render "Total Yards" vertically, a letter per line. The
+         founder's word for the result was "ugly" and he was being kind.
+
+         min-width:0 was there to stop the row overflowing its card and
+         trapping the swipe. Both things are true and they are not in
+         tension: a label that has its own full-width line cannot squeeze
+         the numbers and cannot be squeezed by them. */
       rows += '<div class="tbRow">'
-        + '<div class="tbTop"><b class="'+(lead==='a'?'on':'')+'">'+esc(at)+'</b>'
-        +   '<span>'+esc(show)+(kind==='low'?' <em>lower is better</em>':'')+'</span>'
-        +   '<b class="'+(lead==='h'?'on':'')+'">'+esc(ht)+'</b></div>'
-        + '<div class="tbBar'+(tot>0?'':' tbFlat')+'"><i style="width:'+ap+'%"></i></div>'
+        + '<div class="tbLbl">'+esc(show)+(kind==='low'?' <em>lower is better</em>':'')+'</div>'
+        + '<div class="tbVals">'
+        +   '<b class="'+(lead==='a'?'on':'')+'">'+esc(at)+'</b>'
+        +   '<span class="tbBar'+(tot>0?'':' tbFlat')+'"><i style="width:'+ap+'%"></i></span>'
+        +   '<b class="'+(lead==='h'?'on':'')+'">'+esc(ht)+'</b>'
+        + '</div>'
         + '</div>';
     });
     if(!rows) return '';
-    return '<div class="card stBars">'
+    /* `h2h`, NOT `stBars` — that class already exists on this page for the
+       shot-zone bars (`display:flex;gap:4px`), so every row of this block
+       became a side-by-side flex item about 29px wide and the labels
+       rendered one letter per line. A CSS collision, not a layout mistake:
+       the browser was doing exactly what the older rule asked. */
+    return '<div class="card h2h">'
       + '<div class="stHd">Head to head</div>'
       + '<div class="tbWho"><span>'+esc(T.a.ab||T.a.name||'Away')+'</span>'
       +   '<span>'+esc(T.h.ab||T.h.name||'Home')+'</span></div>'
@@ -25658,7 +25737,7 @@ body.member #s-landing .brand{margin-top:6px}
    See stFlow() and stTeamBars(). Two rules hold the look together: the
    two team colours are the only colours, and every number keeps the
    feed's own string so it matches the broadcast. */
-.stFlow{padding:14px 16px 12px;margin-top:12px}
+.stFlow{display:block;padding:14px 16px 12px;margin-top:12px}
 .flKey{display:flex;gap:16px;margin:2px 0 12px;font-size:12px;font-weight:700;color:var(--muted)}
 .flKey i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:baseline}
 .flKey b{color:var(--ink);margin-left:5px;font-variant-numeric:tabular-nums}
@@ -25689,31 +25768,44 @@ body.member #s-landing .brand{margin-top:6px}
 .flNums b{font-weight:700}
 .flCol.fla .flNums b:first-child,.flCol.flh .flNums b:last-child{color:var(--ink)}
 .flLbl{font-size:12px;color:var(--dim);font-weight:700}
+/* A period that has not been played yet, drawn as a held place rather
+   than an absence — the chart keeps its full shape from the first
+   whistle instead of looking broken until the third quarter. */
+.flCol.flEmpty{opacity:.35}
+.flBars i.flGhost{background:var(--line);height:4px}
+.flCol.flEmpty .flNums b{color:var(--dim)}
 
-.stBars{padding:14px 16px 8px;margin-top:12px;min-width:0;overflow:hidden}
+.h2h{display:block;padding:14px 16px 10px;margin-top:12px;min-width:0;overflow:hidden}
+/* Two team names, and either can be long — "Portland Timbers" against
+   "LAFC". Each side takes half and clips rather than pushing the row past
+   its card, which is what made the whole Stats tab unswipeable once. */
 .tbWho{display:flex;justify-content:space-between;gap:8px;min-width:0;font-size:12px;font-weight:800;
-  letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:9px}
-/* EVERY FLEX CHILD MUST BE ABLE TO SHRINK. A flex item defaults to
-   `min-width:auto`, which means it refuses to go below its own min-content
-   width — so one long label pushed this row 28px past its card, #stBody
-   inherited the overflow, and the swipe handler then read the whole Stats
-   tab as a horizontal scroller and refused to leave it. The tab became
-   unswipeable because of a stat name.
+  letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.tbWho span{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* THE LABEL GETS ITS OWN LINE, AND THAT IS THE WHOLE FIX.
+   The first version put the stat name in a flex item between the two
+   numbers with min-width:0 and overflow-wrap:anywhere — needed to stop the
+   row overflowing its card and trapping the swipe, but together they let
+   it shrink to ONE CHARACTER and render "Total Yards" vertically, a letter
+   per line. Founder: "stats page looks so ugly".
 
-   qa.js reported it two screens away as `stats/stats/stats`, which is why
-   the check now prints the ancestor walk. */
-.tbRow{padding:8px 0 10px;min-width:0}
-.tbTop{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:5px;min-width:0}
-.tbTop b{font-size:15px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums;
-  flex:0 1 auto;min-width:0;overflow-wrap:anywhere}
-.tbTop b.on{color:var(--ink)}
-.tbTop span{font-size:12px;color:var(--dim);font-weight:700;text-align:center;
-  flex:1 1 0;min-width:0;overflow-wrap:anywhere}
-.tbTop em{font-style:normal;color:var(--dim);opacity:.75}
+   A full-width label cannot squeeze the numbers and cannot be squeezed by
+   them, so both requirements hold at once and neither needs a hack. */
+.tbRow{padding:9px 0 11px;min-width:0;border-top:1px solid var(--line)}
+.tbRow:first-of-type{border-top:0}
+.tbLbl{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--dim);text-align:center;margin-bottom:7px;line-height:1.3}
+.tbLbl em{font-style:normal;text-transform:none;letter-spacing:0;opacity:.7}
+/* auto | 1fr | auto — the numbers take exactly what they need and the bar
+   takes the rest, so nothing competes for width. */
+.tbVals{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;min-width:0}
+.tbVals b{font-size:17px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums;
+  white-space:nowrap}
+.tbVals b.on{color:var(--ink)}
 /* One bar, split by share — two bars would need a scale nobody reads. */
-.tbBar{height:6px;border-radius:3px;background:var(--home,#3b4a6b);overflow:hidden}
-.tbBar i{display:block;height:100%;background:var(--away,#28e0d0);border-radius:3px 0 0 3px}
-.tbBar.tbFlat{opacity:.35}
+.tbBar{display:block;height:8px;border-radius:4px;background:var(--home,#3b4a6b);overflow:hidden;min-width:0}
+.tbBar i{display:block;height:100%;background:var(--away,#28e0d0);border-radius:4px 0 0 4px}
+.tbBar.tbFlat{opacity:.3}
 
 /* ---- WAITING FOR THE NEXT ROUND. See gtStartRow(). ------------------
    Two facts, two lines: when the round opens, and where the game is now.

@@ -95,6 +95,33 @@ const FIX = {
       ok(league+': nothing reads NaN or undefined');
     else bad(league+': nothing reads NaN or undefined', 'a number leaked through as NaN/undefined');
 
+    /* ============ RENDER IT, DO NOT JUST BUILD THE STRING ============
+       The geometry checks below measure #stBody. The probe above calls
+       stFlow() and stTeamBars() and reads their RETURN VALUES — it never
+       puts them on the page. So #stBody was EMPTY, "0px overflow" was a
+       measurement of nothing, and the check passed vacuously until a
+       later one asked for an element by name and found none.
+
+       That is the same vacuous-pass shape qa/voice-wiring.js had: 74
+       checks green through two real bugs because its cards carried no
+       real timing. Put the real page on the screen and then measure it. */
+    /* KEEP THE SPORT OVERRIDE FOR THE RENDER. The probe above restores
+       famNow before returning, so renderStats() then drew BASKETBALL rows
+       against an NFL box score and only one label happened to match. The
+       geometry was real and it was measuring the wrong sport. */
+    await p.evaluate((fam)=>{ try{ window.famNow=()=>fam; S.mode='live'; go('stats'); renderStats(); }catch(_){} }, cfg.fam);
+    await p.waitForTimeout(300);
+    const rendered = await p.evaluate(()=>{
+      const b=document.getElementById('stBody');
+      return { has: !!b, len: b ? b.innerHTML.length : 0,
+               bars: document.querySelectorAll('#stBody .h2h').length,
+               flow: document.querySelectorAll('#stBody .stFlow').length };
+    });
+    if(rendered.has && rendered.len>400) ok(league+': the page actually renders into #stBody',
+      rendered.len+' chars, '+rendered.bars+' head-to-head, '+rendered.flow+' flow');
+    else bad(league+': the page actually renders into #stBody',
+      'stBody has '+rendered.len+' chars — every geometry check below would be vacuous');
+
     /* ---- and nothing here may be wider than the screen -------------
        The swipe handler refuses to hijack a gesture that starts inside a
        horizontally scrollable element — `scrollWidth > clientWidth + 8`.
@@ -119,6 +146,38 @@ const FIX = {
     else bad(league+': nothing on the page is wider than the screen',
              '#stBody overflows by '+over.body+'px'+(over.wide.length?('; wide: '+over.wide.join(', ')):'')+
              ' — this is what makes the swipe handler refuse to leave the tab');
+
+    /* ---- and it has to be READABLE, not merely present -------------
+       Founder, 22 Aug: "stats page looks so ugly fix it and make it
+       presentable". The head-to-head labels were flex items with
+       min-width:0 and overflow-wrap:anywhere — added to stop the row
+       overflowing its card — and together those let "Total Yards" shrink
+       to one character wide and render vertically, a letter per line.
+
+       Every check passed: the block drew, the rows were there, the
+       numbers were right, nothing overflowed. A layout can be correct in
+       every property a test usually asserts and still be unreadable. So
+       measure the SHAPE: a label narrower than it is tall is a word
+       standing on end. */
+    const shape = await p.evaluate(()=>{
+      const out={narrow:[], tall:[]};
+      document.querySelectorAll('#stBody .tbLbl').forEach(e=>{
+        const r=e.getBoundingClientRect();
+        const txt=(e.textContent||'').trim().slice(0,24);
+        if(r.width < 60) out.narrow.push(txt+' ('+Math.round(r.width)+'px wide)');
+        /* Three lines of 12px type is ~50px. Anything past that for a
+           two-word stat name means it is wrapping per character. */
+        if(r.height > 56) out.tall.push(txt+' ('+Math.round(r.height)+'px tall)');
+      });
+      out.count=document.querySelectorAll('#stBody .tbLbl').length;
+      return out;
+    });
+    if(shape.count===0) bad(league+': the head-to-head has labelled rows', 'no .tbLbl found');
+    else if(!shape.narrow.length && !shape.tall.length)
+      ok(league+': every stat label is readable across, not down', shape.count+' rows');
+    else bad(league+': every stat label is readable across, not down',
+             'squeezed: '+shape.narrow.concat(shape.tall).slice(0,3).join('; ')+
+             ' — this is the label rendering one letter per line');
 
     if(errs.length) bad(league+': no page errors', errs.slice(0,2).join(' | '));
     else ok(league+': no page errors');
