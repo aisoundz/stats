@@ -223,6 +223,12 @@ const TIER={
      Counts DISTINCT kinds reached across a night, which is the thing
      every existing check was blind to. */
   'ci-rotation.js': {tier:'static'},
+  /* "I have 2 user that show they are both 3 of 3 on their card" and "The
+     share screen looks wrong" — the same mistake twice: a fact about the
+     ROOM printed under a personal label. The denominator counted what the
+     room graded, and the share headline read GAME.night, which holds the
+     matchup on a real night and the number on the fallback. */
+  'your-own-card.js': {tier:'static'},
   /* Reads source, not a browser. Guards the shape of bug this repo produces
      more than any other: something that fails and tells nobody. */
   'silence.js':       {tier:'static'},

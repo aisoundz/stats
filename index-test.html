@@ -14972,10 +14972,37 @@ function bRow(label, got, max, cls, note){
 /* Only questions that were actually graded are counted. A round the host
    never posted answers for has no verdicts in S.results, and it must not
    quietly become "0 of 4 landed" — that reads as four misses. */
+/* ============ "QUESTIONS RIGHT" MUST BE OUT OF YOUR OWN ==============
+   Founder, 21 Aug: "I have 2 user that show they are both 3 of 3 on
+   their card."
+
+   They would. The denominator here counted every question the ROOM
+   graded, not every question the PLAYER answered — and the room grades
+   the same questions for everybody, so `total` was identical for every
+   person in it by construction. Two players who each got everything
+   right on that shared subset both read "3 of 3", however differently
+   they actually played: one may have answered three, the other twelve
+   with nine unresolved.
+
+   Worse in the other direction. A player who joined at halftime and
+   answered one round still had the earlier rounds' results sitting in
+   S.results — the room scored them — so the app credited them with a
+   denominator they were never present for, and "3 of 3" reads as a
+   perfect night rather than "you were here for one round of four".
+
+   A stat labelled "Questions right" is a claim about a person. Count the
+   ones they answered: a question you never saw is not one you got wrong,
+   and it is not one you got right either. */
 function countGraded(){
   let hits=0,total=0;
   rounds.forEach((r,i)=>{
-    (S.results[i]||[]).forEach(v=>{ if(v===undefined||v===null) return; total++; if(v===true) hits++; });
+    const res=S.results[i]||[], ans=S.liveAnswers[i]||[];
+    res.forEach((v,j)=>{
+      if(v===undefined||v===null) return;      // the room never settled it
+      const my=ans[j];
+      if(!my || !my.choice) return;            // you were not there for it
+      total++; if(v===true) hits++;
+    });
   });
   return {hits,total};
 }
@@ -15255,9 +15282,23 @@ let AW_LAST=null, AW_TIMER=null;
 /* How many graded questions this player actually got right — the same
    number the award engine uses, so the share card and the badge can never
    disagree with each other. */
+/* Same rule as countGraded(): a hit is a question you ANSWERED and got
+   right. Counting a `true` you were never present for inflates a practice
+   summary and, on the share card, a public one. */
 function gradedHits(){
-  try{ var n=0; (S.results||[]).forEach(function(qr){ (qr||[]).forEach(function(v){ if(v===true) n++; }); }); return n; }
-  catch(_){ return 0; }
+  try{
+    var n=0;
+    (S.results||[]).forEach(function(qr,i){
+      var ans=(S.liveAnswers||[])[i]||[];
+      (qr||[]).forEach(function(v,j){
+        if(v!==true) return;
+        var my=ans[j];
+        if(!my || !my.choice) return;
+        n++;
+      });
+    });
+    return n;
+  }catch(_){ return 0; }
 }
 function renderAwards(rank){
   const card=document.getElementById('fAward'); if(!card) return null;
@@ -18694,10 +18735,40 @@ function backendBadge(){
 /* ---------------- SHARE CARD ---------------- */
 function openShare(){
   document.getElementById('scEmoji').textContent=SPORT.emoji;
+  /* ============ THE CARD SAID THE MATCHUP TWICE, BACKWARDS ============
+     Founder, 21 Aug: "The share screen looks wrong."
+
+     It read: LYNX @ MYSTICS · MYSTICS VS LYNX · AUG 21.
+
+     `GAME.night` is the string a published night carries, and on a slate
+     night that string is the MATCHUP — "Lynx @ Mystics" — not the number.
+     So the line printed the two teams, then printed them again in the
+     opposite order, and the one fact that identifies the night was
+     missing. On the built-in fallback `night` is "Game Night #13", which
+     is why it read correctly in practice and wrongly in every real room:
+     the two configs put different KINDS of thing in the same field.
+
+     This card exists to be screenshotted into a group chat by somebody
+     who is proud of a score. It has to say, in order: which night, who
+     played, when. Ask gnOf() for the number — it reads the slate tile and
+     withholds an expired default — and say the matchup ONCE, away at
+     home, the way every scoreboard in the world writes it. */
+  var _gn=''; try{ _gn=gnOf(GAME); }catch(_){}
+  var _away=String(GAME.awayNick||GAME.awayAbbr||GAME.awayName||'').toUpperCase();
+  var _home=String(GAME.homeNick||GAME.homeAbbr||GAME.homeName||'').toUpperCase();
+  var _when=String(GAME.shareDate||GAME.short||'').toUpperCase();
   document.getElementById('scGameLine').textContent=
-    `${GAME.night.toUpperCase()} · ${(GAME.homeNick||GAME.homeAbbr).toUpperCase()} vs `+
-    `${(GAME.awayNick||GAME.awayAbbr).toUpperCase()} · ${GAME.shareDate||GAME.short.toUpperCase()}`;
-  document.getElementById('scPts').innerHTML=`${S.pts} <span style="font-size:15px;color:var(--muted);font-weight:800">pts</span>${S.mode==="live"?` <span style="font-size:15px;color:var(--gold);font-weight:900">· ⚡${S.speed}</span>`:''}`;
+    [ (_gn ? ('GAME NIGHT #'+_gn) : ''),
+      ((_away && _home) ? (_away+' AT '+_home) : ''),
+      _when
+    ].filter(Boolean).join(' \u00b7 ');
+  /* THE SAME NUMBER THE RING SHOWS. This printed S.pts — this device's
+     running counter — while the result card beside it prints the
+     confirmed server total. That is the 160-versus-165 bug of 21 Aug, on
+     the one surface built to be posted in public. shownTotal() falls back
+     to S.pts when there is no server row, so practice is unaffected. */
+  var _shown=S.pts; try{ _shown=shownTotal(); }catch(_){}
+  document.getElementById('scPts').innerHTML=`${_shown} <span style="font-size:15px;color:var(--muted);font-weight:800">pts</span>${S.mode==="live"?` <span style="font-size:15px;color:var(--gold);font-weight:900">· ⚡${S.speed}</span>`:''}`;
   const bonus=S.predPts+(S.catchPts||0);
   document.getElementById('scRankLine').textContent = S.mode==="live"
     ? `${S.predPts} from predictions${CATCHES.length?` · ⚡${S.catchPts||0} catches`:''} · ${S.pts-bonus} live · ⚡${S.speed} speed`
@@ -20644,7 +20715,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-22-menugrammar.203';
+const STATS_BUILD='2026-08-22-yourcard.204';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
