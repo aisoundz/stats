@@ -217,6 +217,12 @@ const TIER={
      ruleset. It SKIPS, loudly, until the service account is granted
      permission to call the Rules test API. */
   'rules.js': {tier:'static'},
+  /* "We need more questions for caught it in baseball." There were four
+     and it could only ever ask one: the rotation divided a counter that
+     resets every period, and baseball gets about one question a period.
+     Counts DISTINCT kinds reached across a night, which is the thing
+     every existing check was blind to. */
+  'ci-rotation.js': {tier:'static'},
   /* Reads source, not a browser. Guards the shape of bug this repo produces
      more than any other: something that fails and tells nobody. */
   'silence.js':       {tier:'static'},

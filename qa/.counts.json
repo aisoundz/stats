@@ -38,5 +38,6 @@
   "nav-escape.js": 10,
   "platforms.js": 137,
   "stale-default.js": 14,
-  "stats-page.js": 24
+  "stats-page.js": 24,
+  "ci-rotation.js": 12
 }

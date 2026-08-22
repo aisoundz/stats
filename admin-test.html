@@ -8920,7 +8920,7 @@ AUTO.CI = (function(){
     var last = real[real.length-1] || null;
     if(!last) return null;
 
-    var rot=(counts[per]||0)%4;
+    var rot = C.asked(counts) % 4;
     var qid='ci_'+per+'_'+(counts[per]||0)+'_'+(last.sequenceNumber||0);
 
     /* 0. RUN OR PASS — football's "two or three". */
@@ -9034,7 +9034,7 @@ AUTO.CI = (function(){
     var here=plays.filter(function(p){ return p.period && Number(p.period.number)===Number(per); });
     if(!here.length) return null;
     var last=here[here.length-1];
-    var rot=(counts[per]||0)%3;
+    var rot = C.asked(counts) % 3;
     var qid='ci_'+per+'_'+(counts[per]||0)+'_'+(last.sequenceNumber||0);
 
     /* 0. THE EVENT THAT JUST HAPPENED, by team. Offsides, cards, corners —
@@ -9084,6 +9084,35 @@ AUTO.CI = (function(){
     return null;
   };
 
+  /* ============ THE ROTATION THAT NEVER ROTATED ======================
+     Founder, 21 Aug: "We need more questions for caught it in baseball."
+
+     He is right and the bank was not the problem. Baseball has FOUR
+     Caught It kinds — the last pitch, how the at-bat ended, who is at the
+     plate, runs this inning — and the one to ask is chosen by
+
+         rot = (counts[per] || 0) % 4
+
+     where `counts` is keyed BY PERIOD and resets every inning. Baseball
+     gets roughly one Caught It an inning, so counts[per] is 0 nearly
+     every time it is asked, so rot is 0, so it is ALWAYS the first kind.
+     Friday's room fired eight questions and every one of them was "that
+     last pitch, what was it?" — the exact question he had told me an hour
+     earlier does not work, because a broadcast runs behind the feed.
+
+     Three of baseball's four kinds have never fired in a real game. It is
+     every sport, scaled by how many questions a period gets: football has
+     six kinds and reaches three, basketball four and reaches three.
+
+     So rotate on the whole game. The per-period count still names the
+     question — the qid must stay unique per period — but WHICH question
+     is a decision about the night, not the inning. */
+  C.asked = function(counts){
+    var n = 0;
+    try{ Object.keys(counts||{}).forEach(function(k){ n += Number(counts[k]) || 0; }); }catch(_){}
+    return n;
+  };
+
   C.buildBaseball = function(sport, plays, T, per, counts){
     var isP = function(p){ return String(p.summaryType||'')==='P'; };
     var isN = function(p){ return String(p.summaryType||'')==='N'; };
@@ -9100,7 +9129,7 @@ AUTO.CI = (function(){
     var lastPitch  = pitches[pitches.length-1] || null;
     var lastResult = results[results.length-1] || null;
 
-    var rot = (counts[per]||0) % 4;
+    var rot = C.asked(counts) % 4;
     var seq = (lastPitch && lastPitch.sequenceNumber) || (lastResult && lastResult.sequenceNumber) || 0;
     var qid = 'ci_'+per+'_'+(counts[per]||0)+'_'+seq;
 
@@ -9198,7 +9227,7 @@ AUTO.CI = (function(){
     var at  = (last.awayScore!=null && last.homeScore!=null) ? (T.awayAbbr+' '+last.awayScore+'–'+last.homeScore+' '+T.homeAbbr) : '';
     var anchor = at ? ('the one that made it '+at) : 'that last bucket';
     var who = C.scorerName(last);
-    var rot = (counts[per]||0) % 6;
+    var rot = C.asked(counts) % 6;
 
     /* ==== QUARTER-RETROSPECTIVE, rotations 3–5 =======================
        "We need questions of what happened EARLIER in the quarter."

@@ -9901,9 +9901,14 @@ function buildPred(){
           +'" data-pdj="'+ix+'" aria-label="'+esc(x.label)+(S.predChoices[x.id]?' — picked':' — not picked yet')+'"></button>';
       }).join('')+'</div>'
    +'<div class="pdcard">'
-   +  '<div class="pdcat">'+esc(p.label)+'</div>'
-   +  '<div class="pdq">'+esc(p.q||('Who takes '+p.label.toLowerCase()+'?'))+'</div>'
-   +  '<div class="pdworth">'+worth+' pts'+(p.bonus?(' &nbsp;·&nbsp; +'+p.bonus+' for the exact number'):'')+'</div>'
+   /* Category, question and stake travel together and stay put — see
+      .pdstick. Splitting them would leave "40 pts" hovering over a
+      question that had scrolled away. */
+   +  '<div class="pdstick">'
+   +    '<div class="pdcat">'+esc(p.label)+'</div>'
+   +    '<div class="pdq">'+esc(p.q||('Who takes '+p.label.toLowerCase()+'?'))+'</div>'
+   +    '<div class="pdworth">'+worth+' pts'+(p.bonus?(' &nbsp;·&nbsp; +'+p.bonus+' for the exact number'):'')+'</div>'
+   +  '</div>'
    /* A twelve-name roster stacked one per row is the scroll wall the deck
       was built to kill — the header, the dots and the progress bar all end
       up off-screen above you. Two columns past six options puts a whole
@@ -20618,7 +20623,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-22-thestats.201';
+const STATS_BUILD='2026-08-22-rotate.202';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -25903,6 +25908,29 @@ body.hasgamebar .screen.active{padding-bottom:132px}
 .pdcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:17px 15px;touch-action:pan-y}
 @keyframes pdFlash{0%{border-color:var(--gold);box-shadow:0 0 0 4px rgba(255,197,77,.22)}100%{border-color:var(--line);box-shadow:none}}
 .pdcard.pdflash{animation:pdFlash .9s ease-out}
+/* ============ THE QUESTION STAYS WITH THE ANSWERS ====================
+   Founder, 21 Aug, with a screenshot of the pick sheet scrolled down:
+   "When im scrolling down the category is not there, so we should be more
+   intuitive in how this is designed so we know where we at."
+
+   A twelve-name roster is taller than a phone, so by the time your thumb
+   reaches the name you want, the line saying WHICH CATEGORY you are
+   picking for has scrolled off the top. You are choosing a player for a
+   question you can no longer see — and the six questions differ only in
+   that line. Picking your rebounder for the points question is not a
+   misread, it is the screen withholding the thing you need.
+
+   So the category and the question stick to the top of the card while its
+   own options scroll under them. `position:sticky` on a child of the card
+   confines it to that card, so it never travels the page the way the game
+   rail used to — it leaves with its own question, which is exactly the
+   scope a question header should have.
+
+   The background is opaque and the same colour as the card, because a
+   translucent sticky header with names sliding under it is worse than no
+   header at all. */
+.pdstick{position:sticky;top:0;z-index:3;background:var(--card);
+  padding:2px 0 8px;margin:0 0 2px}
 .pdcat{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);font-weight:800}
 .pdq{font-size:22px;font-weight:900;line-height:1.2;color:var(--ink);margin:7px 0 4px}
 .pdworth{font-size:14px;font-weight:800;color:var(--gold);margin-bottom:14px}
