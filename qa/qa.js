@@ -5565,10 +5565,31 @@ function boardStatic(){
          old sentence to explain why it went, and a plain substring search
          cannot tell an explanation from an instruction. The concatenation
          only appears when it is a string being built. */
+      /* ASSERT THE PROPERTY, NOT ONE SPELLING OF IT. This pinned the exact
+         concatenation, and on 22 Aug the line was rewritten for a real
+         reason — the founder's "Innings 4-6 opens when this stretch ends.
+         Mid 5th", sent from the fifth inning, where the round named after
+         the stretch he was standing in appeared to be waiting for
+         something already under way. Baseball tags name their own boundary
+         so it says "after the 6th" now, and the check went red on a
+         change that made it MORE specific about the trigger.
+
+         What must hold is two things: no host is blamed, and the button
+         names a moment in the game. Either phrasing satisfies the second —
+         the generic period form for sports whose rounds are one period,
+         or roundEndsAfter() for the ones that span several. */
+      /* NOT a bare search for "host" — the comment three lines above this
+         one quotes the retired sentence to explain why it went, and the
+         check's own note warns about exactly that: "an unanchored search
+         producing a false RED, on prose". I added that clause and it went
+         red on the explanation. Match the CODE form only. */
       !!gsr && gsr.indexOf("+' opens when the host pushes it'") < 0
-        && gsr.indexOf("opens when this '+(L.period||'quarter')+' ends") >= 0,
-      'the between-rounds button still blames a host for the wait',
-      'there is no host — the runner opens a round off the game clock, and the player is owed the trigger, not a name');
+        && (/when this ' \+ \(L\.period\|\|'quarter'\)/.test(gsr)
+            || gsr.indexOf("opens when this '+(L.period||'quarter')+' ends") >= 0)
+        && /roundEndsAfter\(qi\)/.test(gsr),
+      'the between-rounds button still blames a host for the wait, or no longer names the moment it is waiting for',
+      'there is no host — the runner opens a round off the game clock, and the player is owed the trigger, not a name. ' +
+      'A round that spans several periods must name the one that ends it: "Innings 4-6 open after the 6th", not "when this stretch ends" while you are standing in it');
 
     /* THE SURFACE IS THE FIRST THING THAT SAYS "SPORT". Founder, after the
        redesign: "look at the background of the first image how there's like

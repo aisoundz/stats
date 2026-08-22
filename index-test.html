@@ -13197,6 +13197,27 @@ var I18N = {
        an English sentence inside a Spanish product assumes something
        broke, which is exactly the impression the whole feature exists to
        avoid. */
+    /* ---- the menu, relabelled 22 Aug to one grammar --------------
+       Six new labels went in and qa/spanish.js reported GREEN, because
+       its walker never opened the menu — an entire screen in English
+       behind a check that said the app was 100% covered. The walker now
+       opens it; these are what it finds. */
+    /* Bilingual ON PURPOSE — somebody who needs Spanish cannot read an
+       English label telling them where Spanish is. Mapped to itself so the
+       walker records a decision rather than an oversight. */
+    "Language · Idioma":"Language · Idioma",
+    "English":"Inglés",
+    "How to play":"Cómo se juega",
+    "Questions read out loud":"Preguntas en voz alta",
+    "Microphone check":"Prueba de micrófono",
+    /* The side-game keeps its name in both languages, the way a team name
+       does. It is mapped rather than omitted so the walker counts it as a
+       decision and not an oversight. */
+    "Caught It":"Caught It",
+    "My card &amp; season":"Mi tarjeta y mi temporada",
+    "My card & season":"Mi tarjeta y mi temporada",
+    "Game night emails":"Correos de noche de juego",
+    "Muted":"Silenciado",
     "Tonight’s slate is on its way":"La cartelera de hoy está en camino",
     "Try again":"Intentar de nuevo",
 
@@ -20623,7 +20644,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-22-rotate.202';
+const STATS_BUILD='2026-08-22-menugrammar.203';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -21138,16 +21159,34 @@ function menuRows(){
     R.push('<button type="button" class="mrow" data-m="'+fn+'"><i>'+icon+'</i>'+label
       + (note?('<s>'+note+'</s>'):'')+'</button>');
   };
+  /* ============ ONE GRAMMAR, AND THE RIGHT-HAND SLOT IS STATE =========
+     Founder, 21 Aug, with a screenshot: "Menu looks inconsitent".
+
+     He is right and it is worth naming precisely, because "inconsistent"
+     is the symptom of two separate rules being broken at once.
+
+     THE LABELS were in five different grammars in one list: a description
+     with a colon ("Voice: read questions out loud"), a question ("Voice
+     check — why isn't it hearing me?"), a statement of state ("Caught It
+     is on"), a noun ("Me & my season") and an imperative ("Email me about
+     game nights"). Every row is the same KIND of thing — a control — so
+     every label is now a NOUN NAMING THE THING. What it does is the
+     obvious consequence of what it is.
+
+     THE RIGHT-HAND SLOT mixed state with instruction. "Voice → On" and
+     "Language → English" report what the setting IS; "Caught It is on →
+     tap to mute for tonight" put an instruction there and said the state
+     twice, once in each column. The slot is STATE, always, in one or two
+     words. A row that needs an instruction is a row whose label is wrong.
+
+     ORDER follows what a person came here for: the way back to the game
+     first when there is a game, then the settings, then the account. */
   R.push('<div class="mgrp">The game</div>');
-  row('📖','How to play &amp; full rules','rules');
-  /* The exit, where a setting belongs — see the note on #onListCard.
-     Only shown to somebody actually on the list, so it is never an
-     invitation to leave something you have not joined. */
-  try{ if(window.__onList) row('📬','Email before each game night','unsub','On'); }catch(_){}
-  try{ if(VX && VX.hasOut){ row(VX.on?'🔊':'🔈','Voice: read questions out loud','voice', VX.on?'On':'Off');
-       row('🎙','Voice check — why isn\u2019t it hearing me?','voicecheck'); } }catch(_){}
   try{ if(S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0) row('▶','Back to my game','resume'); }catch(_){}
   try{ if(S.screen==='final' || (S.mode==='demo' && S.pts>0)) row('🔁','Play again','restart'); }catch(_){}
+  row('📖','How to play','rules');
+  try{ if(VX && VX.hasOut){ row(VX.on?'🔊':'🔈','Questions read out loud','voice', VX.on?'On':'Off');
+       if(VX.on) row('🎙','Microphone check','voicecheck'); } }catch(_){}
   try{ if(S.screen==='final'){ row('😈','Post-game roast card','roast'); } }catch(_){}
   /* "COMING SOON" IS TWO ROWS OF VAPOUR. Leagues and STATS+ have no code
      behind them, and a menu that advertises things that do not exist next
@@ -21161,7 +21200,7 @@ function menuRows(){
   try{
     if(VX && VX.langs && VX.langs().length>1){
       var _cur = VX.L().name, _note = VX.contentNote();
-      row('🌐','Language · Idioma','lang', _cur + (_note?' · '+_note:''));
+      row('🌐','Language · Idioma','lang', _cur + (_note?' · '+_note:''));   // state only: the language
     }
   }catch(_){}
   /* ============ MUTE IS A DOOR, NOT A TRAPDOOR ======================
@@ -21178,12 +21217,20 @@ function menuRows(){
      guess. */
   try{
     var _ciMuted=false; try{ _ciMuted = !!(PCI && PCI.muted); }catch(_){}
-    row(_ciMuted?'🔕':'🔔', _ciMuted?'Caught It is muted' : 'Caught It is on',
-        'cimute', _ciMuted ? 'tap to turn it back on' : 'tap to mute for tonight');
+    /* The label names the control; the slot reports the setting. It used
+       to say the state in BOTH columns and put an instruction in the one
+       reserved for state. */
+    row(_ciMuted?'🔕':'🔔', 'Caught It', 'cimute', _ciMuted ? 'Muted' : 'On');
   }catch(_){}
   R.push('<div class="mgrp">Yours</div>');
-  row('👤','Me &amp; my season','me');
-  row('📬','Email me about game nights','join');
+  row('👤','My card &amp; season','me');
+  /* One row for the list, and it reports which way it is set — rather
+     than one row that asks you to join and a second, elsewhere, that asks
+     you to leave. `unsub` when you are on it, `join` when you are not. */
+  try{
+    if(window.__onList) row('📬','Game night emails','unsub','On');
+    else row('📬','Game night emails','join','Off');
+  }catch(_){ row('📬','Game night emails','join','Off'); }
   /* ============ THERE IS ALWAYS A WAY OUT ==========================
      Founder, 20 Aug: "On the menu theres no way to sign out."
 
@@ -21496,7 +21543,13 @@ function buildStampHTML(){
   return '<div class="center" style="margin-top:18px">'
     + '<button class="buildStamp" id="buildStamp" style="background:none;border:none;cursor:pointer;'
     + 'font-weight:800;font-size:12px;line-height:1.5;color:#5b6a8c;letter-spacing:.06em">'
-    + 'Version <b style="color:#93a0bd">'+esc(short)+'</b> · '+esc(STATS_BUILD)+'</button>'
+    /* A BUILD ID IS NOT COPY. The i18n walker flagged "Version" and the
+       stamp itself as untranslated, and translating a build identifier
+       would be worse than leaving it: the whole point of this line is that
+       a person can read it back to you over the phone and you both see the
+       same characters. `data-noi18n` is the existing marker for exactly
+       this — text that is deliberately outside the dictionary. */
+    + '<span data-noi18n>Version <b style="color:#93a0bd">'+esc(short)+'</b> · '+esc(STATS_BUILD)+'</span></button>'
     + '<div class="sub" style="font-size:12px;margin-top:3px;opacity:.7">Tap to copy. If this is behind, pull down to refresh.</div>'
     + '</div>';
 }
@@ -24746,6 +24799,22 @@ function syncStickyFit(){
 try{ window.addEventListener('resize', function(){ try{ syncStickyFit(); }catch(_){} }); }catch(_){}
 try{ window.addEventListener('orientationchange', function(){ setTimeout(function(){ try{ syncStickyFit(); }catch(_){} },250); }); }catch(_){}
 
+/* Which period a round is actually waiting for, in the words on the
+   scoreboard — read off the round's own tag. Baseball tags a stretch
+   ("4th-6th"), so the last number in the tag is the inning that has to
+   finish. A tag with no range ("Q2", "1H") returns nothing and the caller
+   keeps the generic phrasing, which is already unambiguous for a round
+   that IS one period. */
+function roundEndsAfter(qi){
+  try{
+    var tag = String(roundTag(qi) || '');
+    var m = tag.match(/(\d+)(?:st|nd|rd|th)\s*[-\u2013]\s*(\d+)(st|nd|rd|th)/i);
+    if(m) return 'the ' + m[2] + m[3].toLowerCase();
+  }catch(_){}
+  return '';
+}
+try{ window.roundEndsAfter = roundEndsAfter; }catch(_){}
+
 function gtStartRow(){
   try{
     if(!S) return '';
@@ -24793,16 +24862,49 @@ function gtStartRow(){
          already carries straight from the feed. No estimate, no countdown
          computed from a guess: if the feed cannot say, this says less
          rather than inventing a number. */
-      var why;
+      /* ============ NAME THE MOMENT, AND GIVE THE CLOCK ITS OWN LINE ===
+         Founder, 21 Aug, twice — "Quarter 2 line and the time looks off.
+         It can be organized better", and a screenshot of the baseball room
+         captioned "This dont look right" showing
+
+             Innings 4-6 opens when this stretch ends. Mid 5th
+
+         He was in the fifth. The round called "Innings 4–6" covers where
+         he was standing, so "opens when this stretch ends" reads as a
+         contradiction — the app appears to be waiting for something that
+         has already started. And the live clock was welded onto the end of
+         the sentence with a middle dot, which is why the time "looks off":
+         it is a different kind of fact wearing the same type.
+
+         Baseball's tags name their own boundary — "4th-6th" ends at the
+         6th — so say that. Sports whose rounds are one period keep the
+         generic phrasing, which is already unambiguous there. And the
+         clock moves to its own line, quieter, because it answers a
+         different question: not WHEN does this open, but WHERE ARE WE. */
+      var why, clk='';
       if(blk==='no-host'){
-        var det=''; try{ det=String(GS.detail||'').trim(); }catch(_){}
-        why = roundName(qi)+' opens when this '+(L.period||'quarter')+' ends'
-            + (det ? (' \u00b7 ' + det) : '');
+        try{ clk=String(GS.detail||'').trim(); }catch(_){}
+        var nm = roundName(qi);
+        /* "Innings 4–6" is plural and takes "open"; "Quarter 2" takes
+           "opens". Getting this wrong is the kind of small wrongness that
+           makes a screen feel machine-made. */
+        var verb = /^innings\b/i.test(nm) ? 'open' : 'opens';
+        var after = roundEndsAfter(qi);
+        why = after ? (nm + ' ' + verb + ' after ' + after)
+                    : (nm + ' ' + verb + ' when this ' + (L.period||'quarter') + ' ends');
       }else{
         why = roundTag(qi)+' opens when the game tips';
       }
-      return '<button class="btn ghost" style="margin-top:11px" disabled>'
-        + esc(why) + '</button>';
+      /* STILL A DISABLED BUTTON, not a div. Two suites look for a button
+         here and they are right to: this is the control that opens the
+         round, shown in the state where it cannot be pressed yet. Turning
+         it into a div made it prose, and a screen reader would stop
+         announcing that there is something here to wait for. The two lines
+         go INSIDE it. */
+      return '<button class="btn ghost gtWaitBox" style="margin-top:11px" disabled>'
+        + '<span class="gtWait">' + esc(why) + '</span>'
+        + (clk ? ('<span class="gtWaitClk">' + esc(clk) + '</span>') : '')
+        + '</button>';
     }
     /* Already answered and waiting on the host? Then there is nothing to
        open and a button would be a lie.
@@ -25541,6 +25643,17 @@ body.member #s-landing .brand{margin-top:6px}
 .tbBar{height:6px;border-radius:3px;background:var(--home,#3b4a6b);overflow:hidden}
 .tbBar i{display:block;height:100%;background:var(--away,#28e0d0);border-radius:3px 0 0 3px}
 .tbBar.tbFlat{opacity:.35}
+
+/* ---- WAITING FOR THE NEXT ROUND. See gtStartRow(). ------------------
+   Two facts, two lines: when the round opens, and where the game is now.
+   They were one sentence joined by a middle dot, which made the live
+   clock read as part of the promise. It is not — it changes every twenty
+   seconds and the promise does not. */
+.gtWaitBox{display:block;width:100%;text-align:center;white-space:normal;height:auto;
+  padding:13px 15px;line-height:1.35}
+.gtWait{display:block;font-size:15px;font-weight:700;line-height:1.35}
+.gtWaitClk{display:block;font-size:12px;font-weight:700;color:var(--dim);margin-top:5px;
+  letter-spacing:.04em;font-variant-numeric:tabular-nums}
 
 /* ---- THE ENDING. See gtGameOver(). ---------------------------------
    Deliberately the loudest card the Gametime tab can show: it is the only

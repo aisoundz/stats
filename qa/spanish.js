@@ -125,6 +125,29 @@ function serve() {
       return false;
     };
 
+    /* ============ THE MENU IS A SCREEN AND IT IS NOT A .screen ========
+       This walked `.screen` elements, which is every page of the app and
+       none of its overlays. On 22 Aug six new menu labels went in and this
+       suite reported 100% coverage and GREEN — a whole panel in English
+       behind a check whose whole job is to find English.
+
+       The menu is not a page, it is a sheet, so it never appeared in the
+       list. Open it and give it an id the walk can see. Anything else that
+       overlays the app — the share sheet, the voice check — belongs here
+       too the moment it carries words. */
+    try{
+      if(typeof openMenu === 'function'){
+        openMenu();
+        await new Promise(r => setTimeout(r, 120));
+        const mb = document.getElementById('menuBody') || document.getElementById('menuSheet');
+        if(mb){
+          /* Give it the marker the walk keys on, without making it a page. */
+          const host = mb.closest('.screen') ? mb : (mb.parentElement || mb);
+          host.classList.add('screen');
+          if(!host.id) host.id = 's-menu';
+        }
+      }
+    }catch(_){}
     const screens = [...document.querySelectorAll('.screen')].map(s => s.id);
     const dict = (I18N && I18N.es) || {};
     const found = new Map();
