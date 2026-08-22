@@ -978,13 +978,19 @@ async function main(){
          type and nothing else — so the last resort is the only inference
          that is always safe: a match the feed calls completed played at
          least its regulation periods. */
-      if(!playedTo){
-        try{ playedTo = Number(sum.header.competitions[0].status.period) || 0; }catch(_){}
-      }
-      if(!playedTo){
-        let over = false;
-        try{ over = !!sum.header.competitions[0].status.type.completed; }catch(_){}
-        if(over){ try{ playedTo = Number(AUTO.regulationPeriods(sum)) || 0; }catch(_){} }
+      /* WALKED, NOT CAUGHT. These three were `try{ a.b.c.d }catch(_){}` —
+         four silent catches guarding nothing but a missing property, in
+         the function that decides whether to open a round for a period
+         nobody played. qa/silence.js counts them for a reason: a mute
+         catch here would swallow a ReferenceError in AUTO and report it as
+         "this game reached period 0", which reads like a quiet feed rather
+         than a broken build. A `&&` chain cannot throw and cannot hide a
+         real error either. */
+      const status = (sum && sum.header && sum.header.competitions
+                        && sum.header.competitions[0] && sum.header.competitions[0].status) || null;
+      if(!playedTo && status) playedTo = Number(status.period) || 0;
+      if(!playedTo && status && status.type && status.type.completed){
+        playedTo = Number(AUTO.regulationPeriods(sum)) || 0;
       }
 
       for(const sl of slots){

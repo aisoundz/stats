@@ -1046,32 +1046,69 @@ const TEMPLATES = {
   },
 
   /* ============================ FOOTBALL ============================
-     NO `periods` HERE, AND THAT IS DELIBERATE. Every nfl* resolver reads p
-     as the quarter number, which is exactly index+1 — the same mapping
-     basketball has always used. Declaring [1,2,3,4] would be a second copy
-     of a fact that is already correct by default, and a second copy is how
-     this codebase breaks. Baseball declares periods because baseball needs
-     to; football does not.
+     REWRITTEN 21 AUG 2026, AND THE OLD ONE IS WORTH DESCRIBING BECAUSE
+     THE FAILURE IS REUSABLE. Sixteen questions off six facts, so ten of
+     them were a repeat: punts twice, longest drive twice, touchdowns
+     twice, who-leads twice. Two of the sixteen — "who leads after one",
+     "who leads after three" — asked a room that is looking at a scoreboard
+     what the scoreboard says. Three more were "who finished with more X",
+     which is a stats table rather than a game.
 
-     THE DRIVE IS THE UNIT AND IT GRADES ITSELF. `displayResult` is a clean
-     enum on every drive — Touchdown, Punt, Field Goal, Interception, Downs,
-     Missed FG — which makes this the cheapest bank of the six: no
-     interpretation, one field.
+     Founder, 20 Aug and again 21 Aug:
+       "Stop asking question for NFL who is leading when the score is
+        directly above the questions."
+       "The football questions are the dumbest... We have to be more
+        creative and find questions that are about the game not the score,
+        or what the last play."
+
+     NO `periods` HERE, AND THAT IS STILL DELIBERATE. Every nfl* resolver
+     reads p as the quarter number, which is exactly index+1 — the same
+     mapping basketball has always used. Declaring [1,2,3,4] would be a
+     second copy of a fact that is already correct by default, and a second
+     copy is how this codebase breaks.
+
+     WHAT REPLACED IT. Sixteen questions, sixteen DIFFERENT resolvers, no
+     fact asked twice, nothing on the scoreboard and nothing off the season
+     box score. Each round mixes four shapes on purpose: a moment that
+     resolves to an enum, a moment that resolves to a SIDE, a number, and
+     either a yes/no or a second enum. Twelve of the sixteen resolvers are
+     new — see the block above @host-shared for what each one reads.
+
+     TUNED, NOT GUESSED. Every cutoff and every option list below was run
+     through its real resolver against 78 finished games (2025 pre-season
+     and regular season) before it was written down. The measured spread,
+     as share of the most common answer — a question is only worth asking
+     if the room DISAGREES about it:
+
+       Q1  openingDrive 50 · firstPunt 46 · longestGain 38 · 3-and-outs 44
+       Q2  firstTdKind 47 · explosive 32 · twoMinuteScore 33 · halfEnd 45
+       Q3  redZone 49 · firstSack 37 · thirdDowns 28 · halfOpen 56
+       Q4  fourthDown 35 · firstTurnover 45 · timeouts 37 · lateScore 54
+
+     For scale: the WNBA bank's worst line sits at 90%, which pays a player
+     for knowing a fact rather than for watching. Nothing here is above 56.
+
+     WHAT THIS BANK STILL CANNOT DO, said plainly so nobody re-discovers it
+     at 1pm on a Saturday. The founder asked for questions whose ANSWER is
+     a named player — "who made that interception in the 3rd". The feed can
+     find the player: every play's `text` carries "C.Durant" and a resolver
+     could return it. The OPTIONS cannot. A bank option is a fixed string,
+     publish.js substitutes exactly two tokens ({HOME} and {AWAY}) and
+     treats any other surviving {TOKEN} as a fatal error, and football slate
+     rooms are built needsRoster:false so there is no roster to offer.
+     Naming a player in the options needs a roster token in publish.js and
+     a shortlist rule — a 53-man list is not four thumb-sized options — and
+     that is a build, not a bank edit. Until then the closest honest thing
+     is a question about a specific MOMENT that resolves to a side, which
+     is what four of the sixteen below are.
 
      Band cutoffs, spelled out because band(n,cuts,opts) takes the first
      opts[i] where n <= cuts[i]:
-       nflPuntsBand        [1,2,3]     <=1 / 2 / 3 / 4+
-       nflTouchdownsBand   [0,1,2]     none / 1 / 2 / 3+
-       nflTurnoversBand    [0,1,2]     none / 1 / 2 / 3+
-       nflScoringDrivesBand[0,1,2]     none / 1 / 2 / 3+
-       nflPenaltiesBand    [1,3,5]     <=1 / 2-3 / 4-5 / 6+
-       nflLongestDriveBand [20,45,70]  yards
-
-     TWO OF THESE READ THE BOX, NOT THE QUARTER. nflMoreFirstDowns and
-     nflMoreTotalYards compare season-style box totals, so they answer
-     "who has more SO FAR". They sit in Q4, where so-far and the whole game
-     are the same sentence. Do not move them to Q1 without changing the
-     wording, or the question will be right and the words will be wrong. */
+       nflLongestGainBand    [19,29,44]  yards on one play
+       nflThreeAndOutsBand   [0,1,2]     none / 1 / 2 / 3+
+       nflExplosivePlaysBand [0,1,2]     none / 1 / 2 / 3+
+       nflThirdDownConvBand  [1,2,3]     <=1 / 2 / 3 / 4+
+       nflTimeoutsBand       [1,3,5]     <=1 / 2-3 / 4-5 / 6+                */
   football: {
     league: 'nfl',
     tags:   ['Q1','Q2','Q3','Q4'],
@@ -1080,27 +1117,27 @@ const TEMPLATES = {
     rounds: [
       [
         { t: 'How did the opening drive end?', o: ['Touchdown','Field goal','Punt','Turnover','Downs','Missed FG'], r:'nflFirstDriveResult' },
-        { t: 'The first points of the game came how?', o: ['Touchdown','Field goal','Safety','Nobody scored yet'], r:'nflFirstScoreKind' },
-        { t: 'Punts in the first quarter, both teams — how many?', o: ['One or fewer','Two','Three','Four or more'], r:'nflPuntsBand' },
-        { t: 'Who leads after one?', o: ['{HOME}','{AWAY}','Level'], r:'nflLeadAfter' }
+        { t: 'Which side had to punt it away first?', o: ['{HOME}','{AWAY}','Nobody punted'], r:'nflFirstPuntTeam' },
+        { t: 'The longest gain of the first — how far?', o: ['19 yards or fewer','20 to 29','30 to 44','45 or more'], r:'nflLongestGainBand' },
+        { t: 'Three-and-outs in the first, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nflThreeAndOutsBand' }
       ],
       [
-        { t: 'Touchdowns in the second, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nflTouchdownsBand' },
-        { t: 'The longest drive of the second — how far?', o: ['20 yards or fewer','21 to 45','46 to 70','71 or more'], r:'nflLongestDriveBand' },
-        { t: 'Turnovers in the second, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nflTurnoversBand' },
-        { t: 'More rushing or more passing in the second?', o: ['Rushing','Passing','Even'], r:'nflMoreRushOrPass' }
+        { t: 'The first touchdown of the second — how did it come?', o: ['On the ground','Through the air','Some other way','No touchdown in the second'], r:'nflFirstTdKind' },
+        { t: 'Gains of twenty yards or more in the second — how many?', o: ['None','One','Two','Three or more'], r:'nflExplosivePlaysBand' },
+        { t: 'After the two-minute warning, who put points up before the half?', o: ['{HOME}','{AWAY}','Both of them','Nobody scored'], r:'nflTwoMinuteScore' },
+        { t: 'The very last play before halftime — what was it?', o: ['A kick','A kneel-down','A pass play','A run'], r:'nflHalfEndPlay' }
       ],
       [
-        { t: 'Scoring drives in the third, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nflScoringDrivesBand' },
-        { t: 'Penalties in the third, both teams — how many?', o: ['One or fewer','Two or three','Four or five','Six or more'], r:'nflPenaltiesBand' },
-        { t: 'Punts in the third, both teams — how many?', o: ['One or fewer','Two','Three','Four or more'], r:'nflPuntsBand' },
-        { t: 'Who leads after three?', o: ['{HOME}','{AWAY}','Level'], r:'nflLeadAfter' }
+        { t: 'First team inside the twenty in the third — what did they get?', o: ['A touchdown','A field goal','They came away empty','Nobody got that close'], r:'nflRedZoneFirstTrip' },
+        { t: 'Who gave up the first sack of the third?', o: ['{HOME}','{AWAY}','Nobody got sacked'], r:'nflFirstSackTeam' },
+        { t: 'Third downs picked up in the third, both teams — how many?', o: ['One or fewer','Two','Three','Four or more'], r:'nflThirdDownConvBand' },
+        { t: 'Did the second half open with points?', o: ['Yes','No'], r:'nflHalfOpenScored' }
       ],
       [
-        { t: 'Touchdowns in the fourth, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nflTouchdownsBand' },
-        { t: 'The longest drive of the fourth — how far?', o: ['20 yards or fewer','21 to 45','46 to 70','71 or more'], r:'nflLongestDriveBand' },
-        { t: 'Who finished with more first downs?', o: ['{HOME}','{AWAY}','Even'], r:'nflMoreFirstDowns' },
-        { t: 'Who finished with more total yards?', o: ['{HOME}','{AWAY}','Even'], r:'nflMoreTotalYards' }
+        { t: 'Fourth down in the fourth — did anybody go for it?', o: ['Nobody went for it','Went for it and got it','Went for it and came up short','Both happened'], r:'nflFourthDownOutcome' },
+        { t: 'Who coughed it up first in the fourth?', o: ['{HOME}','{AWAY}','Neither side turned it over'], r:'nflFirstTurnoverTeam' },
+        { t: 'Timeouts called in the fourth — how many?', o: ['One or fewer','Two or three','Four or five','Six or more'], r:'nflTimeoutsBand' },
+        { t: 'Did anybody score inside the last two minutes?', o: ['Yes','No'], r:'nflLateScore' }
       ]
     ]
   },
@@ -8046,6 +8083,341 @@ var AUTO = (function(){
   R.nflMoreFirstDowns  = function(j, p, o){ return boxCompare(j, o, 'firstDowns'); };
   R.nflMoreTotalYards  = function(j, p, o){ return boxCompare(j, o, 'totalYards'); };
 
+  /* ============ THE QUESTIONS THAT ARE ABOUT THE GAME =================
+     Founder, 20 and 21 Aug 2026, twice:
+
+       "Stop asking question for NFL who is leading when the score is
+        directly above the questions."
+       "The football questions are the dumbest. When the score is 7 you
+        ask who leads. We have to be more creative and find questions that
+        are about the game not the score, or what the last play."
+
+     He is right, and the reason the old bank was dull is written above
+     this line: THE DRIVE RESULT IS THE ONLY FIELD ANYBODY READ. Six facts,
+     every one a count of drives, so sixteen questions came out as six
+     questions asked twice — plus two that read the scoreboard back to a
+     room that is looking at the scoreboard.
+
+     Everything below reads the PLAY rows instead, which carry down,
+     distance, clock, yardage, the team in possession and the play's own
+     period. That last one matters more than it looks: `nflDrivesIn` keys
+     off the period a drive STARTED in, so a drive that begins on the last
+     snap of the first and scores in the second is a first-quarter drive to
+     every existing resolver and a second-quarter touchdown to everybody
+     watching. Play rows carry their own period and do not have that
+     problem, so the new work counts plays wherever the choice exists.
+
+     EVERY CUTOFF AND EVERY OPTION SET BELOW WAS TUNED AGAINST 78 REAL
+     FINISHED GAMES (2025 pre-season and regular season, fetched fresh),
+     not against the one fixture in references/. Resolving is not the bar —
+     the bar is that the room disagrees. Three ideas died at that step and
+     they are recorded here so nobody spends the afternoon re-inventing
+     them:
+
+       "longest play — run or pass?"    93% pass. Not a question.
+       "did a QB scramble this quarter?" 68% yes.
+       "timeouts in the 1st / 3rd?"      95% none — timeouts are a
+                                         second and fourth quarter fact,
+                                         which is why nflTimeoutsBand is
+                                         only asked in the fourth.
+     ================================================================== */
+
+  /* Rows that are not football. Clock stoppages and period boundaries sit
+     in the same array as the snaps, and every "what just happened"
+     resolver has to step over them or it answers with a timeout. */
+  var NFL_ADMIN = /^(Timeout|Official Timeout|Two-minute warning|End Period|End of Half|End of Regulation|End of Game|Coin Toss)$/;
+  /* A GAIN FROM SCRIMMAGE, and deliberately not "any row with yards on
+     it". A 62-yard punt and a 40-yard kick return are not what anybody
+     means by the longest play of the quarter, and an interception return
+     is a different sentence again. Four type strings, all four present in
+     the fixture and in all 78 tuning games. */
+  var NFL_GAIN  = /^(Rush|Pass Reception|Rushing Touchdown|Passing Touchdown)$/;
+
+  function nflType(x){ return String((((x||{}).type)||{}).text || ''); }
+  /* NO try/catch IN ANY OF THE NEW HELPERS, DELIBERATELY. qa/silence.js
+     counts catch blocks that say nothing and refuses to let the host path
+     get quieter, and it is right: a swallowed ReferenceError inside a
+     resolver is indistinguishable from "the feed did not have that field",
+     which is the difference between a bug and an honest refusal. Every
+     field walk below is written so it cannot throw instead. */
+  function nflOffId(x){
+    var t = (((x||{}).start)||{}).team || {};
+    return (t.id === null || t.id === undefined) ? null : String(t.id);
+  }
+  /* The option that means "the event did not happen at all". Not tieOpt():
+     that one is for comparisons that came out level, and "nobody punted"
+     is not a tie. Separate idea, separate word list, so widening one can
+     never quietly change the other.
+
+     "NOTHING" IS NOT ON THIS LIST, AND IT WAS, FOR ABOUT AN HOUR.
+     The red-zone question offers both "Nothing at all" (they got down
+     there and came away with nothing) and "Nobody got that close" (no team
+     reached the twenty). Those are opposite facts and "nothing" matched
+     the wrong one first, because find() returns the earliest option that
+     matches. Third quarter of the fixture — where no team snapped it
+     inside the twenty all quarter — answered "Nothing at all", which is a
+     confident wrong answer rather than a void: the exact thing this file
+     keeps saying is worse than silence. Caught by hand-checking a resolved
+     answer against the play-by-play, which is why that step is not
+     optional. qa/host-resolvers.js now recomputes the red-zone trip from
+     the raw feed so it cannot come back. */
+  function nflNoneOpt(o){
+    return (o||[]).find(function(x){ return /\b(nobody|neither|no one|none)\b/i.test(String(x)); }) || null;
+  }
+
+  /* CONVERTED, ACCORDING TO THE FEED RATHER THAN TO ARITHMETIC.
+     `statYardage >= distance` is wrong often enough to matter, in both
+     directions: a defensive holding call hands over a first down on a play
+     that gained nothing, and a play wiped out by an offensive flag can
+     gain fifteen and leave the down exactly where it was. ESPN already
+     answers "what is it now" in end.down, so a converted down is one where
+     the SAME team is back at first. Scoring plays are converted by
+     definition and carry end.down -1, which is why they are checked first.
+
+     MEASURED, over the 2,326 third and fourth-down snaps these resolvers
+     actually look at across 78 games: the two rules disagree 39 times, one
+     snap in sixty, and the feed is right in 38 of them. Eighteen are
+     penalties in both directions. The rest are the case that should end
+     the argument: an INTERCEPTION on third-and-five, returned twenty-one
+     yards. statYardage is the RETURN, so the arithmetic rule scores a
+     turnover as a conversion — ten times in this sample. The one the feed
+     gets wrong is a single row carrying end.down 0, and undercounting by
+     one inside a band is a thing nobody can see. */
+  function nflConverted(x){
+    if(!x) return false;
+    if(x.scoringPlay) return true;
+    var e = x.end || {}, st = x.start || {};
+    if(Number(e.down) !== 1) return false;
+    var a = (e.team||{}).id, b = (st.team||{}).id;
+    return a !== undefined && a !== null && String(a) === String(b);
+  }
+  /* Snaps taken on a given down in a given quarter. Penalty rows are
+     dropped: a flag before the snap re-runs the down and would otherwise
+     be counted as a third down that was never played. */
+  function nflOnDown(j, p, down){
+    return nflPlaysIn(j, p).filter(function(x){
+      var t = nflType(x);
+      if(NFL_ADMIN.test(t) || t === 'Penalty') return false;
+      return Number(((x.start)||{}).down) === down;
+    });
+  }
+
+  /* ---- Q1 ----------------------------------------------------------- */
+
+  /* Somebody has to give the ball back first, and the room remembers who.
+     83% of quarters contain a punt, so the third option carries real
+     weight rather than being decoration. start.team on a Punt row is the
+     PUNTING side — checked against every punt in the tuning set. */
+  R.nflFirstPuntTeam = function(j, p, o){
+    var x = nflPlaysIn(j, p).find(function(y){ return nflType(y) === 'Punt'; });
+    if(!x) return nflNoneOpt(o);
+    var id = nflOffId(x); if(!id) return null;
+    return optForTeam(j, id, o);
+  };
+
+  /* The longest single gain of the quarter — the one play everybody in the
+     room turns round for. Cutoffs [19,29,44] from the 78-game set; the
+     median longest gain in a quarter is 28 yards. */
+  R.nflLongestGainBand = function(j, p, o){
+    var y = nflPlaysIn(j, p).filter(function(x){ return NFL_GAIN.test(nflType(x)); })
+                            .map(function(x){ return Number(x.statYardage); })
+                            .filter(function(n){ return isFinite(n); });
+    if(!y.length) return null;
+    return band(Math.max.apply(null, y), [19,29,44], o);
+  };
+
+  /* Three-and-out is the phrase the room already uses, so the question can
+     borrow it. `offensivePlays` is on the drive and `<= 3` rather than
+     `=== 3` so a two-play drive that punts still counts, which is what
+     anybody watching would call it. */
+  R.nflThreeAndOutsBand = function(j, p, o){
+    var n = nflDrivesIn(j, p).filter(function(d){
+      return Number(d.offensivePlays) <= 3 && /punt/i.test(nflResult(d));
+    }).length;
+    return band(n, [0,1,2], o);
+  };
+
+  /* ---- Q2 ----------------------------------------------------------- */
+
+  /* Not "was there a touchdown" — HOW it came, which is the argument that
+     happens on the sofa. scoringType.name is the reliable flag; the type
+     text is what separates the ground from the air. Anything else that
+     ends in six — a pick six, a kick return — has its own option rather
+     than being forced into one of the two. */
+  R.nflFirstTdKind = function(j, p, o){
+    var x = nflPlaysIn(j, p).find(function(y){
+      if(!y.scoringPlay) return false;
+      var n = String((((y.scoringType)||{}).name)||'');
+      return n ? n === 'touchdown' : /touchdown/i.test(nflType(y));
+    });
+    if(!x) return o.find(function(s){ return /no touchdown|none|nobody/i.test(s); }) || null;
+    var t = nflType(x);
+    if(/^Rushing Touchdown$/.test(t)) return o.find(function(s){ return /ground|run|rush/i.test(s); }) || null;
+    if(/^Passing Touchdown$/.test(t)) return o.find(function(s){ return /air|pass|throw/i.test(s); }) || null;
+    return o.find(function(s){ return /other|else/i.test(s); }) || null;
+  };
+
+  /* Big plays. Twenty yards is the number the broadcast itself uses for
+     "explosive", and counting them is a question about the shape of a
+     quarter rather than about its score. */
+  R.nflExplosivePlaysBand = function(j, p, o){
+    var n = nflPlaysIn(j, p).filter(function(x){
+      return NFL_GAIN.test(nflType(x)) && Number(x.statYardage) >= 20;
+    }).length;
+    return band(n, [0,1,2], o);
+  };
+
+  /* THE BEST-SPREAD QUESTION IN THE SET: away 26 / both 31 / home 29 /
+     nobody 14 across 78 games. The two-minute warning is its own row in
+     the feed, so "after the warning" is an exact index rather than a clock
+     comparison. Only the 2nd and 4th quarters have one — asked in the 2nd,
+     where somebody scores 86% of the time and the question is WHO. */
+  R.nflTwoMinuteScore = function(j, p, o){
+    var ps = nflPlaysIn(j, p);
+    var i = ps.findIndex(function(x){ return /two-minute warning/i.test(nflType(x)); });
+    if(i < 0) return null;
+    var after = ps.slice(i+1).filter(function(x){ return !!x.scoringPlay; });
+    if(!after.length) return nflNoneOpt(o);
+    var ids = {}; after.forEach(function(x){ var id = nflOffId(x); if(id) ids[id] = 1; });
+    var keys = Object.keys(ids);
+    if(!keys.length) return null;
+    if(keys.length > 1) return o.find(function(s){ return /\bboth\b/i.test(String(s)); }) || null;
+    return optForTeam(j, keys[0], o);
+  };
+
+  /* "What was the last thing that happened before the break" is a memory
+     question and nothing else — it is not on any graphic and the
+     scoreboard cannot help. A sack is filed under the pass play it was,
+     which is football's own accounting. A row this cannot name returns
+     null rather than picking the nearest option: on 78 games that is one
+     quarter out of 78, and a void beats a guess. */
+  R.nflHalfEndPlay = function(j, p, o){
+    var ps = nflPlaysIn(j, p).filter(function(x){ return !NFL_ADMIN.test(nflType(x)); });
+    var x = ps[ps.length-1]; if(!x) return null;
+    var t = nflType(x), tx = String(x.text||'');
+    if(/kneel/i.test(tx))                       return o.find(function(s){ return /kneel/i.test(s); }) || null;
+    if(/^(Punt|Field Goal|Blocked Field Goal|Kickoff|Extra Point|Two Point)/.test(t))
+                                                return o.find(function(s){ return /kick/i.test(s); }) || null;
+    if(/Pass|Sack/.test(t))                     return o.find(function(s){ return /pass/i.test(s); }) || null;
+    if(/Rush/.test(t))                          return o.find(function(s){ return /run|rush/i.test(s); }) || null;
+    return null;
+  };
+
+  /* ---- Q3 ----------------------------------------------------------- */
+
+  /* Got down there and got nothing — the loudest groan in football, and
+     invisible to anybody reading the score. The trip is detected on the
+     PLAY (end.yardsToEndzone <= 20 with the offence still holding it) and
+     graded on the DRIVE it belongs to, which is right even when that drive
+     finishes in the next quarter: the fan saw how it ended.
+
+     displayResult is matched EXACTLY. "Interception Touchdown" contains
+     the word touchdown and is the defence scoring — a substring match
+     would hand the offence a touchdown they did not get. */
+  R.nflRedZoneFirstTrip = function(j, p, o){
+    var ds = nflDrives(j);
+    for(var i=0;i<ds.length;i++){
+      var d = ds[i], ps = d.plays || [];
+      for(var k=0;k<ps.length;k++){
+        var x = ps[k];
+        if(Number(((x.period)||{}).number) !== Number(p)) continue;
+        if(NFL_ADMIN.test(nflType(x))) continue;
+        var e = x.end || {};
+        var y = Number(e.yardsToEndzone);
+        if(!isFinite(y) || y > 20) continue;
+        var hold = (e.team||{}).id, dt = ((d.team)||{}).id;
+        if(hold === undefined || hold === null || String(hold) !== String(dt)) continue;
+        var r = nflResult(d);
+        if(/^Touchdown$/i.test(r))  return o.find(function(s){ return /touchdown/i.test(s); }) || null;
+        if(/^Field Goal$/i.test(r)) return o.find(function(s){ return /field goal/i.test(s); }) || null;
+        return o.find(function(s){ return /empty|nothing/i.test(s); }) || null;
+      }
+    }
+    return nflNoneOpt(o);
+  };
+
+  /* Who got to the quarterback first. The play type is "Sack", but a
+     strip-sack is filed as "Fumble Recovery (Own)" or "(Opponent)" with
+     the word sacked in its text — matching the text catches both, and
+     missing the strip-sack would be missing the loudest one. The side
+     charged with it is the OFFENCE in possession, which is the side the
+     room saw get hit. */
+  R.nflFirstSackTeam = function(j, p, o){
+    var x = nflPlaysIn(j, p).find(function(y){ return /\bsacked\b/i.test(String(y.text||'')); });
+    if(!x) return nflNoneOpt(o);
+    var id = nflOffId(x); if(!id) return null;
+    return optForTeam(j, id, o);
+  };
+
+  R.nflThirdDownConvBand = function(j, p, o){
+    var t = nflOnDown(j, p, 3);
+    if(!t.length) return null;
+    return band(t.filter(nflConverted).length, [1,2,3], o);
+  };
+
+  /* The halftime-adjustment question, and it splits 42/58 over 78 games.
+     isScore rather than a result string, so a drive that ends in points
+     any way at all counts. */
+  R.nflHalfOpenScored = function(j, p, o){
+    var d = nflDrivesIn(j, p)[0]; if(!d) return null;
+    return o.find(function(s){ return d.isScore ? /^yes/i.test(s) : /^no/i.test(s); }) || null;
+  };
+
+  /* ---- Q4 ----------------------------------------------------------- */
+
+  /* THE MOST BALANCED QUESTION IN THE BANK — both 36 / made 24 / failed 23
+     / nobody 17 across 78 fourth quarters. A fourth-down row is only
+     "going for it" if it is a snap: punts, field-goal attempts, flags and
+     kneel-downs are all fourth-down rows and none of them is a decision
+     anybody argues about. Conversion is nflConverted(), same rule as third
+     down, so a fourth-and-one picked up on a defensive flag counts. */
+  R.nflFourthDownOutcome = function(j, p, o){
+    var go = nflOnDown(j, p, 4).filter(function(x){
+      var t = nflType(x);
+      if(/^(Punt|Field Goal|Blocked Field Goal|Kickoff)/.test(t)) return false;
+      return !/kneel/i.test(String(x.text||''));
+    });
+    if(!go.length) return nflNoneOpt(o);
+    var made = go.filter(nflConverted).length, failed = go.length - made;
+    if(made && failed) return o.find(function(s){ return /\bboth\b/i.test(String(s)); }) || null;
+    if(made)           return o.find(function(s){ return /got it|made|converted/i.test(String(s)); }) || null;
+    return o.find(function(s){ return /short|failed|stopped/i.test(String(s)); }) || null;
+  };
+
+  /* Whose mistake. start.team on a turnover row is the side that lost it —
+     163 turnovers in the tuning set, 163 agreeing with the drive's own
+     team, no exceptions. */
+  R.nflFirstTurnoverTeam = function(j, p, o){
+    var x = nflPlaysIn(j, p).find(function(y){ return !!y.isTurnover; });
+    if(!x) return nflNoneOpt(o);
+    var id = nflOffId(x); if(!id) return null;
+    return optForTeam(j, id, o);
+  };
+
+  /* Clock management, which is the fourth quarter's real subject. ONLY the
+     fourth: the first and third quarters are 95% and 92% "one or fewer",
+     which is a fact, not a question. "Official Timeout" is a television
+     break and is not counted — the exact-match anchor is what keeps it
+     out. */
+  R.nflTimeoutsBand = function(j, p, o){
+    var n = nflPlaysIn(j, p).filter(function(x){ return nflType(x) === 'Timeout'; }).length;
+    return band(n, [1,3,5], o);
+  };
+
+  /* Did it stay alive to the end. 46/54 across 78 games — the closest
+     thing to a coin flip in the set, and it cannot be answered by anybody
+     who looked up at the final whistle. Scoring plays inside the last two
+     minutes, read off the play clock, which clockSec() already handles
+     including the bare-decimal form ESPN switches to under a minute. */
+  R.nflLateScore = function(j, p, o){
+    var late = nflPlaysIn(j, p).filter(function(x){
+      var s = clockSec(x); return s !== null && s <= 120;
+    });
+    if(!late.length) return null;
+    var hit = late.some(function(x){ return !!x.scoringPlay; });
+    return o.find(function(s){ return hit ? /^yes/i.test(s) : /^no/i.test(s); }) || null;
+  };
+
   /* ============================ NHL =================================
      356 plays, 18 types, coordinates on 337 of them — structurally the
      closest sport to basketball there is, which is why it is cheap once the
@@ -9121,14 +9493,39 @@ AUTO.CI = (function(){
      four and lands on six at the same two-per-period rhythm. NBA is not a
      separate row: it is the basketball family and inherits eight, two a
      quarter, exactly as the WNBA does. */
-  C.PER_GAME = { basketball:8, baseball:8, football:8, soccer:8, hockey:6 };
+  /* ============ HOW MANY, AND WHY IT WENT UP ========================
+     Founder, 21 Aug, mid-game: "The caught it question stop running."
+
+     Nothing had stopped. Both rooms had fired exactly two in Q1 and two in
+     Q2 and gone quiet, because eight a game divided evenly across four
+     quarters is two a quarter — and once a quarter has spent its two there
+     is nothing for the rest of it. In a twelve-minute WNBA quarter that is
+     a long silence in the middle of a live game, and he had already
+     reported the symptom on 20 Aug ("the caught it questions decreased in
+     the second quarter") when it was not decreasing, it was rationing.
+
+     His call: "Hype should 16 and normal should be 12." So normal is now
+     three a quarter rather than two, and hype is four. */
+  C.PER_GAME = { basketball:12, baseball:12, football:12, soccer:12, hockey:9 };
   C.perGameFor = function(sport, pace){
+    var base = C.PER_GAME[String(sport||'basketball')] || 12;
+    /* SCALE AGAINST WHATEVER NORMAL IS, not against a literal. This read
+       `fromPace !== 8` — a sentinel meaning "normal, so do not scale" that
+       silently became wrong the moment normal stopped being 8. Asking
+       PACES what normal is keeps the dial honest through any future
+       change. */
+    /* A SAFE WALK, NOT A try/catch. qa/silence.js caps the number of mute
+       catch blocks in the host path, and it is right to: a catch that eats
+       a ReferenceError turns a fix into decoration. Nothing here can throw
+       — every step is guarded — so nothing needs catching. */
+    var norm = 12;
+    var pn = C.PACES && C.PACES.normal && Number(C.PACES.normal.perGame);
+    if(pn > 0) norm = pn;
     var fromPace = pace && Number(pace.perGame);
-    var base = C.PER_GAME[String(sport||'basketball')] || 8;
-    /* The pacing dial scales the sport's own number rather than replacing
-       it, so Hype on hockey is more hockey questions, not basketball ones. */
-    if(fromPace && fromPace !== 8) return Math.max(1, Math.round(base * (fromPace / 8)));
-    return base;
+    if(!fromPace || fromPace === norm) return base;
+    /* The dial scales the sport's own number rather than replacing it, so
+       Hype on hockey is more hockey questions, not basketball ones. */
+    return Math.max(1, Math.round(base * (fromPace / norm)));
   };
 
   C.quota = function(perGame, per, regPeriods){
@@ -9151,7 +9548,7 @@ AUTO.CI = (function(){
   };
 
   /* The pacing dial, same three settings the Control Room offers. */
-  C.PACES = { chill:{gapMs:150000, perGame:5}, normal:{gapMs:80000, perGame:8}, hype:{gapMs:45000, perGame:12} };
+  C.PACES = { chill:{gapMs:150000, perGame:8}, normal:{gapMs:80000, perGame:12}, hype:{gapMs:45000, perGame:16} };
 
   /* Freshness by IDENTITY, never by a sequence number. Baseball's restarts
      every at-bat, which is what kept Caught It silent on it for a whole

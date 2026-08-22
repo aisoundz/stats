@@ -120,8 +120,28 @@ function predsForBasketball(g, roster){
     { ab:g.homeAbbr, name:g.homeName, names:roster.home.slice() },
     { ab:g.awayAbbr, name:g.awayName, names:roster.away.slice() }
   ];
+  /* ============ THE EXACT NUMBER IS HALF THE POINTS ==================
+     Founder, mid-game on 21 Aug, looking at the "most rebounds" card:
+     "there is no place I can put it in with numbers."
+
+     There was not, on any of the six, and the reason is here. These picks
+     were built `base:100` with NO bonus — while still carrying `num` and
+     `numLabel` ("How many rebounds?"), a label for a field that could
+     never render, because the field only exists when there is a bonus to
+     earn. The built-in practice sheet has always been base:50 + bonus:50.
+
+     So the rules screen has been promising something the live sheet did
+     not offer: "the leader in points, assists, steals, rebounds & blocks
+     (50 pts each). Nail the leader's exact stat total for a +50 bonus per
+     category — so a category you fully nail is worth 100."
+
+     Same ceiling either way. The difference is that naming Napheesa
+     Collier and naming Napheesa Collier FOR 23 were worth exactly the same
+     thing, so the harder call paid nothing and the number box was never
+     drawn. That is 250 points a night of skill the game describes and did
+     not let anybody play for. */
   const player = (id, q, label, num, numLabel) => ({
-    id, q, label, base:100, opts:field.slice(), groups,
+    id, q, label, base:50, bonus:50, opts:field.slice(), groups,
     answer: field[0] || '', num, numLabel
   });
   return [
@@ -586,7 +606,11 @@ function tipLine(iso, net, sport){
       if(!m) return;
       g.marquee = true;
       g.flagship = true;
-      if(m.gn) g.gn = m.gn;
+      /* NOT the number any more — that is derived from the tip-off order
+         further down, because a hand-typed number cannot survive a room
+         being added mid-evening. The marquee file still decides the two
+         things only a person can: which game is the main event, and which
+         are featured. */
       if(m.star) g.gotn = true;      // the day's main event
     });
     /* A FEATURED GAME NOBODY STARTS IS THE WORST ROOM ON THE RAIL — it is
@@ -695,6 +719,46 @@ function tipLine(iso, net, sport){
      rather than left behind by the filter. */
   const merged = kept.concat(railGames)
                      .sort((a,b) => String(a.tipISO).localeCompare(String(b.tipISO)));
+
+  /* ============ THE NUMBERS FOLLOW THE TIP-OFF =======================
+     Founder, 21 Aug, after a room was added mid-evening and landed as #19
+     between #16 and #17: "Can you make the lynx game 17 and follow the
+     order of the tip off time."
+
+     The numbers used to come from the marquee file — hand-typed next to
+     each id — so they recorded the order somebody LISTED the games, not
+     the order they are played. That is fine on a one-room night and wrong
+     the moment a night has four, and it is unfixable by hand the moment a
+     room is added while the night is under way.
+
+     So the marquee file keeps what only a human can decide — which game is
+     the Game of the Night, and which are featured — and stops owning the
+     number. The number is derived: sorted by tip, counting on from the
+     highest one already used. Game Night #N is then a fact about when a
+     game starts, which is what a reader assumes it means anyway.
+
+     Counting on from YESTERDAY rather than from 1 keeps the series
+     unbroken across nights, which is the whole point of numbering them. */
+  {
+    let last = 0;
+    try{
+      const prev = new Date(Date.parse(DATE + 'T12:00:00Z') - 86400000)
+                     .toISOString().slice(0,10);
+      const ps = await db.doc('slate/' + prev).get();
+      const pg = ps.exists ? ((ps.data() || {}).games || []) : [];
+      last = pg.reduce((m,g) => Math.max(m, Number(g.gn) || 0), 0);
+    }catch(_){}
+    /* Nothing yesterday — a Monday, or the first build on a fresh machine.
+       Keep whatever the marquee file said rather than restarting at 1 and
+       claiming a night that has already been played. */
+    if(!last) last = merged.reduce((m,g) => Math.max(m, Number(g.gn) || 0), 0) - merged.length;
+    if(last < 0) last = 0;
+    merged.forEach((g,i) => { g.gn = last + i + 1; });
+    log('gn', `game nights #${merged[0] ? merged[0].gn : '?'}` +
+              (merged.length > 1 ? `–#${merged[merged.length-1].gn}` : '') +
+              `, in tip order`);
+  }
+
   const leagues = [...new Set(merged.map(g => g.league).filter(Boolean))];
   if(kept.length)
     log('merge', `kept ${kept.length} game(s) from ${[...new Set(kept.map(g=>g.league))].join(', ')} already on this date`);

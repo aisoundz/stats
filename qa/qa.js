@@ -343,6 +343,15 @@ async function handlersCallable(page, file){
 }
 
 /* ========== 3. BROWSER ================================================ */
+/* Fill the prediction card's exact-number box by SELECTOR, not by a handle
+   captured earlier. See the note at its first call site: under load the card
+   repaints between the two and a captured handle detaches, failing the gate
+   for a build that is fine. */
+async function pdFill(p, v){
+  try{ await p.fill('#predCard .pdbonus input', String(v==null?7:v), {timeout:4000}); }
+  catch(_){ /* the box genuinely went away — that is the caller's business */ }
+}
+
 async function browserTests(){
   const {chromium}=require('playwright');
   /* ONE CHROMIUM FOR ~40 HEAVY PAGES WAS THE WHOLE BUG.
@@ -530,13 +539,25 @@ async function browserTests(){
     await p.evaluate(()=>{ startDemo(); S.name='QA'; startPredict(); });
     await p.waitForTimeout(400);
     await p.click('#predCard .pdopt'); await p.waitForTimeout(420);
-    const bi=await p.$('#predCard .pdbonus input'); if(bi) await bi.fill('7');
+    /* ============ A HANDLE TAKEN BEFORE A REPAINT IS A STALE HANDLE ==
+       21 Aug: this went red on BOTH viewports with "elementHandle.fill:
+       Element is not attached to the DOM", and nothing was wrong with the
+       build — four clean reruns proved it. The Jetson was hosting four
+       game runners and a live night at the time, the card repainted in
+       the gap between $() and fill(), and the handle pointed at a node
+       that no longer existed.
+
+       A gate that goes red under load is worse than no gate, because it
+       teaches you that red does not mean stop. Locator-style fill()
+       re-resolves the selector at the moment it acts and waits for the
+       element, so a repaint between the two is no longer a failure. */
+    if(await p.$('#predCard .pdbonus input')) await pdFill(p);
     for(let k=0;k<4;k++){
       const can=await p.evaluate(()=>{const b=document.querySelector('[data-pdgo="1"]');return b&&!b.disabled;});
       if(!can) break;
       await p.click('[data-pdgo="1"]'); await p.waitForTimeout(200);
       await p.click('#predCard .pdopt'); await p.waitForTimeout(200);
-      const x=await p.$('#predCard .pdbonus input'); if(x) await x.fill('7');
+      if(await p.$('#predCard .pdbonus input')) await pdFill(p);
     }
     const skipped=await p.evaluate(()=>({
       done:preds.filter(x=>S.predChoices[x.id]).length, total:preds.length,
@@ -4214,9 +4235,27 @@ async function browserTests(){
         const browser = read(ADMIN);
         const bi = browser.indexOf('ESPN.liveTick = async function');
         if(bi < 0) return false;
-        const tick = browser.slice(bi, bi + 3000);
+        /* READ THE WHOLE FUNCTION, NOT THE FIRST 3000 BYTES OF IT.
+           This sliced a fixed window, and on 21 Aug the check went red
+           while the guard it names was intact and working — liveTick had
+           simply grown past the window as comments were added to it. That
+           failure was the lucky direction. The same rot points the other
+           way: had the guard been DELETED and something harmless moved
+           into the first 3000 bytes, this check would have gone on passing
+           and B13 would have shipped again. A check anchored to a byte
+           count is not anchored to anything.
+
+           So: cut at the next top-level `ESPN.` assignment, which is the
+           real end of this function, and assert the ORDER as well as the
+           presence — a guard that runs after the write is not a guard. */
+        const after = browser.slice(bi);
+        const endRel = after.indexOf('\n  ESPN.', 10);
+        const tick = endRel > 0 ? after.slice(0, endRel) : after.slice(0, 8000);
+        const gAt = tick.search(/if\(!label\)\{[\s\S]{0,400}?return;/);
+        const wAt = tick.indexOf('writeScore(');
         const browserOk = /state==='in'/.test(tick)      // only a live game gets a label
-                       && /if\(!label\)/.test(tick)      // and no label means no write
+                       && gAt >= 0                       // and no label means no write
+                       && wAt >= 0 && gAt < wAt          // and the refusal comes FIRST
                        && /OT/.test(tick);               // overtime is named, not wrapped
         let runnerOk = false;
         try{

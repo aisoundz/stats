@@ -106,7 +106,16 @@ const FAKE = `(function(store){
       return { loaded, games:window.SLATE.games.length, date:window.SLATE.date,
                shown:el.style.display!=='none',
                rows:[...el.querySelectorAll('[data-slate]')].map(x=>x.getAttribute('data-slate')),
-               stars:el.querySelectorAll('.grStar').length,
+               /* COUNT WHAT A PERSON SEES. This counted .grStar nodes, and
+                  on 21 Aug the rail began carrying the star on both the
+                  full-name line and the compact abbreviation line — one
+                  markup, CSS picks the density, exactly one ever drawn.
+                  The node count said two and the screen said one.
+                  "Wears the star" is a claim about what renders, so
+                  measure that: offsetParent is null for anything inside a
+                  display:none parent. */
+               stars:[...el.querySelectorAll('.grStar')].filter(x=>x.offsetParent!==null).length,
+               starNodes:el.querySelectorAll('.grStar').length,
                text:el.textContent.replace(/\s+/g,' ').trim() };
     });
     ok('slate.loads-tonights-games', r.loaded && r.games===2 && r.date==='2026-08-19',
@@ -117,7 +126,7 @@ const FAKE = `(function(store){
        JSON.stringify(r.rows));
     /* THE ONE THAT MATTERS MOST FOR THE EMAIL. */
     ok('slate.exactly-one-game-wears-the-star', r.rows.includes('gn13-2026-08-19-min-gs') && r.stars===1,
-       `stars=${r.stars} rows=${JSON.stringify(r.rows)} — the star marks the Game of the Night, ` +
+       `stars=${r.stars} visible (${r.starNodes} in markup) rows=${JSON.stringify(r.rows)} — the star marks the Game of the Night, ` +
        `which is one game a day. Two stars and it means nothing; zero and the main game is ` +
        `indistinguishable from the rest, which the founder has reported twice.`);
     ok('slate.names-the-teams-a-person-would-recognise',

@@ -766,7 +766,28 @@
      the options ARE the pitch: the point is that the game already on your
      television is one of them. Horizontal because a slate is a row, and
      it scrolls because an NFL Sunday is sixteen of them. */
-  #gameRail{position:sticky;top:0;z-index:40;
+  /* `position:sticky` is set per MODE, not on the element. The strip is
+     one line and earns the right to follow the player; the tile grid is
+     the top of the landing page and scrolls away with it. Getting this
+     wrong put a chooser on top of a live question. */
+  /* ============ AND NOW NOTHING HERE IS STICKY ======================
+     The strip's rule went with the strip and this base rule did not, so
+     `compact` inherited `position:sticky` — at 130px instead of 42px.
+     qa/chrome.js found it immediately: on an iPhone SE the pick question
+     sat behind pinned chrome at 17 of 28 scroll positions, over the 50%
+     ceiling. A chooser three times taller than before, still following
+     the player down the page, is a worse version of the bug this whole
+     rebuild exists to end.
+
+     The original case for pinning it was the founder's own: "Id like to
+     watch the basketball game but still see the score and ticker as it
+     happens live." That was an argument for a 42px line. It is not an
+     argument for parking a 130px grid over a live question — the scores
+     are one scroll away and the question is the product.
+
+     So: static, both densities, and the base rule no longer smuggles a
+     default in behind them. */
+  #gameRail{position:static;z-index:40;
     background:linear-gradient(180deg,rgba(19,27,43,.94),rgba(12,18,30,.88));
     -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
     border-bottom:1px solid var(--line)}
@@ -808,44 +829,11 @@
      hamburger is fixed to that corner and covered the third chip. The strip
      scrolls, so this costs nothing: the last chip slides out from under the
      button instead of living beneath it. */
-  .grStrip{display:flex;gap:6px;padding:6px 62px 7px 12px;overflow-x:auto;
-    scrollbar-width:none;-ms-overflow-style:none}
-  .grStrip::-webkit-scrollbar{display:none}
-  .grChip{flex:0 0 auto;display:flex;align-items:baseline;gap:4px;cursor:pointer;
-    background:var(--bg2);border:1px solid var(--line);border-radius:8px;
-    padding:5px 9px;font-family:inherit;white-space:nowrap;
-    font-variant-numeric:tabular-nums}
-  .grChip i{font-style:normal;font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.03em}
-  .grChip b{font-size:14px;font-weight:800;color:var(--ink)}
-  .grChip s{text-decoration:none;color:var(--line2);font-size:12px}
-  .grChip em{font-style:normal;font-size:12px;color:var(--muted);margin-left:3px}
-  .grChip.live em{color:var(--teal);font-weight:700}
-  /* The room you are standing in, marked the same way the tiles mark it. */
-  .grChip.on{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 12%,var(--bg2))}
-  .grChip.on i{color:var(--teal)}
-  /* The score row on a full tile: score first, clock after it. */
-  /* WRAPS RATHER THAN CLIPS. This was one nowrap flex row and the clock,
-     as the last child, fell off the end of a narrow tile — with the
-     scrollbar hidden, so nothing said it was there. qa/platforms.js:
-     "grScore: 1 of 4 child(ren) cut off — a player cannot see or reach it".
-     Exactly the disease the rail itself was rebuilt to cure, reintroduced
-     one level down by the thing that replaced it. */
-  .grTile .grScore{display:flex;align-items:baseline;gap:5px;margin-top:3px;flex-wrap:wrap;min-width:0;
-    font-family:var(--d);font-weight:800;font-size:17px;color:var(--ink);
-    font-variant-numeric:tabular-nums}
-  .grTile .grScore s{text-decoration:none;color:var(--dim);font-weight:600;font-size:12px}
-  /* No margin-left:auto — pushing the clock to the far edge is what put it
-     off the end. It sits after the score with a normal gap and wraps under
-     it when the tile is too narrow to hold both. */
-  .grTile .grScore .grWhen{font-style:normal;font-size:12px;
-    font-weight:700;color:var(--muted);letter-spacing:.02em;white-space:nowrap}
-  .grTile .grWhen.grLive{color:var(--teal);font-weight:800}
-  @media (prefers-reduced-motion:no-preference){
-    .grTile .grWhen.grLive::after{content:"";display:inline-block;width:5px;height:5px;
-      border-radius:50%;background:var(--teal);margin-left:5px;vertical-align:middle;
-      animation:grPulse 2s ease-in-out infinite}
-  }
-  @keyframes grPulse{0%,100%{opacity:1}50%{opacity:.25}}
+  /* The horizontal strip and its chips lived here — a mask fade, a
+     hidden scrollbar, and a wheel handler, all of them elaborate ways to
+     apologise for a row that was wider than its column. Deleted with the
+     branch that drew it; see the long note in paintGameRail(). A wrapping
+     grid needs none of it. */
   .grTiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));
     gap:7px;padding:0 14px 10px;align-items:stretch}
   /* WIDE ENOUGH FOR A REAL NAME. At 126px "Tempo at Mystics" and its tip
@@ -876,6 +864,40 @@
      time out past the tile edge — the exact bug this change was fixing,
      one element smaller. Allowed to wrap, it drops onto its own line only
      on the narrowest screens and stays inline everywhere else. */
+  /* ---- COMPACT: the same grid, mid-game ------------------------------
+     Four rooms at this density is two rows of ~44px rather than 200px, so
+     the chooser costs about a fifth of what the tile grid costs and still
+     shows every game with its live score. Nothing is removed and nothing
+     needs a gesture — the only difference is how much room each tile
+     takes. Narrower minimum so three fit across on a phone. */
+  #gameRail[data-mode="compact"] .grTiles{grid-template-columns:repeat(auto-fit,minmax(100px,1fr));
+    gap:6px;padding:0 62px 7px 12px}
+  #gameRail[data-mode="compact"] .grTile{padding:6px 8px;border-radius:9px}
+  /* TWO LINES, NOT THREE. The league banner ("WNBA #19") is the right
+     thing to lead with on a landing page where somebody is choosing, and
+     the wrong thing to spend 14px on mid-game — the teams and the score
+     are what say which room this is. Dropping it takes the tile from 59px
+     to ~44px, which is the difference between four rooms costing 132px of
+     an 852px phone and costing 95px.
+     Liveness is not lost with it: the clock carries .grLive, which is the
+     signal that actually changes minute to minute. */
+  #gameRail[data-mode="compact"] .grLg{display:none}
+  .grWhen.grLive{color:var(--red)}
+  #gameRail[data-mode="compact"] .grTile[aria-current="true"] .grWhen.grLive{color:var(--teal)}
+  .grAbb{display:none}
+  #gameRail[data-mode="compact"] .grWho{display:none}
+  /* NO nowrap. It was `white-space:nowrap`, which made the line 10px wider
+     than its 96px tile — and an element wider than its box is a horizontal
+     scroller, which is the precise thing this rebuild exists to remove.
+     Allowed to wrap, the worst case is a second line on the narrowest
+     phone; with nowrap the worst case was content you could only reach
+     with a gesture the device might not have. Same trade the strip lost. */
+  #gameRail[data-mode="compact"] .grAbb{display:block;font-size:12px;font-weight:800;
+    color:var(--body);letter-spacing:.02em;min-width:0;overflow-wrap:anywhere}
+  #gameRail[data-mode="compact"] .grAbb s{text-decoration:none;color:var(--dim);
+    font-weight:600;font-size:12px;margin:0 2px}
+  #gameRail[data-mode="compact"] .grScore{font-size:14px}
+  #gameRail[data-mode="compact"] .grWhen{font-size:12px}
   .grLg{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-size:12px;font-weight:800;
     letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
   .grLg i{width:5px;height:5px;border-radius:50%;background:var(--dim);display:block;font-style:normal}
@@ -2222,10 +2244,28 @@
          vanished once you were on the list, which meant "unsubscribe any time"
          pointed at nothing inside the app. It deletes the row — not a flag on
          it — because that is what the sentence on the checkbox says. -->
+    <!-- ============ DO NOT PUT THE EXIT ON THE REWARD SCREEN ==========
+         Founder, 21 Aug, looking at his own final card after a game he
+         finished second in: "do we need to ask someone to take them off
+         the list we shouldnt do that."
+
+         He is right, and the comment immediately below this one was
+         already making his argument — it explains that "Leagues (preview)"
+         and "STATS+" were removed from here because the last thing a
+         player should see at the best moment of their night is not a menu.
+         An UNSUBSCRIBE BUTTON is a worse version of that. It is the app
+         asking, at the exact moment somebody enjoyed themselves, whether
+         they would like to stop hearing from us.
+
+         The promise on the signup checkbox is "unsubscribe any time", and
+         that has to stay true and reachable inside the app — so the
+         control moves to the menu, which is where every other setting
+         lives, and is one tap away from every screen. What stays here is
+         the half that belongs on a celebration: the confirmation that
+         they are on the list for the next one. -->
     <div class="card" id="onListCard" style="display:none">
       <b style="font-size:14px">📬 You're on the list</b>
       <p class="sub" style="font-size:14px;margin:6px 0 0" id="onListNote">One email before each game night. Nothing else, ever.</p>
-      <button class="btn ghost" id="unsubBtn" style="margin-top:10px;font-size:14px" onclick="unsubTap()">Take me off the list</button>
     </div>
     <!-- One thing to do, then one more, then a drawer. The old stack put
          "Leagues (preview)" and "STATS+" at the same visual weight as the
@@ -6695,9 +6735,81 @@ function paintGameRail(){
      So mid-game it becomes ONE LINE — every game, scores and clocks, in
      the height of a single row instead of a grid. Nothing is hidden and
      the question gets its screen back. */
-  var playing = false;
-  try{ playing = (typeof GAME_SCREENS!=='undefined') && GAME_SCREENS.indexOf(S && S.place || '') >= 0; }catch(_){}
-  var RAIL_MAX = playing ? gs.length : 4;
+  /* ============ AND THE ONE LINE WAS THE WHOLE PROBLEM ================
+     Founder, 21 Aug, 7:18pm, with the Fire at Tempo room live and a
+     runner grading it: "i still cant get there. we need to reinvent the
+     way we show games and the home page cause not all devices can access
+     it."
+
+     He is right, and the sentence above — "Nothing is hidden" — was the
+     mistake. A single row IS hiding things the moment the row is wider
+     than the column: four rooms at ~140px in a 430px column overflows by
+     130px, and the fourth game runs off the right edge. The row was
+     `overflow-x:auto`, which is not an affordance, it is an ASSUMPTION —
+     that the device has a way to scroll a horizontal box. A phone does. A
+     mouse wheel does not. A trackpad might. A TV remote does not. So on
+     some devices the fourth room did not exist, and the fix for that is
+     not a better fade or a wheel handler, both of which I had already
+     added and neither of which put the room on his screen.
+
+     THE PRIMITIVE IS WRONG. A chooser must not depend on a scroll
+     gesture, because scroll gestures are per-device and a room you cannot
+     see is a room that does not exist. So the horizontal strip is gone
+     and there is ONE renderer: a grid that WRAPS. Wrapping cannot hide
+     anything on any device — the only thing it costs is vertical space,
+     and that was only ever expensive because the rail was sticky, which
+     it no longer is.
+
+     What survives from the strip is its density. Mid-game the tiles go
+     compact — abbreviations, score, clock, two per row — so four rooms
+     cost about two 44px rows instead of 200px, and the question keeps its
+     screen. Same markup, same score line, one code path.
+
+     This also fixes what my own last change broke: setting the mode from
+     `!!cur` meant the informative grid stopped rendering while somebody
+     was CHOOSING, which qa/switch.js caught as "0 score lines rendered".
+     I had made the app use MORE of the element that hides games. */
+  /* ============ THE SECOND DEAD CONDITION, 21 AUG =====================
+     The note above replaced `S.place==='play'` — a screen name that never
+     existed — with a GAME_SCREENS lookup, and that WAS right. It still
+     drew the tall grid over a live question, because being right is not
+     enough if you are asked at the wrong moment.
+
+     `S.place` is assigned by go(). paintGameRail() is called by the slate
+     load, by the score tick and by the chooser itself — none of which are
+     go(). So the rail's shape is decided by whichever of those fired last,
+     and on the founder's baseball room the answer was "the one before he
+     started picking". Four tiles, ~200px, `position:sticky`, and sticky
+     means the thing FOLLOWS YOU DOWN THE PAGE: the grid sat on top of
+     question five of six. He sent the screenshot — the options and the
+     points are visible and the question itself is behind the tiles.
+
+     So stop asking about the screen. Ask about the ROOM, which is a fact
+     that cannot go stale: if a game is chosen, the rail's job is watching
+     the other scores, and that is one line. The grid is a CHOOSER and it
+     is only ever needed by somebody who has not chosen. */
+  /* `compact` is a DENSITY, not a second renderer. One grid, always.
+
+     WHICH DENSITY IS A QUESTION ABOUT THE SCREEN, and the two earlier
+     answers were both wrong for the same reason. `S.place==='play'` named
+     a screen that does not exist. A GAME_SCREENS lookup named real ones
+     but read a variable go() sets elsewhere, so it was stale whenever a
+     tick painted the rail. `!!cur` was stale-proof and too blunt: it made
+     the LANDING chooser compact, which cost the full team names and the
+     Game of the Night star — qa/slate.js caught both.
+
+     So ask the DOM. go() adds .active to the screen BEFORE it assigns
+     S.screen, so the class is the most current statement of where the
+     player is that exists, and unlike a variable nothing can paint before
+     it is set. Full size wherever somebody is choosing; compact
+     everywhere they are already in a room. */
+  var compact = false;
+  try{
+    var _act = document.querySelector('.screen.active');
+    var _sid = _act ? _act.id : '';
+    compact = !!cur && _sid !== 's-landing' && _sid !== 's-name' && _sid !== '';
+  }catch(_){}
+  var RAIL_MAX = compact ? 8 : 4;
   var showAll = !!window.__railOpen;
   var shown = gs;
   var hidden = 0;
@@ -6739,6 +6851,19 @@ function paintGameRail(){
          out loud, and what any text-based check sees. Spacing that only
          exists in the styling is not spacing. */
       + '<span class="grWho">'+esc(g.away||g.awayAbbr||'')+' <s>at</s> '+esc(g.home||g.homeAbbr||'')+'</span>'
+      /* THE SAME FACT, SHORT. Mid-game the tile has to say which room it
+         is in about a third of the height, and "Fire at Tempo" does not
+         fit in that. Both lines are always in the markup and CSS picks
+         one, so there is no second render path to keep in step — the
+         thing that made the strip a liability in the first place. */
+      + '<span class="grAbb">'
+      /* The star rides BOTH lines for the same reason the names do: one
+         markup, CSS picks the density. It marks the Game of the Night and
+         losing it mid-game would make the flagship indistinguishable from
+         the rest, which the founder has reported twice. */
+      +   (g.gotn ? '<span class="grStar">★</span> ' : '')
+      +   esc(String(g.awayAbbr||g.away||'').slice(0,3).toUpperCase())
+      +   ' <s>at</s> '+esc(String(g.homeAbbr||g.home||'').slice(0,3).toUpperCase())+'</span>'
       /* The score line only exists once there IS a score. A row of dashes
          before kickoff is noise pretending to be information. */
       /* ============ NOTHING IMPORTANT IN THE TOP-RIGHT CORNER ==========
@@ -6769,35 +6894,20 @@ function paintGameRail(){
       + '</button>';
   }).join('');
 
-  if(playing){
-    /* One row, horizontally scrollable, no header. The room you are in is
-       marked and not tappable; everything else stays one tap away. */
-    el.innerHTML = '<div class="grStrip">' + gs.map(function(g){
-      var tk=null; try{ tk=TICK.by[String(g.espnEvent||'')]||null; }catch(_){}
-      var on=(g.nightId===cur);
-      var when=(tk && tk.state!=='pre' && tk.detail) ? tk.detail : (tipShort(g.tipISO)||'');
-      return '<button type="button" class="grChip'+(on?' on':'')+(tk&&tk.state==='in'?' live':'')+'"'
-        + ' data-slate="'+esc(g.nightId)+'"'+(on?' aria-current="true" disabled':'')+'>'
-        + '<i>'+esc(String(g.awayAbbr||g.away||'').slice(0,3).toUpperCase())+'</i>'
-        + (tk&&tk.as!=null ? '<b>'+esc(tk.as)+'</b>' : '')
-        + '<s>·</s>'
-        + '<i>'+esc(String(g.homeAbbr||g.home||'').slice(0,3).toUpperCase())+'</i>'
-        + (tk&&tk.hs!=null ? '<b>'+esc(tk.hs)+'</b>' : '')
-        + '<em>'+esc(when)+'</em>'
-        + '</button>';
-    }).join('') + '</div>';
-    return;
-  }
+
+  /* A CHOOSER DOES NOT FOLLOW YOU DOWN THE PAGE. Neither density is
+     sticky — nothing that wraps gets to float over a question. */
+  el.setAttribute('data-mode', compact ? 'compact' : 'tiles');
   el.innerHTML =
       /* THE HEADER IS A QUESTION, AND MID-GAME IT HAS BEEN ANSWERED.
        "Which game are you watching?" is exactly right on the landing
        screen — it is what that page is for. Sticky above a live question,
        it is 30px spent asking something the player settled ten minutes
        ago. It comes back the moment they are choosing again. */
-    (playing ? ''
+    (compact ? ''
              : '<div class="grTop"><span class="grLbl">Which game are you watching?</span></div>')
     + '<div class="grTiles">'+rows
-    +   (hidden ? '<button type="button" class="grTile grMore'+(playing?' grMoreInline':'')+'" data-railmore="1">'
+    +   (hidden ? '<button type="button" class="grTile grMore'+(compact?' grMoreInline':'')+'" data-railmore="1">'
                 + '<span class="grLg"><i></i>MORE</span>'
                 + '<span class="grWho">+'+hidden+' more game'+(hidden>1?'s':'')+'</span></button>'
         : '')
@@ -6889,6 +6999,11 @@ try{ window.paintSlate = paintSlate; }catch(_){}
    pointerup covers mouse, touch and pen in one path. The movement guard is
    what keeps a SCROLL from being read as a choice — a strip you can flick
    must not change your game because your thumb travelled twelve pixels. */
+/* The wheel-to-horizontal handler stood here. It existed because the
+   score strip could not be scrolled with a laptop wheel — a real bug with
+   a real fix that STILL did not put the fourth room on the founder's
+   screen, because the answer was never a better way to scroll. The strip
+   is gone; so is this. */
 var SLATE_TAP={x:0,y:0,id:null};
 try{
   document.addEventListener('pointerdown', function(e){
@@ -7770,7 +7885,10 @@ function paintContinueCard(){
            honest version depends on whether the HOST has opened the next
            round, which is a fact we hold — not on what this device last
            happened to score. */
-        var nq=(S.nextQ!=null?S.nextQ:S.qi);
+        /* Same stale-counter defect as gtStartRow — the founder's Lynx
+           screenshot at HALFTIME, both quarters scored, read "Continue
+           tonight's game · Q1 opens at the break". See roomNextRound(). */
+        var nq=roomNextRound(S.nextQ!=null?S.nextQ:S.qi);
         var open=false; try{ var hd=hostedDoc(nq); open=!!(hd && hd.state==='live'); }catch(_){}
         where = open ? (roundTag(nq)+' is open \u2014 answer now')
                      : (roundTag(nq)+' opens at the break');
@@ -8184,10 +8302,37 @@ function myServerRow(){
   return null;
 }
 /* The night total, from the server if it has spoken. Practice never has a
-   server row, so it keeps its local number and always will. */
+   server row, so it keeps its local number and always will.
+
+   ============ 0 AND 10, ON THE SAME SCREEN, FROM THE SAME ROW =========
+   Founder's screenshot, 21 Aug, football room: YOUR NIGHT read **0
+   POINTS** while nine centimetres below it TONIGHT'S TOP 3 read **Sam
+   (you) 10** and the line under the board read "You're on the board — 10
+   pts". Three readings, one player, one row of `lastStand`.
+
+   It is not a sync problem — `myServerRow()` clearly FOUND the row,
+   because the rank tile beside the zero said "#2 OF 3" and #2 is exactly
+   where the board put him. The row was right. This function read it
+   wrong.
+
+   The board prints `total != null ? total : pts` — it falls back. This
+   printed `total` and, when `total` was absent, threw the row away
+   entirely and fell all the way back to `S.pts`, the LOCAL counter, which
+   is 0 for a player who joined this room after the rounds it scored.
+
+   So a room can hand you the same row and have the big number say nothing
+   happened while the small numbers say it did. The big number is the one
+   that reads as the truth, and it was the one that was wrong.
+
+   Read it the way the board reads it — the same expression, deliberately,
+   so the two cannot drift apart again. If they ever must differ, that is a
+   decision somebody has to write down here first. */
 function shownTotal(){
   var r=myServerRow();
-  if(r && typeof r.total==='number' && isFinite(r.total)) return Math.max(0,Math.round(r.total));
+  if(r){
+    var v = (r.total!=null ? r.total : r.pts);
+    if(v!=null && isFinite(Number(v))) return Math.max(0,Math.round(Number(v)));
+  }
   return Math.max(0,Math.round(Number(S.pts)||0));
 }
 /* Rank comes from the same ordered list the board draws, so "you're #2"
@@ -8439,14 +8584,14 @@ function doResume(){
         try{ moved = ledgerServerFloor(sv); }catch(_){ moved=false; }
         if(moved){ try{ save(); }catch(_){}
           try{ toast('Your points are back — '+(S.pts||0)+' from the scoreboard.'); }catch(_){}
-          try{ if(S.screen==='lobby') renderLobby(S.nextQ!=null?S.nextQ:S.qi); }catch(_){}
+          try{ if(S.screen==='lobby') renderLobby(roomNextRound(S.nextQ!=null?S.nextQ:S.qi)); }catch(_){}
         }
       });
     }
   }catch(_){}
   const scr=S.place||S.screen;
   if(scr==="predict"){buildPred();go("predict");}
-  else if(scr==="lobby"){renderLobby(S.nextQ!=null?S.nextQ:S.qi);go("lobby");}
+  else if(scr==="lobby"){renderLobby(roomNextRound(S.nextQ!=null?S.nextQ:S.qi));go("lobby");}
   else if(scr==="live"){
     /* Mid-round refresh. It used to wipe `liveAnswers[S.qi]` so the round
        would be replayed from scratch — which reads as "the app lost my
@@ -11207,7 +11352,41 @@ var VX=(function(){
               var _t=String(res[0].transcript||'').trim();
               var _real=false;
               try{
-                if(_t && !V.selfEcho(_t)){
+                /* ============ THE ECHO GUARD WAS EATING THE ANSWER ======
+                   Founder, 21 Aug: "When I use my voice it doesnt listen
+                   to my answer until after the full question asks. i
+                   should be able to talk to it easily. and it doesnt take
+                   lock in or next."
+
+                   Two bugs, and the first one is subtle enough that it
+                   survived every voice suite.
+
+                   selfEcho() returns true when EVERY content word it heard
+                   is a word we just said. That is a sound rule for stray
+                   loudspeaker bleed — and a disastrous one here, because
+                   the words a player answers with are BY CONSTRUCTION
+                   words we just said. We read "Lynx or Mystics"; he says
+                   "Lynx"; every word he said is a word we said; the guard
+                   calls it an echo and swallows it. So the microphone
+                   genuinely did not listen until the sentence finished —
+                   not by design, but because the only thing he could
+                   usefully say during it was indistinguishable from us.
+
+                   The guard cannot be removed: without it, the app
+                   answers its own questions. So invert the order. Ask
+                   FIRST whether what we heard is a real action against the
+                   card in front of him. An action is an answer; only what
+                   is NOT an action gets tested for echo.
+
+                   Second bug, his own words: "it doesnt take lock in or
+                   next". Both are in the LOCK grammar and always have
+                   been — but this list of interruptible kinds carried
+                   'pick', 'off' and 'repeat' and nothing else. Say "lock
+                   it in" while STATS is still reading the options and it
+                   matched, returned {kind:'lock'}, was not in the list,
+                   and was discarded. The grammar was right and this was
+                   the thing throwing it away. */
+                if(_t){
                   /* WHICHEVER CARD IS ACTUALLY IN FRONT OF THEM. curOpts()
                      is the live round question; the PICK SHEET has its own
                      options and its own handler, and the founder's own
@@ -11220,10 +11399,19 @@ var VX=(function(){
                   try{ _o=curOpts()||[]; }catch(_){}
                   if(!_o.length){ try{ _o=V.pickOpts()||[]; }catch(_){} }
                   if(!_o.length){ try{ _o=(V.catchOpts()||[]).map(function(x){ return x.label; }); }catch(_){} }
-                  if(_o.length){
-                    var _m=V.match(_t,_o);
-                    _real = !!(_m && (_m.kind==='pick' || _m.kind==='off' || _m.kind==='repeat'));
-                  }
+                  var _m = _o.length ? V.match(_t,_o) : null;
+                  /* EVERY WAY A PERSON CAN MEAN "I AM DONE TALKING TO YOU
+                     NOW". lock and next are his report; change is its
+                     opposite and belongs for the same reason — somebody
+                     correcting a pick mid-sentence is the most urgent
+                     interruption there is. */
+                  _real = !!(_m && (_m.kind==='pick'   || _m.kind==='off'
+                                 || _m.kind==='repeat' || _m.kind==='lock'
+                                 || _m.kind==='change'));
+                  /* Not an action. Now the echo guard gets its turn: if we
+                     did not just say it, it is the room, and the room does
+                     not interrupt us. */
+                  if(!_real && !V.selfEcho(_t)) _real = false;
                 }
               }catch(_){}
               if(_real){ window.speechSynthesis.cancel(); V.speaking=false; V.paint(); }
@@ -14436,9 +14624,24 @@ function showFinal(){
        which is comparable across nights in a way a seconds-banked total
        never was. Speed still breaks the tie, silently. */
     (function(){
+      /* ============ 160 IN THE RING, 165 IN THE TILE ==================
+         Founder's final card, 21 Aug. The ring read "160 OUT OF 1000" and
+         the tile touching it read "165 · Points tonight".
+
+         Three lines above, this function already says it: "The ending
+         must show the confirmed total, not this device's preview" — the
+         GN10 bug, where both players' cards printed their live-only
+         figure against a ceiling that includes the 600-point card. The
+         ring was fixed to use shownTotal(). This FALLBACK was not, and
+         still reached for S.pts.
+
+         It only shows when countGraded() has nothing, which is precisely
+         the buzzer — the last round is open and ungraded — so the two
+         numbers disagreed on the one screen where the number is the whole
+         point. One source. */
       var g=null; try{ g=countGraded(); }catch(_){}
       if(g && g.total) setStat(2, g.hits+'/'+g.total, 'Questions right');
-      else setStat(2, String(S.pts||0), 'Points tonight');
+      else setStat(2, String(shownTotal()), 'Points tonight');
     })();
     $f('finalTitle').textContent=`${L.End.replace(/[^A-Za-z]+$/,'')}, ${S.name||'player'}!`;
     $f('finalLb').innerHTML=
@@ -15114,10 +15317,49 @@ function clearSignedUp(){ try{ localStorage.removeItem(SIGNUP_KEY); }catch(e){} 
    way to get this wrong. No confirm() — a modal dialog on a phone mid-game
    is exactly the friction the whole app has been stripping out. */
 let unsubArmed=false;
+/* The same two-tap deletion, driven from the menu, where there is no
+   button of ours to retitle. The toast IS the "tap again" state — it is
+   the menu's own idiom, and the row rebuilds under it. */
+let unsubMenuArmed=0;
+async function unsubFromMenu(){
+  var now=Date.now();
+  if(now - unsubMenuArmed > 6000){
+    unsubMenuArmed = now;
+    try{ toast('Tap again to delete your email and phone from the list.'); }catch(_){}
+    return;
+  }
+  unsubMenuArmed = 0;
+  var res={ok:false,why:'threw'};
+  try{ res = (window.SB && SB.unsubscribe) ? (await SB.unsubscribe()) || res : res; }
+  catch(e){ res={ok:false, why:(e&&(e.code||e.name))||'threw'}; }
+  if(res.ok===true){
+    try{ clearSignedUp(); }catch(_){}
+    try{ window.__onList=false; }catch(_){}
+    /* Truthful, not triumphant — the same sentence the card used. The
+       mailer is a separate system with its own unsubscribe in every
+       footer, and pretending otherwise is a small lie that costs the
+       whole relationship. */
+    try{ toast('Done — you\u2019re off the list. If an email still reaches you, the link at its bottom stops them for good.'); }catch(_){}
+  }else{
+    try{ toast('That didn\u2019t go through. Email aisoundz9@gmail.com and we\u2019ll do it by hand.'); }catch(_){}
+  }
+  try{ var _mb=document.getElementById('menuBody'); if(_mb) _mb.innerHTML=menuRows(); }catch(_){}
+  try{ renderSignup(); }catch(_){}
+}
 async function unsubTap(){
+  /* ============ AND THEN I BROKE IT MOVING IT =======================
+     The unsubscribe came off the reward screen and into the menu, which
+     was right — and this function's first act is to find #unsubBtn, the
+     button that move DELETED, and `return` when it is missing. So the
+     menu row was a control that did nothing, silently, which is the exact
+     failure mode this repo produces more than any other.
+
+     A control with no button of its own does the work directly: confirm
+     once, then delete. Same two-tap rule, same wording, no second copy of
+     the deletion. */
   const btn=document.getElementById('unsubBtn');
   const note=document.getElementById('onListNote');
-  if(!btn) return;
+  if(!btn) return unsubFromMenu();
   if(!unsubArmed){
     unsubArmed=true;
     btn.textContent='Tap again to confirm →';
@@ -15174,7 +15416,33 @@ function renderSignup(){
      The promise on the checkbox — "unsubscribe any time" — still has to
      point at something inside the app, so the card stays exactly as it is
      everywhere else. It is the placement that was wrong, not the control. */
-  var onFinal=false; try{ onFinal = (S.screen==='final' || S.screen==='predreview'); }catch(_){}
+  /* ============ AND IT WAS ON THE FINAL SCREEN AGAIN ================
+     The note above is from GN12 and the fix below is correct — and the
+     founder's screenshot on 21 Aug shows the card sitting on the final
+     screen with its unsubscribe button, exactly as before.
+
+     `S.screen` is not current when renderSignup() runs. The screen change
+     and this render are not the same event, so which one happens last
+     decides what the guard sees — the identical defect as the game rail
+     drawing its tall chooser over a live question, and as six places
+     naming Quarter 1 at halftime. A guard on a value that is set
+     elsewhere is a guess about ordering.
+
+     Belt and braces: the button that made this expensive now lives in the
+     menu (see #onListCard), so the worst case here is a harmless line of
+     confirmation rather than an exit offered mid-celebration. The timing
+     guard stays because the card is still noise on that screen. */
+  var onFinal=false;
+  try{
+    onFinal = (S.screen==='final' || S.screen==='predreview');
+    /* Ask the DOM as well as the variable — it cannot be stale. */
+    if(!onFinal){
+      var _f=document.getElementById('s-final');
+      if(_f && _f.classList && _f.classList.contains('active')) onFinal=true;
+    }
+  }catch(_){}
+  /* The menu needs to know whether to offer the exit at all. */
+  try{ window.__onList = !!(S.mode==='live' && alreadySignedUp() && window.SB && SB.enabled); }catch(_){}
   if(on) on.style.display = (!onFinal && S.mode==='live' && alreadySignedUp() && !!(window.SB && SB.enabled)) ? 'block' : 'none';
   if(show){
     const e=document.getElementById('suEmail');
@@ -16211,6 +16479,46 @@ const HR={
   held:{},             // round INDEX -> played off the built-in questions, unscored
   heldQs:{}            // round INDEX -> the exact question texts that phone answered
 };
+
+/* ============ THE ROOM KNOWS WHICH QUARTER IT IS. ASK IT. ===========
+   Founder, 21 Aug, live, after the score rail switched him into the
+   football room at halftime: "now i cant get in." The screen said
+
+       Quarter 1 opens when this quarter ends · Halftime
+
+   with the scoreboard beside it reading NYJ 7 PIT 0, Q1 and Q2 both
+   already scored in that room, and three players on its board.
+
+   Everything that names the next round reads `S.nextQ ?? S.qi`, and BOTH
+   of those are this DEVICE's counters. `S.qi` only moves inside
+   startQuarter(); `S.nextQ` only moves inside afterReview(). A player who
+   arrives after a round has come and gone has run neither — so both are
+   0, and the app confidently offers them Quarter 1 of a game that is at
+   halftime.
+
+   That is not an edge case, it is the ordinary case for everybody except
+   the person who was watching from tip: anyone who switches rooms, anyone
+   who opens the link late, and every single stranger the growth plan is
+   trying to bring in. It is the worst possible first screen, because it is
+   not blank — it is confidently, checkably wrong, and the player can see
+   the scoreboard that contradicts it.
+
+   HR.doc is the newest round document the room has pushed, carrying `idx`
+   and `state`. It is a fact about the ROOM and cannot go stale the way a
+   local counter can. Take whichever is further along. */
+function roomNextRound(local){
+  var qi = Number(local)||0;
+  try{
+    var d = HR.doc;
+    if(d && typeof d.idx === 'number' && d.idx >= 0){
+      /* A scored round is behind us; a live one is the one to be in. */
+      var fromRoom = (d.state === 'scored') ? (d.idx + 1) : d.idx;
+      if(fromRoom > qi) qi = fromRoom;
+    }
+  }catch(_){}
+  return qi;
+}
+try{ window.roomNextRound = roomNextRound; }catch(_){}
 
 // The raw newest-round document for a round index, whatever its state.
 function hostedDoc(qi){ const d=HR.doc; return (d && d.idx===qi) ? d : null; }
@@ -18036,16 +18344,60 @@ async function finishLive(){
        both truer and more useful, because it tells them to go find the
        host rather than to celebrate. */
     var _un=0; try{ _un=awardCtx(rank).unsettled||0; }catch(_){}
+    /* ============ "THIS IS A COMMON BUG" — AND IT IS NOT A BUG ========
+       Founder, 21 Aug, screenshot of the final screen:
+
+         Hold on — 1 round is still unscored
+         ⚠ You answered a round that never came back with a score, so this
+         total is not final. Tell the host — they have your answers in the
+         Control Room and can settle it by hand.
+
+       Nothing was wrong. The Lynx room's Q4 was `state:'live'` with two
+       submissions and no key, and six minutes later the runner scored it
+       and the night finished 4/4. The runner even said so in its own log
+       at the buzzer: "Q4 is live on every phone · 4/4 already readable".
+
+       Here is why he called it common: THE LAST ROUND OF EVERY NIGHT
+       OPENS AT THE FINAL BUZZER — that is what "the round about Q4" means
+       — and ANSWER_MS is six minutes. The final screen appears at that
+       same buzzer. So on every night, for every player who answered Q4,
+       this alarm fires and stays up for six minutes, tells them their
+       score is wrong, and sends them to find a host who does not exist.
+       The one screen that is supposed to be the reward.
+
+       `unsettled` counts "I answered it and nothing came back", which
+       cannot tell a round that is still IN FLIGHT from one that is stuck.
+       HR.doc can: it carries the newest round and its state, and the
+       newest round is precisely the one still open. So subtract it. */
+    var _live=0;
+    try{
+      var _d=HR.doc;
+      if(_d && _d.state==='live' && typeof _d.idx==='number'){
+        var _ans=S.liveAnswers[_d.idx]||[], _res=S.results[_d.idx]||[];
+        var _playedIt=_ans.some(function(m){ return !!(m && m.choice); });
+        var _graded=_res.some(function(v){ return v!==undefined && v!==null; });
+        if(_playedIt && !_graded) _live=1;
+      }
+    }catch(_){}
+    var _stuck = Math.max(0, _un - _live);
     document.getElementById('finalTitle').textContent =
-      _un>0 ? `Hold on — ${_un} ${_un===1?'round is':'rounds are'} still unscored`
+      _stuck>0 ? `Hold on — ${_stuck} ${_stuck===1?'round is':'rounds are'} still unscored`
             : (rank===1 ? '🏆 You won the night!' : `Great game, ${S.name||'player'}!`);
     try{
       var _ub=document.getElementById('finalUnsettled');
       if(_ub){
-        if(_un>0){
-          _ub.textContent = '\u26A0\uFE0F You answered '+(_un===1?'a round':(_un+' rounds'))
+        if(_stuck>0){
+          _ub.textContent = '\u26A0\uFE0F You answered '+(_stuck===1?'a round':(_stuck+' rounds'))
             +' that never came back with a score, so this total is not final. '
             +'Tell the host \u2014 they have your answers in the Control Room and can settle it by hand.';
+          _ub.style.display='block';
+        } else if(_live>0){
+          /* Still in flight. Say what is happening and that there is
+             nothing to do — the listener updates this screen in place. */
+          var _tag=''; try{ _tag=roundTag(HR.doc.idx)||''; }catch(_){}
+          _ub.textContent = '\u23F3 Your '+(_tag||'last round')+' answers are locked in. '
+            +'The last round of the night settles a few minutes after the final buzzer \u2014 '
+            +'this screen updates itself, so there is nothing to do.';
           _ub.style.display='block';
         } else { _ub.style.display='none'; }
       }
@@ -20035,7 +20387,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-21-stalecatch.191';
+const STATS_BUILD='2026-08-21-onegrid.196';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -20267,7 +20619,7 @@ function navGo(tab){
          stopped the room poll and put a "back to my game" bar on top of
          the game. Land on the position the player is actually in. */
       var k='gametime';
-      try{ if(S.mode==='live' && S.place==='lobby'){ k='lobby'; renderLobby(S.nextQ!=null?S.nextQ:S.qi); } }catch(_){}
+      try{ if(S.mode==='live' && S.place==='lobby'){ k='lobby'; renderLobby(roomNextRound(S.nextQ!=null?S.nextQ:S.qi)); } }catch(_){}
       renderGametime(); go(k);
       try{ loadGameStats(true).then(function(){ if(map[S.screen]==='s-gametime') renderGametime(); }); }catch(_){} }
     else if(tab==='stats'){ go('stats'); renderStats(); loadGameStats(true).then(function(){ if(S.screen==='stats') renderStats(); }); }
@@ -20341,7 +20693,14 @@ function gameBarState(){
          Founder, 20 Aug: "When I'm on another page or tab I don't get an
          alert when there is another question." The alert was built, styled
          urgent and already written. It was asking about the wrong round. */
-      const _q = (S.nextQ!=null ? S.nextQ : S.qi) || 0;
+      /* AND THE SAME COUNTER AGAIN. The note above is right that this must
+         ask about the round being OFFERED rather than the one last played
+         — and it still asked a purely local pair. For anybody who joined
+         after tip both are 0, so this looked up round 0, found it scored,
+         and stayed silent: no red bar, no "tap to answer", through a live
+         round. That is the founder's "now i cant get in", and it is what
+         every late arrival gets. */
+      const _q = roomNextRound((S.nextQ!=null ? S.nextQ : S.qi) || 0);
       const d=(typeof hostedDoc==='function') && hostedDoc(_q);
       if(d && d.state==='live' && !(HR.submitted&&HR.submitted[d.id])) { open=true; tag=roundTag(_q); }
     }catch(_){}
@@ -20361,7 +20720,7 @@ function returnToGame(){
   try{
     const place=S.place||'lobby';
     if(place==='predict'){ buildPred(); go('predict'); return; }
-    if(place==='lobby'){ renderLobby(S.nextQ!=null?S.nextQ:S.qi); go('lobby'); return; }
+    if(place==='lobby'){ renderLobby(roomNextRound(S.nextQ!=null?S.nextQ:S.qi)); go('lobby'); return; }
     go(place);
   }catch(e){ try{ go('lobby'); }catch(_){} }
 }
@@ -20493,6 +20852,10 @@ function menuRows(){
   };
   R.push('<div class="mgrp">The game</div>');
   row('📖','How to play &amp; full rules','rules');
+  /* The exit, where a setting belongs — see the note on #onListCard.
+     Only shown to somebody actually on the list, so it is never an
+     invitation to leave something you have not joined. */
+  try{ if(window.__onList) row('📬','Email before each game night','unsub','On'); }catch(_){}
   try{ if(VX && VX.hasOut){ row(VX.on?'🔊':'🔈','Voice: read questions out loud','voice', VX.on?'On':'Off');
        row('🎙','Voice check — why isn\u2019t it hearing me?','voicecheck'); } }catch(_){}
   try{ if(S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0) row('▶','Back to my game','resume'); }catch(_){}
@@ -20573,6 +20936,13 @@ var MENU_GO={
          openMenu() puts it. */
       try{ var _mb=document.getElementById('menuBody'); if(_mb) _mb.innerHTML=menuRows(); }catch(_){}
     }catch(_){}
+  },
+  unsub:function(){
+    /* One writer. unsubTap() already owns the confirm, the delete and the
+       toast — this is the same control from a better place, not a second
+       copy of it. */
+    try{ unsubTap(); }catch(_){}
+    try{ var _mb=document.getElementById('menuBody'); if(_mb) _mb.innerHTML=menuRows(); }catch(_){}
   },
   voice:function(){ try{ VX.toggle(); }catch(_){} },
   voicecheck:function(){ try{ VX.openCheck(); }catch(_){} },
@@ -23868,7 +24238,8 @@ function gtStartRow(){
       if(dq>=NR) return '';                 // practice never goes to overtime
       return '<button class="btn" style="margin-top:11px" onclick="startQuarter('+dq+')">'+esc(startLabel(dq))+'</button>';
     }
-    var qi = (S.nextQ!=null ? S.nextQ : S.qi) || 0;
+    /* The room's position, not this device's. See roomNextRound(). */
+    var qi = roomNextRound((S.nextQ!=null ? S.nextQ : S.qi) || 0);
     /* liveRounds(), not NR — after Q4 is scored this is 4, and it only
        becomes 5 if an overtime round was actually pushed. A regulation
        night therefore still shows nothing here, which is the whole point. */
@@ -24000,6 +24371,9 @@ function renderGametimeRest(){
      nine tenths of that screen put together. */
   let out='';
   try{ out += gtStartRow(); }catch(_){}
+  /* Directly beneath the "Quarter 3 opens when this quarter ends" line,
+     because that line is the one that used to be followed by nothing. */
+  try{ out += gtCardWatch(); }catch(_){}
   try{ out += gtYourNight(); }catch(_){}
   if(!lean()){ try{ out += gtDeepCutBlock(); }catch(_){} }
 
@@ -24024,6 +24398,91 @@ function renderGametimeRest(){
   if(!lean()){ try{ feedRender(); }catch(_){} }
   else { try{ var fw=document.getElementById('gtFeed'); if(fw) fw.innerHTML=''; }catch(_){} }
 }
+
+/* ============ THE 25 MINUTES NOBODY BUILT FOR ========================
+   Founder, 21 Aug, live: "Is there anything we can do with our screen to
+   keep the engagement for the user" and "Make the game more enjoyable."
+
+   Here is the measurement that answers it. On Game Night #12 a player
+   spent 95 of the night's 106 minutes with no round open. Caught It went
+   from 8 a game to 12 tonight, which helps — but between rounds the
+   Gametime tab, the tab they are actually sitting on, renders ONE
+   DISABLED GREY BUTTON reading "Quarter 3 opens when this quarter ends".
+   That is the product for the large majority of the night.
+
+   And the thing that fixes it was already written, and already correct,
+   and on the wrong screen. The Stats tab carries a per-pick live race
+   whose best line is:
+
+       Needs 3 more to take the lead from Napheesa Collier.
+
+   That is the single most engaging sentence this app produces. It names a
+   player, a number, and a reason to look up at the television in the next
+   six minutes — and it is two taps away on the tab whose own code comment
+   says "the tab nobody opens during a game". The deep cut was moved here
+   for exactly that reason; this has a better claim, because it is about
+   the player's own 600 points rather than a fact about the game.
+
+   THIS IS A MIRROR, NOT A SECOND OPINION. Same picks, same box score,
+   same "best in THIS GAME, not the league" rule that was fixed after
+   "It shows the league leader. It should be who is the leader in the
+   game." If the two screens ever disagree, that is a bug in this
+   function, not a difference of view — so it reads the same fields in the
+   same order and computes nothing of its own.
+
+   Compact on purpose: no race bars and no season fallback. Bars are for
+   the tab you go to in order to study. This is the tab you glance at with
+   a game on, so it is one line a pick and the sentence that says what to
+   watch for. */
+function gtCardWatch(){
+  try{
+    if(!S || S.mode!=='live') return '';
+    if(typeof GS==='undefined' || !GS || !GS.box) return '';
+    if(!gsIsAbout(GAME)) return '';           // the feed is describing another room
+    var mine=[];
+    try{ mine=preds.filter(function(p){ return S.predChoices[p.id] && p.id!=='winner'; }); }catch(_){}
+    if(!mine.length) return '';
+    var cfg=sportCfg().box;
+    var KEY={pts:cfg.pts, reb:cfg.reb, ast:cfg.ast, stl:cfg.stl, blk:cfg.blk};
+
+    var lead=0, seen=0, rows=mine.map(function(p){
+      var k=KEY[p.id]; if(!k) return '';
+      var who=String(S.predChoices[p.id]||''); if(!who) return '';
+      var row=GS.box[who], val=row?gsNum(row[k]):null;
+      var bestN='', bestV=-1;
+      Object.keys(GS.box).forEach(function(nm){
+        var v=gsNum(GS.box[nm][k]); if(v!=null && v>bestV){ bestV=v; bestN=nm; }
+      });
+      if(val==null && bestV<0) return '';     // the game has not produced this stat yet
+      seen++;
+      var ahead = (val!=null && bestV>=0 && val>=bestV);
+      if(ahead) lead++;
+      /* The sentence. Ahead gets a short one because there is nothing to
+         do about it; behind gets the number, because that IS the thing to
+         watch for. */
+      var need = ahead
+        ? 'in front'
+        : (val==null ? 'hasn\u2019t recorded one yet'
+                     : 'needs '+((bestV-val)+1)+' more to pass '+esc(bestN));
+      return '<div class="gtcwRow">'
+        + '<span class="gtcwCat">'+esc(String(p.label||'').replace(/^most /i,''))+'</span>'
+        + '<span class="gtcwWho'+(ahead?' on':'')+'">'+esc(who)+' <b>'+(val==null?'\u2013':val)+'</b></span>'
+        + '<span class="gtcwNeed">'+need+'</span>'
+        + '</div>';
+    }).join('');
+    if(!seen) return '';
+
+    /* THE STAKES GO IN THE HEADER. "600 still riding" is the most
+       interesting number the app knows and it was a grey caption. */
+    var riding=0; try{ riding=predRidingPts(); }catch(_){}
+    return '<div class="card gtcw">'
+      + '<div class="alab"><span>Your card, live</span>'
+      +   '<em>'+lead+' of '+seen+' in front'+(riding?(' \u00b7 '+riding+' riding'):'')+'</em></div>'
+      + rows
+      + '</div>';
+  }catch(_){ return ''; }
+}
+try{ window.gtCardWatch = gtCardWatch; }catch(_){}
 
 /* The deep cut, in Arena dress. Moved out of the Stats tab, which is the
    tab nobody opens during a game — this is the one thing on the screen a
@@ -24416,6 +24875,25 @@ body.member #s-landing .brand{margin-top:6px}
   line-height:1.25;flex-wrap:wrap}
 .alab s{text-decoration:none;color:var(--teal)}
 .alab em{font-style:normal;margin-left:auto;color:var(--dim);letter-spacing:1.2px}
+/* ---- YOUR CARD, LIVE, on the tab you are actually sitting on --------
+   See gtCardWatch(). Two lines a pick: who and their number, then the
+   sentence that says what to watch for. The sentence is the point, so it
+   gets its own line rather than being squeezed onto the right at 11px —
+   this has to be readable at arm's length with a game on, which is the
+   distance nothing else in this app is designed for.
+
+   12px is the floor across this design system and the need line sits at
+   13px deliberately: it is the line a player reads, not a label. */
+.gtcw{padding:15px 16px 6px;margin-top:11px}
+.gtcwRow{padding:9px 0 10px;border-top:1px solid var(--line)}
+.gtcwRow:first-of-type{border-top:0;padding-top:2px}
+.gtcwCat{display:block;font-size:12px;font-weight:800;letter-spacing:1.2px;
+  text-transform:uppercase;color:var(--dim);margin-bottom:3px}
+.gtcwWho{display:inline-block;font-size:15px;font-weight:800;color:var(--ink);
+  line-height:1.2}
+.gtcwWho b{font-variant-numeric:tabular-nums;margin-left:5px}
+.gtcwWho.on{color:#2ee6a6}
+.gtcwNeed{display:block;font-size:14px;color:var(--muted);margin-top:2px;line-height:1.35}
 .abig{font-size:46px;font-weight:900;letter-spacing:-2.4px;line-height:.95;
   font-variant-numeric:tabular-nums;color:var(--ink)}
 .abig.team{color:var(--home)}

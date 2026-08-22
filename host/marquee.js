@@ -255,6 +255,14 @@ function nextNumber(){
   const numbers = new Map();
   picked.forEach(g => {
     const row = byIdRow.get(g.nightId);
+    /* ADVISORY ONLY, AS OF 21 AUG. host/build-slate.js now derives the
+       game number from the TIP-OFF ORDER, counting on from the previous
+       night, and it does so AFTER this file's numbers are applied — so
+       whatever is written here is overwritten. It is kept because the
+       marquee file is still human-readable and a number beside each row
+       helps a person scan it, but it is no longer the authority. Two
+       sources of truth for one number is what put a 4:30 game between a
+       4:00 and a 5:15 as "#19". */
     if(row && row.gn){ numbers.set(g.nightId, String(row.gn)); return; }
     numbers.set(g.nightId, '');            // filled below, after the max is known
   });

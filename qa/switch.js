@@ -209,7 +209,58 @@ const ROOM_B = {
     /* ---- mid-question it must shrink and still show both ---- */
     S.place = 'live'; paintGameRail();
     out.railPlaying = rail ? rail.innerText : '';
-    out.railChips = document.querySelectorAll('#gameRail .grChip').length;
+    out.railChips = document.querySelectorAll('#gameRail .grTile').length;
+
+    /* ============ AND EVERY ROOM MUST BE ON THE SCREEN ================
+       Founder, 21 Aug, twice: "theres no way for me to get to the tempo
+       fire game" and then "i still cant get there."
+
+       Everything above passed while that was true. The rail RENDERED all
+       four rooms, its innerText CONTAINED the fourth, and a check counting
+       tiles or reading text saw nothing wrong — the fourth tile was simply
+       past the right edge of a box you could only reach by scrolling
+       sideways, which not every device can do.
+
+       Text is not visibility. So measure: four rooms, a phone-width
+       column, and every tile's right edge must sit inside the rail's own
+       box, with nothing hidden behind an overflow. This is the check that
+       could have caught it, and none of the 100-odd others could. */
+    (function(){
+      const C = (n)=>({ nightId:'n'+n, gn:15+n, sport:'basketball', league:'wnba',
+                        awayAbbr:'AW'+n, homeAbbr:'HM'+n, away:'Away '+n, home:'Home '+n,
+                        espnEvent:'e'+n, tipISO:'2026-08-22T02:00Z' });
+      SLATE.games = [C(1),C(2),C(3),C(4)];
+      TICK.by = {}; [1,2,3,4].forEach(n=>{ TICK.by['e'+n]={state:'in',detail:'Q1',as:'8',hs:'2'}; });
+      TICK.at = Date.now();
+      /* Measure the density a PLAYER sees mid-game. The rail reads the
+         active screen from the DOM, so put the player on one — poking
+         S.place would be testing a variable the renderer no longer
+         consults, which is the whole reason it stopped being stale. */
+      try{ go('gametime'); }catch(_){}
+      paintGameRail();
+      const r = document.getElementById('gameRail');
+      const box = r.getBoundingClientRect();
+      const tiles = Array.from(r.querySelectorAll('.grTile'));
+      out.fourRooms = {
+        drawn: tiles.length,
+        /* a tile is REACHABLE when it is fully inside the rail's box */
+        offRight: tiles.filter(t=>t.getBoundingClientRect().right > box.right + 1).length,
+        offBottom: 0,
+        scrollsSideways: (r.scrollWidth - r.clientWidth) > 1,
+        innerScrollers: Array.from(r.querySelectorAll('*'))
+          .filter(e=>(e.scrollWidth - e.clientWidth) > 1).length,
+        scrollerNames: Array.from(r.querySelectorAll('*'))
+          .filter(e=>(e.scrollWidth - e.clientWidth) > 1)
+          .map(e=>e.className+'('+(e.scrollWidth-e.clientWidth)+'px over)').slice(0,4).join(', '),
+        railH: Math.round(box.height),
+        mode: r.getAttribute('data-mode'),
+        tileH: tiles.length ? Math.round(tiles[0].getBoundingClientRect().height) : 0,
+        perRow: (function(){ if(!tiles.length) return 0; const top=Math.round(tiles[0].getBoundingClientRect().top);
+                  return tiles.filter(t=>Math.round(t.getBoundingClientRect().top)===top).length; })(),
+        showing: tiles.length ? Array.from(tiles[0].children).filter(c=>getComputedStyle(c).display!=='none')
+                  .map(c=>c.className+':'+Math.round(c.getBoundingClientRect().height)).join(' | ') : ''
+      };
+    })();
 
     /* ============ THE CAUGHT IT LANE IS PART OF THE ROOM ==============
        S was made per-room in August. PCI — how many calls you made, how
@@ -290,7 +341,28 @@ const ROOM_B = {
 
   ok('switch.mid-question-no-game-disappears',
      r.railChips >= 2,
-     `only ${r.railChips} games on the strip mid-question — shrinking must not cost you the other scores`);
+     `only ${r.railChips} games mid-question — shrinking must not cost you the other scores`);
+
+  /* ============ TEXT IS NOT VISIBILITY ==============================
+     Every rail check above passed on the night the founder could not
+     reach a live room. They read innerText and counted elements; the
+     fourth tile was rendered, present in the text, and off the right edge
+     of a box only a touch device could scroll. See the probe in the page
+     for the full story. */
+  ok('switch.every-room-is-actually-on-the-screen',
+     r.fourRooms && r.fourRooms.drawn === 4 && r.fourRooms.offRight === 0,
+     r.fourRooms
+       ? `${r.fourRooms.drawn} of 4 rooms drawn, ${r.fourRooms.offRight} past the right edge — a room you cannot see is a room that does not exist`
+       : 'the four-room probe did not run');
+  ok('switch.the-chooser-never-scrolls-sideways',
+     r.fourRooms && !r.fourRooms.scrollsSideways && r.fourRooms.innerScrollers === 0,
+     r.fourRooms
+       ? `rail scrollsSideways=${r.fourRooms.scrollsSideways}, ${r.fourRooms.innerScrollers} inner horizontal scroller(s) [${r.fourRooms.scrollerNames}] — a horizontal scroll is an assumption about the device, not an affordance`
+       : 'the four-room probe did not run');
+  ok('switch.four-rooms-do-not-eat-the-screen',
+     r.fourRooms && r.fourRooms.railH > 0 && r.fourRooms.railH <= 130,
+     r.fourRooms ? `the compact rail is ${r.fourRooms.railH}px for four rooms (mode=${r.fourRooms.mode}, tile=${r.fourRooms.tileH}px, ${r.fourRooms.perRow}/row, spans: ${r.fourRooms.showing}); over 130 and it is a chooser sitting on the game`
+                 : 'the four-room probe did not run');
 
   ok('switch.a-new-room-starts-the-caught-it-lane-at-zero',
      r.pci && r.pci.fresh && r.pci.fresh.pts === 0 && r.pci.fresh.streak === 0 &&

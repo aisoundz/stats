@@ -63,9 +63,17 @@ const MLB = {
 };
 
 /* ---------------------------------------------------------------- NFL
-   The drive is the unit and it grades itself: displayResult is a clean
-   enum, so football is the cheapest bank of the six. Ten seconds between
-   possessions is the natural rhythm. */
+   REWRITTEN 21 Aug 2026 to match admin.html's TEMPLATES.football exactly,
+   question for question and string for string. It had drifted — this file
+   still asked "who leads at the half" long after the shipping bank stopped
+   — and a QA suite checking a bank nobody publishes is a suite that passes
+   for reasons unrelated to the product. If you change one of these two
+   files, change both.
+
+   Sixteen questions, sixteen different resolvers, no fact asked twice,
+   nothing that is on the scoreboard and nothing off the season box score.
+   Every cutoff was tuned against 78 finished games; the most lopsided line
+   in here sits at 56% for its top answer.                              */
 const NFL = {
   tags:  ['Q1', 'Q2', 'Q3', 'Q4'],
   names: ['Quarter 1', 'Quarter 2', 'Quarter 3', 'Quarter 4'],
@@ -74,42 +82,42 @@ const NFL = {
     [
       { t: 'How did the opening drive end?',
         o: ['Touchdown', 'Field goal', 'Punt', 'Turnover', 'Downs', 'Missed FG'], r: 'nflFirstDriveResult' },
-      { t: 'Punts in the first?',
-        o: ['0–1', 'Two', 'Three', 'Four or more'], r: 'nflPuntsBand' },
-      { t: 'More runs or more passes?',
-        o: ['Rush', 'Pass', 'Dead even'], r: 'nflMoreRushOrPass' },
-      { t: 'First points of the game came how?',
-        o: ['Touchdown', 'Field goal', 'Safety', 'Nobody scored'], r: 'nflFirstScoreKind' }
+      { t: 'Which side had to punt it away first?',
+        o: ['{HOME}', '{AWAY}', 'Nobody punted'], r: 'nflFirstPuntTeam' },
+      { t: 'The longest gain of the first — how far?',
+        o: ['19 yards or fewer', '20 to 29', '30 to 44', '45 or more'], r: 'nflLongestGainBand' },
+      { t: 'Three-and-outs in the first, both teams — how many?',
+        o: ['None', 'One', 'Two', 'Three or more'], r: 'nflThreeAndOutsBand' }
     ],
     [
-      { t: 'Touchdowns in the second?',
-        o: ['None', 'One', 'Two', 'Three or more'], r: 'nflTouchdownsBand' },
-      { t: 'Flags thrown in the second?',
-        o: ['0–1', '2–3', '4–5', 'Six or more'], r: 'nflPenaltiesBand' },
-      { t: 'Longest drive of the quarter?',
-        o: ['Under 20 yards', '21–45', '46–70', '71 or more'], r: 'nflLongestDriveBand' },
-      { t: 'Who leads at the half?',
-        o: ['{AWAY}', '{HOME}', 'Tied'], r: 'nflLeadAfter' }
+      { t: 'The first touchdown of the second — how did it come?',
+        o: ['On the ground', 'Through the air', 'Some other way', 'No touchdown in the second'], r: 'nflFirstTdKind' },
+      { t: 'Gains of twenty yards or more in the second — how many?',
+        o: ['None', 'One', 'Two', 'Three or more'], r: 'nflExplosivePlaysBand' },
+      { t: 'After the two-minute warning, who put points up before the half?',
+        o: ['{HOME}', '{AWAY}', 'Both of them', 'Nobody scored'], r: 'nflTwoMinuteScore' },
+      { t: 'The very last play before halftime — what was it?',
+        o: ['A kick', 'A kneel-down', 'A pass play', 'A run'], r: 'nflHalfEndPlay' }
     ],
     [
-      { t: 'Turnovers in the third?',
-        o: ['None', 'One', 'Two', 'Three or more'], r: 'nflTurnoversBand' },
-      { t: 'Drives that ended in points?',
-        o: ['None', 'One', 'Two', 'Three or more'], r: 'nflScoringDrivesBand' },
-      { t: 'How did the first drive of the half end?',
-        o: ['Touchdown', 'Field goal', 'Punt', 'Turnover', 'Downs', 'Missed FG'], r: 'nflFirstDriveResult' },
-      { t: 'More runs or more passes in the third?',
-        o: ['Rush', 'Pass', 'Dead even'], r: 'nflMoreRushOrPass' }
+      { t: 'First team inside the twenty in the third — what did they get?',
+        o: ['A touchdown', 'A field goal', 'They came away empty', 'Nobody got that close'], r: 'nflRedZoneFirstTrip' },
+      { t: 'Who gave up the first sack of the third?',
+        o: ['{HOME}', '{AWAY}', 'Nobody got sacked'], r: 'nflFirstSackTeam' },
+      { t: 'Third downs picked up in the third, both teams — how many?',
+        o: ['One or fewer', 'Two', 'Three', 'Four or more'], r: 'nflThirdDownConvBand' },
+      { t: 'Did the second half open with points?',
+        o: ['Yes', 'No'], r: 'nflHalfOpenScored' }
     ],
     [
-      { t: 'Touchdowns in the fourth?',
-        o: ['None', 'One', 'Two', 'Three or more'], r: 'nflTouchdownsBand' },
-      { t: 'Who moved the ball further tonight?',
-        o: ['{AWAY}', '{HOME}', 'Dead even'], r: 'nflMoreTotalYards' },
-      { t: 'Who picked up more first downs?',
-        o: ['{AWAY}', '{HOME}', 'Dead even'], r: 'nflMoreFirstDowns' },
-      { t: 'Who leads after four?',
-        o: ['{AWAY}', '{HOME}', 'Tied'], r: 'nflLeadAfter' }
+      { t: 'Fourth down in the fourth — did anybody go for it?',
+        o: ['Nobody went for it', 'Went for it and got it', 'Went for it and came up short', 'Both happened'], r: 'nflFourthDownOutcome' },
+      { t: 'Who coughed it up first in the fourth?',
+        o: ['{HOME}', '{AWAY}', 'Neither side turned it over'], r: 'nflFirstTurnoverTeam' },
+      { t: 'Timeouts called in the fourth — how many?',
+        o: ['One or fewer', 'Two or three', 'Four or five', 'Six or more'], r: 'nflTimeoutsBand' },
+      { t: 'Did anybody score inside the last two minutes?',
+        o: ['Yes', 'No'], r: 'nflLateScore' }
     ]
   ]
 };

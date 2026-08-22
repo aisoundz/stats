@@ -17,7 +17,7 @@
   "change-it.js": 6,
   "chrome.js": 40,
   "places.js": 3,
-  "switch.js": 12,
+  "switch.js": 15,
   "hero.js": 25,
   "listeners.js": 8,
   "practice.js": 9,
@@ -31,7 +31,7 @@
   "stats-answers.js": 11,
   "finished.js": 9,
   "voice-android.js": 16,
-  "room-position.js": 19,
+  "room-position.js": 22,
   "card-watch.js": 11,
   "caught-stale.js": 21,
   "bargein.js": 20

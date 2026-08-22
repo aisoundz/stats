@@ -173,6 +173,28 @@ const TIER={
      ITSELF — so the app's own loudspeaker is in its own recogniser.
      Different platform, different failures, its own suite. */
   'voice-android.js': {tier:'player'},
+  /* THREE BUGS THE FOUNDER FOUND WHILE PLAYING A LIVE GAME, 21 AUG. Each
+     one was a screen reading a LOCAL variable when the ROOM already knew
+     the answer: a player who joined at halftime was offered Quarter 1 and
+     never shown the red "a round is open" bar; YOUR NIGHT printed 0 with
+     the board beside it printing 10; and the game chooser floated on top
+     of a live question. None needed new data. All three are the ordinary
+     experience of anybody who arrives after tip — which is everybody we
+     are trying to recruit. */
+  'room-position.js': {tier:'player'},
+  /* The 25 minutes between rounds used to render one disabled grey
+     button. gtCardWatch() puts the live per-pick race there — "needs 3
+     more to pass Atkins" — which is the sentence that makes somebody look
+     up at the television. It is a MIRROR of the Stats tab's version, so
+     this suite mostly exists to stop the two disagreeing. */
+  'card-watch.js': {tier:'player'},
+  /* "it doesnt listen to my answer until after the full question asks...
+     and it doesnt take lock in or next." The echo guard that stops the app
+     answering its own question was also eating the player's answer, because
+     the words you answer with are the words we just read out. Order of
+     tests, not new logic — and voice is the north star, so it gets a suite
+     that RUNS the decision rather than reading around it. */
+  'bargein.js': {tier:'player'},
   /* Reads source, not a browser. Guards the shape of bug this repo produces
      more than any other: something that fails and tells nobody. */
   'silence.js':       {tier:'static'},
@@ -381,9 +403,33 @@ const BASE_FILE=path.join(DIR,'.counts.json');
 let base={}; try{ base=JSON.parse(fs.readFileSync(BASE_FILE,'utf8')); }catch(_){}
 const shrunk=[];
 for(const r of results){
-  const m=r.line.match(/(\d+)\s+(?:passed|promise\(s\) held|voice grammar cases|checks?)/i)
-        || r.line.match(/ALL\s+(\d+)\s+CHECKS/i)
-        || r.line.match(/all\s+(\d+)\s+/i);
+  /* ============ READ THE WHOLE SUITE, NOT ITS LAST LINE ==============
+     21 Aug: the gate reported "qa.js floor was 103, this run reported no
+     number" and told me to treat the run as RED. qa.js had in fact printed
+     `537 CHECKS PASS, no build failures` — and then four more lines, the
+     standing note about the live-feed group wedging on this machine, which
+     is a known Jetson condition. The count was there; only the tail was
+     looked at.
+
+     That is a false red on a mechanism whose entire job is to be believed.
+     A ratchet that cries wolf on a green build is how somebody learns to
+     promote through a warning, which is the failure the honesty work was
+     doing before it — so the parser looks at everything the suite said and
+     takes the LAST count it finds, rather than hoping the count is the
+     last thing printed. */
+  const pat=[/(\d+)\s+(?:passed|promise\(s\) held|voice grammar cases|checks?)/ig,
+             /ALL\s+(\d+)\s+CHECKS/ig,
+             /(\d+)\s+CHECKS\s+PASS/ig];
+  const findIn=(txt)=>{
+    if(!txt) return null;
+    for(const re of pat){
+      re.lastIndex=0;
+      const all=[...String(txt).matchAll(re)];
+      if(all.length) return all[all.length-1];
+    }
+    return null;
+  };
+  const m = findIn(r.line) || findIn(r.out);
   if(!m) continue;
   const n=Number(m[1]);
   if(!isFinite(n) || n<=0) continue;

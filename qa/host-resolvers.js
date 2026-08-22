@@ -59,8 +59,13 @@ const AUTO = ctx.AUTO, R = AUTO.R;
 const load = f => { const p = path.join(DIR, f); return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null; };
 const sidesOf = j => {
   const cs = j.header.competitions[0].competitors;
-  return { home: cs.find(c => c.homeAway === 'home').team.displayName,
-           away: cs.find(c => c.homeAway === 'away').team.displayName };
+  const h = cs.find(c => c.homeAway === 'home'), a = cs.find(c => c.homeAway === 'away');
+  /* THE IDS, NOT JUST THE NAMES. Any check that recomputes "which side did
+     this" has to start from the team id on the play row — the names are
+     what the ANSWER looks like, and mapping one to the other is the step
+     where a check quietly stops being independent. */
+  return { home: h.team.displayName, away: a.team.displayName,
+           homeId: String(h.team.id), awayId: String(a.team.id) };
 };
 const bandOf = (n, cuts, opts) => { for (let i = 0; i < cuts.length; i++) if (n <= cuts[i]) return opts[i]; return opts[opts.length - 1]; };
 
@@ -124,6 +129,140 @@ function run(tag, fn, j, p, opts, want) {
       run(`nfl p${p} lead`, R.nflLeadAfter, j, p, O.lead, want);
       run(`nfl p${p} 1stDrive`, R.nflFirstDriveResult, j, p, ['Touchdown','Field goal','Punt','Turnover','Downs','Missed FG']);
       run(`nfl p${p} longDrive`, R.nflLongestDriveBand, j, p, ['0-20','21-45','46-70','71 or more']);
+
+      /* ---- the 21 Aug bank: twelve new resolvers ---------------------
+         EVERY EXPECTATION HERE IS RECOMPUTED FROM THE RAW FEED IN THIS
+         FILE. That is the whole point of the suite — asking a resolver
+         whether it agrees with itself proves nothing — and it matters more
+         for this batch than for the drive-result ones, because these read
+         down, distance, clock and yardage rather than one clean enum. */
+      const GAIN = /^(Rush|Pass Reception|Rushing Touchdown|Passing Touchdown)$/;
+      const ty   = x => String(((x.type) || {}).text || '');
+      const off  = x => { try { return String(x.start.team.id); } catch (_) { return null; } };
+      const nameOf = id => (id === String(s.homeId) ? s.home : s.away);
+      /* Spelled out again rather than imported, deliberately: if the
+         conversion rule in admin.html is edited, this line is what
+         disagrees with it. */
+      const conv = x => !!x.scoringPlay ||
+        (Number(((x.end) || {}).down) === 1 &&
+         String((((x.end) || {}).team || {}).id) === String((((x.start) || {}).team || {}).id));
+      const gains = p => pIn(p).filter(x => GAIN.test(ty(x))).map(x => Number(x.statYardage)).filter(n => isFinite(n));
+      const secs = x => { const d = String((((x.clock) || {}).displayValue) || '').trim();
+        const m = d.match(/^(\d+):(\d+)/); if (m) return +m[1] * 60 + +m[2];
+        return /^\d+(\.\d+)?$/.test(d) ? Math.round(+d) : null; };
+
+      const Oq = {
+        punt:  [s.home, s.away, 'Nobody punted'],
+        gain:  ['19 yards or fewer', '20 to 29', '30 to 44', '45 or more'],
+        three: ['None', 'One', 'Two', 'Three or more'],
+        expl:  ['None', 'One', 'Two', 'Three or more'],
+        td:    ['On the ground', 'Through the air', 'Some other way', 'No touchdown here'],
+        twomin:[s.home, s.away, 'Both of them', 'Nobody scored'],
+        endpl: ['A kick', 'A kneel-down', 'A pass play', 'A run'],
+        rz:    ['A touchdown', 'A field goal', 'They came away empty', 'Nobody got that close'],
+        sack:  [s.home, s.away, 'Nobody got sacked'],
+        third: ['One or fewer', 'Two', 'Three', 'Four or more'],
+        yn:    ['Yes', 'No'],
+        fourth:['Nobody went for it', 'Went for it and got it', 'Went for it and came up short', 'Both happened'],
+        turn:  [s.home, s.away, 'Neither side turned it over'],
+        tos:   ['One or fewer', 'Two or three', 'Four or five', 'Six or more']
+      };
+
+      const firstPunt = pIn(p).find(x => ty(x) === 'Punt');
+      run(`nfl p${p} 1stPunt`, R.nflFirstPuntTeam, j, p, Oq.punt,
+          firstPunt ? nameOf(off(firstPunt)) : 'Nobody punted');
+
+      run(`nfl p${p} longGain`, R.nflLongestGainBand, j, p, Oq.gain,
+          gains(p).length ? bandOf(Math.max(...gains(p)), [19, 29, 44], Oq.gain) : undefined);
+
+      run(`nfl p${p} 3andOut`, R.nflThreeAndOutsBand, j, p, Oq.three,
+          bandOf(dIn(p).filter(d => Number(d.offensivePlays) <= 3 && /punt/i.test(d.displayResult || '')).length, [0, 1, 2], Oq.three));
+
+      run(`nfl p${p} explosive`, R.nflExplosivePlaysBand, j, p, Oq.expl,
+          bandOf(pIn(p).filter(x => GAIN.test(ty(x)) && Number(x.statYardage) >= 20).length, [0, 1, 2], Oq.expl));
+
+      const firstTd = pIn(p).find(x => x.scoringPlay && /touchdown/i.test(String((((x.scoringType) || {}).name) || ty(x))));
+      run(`nfl p${p} 1stTD`, R.nflFirstTdKind, j, p, Oq.td,
+          !firstTd ? 'No touchdown here'
+                   : (ty(firstTd) === 'Rushing Touchdown' ? 'On the ground'
+                   : (ty(firstTd) === 'Passing Touchdown' ? 'Through the air' : 'Some other way')));
+
+      /* Only the 2nd and 4th quarters have a two-minute warning at all;
+         in the 1st and 3rd this must be SILENT, and undefined truth is how
+         that is expressed without excusing silence anywhere else. */
+      const wi = pIn(p).findIndex(x => /two-minute warning/i.test(ty(x)));
+      let twoWant;
+      if (wi >= 0) {
+        const after = pIn(p).slice(wi + 1).filter(x => x.scoringPlay);
+        const who = [...new Set(after.map(off).filter(Boolean))];
+        twoWant = !after.length ? 'Nobody scored' : (who.length > 1 ? 'Both of them' : nameOf(who[0]));
+      }
+      run(`nfl p${p} 2minScore`, R.nflTwoMinuteScore, j, p, Oq.twomin, twoWant);
+      must(wi >= 0 || (p !== 2 && p !== 4), `nfl p${p}: no two-minute warning row in a quarter that must have one`);
+
+      run(`nfl p${p} lastPlay`, R.nflHalfEndPlay, j, p, Oq.endpl);
+
+      /* RUN-ONLY WAS NOT ENOUGH HERE, AND IT COST A WRONG ANSWER.
+         nflRedZoneFirstTrip offers "They came away empty" and "Nobody got
+         that close" — opposite facts — and for its first hour the
+         no-trip branch matched the wrong one, so quarter 3 of this
+         fixture, in which no team snapped the ball inside the twenty,
+         answered "they came away empty". A legality check cannot see that:
+         both strings are legal options. Only a value recomputed here can.
+         So the trip is rebuilt from the raw drives below. */
+      let rzWant = 'Nobody got that close';
+      outer: for (const d of drives) {
+        for (const x of (d.plays || [])) {
+          if (Number((x.period || {}).number) !== p) continue;
+          if (/^(Timeout|Official Timeout|Two-minute warning|End )/.test(ty(x))) continue;
+          const e = x.end || {}, y = Number(e.yardsToEndzone);
+          if (!isFinite(y) || y > 20) continue;
+          if (String((e.team || {}).id) !== String((d.team || {}).id)) continue;
+          const r = String(d.displayResult || '');
+          rzWant = r === 'Touchdown' ? 'A touchdown' : (r === 'Field Goal' ? 'A field goal' : 'They came away empty');
+          break outer;
+        }
+      }
+      run(`nfl p${p} redZone`, R.nflRedZoneFirstTrip, j, p, Oq.rz, rzWant);
+
+      const firstSack = pIn(p).find(x => /\bsacked\b/i.test(String(x.text || '')));
+      run(`nfl p${p} 1stSack`, R.nflFirstSackTeam, j, p, Oq.sack,
+          firstSack ? nameOf(off(firstSack)) : 'Nobody got sacked');
+
+      const thirds = pIn(p).filter(x => { try { return Number(x.start.down) === 3 && ty(x) !== 'Penalty' && !/^(Timeout|Official Timeout|Two-minute warning|End )/.test(ty(x)); } catch (_) { return false; } });
+      run(`nfl p${p} 3rdConv`, R.nflThirdDownConvBand, j, p, Oq.third,
+          thirds.length ? bandOf(thirds.filter(conv).length, [1, 2, 3], Oq.third) : undefined);
+
+      run(`nfl p${p} halfOpen`, R.nflHalfOpenScored, j, p, Oq.yn,
+          dIn(p).length ? (dIn(p)[0].isScore ? 'Yes' : 'No') : undefined);
+
+      const goFor = pIn(p).filter(x => {
+        try { if (Number(x.start.down) !== 4) return false; } catch (_) { return false; }
+        const t = ty(x);
+        /* END PERIOD ROWS CARRY A DOWN. The quarter-boundary marker
+           inherits start.down 4 from the punt that is about to be snapped
+           in the next quarter, so leaving it in counts a clock event as a
+           failed fourth-down gamble — which is exactly what this check did
+           on its first run against quarter 3 of the fixture. */
+        if (/^(Punt|Field Goal|Blocked Field Goal|Kickoff|Penalty|Timeout|Official Timeout|Two-minute warning|End )/.test(t)) return false;
+        return !/kneel/i.test(String(x.text || ''));
+      });
+      const made = goFor.filter(conv).length;
+      run(`nfl p${p} 4thDown`, R.nflFourthDownOutcome, j, p, Oq.fourth,
+          !goFor.length ? 'Nobody went for it'
+            : (made && made < goFor.length ? 'Both happened'
+            : (made ? 'Went for it and got it' : 'Went for it and came up short')));
+
+      const firstTO = pIn(p).find(x => x.isTurnover);
+      run(`nfl p${p} 1stTO`, R.nflFirstTurnoverTeam, j, p, Oq.turn,
+          firstTO ? nameOf(off(firstTO)) : 'Neither side turned it over');
+
+      run(`nfl p${p} timeouts`, R.nflTimeoutsBand, j, p, Oq.tos,
+          bandOf(pIn(p).filter(x => ty(x) === 'Timeout').length, [1, 3, 5], Oq.tos));
+
+      const late = pIn(p).filter(x => { const c = secs(x); return c !== null && c <= 120; });
+      run(`nfl p${p} lateScore`, R.nflLateScore, j, p, Oq.yn,
+          late.length ? (late.some(x => x.scoringPlay) ? 'Yes' : 'No') : undefined);
     }
     run('nfl 1stDowns', R.nflMoreFirstDowns, j, 4, [s.away, s.home, 'Tied']);
     run('nfl yards',    R.nflMoreTotalYards, j, 4, [s.away, s.home, 'Tied']);

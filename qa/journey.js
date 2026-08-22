@@ -221,10 +221,46 @@ const FAKE_SLATE=[
   ok('journey.the-pick-sheet-opens', !entered.err && entered.screen==='predict', entered.err||`screen=${entered.screen}`);
   ok('journey.a-pick-is-recorded', (entered.picks||0)>=1, `${entered.picks} pick(s)`);
 
-  /* ---- 4. THE RAIL IS STILL REACHABLE MID-PICK ---------------------- */
-  s=await state();
-  ok('journey.you-can-still-reach-the-rail-while-picking', s.railVisible===true,
-     'the way to the other game disappeared once picking started — this is the reported bug');
+  /* ---- 4. THE RAIL IS STILL REACHABLE MID-PICK ----------------------
+     WHAT "REACHABLE" MEANS CHANGED ON 21 AUG, AND NOT BY WEAKENING IT.
+
+     This asserted the rail was IN THE VIEWPORT, which was free while the
+     rail was `position:sticky` — it followed the player everywhere. That
+     stickiness is what put a 130px chooser on top of a live question and
+     failed qa/chrome.js at 17 of 28 scroll positions on an iPhone SE, so
+     the rail is static now and sits at the top of the screen instead.
+
+     The bug this check remembers is REAL and must stay covered: "the way
+     to the other game disappeared once picking started." So the claim is
+     still that a player can get there — it is the route that changed,
+     from "it is already under your eyes" to "scroll up and it is the
+     first thing on the page."
+
+     That is not the same trade as the horizontal strip. A sideways scroll
+     inside a nested box is an ASSUMPTION about the device — a wheel
+     cannot do it, a remote cannot. Scrolling the page vertically is how
+     you read the page at all; every device that can show this screen can
+     do it. So: scroll to the top of the screen the player is actually on,
+     and demand the rail be there, with its tiles, ready to tap. */
+  const reach = await p.evaluate(async()=>{
+    const app=document.getElementById('app');
+    if(app) app.scrollTop=0;
+    window.scrollTo(0,0);
+    await new Promise(r=>setTimeout(r,120));
+    const e=document.getElementById('gameRail');
+    if(!e) return {ok:false, why:'no rail element'};
+    const r=e.getBoundingClientRect();
+    return {
+      ok: getComputedStyle(e).display!=='none' && r.height>0
+          && r.bottom>0 && r.top<window.innerHeight,
+      tiles: e.querySelectorAll('[data-slate]').length,
+      top: Math.round(r.top), h: Math.round(r.height)
+    };
+  });
+  ok('journey.you-can-still-reach-the-rail-while-picking',
+     reach.ok===true && reach.tiles>=2,
+     `scrolled to the top mid-pick and the rail was not there (top=${reach.top} h=${reach.h} tiles=${reach.tiles}) `+
+     `— the way to the other game disappeared once picking started, which is the reported bug`);
 
   /* ---- 5. switch to game B ----------------------------------------- */
   await p.click(`[data-slate="${B.id}"]`);
