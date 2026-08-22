@@ -229,6 +229,12 @@ const TIER={
      room graded, and the share headline read GAME.night, which holds the
      matchup on a real night and the number on the fallback. */
   'your-own-card.js': {tier:'static'},
+  /* "We added a game last minute yesterday. All the games should be in
+     order." Two files owned Game Night #N — build-slate derived it from
+     tip order, marquee.js invented it from the marquee FILES and stamped
+     it into the slate afterwards. A number remembered from a file cannot
+     survive a game being added late; one recomputed from the series can. */
+  'night-numbers.js': {tier:'static'},
   /* Reads source, not a browser. Guards the shape of bug this repo produces
      more than any other: something that fails and tells nobody. */
   'silence.js':       {tier:'static'},

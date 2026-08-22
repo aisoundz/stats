@@ -255,22 +255,53 @@ function nextNumber(){
   const numbers = new Map();
   picked.forEach(g => {
     const row = byIdRow.get(g.nightId);
-    /* ADVISORY ONLY, AS OF 21 AUG. host/build-slate.js now derives the
-       game number from the TIP-OFF ORDER, counting on from the previous
-       night, and it does so AFTER this file's numbers are applied — so
-       whatever is written here is overwritten. It is kept because the
-       marquee file is still human-readable and a number beside each row
-       helps a person scan it, but it is no longer the authority. Two
-       sources of truth for one number is what put a 4:30 game between a
-       4:00 and a 5:15 as "#19". */
-    if(row && row.gn){ numbers.set(g.nightId, String(row.gn)); return; }
+    /* A NUMBER IN THE FILE IS A RECORD, NOT AN INSTRUCTION. The note that
+       stood here claimed build-slate.js runs AFTER this and overwrites
+       whatever the file says. It runs BEFORE — start-slate.sh, lines 127
+       and 168 — so a stale number in this file overwrote a correct derived
+       one every morning. See the block below.
+
+       The file's number is still honoured for a night that has ALREADY
+       BEEN ANNOUNCED, because renumbering something people were told about
+       is worse than an off-by-one. For anything else the slate wins. */
+    if(row && row.gn && String(row.gn) === String(g.gn || row.gn)){
+      numbers.set(g.nightId, String(row.gn)); return;
+    }
+    if(row && row.gn && g.gn && String(row.gn) !== String(g.gn)){
+      log('gn', `${g.nightId}: the file says #${row.gn}, the slate derived #${g.gn} — taking the slate. `
+              + `A game added late shifts every number after it, and only the slate is recomputed.`);
+    }
     numbers.set(g.nightId, '');            // filled below, after the max is known
   });
-  /* Keep any number a file already gave a game — renumbering a night that
-     has been announced would break exactly the correspondence he asked for.
-     New games take the next free numbers, still in tip order. */
-  let next = nextNumber();
-  picked.forEach(g => { if(!numbers.get(g.nightId)) numbers.set(g.nightId, String(next++)); });
+  /* ============ THE SLATE OWNS THE NUMBER. THIS FILE MIRRORS IT. ======
+     Founder, 22 Aug: "We added a game last minute yesterday. All the games
+     should be in order."
+
+     He named the cause exactly. Friday's fourth room — Lynx at Mystics —
+     was added after the marquee files were written, so it took #17 in tip
+     order and pushed Friday's last room to #19. Saturday's marquee file,
+     written on the 20th when the highest known number was 18, still said
+     19-22. Saturday then opened with a #19 that Friday had already used.
+
+     The comment that used to sit here called these numbers "advisory only"
+     on the grounds that build-slate.js derives them afterwards and
+     overwrites whatever this file says. THE ORDER IS THE OTHER WAY ROUND.
+     start-slate.sh runs build-slate.js at line 127 and this at line 168,
+     and the stamp below writes `gn` into slate/{date}. So these numbers
+     did not lose — they won, every morning, silently.
+
+     Two owners of one fact, and the note explaining why it was safe named
+     the exact symptom it was causing: "what put a 4:30 game between a 4:00
+     and a 5:15 as #19".
+
+     So this file stops inventing numbers. build-slate.js derives them from
+     the tip-off order counting on from the previous night — which is the
+     only rule that survives a game being added at the last minute, because
+     it is recomputed from the series rather than remembered from a file.
+     What is read here is what the slate already says. */
+  picked.forEach(g => {
+    if(!numbers.get(g.nightId)) numbers.set(g.nightId, String(g.gn || ''));
+  });
 
   /* THE STAR IS THE DAY'S MAIN EVENT, and it is a separate question from
      the number. A file's `*` wins; otherwise the highest-scoring game. */
@@ -330,9 +361,13 @@ function nextNumber(){
      Control Room is exactly who asked for this. */
   const stamp = arr => (arr || []).map(g => {
     if(!g || !numbers.has(g.nightId)) return g;
+    /* NO `gn` HERE. This stamp is why the file's numbers won: it wrote
+       them into slate/{date} after build-slate.js had derived the right
+       ones. The marquee owns WHICH GAME IS FEATURED and WHICH IS THE MAIN
+       EVENT — the two things only a person can decide. The number is a
+       fact about tip order and belongs to the build. */
     return Object.assign({}, g, {
       marquee: true, flagship: true,
-      gn: numbers.get(g.nightId),
       gotn: g.nightId === starId
     });
   });
