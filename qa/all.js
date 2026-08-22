@@ -241,18 +241,73 @@ function stampOf(f){
   try{ return (fs.readFileSync(path.resolve(__dirname,'..',f),'utf8')
                  .match(/const STATS_BUILD='([^']+)'/)||[])[1]||null; }catch(_){ return null; }
 }
-if(!LIST && TARGET==='index-test.html'){
-  const cand=stampOf('index-test.html'), live=stampOf('index.html');
-  if(cand && live && cand===live){
-    console.log('\n  !! index-test.html and index.html both say '+cand);
-    console.log('     Promoting now would ship a build no open phone can detect — the');
-    console.log('     "new version ready" prompt only fires when the stamp MOVES.');
-    console.log('     Bump STATS_BUILD before promoting.\n');
+/* THE QUESTION THIS ASKS HAD GONE STALE WITH THE WORKFLOW.
+   It compared index-test.html against index.html and warned when they
+   matched. That was right when the loop was build-on-test-then-promote.
+   The loop is now edit-index-directly and keep index-test as a synced
+   copy, so the two ALWAYS matched and this fired on every single run.
+   A warning that always fires is exactly as useless as one that never
+   fires, and it trains you to scroll past the line above it.
+
+   The real question is: has this working tree changed the player app
+   WITHOUT moving the build stamp? A phone only offers "new version
+   ready" when the stamp moves, so an edited file on an unchanged stamp
+   ships a fix no open phone can detect. Ask git, which knows what the
+   last committed build was.
+
+   NEVER READ THE FILE THROUGH execSync. The first version of this ran
+   `git show HEAD:index.html` and compared the whole text. execSync
+   defaults to a 1MB buffer, index.html is 1.38MB, so it threw ENOBUFS
+   on every run, the catch swallowed it, and the check sat silent while
+   reporting nothing — the exact failure it exists to prevent, inside
+   itself. Both commands below return a few bytes. */
+if(!LIST){
+  const cp=require('child_process');
+  const RT=path.resolve(__dirname,'..');
+  const git=(cmd)=>cp.execSync(cmd,{cwd:RT,stdio:['ignore','pipe','ignore']}).toString().trim();
+  /* "no git here" and "git is broken here" are different sentences and only
+     the first one is allowed to be quiet. git exits 128 when the directory is
+     not a repository, and the spawn throws ENOENT when there is no binary at
+     all; both are legitimate reasons to skip. ANY OTHER failure means the
+     tool that answers this question is broken, and a broken tool must not
+     read as a pass. */
+  let isRepo=true, gitBroken=null;
+  try{ git('git rev-parse --git-dir'); }
+  catch(e){
+    isRepo=false;
+    if(e.code!=='ENOENT' && e.status!==128) gitBroken=(e.message||'').split('\n')[0];
+  }
+  if(gitBroken){
+    console.log('\n  !! git is present but not answering, so the build stamp was never');
+    console.log('     checked: '+gitBroken);
+    console.log('     Treating that as a failure, not as a pass.\n');
     STAMP_STUCK = true;
   }
+  if(isRepo){
+    /* Past this point a failure is a FINDING, not a shrug. A bare catch
+       here is how the ENOBUFS bug hid. */
+    let changed=null, headStamp=null, why=null;
+    try{
+      changed = git('git diff --name-only HEAD -- index.html').length > 0;
+      headStamp = git("git show HEAD:index.html | grep -m1 -o \"const STATS_BUILD='[^']*'\" || true")
+                    .replace(/^const STATS_BUILD='/,'').replace(/'$/,'') || null;
+    }catch(e){ why = e.message.split('\n')[0]; }
+    const nowStamp = stampOf('index.html');
+    if(why){
+      console.log('\n  !! could not ask git whether the build stamp moved: '+why);
+      console.log('     Treating that as a failure, not as a pass. "I could not check"');
+      console.log('     and "I checked and it is fine" are not the same sentence.\n');
+      STAMP_STUCK = true;
+    }else if(changed && headStamp && nowStamp && nowStamp===headStamp){
+      console.log('\n  !! index.html has changed since the last commit and still says '+nowStamp);
+      console.log('     A phone only offers "new version ready" when the stamp MOVES, so');
+      console.log('     shipping this would be a fix no open phone can detect.');
+      console.log('     Bump STATS_BUILD.\n');
+      STAMP_STUCK = true;
+    }
+  }
 }
-console.log('\n=== EVERY SUITE ===  judging '+TARGET
-  +(ONLY_STATIC?'   static only':WITH_LIVE?'   including live':'')+'\n');
+
 if(!fs.existsSync(TARGET_ABS)){ console.log('  the file under test does not exist: '+TARGET_ABS); process.exit(1); }
 /* Say which suites are NOT reading that file, so "green" is never read as
    broader than it is. */
