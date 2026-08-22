@@ -94,6 +94,11 @@ const TIER={
   'qa.js':            {tier:'browser', args:QUICK?['--quick']:[]},
   'acceptance.js':    {tier:'static'},
   'board-order.js':   {tier:'static'},
+  /* 21 Aug: a finished Caught It card came back on every tab change, and
+     "usually the same one" — one stale question sat in PCI.pending and
+     paintNav flushed the queue on every navigation. Static, because what
+     was wrong was the RULE, not a pixel. */
+  'caught-stale.js':  {tier:'static'},
   /* NOT SUITES. Both end in module.exports and print nothing; node loads
      them and exits 0, so they can never fail. Tiered as 'lib' so they are
      neither run nor reported as untiered — "ALL 16 SUITES PASS" used to be

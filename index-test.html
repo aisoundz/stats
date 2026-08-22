@@ -11981,7 +11981,173 @@ var VX=(function(){
     }catch(_){ return ''; }
   };
 
+  /* ============ THE RECORD BOOK ======================================
+     Founder: "Can you put a ai in the voice so when I ask questions about
+     who is the all time leading rusher they can tell me... they should be
+     the top dog. Their name is STATS."
+
+     host/factbook.js harvests ESPN's own all-time leaders on the Jetson
+     into facts.json — four leagues, four kilobytes, no API key. STATS does
+     not generate an answer here, it READS one, so it cannot invent a name
+     or a number. When it does not have something it says so, which is the
+     only reason the times it does answer are worth anything.
+
+     Loaded lazily, on the first record question of the night, so a player
+     who never asks one never pays for it. */
+  V.book = null; V.bookTried = false;
+  V.loadBook = async function(){
+    if(V.book || V.bookTried) return V.book;
+    V.bookTried = true;
+    try{
+      var r = await fetch('facts.json', { cache:'force-cache' });
+      if(r && r.ok) V.book = await r.json();
+    }catch(_){}
+    return V.book;
+  };
+
+  /* Which league is being asked about: whatever they named, else the room
+     they are standing in. */
+  V.bookLeague = function(t){
+    var s = String(t||'');
+    if(/\bnfl\b|football/.test(s))        return 'nfl';
+    if(/\bwnba\b/.test(s))                return 'wnba';
+    if(/\bnba\b|basketball/.test(s))      return 'nba';
+    if(/\bmlb\b|baseball/.test(s))        return 'mlb';
+    if(/\bnhl\b|hockey/.test(s))          return 'nhl';
+    var lg=''; try{ lg=String((GAME&&GAME.league)||'').toLowerCase(); }catch(_){}
+    return lg || 'nfl';
+  };
+  /* Did they SAY a league, or are we guessing from the room? It decides
+     whether we are allowed to look anywhere else — see askBook. */
+  V.bookNamed = function(t){
+    return /\bnfl\b|football|\bwnba\b|\bnba\b|basketball|\bmlb\b|baseball|\bnhl\b|hockey/.test(String(t||''));
+  };
+
+  /* The words a person actually uses, mapped onto ESPN's category names.
+     "leading rusher" and "most rushing yards" are the same question. */
+  /* MATCH ON ESPN'S OWN DISPLAY NAME, NOT ON THE KEY.
+     The keys are not consistent between leagues and cannot be trusted: the
+     NBA shelf has a category KEYED `assists` whose display name is
+     "Blocks". Matching on keys would have answered a question about assists
+     with a blocks number, correctly labelled, and nobody would have caught
+     it because both are plausible. The display name is what ESPN puts in
+     front of a human, and it is the thing that is actually right. */
+  /* EACH ENTRY IS A PREFERENCE ORDER, not one pattern. "The all-time
+     leading rusher" means YARDS — but a shelf lists "Rushing Touchdowns"
+     before "Rushing Yards", so a single loose /rushing/ answered Emmitt
+     Smith's 164 touchdowns to a question everybody knows is about 18,355
+     yards. Right man, wrong number, said with complete confidence, which
+     is the failure this design exists to prevent. Ask for the specific
+     thing first and fall back to the loose one only if it is absent.
+
+     A question that says "touchdowns" out loud is matched earlier, so it
+     still gets touchdowns. */
+  V.BOOK_WORDS = [
+    [/rushing touchdown|rush.*\btds?\b/,   [/rushing touchdown/i]],
+    [/passing touchdown|pass.*\btds?\b/,   [/passing touchdown/i]],
+    [/rush|running back|ground game/,     [/rushing yards/i, /rushing/i]],
+    [/pass|passing|throw|quarterback/,    [/passing yards/i, /passing/i]],
+    [/catch|receiv|reception/,            [/receptions/i, /receiving/i]],
+    [/sack/,                              [/sack/i]],
+    [/intercept|pick/,                    [/intercept/i]],
+    [/touchdown|\btds?\b/,                [/total touchdown/i, /touchdown/i]],
+    [/rebound|board/,                     [/rebound/i]],
+    [/assist/,                            [/assist/i]],
+    [/steal/,                             [/steal/i]],
+    [/block/,                             [/block/i]],
+    [/home ?run|homer/,                   [/home run/i]],
+    [/\bhits?\b/,                         [/^hits$/i]],
+    [/average|batting/,                   [/batting/i]],
+    [/strike ?out/,                       [/strikeout/i]],
+    [/\bsaves?\b/,                        [/^saves$/i]],
+    [/\bwins?\b/,                         [/^wins$/i]],
+    [/penalty|penalties|box/,             [/penalty/i]],
+    [/goal/,                              [/^goals$/i]],
+    [/score|scorer|scoring|point/,        [/^points$/i, /total points/i, /point/i]]
+  ];
+  /* Find the shelf's category whose DISPLAY NAME matches. */
+  V.bookFind = function(shelf, list){
+    if(!shelf || !shelf.cats || !list) return null;
+    var pats = (list instanceof RegExp) ? [list] : list;
+    var keys = Object.keys(shelf.cats);
+    for(var p=0;p<pats.length;p++){
+      for(var i=0;i<keys.length;i++){
+        var c = shelf.cats[keys[i]];
+        if(c && pats[p].test(String(c.d||''))) return c;
+      }
+    }
+    return null;
+  };
+
+  V.askBook = async function(t){
+    var s = String(t||'').toLowerCase();
+    /* Only a records question. "who is winning" is a different thing and
+       is answered by the live layer above. */
+    if(!/all ?time|career|ever|record|most .*(ever|all time)|leading (rusher|scorer|passer|receiver)/.test(s)) return false;
+
+    var book = await V.loadBook();
+    if(!book || !book.leagues){
+      V.deafSay('I cannot reach the record book right now. I can tell you anything about tonight though.');
+      return true;
+    }
+    /* THE QUESTION OFTEN NAMES THE SPORT WITHOUT NAMING THE LEAGUE.
+       "Who has the most home runs all time" is obviously baseball, and
+       answering it out of the football shelf because that is the room you
+       happen to be standing in is the same category of wrong as telling a
+       man watching basketball his own points total. So: try the league
+       they named, then the room they are in, then any shelf that actually
+       carries the thing they asked about. */
+    var order = [V.bookLeague(s)];
+    ['nfl','nba','mlb','nhl','wnba','mls'].forEach(function(k){ if(order.indexOf(k)<0) order.push(k); });
+    var wantEarly = null;
+    for(var w=0;w<V.BOOK_WORDS.length;w++){ if(V.BOOK_WORDS[w][0].test(s)){ wantEarly = V.BOOK_WORDS[w][1]; break; } }
+    var lgKey = order[0], shelf = book.leagues[lgKey];
+    /* A NAMED LEAGUE IS FINAL. Asked for the WNBA all-time scorer, the
+       cross-league search below found "total points" on the football shelf
+       and answered Adam Vinatieri — confidently, about the wrong sport,
+       to a question that named its sport in the second word. That is the
+       exact failure this whole design exists to avoid, arriving through
+       the convenience feature rather than through a model. If they said
+       which league, that is the only shelf we may read. */
+    if(V.bookNamed(s)){
+      if(!shelf){
+        V.deafSay('I do not carry all-time records for that league. I have them for the NFL, the NBA, baseball and hockey.');
+        return true;
+      }
+    } else if(wantEarly){
+      var found = order.filter(function(k){
+        return !!V.bookFind(book.leagues[k], wantEarly);
+      })[0];
+      if(found){ lgKey = found; shelf = book.leagues[found]; }
+    }
+    if(!shelf){
+      /* ESPN publishes no all-time list for the WNBA or MLS. Say which
+         thing is missing rather than pretending the question was odd. */
+      V.deafSay('I do not carry all-time records for that league. I have them for the NFL, the NBA, baseball and hockey.');
+      return true;
+    }
+    var cat = wantEarly ? V.bookFind(shelf, wantEarly) : null;
+    if(!cat){
+      var have = Object.keys(shelf.cats).map(function(k){ return shelf.cats[k].d; }).slice(0,4).join(', ');
+      V.deafSay('I do not have that one for ' + shelf.label + '. What I have there is ' + have + '.');
+      return true;
+    }
+    var one = cat.l[0], two = cat.l[1];
+    var line = one[0] + ', ' + one[1] + ' ' + String(cat.d).toLowerCase() + ' in ' + shelf.label + '.';
+    if(two) line += ' ' + two[0] + ' is second on ' + two[1] + '.';
+    V.deafSay(line);
+    return true;
+  };
+
   V.globalCmd=function(t){
+    /* The record book gets asked before anything else can mistake it for a
+       navigation word. It answers asynchronously and returns true the
+       moment it recognises the shape, so nothing downstream also replies. */
+    try{
+      if(/all ?time|career|ever|record|leading (rusher|scorer|passer|receiver)/.test(String(t||''))){
+        V.askBook(t); return true;
+      }
+    }catch(_){}
     /* THE GAME */
     /* "WHAT'S THE SCORE" IS ALWAYS THE GAME. No ambiguity: nobody watching
        a broadcast means their own points by that. */
@@ -17075,8 +17241,12 @@ function ciStash(){
     var c=document.getElementById('ciCard'); if(!c) return;
     if(c.style.display==='none') return;
     var live=PCI.active;
-    var unanswered = live && PCI.picked[live.qid]==null;
-    if(unanswered) PCI.pending=live;      // owed, not lost
+    var unanswered = live && PCI.picked[live.qid]==null
+                     && live.state!=='resolved' && live.state!=='void';
+    /* Only an OPEN, unanswered card is owed back. Stashing a settled one
+       put a finished result into the queue, and ciFlush then re-showed it
+       on the next tab change. */
+    if(unanswered) PCI.pending=live; else PCI.pending=null;   // owed, or nothing
     c.style.display='none';
     try{ document.body.classList.remove('ciopen'); }catch(_){}
     try{ document.documentElement.style.setProperty('--cih','0px'); }catch(_){}
@@ -17085,6 +17255,30 @@ function ciStash(){
 function ciFlush(){
   if(!PCI.pending) return;
   var q=PCI.pending;
+  /* WHAT THIS IS FOR, AND WHAT IT IS NOT FOR.
+     ciStash owes the player back a card that was taken off screen mid
+     quarter-question WHILE THEY STILL HAD A CHOICE TO MAKE. That is the
+     whole debt. It was re-rendering `pending` with no state check, so a
+     card stashed unanswered that then RESOLVED while it sat in the queue
+     came back as a finished result — and paintNav calls this on every
+     single navigation. Founder, 21 Aug: "when i switch between screens it
+     shows an old caught it and is usually the same one." The same one,
+     because one stale question sat in `pending` and every tab change
+     brought it out again.
+     A settled card is not a debt. Drop it. */
+  var settled=false;
+  try{ settled = (q.state==='resolved') || (q.state==='void') || (PCI.picked[q.qid]!=null); }catch(_){}
+  /* And a question whose own clock ran out while it was stashed is not
+     answerable any more either. Bringing it back offers a choice that
+     cannot be made, on a play the game has long since moved past. */
+  try{
+    var opened = q.opensAt && q.opensAt.toMillis ? q.opensAt.toMillis() : 0;
+    if(opened && (Date.now() - opened) > (q.locksMs||20000) + 5000) settled=true;
+  }catch(_){}
+  if(settled){ PCI.pending=null; return; }
+  /* Clear the debt before the screen test, not after. Returning early
+     without clearing left `pending` set for the life of the page, so it
+     could be re-offered on any later navigation. */
   if(!ciScreenOk()) return;
   PCI.pending=null;
   try{ renderCiCard(q); }catch(_){}
@@ -17421,7 +17615,13 @@ function renderCiCard(q){
     try{ VX.mount(); }catch(_){}
     try{ VX.listenNow ? VX.listenNow() : VX.ear(); }catch(_){}
   };
-  var mb=card.querySelector('[data-cimute]'); if(mb) mb.onclick=function(){ PCI.muted=true; card.style.display='none'; try{ document.body.classList.remove('ciopen'); }catch(_){} };
+  var mb=card.querySelector('[data-cimute]'); if(mb) mb.onclick=function(){
+    PCI.muted=true; card.style.display='none';
+    try{ document.body.classList.remove('ciopen'); }catch(_){}
+    /* SAY WHERE THE WAY BACK IS. The button that turns something off has
+       to name the control that turns it on, or it reads as permanent. */
+    try{ toast('Caught It muted for tonight. Turn it back on in the ☰ menu.'); }catch(_){}
+  };
   var hb=card.querySelector('[data-cihide]'); if(hb) hb.onclick=function(){ card.style.display='none'; try{ if(typeof renderGametime==='function') renderGametime(); }catch(_){} };
   /* YOUR ANSWER IS IN — THE CARD GETS OUT OF THE WAY. A locked card that
      sits on screen until a host somewhere remembers to resolve it is how a
@@ -19835,7 +20035,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-21-outloud.190';
+const STATS_BUILD='2026-08-21-stalecatch.191';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -20313,6 +20513,23 @@ function menuRows(){
       row('🌐','Language · Idioma','lang', _cur + (_note?' · '+_note:''));
     }
   }catch(_){}
+  /* ============ MUTE IS A DOOR, NOT A TRAPDOOR ======================
+     Founder, mid-game: "Im muted the caught it and now cant unmute it."
+
+     The mute button on the Caught It card sets PCI.muted and there was no
+     control anywhere in the app that cleared it. The only ways back were a
+     page reload, which nobody would guess, or starting a practice game.
+     A one-tap control with no matching way back is a trap, and it is a
+     particularly bad one here: Caught It is most of the live game, so
+     muting it during a night quietly ends the night.
+
+     The row states which way it is set, so it is a switch and not a
+     guess. */
+  try{
+    var _ciMuted=false; try{ _ciMuted = !!(PCI && PCI.muted); }catch(_){}
+    row(_ciMuted?'🔕':'🔔', _ciMuted?'Caught It is muted' : 'Caught It is on',
+        'cimute', _ciMuted ? 'tap to turn it back on' : 'tap to mute for tonight');
+  }catch(_){}
   R.push('<div class="mgrp">Yours</div>');
   row('👤','Me &amp; my season','me');
   row('📬','Email me about game nights','join');
@@ -20338,6 +20555,25 @@ function menuRows(){
 }
 var MENU_GO={
   rules:function(){ go('rules'); },
+  cimute:function(){
+    try{
+      PCI.muted = !PCI.muted;
+      if(PCI.muted){
+        try{ var c=document.getElementById('ciCard'); if(c) c.style.display='none'; }catch(_){}
+        try{ document.body.classList.remove('ciopen'); }catch(_){}
+        toast('Caught It muted. Turn it back on from this menu.');
+      }else{
+        /* Bring back whatever was held while they were muted, rather than
+           making them wait for the next one to prove it worked. */
+        try{ if(typeof ciFlush==='function') ciFlush(); }catch(_){}
+        toast('Caught It is back on.');
+      }
+      /* Repaint the sheet in place so the row shows the state it just
+         moved to — menuRows() is the one builder and #menuBody is where
+         openMenu() puts it. */
+      try{ var _mb=document.getElementById('menuBody'); if(_mb) _mb.innerHTML=menuRows(); }catch(_){}
+    }catch(_){}
+  },
   voice:function(){ try{ VX.toggle(); }catch(_){} },
   voicecheck:function(){ try{ VX.openCheck(); }catch(_){} },
   resume:function(){ try{ returnToGame(); }catch(_){ go('gametime'); } },
@@ -20480,6 +20716,26 @@ function paintNav(active){
        question — covering the score and looking frozen. ciScreenOk() is
        the same test renderCiCard uses, so the two can never disagree. */
     if(ci && (typeof ciScreenOk!=='function' || !ciScreenOk())) ci.style.display='none';
+    /* A SETTLED CARD DOES NOT TRAVEL. The rule above only hides the card on
+       screens where Caught It is not allowed at all, so a finished result
+       sitting on Gametime was carried, verbatim, onto Stats and the Board
+       and back — the founder's "it shows an old caught it and is usually
+       the same one". A result belongs to the moment it landed and to the
+       screen it landed on; the second you navigate it is history, and the
+       8-second auto-tuck should not be the only thing standing between a
+       player and a stale answer. An OPEN card still travels: that one is a
+       live task with a clock on it. */
+    try{
+      if(ci && ci.style.display!=='none' && PCI && PCI.active){
+        var a=PCI.active, done = a.state==='resolved' || a.state==='void' || PCI.picked[a.qid]!=null;
+        if(done && PCI.lastScreen && PCI.lastScreen!==scr){
+          ci.style.display='none';
+          try{ document.body.classList.remove('ciopen'); }catch(_){}
+          try{ document.documentElement.style.setProperty('--cih','0px'); }catch(_){}
+        }
+      }
+      if(PCI) PCI.lastScreen=scr;
+    }catch(_){}
     if(typeof ciFlush==='function') setTimeout(ciFlush, 420);
   }catch(_){}
   try{ document.body.classList.toggle('hasnav', !hide); }catch(_){}
