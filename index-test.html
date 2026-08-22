@@ -1579,7 +1579,7 @@
       <div id="portalDown" style="display:none;margin-top:10px;background:rgba(255,197,77,.10);border:1px solid rgba(255,197,77,.35);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.45;color:var(--ink,#eef2fb)">
         <b>We’re having trouble reaching the game server.</b><br>
         <span style="color:var(--muted,#93a0bd)">Signing in still works — give it a tap. If it doesn’t take, reloading the page usually fixes it.</span>
-        <button type="button" class="btn ghost sm" style="margin-top:9px;width:100%" onclick="location.reload()">Reload and try again</button>
+        <button type="button" class="btn ghost sm" id="portalRetry" style="margin-top:9px;width:100%" onclick="retryConnect(this)">Try again</button>
       </div>
       <label style="display:flex;gap:9px;align-items:flex-start;margin-top:12px;cursor:pointer">
         <input type="checkbox" id="portalConsent" checked style="margin-top:1px;width:26px;height:26px;padding:6px;flex:0 0 auto;accent-color:#28e0d0">
@@ -3011,7 +3011,35 @@ window.STATS_FIREBASE = {
 
   function visible() { return document.visibilityState !== 'hidden'; }
 
-  (async function boot() {
+  /* ============ A RETRY BUTTON NEEDS SOMETHING TO CALL ================
+     Founder, 21 Aug, from his notes: "Reload and try again button is a
+     bug." The screenshot is the sign-in door with
+
+       We're having trouble reaching the game server. Signing in still
+       works — give it a tap. If it doesn't take, reloading the page
+       usually fixes it.   [ Reload and try again ]
+
+     The banner shows on SB.state 'off' or 'error', and 'error' is STICKY:
+     nothing in the state machine ever leaves it. So the only escape was
+     `location.reload()` — throw the whole page away and hope. If whatever
+     caused it is still true a second later, you reload straight back into
+     the same banner, which is what a person means by "the button is a
+     bug": it is the loudest control on the screen and it does not fix the
+     thing it is named after.
+
+     The note left here last night said exactly this and deferred it: "SB's
+     connect path is an anonymous IIFE, so there is no function to call to
+     retry in place. Extracting it into a named, re-runnable connect() is
+     the real fix and it belongs in daylight." It is daylight somewhere.
+
+     So: same body, now reachable. It guards against overlapping runs and
+     resets to 'connecting', which is what un-sticks 'error'. */
+  var _connecting = false;
+  SB.connect = async function boot() {
+    if (_connecting) return false;
+    if (SB.state === 'on') return true;
+    _connecting = true;
+    setState('connecting', 'retrying');
     try {
       var appMod  = await import(SDK + '/firebase-app.js');
       var authMod = await import(SDK + '/firebase-auth.js');
@@ -3182,8 +3210,12 @@ window.STATS_FIREBASE = {
       setState('on', 'connected');
     } catch (e) {
       setState('error', (e && e.message) || String(e));
+    } finally {
+      _connecting = false;
     }
-  })();
+    return SB.state === 'on';
+  };
+  SB.connect();
 
   /* ---- join: claim a seat ------------------------------------------ */
   SB.join = async function (o) {
@@ -4189,8 +4221,46 @@ window.STATS_FIREBASE = {
           await F.setDoc(F.doc(db, 'nights', e.nid, 'rounds', e.rid, 'subs', uid()), body);
           sent = true;
         } catch (_) { sent = false; }
+        /* ============ A RETRY THAT CANNOT WORK IS NOT A RETRY ==========
+           Founder, 21 Aug: "It keeps putting the alert on the screen",
+           with the banner reading
+
+             Saving 1 answer — retrying, they're safe on this phone.
+
+           Two hundred tries at eight seconds is TWENTY-SIX MINUTES of that
+           sentence, and for most of it the sentence is false. From B-71 a
+           submission is only accepted while its round is `live`; the
+           moment the runner scores the round, every retry is refused
+           forever. The answer is not "safe on this phone" in any sense the
+           player cares about — it is never going to count, and the app was
+           reassuring him about it once every eight seconds.
+
+           That is precisely the failure the receipt system was built to
+           end: a screen that reports the ASKING rather than the LANDING.
+           It grew a third variety — reporting a retry that has no chance.
+
+           So ask the round whether the door is still open. Closed and
+           unsent means lost, said once, plainly, with the one thing a
+           player can actually do about it. */
+        if (!sent) {
+          var closed = false;
+          try {
+            var rd = await F.getDoc(F.doc(db, 'nights', e.nid, 'rounds', e.rid));
+            var st = rd && rd.exists() ? String((rd.data() || {}).state || '') : '';
+            closed = (st !== '' && st !== 'live');
+          } catch (_) { closed = false; }   // cannot tell: keep trying
+          if (closed) {
+            notifyOps('write-lost',
+              'Your ' + e.rid + ' answers did not reach the server before that round closed. '
+              + 'Tell the host — they can score you by hand.');
+            subMark(e.rid,'lost');
+            continue;                        // dropped: `still` never gets it
+          }
+        }
         if (sent) { notifyOps('write-landed', 'Your ' + e.rid + ' answers are saved.'); subMark(e.rid,'saved'); }
-        else if (e.tries < 200) still.push(e);
+        /* Thirty tries is four minutes, which is longer than any real
+           network blip and far short of nagging. */
+        else if (e.tries < 30) still.push(e);
         else { notifyOps('write-lost', 'Couldn’t save your ' + e.rid + ' answers after many tries. Tell the host — they can score you by hand.'); subMark(e.rid,'lost'); }
       }
       outbox = still; outSave(); outAnnounce();
@@ -4722,6 +4792,9 @@ try{ window.prefetchSlateConfigs = prefetchSlateConfigs; }catch(_){}
    re-skins to ANY game — NBA, G-League, college, WNBA.
    In production this loads from the nightly schedule feed. */
 const BB_GAME={
+  /* THIS IS THE FALLBACK, AND IT KNOWS IT. Cleared by hydrateNight() the
+     moment a real night lands. See bakedNightIsStale(). */
+  __baked:true,
   nightId:"gn13-2026-08-19-min-gs",
   espnEvent:"401857157",   // verified against the WNBA scoreboard for 2026-08-19
   tipISO:"2026-08-20T02:00:00Z",   // 10:00 pm ET / 7:00 pm PT. Never parsed from a display string.
@@ -5845,6 +5918,13 @@ function hydrateNight(cfg){
           GAME is the ACTIVE sport's game object. Writing BB_GAME here was
           right for basketball by accident and wrong for everything else. */
     Object.keys(g).forEach(function(k){ GAME[k] = g[k]; });
+    /* A REAL NIGHT LANDED, SO THE DEFAULT IS NO LONGER IN CHARGE.
+       This merges the incoming keys INTO the existing object rather than
+       replacing it, so anything the built-in night carried and the new one
+       does not carry SURVIVES — including the flag that says "I am the
+       fallback". Leave it set and every hydrated night is treated as
+       expired the day after it plays. See bakedNightIsStale(). */
+    try{ delete GAME.__baked; }catch(_){ GAME.__baked = false; }
 
     /* 2. the rosters — SPLICE, do not reassign. `groups` holds references
           to these very arrays, so replacing them would leave the pick
@@ -6128,7 +6208,40 @@ function fixStartWord(line, sportKey){
    this works on configs already published — tonight's included — without
    waiting for a rebuild. The config is the fallback for anything not on
    the slate. */
+/* ============ A BAKED DEFAULT IS A CLOCK THAT ONLY GOES BACKWARDS ====
+   Founder, 21 Aug, from his notes: "The game night is wrong, it says 13
+   but its 16."
+
+   Nothing computed 13. BB_GAME is the built-in night this file ships
+   with — `gn13-2026-08-19-min-gs`, Minnesota at Golden State, tipping on
+   19 August — and GAME starts as that object. hydrateNight() replaces it
+   from the slate a moment later, so on a good connection nobody ever sees
+   it. On a slow one, on a cold cache, or any time the slate read is late,
+   the first screen a person gets is a game from three days ago wearing
+   tonight's furniture: the wrong teams, the wrong date, the wrong number.
+
+   That is the same defect as the 4:46am date bug and the rotted hero
+   fixture — a baked constant that was true when it was written and gets
+   quietly falser every day. The app cannot stop shipping a default, but
+   it can know when the default has expired.
+
+   Eighteen hours, not twenty-four: a 7pm tip is still "tonight" at 1am for
+   somebody finishing the board, and is nobody's tonight by the next
+   afternoon. */
+function bakedNightIsStale(g){
+  try{
+    if(!g || !g.__baked) return false;          // hydrated: a real night, never stale
+    var tip = Date.parse(g.tipISO || '');
+    if(!isFinite(tip)) return true;             // no date it can defend
+    return (Date.now() - tip) > 18*3600*1000;
+  }catch(_){ return false; }
+}
+try{ window.bakedNightIsStale = bakedNightIsStale; }catch(_){}
+
 function gnOf(g){
+  /* An expired default has no number worth printing. "#13" on a Friday in
+     August is worse than no number: it is checkable, and wrong. */
+  if(bakedNightIsStale(g)) return '';
   try{
     var id = (g && g.nightId) || '';
     if(id){
@@ -6219,6 +6332,12 @@ function tonightTipLine(g){
    parsed instant and not from slicing the ISO string. */
 function tonightHeadLine(g){
   try{
+    /* NEVER DATELINE AN EXPIRED DEFAULT. The whole point of the headline
+       is "this is tonight", and printing "Game Night #13 · Wed · August
+       19" on a Friday makes the app wrong about the one thing a person can
+       check without leaving the page. Say what is actually happening
+       instead — the slate is on its way, and it arrives in a moment. */
+    if(bakedNightIsStale(g)) return 'Tonight\u2019s games are loading\u2026';
     var d = new Date(g.tipISO); if(isNaN(d)) return '';
     var day = d.toLocaleDateString('en-US',{weekday:'short'});
     var mon = d.toLocaleDateString('en-US',{month:'long', day:'numeric'});
@@ -7816,6 +7935,20 @@ try{ window.paintSurface=paintSurface; }catch(_){}
 
 function landingTipLine(){
   try{
+    /* THE EXPIRED DEFAULT IS THIS FUNCTION'S PROBLEM, NOT THE CALLER'S.
+       The first version of this branched at the call site —
+       set('landingTip', stale ? '' : landingTipLine()) — and qa.js caught
+       it within the hour: "the landing page is writing GAME.tip directly".
+       That check exists because this element must have exactly ONE
+       author, and the comment three lines below says so in terms: "a
+       landing page that read 'Tip-off 8:00 ET' in gold through the middle
+       of the second quarter, and that happened because the tip line had a
+       second author. Branching at the call site is how a second author
+       starts."
+
+       I wrote a second author directly beneath the note explaining why
+       not to. The rule holds; the knowledge moves in here. */
+    if(bakedNightIsStale(typeof GAME!=='undefined' ? GAME : null)) return '';
     /* THE MARQUEE CASE LIVES HERE, not at the call site. It was written as
        a ternary in applySport() — set('landingTip', marquee ? a : b) — and
        qa.js caught it, because that check demands this element have exactly
@@ -10838,6 +10971,7 @@ var VX=(function(){
        Take a ticket. Only the utterance that is actually current may
        declare itself finished. */
     var myTurn = (V.sayTurn = (V.sayTurn||0) + 1);
+    var myOff  = (V.offAt||0);          // see the next-tick guard below
     var done=false, fire=function(){
       if(done) return; done=true;
       if(V.sayTurn === myTurn) V.speaking=false;
@@ -10890,8 +11024,32 @@ var VX=(function(){
            once more on its way out. qa/voice-wiring caught it as a flake —
            one run in three — which is exactly how a real race looks from
            the outside. */
-        if(!V.on || V.sayTurn!==myTurn || done) return;
-        try{ window.speechSynthesis.speak(u); }catch(_){ fire(); return; }
+        /* ============ A SENTENCE MAY ONLY BE CANCELLED BY A NEWER ONE ===
+           This read `if(!V.on || ...)`, and the note above explains why:
+           speaking on the next tick opened a gap where the player could
+           switch voice off and still be spoken to.
+
+           The guard was too wide. `V.on` is false for the deliberate
+           switch-off AND for a dozen transient internal states, and
+           deafSay() — the path that says "too late on that one" — calls
+           V.pause() immediately before V.say(), so the recogniser tears
+           down asynchronously in exactly the gap this guard watches. The
+           result was a sentence that vanished about one run in three, and
+           qa/voice-wiring.js has been calling it a flake. It is not a
+           flake. It is STATS going quiet, intermittently, in the feature
+           the whole product is built on — which is the founder's "its
+           still doing it. Doesnt work", surviving three fixes because it
+           only happens sometimes.
+
+           So ask the precise question. `V.offAt` counts DELIBERATE
+           switch-offs and nothing else. If it has not moved, the player
+           still wants to hear this. */
+        if(V.sayTurn!==myTurn || done || (V.offAt||0)!==myOff){
+          try{ V.bail = (V.sayTurn!==myTurn ? 'newer-say('+V.sayTurn+' vs '+myTurn+')'
+                       : done ? 'already-done' : 'switched-off'); }catch(_){}
+          return;
+        }
+        try{ V.bail=''; window.speechSynthesis.speak(u); }catch(_){ fire(); return; }
         setTimeout(function(){
           if(V.sayTurn!==myTurn || done || V.started===myTurn) return;
           /* It took the sentence and did nothing. Commonest cause is (4),
@@ -12740,6 +12898,11 @@ var VX=(function(){
     V.paint();
   };
   V.disable=function(){
+    /* A DELIBERATE SWITCH-OFF, COUNTED. The deferred speak in V.say has to
+       tell "the player turned voice off" apart from "some internal state
+       moved between the call and the next tick", and `!V.on` cannot: it is
+       true for both. See the note at the setTimeout in V.say. */
+    V.offAt = (V.offAt||0) + 1;
     V.on=false; V.clearHint(); V.deaf(); V.hush();
     try{ localStorage.setItem(KEY,'0'); }catch(_){}
     try{ trk('voice_off'); }catch(_){}
@@ -13024,6 +13187,13 @@ var I18N = {
       "Avísame por correo cuando haya noche de juego. Uno por partido, cancela cuando quieras.",
     "Notify me":"Avísame",
     "Take me off the list":"Quítame de la lista",
+    /* Added 22 Aug with the expired-default guard and the door's retry.
+       qa/spanish.js caught both the same night — a Spanish player reading
+       an English sentence inside a Spanish product assumes something
+       broke, which is exactly the impression the whole feature exists to
+       avoid. */
+    "Tonight’s slate is on its way":"La cartelera de hoy está en camino",
+    "Try again":"Intentar de nuevo",
 
     /* --- the round flow --- */
     "End of Q1":"Fin del 1er cuarto",
@@ -17023,10 +17193,53 @@ function ciRecapCapture(qs){
     CI_RECAP[q.qid] = { qid:q.qid, prompt:q.prompt, options:q.options||[], answer:q.answer, state:q.state, seq:q.seq||0 };
   });
 }
+/* ============ THE NEWEST CARD IN A ROOM IS NOT NEWS ==================
+   Founder, 21 Aug, with a screenshot: "When I shift between games theres
+   always a caught it that is old and happened long time ago."
+
+   Exactly what it does. The watcher hands over that room's most recent
+   Caught It and this rendered it, whatever it was. Walk into the baseball
+   room at 8pm and the newest card is the one that resolved at 6:40 — a
+   question about a pitch two hours gone, presented as if it just
+   happened, and graded as a miss because of course this device never
+   picked it.
+
+   Every room has a last card forever, so this fires on EVERY switch. It is
+   the single most-seen bug of the night, and it makes the room feel broken
+   in the first two seconds, which is the worst possible two seconds.
+
+   A card earns the screen in exactly two situations:
+
+     it is still OPEN            — there is something to do about it
+     you answered it, just now   — this is your payoff, the reward moment
+
+   Anything else is history, and history has a home already: the recap on
+   the Board, which ciRecapCapture() above has just filed it into. */
+function ciWorthShowing(q){
+  try{
+    if(!q || !q.qid) return false;
+    var st = String(q.state || 'open');
+    if(st === 'open') return true;                    // live: always
+    /* Resolved or void. Only yours, only fresh, only once. */
+    if(PCI.picked[q.qid] == null) return false;       // you were not there
+    if(PCI.graded && PCI.graded[q.qid]) return false; // already shown to you
+    var age = Date.now() - (Number(q.seq) || 0);
+    if(!isFinite(age) || age < 0) return false;
+    return age < 120000;                              // two minutes
+  }catch(_){ return false; }
+}
+try{ window.ciWorthShowing = ciWorthShowing; }catch(_){}
+
 function onCallItQuestions(qs){
   if(!qs || !qs.length) return;
   try{ ciRecapCapture(qs); }catch(_){}
   var q = qs[qs.length-1];              // newest
+  if(!ciWorthShowing(q)){
+    /* Filed in the recap, kept off the screen. PCI.active is NOT set:
+       leaving a stale question as "the active one" is how a later tap or a
+       voice answer lands on a question from an hour ago. */
+    return;
+  }
   PCI.active = q;
   renderCiCard(q);
 }
@@ -19808,17 +20021,32 @@ function applySport(){
      read once, and every line on this card comes from it. */
   var _hg = heroGame();
   var _marquee = (_hg !== GAME);
+  /* ============ AND THE SAME EXPIRED DEFAULT, ON THE BIG TYPE ========
+     tonightHeadLine() refuses a stale baked night, and this branch never
+     called it: with no marquee it built the eyebrow straight out of
+     `GAME.night` and `GAME.date`, which on the built-in fallback are the
+     literal strings "Game Night #13" and "Wed · August 19". So the fix one
+     function up would have printed "loading" on a marquee night and "#13"
+     on every other one.
+
+     Both branches ask the same question now. The matchup type goes neutral
+     with it — naming Minnesota at Golden State under a "loading" eyebrow
+     is a worse screen than naming nobody, because the teams are the part a
+     person believes. */
+  var _stale = bakedNightIsStale(_hg);
   set('landingTip', landingTipLine());
-  if(_marquee){ html('landingMatch','<b style="color:var(--ink)">'
+  if(_stale){ html('landingMatch','<b style="color:var(--muted)">Tonight\u2019s slate is on its way</b>'); }
+  else if(_marquee){ html('landingMatch','<b style="color:var(--ink)">'
       + esc(String(_hg.awayName || _hg.awayAbbr || '')) + ' @ '
       + esc(String(_hg.homeName || _hg.homeAbbr || '')) + '</b>'); }
   else { html('landingMatch',SPORT.landing); }
   /* THE EYEBROW NAMES THE NIGHT, the huge type below names the teams —
      they were both naming the teams, and neither was naming the night. */
   var _gn = gnOf(_hg);
-  set('landingHead', _marquee ? tonightHeadLine(_hg)
+  set('landingHead', _stale ? tonightHeadLine(_hg)
+      : (_marquee ? tonightHeadLine(_hg)
       : (_gn ? `Game Night #${_gn} · ${GAME.date}`
-             : `${GAME.night} · ${GAME.date}`).replace(' · ·',' ·'));
+             : `${GAME.night} · ${GAME.date}`).replace(' · ·',' ·')));
   /* THE LEAGUE IS THE NIGHT'S, NOT THE SPORT'S. SPORT.L.league is a
      per-SPORT constant, so every soccer room in the product was chipped
      "Leagues Cup" — including two live MLS matches. One sport has many
@@ -20012,6 +20240,9 @@ function renderPortal(){
       const dead = !window.SB || SB.state==='off' || SB.state==='error';
       const warn = document.getElementById('portalDown');
       if(warn) warn.style.display = dead ? 'block' : 'none';
+      /* Connecting is not down. Without this the banner blinks on during
+         every cold start, which is how a person learns to ignore it. */
+      if(warn && window.SB && SB.state==='connecting') warn.style.display='none';
       /* NEVER disabled. Left fully live, at full opacity, so the door looks
          like a door. */
       ['portalGsi','portalEmailBtn'].forEach(function(id){
@@ -20387,7 +20618,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-21-onegrid.196';
+const STATS_BUILD='2026-08-22-thestats.201';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -20592,6 +20823,33 @@ function tabsUnlocked(){
   }catch(_){}
   return false;
 }
+/* ============ TRY AGAIN, IN PLACE ==================================
+   The door's retry. It calls SB.connect() — see the long note there —
+   rather than throwing the page away, and it REPORTS: a control that
+   might take four seconds and says nothing is a control people press
+   twice and then distrust. On success the banner removes itself, because
+   the thing it was warning about is no longer true. */
+async function retryConnect(btn){
+  var label = btn ? btn.textContent : '';
+  try{ if(btn){ btn.disabled = true; btn.textContent = 'Reconnecting\u2026'; } }catch(_){}
+  var ok = false;
+  try{ ok = !!(window.SB && SB.connect && await SB.connect()); }catch(_){ ok = false; }
+  try{
+    var warn = document.getElementById('portalDown');
+    if(ok){
+      if(warn) warn.style.display = 'none';
+      toast('\u2705 Connected.');
+    }else{
+      toast('Still cannot reach the room. Signing in works either way.');
+      if(btn){ btn.disabled = false; btn.textContent = label || 'Try again'; }
+    }
+  }catch(_){}
+  /* Whatever happened, repaint the door from the state it is actually in. */
+  try{ if(typeof renderPortal==='function') renderPortal(); }catch(_){}
+  return ok;
+}
+try{ window.retryConnect = retryConnect; }catch(_){}
+
 function navGo(tab){
   /* Belt and braces with leanStripTabs(): a hidden button is not a closed
      door. Swipe handlers, the keyboard and any stale onclick all come
@@ -20611,6 +20869,29 @@ function navGo(tab){
     // Leaving the Crew tab closes the room. A modal that survives a tab
     // change is the classic half-built-nav tell.
     if(tab!=='crew'){ try{ closeTalk(); }catch(_){} }
+    /* ============ MOVE FIRST, THEN DRAW ==============================
+       Founder, 21 Aug: "Then after I go to the stats page I cant go back
+       to the game time page it gets stuck."
+
+       The B-67 note below says "go() fires BEFORE the render in every
+       branch, so a throw leaves you standing ON the new tab with a stale
+       or empty body". That was the design and it was true of exactly ONE
+       branch. Three of the five did the opposite:
+
+           gametime   renderGametime(); go(k);
+           board      renderBoard();    go('board');
+           me         renderMe();       go('me');
+
+       So when a render threw, `go()` never ran, the catch below swallowed
+       it, and paintNav lit the tab anyway — the nav said Gametime and the
+       screen was still Stats. Tapping again re-ran the same throwing
+       render and did the same nothing. That is what "stuck" is, and the
+       comment explaining why it could not happen sat twenty lines below
+       the three places where it could.
+
+       Navigation is not allowed to depend on a render succeeding. Every
+       branch moves the screen first; a body that fails to draw is a bad
+       screen, and a screen you cannot leave is a broken app. */
     if(tab==='home')  { go('landing'); }
     else if(tab==='gametime'){
       /* THE TAB AND THE WAITING ROOM ARE THE SAME PAGE NOW. Coming back to
@@ -20619,14 +20900,16 @@ function navGo(tab){
          stopped the room poll and put a "back to my game" bar on top of
          the game. Land on the position the player is actually in. */
       var k='gametime';
-      try{ if(S.mode==='live' && S.place==='lobby'){ k='lobby'; renderLobby(roomNextRound(S.nextQ!=null?S.nextQ:S.qi)); } }catch(_){}
-      renderGametime(); go(k);
+      try{ if(S.mode==='live' && S.place==='lobby'){ k='lobby'; } }catch(_){}
+      go(k);
+      try{ if(k==='lobby') renderLobby(roomNextRound(S.nextQ!=null?S.nextQ:S.qi)); }catch(_){}
+      renderGametime();
       try{ loadGameStats(true).then(function(){ if(map[S.screen]==='s-gametime') renderGametime(); }); }catch(_){} }
     else if(tab==='stats'){ go('stats'); renderStats(); loadGameStats(true).then(function(){ if(S.screen==='stats') renderStats(); }); }
-    else if(tab==='board'){ renderBoard(); go('board');
+    else if(tab==='board'){ go('board'); renderBoard();
       if(S.mode==='live'){ try{ refreshRoom(); }catch(_){} try{ boardRefresh(); }catch(_){} } }
     else if(tab==='crew'){ try{ openTalk(); }catch(_){ toast('The room opens on game night.'); } }
-    else if(tab==='me'){ renderMe(); go('me'); }
+    else if(tab==='me'){ go('me'); renderMe(); }
   }catch(e){
     /* ============ B-67: THE NAV USED TO LIE ==========================
        This was a bare `catch(e){}` with paintNav(tab) OUTSIDE it. So when
@@ -21359,7 +21642,7 @@ function sportCfg(){
    want the radio hammered. Failures now back off and the screen offers a
    button instead of spinning forever. */
 /* `ev` IS PART OF THE CACHE KEY, NOT DECORATION. See loadGameStats. */
-var GS={ok:false,at:0,ev:'',loading:false,state:'pre',teams:[],leaders:[],box:{},plays:[],
+var GS={ok:false,at:0,ev:'',loading:false,state:'pre',teams:[],leaders:[],box:{},plays:[],lines:[],
         wp:[],info:{},line:null,series:[],form:[],seriesSummary:'',err:'',fails:0,lastTry:0};
 /* THE CLOCK, AS A CLOCK. ESPN hands back "30.5" inside the last minute —
    thirty and a half seconds — and printing that raw put a decimal point in
@@ -21461,7 +21744,45 @@ async function loadGameStats(force){
     var bs=j.boxscore||{}, comp=(j.header&&j.header.competitions&&j.header.competitions[0])||{};
     var stat=(comp.status&&comp.status.type)||{};
     var teams=(bs.teams||[]).map(function(t){
-      var m={}; (t.statistics||[]).forEach(function(s){ if(m[s.label]==null) m[s.label]=s.displayValue; });
+      /* ============ BASEBALL'S NUMBERS WERE NEVER READ ================
+         Founder, 21 Aug, three separate notes: "the stats for baseball
+         and nfl have nothing", "This is the stats page and it is empty",
+         "Stats Page is empty."
+
+         For baseball that is literal, and this line is why. ESPN publishes
+         team statistics in TWO shapes and this only understood one:
+
+           flat    statistics[] = { label, displayValue }        NFL, WNBA, NBA
+           nested  statistics[] = { name:'batting', displayName,
+                                    stats:[{ displayName, displayValue }] }   MLB
+
+         On a nested feed `s.label` is undefined for every entry, so `m`
+         came out EMPTY — and every block on the Stats page reads `t.m`.
+         The page was not thin for baseball, it had no data at all, and the
+         "not enough has happened yet" line was the app telling a player
+         nothing was going on during a game with eleven hits in it.
+
+         Read both. The nested shape is flattened with its group name kept
+         (Batting/Pitching/Fielding all publish "Strikeouts" and they mean
+         opposite things), and the bare name kept too so anything already
+         asking for "Hits" still finds it. */
+      var m={};
+      (t.statistics||[]).forEach(function(s){
+        if(!s) return;
+        if(Array.isArray(s.stats) && s.stats.length){
+          var grp = String(s.displayName || s.name || '');
+          s.stats.forEach(function(x){
+            if(!x) return;
+            var lab = String(x.displayName || x.shortDisplayName || x.name || '');
+            if(!lab) return;
+            if(grp && m[grp+' '+lab]==null) m[grp+' '+lab] = x.displayValue;
+            if(m[lab]==null) m[lab] = x.displayValue;
+          });
+          return;
+        }
+        var l = s.label || s.displayName || s.name;
+        if(l && m[l]==null) m[l] = s.displayValue;
+      });
       var c=(comp.competitors||[]).find(function(x){ return x.team&&t.team&&x.team.id===t.team.id; })||{};
       return { id:(t.team&&t.team.id)||'', ab:(t.team&&t.team.abbreviation)||'', name:(t.team&&t.team.displayName)||'',
                /* The colour lives on the COMPETITOR in the header, not on the
@@ -21599,6 +21920,31 @@ async function loadGameStats(force){
     /* ---- THE COMMIT. One block, no awaits inside it. ---- */
     GS.wp=_wp; GS.info=_gi; GS.line=_line; GS.series=_series; GS.form=_form;
     GS.seriesSummary=(typeof _seriesSummary==='string')?_seriesSummary:'';
+    /* ============ HOW THE GAME ACTUALLY WENT ==========================
+       Every sport publishes linescores on the competitor — quarters,
+       innings, periods, halves — and nothing in this app has ever read
+       them. It is the single most universal piece of shape a game has:
+       one row per team, one number per period, no sport-specific parsing
+       and no prose to guess at. It is what stFlow() draws, and it is the
+       reason the Stats page can say something true about a football or
+       baseball game rather than "not enough has happened yet". */
+    var _lines=[];
+    try{
+      _lines = (comp.competitors||[]).map(function(c){
+        return {
+          id:(c.team&&c.team.id)||'',
+          ab:(c.team&&c.team.abbreviation)||'',
+          home:c.homeAway==='home',
+          vals:(c.linescores||[]).map(function(l){
+            var v = (l && (l.displayValue!=null ? l.displayValue : l.value));
+            return { n:(v==null?null:Number(v)), t:(v==null?'':String(v)),
+                     hits:(l&&l.hits!=null)?Number(l.hits):null,
+                     errs:(l&&l.errors!=null)?Number(l.errors):null };
+          })
+        };
+      }).filter(function(x){ return x.vals.length; });
+    }catch(_){ _lines=[]; }
+    GS.lines=_lines;
     GS.teams=teams; GS.box=box; GS.leaders=_leaders; GS.inj=_inj; GS.plays=_plays;
     GS.state=stat.state||'pre';
     GS.detail=String(stat.shortDetail||stat.detail||'')
@@ -23039,6 +23385,160 @@ function stWatchFor(){
   }catch(_){ return ''; }
 }
 
+/* ============ THE STATS TAB, FOR EVERY SPORT =========================
+   Founder, 21 Aug, three times in one night:
+
+     "The stats page has no effect. It should be interactive and nice
+      design like the WNBA."
+     "This is the stats page and it is empty. This page is so importnat,
+      please think of ways to maiximize this space with interactivity and
+      statistical insights"
+     "the stats for baseball and nfl have nothing"
+
+   Everything the page drew was basketball: shot zones, assist networks,
+   scoring runs, deep cuts keyed to a basketball season table. Point it at
+   a football or baseball game and every block returned nothing, so it
+   fell through to "Not enough has happened yet" — during a game with
+   eleven hits in it.
+
+   The fix is not more basketball blocks with sport branches bolted on. It
+   is to build on what EVERY feed publishes and nothing here has ever
+   read: the linescores, and the team statistics table. Both exist for all
+   six leagues, both are already fetched, and between them they answer the
+   two questions anybody actually has about a game they are half-watching
+   — how did it go, and who is winning what.
+
+   These two run for every sport. The basketball blocks stay exactly as
+   they are and stack on top where they apply. */
+
+/* ---- HOW IT WENT, PERIOD BY PERIOD --------------------------------- */
+function stFlow(){
+  try{
+    var L = (GS.lines||[]).filter(function(x){ return x && x.vals && x.vals.length; });
+    if(L.length < 2) return '';
+    var away = L.filter(function(x){ return !x.home; })[0] || L[0];
+    var home = L.filter(function(x){ return  x.home; })[0] || L[1];
+    var n = Math.max(away.vals.length, home.vals.length);
+    if(!n) return '';
+
+    /* The tallest single period sets the scale, so a 21-point quarter and
+       a 3-point quarter cannot look the same. Floor of 1 so a 0-0 inning
+       does not divide by zero. */
+    var peak = 1;
+    for(var i=0;i<n;i++){
+      var a=(away.vals[i]||{}).n, h=(home.vals[i]||{}).n;
+      if(a!=null && a>peak) peak=a;
+      if(h!=null && h>peak) peak=h;
+    }
+    var word = ''; try{ word = periodWordFor(); }catch(_){ word='Period'; }
+    var ac='var(--away)', hc='var(--home)';
+    try{ var T=gtTeams(); if(T){ ac=T.a.color||ac; hc=T.h.color||hc; } }catch(_){}
+
+    var cols='', runA=0, runH=0;
+    for(var k=0;k<n;k++){
+      var av=(away.vals[k]||{}), hv=(home.vals[k]||{});
+      var an=(av.n==null?0:av.n), hn=(hv.n==null?0:hv.n);
+      runA+=an; runH+=hn;
+      /* Who took the period. The only editorial judgement here, and it is
+         arithmetic. */
+      var edge = an>hn ? 'a' : (hn>an ? 'h' : '');
+      cols += '<div class="flCol'+(edge?' fl'+edge:'')+'">'
+        + '<div class="flBars">'
+        +   '<i style="height:'+Math.max(3,Math.round((an/peak)*100))+'%;background:'+esc(ac)+'"></i>'
+        +   '<i style="height:'+Math.max(3,Math.round((hn/peak)*100))+'%;background:'+esc(hc)+'"></i>'
+        + '</div>'
+        + '<div class="flNums"><b>'+esc(av.t===''?'–':av.t)+'</b><b>'+esc(hv.t===''?'–':hv.t)+'</b></div>'
+        + '<div class="flLbl">'+(k+1)+'</div>'
+        + '</div>';
+    }
+    return '<div class="card stFlow"><div class="stHd">'+esc(word)+' by '+esc(word.toLowerCase())+'</div>'
+      + '<div class="flKey">'
+      +   '<span><i style="background:'+esc(ac)+'"></i>'+esc(away.ab||'Away')+' <b>'+runA+'</b></span>'
+      +   '<span><i style="background:'+esc(hc)+'"></i>'+esc(home.ab||'Home')+' <b>'+runH+'</b></span>'
+      + '</div>'
+      + '<div class="flWrap">'+cols+'</div></div>';
+  }catch(_){ return ''; }
+}
+
+/* What this sport calls a chunk of a game. Used as a label only. */
+function periodWordFor(){
+  try{
+    var f = famNow();
+    if(f==='baseball') return 'Innings';
+    if(f==='soccer')   return 'Halves';
+    if(f==='hockey')   return 'Periods';
+    return 'Quarters';
+  }catch(_){ return 'Periods'; }
+}
+
+/* ---- WHO IS WINNING WHAT ------------------------------------------- */
+/* The labels are per sport and every one of them was READ OFF A REAL FEED
+   in references/multisport, not guessed. A label that is not in tonight's
+   feed is skipped rather than shown empty — a row of dashes is not
+   information. */
+var ST_BARS = {
+  basketball: [['Field Goal %','%'],['Three Point %','%'],['Rebounds',''],['Assists',''],
+               ['Turnovers','low'],['Points in Paint',''],['Fast Break Points','']],
+  football:   [['Total Yards',''],['1st Downs',''],['Passing',''],['Rushing',''],
+               ['3rd down efficiency','frac'],['Turnovers','low'],['Penalties','frac']],
+  baseball:   [['Batting Hits',''],['Batting Runs Batted In',''],['Batting Strikeouts','low'],
+               ['Batting Stolen Bases',''],['Fielding Errors','low'],['Fielding Double Plays',''],
+               ['Pitching Strikeouts','']],
+  hockey:     [['Shots',''],['Power Play Goals',''],['Faceoffs Won',''],['Penalty Minutes','low'],['Hits','']],
+  soccer:     [['Possession','%'],['Shots',''],['Shots on Goal',''],['Corner Kicks',''],['Fouls','low']]
+};
+/* A "5-16" reads as 5 for the bar and "5-16" on the label — the fraction
+   is the honest display and the numerator is the comparable quantity. */
+function stBarNum(v){
+  if(v==null) return null;
+  var t=String(v).trim();
+  var m=t.match(/^(-?[\d.]+)/);
+  return m ? Number(m[1]) : null;
+}
+function stTeamBars(){
+  try{
+    var T=null; try{ T=gtTeams(); }catch(_){}
+    if(!T || !T.a || !T.h) return '';
+    var fam=''; try{ fam=famNow(); }catch(_){}
+    var spec = ST_BARS[fam] || ST_BARS.basketball;
+
+    var rows='';
+    spec.forEach(function(pair){
+      var label=pair[0], kind=pair[1];
+      var av=T.a.m ? T.a.m[label] : null, hv=T.h.m ? T.h.m[label] : null;
+      if(av==null && hv==null) return;                 // not in this feed
+      var an=stBarNum(av), hn=stBarNum(hv);
+      if(an==null && hn==null) return;
+      an=an||0; hn=hn||0;
+      var tot=an+hn;
+      /* Split the bar by share. When both are zero, split it evenly and
+         grey it — that is a true statement about a 0-0 row. */
+      var ap = tot>0 ? Math.round((an/tot)*100) : 50;
+      var lead = tot>0 ? (kind==='low' ? (an<hn?'a':(hn<an?'h':'')) : (an>hn?'a':(hn>an?'h':''))) : '';
+      /* The display keeps the feed's own string — "5-16", "44", "24:31" —
+         because that is what a person will see on the broadcast. */
+      var at = av==null ? '–' : String(av) + (kind==='%' ? '%' : '');
+      var ht = hv==null ? '–' : String(hv) + (kind==='%' ? '%' : '');
+      /* Strip the group prefix that the nested-feed reader adds, so a
+         baseball row reads "Hits" and not "Batting Hits". */
+      var show = label.replace(/^(Batting|Pitching|Fielding)\s+/,'');
+      rows += '<div class="tbRow">'
+        + '<div class="tbTop"><b class="'+(lead==='a'?'on':'')+'">'+esc(at)+'</b>'
+        +   '<span>'+esc(show)+(kind==='low'?' <em>lower is better</em>':'')+'</span>'
+        +   '<b class="'+(lead==='h'?'on':'')+'">'+esc(ht)+'</b></div>'
+        + '<div class="tbBar'+(tot>0?'':' tbFlat')+'"><i style="width:'+ap+'%"></i></div>'
+        + '</div>';
+    });
+    if(!rows) return '';
+    return '<div class="card stBars">'
+      + '<div class="stHd">Head to head</div>'
+      + '<div class="tbWho"><span>'+esc(T.a.ab||T.a.name||'Away')+'</span>'
+      +   '<span>'+esc(T.h.ab||T.h.name||'Home')+'</span></div>'
+      + rows + '</div>';
+  }catch(_){ return ''; }
+}
+try{ window.stFlow=stFlow; window.stTeamBars=stTeamBars; }catch(_){}
+
 function renderStats(){
   var el = document.getElementById('stBody'); if(!el) return;
 
@@ -23087,6 +23587,11 @@ function renderStats(){
         '<div style="font-size:17px;font-weight:700;line-height:1.4;color:var(--ink)">' + esc(watch) + '</div>');
     }
     try{ out += stYourCard(); }catch(_){}
+    /* Before tip these are usually empty and correctly draw nothing — but
+       on a game that has already tipped elsewhere on the slate, or a feed
+       that arrives early, they are real. Ask rather than assume. */
+    try{ out += stFlow(); }catch(_){}
+    try{ out += stTeamBars(); }catch(_){}
     if(!story && !watch){
       out += stEmpty('📈', 'The numbers land at tip-off',
         'Season form, the head-to-head and the league ranks fill this in as the feed wakes up. Nothing here is ever typed by hand.');
@@ -23125,6 +23630,14 @@ function renderStats(){
        because it is the only thing here that is about the player. */
     try{ out += stYourCard(); }catch(_){}
 
+    /* EVERY SPORT GETS THESE TWO. See the note above stFlow(). They read
+       linescores and the team statistics table, which all six leagues
+       publish, so a football or baseball room is no longer looking at an
+       empty page during a game. Placed under the player's own card and
+       above the basketball-only blocks, which stack on when they apply. */
+    try{ out += stFlow(); }catch(_){}
+    try{ out += stTeamBars(); }catch(_){}
+
     /* THE ROOM'S OWN POINTS, RIGHT NEXT TO THE LEAGUE'S. "We should also
        add our points" — this page compares a pick against the league's
        real leaders and stops there; it never says what tonight's actual
@@ -23161,7 +23674,11 @@ function renderStats(){
         + '</div>';
     }
 
-    if(!run && !zones && !ast && !rest.length){
+    /* The empty state now has to be honest about the two blocks above it:
+       if either of them drew, the page is not empty and saying so would be
+       the app failing to look at its own screen. */
+    var _uni=false; try{ _uni = !!(stFlow() || stTeamBars()); }catch(_){}
+    if(!_uni && !run && !zones && !ast && !rest.length){
       out += stEmpty('📈', 'Not enough has happened yet',
         (THIN_LINE[famNow()] || THIN_LINE.basketball) + ' need a few minutes of play behind them. This fills in as the game goes.');
     }
@@ -24370,7 +24887,12 @@ function renderGametimeRest(){
      morning of a game night, and one button is worth more than the other
      nine tenths of that screen put together. */
   let out='';
-  try{ out += gtStartRow(); }catch(_){}
+  /* THE ENDING GOES FIRST, and it replaces the "next quarter opens when
+     this one ends" line rather than sitting under it — there is no next
+     quarter. See gtGameOver(). */
+  var _over=''; try{ _over = gtGameOver(); }catch(_){}
+  if(_over){ out += _over; }
+  else { try{ out += gtStartRow(); }catch(_){} }
   /* Directly beneath the "Quarter 3 opens when this quarter ends" line,
      because that line is the one that used to be followed by nothing. */
   try{ out += gtCardWatch(); }catch(_){}
@@ -24398,6 +24920,76 @@ function renderGametimeRest(){
   if(!lean()){ try{ feedRender(); }catch(_){} }
   else { try{ var fw=document.getElementById('gtFeed'); if(fw) fw.innerHTML=''; }catch(_){} }
 }
+
+/* ============ A NIGHT HAS AN ENDING, AND A NEXT ROOM =================
+   Two notes from 21 Aug that are the same missing thing:
+
+     "Of all the 3 games there is no good ending to the game that takes
+      you to the home page"
+     "There's no announcement that happens that the other game ended if
+      someone wants to move they can if their playing there no
+      notification"
+
+   When a room's game finished, the Gametime tab simply stopped changing.
+   No sentence saying it was over, no result, no way onward — the player
+   sat on a dead screen and eventually closed the tab. And the whole
+   argument for a SLATE is that a night is more than one game: three rooms
+   ran tonight and nothing ever told anybody that the one they were in had
+   ended while two others were still going.
+
+   So the ending says three things, in the order a person wants them:
+   it is over, here is what you got, and here is where the night still is.
+   The last one is the product — it is the only screen in the app that
+   turns "my game finished" into "I am still playing".
+
+   Reads the same TICK the rail reads, so "still going" can never disagree
+   with the scores one element above it. */
+function gtGameOver(){
+  try{
+    if(!S || S.mode!=='live') return '';
+    if(!nightIsOver()) return '';
+
+    /* Where else is the night? Live rooms first, then anything yet to
+       tip; a finished room is not an invitation. */
+    var others=[];
+    try{
+      var cur=(typeof GAME!=='undefined' && GAME) ? GAME.nightId : null;
+      (SLATE.games||[]).forEach(function(g){
+        if(!g || g.nightId===cur) return;
+        var tk=null; try{ tk=TICK.by[String(g.espnEvent||'')]||null; }catch(_){}
+        var st=tk ? String(tk.state||'') : '';
+        if(st==='post') return;                       // already done, like this one
+        others.push({ g:g, live:(st==='in'), tk:tk });
+      });
+      others.sort(function(a,b){ return (b.live?1:0)-(a.live?1:0); });
+    }catch(_){}
+
+    var mine=0; try{ mine=shownTotal(); }catch(_){}
+    var rows = others.slice(0,3).map(function(o){
+      var g=o.g, tk=o.tk;
+      var who = String(g.awayAbbr||g.away||'') + ' at ' + String(g.homeAbbr||g.home||'');
+      var when = o.live
+        ? ((tk && tk.as!=null ? (tk.as+'\u2013'+tk.hs+' \u00b7 ') : '') + String((tk&&tk.detail)||'live'))
+        : (tipShort(g.tipISO) || 'not started');
+      return '<button type="button" class="goRoom'+(o.live?' on':'')+'" data-slate="'+esc(g.nightId)+'">'
+        + '<span class="goWho">'+esc(who)+'</span>'
+        + '<span class="goWhen">'+esc(when)+'</span>'
+        + '</button>';
+    }).join('');
+
+    return '<div class="card goCard">'
+      + '<div class="alab"><span>Final</span></div>'
+      + '<div class="goLine">'+esc(overSay())+'</div>'
+      + '<div class="goPts">You finished on <b>'+mine+'</b> point'+(mine===1?'':'s')+' in this room.</div>'
+      + '<button type="button" class="btn goSee" onclick="showFinal()">See your result card</button>'
+      + (rows
+          ? '<div class="goNext">The night is still going</div>' + rows
+          : '<div class="goNext goDone">That was the last game of the night.</div>')
+      + '<button type="button" class="btn ghost goHome" onclick="navGo(\'home\')">Back to home</button>'
+      + '</div>';
+  }catch(_){ return ''; }
+}
+try{ window.gtGameOver = gtGameOver; }catch(_){}
 
 /* ============ THE 25 MINUTES NOBODY BUILT FOR ========================
    Founder, 21 Aug, live: "Is there anything we can do with our screen to
@@ -24884,6 +25476,92 @@ body.member #s-landing .brand{margin-top:6px}
 
    12px is the floor across this design system and the need line sits at
    13px deliberately: it is the line a player reads, not a label. */
+/* ---- THE STATS TAB, FOR EVERY SPORT --------------------------------
+   See stFlow() and stTeamBars(). Two rules hold the look together: the
+   two team colours are the only colours, and every number keeps the
+   feed's own string so it matches the broadcast. */
+.stFlow{padding:14px 16px 12px;margin-top:12px}
+.flKey{display:flex;gap:16px;margin:2px 0 12px;font-size:12px;font-weight:700;color:var(--muted)}
+.flKey i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:baseline}
+.flKey b{color:var(--ink);margin-left:5px;font-variant-numeric:tabular-nums}
+/* NO HORIZONTAL SCROLLER, ANYWHERE. The first version of this had
+   `overflow-x:auto` for the nine-inning case, and qa/chrome.js caught the
+   consequence within one gate run: the swipe handler fired on a vertical
+   gesture over the Stats page, because a scrollable box under the thumb
+   is exactly what the swipe guard is watching for.
+
+   It is also the same mistake as the game rail, one screen over, made by
+   me on the same night I deleted it there. A sideways scroll is an
+   assumption about the device. Ten innings fit if the columns are allowed
+   to be narrow, so let them be narrow. */
+.flWrap{display:flex;gap:4px;align-items:flex-end;padding-bottom:2px}
+.flCol{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px}
+.flBars{display:flex;align-items:flex-end;gap:2px;height:64px;width:100%;justify-content:center}
+.flBars i{display:block;width:7px;max-width:45%;border-radius:3px 3px 0 0;min-height:3px}
+/* STACKED, NOT SIDE BY SIDE. Two numbers abreast need about 32px and a
+   nine-inning game only has 28px a column to give, so the row was wider
+   than its box — and `scrollWidth > clientWidth` is exactly what the
+   swipe guard treats as "a horizontal scroller, do not hijack it". The
+   Stats tab became a tab you could not swipe out of.
+
+   Stacking them halves the width, and it reads better anyway: the two
+   numbers now sit in the same order as the two bars above them. */
+.flNums{display:flex;flex-direction:column;align-items:center;line-height:1.15;
+  font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.flNums b{font-weight:700}
+.flCol.fla .flNums b:first-child,.flCol.flh .flNums b:last-child{color:var(--ink)}
+.flLbl{font-size:12px;color:var(--dim);font-weight:700}
+
+.stBars{padding:14px 16px 8px;margin-top:12px;min-width:0;overflow:hidden}
+.tbWho{display:flex;justify-content:space-between;gap:8px;min-width:0;font-size:12px;font-weight:800;
+  letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:9px}
+/* EVERY FLEX CHILD MUST BE ABLE TO SHRINK. A flex item defaults to
+   `min-width:auto`, which means it refuses to go below its own min-content
+   width — so one long label pushed this row 28px past its card, #stBody
+   inherited the overflow, and the swipe handler then read the whole Stats
+   tab as a horizontal scroller and refused to leave it. The tab became
+   unswipeable because of a stat name.
+
+   qa.js reported it two screens away as `stats/stats/stats`, which is why
+   the check now prints the ancestor walk. */
+.tbRow{padding:8px 0 10px;min-width:0}
+.tbTop{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:5px;min-width:0}
+.tbTop b{font-size:15px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums;
+  flex:0 1 auto;min-width:0;overflow-wrap:anywhere}
+.tbTop b.on{color:var(--ink)}
+.tbTop span{font-size:12px;color:var(--dim);font-weight:700;text-align:center;
+  flex:1 1 0;min-width:0;overflow-wrap:anywhere}
+.tbTop em{font-style:normal;color:var(--dim);opacity:.75}
+/* One bar, split by share — two bars would need a scale nobody reads. */
+.tbBar{height:6px;border-radius:3px;background:var(--home,#3b4a6b);overflow:hidden}
+.tbBar i{display:block;height:100%;background:var(--away,#28e0d0);border-radius:3px 0 0 3px}
+.tbBar.tbFlat{opacity:.35}
+
+/* ---- THE ENDING. See gtGameOver(). ---------------------------------
+   Deliberately the loudest card the Gametime tab can show: it is the only
+   moment where doing nothing is the wrong answer, because the night is
+   still on somewhere else. */
+.goCard{padding:16px;margin-top:11px;border-color:var(--line2)}
+.goLine{font-size:17px;font-weight:800;color:var(--ink);line-height:1.3}
+.goPts{font-size:14px;color:var(--muted);margin-top:6px}
+.goSee{margin-top:12px;width:100%}
+.goNext{font-size:12px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;
+  color:var(--dim);margin:15px 0 7px}
+.goNext.goDone{letter-spacing:0;text-transform:none;font-weight:600;font-size:14px;color:var(--muted)}
+.goRoom{display:flex;align-items:baseline;justify-content:space-between;gap:10px;width:100%;
+  text-align:left;cursor:pointer;font-family:inherit;margin-bottom:6px;
+  padding:10px 12px;border-radius:11px;color:var(--body);
+  background:rgba(5,8,14,.6);border:1px solid var(--line)}
+.goRoom.on{border-color:transparent;
+  background:linear-gradient(var(--card),var(--card)) padding-box,
+             linear-gradient(120deg,var(--gA),var(--gH)) border-box;
+  border:1px solid transparent}
+.goRoom:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.goWho{font-size:15px;font-weight:800;color:var(--ink)}
+.goWhen{font-size:12px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;
+  white-space:nowrap}
+.goRoom.on .goWhen{color:var(--red)}
+.goHome{margin-top:8px;width:100%}
 .gtcw{padding:15px 16px 6px;margin-top:11px}
 .gtcwRow{padding:9px 0 10px;border-top:1px solid var(--line)}
 .gtcwRow:first-of-type{border-top:0;padding-top:2px}

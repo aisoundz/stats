@@ -7,7 +7,7 @@
   "night-config.js": 55,
   "overtime.js": 16,
   "payoff.js": 9,
-  "qa.js": 103,
+  "qa.js": 537,
   "slate.js": 25,
   "voice-pick.js": 33,
   "voice-wiring.js": 78,
@@ -23,7 +23,7 @@
   "practice.js": 9,
   "marquee-order.js": 7,
   "night-per-sport.js": 82,
-  "spanish.js": 5,
+  "spanish.js": 6,
   "silence.js": 1,
   "phantom-ot.js": 7,
   "celebrate.js": 8,
@@ -34,5 +34,9 @@
   "room-position.js": 22,
   "card-watch.js": 11,
   "caught-stale.js": 21,
-  "bargein.js": 20
+  "bargein.js": 20,
+  "nav-escape.js": 10,
+  "platforms.js": 137,
+  "stale-default.js": 14,
+  "stats-page.js": 24
 }

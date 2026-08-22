@@ -1007,21 +1007,32 @@ const TEMPLATES = {
     periods:[3,6,9,10],
     rounds: [
       [
-        { t: 'The first hit of the game — what was it?', o: ['Single','Double','Triple','Home run'], r:'mlbFirstHitKind' },
-        { t: 'Runs through three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand' },
-        { t: 'Strikeouts through three, both staffs combined — how many?', o: ['Two or fewer','Three or four','Five or six','Seven or more'], r:'mlbStrikeoutsBand' },
-        { t: 'Who leads after three?', o: ['{HOME}','{AWAY}','Level'], r:'mlbLeadAfter' }
+        { t: 'The first hit of the game — what was it?', o: ['Single','Double','Triple','Home run'], r:'mlbFirstHitKind',
+          t_es: 'El primer hit del partido — ¿qué fue?', o_es: ['Sencillo','Doble','Triple','Jonrón'] },
+        { t: 'Runs through three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand',
+          t_es: 'Carreras en las primeras tres, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una o dos','Tres o cuatro','Cinco o más'] },
+        { t: 'Strikeouts through three, both staffs combined — how many?', o: ['Two or fewer','Three or four','Five or six','Seven or more'], r:'mlbStrikeoutsBand',
+          t_es: 'Ponches en las primeras tres, entre los dos cuerpos de pitcheo — ¿cuántos?', o_es: ['Dos o menos','Tres o cuatro','Cinco o seis','Siete o más'] },
+        { t: 'Who leads after three?', o: ['{HOME}','{AWAY}','Level'], r:'mlbLeadAfter',
+          t_es: '¿Quién gana tras tres entradas?', o_es: ['{HOME}','{AWAY}','Empate'] }
       ],
       [
-        { t: 'Runs in the middle three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand' },
-        { t: 'Home runs in the middle three — how many?', o: ['None','One','Two','Three or more'], r:'mlbHomeRunsBand' },
-        { t: 'The fastest pitch of the middle three — how hard?', o: ['93 or under','94 to 96','97 or 98','99 or more'], r:'mlbFastestPitchBand' },
-        { t: 'Which of these was the busiest inning?', o: ['The 4th','The 5th','The 6th'], r:'mlbBusiestInning' }
+        { t: 'Runs in the middle three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand',
+          t_es: 'Carreras en las tres del medio, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una o dos','Tres o cuatro','Cinco o más'] },
+        { t: 'Home runs in the middle three — how many?', o: ['None','One','Two','Three or more'], r:'mlbHomeRunsBand',
+          t_es: 'Jonrones en las tres del medio — ¿cuántos?', o_es: ['Ninguno','Uno','Dos','Tres o más'] },
+        { t: 'The fastest pitch of the middle three — how hard?', o: ['93 or under','94 to 96','97 or 98','99 or more'], r:'mlbFastestPitchBand',
+          t_es: 'El lanzamiento más rápido de las tres del medio — ¿a cuánto?', o_es: ['93 o menos','De 94 a 96','97 o 98','99 o más'] },
+        { t: 'Which of these was the busiest inning?', o: ['The 4th','The 5th','The 6th'], r:'mlbBusiestInning',
+          t_es: '¿Cuál de estas fue la entrada más movida?', o_es: ['La 4ta','La 5ta','La 6ta'] }
       ],
       [
-        { t: 'Runs in the last three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand' },
-        { t: 'Strikeouts in the last three, both staffs combined — how many?', o: ['Two or fewer','Three or four','Five or six','Seven or more'], r:'mlbStrikeoutsBand' },
-        { t: 'Stolen bases in the last three — how many?', o: ['None','One','Two','Three or more'], r:'mlbStolenBasesBand' },
+        { t: 'Runs in the last three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand',
+          t_es: 'Carreras en las últimas tres, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una o dos','Tres o cuatro','Cinco o más'] },
+        { t: 'Strikeouts in the last three, both staffs combined — how many?', o: ['Two or fewer','Three or four','Five or six','Seven or more'], r:'mlbStrikeoutsBand',
+          t_es: 'Ponches en las últimas tres, entre los dos cuerpos de pitcheo — ¿cuántos?', o_es: ['Dos o menos','Tres o cuatro','Cinco o seis','Siete o más'] },
+        { t: 'Stolen bases in the last three — how many?', o: ['None','One','Two','Three or more'], r:'mlbStolenBasesBand',
+          t_es: 'Bases robadas en las últimas tres — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] },
         /* WAS mlbMoreKsOrHits, AND THE SHADOW TEST KILLED IT. Eight
            finished games, eight answers of "Strikeouts" — over three
            innings of modern baseball, strikeouts beat hits essentially
@@ -1029,12 +1040,16 @@ const TEMPLATES = {
            mlbOneTwoThreeInning failed the same way: eight "Yes".
            A resolver being correct is not the same as a question being
            worth asking, and only a spread check tells you which you have. */
-        { t: 'Home runs in the last three — how many?', o: ['None','One','Two','Three or more'], r:'mlbHomeRunsBand' }
+        { t: 'Home runs in the last three — how many?', o: ['None','One','Two','Three or more'], r:'mlbHomeRunsBand',
+          t_es: 'Jonrones en las últimas tres — ¿cuántos?', o_es: ['Ninguno','Uno','Dos','Tres o más'] }
       ],
       [
-        { t: 'Who scores first this inning?', o: ['{HOME}','{AWAY}','Nobody scored'], r:'mlbExtraFirstScoringTeam' },
-        { t: 'Runs this inning, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlbExtraRunsBand' },
-        { t: 'Does the game end here?', o: ['Yes','No'], r:'mlbExtraDecides' }
+        { t: 'Who scores first this inning?', o: ['{HOME}','{AWAY}','Nobody scored'], r:'mlbExtraFirstScoringTeam',
+          t_es: '¿Quién anota primero en esta entrada?', o_es: ['{HOME}','{AWAY}','Nadie anotó'] },
+        { t: 'Runs this inning, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlbExtraRunsBand',
+          t_es: 'Carreras en esta entrada, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] },
+        { t: 'Does the game end here?', o: ['Yes','No'], r:'mlbExtraDecides',
+          t_es: '¿Se acaba el partido aquí?', o_es: ['Sí','No'] }
       ]
     ]
     /* NO EXTRA-INNINGS TEMPLATE YET. run.js splits an overtime round out by
@@ -1116,28 +1131,44 @@ const TEMPLATES = {
     worth:  [10,20,30,40],
     rounds: [
       [
-        { t: 'How did the opening drive end?', o: ['Touchdown','Field goal','Punt','Turnover','Downs','Missed FG'], r:'nflFirstDriveResult' },
-        { t: 'Which side had to punt it away first?', o: ['{HOME}','{AWAY}','Nobody punted'], r:'nflFirstPuntTeam' },
-        { t: 'The longest gain of the first — how far?', o: ['19 yards or fewer','20 to 29','30 to 44','45 or more'], r:'nflLongestGainBand' },
-        { t: 'Three-and-outs in the first, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nflThreeAndOutsBand' }
+        { t: 'How did the opening drive end?', o: ['Touchdown','Field goal','Punt','Turnover','Downs','Missed FG'], r:'nflFirstDriveResult',
+          t_es: '¿Cómo terminó la primera serie ofensiva?', o_es: ['Touchdown','Gol de campo','Despeje','Pérdida de balón','Cuarta y corta fallida','Gol de campo fallado'] },
+        { t: 'Which side had to punt it away first?', o: ['{HOME}','{AWAY}','Nobody punted'], r:'nflFirstPuntTeam',
+          t_es: '¿Qué equipo tuvo que despejar primero?', o_es: ['{HOME}','{AWAY}','Nadie despejó'] },
+        { t: 'The longest gain of the first — how far?', o: ['19 yards or fewer','20 to 29','30 to 44','45 or more'], r:'nflLongestGainBand',
+          t_es: 'La jugada más larga del primer cuarto — ¿de cuántas yardas?', o_es: ['19 yardas o menos','De 20 a 29','De 30 a 44','45 o más'] },
+        { t: 'Three-and-outs in the first, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nflThreeAndOutsBand',
+          t_es: 'Series de tres y fuera en el primero, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] }
       ],
       [
-        { t: 'The first touchdown of the second — how did it come?', o: ['On the ground','Through the air','Some other way','No touchdown in the second'], r:'nflFirstTdKind' },
-        { t: 'Gains of twenty yards or more in the second — how many?', o: ['None','One','Two','Three or more'], r:'nflExplosivePlaysBand' },
-        { t: 'After the two-minute warning, who put points up before the half?', o: ['{HOME}','{AWAY}','Both of them','Nobody scored'], r:'nflTwoMinuteScore' },
-        { t: 'The very last play before halftime — what was it?', o: ['A kick','A kneel-down','A pass play','A run'], r:'nflHalfEndPlay' }
+        { t: 'The first touchdown of the second — how did it come?', o: ['On the ground','Through the air','Some other way','No touchdown in the second'], r:'nflFirstTdKind',
+          t_es: 'El primer touchdown del segundo — ¿cómo llegó?', o_es: ['Por tierra','Por aire','De otra manera','Sin touchdown en el segundo'] },
+        { t: 'Gains of twenty yards or more in the second — how many?', o: ['None','One','Two','Three or more'], r:'nflExplosivePlaysBand',
+          t_es: 'Jugadas de veinte yardas o más en el segundo — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] },
+        { t: 'After the two-minute warning, who put points up before the half?', o: ['{HOME}','{AWAY}','Both of them','Nobody scored'], r:'nflTwoMinuteScore',
+          t_es: 'Tras el aviso de dos minutos, ¿quién anotó antes del descanso?', o_es: ['{HOME}','{AWAY}','Los dos','Nadie anotó'] },
+        { t: 'The very last play before halftime — what was it?', o: ['A kick','A kneel-down','A pass play','A run'], r:'nflHalfEndPlay',
+          t_es: 'La última jugada antes del descanso — ¿cuál fue?', o_es: ['Una patada','Una rodilla en tierra','Un pase','Una carrera'] }
       ],
       [
-        { t: 'First team inside the twenty in the third — what did they get?', o: ['A touchdown','A field goal','They came away empty','Nobody got that close'], r:'nflRedZoneFirstTrip' },
-        { t: 'Who gave up the first sack of the third?', o: ['{HOME}','{AWAY}','Nobody got sacked'], r:'nflFirstSackTeam' },
-        { t: 'Third downs picked up in the third, both teams — how many?', o: ['One or fewer','Two','Three','Four or more'], r:'nflThirdDownConvBand' },
-        { t: 'Did the second half open with points?', o: ['Yes','No'], r:'nflHalfOpenScored' }
+        { t: 'First team inside the twenty in the third — what did they get?', o: ['A touchdown','A field goal','They came away empty','Nobody got that close'], r:'nflRedZoneFirstTrip',
+          t_es: 'El primer equipo dentro de la veinte en el tercero — ¿qué sacó?', o_es: ['Un touchdown','Un gol de campo','Se fue sin nada','Nadie llegó tan cerca'] },
+        { t: 'Who gave up the first sack of the third?', o: ['{HOME}','{AWAY}','Nobody got sacked'], r:'nflFirstSackTeam',
+          t_es: '¿Quién permitió la primera captura del tercero?', o_es: ['{HOME}','{AWAY}','No hubo capturas'] },
+        { t: 'Third downs picked up in the third, both teams — how many?', o: ['One or fewer','Two','Three','Four or more'], r:'nflThirdDownConvBand',
+          t_es: 'Terceras oportunidades convertidas en el tercero, entre los dos equipos — ¿cuántas?', o_es: ['Una o menos','Dos','Tres','Cuatro o más'] },
+        { t: 'Did the second half open with points?', o: ['Yes','No'], r:'nflHalfOpenScored',
+          t_es: '¿Abrió la segunda mitad con puntos?', o_es: ['Sí','No'] }
       ],
       [
-        { t: 'Fourth down in the fourth — did anybody go for it?', o: ['Nobody went for it','Went for it and got it','Went for it and came up short','Both happened'], r:'nflFourthDownOutcome' },
-        { t: 'Who coughed it up first in the fourth?', o: ['{HOME}','{AWAY}','Neither side turned it over'], r:'nflFirstTurnoverTeam' },
-        { t: 'Timeouts called in the fourth — how many?', o: ['One or fewer','Two or three','Four or five','Six or more'], r:'nflTimeoutsBand' },
-        { t: 'Did anybody score inside the last two minutes?', o: ['Yes','No'], r:'nflLateScore' }
+        { t: 'Fourth down in the fourth — did anybody go for it?', o: ['Nobody went for it','Went for it and got it','Went for it and came up short','Both happened'], r:'nflFourthDownOutcome',
+          t_es: 'Cuarta oportunidad en el cuarto — ¿alguien se fue por ella?', o_es: ['Nadie lo intentó','Se fue por ella y la sacó','Se fue por ella y se quedó corto','Pasaron las dos cosas'] },
+        { t: 'Who coughed it up first in the fourth?', o: ['{HOME}','{AWAY}','Neither side turned it over'], r:'nflFirstTurnoverTeam',
+          t_es: '¿Quién perdió el balón primero en el cuarto?', o_es: ['{HOME}','{AWAY}','Ninguno lo perdió'] },
+        { t: 'Timeouts called in the fourth — how many?', o: ['One or fewer','Two or three','Four or five','Six or more'], r:'nflTimeoutsBand',
+          t_es: 'Tiempos muertos pedidos en el cuarto — ¿cuántos?', o_es: ['Uno o menos','Dos o tres','Cuatro o cinco','Seis o más'] },
+        { t: 'Did anybody score inside the last two minutes?', o: ['Yes','No'], r:'nflLateScore',
+          t_es: '¿Anotó alguien en los últimos dos minutos?', o_es: ['Sí','No'] }
       ]
     ]
   },

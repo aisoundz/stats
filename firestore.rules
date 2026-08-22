@@ -153,6 +153,27 @@ service cloud.firestore {
         // Create-only for the player: they cannot rewrite a pick after the
         // answer is revealed, which is the property that makes a submitted
         // round auditable rather than merely claimed.
+        // B-71, 21 Aug. The founder, after the WNBA room had finished:
+        // "after the quarter ended and the score was made i was able to
+        // sign into the tempo and mystics game and put in entries after
+        // the game."
+        //
+        // He could, and the comment four lines above claimed he could not:
+        // "written once, at the moment they finish the round and BEFORE
+        // the key exists anywhere public". Nothing enforced the timing.
+        // Create-only stops a player REWRITING a pick after the reveal and
+        // does nothing at all about writing a first one — so the whole
+        // auditability claim rested on players not trying.
+        //
+        // The fix already existed in this file, forty lines up, on the
+        // SIDE-GAME: Caught It picks require the parent card to be 'open'.
+        // The main game — the one with the points — never got it. So the
+        // same shape, against the round's own state. Once the runner flips
+        // a round to 'scored' the key is public and the door is shut.
+        function roundIsOpen(n, r) {
+          return exists(/databases/$(database)/documents/nights/$(n)/rounds/$(r))
+            && get(/databases/$(database)/documents/nights/$(n)/rounds/$(r)).data.state == 'live';
+        }
         match /subs/{uid} {
           allow read: if isOwner() || (signedIn() && request.auth.uid == uid);
           allow create: if signedIn()
@@ -160,7 +181,8 @@ service cloud.firestore {
             && request.resource.data.picks is list
             && request.resource.data.picks.size() <= 12
             && request.resource.data.name is string
-            && request.resource.data.name.size() <= 24;
+            && request.resource.data.name.size() <= 24
+            && roundIsOpen(nightId, roundId);
           allow update, delete: if isOwner();
         }
       }

@@ -40,8 +40,20 @@ const argFile = (() => {
 })();
 const TARGET = path.basename(argFile);
 const LIST   = process.argv.includes('--list');
+/* ============ THE BACKLOG IS CLEARED, SO THE RATCHET CLOSES =========
+   This defaulted to null, which means the untranslated count was PRINTED
+   and never ASSERTED — the suite's own output said so: "Pass --max 0 once
+   the backlog is cleared so it can never silently grow again."
+
+   On 22 Aug the backlog reached zero, and it got there by this check
+   catching two strings added the same night by the person adding them.
+   That is the whole argument for closing it: coverage does not decay
+   through neglect, it decays one honest new sentence at a time.
+
+   `--max N` still works for a deliberate, temporary allowance. The
+   default is now the standard. */
 const MAXI   = process.argv.indexOf('--max');
-const MAX    = MAXI > 0 ? Number(process.argv[MAXI + 1]) : null;
+const MAX    = MAXI > 0 ? Number(process.argv[MAXI + 1]) : 0;
 
 let pass = 0, fail = 0;
 function ok(name, cond, detail) {
@@ -180,6 +192,44 @@ function serve() {
      `only ${r.screens.length} screens and ${r.seen} strings — the walker is broken, not the app`);
   ok('spanish.the-dictionary-is-real', r.dictSize >= 100,
      `the Spanish dictionary has ${r.dictSize} entries`);
+
+  /* ============ AND THE QUESTIONS, NOT ONLY THE FURNITURE ===========
+     Founder, 21 Aug, with a screenshot titled exactly that: "English
+     questions in spanish section".
+
+     The walker above covers the app's own strings and had them at 99%.
+     The QUESTIONS come from TEMPLATES in admin.html and are a separate
+     body of text entirely — and on that night basketball carried 19
+     Spanish questions, soccer 8, and football, baseball and hockey
+     carried NONE. A Spanish player picked a Spanish room and was asked,
+     in English, how the opening drive ended.
+
+     A bank that resolves is not a bank that ships. Every question a
+     player can be shown must exist in both languages, or the language
+     switch is a half-truth. */
+  (function(){
+    try{
+      const fs2=require('fs'), path2=require('path');
+      const admin=fs2.readFileSync(path2.join(__dirname,'..','admin.html'),'utf8');
+      const cut=(a,b)=>{ const i=admin.indexOf(a), j=admin.indexOf(b,i); return (i<0||j<0)?'':admin.slice(i,j); };
+      const BANKS=[['basketball','  basketball: {','  baseball: {'],
+                   ['baseball',  '  baseball: {',  '  football: {'],
+                   ['football',  '  football: {',  '  soccer: {'],
+                   ['soccer',    '  soccer: {',    '  hockey: {']];
+      const gaps=[];
+      BANKS.forEach(([name,a,b])=>{
+        const blk=cut(a,b); if(!blk) return;
+        const q=(blk.match(/\{ t: '/g)||[]).length;
+        const es=(blk.match(/t_es:/g)||[]).length;
+        if(q>0 && es<q) gaps.push(name+' '+es+'/'+q);
+      });
+      ok('spanish.every-question-exists-in-both-languages', gaps.length===0,
+         'banks with English-only questions: '+gaps.join(', ')+
+         ' — a Spanish player picked a Spanish room and was asked the question in English');
+    }catch(e){
+      ok('spanish.every-question-exists-in-both-languages', false, 'could not read the banks: '+e.message);
+    }
+  })();
 
   if (MAX !== null) {
     ok('spanish.no-untranslated-strings-on-screen', r.missing.length <= MAX,

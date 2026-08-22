@@ -729,14 +729,43 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     return clicked===null;
   });
 
-  await p.waitForTimeout(150);
+  /* ============ WAIT FOR THE CONDITION, NOT FOR A DURATION ==========
+     This slept 150ms and then read. On 22 Aug it went red once in three
+     identical runs, and the build was fine: heardCatch reaches the branch
+     SYNCHRONOUSLY — VX.lateSaid['late-1'] is already true when the call
+     returns — but V.say() defers the actual utterance by a tick and hangs
+     an onstart watchdog on it, so what lands in __said arrives a beat
+     later. Under load that beat is longer than 150ms.
+
+     A gate that fails at random on a good build is worse than no gate,
+     because it teaches you that red does not mean stop. Poll for the
+     thing being true, with a ceiling, and fail only if it never becomes
+     true. */
+  await p.waitForFunction(
+    () => /too late/i.test((window.__said||[]).join(' ')),
+    null, { timeout: 4000 }
+  ).catch(()=>{});
   R['and-tells-the-player-it-was-too-late'] = await p.evaluate(()=>{
     /* ASSERT THE MOVE, NOT THE ABSENCE OF A COMPLAINT. Returning false in
        silence is what made this invisible: a correctly recognised and
        correctly matched answer vanished, and the resolved card then read
        "You sat this one out" — the app blaming the player for a window it
        spent reading the question aloud. */
-    return /too late/i.test((window.__said||[]).join(' '));
+    /* SAY WHY, NOT JUST NO. This returned a bare false and cost an hour of
+       bisecting on 22 Aug — the app was reaching the branch every time
+       (VX.lateSaid proves it) and the utterance was being dropped after
+       the fact. V.bail records which of the three guards in the deferred
+       speak discarded it, and it is the only thing that can tell "the
+       product went quiet" apart from "an earlier check left state behind".
+       A check that fails without evidence sends you looking in the wrong
+       file. */
+    if(/too late/i.test((window.__said||[]).join(' '))) return true;
+    var why=[];
+    try{ why.push('bail='+(V_BAIL()||'(none)')); }catch(_){ why.push('bail=?'); }
+    try{ why.push('lateSaid='+JSON.stringify((window.VX&&VX.lateSaid)||{})); }catch(_){}
+    try{ why.push('said='+JSON.stringify((window.__said||[]).slice(-3))); }catch(_){}
+    function V_BAIL(){ try{ return window.VX && VX.bail; }catch(_){ return ''; } }
+    return 'NOT SAID · ' + why.join(' · ');
   });
 
   R['every-card-is-announced-even-when-the-prompt-repeats'] = await p.evaluate(()=>{

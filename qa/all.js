@@ -195,6 +195,28 @@ const TIER={
      tests, not new logic — and voice is the north star, so it gets a suite
      that RUNS the decision rather than reading around it. */
   'bargein.js': {tier:'player'},
+  /* "The game night is wrong, it says 13 but its 16." The app ships with a
+     night baked in and that night gets older every day; this is the third
+     time a stale constant has been reported as a bug. */
+  'stale-default.js': {tier:'player'},
+  /* "after I go to the stats page I cant go back to the game time page it
+     gets stuck." Three of navGo's five branches rendered before they
+     navigated, so a throwing render trapped the player. This BREAKS a
+     render on purpose and demands they can still leave. */
+  'nav-escape.js': {tier:'browser'},
+  /* "the stats for baseball and nfl have nothing." Baseball's team stats
+     were never read at all — ESPN nests them and the reader only knew the
+     flat shape. Drives the real page against real fixtures for three
+     leagues and demands CONTENT, not wiring. */
+  'stats-page.js': {tier:'browser'},
+  /* B-71: "after the quarter ended and the score was made i was able to
+     sign into the tempo and mystics game and put in entries after the
+     game." firestore.rules had never been executed by anything — the
+     acceptance suite says so in terms — so the file deciding who may write
+     to a live game shipped on reading alone. This evaluates the real
+     ruleset. It SKIPS, loudly, until the service account is granted
+     permission to call the Rules test API. */
+  'rules.js': {tier:'static'},
   /* Reads source, not a browser. Guards the shape of bug this repo produces
      more than any other: something that fails and tells nobody. */
   'silence.js':       {tier:'static'},
@@ -417,9 +439,16 @@ for(const r of results){
      doing before it — so the parser looks at everything the suite said and
      takes the LAST count it finds, rather than hoping the count is the
      last thing printed. */
+  /* `all 40 chrome checks pass`, `all 16 overtime checks`, `all 78 voice
+     wiring checks` — the number and the word "checks" are separated by the
+     suite's own name, so a pattern that demands them adjacent misses all
+     three. Rewriting this list on 22 Aug dropped the loose `all N …` form
+     and three suites fell out of the ratchet the same night. Keep it last,
+     so the precise forms win when they are present. */
   const pat=[/(\d+)\s+(?:passed|promise\(s\) held|voice grammar cases|checks?)/ig,
              /ALL\s+(\d+)\s+CHECKS/ig,
-             /(\d+)\s+CHECKS\s+PASS/ig];
+             /(\d+)\s+CHECKS\s+PASS/ig,
+             /\ball\s+(\d+)\s+\S/ig];
   const findIn=(txt)=>{
     if(!txt) return null;
     for(const re of pat){

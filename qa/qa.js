@@ -2060,6 +2060,37 @@ async function browserTests(){
          the whole app is two swipes wide: stats · gametime · board. */
       S.mode='live';
       navGo('stats');
+      /* ============ SAY WHAT BLOCKED IT ==============================
+         On 22 Aug this reported `stats/stats/stats` for two gate runs and
+         the swipe was provably fine — the same fling sequence, driven
+         through the same exposed handlers on the same build, moved
+         gametime/board/gametime in isolation. The difference is page
+         STATE built up by the forty checks that run before this one, and
+         a bare tab name cannot say which piece of it.
+
+         start() refuses a gesture whose ancestors include a horizontal
+         scroller, so record that walk. Cheap, and it turns "the swipe is
+         broken" into "this element is 79px too wide". */
+      const blocked=(function(){
+        try{
+          const out=[]; let t=document.getElementById('stBody')||document.body;
+          while(t && t!==document.body){
+            out.push((t.id||t.className||t.tagName)+':'+t.scrollWidth+'/'+t.clientWidth
+                     +(t.scrollWidth>t.clientWidth+8?'<<':''));
+            t=t.parentNode;
+          }
+          const wide=[];
+          document.querySelectorAll('#stBody *').forEach(e=>{
+            if(e.scrollWidth>e.clientWidth+8)
+              wide.push((e.className||e.tagName)+':'+e.scrollWidth+'/'+e.clientWidth);
+          });
+          if(wide.length) out.push('WIDE[' + [...new Set(wide)].slice(0,4).join(' ') + ']');
+          return out.join(' ');
+        }catch(e){ return 'walk failed: '+e.message; }
+      })();
+      const gate={ unlocked:(()=>{try{return tabsUnlocked();}catch(e){return 'ERR';}})(),
+                   lean:(()=>{try{return lean();}catch(e){return 'ERR';}})(),
+                   afterNav:S.screen };
       fling(-120,4); const a=S.screen;             // stats  -> gametime
       fling(-120,4); const b=S.screen;             // gametime -> board
       fling(120,4);  const c=S.screen;             // board  -> gametime
@@ -2068,11 +2099,14 @@ async function browserTests(){
       // and it must be dead under a live question
       go('live'); const before=S.screen; fling(-120,4); const during=S.screen;
       S.mode='demo';
-      return {a,b,c,tiny,vert,locked:before===during};
+      return {a,b,c,tiny,vert,locked:before===during,blocked,gate};
     });
     check(`swipe.moves-between-tabs.${vp.name}`,
       swipe.a==='gametime' && swipe.b==='board' && swipe.c==='gametime',
-      `swipe sequence gave ${swipe.a}/${swipe.b}/${swipe.c}`,
+      `swipe sequence gave ${swipe.a}/${swipe.b}/${swipe.c}` +
+      ` · after navGo('stats') the screen was ${swipe.gate&&swipe.gate.afterNav}` +
+      `, tabsUnlocked=${swipe.gate&&swipe.gate.unlocked}, lean=${swipe.gate&&swipe.gate.lean}` +
+      ` · ancestor walk: ${swipe.blocked}`,
       'a tab bar you have to aim at is a website; swipe is what makes it feel like an app');
     check(`swipe.ignores-scroll.${vp.name}`, swipe.tiny==='gametime' && swipe.vert==='stats',
       `fired on a small (${swipe.tiny}) or vertical (${swipe.vert}) gesture`,
