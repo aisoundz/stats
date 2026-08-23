@@ -321,7 +321,12 @@ async function main(){
        than no warning: it is a confident wrong answer about your own
        build, which is the same failure mode this whole codebase is
        organised against. */
-    const otKnown = { basketball:true, hockey:true };
+    /* football joined this list on 22 Aug, when the NFL template got an
+       OT round (see admin.html, football.tags). Before that the else-branch
+       below correctly said football had no template; saying it now would be
+       a confident wrong answer about our own build, which is the exact
+       thing the paragraph above is about. */
+    const otKnown = { basketball:true, hockey:true, football:true };
     const sport = cfg.fromTemplate || 'basketball';
     /* SOCCER WAS IN THIS LIST AND SHOULD NOT HAVE BEEN, for the same
        reason baseball was taken out of it. The advice below — "adding 'OT'

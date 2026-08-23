@@ -4116,7 +4116,15 @@ window.STATS_FIREBASE = {
         where: String(where || '').slice(0, 40),
         msg: String(msg || '').slice(0, 300),
         extra: String(extra == null ? '' : extra).slice(0, 200),
-        build: String(window.STATS_BUILD_ID || '').slice(0, 40),
+        /* window.STATS_BUILD, not STATS_BUILD_ID. Nothing has ever set
+           STATS_BUILD_ID — the only global is window.STATS_BUILD, stamped
+           further down this file — so every error document ever written
+           carried build:'' and the first question anyone asks of a crash
+           report ("which build was this?") could never be answered from
+           the report itself. Found 22 Aug while chasing an intermittent
+           that only appears under load, which is exactly the kind you need
+           the build stamp for. */
+        build: String(window.STATS_BUILD || '').slice(0, 40),
         ua: String(navigator.userAgent || '').slice(0, 160),
         at: F.serverTimestamp()
       }).catch(function () {});
@@ -21100,7 +21108,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-22-unfreeze.211';
+const STATS_BUILD='2026-08-22-unfreeze.212';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

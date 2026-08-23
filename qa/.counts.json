@@ -50,5 +50,8 @@
   "closed-round.js": 10,
   "team-bars.js": 21,
   "inning-end.js": 24,
-  "not-final-yet.js": 22
+  "not-final-yet.js": 22,
+  "error-log.js": 8,
+  "nfl-overtime.js": 39,
+  "ordinal-question.js": 36
 }

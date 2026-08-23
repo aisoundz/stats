@@ -293,6 +293,29 @@ const TIER={
      while a round is live there is nothing to settle. Checks both doors,
      and checks just as hard that a finished night can still settle. */
   'not-final-yet.js': {tier:'browser'},
+  /* debrief.js prints "Zero errors is a FINDING, not a clean bill of
+     health" over every night. This is the difference between those two
+     sentences. SB.logError stamped window.STATS_BUILD_ID, which nothing has
+     ever set, so every crash report ever written said build:"" — the first
+     question anyone asks of one, unanswerable from the report itself. */
+  'error-log.js': {tier:'browser'},
+  /* NFL Week 1 is 6 September and regular-season games go to overtime;
+     publish.js had been logging "football does not have an OT-tagged
+     template yet" on every NFL night. It has one now — and nothing in the
+     2026 schedule can exercise it, because preseason has no overtime. The
+     fixture turned out to BE an overtime game (Rams 20, Bears 17: punt,
+     interception, winning field goal), so the round is checked against a
+     real one rather than an invention. */
+  'nfl-overtime.js': {tier:'static'},
+  /* "The question for baseball it's tough to say what was the last pitch
+     because the time is different — it has to be something related to the
+     game, who was the second strikeout etc." That is a fairness bug: the
+     feed runs AHEAD of the television, so "who is at the plate right now"
+     flipped at every half-inning boundary and a person watching carefully
+     answered wrong. An ordinal cannot be reached by any delay — provided
+     it waits until the event is safely in the past, which is the whole
+     point of the lag buffer. */
+  'ordinal-question.js': {tier:'static'},
   /* From the demo: "they had to scroll to the bottom of the page for
      locked in or next... The user shouldn't scroll down to find next or
      lock." A twelve-name roster is 2,000px tall on a phone and the way

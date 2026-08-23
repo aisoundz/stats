@@ -64,7 +64,38 @@ const FIX = {
       /* Stand the parser up exactly the way loadGameStats does, by
          letting it fetch our fixture instead of the network. */
       const realFetch = window.fetch;
-      window.fetch = () => Promise.resolve({ json: () => Promise.resolve(j) });
+      /* ============ A STUB THAT HIJACKS EVERY REQUEST =================
+         This replaced the GLOBAL fetch with an object carrying only
+         .json(), for the whole duration of the await below. Firestore is
+         also making requests in that window, and the SDK calls .text() on
+         what it gets back — so on a slow enough machine its request landed
+         on this stub and threw
+
+             TypeError: e.text is not a function
+               at firebase-firestore.js
+
+         which surfaced as an intermittent "mlb: no page errors" failure
+         that only appeared under load and could not be reproduced by
+         hammering the box. Chromium CPU throttling at 8x reproduces it on
+         demand; 1x, 4x and 16x do not, which is why fifteen ordinary runs
+         found nothing.
+
+         The app was never at fault. The test was breaking it.
+
+         So: intercept only the feed this suite is faking, hand everything
+         else to the real fetch, and return a Response shaped enough that a
+         caller expecting a real one is not surprised. */
+      window.fetch = function (input, init) {
+        const url = String((input && input.url) || input || '');
+        if (!/espn\.com/i.test(url)) return realFetch.call(window, input, init);
+        return Promise.resolve({
+          ok: true, status: 200, statusText: 'OK', url: url,
+          headers: { get: () => null },
+          json: () => Promise.resolve(j),
+          text: () => Promise.resolve(JSON.stringify(j)),
+          clone: function () { return this; }
+        });
+      };
       window.__famOverride = fam;
       const oldFam = window.famNow;
       window.famNow = () => fam;

@@ -75,28 +75,51 @@ function seenIds(lg){ return new Set(readArchive(lg).map(r=>r.event)); }
 /* ====================== THE REPORT ================================== */
 function report(){
   console.log('\n  BACKTEST ARCHIVE\n');
-  let grand={games:0,answered:0,silent:0,invalid:0,threw:0};
+  /* ============ 'unknowable' IS NOT A BUG, AND CALLING IT ONE COST US
+     A NIGHTLY RED THAT MEANT NOTHING. The writer records a fourth state
+     with a reason attached:
+
+       {"st":"unknowable","why":"cumulative box stat at a period boundary
+        - needs a live half-time snapshot"}
+
+     mlsMoreShots asks who had more shots in the FIRST HALF. Live, at the
+     break, the box score IS the first half and the resolver is correct. A
+     FINISHED game's summary carries only the whole match, so the first half
+     cannot be reconstructed from it at all. The backtest knows this and says
+     so; it is the most honest line in the archive.
+
+     The report had no bucket for it, so `else { threw++ }` swept it in with
+     exceptions, printed ***BUG*** against a working question, and declared
+     the whole run RED — 15 of 3,045. A nightly RED that is always wrong
+     trains everybody to stop reading it, which is worse than no report.
+
+     Counted separately now. RED still means what it says: an answer that
+     was not one of the options, or a resolver that threw. */
+  let grand={games:0,answered:0,silent:0,invalid:0,threw:0,unknowable:0};
   for(const lg of LEAGUES){
     const rows=readArchive(lg);
     if(!rows.length){ console.log(`  ${lg.toUpperCase().padEnd(5)} — nothing archived yet`); continue; }
-    const t={answered:0,silent:0,invalid:0,threw:0};
+    const t={answered:0,silent:0,invalid:0,threw:0,unknowable:0};
     const perQ={};
     rows.forEach(r=>{
       (r.q||[]).forEach(q=>{
         const k=r.sport+' · '+q.tag+' · '+q.r;
-        perQ[k]=perQ[k]||{answers:{},silent:0,invalid:0,threw:0,n:0,text:q.t};
+        perQ[k]=perQ[k]||{answers:{},silent:0,invalid:0,threw:0,unknowable:0,why:'',n:0,text:q.t};
         const p=perQ[k]; p.n++;
         if(q.st==='answered'){ t.answered++; p.answers[q.a]=(p.answers[q.a]||0)+1; }
         else if(q.st==='silent'){ t.silent++; p.silent++; }
         else if(q.st==='invalid'){ t.invalid++; p.invalid++; }
+        else if(q.st==='unknowable'){ t.unknowable++; p.unknowable++; if(!p.why) p.why=String(q.why||''); }
         else { t.threw++; p.threw++; }
       });
     });
-    const tot=t.answered+t.silent+t.invalid+t.threw;
+    const tot=t.answered+t.silent+t.invalid+t.threw+t.unknowable;
     console.log(`\n  ══ ${lg.toUpperCase()} · ${rows.length} games · ${tot} question-resolutions ══`);
-    console.log(`     ${t.answered} answered · ${t.silent} correctly silent · ${t.invalid} INVALID · ${t.threw} THREW`);
+    console.log(`     ${t.answered} answered · ${t.silent} correctly silent · ` +
+                (t.unknowable ? `${t.unknowable} not knowable from a finished game · ` : '') +
+                `${t.invalid} INVALID · ${t.threw} THREW`);
     grand.games+=rows.length; grand.answered+=t.answered; grand.silent+=t.silent;
-    grand.invalid+=t.invalid; grand.threw+=t.threw;
+    grand.invalid+=t.invalid; grand.threw+=t.threw; grand.unknowable+=t.unknowable;
 
     console.log('\n     question                              n   spread  silent  distribution');
     Object.keys(perQ).sort().forEach(k=>{
@@ -114,6 +137,11 @@ function report(){
          as "one answer every game" and called it dead. A question mostly
          cannot be judged on the few times it spoke. */
       if(p.invalid||p.threw) flag='  ***BUG***';
+      /* Named, not flagged. This question works live and cannot be
+         replayed; saying so every night is the point. */
+      else if(p.unknowable && p.unknowable===p.n)
+        flag='  <- cannot be replayed: ' + (p.why || 'needs live state');
+      else if(p.unknowable) flag='  <- ' + p.unknowable + ' not replayable';
       else if(p.n>=8 && p.silent/p.n>0.5) flag='  <- mostly silent (expected for OT rounds)';
       else if(p.n>=8 && p.silent/p.n>0.25) flag='  <- VOIDS often';
       else if(p.n-p.silent>=8 && spread<=1) flag='  <- DEAD, one answer every time it speaks';
@@ -121,8 +149,9 @@ function report(){
       console.log(`     ${nm.padEnd(36).slice(0,36)} ${String(p.n).padStart(3)} ${String(spread).padStart(6)} ${String(p.silent).padStart(7)}  ${dist}${flag}`);
     });
   }
-  const gt=grand.answered+grand.silent+grand.invalid+grand.threw;
-  console.log(`\n  ── ${grand.games} games · ${gt} resolutions · ${grand.invalid} invalid · ${grand.threw} threw ──`);
+  const gt=grand.answered+grand.silent+grand.invalid+grand.threw+grand.unknowable;
+  console.log(`\n  ── ${grand.games} games · ${gt} resolutions · ${grand.invalid} invalid · ${grand.threw} threw` +
+              (grand.unknowable ? ` · ${grand.unknowable} not replayable` : '') + ' ──');
   console.log(grand.invalid+grand.threw ? '\n  RED — an invalid answer is a bug wherever it appears\n'
                                         : '\n  GREEN — every answer produced was one of its own options\n');
 }
