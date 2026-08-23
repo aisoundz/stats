@@ -896,7 +896,21 @@
     color:var(--body);letter-spacing:.02em;min-width:0;overflow-wrap:anywhere}
   #gameRail[data-mode="compact"] .grAbb s{text-decoration:none;color:var(--dim);
     font-weight:600;font-size:12px;margin:0 2px}
-  #gameRail[data-mode="compact"] .grScore{font-size:14px}
+  /* ============ "17–30:27 - 2nd" ====================================
+     From the founder's phone, 22 Aug: the chips read `31–7Final`,
+     `0–04:15 PM` and `17–30:27 - 2nd`. That last one is the score 17–3
+     and the clock 0:27 - 2nd with NOTHING between them, and it parses as
+     a number nobody can make sense of.
+
+     `.grScore` had no rule of its own at all — only a font-size override
+     down here — so it was a plain inline span and the `margin-left:auto`
+     on the clock, which would have separated them, was doing nothing
+     because there was no flex container to push against. It never showed
+     up on a wide screen because the tiles were roomy enough for the
+     natural word spacing to read as a gap. */
+  .grScore{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+  .grScore s{text-decoration:none;opacity:.55;margin:0 1px}
+  #gameRail[data-mode="compact"] .grScore{font-size:14px;gap:5px}
   #gameRail[data-mode="compact"] .grWhen{font-size:12px}
   .grLg{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-size:12px;font-weight:800;
     letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
@@ -4160,6 +4174,28 @@ window.STATS_FIREBASE = {
 
      `lost` is the one that mattered on Game Night #7 and the one that had
      no representation anywhere. It now has a loud one.                  */
+  /* ============ 'rP' IS NOT A WORD ==================================
+     Founder's phone, 22 Aug: a toast reading "Your rP answers are saved."
+
+     `rP` is the internal id of the prediction-card lane — the round ids
+     are r0..r3 and the pre-game card is rP — and it was being dropped
+     straight into six player-facing sentences. It has never meant
+     anything to anybody outside this file, and on a small screen it looks
+     like the app broke mid-sentence.
+
+     Rounds get the name the player already sees on their own card. */
+  function laneName(rid, possessive){
+    var id = String(rid || '');
+    if (id === 'rP') return possessive ? 'Your card' : 'your card';
+    var m = id.match(/^r(\d+)$/);
+    if (m) {
+      var tag = '';
+      try { tag = (typeof roundTag === 'function') ? String(roundTag(Number(m[1])) || '') : ''; } catch (_) {}
+      if (tag) return (possessive ? 'Your ' : 'your ') + tag + ' answers';
+    }
+    return possessive ? 'Your answers' : 'your answers';
+  }
+
   SB.subState = {};
   function subMark(rid, st) {
     if (!rid) return st;
@@ -4171,11 +4207,11 @@ window.STATS_FIREBASE = {
 
   function outQueue(rid, row) {
     var nid = nidNow();
-    if (!nid) { notifyOps('write-lost', 'No night to save ' + rid + ' to. Tell the host.'); subMark(rid,'lost'); return false; }
+    if (!nid) { notifyOps('write-lost', 'No night to save ' + laneName(rid, false) + ' to. Tell the host.'); subMark(rid,'lost'); return false; }
     outbox = outbox.filter(function (e) { return !(e.nid === nid && e.rid === rid); });
     outbox.push({ nid: nid, rid: String(rid), row: row, tries: 0 });
     outSave(); outAnnounce();
-    notifyOps('write-queued', 'Your answers for ' + rid + ' haven’t reached the server yet — held on this phone and retrying.');
+    notifyOps('write-queued', laneName(rid, true) + ' haven’t reached the server yet — held on this phone and retrying.');
     outStart();
     return subMark(rid,'queued') && true;
   }
@@ -4251,17 +4287,17 @@ window.STATS_FIREBASE = {
           } catch (_) { closed = false; }   // cannot tell: keep trying
           if (closed) {
             notifyOps('write-lost',
-              'Your ' + e.rid + ' answers did not reach the server before that round closed. '
+              laneName(e.rid, true) + ' did not reach the server before that round closed. '
               + 'Tell the host — they can score you by hand.');
             subMark(e.rid,'lost');
             continue;                        // dropped: `still` never gets it
           }
         }
-        if (sent) { notifyOps('write-landed', 'Your ' + e.rid + ' answers are saved.'); subMark(e.rid,'saved'); }
+        if (sent) { notifyOps('write-landed', laneName(e.rid, true) + ' saved.'); subMark(e.rid,'saved'); }
         /* Thirty tries is four minutes, which is longer than any real
            network blip and far short of nagging. */
         else if (e.tries < 30) still.push(e);
-        else { notifyOps('write-lost', 'Couldn’t save your ' + e.rid + ' answers after many tries. Tell the host — they can score you by hand.'); subMark(e.rid,'lost'); }
+        else { notifyOps('write-lost', 'Couldn’t save ' + laneName(e.rid, false) + ' after many tries. Tell the host — they can score you by hand.'); subMark(e.rid,'lost'); }
       }
       outbox = still; outSave(); outAnnounce();
       if (!outbox.length && outTimer) { clearInterval(outTimer); outTimer = null; }
@@ -9917,23 +9953,28 @@ function buildPred(){
    +  opts
    +  bonus + rank
    +'</div>'
-   +'<div class="pdnav">'
-   +  '<button type="button" class="pdarrow" data-pdgo="-1"'+(PD.i===0?' disabled':'')+'>← Back</button>'
-   /* The count lived here AND in the bar pinned right below it, saying the
-      same thing twice within an inch of itself. The bar owns it. This slot
-      says what the CARD is, which is the thing the arrows move through. */
-   +  '<span class="pdsofar">'+(PD.i+1)+' of '+L.length+'</span>'
-   /* ON THE LAST CARD, NEXT IS THE LOCK. Reported from a real phone: you
-      finish the sixth pick and the only live control is a greyed-out
-      "Next" — the button your thumb is already on — while the actual way
-      forward is a separate button further down that you have to go find.
-      A disabled control at the end of a completed form reads as "you are
-      not finished", which is the opposite of true. */
-   +  (PD.i===L.length-1
-        ? ('<button type="button" class="pdarrow'+(doneN>=preds.length?' ready':'')+'" data-pdlock="1"'
-           + (doneN>=preds.length?'':' disabled')+'>'+(doneN>=preds.length?'Lock ✓':'Next')+'</button>')
-        : '<button type="button" class="pdarrow" data-pdgo="1">Next</button>')
-   +'</div>'
+   /* ============ THE WAY FORWARD IS NOT AT THE BOTTOM OF A ROSTER =====
+      From the demo, 22 Aug: "When someone was putting in their picks they
+      had to scroll to the bottom of the page for locked in or next. It
+      should be [pinned] on the bottom of the screen... The user shouldn't
+      scroll down to find next or lock."
+
+      Back and Next lived HERE, after the options. A basketball pick is a
+      twelve-name roster in two columns, so on a phone the control that
+      advances the card sat most of a screen below the thumb that had just
+      tapped a name. Every pick cost a scroll down to move on and a scroll
+      back up to read the next question.
+
+      They move into #pdBar, which is already pinned above the nav and
+      already carries the progress and the lock. MOVED, not copied — two
+      controls for one job is how a player ends up with a "Next" that
+      disagrees with a "Next", and this file has a check about it.
+
+      The special case that used to live here — on the last card, Next
+      becomes the Lock, because "the actual way forward is a separate
+      button further down that you have to go find" — goes with it. Once
+      the lock is pinned, it is not further down any more, and the reason
+      for the special case is gone. */
    /* THE ACTION LIVES WITH THE CARD. The old Lock button sat at the bottom
       of the page — which on a phone put it a full screen below the deck,
       invisible, and grey for a reason you could not see. Now it is here,
@@ -9961,12 +10002,46 @@ function buildPred(){
        nowhere for this button to take you: it is not there. It appears
        with your first pick, which is exactly when "which one did I miss"
        becomes a real question. */
+    /* Row one is NAVIGATION and nothing else. Row two is the one primary
+       action. Keeping those apart is why the last-card special case is no
+       longer needed: the loud control is always on screen, so a quiet
+       disabled "Next" beside it cannot be mistaken for the only way out. */
+    /* ============ TWO ROWS, BECAUSE THE THIRD ATE THE QUESTION =========
+       Pinning Back and Next was right and the founder asked for it twice.
+       Doing it as a THIRD row was not: the bar went from 70px to 112px,
+       and on a 375x667 phone that put it at y483-595 with the nav at
+       601-667 — 184px of the screen belonging to bars. The beta tester
+       measured `elementFromPoint` over the answer "Miami Dolphins" and
+       got back `DIV#pdBar`. A two-team question with one tappable team.
+
+       So the progress folds INTO the nav row, where there was already a
+       "3 of 6" saying half of it. One line: where you are, and how much
+       of the card is done. The bar is back to two rows and the answers
+       are answerable. */
     bar.innerHTML=
-      '<div class="pdsummary"><span>Your card so far</span><b>'+doneN+' / '+preds.length+' locked</b></div>'
+      '<div class="pdnav">'
+     +   '<button type="button" class="pdarrow" data-pdgo="-1"'+(PD.i===0?' disabled':'')+'>← Back</button>'
+     /* TWO LINES ON SCREEN, TWO PHRASES TO A READER. Stacked, "1 of 6"
+        over "0 locked" reads correctly to the eye and ran together as
+        "1 of 60 locked" in textContent — which is what a screen reader
+        says out loud, and what qa.js read when it went looking for the
+        count. A space and a label cost nothing. */
+     +   '<span class="pdsofar" aria-label="Question '+(PD.i+1)+' of '+L.length
+     +     ', '+doneN+' of '+preds.length+' locked">'+(PD.i+1)+' of '+L.length
+     +     ' <i>'+doneN+' locked</i></span>'
+     +   '<button type="button" class="pdarrow" data-pdgo="1"'+(PD.i===L.length-1?' disabled':'')+'>Next →</button>'
+     + '</div>'
      + (doneN===0 ? ''
         : '<button type="button" class="pdlock'+(left<=0?' ready':' todo')+'" id="pdLock">'
           + (left<=0 ? 'Lock my card →' : ('Still need '+(missP||(left+' more'))+' →'))
           + '</button>');
+    /* THE BAR'S OWN BUTTONS NEED THEIR OWN HANDLERS. The [data-pdgo] wiring
+       below binds inside the CARD element, and these are no longer in it —
+       a control that renders and does nothing is worse than one that is
+       not there. */
+    Array.prototype.forEach.call(bar.querySelectorAll('[data-pdgo]'), function(b){
+      b.onclick=function(){ predGo(Number(b.getAttribute('data-pdgo'))); };
+    });
     /* AND THE BAR MUST NOT SIT ON THE CARD. It is fixed, 72px up to clear
        the nav, and it was covering the bottom of the pick card — on a 393
        phone the SECOND option of the very first question was behind it, so
@@ -13815,6 +13890,7 @@ function loadQuestion(){
   document.getElementById('qWorth').textContent=`Worth ${worth} pt${worth>1?'s':''}${S.mode==="live"?' + ⚡':''}`;
   document.getElementById('revealBox').innerHTML='';
   document.getElementById('nextBtn').style.display='none';
+  try{ var _gq=document.getElementById('gtQuestion'); if(_gq) _gq.style.paddingBottom=''; }catch(_){}
   hideLockNote();
   document.getElementById('helpNote').textContent='';
   const half=lifelineKey(S.qi);
@@ -14037,8 +14113,45 @@ function answer(choice,btn){
                          : ((choice?'Not quite. ':'Missed it. ')+'The answer was '+q.a+'.')); }catch(_){}
   bumpBots(worth); // other players score too
   renderScore();
-  document.getElementById('nextBtn').style.display='block';
-  document.getElementById('nextBtn').textContent = (S.ni<nq()-1)?'Next question →':'See the leaderboard →';
+  /* ============ "THE BUTTON BELOW" WAS BELOW THE FOLD ================
+     The reveal box says, in the shipping copy: "nothing's final until you
+     hit the button below." On a phone that button sat under the reveal
+     box, under the options, under the voice row — and the founder's demo
+     player could not find it. Two people in two days told us the same
+     thing about two different screens, and this is the one that matters
+     most, because it is the loop: answer, confirm, next, answer.
+
+     So it pins, the same way the pick sheet's does, and the screen
+     reserves its measured height so it never covers the last option. */
+  var _nb=document.getElementById('nextBtn');
+  _nb.style.display='block';
+  _nb.textContent = (S.ni<nq()-1)?'Next question →':'See the leaderboard →';
+  try{
+    var gq=document.getElementById('gtQuestion');
+    if(gq) gq.style.paddingBottom = (_nb.offsetHeight + 96) + 'px';
+  }catch(_){}
+  /* AND IT MUST NOT LAND ON THE ANSWERS. The reveal copy invites exactly
+     this: "Changed your mind? Tap another one." A confirm button that
+     appears on top of the options it is asking you to reconsider is worse
+     than one you have to scroll to. Reserving space at the end of the
+     screen lets you scroll them clear; it does not put them clear NOW.
+     So if the button has landed over the list, move the page the exact
+     amount needed and no more. Measured, not a guessed constant. */
+  try{
+    setTimeout(function(){
+      try{
+        var opts=document.querySelectorAll('#qOpts button, #qOpts .opt');
+        if(!opts.length) return;
+        var last=opts[opts.length-1].getBoundingClientRect();
+        var btn=_nb.getBoundingClientRect();
+        var over=last.bottom - btn.top;
+        if(over > -8){
+          var d=document.scrollingElement||document.documentElement;
+          d.scrollTop = d.scrollTop + over + 16;
+        }
+      }catch(_){}
+    }, 60);
+  }catch(_){}
 }
 function useLifeline(){
   const half=lifelineKey(S.qi);
@@ -20739,7 +20852,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-22-h2h.207';
+const STATS_BUILD='2026-08-22-unfreeze.209';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -22706,9 +22819,12 @@ try{ window.seaRetry=seaRetry; }catch(_){}
    to say "28 tonight against a season average of 15.7", which is true and
    interesting, and never enough to print a rank that isn't real. Bounded to
    eight requests, once a night, only for players actually on the floor. */
+/* Returns TRUE only if it actually filled something. See the note on
+   loadRoomStat(): a loader that resolves without working, feeding a
+   `.then(renderStats)`, is the freeze. */
 async function seaFillGaps(){
   try{
-    if(!SEA.ok || SEA.filled) return;
+    if(!SEA.ok || SEA.filled) return false;
     var need=Object.keys(GS.box||{})
       .filter(function(nm){ return !SEA.by[nm.toLowerCase()] && GS.box[nm].aid; })
       .filter(function(nm){ var m=gsNum(GS.box[nm].MIN); return m==null || m>=5; })
@@ -22731,7 +22847,8 @@ async function seaFillGaps(){
           fgp:num('fieldGoalPct'), ftp:num('freeThrowPct') };
       }catch(_){}
     }));
-  }catch(_){}
+    return true;
+  }catch(_){ return false; }
 }
 function seaOf(name){ try{ return SEA.by[String(name||'').toLowerCase()]||null; }catch(_){ return null; } }
 function ord(n){ n=Number(n); if(!n) return ''; var s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
@@ -22786,8 +22903,12 @@ function logParse(j){
   return rows;
 }
 
+/* THIS ONE RETURNED `LOG` — AN OBJECT, AND OBJECTS ARE TRUTHY. So a
+   caller guarding on the resolved value (`.then(did => did && render)`)
+   would still redraw on the do-nothing path, and the loop would survive
+   the fix. Booleans, both ways. */
 async function loadLogs(){
-  if(LOG.loading || LOG.done) return LOG;
+  if(LOG.loading || LOG.done) return false;
   LOG.loading=true;
   try{
     var who=Object.keys(GS.box||{})
@@ -22796,7 +22917,7 @@ async function loadLogs(){
       .sort(function(a,b){ return b.min-a.min; })
       .slice(0,8);
     LOG.done=true;
-    if(!who.length){ LOG.done=false; LOG.loading=false; return LOG; }
+    if(!who.length){ LOG.done=false; LOG.loading=false; return false; }
     var path=sportCfg().path;
     await Promise.all(who.map(async function(x){
       try{
@@ -22810,7 +22931,7 @@ async function loadLogs(){
     LOG.at=Date.now();
   }catch(_){}
   LOG.loading=false;
-  return LOG;
+  return true;
 }
 
 /* Facts from the log, for one player, given what she has done tonight.
@@ -23451,17 +23572,36 @@ function stShareCard(kicker, text, inner, tone){
    the season table above it; repaints the Stats screen once the room
    answers, and says nothing at all if it never does. */
 var ROOMSTAT = { ok:false, loading:false, list:null };
+/* ============ A PROMISE THAT DID NOTHING MUST NOT TRIGGER A REDRAW ===
+   This is the freeze. `loadRoomStat()` returns an ALREADY-RESOLVED
+   promise on every one of its five early-exit conditions, and
+   `stRoomCard()` hangs a `.then(renderStats)` on it. Nothing sets
+   ROOMSTAT.ok in that path, so the next render calls stRoomCard again,
+   which resolves again, which renders again — about 2,400 times a second,
+   as a MICROTASK CHAIN, which is the part that makes it fatal: microtasks
+   drain before the browser does anything else, so no timer, no network
+   callback, no tap and no repaint ever gets a turn again. The page sits
+   there looking completely normal and the session is over.
+
+   It is not viewport-dependent and it is not intermittent. It is every
+   time the Stats tab has data to draw — which means the better the feed
+   is working, the sooner it kills the app.
+
+   So the loader now reports whether it STARTED anything, and only a
+   promise that did real work is allowed to cause a redraw. Same change
+   below for the season table, which has the identical shape. */
 function loadRoomStat(){
-  if(ROOMSTAT.loading || ROOMSTAT.ok || !window.SB || !SB.top || S.mode!=='live') return Promise.resolve();
+  if(ROOMSTAT.loading || ROOMSTAT.ok || !window.SB || !SB.top || S.mode!=='live') return Promise.resolve(false);
   ROOMSTAT.loading = true;
   return SB.top(3).then(function(list){
     ROOMSTAT.loading = false; ROOMSTAT.ok = true;
     ROOMSTAT.list = (list && list.length) ? list : null;
-  }).catch(function(){ ROOMSTAT.loading = false; });
+    return true;
+  }).catch(function(){ ROOMSTAT.loading = false; return false; });
 }
 function stRoomCard(){
   if(!ROOMSTAT.ok){
-    try{ loadRoomStat().then(function(){ if(S.screen==='stats') renderStats(); }); }catch(_){}
+    try{ loadRoomStat().then(function(did){ if(did && S.screen==='stats') renderStats(); }); }catch(_){}
     return '';
   }
   if(!ROOMSTAT.list || !ROOMSTAT.list.length) return '';
@@ -23747,7 +23887,31 @@ function stTeamBars(){
 }
 try{ window.stFlow=stFlow; window.stTeamBars=stTeamBars; }catch(_){}
 
+/* ============ AND A FLOOR UNDER IT ==================================
+   Two of the four re-render callbacks on this page were infinite. I have
+   fixed those two; the beta tester's words were "the other two are alive
+   and waiting for the right day", and the honest reading is that I cannot
+   prove I have found them all by inspection — I did not find these two by
+   inspection either.
+
+   So: a render that has already run many times in the last second is a
+   loop, whatever started it. Refuse, say so once in the console, and let
+   the browser breathe. A Stats tab that misses a repaint is a bad screen;
+   a Stats tab that freezes the app is the end of somebody's night. */
+var ST_RUNS = [];
 function renderStats(){
+  var _now = Date.now();
+  ST_RUNS = ST_RUNS.filter(function(t){ return _now - t < 1000; });
+  if(ST_RUNS.length >= 12){
+    if(ST_RUNS.length === 12){
+      ST_RUNS.push(_now);
+      try{ console.error('[STATS] renderStats re-entered ' + ST_RUNS.length +
+        ' times in a second — refusing. Something is re-rendering on a promise that did no work.'); }catch(_){}
+      try{ trk('render_loop', {screen:'stats'}); }catch(_){}
+    }
+    return;
+  }
+  ST_RUNS.push(_now);
   var el = document.getElementById('stBody'); if(!el) return;
 
   if(!GS.ok){
@@ -23768,10 +23932,15 @@ function renderStats(){
   // The season table is what makes the deep cuts deep. Fetch once, lazily,
   // and repaint when it lands rather than blocking the screen on it.
   try{
+    /* loadSeason() resolves immediately once it has failed three times in
+       a minute, and resolves with SEA either way — so `.then(renderStats)`
+       here is the same infinite chain as the room card. Only redraw when
+       the table actually arrived. */
     if(!SEA.ok && !SEA.loading) loadSeason().then(function(){
+      if(!SEA.ok) return;                       // nothing new — do not redraw
       if(S.screen === 'stats') renderStats();
-      seaFillGaps().then(function(){ if(S.screen === 'stats') renderStats(); });
-      loadLogs().then(function(){ if(S.screen === 'stats') renderStats(); });
+      seaFillGaps().then(function(did){ if(did && S.screen === 'stats') renderStats(); });
+      loadLogs().then(function(did){ if(did && S.screen === 'stats') renderStats(); });
     });
   }catch(_){}
 
@@ -26292,11 +26461,35 @@ body.hasgamebar .screen.active{padding-bottom:132px}
 .pdlock.todo{background:rgba(255,197,77,.12);border:1px solid rgba(255,197,77,.55);color:var(--gold);padding:17px}
 .pdlock:active{filter:brightness(.94)}
 
-#pdBar{display:none;position:fixed;left:0;right:0;bottom:72px;z-index:8600;padding:11px 14px calc(12px + env(safe-area-inset-bottom,0px));
+#pdBar{display:none;position:fixed;left:0;right:0;bottom:72px;z-index:8600;padding:9px 14px calc(9px + env(safe-area-inset-bottom,0px));
   background:rgba(10,14,23,.96);backdrop-filter:blur(14px);border-top:1px solid var(--line2)}
-#pdBar .pdsummary,#pdBar .pdlock{max-width:430px;margin-left:auto;margin-right:auto}
-#pdBar .pdsummary{margin-top:0}
-#pdBar .pdlock{margin-top:9px;display:block}
+#pdBar .pdlock,#pdBar .pdnav{max-width:430px;margin-left:auto;margin-right:auto}
+/* TWO ROWS AND NOT ONE PIXEL MORE. This bar sits above the nav on a
+   screen that also has to show a question and its answers, so every pixel
+   it takes is a pixel of the thing the player came for. A third row put
+   it over the answers on a 375-tall phone. */
+/* THE CONFIRM BUTTON IS PINNED, because the sentence above it says "the
+   button below" and a player should never have to go looking for the
+   thing a sentence just pointed at. Same shelf as #pdBar — above the nav,
+   inside the safe area — so the two never fight: they are never on screen
+   at the same time. */
+#nextBtn{position:fixed;left:14px;right:14px;bottom:calc(76px + env(safe-area-inset-bottom,0px));
+  z-index:8600;max-width:430px;margin:0 auto;box-shadow:0 -6px 24px rgba(0,0,0,.45)}
+@media (min-width:560px){
+  /* On a desktop the page is short enough that pinning is noise. */
+  #nextBtn{position:static;margin-top:10px;box-shadow:none;left:auto;right:auto}
+}
+#pdBar .pdnav{margin-top:0;gap:8px}
+/* Trimmed until it fits the budget on a 667-tall phone. The lock button
+   was 18px of padding designed for a card, not for a pinned bar that has
+   to share the screen with the question it is about. */
+#pdBar .pdlock{margin-top:7px;display:block;padding:13px;font-size:15px}
+#pdBar .pdarrow{padding:9px 13px;font-size:14px}
+/* Where you are, and how much is done, in one column of two small lines
+   — it replaces the row that used to say the second half on its own. */
+#pdBar .pdsofar{display:flex;flex-direction:column;align-items:center;line-height:1.25;
+  font-size:12px;color:var(--dim);font-weight:700;letter-spacing:.04em}
+#pdBar .pdsofar i{font-style:normal;color:var(--muted);font-weight:800}
 #s-predict.active{padding-bottom:250px}
 /* On a tall screen the viewport floor is nowhere near the card — pinning
    there strands the button in empty space. Above this height it simply

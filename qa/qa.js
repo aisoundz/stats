@@ -3188,7 +3188,18 @@ async function browserTests(){
       R.fillPct=(function(){ const i=document.querySelector('.pdbar i');
         return i ? Math.round(parseFloat(i.style.width)||0) : -1; })();
       R.filledDots=[...document.querySelectorAll('.pddot')].filter(d=>d.className.includes('fill')).length;
-      R.summary=((document.querySelector('.pdsummary')||{}).textContent||'').replace(/\s+/g,' ').trim();
+      /* THE COUNTER MOVED, THE RULE DID NOT. `.pdsummary` was its own row
+         in the pinned bar until 22 Aug, when the bar grew a navigation row
+         and went 70px -> 112px — which on a 375px phone put it over the
+         answers themselves. The count folded into the nav line, where "3
+         of 6" already said half of it, and the third row went away.
+
+         Read wherever it lives; keep asserting that it agrees with the
+         header. Pinning the selector to `.pdsummary` would have made this
+         check die of a layout change rather than of a real disagreement,
+         which is the failure mode it exists to catch. */
+      R.summary=((document.querySelector('.pdsummary') || document.querySelector('#pdBar .pdsofar') || {})
+                  .textContent||'').replace(/\s+/g,' ').trim();
       R.lock=(document.getElementById('pdLock')||{}).textContent||null;
       R.barOverlapsCard = bar.top < card.bottom - 1;
       /* every option of the FIRST question has to be reachable without the
@@ -3214,7 +3225,7 @@ async function browserTests(){
     });
     check('deck.the-two-counters-agree',
       /^0 \/ \d+ picked$/.test(first.pdn) && first.fillPct===0 && first.filledDots===0
-        && /0 \/ \d+ locked/.test(first.summary),
+        && /\b0 locked\b/.test(first.summary),
       `header said "${first.pdn}" (bar ${first.fillPct}% full, ${first.filledDots} dots) over a footer saying "${first.summary}"`,
       'REGRESSION: the sheet opened reading "1 / 6" over a bar a sixth full and a footer reading "0 / 6 locked". One counted the card you were LOOKING at, the other what you had DONE — both true, and a player has no way to know that');
     check('deck.nothing-is-still-needed-before-you-start',

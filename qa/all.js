@@ -235,6 +235,12 @@ const TIER={
      it into the slate afterwards. A number remembered from a file cannot
      survive a game being added late; one recomputed from the series can. */
   'night-numbers.js': {tier:'static'},
+  /* From the demo: "they had to scroll to the bottom of the page for
+     locked in or next... The user shouldn't scroll down to find next or
+     lock." A twelve-name roster is 2,000px tall on a phone and the way
+     forward sat under all of it. Measures WHERE the control is when you
+     need it, which is the question no existing check asked. */
+  'pick-reach.js': {tier:'browser'},
   /* Reads source, not a browser. Guards the shape of bug this repo produces
      more than any other: something that fails and tells nobody. */
   'silence.js':       {tier:'static'},
@@ -398,13 +404,32 @@ for(const f of run){
   const out=(r.stdout||'')+(r.stderr||'');
   /* A timeout or a crash has no exit status; treat both as failure and say
      which, because "suite hung" and "suite failed" are different repairs. */
-  const how = r.error && r.error.code==='ETIMEDOUT' ? 'TIMEOUT'
+  let how = r.error && r.error.code==='ETIMEDOUT' ? 'TIMEOUT'
             : r.status===0 ? 'PASS'
             : (r.status==null ? 'CRASH' : 'FAIL');
+  /* A SUITE THAT ANNOUNCES IT RAN NOTHING IS NOT A PASS.
+     qa/rules.js exits 0 after printing "SKIP -- the rules were NOT evaluated.
+     The Rules API refused: The caller does not have permission", and names its
+     own consequence in the next line: "which is how B-71 shipped". The gate
+     counted it inside ALL 32 SUITES PASS. That is the same defect as the three
+     suites that printed "no fixtures dir -- skipping" and exited 0, which this
+     file was written to eliminate, surviving in a suite nobody re-read.
+     "I could not check" and "I checked and it is fine" are different
+     sentences. */
+  /* ANCHORED, because an unanchored pattern is a substring match and this
+     repo has been bitten by that before (indexOf('NBA') matches inside WNBA).
+     The first version flagged phantom-ot.js, which logs lowercase "skip" as
+     TEST DATA -- the code under test correctly declining to invent an
+     overtime. That is the suite working. What we want is a suite's own
+     VERDICT that it ran nothing, which appears at the start of a line. */
+  const skipped = /^\s*SKIP\b/m.test(out)
+               || /were NOT evaluated/i.test(out)
+               || /^\s*(no fixtures dir|skipping)\b/im.test(out);
+  if(how==='PASS' && skipped) how='RAN NOTHING';
   /* The last non-empty line is every suite's verdict line, by convention. */
   const line=(out.trim().split('\n').filter(x=>x.trim()).pop()||'').replace(/\x1b\[[0-9;]*m/g,'').trim();
   results.push({f, how, ms, line, out});
-  const mark = how==='PASS' ? '  ok  ' : '  XX  ';
+  const mark = how==='PASS' ? '  ok  ' : (how==='RAN NOTHING' ? '  --  ' : '  XX  ');
   console.log(mark+f.padEnd(20)+String(ms+'ms').padStart(8)+'   '+line.slice(0,90));
 }
 
@@ -519,7 +544,14 @@ const neverCount = results.filter(r => r.how==='PASS' && !r.count
                                     && typeof base[r.f]!=='number'
                                     && !COUNT_UNSTABLE.has(r.f));
 
-const bad=results.filter(r=>r.how!=='PASS');
+/* RAN NOTHING is its own bucket, deliberately not in `bad`.
+   It must never be counted as a pass, because it is not one. But blocking a
+   promotion on a Firebase permissions grant that only the founder can make
+   would be a gate nobody can clear, and a gate nobody can clear gets bypassed.
+   So it is named, counted, and kept out of the all-pass claim. If the number
+   grows, that is a real regression and the line below says so. */
+const ranNothing=results.filter(r=>r.how==='RAN NOTHING');
+const bad=results.filter(r=>r.how!=='PASS' && r.how!=='RAN NOTHING');
 console.log('\n'+'-'.repeat(62));
 if(lostCount.length){
   console.log('A SUITE FELL OUT OF THE COVERAGE RATCHET — it had a recorded check');
@@ -542,8 +574,15 @@ if(shrunk.length){
   shrunk.forEach(x=>console.log('   ! '+x.f+'  '+x.was+' -> '+x.now+'   ('+(x.was-x.now)+' check(s) did not run; the line still said GREEN)'));
   console.log('');
 }
+if(ranNothing.length){
+  console.log('SUITES THAT RAN NOTHING AND STILL EXITED 0 — not passes, and not');
+  console.log('counted as any. Each says so in its own output and was believed anyway:');
+  ranNothing.forEach(r=>console.log('   -- '+r.f+'   '+(r.line||'').slice(0,84)));
+  console.log('');
+}
 if(!bad.length && !shrunk.length && !lostCount.length){
-  console.log('ALL '+results.length+' SUITES PASS'+(ONLY_STATIC?'  (static only — browser suites not run)':''));
+  console.log('ALL '+(results.length-ranNothing.length)+' RUNNABLE SUITES PASS'
+    +(ranNothing.length?('  ('+ranNothing.length+' ran nothing)'):'')+(ONLY_STATIC?'  (static only — browser suites not run)':''));
 }else if(!bad.length){
   console.log('every suite passed, but coverage shrank — treat as RED until explained');
 }else{

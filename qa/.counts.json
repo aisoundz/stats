@@ -7,7 +7,7 @@
   "night-config.js": 55,
   "overtime.js": 16,
   "payoff.js": 9,
-  "qa.js": 537,
+  "qa.js": 554,
   "slate.js": 25,
   "voice-pick.js": 33,
   "voice-wiring.js": 78,
@@ -41,5 +41,6 @@
   "stats-page.js": 30,
   "ci-rotation.js": 12,
   "your-own-card.js": 11,
-  "night-numbers.js": 9
+  "night-numbers.js": 9,
+  "pick-reach.js": 30
 }
