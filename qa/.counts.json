@@ -42,5 +42,13 @@
   "ci-rotation.js": 12,
   "your-own-card.js": 11,
   "night-numbers.js": 9,
-  "pick-reach.js": 30
+  "pick-reach.js": 30,
+  "ci-clearance.js": 96,
+  "ci-order.js": 7,
+  "practice-teams.js": 15,
+  "sub-receipt.js": 8,
+  "closed-round.js": 10,
+  "team-bars.js": 21,
+  "inning-end.js": 24,
+  "not-final-yet.js": 22
 }

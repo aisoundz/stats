@@ -1200,10 +1200,35 @@ const TEMPLATES = {
     worth:  [40,60],
     rounds: [
       [
-        { t: 'Who scored first in the half?', o: ['{HOME}','{AWAY}','Nobody scored'], r:'mlsFirstGoalTeam',
-          t_es: '¿Quién anotó primero en la primera mitad?', o_es: ['{HOME}', '{AWAY}', 'Nadie anotó'] },
-        { t: 'Goals in the first half, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlsGoalsBand',
-          t_es: 'Goles en la primera mitad, entre los dos equipos — ¿cuántos?', o_es: ['Ninguno', 'Uno', 'Dos', 'Tres o más'] },
+        /* ============ THESE TWO WERE FREE POINTS ======================
+           Founder, 22 Aug, looking at this round at half-time in the
+           Portland–LAFC room: "what's wrong with these questions".
+
+           The round OPENS at the break, and the score strip is on the same
+           screen — POR 1, LAFC 0. So "who scored first in the half" was
+           Portland and "goals in the first half" was One, both readable
+           without looking up from the phone. Eighty of the round's 160
+           points went to anyone who opened the app at half-time, and the
+           person who watched all 45 minutes scored exactly the same. That
+           is the opposite of what this product sells.
+
+           "Nobody scored" was dead on the same screen for the same reason:
+           at 1–0 a three-way question had one live distractor.
+
+           Replaced with two that the scoreboard cannot answer. The MINUTE
+           the first goal arrived is only knowable by having watched it, and
+           corners are not on any broadcast score line. Both resolvers were
+           already built and validated; they were simply never used.
+
+           Kept: cards and shots below. Neither is on the scoreboard, which
+           is why they were the two the founder did not object to. */
+        { t: 'The first goal — when did it come?',
+          o: ['In the opening 15','Between 15 and 30','Between 30 and 45','In first-half stoppage'],
+          r:'mlsFirstGoalWindow',
+          t_es: 'El primer gol — ¿cuándo llegó?',
+          o_es: ['En los primeros 15', 'Entre el 15 y el 30', 'Entre el 30 y el 45', 'En el descuento'] },
+        { t: 'Who won more corners in the first half?', o: ['{HOME}','{AWAY}','Even'], r:'mlsMoreCorners',
+          t_es: '¿Quién ganó más córners en la primera mitad?', o_es: ['{HOME}', '{AWAY}', 'Igual'] },
         { t: 'Cards shown in the first half — how many?', o: ['None','One','Two or three','Four or more'], r:'mlsCardsBand',
           t_es: 'Tarjetas mostradas en la primera mitad — ¿cuántas?', o_es: ['Ninguna', 'Una', 'Dos o tres', 'Cuatro o más'] },
         { t: 'Who had more shots in the first half?', o: ['{HOME}','{AWAY}','Even'], r:'mlsMoreShots',
@@ -9271,6 +9296,72 @@ AUTO.CI = (function(){
 
     /* Nothing sensible yet — say so rather than invent one. */
     return null;
+  };
+
+  /* ============ THE END OF AN INNING IS THE MOMENT ====================
+     Anis, 22 Aug: "For baseball we should do question at the end of every
+     [inning]." Baseball's rounds cover innings 1-3, 4-6 and 7-9, so between
+     them there is a forty-minute stretch with nothing to answer, and that
+     is most of the game.
+
+     TWO THINGS MAKE THIS DIFFERENT FROM AN ORDINARY CAUGHT IT, and both
+     had to be got right or it would be worse than not asking:
+
+     1. It is about the inning that just ENDED, not the one starting. At the
+        moment the period turns, the new inning has no plays in it — asking
+        "that last pitch, what was it?" thirty seconds into the next inning
+        is a question about nothing. So the caller passes the inning that
+        finished, and every play this reads is filtered to that number.
+
+     2. It is a summary, not a snapshot. "How many runs did that inning
+        produce" can be answered by anyone who watched it and by nobody who
+        did not, which is the whole test. It is computed here, at generation
+        time, from the same feed that will resolve it — so it is verifiable
+        the moment it is asked and needs no host.
+
+     Named 'qtrRuns' deliberately: lockMsFor() gives the /^(saw|qtr)/ family
+     20 seconds rather than 15, and a spoken answer needs every one of them.
+     See the voice budget note in stats_gametime_voice_north_star. */
+  C.buildInningEnd = function(sport, plays, T, per, counts){
+    if(String(sport||'') !== 'baseball') return null;
+    var n = Number(per); if(!n) return null;
+
+    var inThis = plays.filter(function(p){
+      return p.period && Number(p.period.number) === n; });
+    if(!inThis.length) return null;
+    var before = plays.filter(function(p){
+      return p.period && Number(p.period.number) < n; });
+
+    /* Runs are read off the running score, not counted from scoring plays:
+       a single play can drive in more than one, and the score line already
+       carries the arithmetic. */
+    var tot = function(p){ return (Number(p.awayScore)||0) + (Number(p.homeScore)||0); };
+    var end   = tot(inThis[inThis.length-1]);
+    var start = before.length ? tot(before[before.length-1]) : 0;
+    var runs  = end - start;
+    if(!(runs >= 0)) return null;                 // a feed that went backwards
+
+    var ord = C.ordinal ? C.ordinal(n) : (n + 'th');
+    var seq = (inThis[inThis.length-1] || {}).sequenceNumber || 0;
+    var ans = runs === 0 ? '0' : (runs === 1 ? '1' : (runs === 2 ? '2' : '3'));
+
+    return {
+      qid: 'ci_' + n + '_end_' + seq,
+      kind: 'qtrRuns', per: n, runTeam: null,
+      prompt: '\uD83C\uDFAF The ' + ord + ' is over \u2014 how many runs did it produce?',
+      options: [{k:'None',v:'0'},{k:'One',v:'1'},{k:'Two',v:'2'},{k:'Three or more',v:'3'}],
+      ans: ans,
+      atext: runs === 0 ? ('Nothing in the ' + ord + '.')
+           : (runs + ' run' + (runs === 1 ? '' : 's') + ' in the ' + ord + '.')
+    };
+  };
+  /* 1st, 2nd, 3rd, 4th... and the teens, which is where naive versions
+     produce "11st". */
+  C.ordinal = function(n){
+    n = Number(n) || 0;
+    var t = n % 100;
+    if(t >= 11 && t <= 13) return n + 'th';
+    return n + (['th','st','nd','rd'][n % 10] || 'th');
   };
 
   C.build = function(sport, plays, T, per, counts, sum){

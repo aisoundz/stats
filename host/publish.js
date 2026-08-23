@@ -321,9 +321,29 @@ async function main(){
        than no warning: it is a confident wrong answer about your own
        build, which is the same failure mode this whole codebase is
        organised against. */
-    const otKnown = { basketball:true, hockey:true, soccer:true };
+    const otKnown = { basketball:true, hockey:true };
     const sport = cfg.fromTemplate || 'basketball';
-    if(otKnown[sport]){
+    /* SOCCER WAS IN THIS LIST AND SHOULD NOT HAVE BEEN, for the same
+       reason baseball was taken out of it. The advice below — "adding 'OT'
+       to this night's tags is the fix" — is correct for basketball and
+       hockey, where any tied game goes to an extra period.
+
+       League football is not that. An MLS regular-season match that is
+       level at ninety minutes is a draw and ends; there is no extra time
+       to answer questions about. Every night on soccer/usa.1 was being
+       told to add a round that could never open, on every publish.
+
+       Extra time does exist in knockout football, so this is not "soccer
+       has no overtime" — it is that the competition decides, and the
+       publisher does not know the competition. So it says what it knows.
+       The paragraph above is the standing rule here: a warning that tells
+       you to do something that will not work is worse than no warning. */
+    if(sport === 'soccer'){
+      log('note', `no extra-period round for ${NIGHT}. A LEAGUE match that is level at ` +
+                  'full time is a draw and simply ends, so there is nothing more to answer ' +
+                  "and that is correct. If this night is a KNOCKOUT tie, extra time is real " +
+                  "and an 'OT'-tagged round is the fix — check the competition before adding one.");
+    } else if(otKnown[sport]){
       log('warn', `no overtime round configured for ${NIGHT}, so an overtime would be played with nothing ` +
                   `to answer. Adding 'OT' to this night's tags is now safe and is the fix — but only on ` +
                   'player build .129 or later, which is the first one that can receive a fifth round. ' +

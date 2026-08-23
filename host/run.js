@@ -713,6 +713,7 @@ async function main(){
   let ciOpen = null;         // qid currently open
   let ciOpenedAt = 0;
   let ciPending = null;      // {qid, ans, text, at} — the answer, held back
+  let ciLastPer = null;      // the period we last saw, so we can spot the turn
   let lastFeedSig = '';
   let lastScoreSig = '';
   /* ============ FOUR HOURS OF THE GAME, NOT OF THE PROCESS ==========
@@ -863,9 +864,41 @@ async function main(){
               const askedTotal = Object.keys(ciCounts).reduce((n,k)=>n+(ciCounts[k]||0),0);
               const allowed = AUTO.CI.quota(AUTO.CI.perGameFor(sportFam, pace), per, regPer);
               const gap = Date.now() - ciOpenedAt;
-              const mo = AUTO.CI.moment(sportFam, step.fresh);
-              const spacedOut = mo && gap >= AUTO.CI.floorMs(mo.stoppage, askedTotal, allowed, pace);
-              if(mo && askedTotal < allowed && spacedOut){
+
+              /* ============ A QUESTION AT THE END OF EVERY INNING ========
+                 His ask, 22 Aug. Baseball's scoring rounds cover innings
+                 1-3, 4-6 and 7-9, so between them sit forty-minute
+                 stretches with nothing to answer — most of the game.
+
+                 The turn of the period is the signal, and the question is
+                 about the inning that JUST FINISHED, never the one starting:
+                 at this instant the new inning has no plays in it, so an
+                 ordinary Caught It built against it would be a question
+                 about nothing. AUTO.CI.buildInningEnd() is passed the
+                 inning that ended and filters every play to it.
+
+                 It also bypasses the RAMP but not the CAP. `allowed` grows
+                 with the period so a game does not spend its whole budget
+                 in the first quarter — sound for ordinary questions, and
+                 wrong here, because it would silence exactly the early
+                 innings this is meant to cover. The per-game total still
+                 binds, so this cannot run away. */
+              let inningEnded = null;
+              if(sportFam === 'baseball'){
+                if(ciLastPer != null && per > ciLastPer) inningEnded = ciLastPer;
+                ciLastPer = per;
+              }
+              const perGameCap = AUTO.CI.perGameFor(sportFam, pace);
+              const mo = inningEnded != null
+                ? { reason: 'inning', stoppage: true }
+                : AUTO.CI.moment(sportFam, step.fresh);
+              const spacedOut = mo && (inningEnded != null
+                ? gap >= 15000                       /* only so two turns cannot collide */
+                : gap >= AUTO.CI.floorMs(mo.stoppage, askedTotal, allowed, pace));
+              const withinBudget = inningEnded != null
+                ? askedTotal < perGameCap
+                : askedTotal < allowed;
+              if(mo && withinBudget && spacedOut){
                 const comp = ((sum.header || {}).competitions || [])[0] || {};
                 const cs = comp.competitors || [];
                 const aw = cs.find(c => c.homeAway === 'away') || cs[0] || {};
@@ -877,8 +910,28 @@ async function main(){
                   awayScore:aw.score, homeScore:hm.score
                 };
                 let q = null;
-                try{ q = AUTO.CI.build(sportFam, cplays, T, per, ciCounts, sum); }
-                catch(e){ log('callit', 'the builder threw: ' + ((e && e.message) || e)); }
+                /* ============ THE NEW BUILDER GETS ITS OWN NET ============
+                   These were one try/catch, and that was wrong: a throw
+                   inside buildInningEnd() would jump straight past the
+                   ordinary builder below, so the moment produced NO
+                   question at all rather than falling back to the one that
+                   has worked for weeks. New code sharing a catch with
+                   proven code drags the proven code down with it — and it
+                   fails silently, which is the shape this whole file is
+                   organised against.
+
+                   Separate nets. The inning-end question is an addition; if
+                   it cannot be built, for any reason, the night carries on
+                   exactly as it did before it existed. */
+                if(inningEnded != null){
+                  try{ q = AUTO.CI.buildInningEnd(sportFam, cplays, T, inningEnded, ciCounts); }
+                  catch(e){ log('callit', 'the inning-end builder threw, falling back: ' +
+                                          ((e && e.message) || e)); q = null; }
+                }
+                if(!q){
+                  try{ q = AUTO.CI.build(sportFam, cplays, T, per, ciCounts, sum); }
+                  catch(e){ log('callit', 'the builder threw: ' + ((e && e.message) || e)); }
+                }
                 if(q && q.qid){
                   const locks = AUTO.CI.lockMsFor(q.kind);
                   /* The answer NEVER goes in the document the phones read.

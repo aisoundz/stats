@@ -18,6 +18,7 @@
    Usage: node qa/celebrate.js [index-test.html]
 */
 const { chromium } = require('playwright');
+const { waitReady } = require('./ready.js');
 const http = require('http'), fs = require('fs'), path = require('path');
 
 const TARGET = process.argv.find(a => /\.html$/.test(a)) || 'index.html';
@@ -46,7 +47,11 @@ function serve(){
     const p = await b.newPage({ viewport:{width:414,height:896} });
     const errs=[]; p.on('pageerror',e=>errs.push(String(e.message).slice(0,120)));
     await p.goto(`http://localhost:${port}/${TARGET}`, { waitUntil:'domcontentloaded' });
-    await p.waitForTimeout(2500);
+    /* waitReady(), not a guess. On 22 Aug qa/stats-page.js was found
+       skipping an entire sport per run because its fixed boot sleep
+       sometimes expired before the app existed — and it had been
+       reporting full coverage on the runs where it did not. */
+    await waitReady(p);
 
     ok('celebrate.is-exported',
        await p.evaluate(()=>typeof window.celebrate === 'function'),
@@ -93,7 +98,11 @@ function serve(){
     const b = await chromium.launch();
     const p = await b.newPage({ viewport:{width:414,height:896}, reducedMotion:'reduce' });
     await p.goto(`http://localhost:${port}/${TARGET}`, { waitUntil:'domcontentloaded' });
-    await p.waitForTimeout(2500);
+    /* waitReady(), not a guess. On 22 Aug qa/stats-page.js was found
+       skipping an entire sport per run because its fixed boot sleep
+       sometimes expired before the app existed — and it had been
+       reporting full coverage on the runs where it did not. */
+    await waitReady(p);
     const r = await p.evaluate(()=>{
       celebrate(3);
       return { parts: CELEB.parts.length, canvas: !!document.getElementById('celebCv') };

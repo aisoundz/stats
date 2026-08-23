@@ -21,6 +21,7 @@
    ================================================================== */
 const {chromium}=require('playwright');
 const path=require('path');
+const { waitReady } = require('./ready.js');
 const FILE='file://'+path.join(__dirname,'..','index-test.html');
 let pass=0, fail=0;
 const ok =(n)=>{pass++; console.log('  ok   '+n);};
@@ -30,8 +31,13 @@ const bad=(n,d)=>{fail++; console.log('  FAIL '+n+(d?'\n         '+d:''));};
   const b=await chromium.launch();
   const p=await b.newPage({viewport:{width:393,height:852}});
   const errs=[]; p.on('pageerror',e=>errs.push(String(e&&e.message||e)));
-  await p.goto(FILE);
-  await p.waitForTimeout(1400);
+  await p.goto(FILE, { waitUntil: 'domcontentloaded' });
+  /* waitReady(), not a fixed sleep. qa/stats-page.js slept 1300ms for
+     boot and, on a loaded machine, called into an app that was not
+     there yet — its catch swallowed the ReferenceError and a whole
+     sport section was skipped behind one red line, differently on
+     every run. A guess at boot is a guess at coverage. */
+  await waitReady(p);
 
   /* Become a player: practice unlocks the tabs, same as B14 intends. */
   await p.evaluate(()=>{ startDemo(); S.name='QA'; startPredict(); });

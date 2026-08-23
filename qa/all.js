@@ -235,6 +235,64 @@ const TIER={
      it into the slate afterwards. A number remembered from a file cannot
      survive a game being added late; one recomputed from the series can. */
   'night-numbers.js': {tier:'static'},
+  /* The AI beta tester, on a 393pt phone: the ☰ button was cutting a
+     38x39 hole out of the top-right corner of a live Caught It card —
+     which is exactly where the ✕ and the countdown sit, so the two
+     controls you reach for during a question were the two the button ate.
+     Only on the three screens with no score strip; on gametime the
+     scoreboard already pushed the card clear, which is why it survived
+     every previous look. Geometric, both engines, four screens. */
+  'ci-clearance.js': {tier:'browser'},
+  /* Same tester, same session: pressed Practice inside a Giants-Dolphins
+     room and was asked to choose between Denver and Atlanta. hydrateNight
+     replaces the GAME's team names but not the question STRINGS, so the
+     scoreboard and the questions were reading two different games. Drives
+     setSport -> hydrate -> startDemo for three sports and reads the words. */
+  'practice-teams.js': {tier:'browser'},
+  /* "Scoreboard check — who is ahead right now?" arrived with the score
+     on screen; the tester answered without looking up. Free points teach
+     a player that watching is optional. The score reads are not deleted
+     (early in a quarter they are all there is) — they are ordered last,
+     behind everything that requires having watched. */
+  'ci-order.js': {tier:'browser'},
+  /* From the 22 Aug archive: a player answered two of Q2's four questions
+     three minutes after Q2 closed and Q3 opened. The write was filed safely
+     to 'r1-local' — but the receipt was keyed to 'r1', found no status for
+     a document nobody wrote, and hid itself. He did the work and was told
+     nothing at all. His own note the night before: "I could submit answers
+     after the game ended." The write was made safe then; the sentence
+     was not. */
+  'sub-receipt.js': {tier:'browser'},
+  /* The other half of the same 22 Aug finding: he should not have been
+     able to OPEN Q2 at 22:37 at all. The round listener holds exactly one
+     document — the newest — so hostedDoc() cannot see that the host served
+     a past round, and the built-in deck opened as though nobody were
+     hosting. The host's own index settles it: anything before HR.doc.idx
+     is finished. Guards the three exceptions as hard as the rule. */
+  'closed-round.js': {tier:'browser'},
+  /* Stats tab, from the beta tester: the 3rd-down bar answered a different
+     question from its label and Penalties had no 'lower is better' note.
+     One cause — both arrive as "N-M" and both were tagged 'frac', so
+     5-of-16 (31%) was shown beating 4-of-8 (50%) and more penalties read as
+     leading. The numbers beside them were right the whole time; only the
+     verdict was wrong, which is why nobody caught it. */
+  'team-bars.js': {tier:'browser'},
+  /* "For baseball we should do question at the end of every [inning]."
+     The scoring rounds cover innings 1-3, 4-6 and 7-9, so between them sit
+     forty-minute stretches with nothing to answer. Fires on the turn of the
+     period, about the inning that just ENDED — at that instant the new one
+     has no plays in it. Checked against every inning of a real 604-play
+     game, plus a two-run homer, which is the case that separates counting
+     RUNS from counting scoring PLAYS. */
+  'inning-end.js': {tier:'static'},
+  /* His phone, 22 Aug, in the Portland-LAFC room AT HALF-TIME: "FINAL
+     WHISTLE · Score your predictions". The room was read while still live —
+     r0 "First half", state=live, four questions. They existed and he was
+     walked past them. The route was never proven; the rule that makes every
+     candidate harmless is that the HOST decides when a night is over, and
+     while a round is live there is nothing to settle. Checks both doors,
+     and checks just as hard that a finished night can still settle. */
+  'not-final-yet.js': {tier:'browser'},
   /* From the demo: "they had to scroll to the bottom of the page for
      locked in or next... The user shouldn't scroll down to find next or
      lock." A twelve-name roster is 2,000px tall on a phone and the way

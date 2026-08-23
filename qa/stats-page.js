@@ -18,6 +18,7 @@
    asserting that functions existed.
    ================================================================== */
 const {chromium}=require('playwright');
+const { waitReady } = require('./ready.js');
 const path=require('path'), fs=require('fs');
 const FILE='file://'+path.join(__dirname,'..','index-test.html');
 let pass=0, fail=0;
@@ -36,7 +37,26 @@ const FIX = {
     const raw = JSON.parse(fs.readFileSync(path.join(__dirname,'..','references','multisport',cfg.file),'utf8'));
     const p=await b.newPage({viewport:{width:393,height:852}});
     const errs=[]; p.on('pageerror',e=>errs.push(String(e&&e.message||e)));
-    await p.goto(FILE); await p.waitForTimeout(1300);
+    /* ============ 1300ms WAS A GUESS, AND IT WAS SOMETIMES WRONG ======
+       This slept a fixed 1300ms for boot and then called loadGameStats().
+       On a loaded machine boot had not finished, loadGameStats did not yet
+       exist, the try/catch below swallowed the ReferenceError, GS.ok stayed
+       false and the ENTIRE sport section was skipped with one red line.
+
+       Observed three times in a row on this box, on a different sport each
+       run — wnba+nfl, then mlb, then none. A suite that silently drops a
+       third of its checks depending on machine load is worse than one that
+       fails: on the good runs it reports full coverage it did not perform.
+
+       Wait for the functions this suite actually calls. */
+    await p.goto(FILE, { waitUntil: 'domcontentloaded' });
+    /* The project already had the right tool for this. waitReady() waits on
+       the app's own STATS_READY flag and, when it never arrives, throws a
+       message saying plainly that this is a BOOT failure and not a defect in
+       the feature under test — which is exactly the sentence this suite
+       needed on the evening it spent skipping one sport per run. Every other
+       browser suite uses it; there is no reason for this one to be special. */
+    await waitReady(p);
 
     /* Feed the REAL summary through the REAL parser, then call the REAL
        renderers. Nothing here reimplements what it is testing. */
@@ -48,12 +68,23 @@ const FIX = {
       window.__famOverride = fam;
       const oldFam = window.famNow;
       window.famNow = () => fam;
-      try { GS.ok=false; GS.at=0; GS.ev=''; await loadGameStats(true); } catch(e){ }
+      let why = '';
+      try { GS.ok=false; GS.at=0; GS.ev=''; await loadGameStats(true); }
+      catch(e){ why = 'threw: ' + ((e && e.message) || e); }
+      /* One retry, because the only failure ever seen here was the app not
+         being ready yet — and a second attempt distinguishes that from a
+         fixture the parser genuinely rejects. */
+      if(!GS.ok){
+        try { GS.ok=false; GS.at=0; GS.ev=''; await loadGameStats(true); }
+        catch(e){ why = why || ('threw on retry: ' + ((e && e.message) || e)); }
+        if(!why) why = GS.ok ? 'needed a second attempt' : 'GS.ok still false after a retry';
+      }
       window.fetch = realFetch;
 
       const T = (()=>{ try{ return gtTeams(); }catch(_){ return null; } })();
       const out = {
-        parsed: !!GS.ok,
+        parsed: !!GS.ok, why: why,
+        haveFns: (typeof loadGameStats === 'function') + '/' + (typeof stFlow === 'function'),
         lines: (GS.lines||[]).length,
         periods: ((GS.lines||[])[0]||{vals:[]}).vals.length,
         statKeys: T && T.a && T.a.m ? Object.keys(T.a.m).length : 0,
@@ -66,7 +97,11 @@ const FIX = {
     }, {j: raw, fam: cfg.fam});
 
     console.log('\n  ── ' + league.toUpperCase() + ' (' + cfg.fam + ')');
-    if(!r.parsed){ bad(league+': the fixture parses', 'GS.ok is false — the feed never loaded'); await p.close(); continue; }
+    if(!r.parsed){ bad(league+': the fixture parses',
+      'GS.ok is false — ' + (r.why || 'the feed never loaded') + '  [fns ' + r.haveFns + ']');
+      await p.close(); continue; }
+    if(r.why === 'needed a second attempt')
+      console.log('     (note: the first load attempt did not take — boot timing)');
 
     /* ---- the data the page needs actually arrived ---- */
     if(r.statKeys>0) ok(league+': team statistics were read', r.statKeys+' labels, e.g. '+r.someKeys.slice(0,3).join(' / '));

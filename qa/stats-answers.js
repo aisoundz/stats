@@ -25,6 +25,7 @@
    Usage: node qa/stats-answers.js [index-test.html]
 */
 const { chromium } = require('playwright');
+const { waitReady } = require('./ready.js');
 const http = require('http'), fs = require('fs'), path = require('path');
 
 const TARGET = process.argv.find(a => /\.html$/.test(a)) || 'index.html';
@@ -54,7 +55,11 @@ function serve(){
       cancel(){}, paused:false, resume(){}, getVoices(){return[];} }});
   });
   await p.goto(`http://localhost:${port}/${TARGET}`, { waitUntil:'domcontentloaded' });
-  await p.waitForTimeout(2600);
+  /* waitReady(), not a guess. On 22 Aug qa/stats-page.js was found
+     skipping an entire sport per run because its fixed boot sleep
+     sometimes expired before the app existed — and it had been
+     reporting full coverage on the runs where it did not. */
+  await waitReady(p);
 
   /* A real game in memory: Lynx 68, Valkyries 61, third quarter. */
   const r = await p.evaluate(async ()=>{

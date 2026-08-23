@@ -35,6 +35,7 @@
      node qa/live-smoke.js --base https://statsgametime.com/index-test.html
    ================================================================== */
 const {chromium}=require('playwright');
+const { waitReady } = require('./ready.js');
 const ARG=(k,d)=>{const i=process.argv.indexOf('--'+k); return i>=0?process.argv[i+1]:d;};
 const BASE=ARG('base','https://statsgametime.com/');
 const ADMIN=process.argv.includes('--admin');
@@ -63,7 +64,11 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
     p.on('requestfailed', r=>{ deadReq.push(r.url()); });
 
     await p.goto(BASE+CB(),{waitUntil:'domcontentloaded'});
-    await p.waitForTimeout(6000);
+    /* waitReady(), not a guess. On 22 Aug qa/stats-page.js was found
+       skipping an entire sport per run because its fixed boot sleep
+       sometimes expired before the app existed — and it had been
+       reporting full coverage on the runs where it did not. */
+    await waitReady(p);
 
     const s=await p.evaluate(()=>({
       build:(typeof STATS_BUILD!=='undefined')?STATS_BUILD:null,
@@ -125,7 +130,11 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
     const p=await b.newPage({viewport:{width:1200,height:900}});
     const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
     await p.goto(url+CB(),{waitUntil:'domcontentloaded'});
-    await p.waitForTimeout(3500);
+    /* waitReady(), not a guess. On 22 Aug qa/stats-page.js was found
+       skipping an entire sport per run because its fixed boot sleep
+       sometimes expired before the app existed — and it had been
+       reporting full coverage on the runs where it did not. */
+    await waitReady(p);
     const a=await p.evaluate(async()=>{
       const out={ tabs:[...document.querySelectorAll('nav button')].map(b=>b.textContent.trim()) };
       try{ out.loaded = await loadSlateRooms(); out.rooms = SLATE_ROOMS.map(r=>r.id); }

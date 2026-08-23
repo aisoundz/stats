@@ -57,10 +57,41 @@ const sub=(v,h,a)=>String(v).replace(/\{HOME\}/g,h).replace(/\{AWAY\}/g,a);
   if(!L){ console.error(`no feed path for ${SPORT}`); process.exit(2); }
   const probeDates = DATES.length ? DATES : L.dates;
 
+  /* ============ A BLIP IS NOT A BROKEN BANK =========================
+     This fetch was bare, so a single connect timeout threw out of the
+     whole script and the gate printed `XX bank-shadow.js` with a stack
+     trace — which reads as "the question bank is broken" when what
+     actually happened is that the box could not reach ESPN for ten
+     seconds. It happened on 22 Aug while the same machine was polling the
+     feed every twenty seconds for a live match, which is precisely when
+     this suite is most likely to run.
+
+     Three attempts with a short backoff. If the feed is genuinely
+     unreachable this still FAILS — a suite that cannot run has not passed,
+     which is the rule this whole file exists under — but it says which of
+     the two things went wrong. The per-game fetch below has always caught
+     and carried on; only this one could kill the run. */
+  const getJSON = async (url) => {
+    let last;
+    for(let attempt=1; attempt<=3; attempt++){
+      try{ return await (await fetch(url)).json(); }
+      catch(e){
+        last = e;
+        const why = (e && e.cause && e.cause.code) || (e && e.message) || 'unknown';
+        console.log(`  net   attempt ${attempt}/3 failed (${why})` + (attempt<3 ? ' — retrying' : ''));
+        if(attempt<3) await new Promise(r=>setTimeout(r, attempt*2000));
+      }
+    }
+    console.error(`\n  COULD NOT REACH THE FEED after 3 attempts: ${url}`);
+    console.error('  This suite did NOT run. That is a network failure on this machine,');
+    console.error('  not a finding about the question bank — but it is still not a pass.');
+    throw last;
+  };
+
   /* Finished games, from real scoreboards. */
   const games=[];
   for(const d of probeDates){
-    const j=await (await fetch(`https://site.api.espn.com/apis/site/v2/sports/${L.path}/scoreboard?dates=${d}`)).json();
+    const j=await getJSON(`https://site.api.espn.com/apis/site/v2/sports/${L.path}/scoreboard?dates=${d}`);
     for(const e of (j.events||[])){
       const c=e.competitions[0];
       if(!(c.status.type||{}).completed) continue;

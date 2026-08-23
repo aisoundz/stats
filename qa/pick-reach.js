@@ -19,6 +19,7 @@
    ================================================================== */
 const {chromium}=require('playwright');
 const path=require('path');
+const { waitReady } = require('./ready.js');
 const FILE='file://'+path.join(__dirname,'..','index-test.html');
 let pass=0, fail=0;
 const ok =(n,d)=>{pass++; console.log('  ok   '+n+(d?('   '+d):''));};
@@ -69,7 +70,13 @@ const VPS=[{n:'iPhone SE',w:375,h:667},{n:'iPhone 15',w:393,h:852}];
   for(const vp of VPS){
     const p=await b.newPage({viewport:{width:vp.w,height:vp.h}});
     const errs=[]; p.on('pageerror',e=>errs.push(String(e&&e.message||e)));
-    await p.goto(FILE); await p.waitForTimeout(1200);
+    await p.goto(FILE, { waitUntil: 'domcontentloaded' });
+    /* waitReady(), not a fixed sleep. qa/stats-page.js slept 1300ms for
+     boot and, on a loaded machine, called into an app that was not
+     there yet — its catch swallowed the ReferenceError and a whole
+     sport section was skipped behind one red line, differently on
+     every run. A guess at boot is a guess at coverage. */
+    await waitReady(p);
     await p.evaluate(()=>{ startDemo(); S.name='QA'; startPredict(); });
     await p.waitForTimeout(700);
 

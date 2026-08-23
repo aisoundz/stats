@@ -1007,21 +1007,32 @@ const TEMPLATES = {
     periods:[3,6,9,10],
     rounds: [
       [
-        { t: 'The first hit of the game — what was it?', o: ['Single','Double','Triple','Home run'], r:'mlbFirstHitKind' },
-        { t: 'Runs through three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand' },
-        { t: 'Strikeouts through three, both staffs combined — how many?', o: ['Two or fewer','Three or four','Five or six','Seven or more'], r:'mlbStrikeoutsBand' },
-        { t: 'Who leads after three?', o: ['{HOME}','{AWAY}','Level'], r:'mlbLeadAfter' }
+        { t: 'The first hit of the game — what was it?', o: ['Single','Double','Triple','Home run'], r:'mlbFirstHitKind',
+          t_es: 'El primer hit del partido — ¿qué fue?', o_es: ['Sencillo','Doble','Triple','Jonrón'] },
+        { t: 'Runs through three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand',
+          t_es: 'Carreras en las primeras tres, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una o dos','Tres o cuatro','Cinco o más'] },
+        { t: 'Strikeouts through three, both staffs combined — how many?', o: ['Two or fewer','Three or four','Five or six','Seven or more'], r:'mlbStrikeoutsBand',
+          t_es: 'Ponches en las primeras tres, entre los dos cuerpos de pitcheo — ¿cuántos?', o_es: ['Dos o menos','Tres o cuatro','Cinco o seis','Siete o más'] },
+        { t: 'Who leads after three?', o: ['{HOME}','{AWAY}','Level'], r:'mlbLeadAfter',
+          t_es: '¿Quién gana tras tres entradas?', o_es: ['{HOME}','{AWAY}','Empate'] }
       ],
       [
-        { t: 'Runs in the middle three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand' },
-        { t: 'Home runs in the middle three — how many?', o: ['None','One','Two','Three or more'], r:'mlbHomeRunsBand' },
-        { t: 'The fastest pitch of the middle three — how hard?', o: ['93 or under','94 to 96','97 or 98','99 or more'], r:'mlbFastestPitchBand' },
-        { t: 'Which of these was the busiest inning?', o: ['The 4th','The 5th','The 6th'], r:'mlbBusiestInning' }
+        { t: 'Runs in the middle three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand',
+          t_es: 'Carreras en las tres del medio, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una o dos','Tres o cuatro','Cinco o más'] },
+        { t: 'Home runs in the middle three — how many?', o: ['None','One','Two','Three or more'], r:'mlbHomeRunsBand',
+          t_es: 'Jonrones en las tres del medio — ¿cuántos?', o_es: ['Ninguno','Uno','Dos','Tres o más'] },
+        { t: 'The fastest pitch of the middle three — how hard?', o: ['93 or under','94 to 96','97 or 98','99 or more'], r:'mlbFastestPitchBand',
+          t_es: 'El lanzamiento más rápido de las tres del medio — ¿a cuánto?', o_es: ['93 o menos','De 94 a 96','97 o 98','99 o más'] },
+        { t: 'Which of these was the busiest inning?', o: ['The 4th','The 5th','The 6th'], r:'mlbBusiestInning',
+          t_es: '¿Cuál de estas fue la entrada más movida?', o_es: ['La 4ta','La 5ta','La 6ta'] }
       ],
       [
-        { t: 'Runs in the last three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand' },
-        { t: 'Strikeouts in the last three, both staffs combined — how many?', o: ['Two or fewer','Three or four','Five or six','Seven or more'], r:'mlbStrikeoutsBand' },
-        { t: 'Stolen bases in the last three — how many?', o: ['None','One','Two','Three or more'], r:'mlbStolenBasesBand' },
+        { t: 'Runs in the last three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand',
+          t_es: 'Carreras en las últimas tres, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una o dos','Tres o cuatro','Cinco o más'] },
+        { t: 'Strikeouts in the last three, both staffs combined — how many?', o: ['Two or fewer','Three or four','Five or six','Seven or more'], r:'mlbStrikeoutsBand',
+          t_es: 'Ponches en las últimas tres, entre los dos cuerpos de pitcheo — ¿cuántos?', o_es: ['Dos o menos','Tres o cuatro','Cinco o seis','Siete o más'] },
+        { t: 'Stolen bases in the last three — how many?', o: ['None','One','Two','Three or more'], r:'mlbStolenBasesBand',
+          t_es: 'Bases robadas en las últimas tres — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] },
         /* WAS mlbMoreKsOrHits, AND THE SHADOW TEST KILLED IT. Eight
            finished games, eight answers of "Strikeouts" — over three
            innings of modern baseball, strikeouts beat hits essentially
@@ -1029,12 +1040,16 @@ const TEMPLATES = {
            mlbOneTwoThreeInning failed the same way: eight "Yes".
            A resolver being correct is not the same as a question being
            worth asking, and only a spread check tells you which you have. */
-        { t: 'Home runs in the last three — how many?', o: ['None','One','Two','Three or more'], r:'mlbHomeRunsBand' }
+        { t: 'Home runs in the last three — how many?', o: ['None','One','Two','Three or more'], r:'mlbHomeRunsBand',
+          t_es: 'Jonrones en las últimas tres — ¿cuántos?', o_es: ['Ninguno','Uno','Dos','Tres o más'] }
       ],
       [
-        { t: 'Who scores first this inning?', o: ['{HOME}','{AWAY}','Nobody scored'], r:'mlbExtraFirstScoringTeam' },
-        { t: 'Runs this inning, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlbExtraRunsBand' },
-        { t: 'Does the game end here?', o: ['Yes','No'], r:'mlbExtraDecides' }
+        { t: 'Who scores first this inning?', o: ['{HOME}','{AWAY}','Nobody scored'], r:'mlbExtraFirstScoringTeam',
+          t_es: '¿Quién anota primero en esta entrada?', o_es: ['{HOME}','{AWAY}','Nadie anotó'] },
+        { t: 'Runs this inning, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlbExtraRunsBand',
+          t_es: 'Carreras en esta entrada, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] },
+        { t: 'Does the game end here?', o: ['Yes','No'], r:'mlbExtraDecides',
+          t_es: '¿Se acaba el partido aquí?', o_es: ['Sí','No'] }
       ]
     ]
     /* NO EXTRA-INNINGS TEMPLATE YET. run.js splits an overtime round out by
@@ -1046,32 +1061,69 @@ const TEMPLATES = {
   },
 
   /* ============================ FOOTBALL ============================
-     NO `periods` HERE, AND THAT IS DELIBERATE. Every nfl* resolver reads p
-     as the quarter number, which is exactly index+1 — the same mapping
-     basketball has always used. Declaring [1,2,3,4] would be a second copy
-     of a fact that is already correct by default, and a second copy is how
-     this codebase breaks. Baseball declares periods because baseball needs
-     to; football does not.
+     REWRITTEN 21 AUG 2026, AND THE OLD ONE IS WORTH DESCRIBING BECAUSE
+     THE FAILURE IS REUSABLE. Sixteen questions off six facts, so ten of
+     them were a repeat: punts twice, longest drive twice, touchdowns
+     twice, who-leads twice. Two of the sixteen — "who leads after one",
+     "who leads after three" — asked a room that is looking at a scoreboard
+     what the scoreboard says. Three more were "who finished with more X",
+     which is a stats table rather than a game.
 
-     THE DRIVE IS THE UNIT AND IT GRADES ITSELF. `displayResult` is a clean
-     enum on every drive — Touchdown, Punt, Field Goal, Interception, Downs,
-     Missed FG — which makes this the cheapest bank of the six: no
-     interpretation, one field.
+     Founder, 20 Aug and again 21 Aug:
+       "Stop asking question for NFL who is leading when the score is
+        directly above the questions."
+       "The football questions are the dumbest... We have to be more
+        creative and find questions that are about the game not the score,
+        or what the last play."
+
+     NO `periods` HERE, AND THAT IS STILL DELIBERATE. Every nfl* resolver
+     reads p as the quarter number, which is exactly index+1 — the same
+     mapping basketball has always used. Declaring [1,2,3,4] would be a
+     second copy of a fact that is already correct by default, and a second
+     copy is how this codebase breaks.
+
+     WHAT REPLACED IT. Sixteen questions, sixteen DIFFERENT resolvers, no
+     fact asked twice, nothing on the scoreboard and nothing off the season
+     box score. Each round mixes four shapes on purpose: a moment that
+     resolves to an enum, a moment that resolves to a SIDE, a number, and
+     either a yes/no or a second enum. Twelve of the sixteen resolvers are
+     new — see the block above @host-shared for what each one reads.
+
+     TUNED, NOT GUESSED. Every cutoff and every option list below was run
+     through its real resolver against 78 finished games (2025 pre-season
+     and regular season) before it was written down. The measured spread,
+     as share of the most common answer — a question is only worth asking
+     if the room DISAGREES about it:
+
+       Q1  openingDrive 50 · firstPunt 46 · longestGain 38 · 3-and-outs 44
+       Q2  firstTdKind 47 · explosive 32 · twoMinuteScore 33 · halfEnd 45
+       Q3  redZone 49 · firstSack 37 · thirdDowns 28 · halfOpen 56
+       Q4  fourthDown 35 · firstTurnover 45 · timeouts 37 · lateScore 54
+
+     For scale: the WNBA bank's worst line sits at 90%, which pays a player
+     for knowing a fact rather than for watching. Nothing here is above 56.
+
+     WHAT THIS BANK STILL CANNOT DO, said plainly so nobody re-discovers it
+     at 1pm on a Saturday. The founder asked for questions whose ANSWER is
+     a named player — "who made that interception in the 3rd". The feed can
+     find the player: every play's `text` carries "C.Durant" and a resolver
+     could return it. The OPTIONS cannot. A bank option is a fixed string,
+     publish.js substitutes exactly two tokens ({HOME} and {AWAY}) and
+     treats any other surviving {TOKEN} as a fatal error, and football slate
+     rooms are built needsRoster:false so there is no roster to offer.
+     Naming a player in the options needs a roster token in publish.js and
+     a shortlist rule — a 53-man list is not four thumb-sized options — and
+     that is a build, not a bank edit. Until then the closest honest thing
+     is a question about a specific MOMENT that resolves to a side, which
+     is what four of the sixteen below are.
 
      Band cutoffs, spelled out because band(n,cuts,opts) takes the first
      opts[i] where n <= cuts[i]:
-       nflPuntsBand        [1,2,3]     <=1 / 2 / 3 / 4+
-       nflTouchdownsBand   [0,1,2]     none / 1 / 2 / 3+
-       nflTurnoversBand    [0,1,2]     none / 1 / 2 / 3+
-       nflScoringDrivesBand[0,1,2]     none / 1 / 2 / 3+
-       nflPenaltiesBand    [1,3,5]     <=1 / 2-3 / 4-5 / 6+
-       nflLongestDriveBand [20,45,70]  yards
-
-     TWO OF THESE READ THE BOX, NOT THE QUARTER. nflMoreFirstDowns and
-     nflMoreTotalYards compare season-style box totals, so they answer
-     "who has more SO FAR". They sit in Q4, where so-far and the whole game
-     are the same sentence. Do not move them to Q1 without changing the
-     wording, or the question will be right and the words will be wrong. */
+       nflLongestGainBand    [19,29,44]  yards on one play
+       nflThreeAndOutsBand   [0,1,2]     none / 1 / 2 / 3+
+       nflExplosivePlaysBand [0,1,2]     none / 1 / 2 / 3+
+       nflThirdDownConvBand  [1,2,3]     <=1 / 2 / 3 / 4+
+       nflTimeoutsBand       [1,3,5]     <=1 / 2-3 / 4-5 / 6+                */
   football: {
     league: 'nfl',
     tags:   ['Q1','Q2','Q3','Q4'],
@@ -1079,28 +1131,44 @@ const TEMPLATES = {
     worth:  [10,20,30,40],
     rounds: [
       [
-        { t: 'How did the opening drive end?', o: ['Touchdown','Field goal','Punt','Turnover','Downs','Missed FG'], r:'nflFirstDriveResult' },
-        { t: 'The first points of the game came how?', o: ['Touchdown','Field goal','Safety','Nobody scored yet'], r:'nflFirstScoreKind' },
-        { t: 'Punts in the first quarter, both teams — how many?', o: ['One or fewer','Two','Three','Four or more'], r:'nflPuntsBand' },
-        { t: 'Who leads after one?', o: ['{HOME}','{AWAY}','Level'], r:'nflLeadAfter' }
+        { t: 'How did the opening drive end?', o: ['Touchdown','Field goal','Punt','Turnover','Downs','Missed FG'], r:'nflFirstDriveResult',
+          t_es: '¿Cómo terminó la primera serie ofensiva?', o_es: ['Touchdown','Gol de campo','Despeje','Pérdida de balón','Cuarta y corta fallida','Gol de campo fallado'] },
+        { t: 'Which side had to punt it away first?', o: ['{HOME}','{AWAY}','Nobody punted'], r:'nflFirstPuntTeam',
+          t_es: '¿Qué equipo tuvo que despejar primero?', o_es: ['{HOME}','{AWAY}','Nadie despejó'] },
+        { t: 'The longest gain of the first — how far?', o: ['19 yards or fewer','20 to 29','30 to 44','45 or more'], r:'nflLongestGainBand',
+          t_es: 'La jugada más larga del primer cuarto — ¿de cuántas yardas?', o_es: ['19 yardas o menos','De 20 a 29','De 30 a 44','45 o más'] },
+        { t: 'Three-and-outs in the first, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nflThreeAndOutsBand',
+          t_es: 'Series de tres y fuera en el primero, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] }
       ],
       [
-        { t: 'Touchdowns in the second, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nflTouchdownsBand' },
-        { t: 'The longest drive of the second — how far?', o: ['20 yards or fewer','21 to 45','46 to 70','71 or more'], r:'nflLongestDriveBand' },
-        { t: 'Turnovers in the second, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nflTurnoversBand' },
-        { t: 'More rushing or more passing in the second?', o: ['Rushing','Passing','Even'], r:'nflMoreRushOrPass' }
+        { t: 'The first touchdown of the second — how did it come?', o: ['On the ground','Through the air','Some other way','No touchdown in the second'], r:'nflFirstTdKind',
+          t_es: 'El primer touchdown del segundo — ¿cómo llegó?', o_es: ['Por tierra','Por aire','De otra manera','Sin touchdown en el segundo'] },
+        { t: 'Gains of twenty yards or more in the second — how many?', o: ['None','One','Two','Three or more'], r:'nflExplosivePlaysBand',
+          t_es: 'Jugadas de veinte yardas o más en el segundo — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] },
+        { t: 'After the two-minute warning, who put points up before the half?', o: ['{HOME}','{AWAY}','Both of them','Nobody scored'], r:'nflTwoMinuteScore',
+          t_es: 'Tras el aviso de dos minutos, ¿quién anotó antes del descanso?', o_es: ['{HOME}','{AWAY}','Los dos','Nadie anotó'] },
+        { t: 'The very last play before halftime — what was it?', o: ['A kick','A kneel-down','A pass play','A run'], r:'nflHalfEndPlay',
+          t_es: 'La última jugada antes del descanso — ¿cuál fue?', o_es: ['Una patada','Una rodilla en tierra','Un pase','Una carrera'] }
       ],
       [
-        { t: 'Scoring drives in the third, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nflScoringDrivesBand' },
-        { t: 'Penalties in the third, both teams — how many?', o: ['One or fewer','Two or three','Four or five','Six or more'], r:'nflPenaltiesBand' },
-        { t: 'Punts in the third, both teams — how many?', o: ['One or fewer','Two','Three','Four or more'], r:'nflPuntsBand' },
-        { t: 'Who leads after three?', o: ['{HOME}','{AWAY}','Level'], r:'nflLeadAfter' }
+        { t: 'First team inside the twenty in the third — what did they get?', o: ['A touchdown','A field goal','They came away empty','Nobody got that close'], r:'nflRedZoneFirstTrip',
+          t_es: 'El primer equipo dentro de la veinte en el tercero — ¿qué sacó?', o_es: ['Un touchdown','Un gol de campo','Se fue sin nada','Nadie llegó tan cerca'] },
+        { t: 'Who gave up the first sack of the third?', o: ['{HOME}','{AWAY}','Nobody got sacked'], r:'nflFirstSackTeam',
+          t_es: '¿Quién permitió la primera captura del tercero?', o_es: ['{HOME}','{AWAY}','No hubo capturas'] },
+        { t: 'Third downs picked up in the third, both teams — how many?', o: ['One or fewer','Two','Three','Four or more'], r:'nflThirdDownConvBand',
+          t_es: 'Terceras oportunidades convertidas en el tercero, entre los dos equipos — ¿cuántas?', o_es: ['Una o menos','Dos','Tres','Cuatro o más'] },
+        { t: 'Did the second half open with points?', o: ['Yes','No'], r:'nflHalfOpenScored',
+          t_es: '¿Abrió la segunda mitad con puntos?', o_es: ['Sí','No'] }
       ],
       [
-        { t: 'Touchdowns in the fourth, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nflTouchdownsBand' },
-        { t: 'The longest drive of the fourth — how far?', o: ['20 yards or fewer','21 to 45','46 to 70','71 or more'], r:'nflLongestDriveBand' },
-        { t: 'Who finished with more first downs?', o: ['{HOME}','{AWAY}','Even'], r:'nflMoreFirstDowns' },
-        { t: 'Who finished with more total yards?', o: ['{HOME}','{AWAY}','Even'], r:'nflMoreTotalYards' }
+        { t: 'Fourth down in the fourth — did anybody go for it?', o: ['Nobody went for it','Went for it and got it','Went for it and came up short','Both happened'], r:'nflFourthDownOutcome',
+          t_es: 'Cuarta oportunidad en el cuarto — ¿alguien se fue por ella?', o_es: ['Nadie lo intentó','Se fue por ella y la sacó','Se fue por ella y se quedó corto','Pasaron las dos cosas'] },
+        { t: 'Who coughed it up first in the fourth?', o: ['{HOME}','{AWAY}','Neither side turned it over'], r:'nflFirstTurnoverTeam',
+          t_es: '¿Quién perdió el balón primero en el cuarto?', o_es: ['{HOME}','{AWAY}','Ninguno lo perdió'] },
+        { t: 'Timeouts called in the fourth — how many?', o: ['One or fewer','Two or three','Four or five','Six or more'], r:'nflTimeoutsBand',
+          t_es: 'Tiempos muertos pedidos en el cuarto — ¿cuántos?', o_es: ['Uno o menos','Dos o tres','Cuatro o cinco','Seis o más'] },
+        { t: 'Did anybody score inside the last two minutes?', o: ['Yes','No'], r:'nflLateScore',
+          t_es: '¿Anotó alguien en los últimos dos minutos?', o_es: ['Sí','No'] }
       ]
     ]
   },
@@ -1132,10 +1200,35 @@ const TEMPLATES = {
     worth:  [40,60],
     rounds: [
       [
-        { t: 'Who scored first in the half?', o: ['{HOME}','{AWAY}','Nobody scored'], r:'mlsFirstGoalTeam',
-          t_es: '¿Quién anotó primero en la primera mitad?', o_es: ['{HOME}', '{AWAY}', 'Nadie anotó'] },
-        { t: 'Goals in the first half, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlsGoalsBand',
-          t_es: 'Goles en la primera mitad, entre los dos equipos — ¿cuántos?', o_es: ['Ninguno', 'Uno', 'Dos', 'Tres o más'] },
+        /* ============ THESE TWO WERE FREE POINTS ======================
+           Founder, 22 Aug, looking at this round at half-time in the
+           Portland–LAFC room: "what's wrong with these questions".
+
+           The round OPENS at the break, and the score strip is on the same
+           screen — POR 1, LAFC 0. So "who scored first in the half" was
+           Portland and "goals in the first half" was One, both readable
+           without looking up from the phone. Eighty of the round's 160
+           points went to anyone who opened the app at half-time, and the
+           person who watched all 45 minutes scored exactly the same. That
+           is the opposite of what this product sells.
+
+           "Nobody scored" was dead on the same screen for the same reason:
+           at 1–0 a three-way question had one live distractor.
+
+           Replaced with two that the scoreboard cannot answer. The MINUTE
+           the first goal arrived is only knowable by having watched it, and
+           corners are not on any broadcast score line. Both resolvers were
+           already built and validated; they were simply never used.
+
+           Kept: cards and shots below. Neither is on the scoreboard, which
+           is why they were the two the founder did not object to. */
+        { t: 'The first goal — when did it come?',
+          o: ['In the opening 15','Between 15 and 30','Between 30 and 45','In first-half stoppage'],
+          r:'mlsFirstGoalWindow',
+          t_es: 'El primer gol — ¿cuándo llegó?',
+          o_es: ['En los primeros 15', 'Entre el 15 y el 30', 'Entre el 30 y el 45', 'En el descuento'] },
+        { t: 'Who won more corners in the first half?', o: ['{HOME}','{AWAY}','Even'], r:'mlsMoreCorners',
+          t_es: '¿Quién ganó más córners en la primera mitad?', o_es: ['{HOME}', '{AWAY}', 'Igual'] },
         { t: 'Cards shown in the first half — how many?', o: ['None','One','Two or three','Four or more'], r:'mlsCardsBand',
           t_es: 'Tarjetas mostradas en la primera mitad — ¿cuántas?', o_es: ['Ninguna', 'Una', 'Dos o tres', 'Cuatro o más'] },
         { t: 'Who had more shots in the first half?', o: ['{HOME}','{AWAY}','Even'], r:'mlsMoreShots',
@@ -9203,6 +9296,72 @@ AUTO.CI = (function(){
 
     /* Nothing sensible yet — say so rather than invent one. */
     return null;
+  };
+
+  /* ============ THE END OF AN INNING IS THE MOMENT ====================
+     Anis, 22 Aug: "For baseball we should do question at the end of every
+     [inning]." Baseball's rounds cover innings 1-3, 4-6 and 7-9, so between
+     them there is a forty-minute stretch with nothing to answer, and that
+     is most of the game.
+
+     TWO THINGS MAKE THIS DIFFERENT FROM AN ORDINARY CAUGHT IT, and both
+     had to be got right or it would be worse than not asking:
+
+     1. It is about the inning that just ENDED, not the one starting. At the
+        moment the period turns, the new inning has no plays in it — asking
+        "that last pitch, what was it?" thirty seconds into the next inning
+        is a question about nothing. So the caller passes the inning that
+        finished, and every play this reads is filtered to that number.
+
+     2. It is a summary, not a snapshot. "How many runs did that inning
+        produce" can be answered by anyone who watched it and by nobody who
+        did not, which is the whole test. It is computed here, at generation
+        time, from the same feed that will resolve it — so it is verifiable
+        the moment it is asked and needs no host.
+
+     Named 'qtrRuns' deliberately: lockMsFor() gives the /^(saw|qtr)/ family
+     20 seconds rather than 15, and a spoken answer needs every one of them.
+     See the voice budget note in stats_gametime_voice_north_star. */
+  C.buildInningEnd = function(sport, plays, T, per, counts){
+    if(String(sport||'') !== 'baseball') return null;
+    var n = Number(per); if(!n) return null;
+
+    var inThis = plays.filter(function(p){
+      return p.period && Number(p.period.number) === n; });
+    if(!inThis.length) return null;
+    var before = plays.filter(function(p){
+      return p.period && Number(p.period.number) < n; });
+
+    /* Runs are read off the running score, not counted from scoring plays:
+       a single play can drive in more than one, and the score line already
+       carries the arithmetic. */
+    var tot = function(p){ return (Number(p.awayScore)||0) + (Number(p.homeScore)||0); };
+    var end   = tot(inThis[inThis.length-1]);
+    var start = before.length ? tot(before[before.length-1]) : 0;
+    var runs  = end - start;
+    if(!(runs >= 0)) return null;                 // a feed that went backwards
+
+    var ord = C.ordinal ? C.ordinal(n) : (n + 'th');
+    var seq = (inThis[inThis.length-1] || {}).sequenceNumber || 0;
+    var ans = runs === 0 ? '0' : (runs === 1 ? '1' : (runs === 2 ? '2' : '3'));
+
+    return {
+      qid: 'ci_' + n + '_end_' + seq,
+      kind: 'qtrRuns', per: n, runTeam: null,
+      prompt: '\uD83C\uDFAF The ' + ord + ' is over \u2014 how many runs did it produce?',
+      options: [{k:'None',v:'0'},{k:'One',v:'1'},{k:'Two',v:'2'},{k:'Three or more',v:'3'}],
+      ans: ans,
+      atext: runs === 0 ? ('Nothing in the ' + ord + '.')
+           : (runs + ' run' + (runs === 1 ? '' : 's') + ' in the ' + ord + '.')
+    };
+  };
+  /* 1st, 2nd, 3rd, 4th... and the teens, which is where naive versions
+     produce "11st". */
+  C.ordinal = function(n){
+    n = Number(n) || 0;
+    var t = n % 100;
+    if(t >= 11 && t <= 13) return n + 'th';
+    return n + (['th','st','nd','rd'][n % 10] || 'th');
   };
 
   C.build = function(sport, plays, T, per, counts, sum){

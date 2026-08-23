@@ -5705,7 +5705,69 @@ try{ window.SPORT_EXPLICIT = SPORT_EXPLICIT; }catch(_){}
 let SPORT=SPORTS[SPORT_KEY]||SPORTS.basketball;
 if(!SPORTS[SPORT_KEY]) SPORT_KEY='basketball';
 let L=SPORT.L;
+/* ============ REMEMBER WHOSE NAMES THE SAMPLE BANK IS WRITTEN IN =====
+   The practice banks hardcode their fixture's teams in the option strings
+   — football's read "Denver Broncos" and "Atlanta Falcons" — and
+   hydrateNight() merges a real night INTO the very object those names came
+   from. So the moment a slate room loads, GAME says Giants at Dolphins and
+   the questions still say Denver and Atlanta, with a scoreboard four
+   centimetres above them saying otherwise.
+
+   The beta tester hit it in ten seconds: "A Giants–Dolphins room asked me
+   about the Denver Broncos."
+
+   Snapshot the sample names HERE, before any hydration can happen, so
+   there is still something to translate FROM. */
+try{
+  Object.keys(SPORTS).forEach(function(k){
+    var g = SPORTS[k] && SPORTS[k].game; if(!g) return;
+    SPORTS[k].__sample = {
+      home:g.homeName||'', away:g.awayName||'',
+      homeNick:g.homeNick||'', awayNick:g.awayNick||'',
+      homeAbbr:g.homeAbbr||'', awayAbbr:g.awayAbbr||''
+    };
+  });
+}catch(_){}
+
 let GAME=SPORT.game, roster=SPORT.roster, preds=SPORT.preds, rounds=SPORT.rounds, CATCHES=SPORT.catches;
+
+/* Rewrite the practice bank's team names to whatever room the player is
+   actually standing in. Practice only — a live night's questions come from
+   the server already carrying the right teams. Longest names first, so
+   "Denver Broncos" is replaced before a bare "Denver" could be. */
+function fixSampleTeams(){
+  try{
+    var smp = SPORT && SPORT.__sample; if(!smp) return;
+    var pairs = [
+      [smp.home, GAME.homeName], [smp.away, GAME.awayName],
+      [smp.homeNick, GAME.homeNick], [smp.awayNick, GAME.awayNick],
+      [smp.homeAbbr, GAME.homeAbbr], [smp.awayAbbr, GAME.awayAbbr]
+    ].filter(function(p){ return p[0] && p[1] && p[0] !== p[1]; })
+     .sort(function(a,b){ return b[0].length - a[0].length; });
+    if(!pairs.length) return;
+    var sub = function(v){
+      if(typeof v !== 'string') return v;
+      pairs.forEach(function(p){ v = v.split(p[0]).join(p[1]); });
+      return v;
+    };
+    (rounds||[]).forEach(function(r){
+      (r && r.q || []).forEach(function(q){
+        if(!q) return;
+        if(Array.isArray(q.o))    q.o    = q.o.map(sub);
+        if(Array.isArray(q.o_es)) q.o_es = q.o_es.map(sub);
+        if(q.a  != null) q.a  = sub(q.a);
+        if(q.t  != null) q.t  = sub(q.t);
+        if(q.t_es != null) q.t_es = sub(q.t_es);
+      });
+    });
+    (preds||[]).forEach(function(pd){
+      if(!pd) return;
+      if(Array.isArray(pd.opts)) pd.opts = pd.opts.map(sub);
+      if(pd.answer != null) pd.answer = sub(pd.answer);
+    });
+  }catch(_){}
+}
+try{ window.fixSampleTeams = fixSampleTeams; }catch(_){}
 
 /* ============ THE NIGHTS THIS BUILD WAS BORN KNOWING ==================
    Captured for EVERY sport, HERE, before anything hydrates over any of
@@ -8194,6 +8256,11 @@ function freshStart(then){
   try{ location.reload(); }catch(_){ location.href=location.pathname; }
 }
 function startDemo(){
+  /* The sample bank names its own fixture's teams. If this practice run is
+     happening inside a real room, translate them first — see
+     fixSampleTeams(). It is idempotent: once the names match, it does
+     nothing. */
+  try{ fixSampleTeams(); }catch(_){}
   /* A stale live save was auto-resuming straight over the top of a
      rehearsal — press Practice and the home card came back reading
      "Continue tonight's game · waiting on Q4, 110 pts". Pressing Practice
@@ -10465,6 +10532,33 @@ function liveRoundBlocked(qi){
        outranks the clock: if the Control Room says a round exists, it
        exists, whatever the feed thinks. */
     try{ var hd=hostedDoc(qi); if(hd) return null; }catch(_){}
+    /* ============ THE HOST HAS ALREADY MOVED PAST THIS ONE ============
+       22 Aug, from the archive: a player opened Q2 and answered two of its
+       four questions at 22:37. Q2 had closed at 22:34, when Q3 went live.
+       The answers filed to 'r1-local' and could never score.
+
+       hostedDoc() above cannot catch this. The round listener is
+       orderBy('seq','desc').limit(1) — it holds exactly ONE document, the
+       newest — so the app has no way to ask "did the host serve round 1?"
+       once round 2 exists. hostedDoc(1) returns null and the built-in deck
+       opens as though nobody were hosting at all.
+
+       But the newest round is enough to settle it. If the host is on round
+       2, then round 1 is over, whatever this phone did or did not receive.
+       Anything before the host's current index is gone.
+
+       This is his note from 21 Aug — "I could submit answers after the game
+       ended" — and it is the half that was left: build .210 made the
+       receipt honest about a round that cannot score, and this stops the
+       player being offered it in the first place. Doing useless work and
+       being told about it afterwards is still doing useless work.
+
+       NOT blocked when HR.doc is null: no host, no opinion, and the
+       built-in deck is the fallback that keeps a hostless night playable. */
+    try{
+      if(HR && HR.doc && HR.doc.idx != null && qi < HR.doc.idx
+         && !HR.started[('r'+qi)] && !HR.submitted[('r'+qi)]) return 'host-moved-on';
+    }catch(_){}
     /* Already held off the built-in bank on an older build? Leave that path
        alone — gtStartRow already renders it as 'locked, waiting on the
        host', and re-blocking it would change a player's screen mid-night. */
@@ -10476,6 +10570,13 @@ function liveRoundBlocked(qi){
 }
 function startQuarter(qi){
   var _blk=liveRoundBlocked(qi);
+  if(_blk==='host-moved-on'){
+    var _now=''; try{ _now=roundName(HR.doc.idx); }catch(_){}
+    try{ toast(roundTag(qi)+' is finished and scored \u2014 those answers cannot count now.'
+               + (_now ? ' ' + _now + ' is the one that is live.' : '')); }catch(_){}
+    try{ if(typeof renderLobby==='function') renderLobby(roomNextRound(HR.doc.idx)); }catch(_){}
+    return;
+  }
   if(_blk==='no-host'){
     /* Same correction as the button above: nobody is pushing anything. */
     try{ toast('This '+(L.period||'quarter')+' is still being played \u2014 the questions open the moment it ends.'); }catch(_){}
@@ -14219,6 +14320,9 @@ const LOCKED = {};                     // roundId -> already sent from here
    The rule it enforces: "saved" is not something we say because we asked
    for a write. It is something we say because the server answered.       */
 var RCPT_RID = '';
+/* Which submitted round ids were filed as local-only, i.e. cannot score. */
+var RCPT_LOCAL = {};
+try{ window.RCPT_LOCAL = RCPT_LOCAL; }catch(_){}
 function subReceiptFor(rid){
   RCPT_RID = String(rid||'');
   paintSubReceipt();
@@ -14229,7 +14333,15 @@ function paintSubReceipt(){
   if(!rid || !S || S.mode!=='live'){ el.style.display='none'; return; }
   var st=''; try{ st=(window.SB && SB.subStateOf) ? SB.subStateOf(rid) : ''; }catch(_){}
   if(!st){ el.style.display='none'; return; }
-  var copy={
+  /* A round the host already moved past. Saved, kept, and honest about
+     what it is worth — which is nothing on the board. */
+  var _loc=false; try{ _loc = !!RCPT_LOCAL[rid]; }catch(_){}
+  var copy = _loc ? {
+    sending:'Saving your answers…',
+    saved:  'Saved \u2014 but this round already closed, so it will not score.',
+    queued: 'Held on this device. This round already closed, so it will not score.',
+    lost:   'These answers did NOT save. This round had already closed anyway.'
+  }[st] || '' : {
     sending:'Sending your answers…',
     saved:  'Saved to tonight\u2019s room \u2014 the host has them.',
     queued: 'Not on the server yet \u2014 held on this device, still trying.',
@@ -14280,7 +14392,6 @@ function lockPicks(idx, tries){
   const again = ()=>{ const n=(tries||0)+1; if(n<=2) setTimeout(()=>lockPicks(idx, n), 3000*n); };
   if(!window.SB || !SB.enabled || !SB.submit){ again(); return false; }
   LOCKED[rid] = true;
-  subReceiptFor(rid);
   const mine = S.liveAnswers[idx] || [];
   /* ============ A PRACTICE DECK MUST NOT WEAR A HOSTED ROUND'S ID =====
      This is the worst thing that happened on 20 Aug and it took two
@@ -14313,6 +14424,28 @@ function lockPicks(idx, tries){
   var _hosted = false;
   try{ _hosted = !!(HR && HR.started && HR.started[rid]); }catch(_){}
   var _rid = _hosted ? rid : (rid + '-local');
+  /* ============ SAY SO WHEN IT CANNOT SCORE =========================
+     22 Aug, from the archive: one player answered two of Q2's four
+     questions at 22:37. Q2 had closed and Q3 had been live since 22:34.
+     The answers filed correctly to 'r1-local' — the guard above did its
+     job and kept a practice deck out of a hosted round — and then the
+     receipt said "Saved to tonight's room — the host has them."
+
+     It was saved. The host does not have them, and they can never score,
+     because no key will ever be applied to a round id the host never
+     created. The player did the work and was told it counted.
+
+     This is his own note from the night before: "I could submit answers
+     after the game ended." The write was made safe then; the SENTENCE
+     was not. A receipt that overstates is worse than no receipt. */
+  try{ if(!_hosted && HR && HR.doc) RCPT_LOCAL[_rid] = true; }catch(_){}
+  /* AND THE RECEIPT WATCHES THE ID WE ACTUALLY WROTE. This was called
+     above with `rid` while the write went to `_rid` — so for every local
+     filing the receipt asked for the status of a document nobody had
+     written, got nothing back, and hid itself. The player who answered a
+     closed round got no confirmation of any kind: not a wrong one, none.
+     It has to be called after `_rid` exists, which is why it moved. */
+  subReceiptFor(_rid);
   SB.submit(_rid, {
     name:  S.name || 'player',
     picks: qs.map((q,i)=>{ const m=mine[i]; return (m&&m.choice)||''; }),
@@ -14698,7 +14831,69 @@ function applySettlement(st){
 }
 
 /* ---------------- GAME NIGHT: PREDICTION REVIEW ---------------- */
+/* ============ THE HOST DECIDES WHEN THE NIGHT IS OVER ================
+   22 Aug, from the founder's phone in the Portland-LAFC room AT HALF-TIME:
+   the "FINAL WHISTLE / Score your predictions / Waiting on the official
+   final box score" screen, forty-five minutes before the final whistle.
+   The room was checked while it was still live: round r0, "First half",
+   state=live, four questions. The questions existed the whole time; the
+   app had decided the match was over and walked past them.
+
+   The exact route was not proven and I am not going to pretend it was.
+   The candidates all end in the same place — the feed says 'post' for a
+   game that is not this one, a stale event id after a room switch, a
+   resume that lands on the wrong screen — and every one of them is the
+   app forming an opinion about the end of a match from something other
+   than the host.
+
+   The host cannot be wrong about this. If a hosted round is LIVE, the
+   night is not over; there is nothing to settle and there is a question
+   on screen somewhere that the player is being walked past. So this
+   refuses, and says so, rather than trusting whichever signal was
+   mistaken. It costs nothing when the night really has ended: the final
+   round is scored before the buzzer, so no round is live at that point.
+
+   Guarded by qa/not-final-yet.js. */
+function hostedRoundIsLive(){
+  try{
+    if(!S || S.mode!=='live') return false;
+    var d = HR && HR.doc;
+    if(!(d && d.state==='live' && !HR.scored[d.id])) return false;
+    /* ============ AND A WAY OUT, OR THIS IS THE NEXT BUG =============
+       The guard above says "the host has a round open, so the night is not
+       over". That is right until the host is GONE. A runner that dies with
+       a round still live would leave this returning true forever, and the
+       player could never reach their final screen at all — I would have
+       traded a premature ending for no ending, which is the worse of the
+       two and is exactly the shape of B36.
+
+       A round is live for the window around one break. Forty-five minutes
+       is longer than any of them — longer than a full soccer half — so a
+       round still open past that is not a round in progress, it is an
+       abandoned one. `seq` is the millisecond stamp the runner writes when
+       it opens the round, which is the same clock this comparison needs.
+
+       If seq is missing or unreadable, keep blocking: an unknown age is
+       not evidence the host has gone. */
+    var seq = Number(d.seq);
+    if(isFinite(seq) && seq > 0 && (Date.now() - seq) > 45*60*1000){
+      try{ trk('round_abandoned'); }catch(_){}
+      return false;
+    }
+    return true;
+  }catch(_){ return false; }
+}
 function openPredReview(){
+  if(hostedRoundIsLive()){
+    try{
+      var _d = HR.doc, _i = (_d && _d.idx != null) ? Number(_d.idx) : null;
+      trk('predreview_blocked');
+      toast(( _i!=null ? roundName(_i) : 'A round') + ' is still open — the '
+            + (L && L.end ? L.end : 'final whistle') + ' has not gone yet.');
+      if(_i != null){ renderLobby(roomNextRound(_i)); go('lobby'); }
+    }catch(_){}
+    return;
+  }
   /* ============ A PRACTICE RUN NEVER ASKS YOU FOR A BOX SCORE ==========
      Reported from a real phone: press Practice, play it through, and the
      last screen was "The feed didn't settle it" with a form asking you to
@@ -17138,7 +17333,16 @@ function ciQtrBank(){
     // --- the last thing that happened, which rewards paying attention NOW
     var last=scores[scores.length-1];
     if(last){
-      out.push({ qid:'ciq-last-'+per+'-'+last.id,
+      /* THE ID HAS TO CHANGE WHEN THE PLAY CHANGES. These two qids exist to
+         be different every time a new basket goes in — the card guard is
+         "have I already fired this id?", so an id that repeats means the
+         question is never asked again for the rest of the quarter, and
+         Caught It just quietly stops. ESPN supplies play.id today. If it
+         ever does not, 'ciq-last-2-undefined' is the same string forever;
+         the count of scoring plays is not, and it is derived from the same
+         feed. Belt and braces, because the failure is silent. */
+      var lid = (last.id != null && last.id !== '') ? last.id : ('n' + scores.length);
+      out.push({ qid:'ciq-last-'+per+'-'+lid,
         prompt:'The last basket that went in — how many was it worth?',
         options:[{k:'One',v:'1'},{k:'Two',v:'2'},{k:'Three',v:'3'}], answer:String(last.value),
         resolveText:last.text+'.' });
@@ -17146,7 +17350,7 @@ function ciQtrBank(){
       if(ln){
         var alt=scores.slice(0,-1).map(function(p){ return nameOf(p.text); })
                       .filter(function(n){ return n && n!==ln; }).pop();
-        if(alt) out.push({ qid:'ciq-lastwho-'+per+'-'+last.id,
+        if(alt) out.push({ qid:'ciq-lastwho-'+per+'-'+lid,
           prompt:'Which player scored the last basket?',
           options:[{k:ln,v:'a'},{k:alt,v:'b'}], answer:'a',
           resolveText:last.text+'.' });
@@ -17254,7 +17458,26 @@ function ciBank(){
      play-by-play to ask anything about it — but the moment there is, the
      questions that reward watching go to the front of the queue. */
   var q=[]; try{ q=ciQtrBank(); }catch(_){ q=[]; }
-  return q.concat(ciLiveBank());
+
+  /* ============ A GLANCE IS NOT A QUESTION ==========================
+     The beta tester, mid-game: "Scoreboard check — who is ahead right
+     now?" arrived while the scoreboard was on screen two inches above the
+     card. He answered it without looking up from the phone. That is a
+     free point, and a free point teaches a player that the questions do
+     not require watching — which is the one thing this product sells.
+
+     ci-ahead and ci-margin are both pure reads of the score line. They
+     are not deleted, because a silent Caught It is worse than an easy
+     one: early in a quarter there is not yet enough play-by-play for
+     ciQtrBank to ask anything, and something has to be askable. They go
+     to the BACK instead, behind every question that requires having
+     watched. The bank is consumed in order, so they now fire only when
+     nothing else is left — which is exactly the case they exist for. */
+  var live=[]; try{ live=ciLiveBank(); }catch(_){ live=[]; }
+  var GLANCE={ 'ci-ahead':1, 'ci-margin':1 };
+  var earned=[], glance=[];
+  live.forEach(function(x){ (GLANCE[x && x.qid] ? glance : earned).push(x); });
+  return q.concat(earned).concat(glance);
 }
 function ciBankShuffled(){
   var b=ciBank().slice();
@@ -17621,7 +17844,12 @@ function ensureCiCard(){
       'display:grid;place-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);'+
       'color:#93a0bd;font-size:17px;font-weight:800;line-height:1;cursor:pointer;padding:0;z-index:3}'+
     '#ciCard .cix:hover{color:#eef2fb;background:rgba(255,255,255,.12)}'+
-    '#ciCard{position:relative}'+
+    /* A dead rule, removed. It set position:relative on the card so the
+       close button would anchor, but renderCiCard sets position INLINE on
+       every single paint — 'relative' in the scoreboard slot, 'fixed'
+       everywhere else — and an inline style beats a stylesheet rule. So
+       this never applied and never could. Deleting it is housekeeping,
+       not a fix; the card's placement is decided in JS, below. */
     /* the commit, painted on the same frame as the tap */
     '#ciCard .ciopt{transition:opacity .18s ease,transform .18s ease,background .18s ease}'+
     '#ciCard .ciopt.cifade{opacity:.18;transform:scale(.97)}'+
@@ -17715,6 +17943,26 @@ function ciDock(){
      only the inline value left the card anchored top AND bottom — it
      stretched the whole height of the phone with the question stranded at
      the top of an empty box. */
+  /* ============ THE HOLE IN THE COUNTDOWN BAR =======================
+     The card is 'min(430px,94vw)' and centred, so on a 393pt phone it
+     runs left:12 to right:381. The ☰ button is fixed at right:10, which
+     is left:343 to right:383. They always overlap — and the button is
+     z-index 8700 against the card's 8400, so the button wins and cuts a
+     38x39 bite out of the top-right corner of a live question. That is
+     exactly where the ✕ and the countdown live.
+
+     Nudging the card left would break the centring the whole layout is
+     built on, and lowering the button would make the menu unreachable
+     while a card is up. So the card starts BELOW the button whenever the
+     two would collide. It costs ~40px of vertical position and it is the
+     only option that leaves both things whole and tappable. */
+  try{
+    var mb=document.getElementById('menuBtn');
+    if(mb && getComputedStyle(mb).display!=='none'){
+      var mr=mb.getBoundingClientRect();
+      if(mr.height>0 && top < mr.bottom+6) top=Math.round(mr.bottom)+6;
+    }
+  }catch(_){}
   c.style.position='fixed'; c.style.left='50%'; c.style.bottom='auto';
   c.style.top=top+'px';
   c.style.transform='translateX(-50%)'; c.style.width='min(430px,94vw)';
@@ -20852,7 +21100,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-22-unfreeze.209';
+const STATS_BUILD='2026-08-22-unfreeze.211';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -22329,6 +22577,10 @@ function finishNightFromFeed(){
   try{
     if(FINALISED) return;
     if(!S || S.mode!=='live') return;
+    /* Same rule, one level up and for the same reason: a feed that says
+       'post' while the host still has a round open is describing a
+       different game, or an older one. Do not bank the night on it. */
+    if(hostedRoundIsLive()) return;
     if(S.screen==='final' || S.screen==='predreview') { FINALISED=true; return; }
     if(!inDeadAir()) return;            // mid-question — catch them on the way out
     /* B36 — A PLAYER WITH NO CARD USED TO GET NO ENDING AT ALL. This
@@ -23735,7 +23987,22 @@ function stFlow(){
     }
     var word = ''; try{ word = periodWordFor(); }catch(_){ word='Period'; }
     var ac='var(--away)', hc='var(--home)';
-    try{ var T=gtTeams(); if(T){ ac=T.a.color||ac; hc=T.h.color||hc; } }catch(_){}
+    /* ============ ONE PAIR OF TEAM COLOURS, NOT TWO =====================
+       This read T.a.color — the RAW colour off the feed — while every bar
+       and gradient on the page reads --away / --home, which are set by
+       gsPaintTeams() only AFTER checking the two teams are told apart:
+       tcTooClose() compares them, and a clash is resolved to the team's
+       alternate or to a measured-far colour.
+
+       So on any night where the two teams clash, the adjusted colour won
+       in the bars and the raw one won here. The beta tester's words were
+       that New York was blue in the chart and orange in the bars. Both
+       were "the team's colour"; only one of them had been through the
+       check that makes two teams distinguishable.
+
+       The resolved pair is the answer, and the CSS variables are the
+       fallback rather than the override — they hold the same values. */
+    try{ if(GS.awayC) ac=GS.awayC; if(GS.homeC) hc=GS.homeC; }catch(_){}
 
     /* SHOW THE WHOLE GAME'S SHAPE, not just the part that has happened.
        One played quarter drew one lonely bar in an empty box, which reads
@@ -23759,12 +24026,22 @@ function stFlow(){
       /* Who took the period. The only editorial judgement here, and it is
          arithmetic. */
       var edge = an>hn ? 'a' : (hn>an ? 'h' : '');
-      cols += '<div class="flCol'+(edge?' fl'+edge:'')+'">'
+      cols += '<div class="flCol'+(edge?' fl'+edge:'')+'"'
+        + ' style="--ac:'+esc(ac)+';--hc:'+esc(hc)+'">'
         + '<div class="flBars">'
         +   '<i style="height:'+Math.max(3,Math.round((an/peak)*100))+'%;background:'+esc(ac)+'"></i>'
         +   '<i style="height:'+Math.max(3,Math.round((hn/peak)*100))+'%;background:'+esc(hc)+'"></i>'
         + '</div>'
-        + '<div class="flNums"><b>'+esc(av.t===''?'–':av.t)+'</b><b>'+esc(hv.t===''?'–':hv.t)+'</b></div>'
+        /* COLOURED, BECAUSE THEY WERE TWO BARE NUMBERS. The bars above
+           them carry the team colours and the key at the top says which
+           colour is which team — but the pair of numbers underneath said
+           nothing at all, so "7  3" left the reader guessing which way
+           round it was. They are the same two quantities as the bars, so
+           they take the same two colours and the key covers both. */
+        + '<div class="flNums">'
+        +   '<b>'+esc(av.t===''?'–':av.t)+'</b>'
+        +   '<b>'+esc(hv.t===''?'–':hv.t)+'</b>'
+        + '</div>'
         + '<div class="flLbl">'+(k+1)+'</div>'
         + '</div>';
     }
@@ -23810,8 +24087,23 @@ function regulationPeriods(){
 var ST_BARS = {
   basketball: [['Field Goal %','%'],['Three Point %','%'],['Rebounds',''],['Assists',''],
                ['Turnovers','low'],['Points in Paint',''],['Fast Break Points','']],
+  /* '3rd down efficiency' and 'Penalties' both arrive as "N-M" and were
+     both tagged 'frac', which made them the same kind of number. They are
+     not, and the bar was answering a different question from its label:
+
+       3rd down efficiency  "5-16"  = 5 conversions of 16 attempts. A RATIO,
+                                      and higher is better.
+       Penalties            "7-55"  = 7 penalties for 55 yards. NOT a ratio
+                                      — the count is the quantity, and LOWER
+                                      is better.
+
+     Scored as 'frac', both compared bare numerators with higher winning. So
+     a team that went 5 of 16 (31%) was shown beating a team that went 4 of 8
+     (50%), and the side with MORE penalties was highlighted as leading.
+     Both were wrong on the screen while the numbers beside them were right,
+     which is the worst way to be wrong. */
   football:   [['Total Yards',''],['1st Downs',''],['Passing',''],['Rushing',''],
-               ['3rd down efficiency','frac'],['Turnovers','low'],['Penalties','frac']],
+               ['3rd down efficiency','ratio'],['Turnovers','low'],['Penalties','countlow']],
   baseball:   [['Batting Hits',''],['Batting Runs Batted In',''],['Batting Strikeouts','low'],
                ['Batting Stolen Bases',''],['Fielding Errors','low'],['Fielding Double Plays',''],
                ['Pitching Strikeouts','']],
@@ -23826,6 +24118,21 @@ function stBarNum(v){
   var m=t.match(/^(-?[\d.]+)/);
   return m ? Number(m[1]) : null;
 }
+/* THE NUMBER THE BAR IS ALLOWED TO COMPARE, which is not always the one
+   shown. "5-16" displays as "5-16" because that is what the broadcast puts
+   on screen, but the quantity that decides who is ahead is 5/16. */
+function stBarCmp(v, kind){
+  if(v==null) return null;
+  var t=String(v).trim();
+  if(kind==='ratio'){
+    var r=t.match(/^(-?[\d.]+)\s*[-\/]\s*(-?[\d.]+)/);
+    if(r){ var d=Number(r[2]); return d>0 ? Number(r[1])/d : 0; }
+  }
+  return stBarNum(t);
+}
+/* Which direction wins. One place, so the bar, the highlight and the
+   'lower is better' note can never disagree with each other. */
+function stBarLow(kind){ return kind==='low' || kind==='countlow'; }
 function stTeamBars(){
   try{
     var T=null; try{ T=gtTeams(); }catch(_){}
@@ -23838,14 +24145,25 @@ function stTeamBars(){
       var label=pair[0], kind=pair[1];
       var av=T.a.m ? T.a.m[label] : null, hv=T.h.m ? T.h.m[label] : null;
       if(av==null && hv==null) return;                 // not in this feed
-      var an=stBarNum(av), hn=stBarNum(hv);
+      var an=stBarCmp(av, kind), hn=stBarCmp(hv, kind);
       if(an==null && hn==null) return;
       an=an||0; hn=hn||0;
       var tot=an+hn;
+      var low=stBarLow(kind);
       /* Split the bar by share. When both are zero, split it evenly and
          grey it — that is a true statement about a 0-0 row. */
-      var ap = tot>0 ? Math.round((an/tot)*100) : 50;
-      var lead = tot>0 ? (kind==='low' ? (an<hn?'a':(hn<an?'h':'')) : (an>hn?'a':(hn>an?'h':''))) : '';
+      /* A 0-0 row drew a half-filled bar at low opacity, which reads as
+         "evenly matched" when the truth is "nothing has happened yet".
+         No fill, and the track stays flat. */
+      var ap = tot>0 ? Math.round((an/tot)*100) : 0;
+      var lead = tot>0 ? (low ? (an<hn?'a':(hn<an?'h':'')) : (an>hn?'a':(hn>an?'h':''))) : '';
+      /* THE BAR SHOWS MAGNITUDE, NOT MERIT — deliberately, and this was
+         nearly changed the other way. Flipping the fill on lower-is-better
+         rows would make the away-coloured segment show the HOME share, so a
+         row reading "7 [====----] 3" would draw the 7 short. The bar has to
+         agree with the two numbers printed either side of it, because those
+         are the same quantity. Direction is carried by the bold highlight
+         and by the 'lower is better' note, which is what they are for. */
       /* The display keeps the feed's own string — "5-16", "44", "24:31" —
          because that is what a person will see on the broadcast. */
       var at = av==null ? '–' : String(av) + (kind==='%' ? '%' : '');
@@ -23864,7 +24182,7 @@ function stTeamBars(){
          tension: a label that has its own full-width line cannot squeeze
          the numbers and cannot be squeezed by them. */
       rows += '<div class="tbRow">'
-        + '<div class="tbLbl">'+esc(show)+(kind==='low'?' <em>lower is better</em>':'')+'</div>'
+        + '<div class="tbLbl">'+esc(show)+(low?' <em>lower is better</em>':'')+'</div>'
         + '<div class="tbVals">'
         +   '<b class="'+(lead==='a'?'on':'')+'">'+esc(at)+'</b>'
         +   '<span class="tbBar'+(tot>0?'':' tbFlat')+'"><i style="width:'+ap+'%"></i></span>'
@@ -23947,7 +24265,8 @@ function renderStats(){
   var ph = 'pre'; try{ ph = phaseNow(); }catch(_){}
   var T = null; try{ T = gtTeams(); }catch(_){}
   var AC = 'var(--away)', HC = 'var(--home)';
-  try{ if(T){ AC = T.a.color || AC; HC = T.h.color || HC; } }catch(_){}
+  /* Same resolved pair as stFlow and the bars — see the note there. */
+  try{ if(GS.awayC) AC = GS.awayC; if(GS.homeC) HC = GS.homeC; }catch(_){}
   _stN = 0; STX = {};
   var out = '';
 
@@ -25935,6 +26254,18 @@ body.member #s-landing .brand{margin-top:6px}
 .flNums{display:flex;flex-direction:column;align-items:center;line-height:1.15;
   font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted)}
 .flNums b{font-weight:700}
+/* WHICH NUMBER IS WHICH TEAM. These were two bare numbers under a pair of
+   coloured bars — "7  3" with nothing saying which way round it went. They
+   take the same two colours as the bars above them, so the key at the top
+   of the card explains both at once.
+
+   Set here and NOT inline: the rule below highlights whoever took the
+   period, and an inline colour would beat it and delete that signal
+   entirely. As a stylesheet rule it loses to the more specific winner
+   selector, which is exactly the order we want — team identity by default,
+   overridden to full brightness for the team that won the period. */
+.flNums b:first-child{color:var(--ac,var(--away))}
+.flNums b:last-child{color:var(--hc,var(--home))}
 .flCol.fla .flNums b:first-child,.flCol.flh .flNums b:last-child{color:var(--ink)}
 .flLbl{font-size:12px;color:var(--dim);font-weight:700}
 /* A period that has not been played yet, drawn as a held place rather
