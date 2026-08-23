@@ -101,5 +101,53 @@ t('the series has no gaps either', ()=>{
   return all.every((n,i)=> i===0 || n===all[i-1]+1);
 });
 
+
+/* ============================================================================
+   ADDED 22 Aug — TWO ROOMS CANNOT BE THE SAME GAME NIGHT
+
+   Building 23 August wrote slate-marquee-2026-08-23.txt as
+   24 sf-bos / 25 nyc-ne / 24 ind-chi / 25 sea-ten, while slate/2026-08-23
+   correctly held #24-#27 in tip order. The number the PLAYER saw was right
+   and the durable RECORD was wrong — the worse way round, because
+   build-slate.js reads that file back at 08:10 and honours a number for a
+   night it believes was already announced. A duplicate in the file
+   propagates into the next day rather than staying a display bug.
+
+   host/marquee.js refuses to write such a file now. This asserts the
+   refusal exists and runs BEFORE the write, because a guard nobody checks
+   is a guard that gets deleted.
+   ========================================================================== */
+const _fs2 = require('fs'), _path2 = require('path');
+const MSRC = _fs2.readFileSync(_path2.join(__dirname, '..', 'host', 'marquee.js'), 'utf8');
+const _w = MSRC.indexOf('fs.writeFileSync(MARQF');
+const _d = MSRC.search(/new Set\(nums\)\.size\s*!==\s*nums\.length/);
+
+t('marquee.js tests its numbers for duplicates', () => _d > -1);
+t('marquee.js tests for a room with no number at all', () => /blank\.length/.test(MSRC));
+t('marquee.js still writes the record', () => _w > -1);
+t('the duplicate test runs BEFORE the file is written', () => _d > -1 && _w > -1 && _d < _w);
+t('it REFUSES rather than warning', () => /die\(\s*['"`]two rooms were given the SAME/.test(MSRC));
+
+/* And every record actually on disk must be clean. */
+const LOGDIR2 = _path2.join(process.env.HOME, 'gamenight-logs');
+let _checked = 0; const _bad = [];
+try{
+  _fs2.readdirSync(LOGDIR2)
+    .filter(f => /^slate-marquee-\d{4}-\d{2}-\d{2}\.txt$/.test(f))
+    .forEach(f => {
+      const ns = _fs2.readFileSync(_path2.join(LOGDIR2, f), 'utf8')
+        .split('\n').map(x => x.trim()).filter(Boolean)
+        .map(l => (l.match(/^(\d+)\s/) || [])[1]).filter(Boolean);
+      if(!ns.length) return;
+      _checked++;
+      if(new Set(ns).size !== ns.length) _bad.push(f + ' -> ' + ns.join(','));
+    });
+}catch(_){}
+t('there are marquee records on disk to check', () => _checked > 0);
+t('every marquee record on disk has distinct Game Night numbers', () => {
+  if(_bad.length) console.error('        ' + _bad.join('\n        '));
+  return _bad.length === 0;
+});
+
 console.log('\n  '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

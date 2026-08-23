@@ -507,7 +507,16 @@ async function archiveNight(db, FieldValue, why){
 
   const players = [];
   (await db.collection(`nights/${NIGHT}/players`).get()).forEach(d => { const v = d.data() || {};
+    /* livePts BELONGS IN THE ARCHIVE. It was the one lane left out, and it
+       is the one the board is built on: SB.nightTotal() composes a night
+       from livePts + predPts + catchPts + caughtPts and only falls back to
+       `pts` when livePts is missing. Archiving every lane EXCEPT that one
+       meant a debrief could never reconstruct the number a player actually
+       saw — it had to fall back to `pts`, a legacy field any writer can
+       leave stale, and then report a disagreement that was drift rather
+       than a scoring error. Found on 22 Aug chasing exactly that. */
     players.push({ uid: d.id, name: v.name || '', pts: v.pts || 0, speed: v.speed || 0,
+                   livePts: v.livePts || 0,
                    predPts: v.predPts || 0, catchPts: v.catchPts || 0,
                    caughtPts: v.caughtPts || 0, roundsDone: v.roundsDone || 0 }); });
 

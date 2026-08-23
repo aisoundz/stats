@@ -34,8 +34,32 @@ function loadAuto() {
   console.log(`written by        : ${arc.by || 'unknown'}   why: ${arc.why || 'unknown'}`);
 
   const rounds = arc.rounds || [];
-  const subs = arc.subs || {};
-  const players = arc.players || {};
+
+  /* ============ THE ARCHIVE IS ARRAYS; tally() WANTS UID MAPS =========
+     22 Aug. This file reported that Sam scored 80 and Courtside 0, when the
+     only submission in the room belonged to Courtside and the game had
+     already scored him 85 — correctly, on the right uid.
+
+     run.js writes the archive as ARRAYS: players is [{uid,...}] and
+     subs[roundId] is [{uid, picks, banks}]. AUTO.tally() reads both as
+     objects KEYED BY UID — Object.keys(players) to build its output rows,
+     and perRound[uid] to find a player's picks.
+
+     Hand it an array and Object.keys returns "0","1","2" — the POSITIONS.
+     So tally built rows keyed by index, looked up the first submission at
+     index "0", found the row for the first player in the array, and
+     credited them. Every submission in a round landed on whoever happened
+     to be listed first. It agreed perfectly whenever everyone scored zero,
+     which is most nights, which is why it went unnoticed — and it was the
+     one number in this file that exists to catch scoring bugs.
+
+     Convert once, here, and let tally see the shape it was written for. */
+  const byUid = (v) => Array.isArray(v)
+    ? v.reduce((m, x) => { if (x && x.uid) m[x.uid] = x; return m; }, {})
+    : (v || {});
+  const subsRaw = arc.subs || {};
+  const subs = Object.keys(subsRaw).reduce((m, rid) => { m[rid] = byUid(subsRaw[rid]); return m; }, {});
+  const players = byUid(arc.players);
 
   // ---- NUMBER 1: round completion ----------------------------------
   const scored = rounds.filter(r => r.state === 'scored');
@@ -58,14 +82,46 @@ function loadAuto() {
   else {
     const tally = AUTO.tally(scored, players, subs);
     let agree = 0, diff = 0;
+    /* ============ COMPARE THE NUMBER THE BOARD ACTUALLY SHOWS ========
+       This read `players[uid].pts` and called it the stored score. It is
+       not the score: SB.nightTotal() in index.html — the one function both
+       the board and the rank come through — composes the total from the
+       LANES, livePts + predPts + catchPts + caughtPts, and never reads
+       `pts` unless livePts is missing entirely.
+
+       `pts` is a legacy field that any writer can leave behind. On 22 Aug
+       Courtside's row carried pts=85 with every lane at zero except
+       livePts=80, so this file reported the server disagreeing by 5 about
+       a player it had scored perfectly. The five points were a lane that
+       contributed at scoring time and was later zeroed without the total
+       being rewritten — drift in a field nothing authoritative reads.
+
+       So: compose the stored side the same way the board does, and report
+       a `pts` that has drifted away from its own lanes separately, because
+       that IS worth knowing — it is just not a scoring disagreement.
+
+       NOTE speed is deliberately absent from both sides. Neither
+       nightTotal() nor tally() counts it toward a night total. */
+    const lanes = (v) => Number(v.livePts || 0) + Number(v.predPts || 0)
+                       + Number(v.catchPts || 0) + Number(v.caughtPts || 0);
+    const drifted = [];
     uids.forEach(uid => {
-      const stored = Number((players[uid] || {}).pts || 0);
+      const v = players[uid] || {};
+      const stored = (v.livePts != null) ? lanes(v) : Number(v.pts || 0);
       const recomputed = Number(((tally || {})[uid] || {}).pts || 0);
-      const name = (players[uid] || {}).name || uid.slice(0, 6);
+      const name = v.name || uid.slice(0, 6);
       const ok = stored === recomputed;
       ok ? agree++ : diff++;
+      if (v.livePts != null && Number(v.pts || 0) !== lanes(v))
+        drifted.push(`${name}: pts=${Number(v.pts || 0)} but its lanes sum to ${lanes(v)}`);
       console.log(`    ${String(name).padEnd(14)} stored=${String(stored).padStart(5)}  recomputed=${String(recomputed).padStart(5)}  ${ok ? 'agree' : '← DIFFERS by ' + (recomputed - stored)}`);
     });
+    if (drifted.length) {
+      console.log(`\n  LEGACY pts FIELD HAS DRIFTED from the lanes it should equal —`);
+      console.log(`  nothing authoritative reads it (the board composes from lanes), so`);
+      console.log(`  this is not a wrong score on anyone's screen. It is a stale number:`);
+      drifted.forEach(d => console.log(`    ${d}`));
+    }
     console.log(`  → ${agree} of ${uids.length} players agree`);
     console.log(`  NOTE: this is server-side only. pred/catch/caught points settle on the`);
     console.log(`  phone, so "what the player's SCREEN showed" still needs a human to report.`);

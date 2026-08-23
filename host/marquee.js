@@ -342,6 +342,40 @@ function nextNumber(){
   /* Always rewrite: the file is the durable record of BOTH the choice and
      the numbers, and a number that only exists in Firestore is a number the
      next build cannot keep. */
+  /* ============ TWO ROOMS CANNOT BE THE SAME GAME NIGHT ==============
+     22 Aug, building 23 August: this file was written as
+
+         24 slate-2026-08-23-sf-bos
+         25 slate-2026-08-23-nyc-ne
+         24 slate-2026-08-23-ind-chi *
+         25 slate-2026-08-23-sea-ten
+
+     while slate/2026-08-23 — which the app actually reads — correctly held
+     #24, #25, #26, #27 in tip order. So the number a player saw was right
+     and the durable RECORD was wrong, which is the more dangerous way round:
+     build-slate.js reads this file back at 08:10 and honours a number for a
+     night it believes was already announced. A duplicate in here propagates
+     into tomorrow rather than staying a display bug.
+
+     Whatever produced the two passes, the invariant is simple and it is
+     cheap to assert: a set of rooms has as many distinct numbers as it has
+     rooms. Refuse rather than write a record that will be believed later.
+     The founder's own words on the numbering, 22 Aug: "All the games should
+     be in order." */
+  const nums = picked.map(g => String(numbers.get(g.nightId) || ''));
+  const blank = picked.filter((g, i) => !nums[i]).map(g => g.nightId);
+  if(blank.length)
+    die(`${blank.length} featured room(s) have NO Game Night number: ${blank.join(', ')}. `
+      + 'Writing a record with a hole in it is worse than not writing one.');
+  if(new Set(nums).size !== nums.length){
+    const seen = {}, dupes = [];
+    picked.forEach((g, i) => { (seen[nums[i]] = seen[nums[i]] || []).push(g.nightId); });
+    Object.keys(seen).forEach(n => { if(seen[n].length > 1) dupes.push(`#${n}: ${seen[n].join(' and ')}`); });
+    die('two rooms were given the SAME Game Night number — ' + dupes.join(' · ')
+      + `. slate/${DATE} is the authority; this file is its mirror and must not disagree. `
+      + 'Nothing written.');
+  }
+
   const out = picked.map(g =>
     `${numbers.get(g.nightId)} ${g.nightId}${g.nightId === starId ? ' *' : ''}`).join('\n') + '\n';
   fs.writeFileSync(MARQF, out);
