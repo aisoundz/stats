@@ -72,6 +72,38 @@ function req(url, opts) {
   });
 }
 
+// 24 Aug — the 10:45am fire crashed on a bare ETIMEDOUT connecting to
+// Firestore, uncaught, before it ever reached the draft check. No retry
+// existed anywhere in this script, and the timer only fires once a day,
+// so one transient DNS/network blip meant the whole day's email silently
+// never happened. This wraps req() with two retries and a short backoff
+// for CONNECTION failures only (ETIMEDOUT, ECONNRESET, ENOTFOUND,
+// EAI_AGAIN) — a real HTTP response, even an error one, is never
+// retried here, because that is an answer, not a dropped connection.
+//
+// DELIBERATELY NOT USED for the final schedule/send call below. A
+// timeout on THAT specific call is ambiguous — the request may have
+// already reached MailerLite and been acted on before the response was
+// lost — and retrying an ambiguous send risks sending twice, which is
+// worse than sending zero times and needing a human to look at it. See
+// [[signal_double_send]] for what that failure mode actually costs.
+// Every read in this script (slate, campaign list, campaign detail) is
+// a GET with no side effect, so retrying those is always safe.
+const RETRYABLE = new Set(['ETIMEDOUT', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED']);
+async function reqRetry(url, opts, tries) {
+  tries = tries || 3;
+  for (let attempt = 1; attempt <= tries; attempt++) {
+    try {
+      return await req(url, opts);
+    } catch (e) {
+      const code = (e && e.code) || (e && e.cause && e.cause.code) || '';
+      if (attempt === tries || !RETRYABLE.has(code)) throw e;
+      log(`  (${code || e.message} on attempt ${attempt}/${tries} — retrying in ${attempt}s)`);
+      await new Promise((r) => setTimeout(r, attempt * 1000));
+    }
+  }
+}
+
 function todayISO() {
   // Business day is Pacific time, matching every other timer on this box.
   const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -108,7 +140,7 @@ async function main() {
 
   // ---- 1. today's slate, the ground truth ------------------------------
   const slateURL = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents/slate/${today}?key=${FIREBASE_KEY}`;
-  const slateRes = await req(slateURL);
+  const slateRes = await reqRetry(slateURL);
   if (slateRes.status !== 200 || !slateRes.body || !slateRes.body.fields) {
     log(`REFUSE: could not read slate/${today} from Firestore (status ${slateRes.status}). Nothing was sent — a wrong email cannot be recalled, and an email cannot be checked against a slate that could not be read.`);
     process.exitCode = 2;
@@ -139,7 +171,7 @@ async function main() {
   }
 
   // ---- 2. draft campaigns created today --------------------------------
-  const campRes = await req('https://connect.mailerlite.com/api/campaigns?filter[status]=draft&limit=50', {
+  const campRes = await reqRetry('https://connect.mailerlite.com/api/campaigns?filter[status]=draft&limit=50', {
     headers: { Authorization: `Bearer ${apiKey}`, Accept: 'application/json' },
   });
   if (campRes.status !== 200 || !campRes.body || !Array.isArray(campRes.body.data)) {
@@ -165,16 +197,20 @@ async function main() {
   const draft = todaysDrafts[0];
 
   // ---- 3. deterministic content check -----------------------------
-  const emailId = ((draft.emails || [])[0] || {}).id;
-  if (!emailId) {
-    log('REFUSE: draft has no email id to fetch content from. Nothing sent.');
-    process.exitCode = 2;
-    return;
-  }
-  const emailRes = await req(`https://connect.mailerlite.com/api/emails/${emailId}`, {
+  // 24 Aug — this used to fetch /api/emails/{id}, which is not a real
+  // MailerLite endpoint (confirmed: a live 404 "Resource does not
+  // exist"). Every run since this script was written failed here,
+  // silently, because REFUSE looks identical to "the content didn't
+  // match" in the log — the whole point of REFUSE is to look calm.
+  // The real content lives nested under the CAMPAIGN, not a standalone
+  // email resource: GET /api/campaigns/{campaign_id} ->
+  // data.emails[0].content. Verified directly against this exact draft
+  // before trusting it: 8,922 chars, both real team names present.
+  const campDetailRes = await reqRetry(`https://connect.mailerlite.com/api/campaigns/${draft.id}`, {
     headers: { Authorization: `Bearer ${apiKey}`, Accept: 'application/json' },
   });
-  const html = (emailRes.body && emailRes.body.data && emailRes.body.data.content) || '';
+  const html = (campDetailRes.body && campDetailRes.body.data &&
+    ((campDetailRes.body.data.emails || [])[0] || {}).content) || '';
   if (!html) {
     log("REFUSE: could not read the draft's rendered HTML. Nothing sent.");
     process.exitCode = 2;
@@ -186,7 +222,20 @@ async function main() {
     const nameOk = (n) => n && html.includes(n);
     if (g.home && !nameOk(g.home)) missing.push(`${g.id}: home team "${g.home}" not found in draft`);
     if (g.away && !nameOk(g.away)) missing.push(`${g.id}: away team "${g.away}" not found in draft`);
-    if (g.net && !nameOk(g.net)) missing.push(`${g.id}: channel "${g.net}" not found in draft`);
+    // 24 Aug — g.net is Firestore's FULL list for the game ("MLB.TV ·
+    // FS1 · Rays.TV · Tigers.TV"), every feed that carries it, not what
+    // one email names. The draft correctly picks ONE relevant channel
+    // ("FS1") rather than reading out every regional/team feed, so
+    // checking the whole joined string against the HTML refused a
+    // draft that was actually right — verified by eye against this
+    // exact draft before changing this. The real check: does the draft
+    // name AT LEAST ONE of the real channels this game is actually on.
+    if (g.net) {
+      const channels = g.net.split('·').map((s) => s.trim()).filter(Boolean);
+      if (channels.length && !channels.some(nameOk)) {
+        missing.push(`${g.id}: none of its real channels (${channels.join(', ')}) found in draft`);
+      }
+    }
   }
   if (missing.length) {
     log("REFUSE: the draft does not match tonight's real slate. Anis waived his own review, not the verification — a wrong email cannot be recalled:");
@@ -212,7 +261,12 @@ async function main() {
   });
 
   if (sendRes.status >= 200 && sendRes.status < 300) {
-    const recipients = (sendRes.body && sendRes.body.data && sendRes.body.data.recipients_count) || '?';
+    // 24 Aug — the schedule response itself doesn't carry recipients_count
+    // (confirmed live: this always printed "? recipient(s)", a cosmetic
+    // bug, not a sign the send failed). It's on the campaign object
+    // already fetched above for the content check, at the top level.
+    const recipients = (sendRes.body && sendRes.body.data && sendRes.body.data.recipients_count) ||
+      (campDetailRes.body && campDetailRes.body.data && campDetailRes.body.data.recipients_count) || '?';
     log(`SENT. campaign ${draft.id}, ${recipients} recipient(s).`);
   } else {
     log(`SEND FAILED: MailerLite returned status ${sendRes.status}. ${JSON.stringify(sendRes.body).slice(0, 300)}`);
