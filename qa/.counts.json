@@ -48,10 +48,13 @@
   "practice-teams.js": 15,
   "sub-receipt.js": 8,
   "closed-round.js": 10,
-  "team-bars.js": 21,
-  "inning-end.js": 24,
+  "team-bars.js": 24,
+  "inning-end.js": 25,
   "not-final-yet.js": 38,
   "error-log.js": 8,
   "nfl-overtime.js": 39,
-  "ordinal-question.js": 36
+  "ordinal-question.js": 36,
+  "inning-end-budget.js": 10,
+  "ci-missed-card.js": 7,
+  "board-total.js": 6
 }

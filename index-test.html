@@ -4784,14 +4784,40 @@ try{ window.prefetchSlateConfigs = prefetchSlateConfigs; }catch(_){}
         var out = [];
         snap.forEach(function (d) {
           var v = d.data() || {};
+          /* ============ THE SAME PLAYER, TWO DIFFERENT NUMBERS ==========
+             23 Aug: "the points didn't add up in all the pages. In one
+             page Dan the fan has 480 and another page he has 190."
+
+             This row carried raw `pts` and nothing else. readRoom() — the
+             function SB.top() calls, which feeds the SAME lastStand cache
+             this listener also writes into — composes a `.total` from
+             nightTotal(v): livePts + predPts + catchPts + caughtPts. That
+             is the number the board is SUPPOSED to show; `pts` is the
+             legacy field a runner writes only at its own scoring passes
+             (every ~10 minutes, see host/run.js), while catchPts and
+             caughtPts get written directly by a player's own device the
+             moment they happen. Between runner passes the two drift, and
+             renderBoard() picks `.total` when it exists and silently
+             falls back to `.pts` when it does not — so whichever of these
+             two listeners last wrote the shared cache decided which
+             number you saw. Same bug, same shape, as the one found in
+             host/debrief.js this same morning: a legacy `pts` field
+             believed instead of the lanes it is supposed to summarise.
+
+             Composed here now, the same way, so every writer of the
+             shared cache agrees. */
           out.push({ uid: d.id, name: String(v.name || 'player').slice(0, 24),
                      color: String(v.color || '#888').slice(0, 12),
-                     pts: Number(v.pts) || 0, speed: Number(v.speed) || 0,
+                     pts: Number(v.pts) || 0, total: nightTotal(v),
+                     speed: Number(v.speed) || 0,
                      me: d.id === uid() });
         });
         /* orderBy silently drops documents missing the field, which once
-           emptied a whole leaderboard. Sort here too and trust nothing. */
-        out.sort(function (a, b) { return (b.pts - a.pts) || (b.speed - a.speed); });
+           emptied a whole leaderboard. Sort here too, on the SAME number
+           the board displays — sorting by raw pts while displaying total
+           could rank two players in an order their own displayed scores
+           contradict. */
+        out.sort(function (a, b) { return (b.total - a.total) || (b.speed - a.speed); });
         try { cb(out); } catch (e) {}
       }, function (e) {
         SB.lastTopError = (e && (e.code || e.message)) || 'listen-failed';
@@ -18631,6 +18657,32 @@ function renderCiCard(q){
      card re-opens on its own the moment the answer lands, so every extra
      second here is a card sitting over the game for no reason. */
   if(pick!=null && st!=='resolved'){ ciHideSoon(4000); }
+  /* ============ A MISSED CARD MUST NOT WAIT FOREVER FOR A PUSH ========
+     23 Aug: "when the caught it question was done and I missed it, it
+     just stayed stuck on the screen." Confirmed in the code, not just the
+     report: this branch handles BOTH "still open" and "locked, never
+     answered", and only the ANSWERED case above (`pick!=null`) ever
+     scheduled a hide. A card the player missed depended entirely on the
+     server's 'resolved' write reaching this device and triggering a fresh
+     render — which is the branch at the top of this function, and it DOES
+     call ciHideSoon(8000) once it runs. But nothing forces that render to
+     happen. PCI.tick only reschedules itself while `!locked`; the instant
+     the window closes, the self-timer stops, and a card sitting on
+     'locked, unanswered' has no timer of its own left running. A missed
+     snapshot, a listener hiccup, a resolve that is simply slow — any of
+     them leaves this exact card frozen on screen with four disabled
+     buttons and "the answer lands in a moment", indefinitely.
+
+     Real answers land fast — under 30s in the runner's own logs, well
+     inside the lock window itself. Fifteen seconds past the lock is
+     generous room for a normal resolve to still arrive and take over
+     first; if it never does, the card gets out of the player's way on its
+     own rather than waiting on a push that may not come. If the resolve
+     DOES turn up in that window, the watcher's own render call reaches
+     the resolved branch exactly as it does today and this timer is
+     simply superseded — ciHideSoon() always clears whatever is pending
+     before scheduling anew, so the two paths cannot collide. */
+  else if(pick==null && locked){ ciHideSoon(15000); }
   clearTimeout(PCI.tick);
   if(!locked){ PCI.tick=setTimeout(function(){ if(PCI.active) renderCiCard(PCI.active); }, Math.max(250, locksMs-now)); }
 }
@@ -21149,7 +21201,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-23-lastround.213';
+const STATS_BUILD='2026-08-24-drift.215';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -24193,6 +24245,29 @@ function stTeamBars(){
     var fam=''; try{ fam=famNow(); }catch(_){}
     var spec = ST_BARS[fam] || ST_BARS.basketball;
 
+    /* ============ TWO ROWS BOTH SAID "STRIKEOUTS" ======================
+       23 Aug, a real Stats page: "Batting Strikeouts" and "Pitching
+       Strikeouts" both had their group word stripped below — "so a
+       baseball row reads 'Hits' and not 'Batting Hits'" — and baseball is
+       the one sport where that word is load-bearing for exactly one stat.
+       A team's own batters striking out and its pitchers striking out the
+       other side are different numbers; stripped to "Strikeouts" they
+       rendered as two identical, unlabelled rows with no way to tell them
+       apart, which reads as a bug even on the night the numbers happen to
+       coincide.
+
+       Computed ONCE, over the whole spec, before any row is built: strip
+       every label, count how many collide onto the same stripped form.
+       Anything that collides keeps its full original label — "Batting
+       Strikeouts" and "Pitching Strikeouts" stay exactly that — and
+       anything that does not collide still gets the clean short form,
+       "Hits" rather than "Batting Hits", which is what this was for. */
+    var _stripped = {};
+    spec.forEach(function(pair){
+      var s = pair[0].replace(/^(Batting|Pitching|Fielding)\s+/, '');
+      _stripped[s] = (_stripped[s] || 0) + 1;
+    });
+
     var rows='';
     spec.forEach(function(pair){
       var label=pair[0], kind=pair[1];
@@ -24222,8 +24297,11 @@ function stTeamBars(){
       var at = av==null ? '–' : String(av) + (kind==='%' ? '%' : '');
       var ht = hv==null ? '–' : String(hv) + (kind==='%' ? '%' : '');
       /* Strip the group prefix that the nested-feed reader adds, so a
-         baseball row reads "Hits" and not "Batting Hits". */
-      var show = label.replace(/^(Batting|Pitching|Fielding)\s+/,'');
+         baseball row reads "Hits" and not "Batting Hits" — UNLESS another
+         row in this same sport strips to the same word, in which case the
+         prefix is the only thing telling the two apart and must stay. */
+      var _bare = label.replace(/^(Batting|Pitching|Fielding)\s+/,'');
+      var show = (_stripped[_bare] > 1) ? label : _bare;
       /* LABEL ON ITS OWN LINE. The first version put the stat name in a
          flex item between the two numbers with `min-width:0` and
          `overflow-wrap:anywhere` — which let it shrink to ONE CHARACTER

@@ -718,7 +718,11 @@ async function main(){
      block, so this is the same implementation the Control Room uses rather
      than a second copy of it. All that is left here is state and writes. */
   let ciKey = null;          // identity of the last play seen; never a sequence number
-  let ciCounts = {};         // questions asked per period, for the cap
+  let ciCounts = {};         // questions asked per period, for the ORDINARY cap
+  let inningEndCount = 0;    // end-of-inning firings, its OWN cap — see the
+                              // note above where it is checked. Never mixed
+                              // into ciCounts/askedTotal, or a shared pool
+                              // reintroduces the 23 Aug bug.
   let ciOpen = null;         // qid currently open
   let ciOpenedAt = 0;
   let ciPending = null;      // {qid, ans, text, at} — the answer, held back
@@ -886,18 +890,38 @@ async function main(){
                  about nothing. AUTO.CI.buildInningEnd() is passed the
                  inning that ended and filters every play to it.
 
-                 It also bypasses the RAMP but not the CAP. `allowed` grows
-                 with the period so a game does not spend its whole budget
-                 in the first quarter — sound for ordinary questions, and
-                 wrong here, because it would silence exactly the early
-                 innings this is meant to cover. The per-game total still
-                 binds, so this cannot run away. */
+                 It also bypasses the RAMP AND THE SHARED CAP. `allowed`
+                 grows with the period so a game does not spend its whole
+                 budget in the first quarter — sound for ordinary questions,
+                 and wrong here for the same reason the ramp is.
+
+                 IT USED TO SHARE THE SHARED CAP TOO, AND THAT WAS A SECOND
+                 BUG WITH THE SAME SHAPE. 23 Aug, a real 9-inning game:
+                 twelve Caught It questions fired total, matching 'normal'
+                 pace's perGameFor exactly, and then NOTHING for the last
+                 eighty-five minutes — no 9th inning, nothing else. Two
+                 ordinary sawAtBat/sawPitch questions were mixed into that
+                 same twelve, so the shared pool ran out three innings
+                 early. "A question at the end of every inning" is a
+                 guarantee, not a pacing preference, and a guarantee cannot
+                 share a budget with something that competes for the same
+                 slots — the promise breaks exactly when the game runs
+                 long, which is the game most worth watching.
+
+                 So it has its OWN counter now, inningEndCount, checked
+                 against its own generous backstop rather than the shared
+                 askedTotal. Nine regulation innings plus a realistic run of
+                 extras fits inside twenty with room to spare; the number
+                 exists only to stop a malformed feed from looping forever,
+                 not to pace a real game. The ordinary per-game budget is
+                 untouched by this and keeps working exactly as before —
+                 the fix is that the two no longer draw from one pool. */
+              const INNING_END_CAP = 20;
               let inningEnded = null;
               if(sportFam === 'baseball'){
                 if(ciLastPer != null && per > ciLastPer) inningEnded = ciLastPer;
                 ciLastPer = per;
               }
-              const perGameCap = AUTO.CI.perGameFor(sportFam, pace);
               const mo = inningEnded != null
                 ? { reason: 'inning', stoppage: true }
                 : AUTO.CI.moment(sportFam, step.fresh);
@@ -905,7 +929,7 @@ async function main(){
                 ? gap >= 15000                       /* only so two turns cannot collide */
                 : gap >= AUTO.CI.floorMs(mo.stoppage, askedTotal, allowed, pace));
               const withinBudget = inningEnded != null
-                ? askedTotal < perGameCap
+                ? inningEndCount < INNING_END_CAP
                 : askedTotal < allowed;
               if(mo && withinBudget && spacedOut){
                 const comp = ((sum.header || {}).competitions || [])[0] || {};
@@ -932,12 +956,19 @@ async function main(){
                    Separate nets. The inning-end question is an addition; if
                    it cannot be built, for any reason, the night carries on
                    exactly as it did before it existed. */
+                let firedFromInningEnd = false;
                 if(inningEnded != null){
                   try{ q = AUTO.CI.buildInningEnd(sportFam, cplays, T, inningEnded, ciCounts); }
                   catch(e){ log('callit', 'the inning-end builder threw, falling back: ' +
                                           ((e && e.message) || e)); q = null; }
+                  if(q) firedFromInningEnd = true;
                 }
                 if(!q){
+                  /* A turn with nothing to ask about (buildInningEnd
+                     returned null) falls through to an ordinary question so
+                     the moment is not wasted — and THAT question is
+                     genuinely ordinary, so it counts against the ordinary
+                     budget below, not the inning-end one. */
                   try{ q = AUTO.CI.build(sportFam, cplays, T, per, ciCounts, sum); }
                   catch(e){ log('callit', 'the builder threw: ' + ((e && e.message) || e)); }
                 }
@@ -952,7 +983,15 @@ async function main(){
                     opensAt: FieldValue.serverTimestamp(), locksMs: locks, seq: Date.now()
                   }, { merge:true });
                   ciOpen = q.qid; ciOpenedAt = Date.now();
-                  ciCounts[per] = (ciCounts[per] || 0) + 1;
+                  /* Two separate counters for two separate promises. A
+                     genuine inning-end question increments its own count
+                     ONLY — it must never eat into the ordinary budget, or
+                     the ordinary questions get starved by every inning
+                     turn. Everything else, including a fallback that came
+                     through here because an inning had nothing to ask
+                     about, counts the ordinary way, exactly as before. */
+                  if(firedFromInningEnd) inningEndCount++;
+                  else ciCounts[per] = (ciCounts[per] || 0) + 1;
                   ciPending = (q.ans != null)
                     ? { qid:q.qid, ans:String(q.ans), text:q.atext || '', at: Date.now() + locks + 1200 }
                     : null;

@@ -152,11 +152,24 @@ const ids = innings.map(n => (C.buildInningEnd('baseball', plays, T, n, {}) || {
 ok(new Set(ids).size === ids.length, 'every inning gets its own qid',
    ids.length + ' built, ' + new Set(ids).size + ' distinct');
 
-/* ---- THE RUNNER SIDE: the ramp must not mute early innings ------------ */
+/* ---- THE RUNNER SIDE: the ramp must not mute early innings ------------
+   UPDATED 23 Aug. This originally asserted inning-end shared the ordinary
+   perGameCap ("askedTotal < perGameCap") rather than the ramp. That was
+   itself a bug of the same shape, caught on a real 9-inning game: two
+   ordinary at-bat questions shared that pool, it ran dry after 12
+   questions, and the 9th inning got nothing for the last 85 minutes of a
+   live room. Inning-end now has its OWN counter (inningEndCount) against
+   its own generous backstop (INNING_END_CAP), never the shared pool.
+   Full coverage, including a sabotage-proven check of the exact guard
+   shape, lives in qa/inning-end-budget.js — this assertion now only
+   confirms the two pools stay genuinely separate. */
 const run = fs.readFileSync(path.join(ROOT, 'host/run.js'), 'utf8');
-ok(/inningEnded\s*!=\s*null[\s\S]{0,200}askedTotal\s*<\s*perGameCap/.test(run),
-   'an inning-end question is budgeted against the per-game cap, not the ramp',
-   'the early-game ramp would silence the innings this feature exists for');
+ok(/inningEndCount\s*<\s*INNING_END_CAP/.test(run),
+   'an inning-end question is budgeted against its OWN counter, not the shared one',
+   'the shared-pool bug from 23 Aug would be back');
+ok(!/inningEnded\s*!=\s*null[\s\S]{0,80}askedTotal\s*<\s*perGameCap/.test(run),
+   'and no longer shares askedTotal/perGameCap with ordinary questions',
+   'a shared-budget expression reappeared');
 ok(/buildInningEnd\(/.test(run), 'the runner actually calls buildInningEnd');
 /* Passed the inning that ENDED — not `per`, which at the turn is the new
    inning and contains no plays yet. A mutation to `per` left every other
@@ -165,8 +178,9 @@ ok(/buildInningEnd\(\s*sportFam\s*,\s*cplays\s*,\s*T\s*,\s*inningEnded\s*,/.test
    'and passes it the inning that ENDED, not the one starting',
    'passing `per` asks about an inning with no plays in it yet');
 ok(/ciLastPer/.test(run), 'the runner tracks the period so it can see the turn');
-ok(/if\(!q\)\s*\{[\s\S]{0,120}AUTO\.CI\.build\(/.test(run),
-   'it falls back to an ordinary question rather than going silent');
+ok(/if\(!q\)\{[\s\S]{0,400}AUTO\.CI\.build\(/.test(run),
+   'it falls back to an ordinary question rather than going silent',
+   'the fallback structure changed shape — check it still exists');
 /* And the fallback must survive the new builder THROWING, not just
    returning null. Sharing one try/catch meant an exception in
    buildInningEnd jumped past the ordinary builder entirely and the

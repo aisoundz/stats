@@ -201,6 +201,38 @@ const ok = (c, label, detail) => c ? pass++ : (fail++, bad.push(label + (detail 
   }
   ok(z.rows > 0, 'the 0-0 fixture produced rows to measure', z.html);
 
+  /* ---- 23 Aug: two rows both said "STRIKEOUTS" -----------------------
+     Batting Strikeouts and Pitching Strikeouts both had their group word
+     stripped, producing two identical, unlabelled "STRIKEOUTS" rows on a
+     real Stats page. Every visible row label in a sport's head-to-head
+     card must be unique — that is the actual promise, and it is stronger
+     than "the word strikeouts specifically doesn't collide". */
+  const labels = await page.evaluate(() => {
+    const mk = (ab, m) => ({ ab, name: ab, color: '#367fd9', m,
+                             stat: function (k) { return this.m[k]; } });
+    const box = {
+      'Batting Hits': '6', 'Batting Runs Batted In': '3', 'Batting Strikeouts': '2',
+      'Batting Stolen Bases': '0', 'Fielding Errors': '0', 'Fielding Double Plays': '0',
+      'Pitching Strikeouts': '2'
+    };
+    const realGt = window.gtTeams, realFam = window.famNow;
+    window.gtTeams = () => ({ a: mk('SF', Object.assign({}, box)), h: mk('BOS', Object.assign({}, box)) });
+    window.famNow  = () => 'baseball';
+    let html = '';
+    try { html = String(stTeamBars() || ''); } catch (e) { html = 'THREW ' + e.message; }
+    window.gtTeams = realGt; window.famNow = realFam;
+    const m = [...html.matchAll(/tbLbl">([^<]+)</g)].map(x => x[1].trim());
+    return { html: html.slice(0, 300), rows: m };
+  });
+  console.log('  baseball row labels: ' + JSON.stringify(labels.rows));
+  ok(labels.rows.length >= 2, 'the strikeouts fixture produced rows to measure', labels.html);
+  ok(new Set(labels.rows).size === labels.rows.length,
+     'every visible row label in the head-to-head card is unique',
+     'duplicate label(s): ' + JSON.stringify(labels.rows));
+  ok(labels.rows.some(l => /batting/i.test(l)) && labels.rows.some(l => /pitching/i.test(l)),
+     'the two strikeouts rows keep their disambiguating word',
+     JSON.stringify(labels.rows));
+
   /* ---- the two numbers under each column ----------------------------
      They were bare: "7  3" under a pair of coloured bars, with nothing
      saying which way round it went. They now take the bars' colours —

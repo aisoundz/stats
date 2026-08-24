@@ -316,6 +316,32 @@ const TIER={
      it waits until the event is safely in the past, which is the whole
      point of the lag buffer. */
   'ordinal-question.js': {tier:'static'},
+  /* 23 Aug, real 9-inning game watched live: 12 Caught It questions
+     fired (exactly 'normal' pace's per-game cap), then NOTHING for the
+     last 85 minutes — no 9th inning, nothing else. Two ordinary
+     at-bat/pitch questions shared the same 12-question pool as the
+     end-of-inning guarantee, so the pool ran dry three innings early.
+     "A question at the end of every inning" is a promise, not a pacing
+     preference, and cannot share a budget with something competing for
+     the same slots. Sabotage-verified: a plausible-looking one-line
+     regression (reuse askedTotal for inning-end) is caught. */
+  'inning-end-budget.js': {tier:'static'},
+  /* "When the caught it question was done and I missed it, it just
+     stayed stuck on the screen." Confirmed in the code: the locked/missed
+     branch never scheduled a hide of its own — it depended entirely on the
+     server's 'resolved' write arriving and triggering a fresh render. A
+     missed snapshot, a slow resolve, a listener hiccup, and the card sat
+     there with disabled buttons forever. Now self-clears 15s after lock
+     if no resolve has taken over by then. */
+  'ci-missed-card.js': {tier:'browser'},
+  /* "The points didn't add up in all the pages. In one page Dan the fan
+     has 480 and another page he has 190." Two listeners fed the same
+     client cache: SB.top() composed the true total via nightTotal(), and
+     SB.watchBoard() read the raw legacy `pts` field straight off the
+     document. renderBoard() showed .total when present and silently fell
+     back to .pts when not — whichever listener wrote last decided which
+     number a player saw. The fixture used the exact numbers reported. */
+  'board-total.js': {tier:'browser'},
   /* From the demo: "they had to scroll to the bottom of the page for
      locked in or next... The user shouldn't scroll down to find next or
      lock." A twelve-name roster is 2,000px tall on a phone and the way
