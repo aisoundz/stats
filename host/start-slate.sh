@@ -281,7 +281,41 @@ live_rooms(){
   echo "$n"
 }
 
-echo "--- running: [$RUN_LEAGUES]  $(live_rooms) room(s) already up${MAX_ROOMS:+, cap $MAX_ROOMS} ---"
+# ============ THE REAL GATE IS LISTENERS, NOT A ROOM COUNT ============
+# Reversed 24 Aug. MAX_ROOMS used to be the thing that decided how many
+# rooms could run — a number a person picked and then had to remember to
+# raise by hand every time the business grew (2 -> 3 -> 4, and the next
+# raise would have been someone editing leagues.env again). But the only
+# night this project has ever lost — 19 Aug, GN13 — was never a room-count
+# problem. It was CONCURRENT SNAPSHOT LISTENERS crossing ~78, and that
+# number does not know or care how many rooms produced it.
+#
+# So: ask for the real number before starting each room, and refuse only
+# if it is already at/above 55 — the SAME alert threshold host/listeners.js
+# prints and host/read-alert.js pages on. Growth is automatic from here —
+# a 5th, 6th, 10th room is fine for as long as real usage says it's fine,
+# and MAX_ROOMS (now 0 by default — see leagues.env) stays only as a
+# manual override for a night somebody wants a hard room-count ceiling
+# regardless of listener headroom.
+#
+# Read ONCE per pass, not once per candidate room — the API's own
+# aggregation window is 5 minutes, so asking it three times in the same
+# ten-minute tick buys nothing but latency. FAILS OPEN: if the read
+# errors or times out, that is said out loud and rooms start anyway — a
+# monitoring call that can silently cancel a real game night on its own
+# hiccup would be a worse failure than the thing it exists to prevent,
+# and the read-alert email still watches independently of this check.
+LISTEN_ALERT=55
+LISTEN_NOW="$(timeout 15 node host/listeners.js --now 2>/dev/null)"
+case "$LISTEN_NOW" in
+  ''|*[!0-9]*)
+    echo "--- listeners: could not read the live count — the listener gate is BLIND this pass, starting rooms anyway (read-alert email still watches) ---"
+    LISTEN_NOW=""
+    ;;
+  *) : ;;
+esac
+
+echo "--- running: [$RUN_LEAGUES]  $(live_rooms) room(s) already up${LISTEN_NOW:+, $LISTEN_NOW listener(s) now (alert at $LISTEN_ALERT)}${MAX_ROOMS:+, room-count override $MAX_ROOMS} ---"
 [ "$IDLE_EXIT_MIN" = "0" ] && echo "--- stand-down OFF: rooms stay up for late arrivals ---"
 STARTED_COUNT=""   # one char per started room, per league, counted with ${#}
 OFFERED_UNHOSTED=""   # rooms the PLAYER is offered that nobody is hosting
@@ -371,13 +405,23 @@ while IFS=$'\t' read -r LG NIGHT_ID ESPN_EVENT HOME_NICK AWAY_NICK TIP SPORT SPA
     fi
   fi
 
-  # Start small, and only DUE games spend the cap — see the note above the
-  # due check. A room skipped for the cap is SAID OUT LOUD: a silent
+  # Start small, and only DUE games spend a cap — see the note above the
+  # due check. A room skipped for a cap is SAID OUT LOUD: a silent
   # truncation reads as "we covered everything" when we did not.
+  #
+  # THE REAL GATE: measured listeners, read once above this loop. A room
+  # already at the alert threshold does not get another one piled on top
+  # of it, whatever room number this would be.
+  if [ -n "$LISTEN_NOW" ] && [ "$LISTEN_NOW" -ge "$LISTEN_ALERT" ]; then
+    echo "  CAP  $NIGHT_ID — $LISTEN_NOW concurrent listener(s), at/above the $LISTEN_ALERT alert threshold — not starting another room"
+    continue
+  fi
+  # THE MANUAL OVERRIDE: off (0) by default. Only bites if somebody set a
+  # real number in leagues.env or the environment for this run.
   if [ "$MAX_ROOMS" -gt 0 ]; then
     RUNNING=$(live_rooms)
     if [ "$RUNNING" -ge "$MAX_ROOMS" ]; then
-      echo "  CAP  $NIGHT_ID — $RUNNING room(s) already up, cap is $MAX_ROOMS"
+      echo "  CAP  $NIGHT_ID — $RUNNING room(s) already up, room-count override is $MAX_ROOMS"
       continue
     fi
   fi
