@@ -221,8 +221,10 @@ const TIER={
      game." firestore.rules had never been executed by anything — the
      acceptance suite says so in terms — so the file deciding who may write
      to a live game shipped on reading alone. This evaluates the real
-     ruleset. It SKIPS, loudly, until the service account is granted
-     permission to call the Rules test API. */
+     ruleset. It skipped, loudly, until 24 Aug, when the service account
+     was granted roles/firebaserules.admin in the console — no code
+     change, an IAM grant — and it started actually running: 14 passed,
+     0 failed against the live rules, including both B-71 `-local` cases. */
   'rules.js': {tier:'static'},
   /* "We need more questions for caught it in baseball." There were four
      and it could only ever ask one: the rotation divided a counter that
