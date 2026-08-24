@@ -61,6 +61,19 @@ const CASES = [
   { id:'a player may NOT answer a round that does not exist',
     want:'DENY',  auth:PLAY, path:subPath, method:'create', data:goodSub, mocks:roundIs('live', false) },
 
+  /* ---- 24 Aug, found reviewing the fix above BEFORE it shipped -------
+     lockPicks() in index.html files a second kind of submission, at
+     roundId + '-local', when the built-in practice deck gets answered
+     instead of a round the host pushed. It never has a matching document
+     in /rounds by construction, so exists() on it is always false — the
+     ORIGINAL version of roundIsOpen() would have rejected every one of
+     these, not just the ones for a closed round. No mocks: the point is
+     that the rule must not even need to look the document up. */
+  { id:'a LOCAL-only submission (practice deck inside a live room) is allowed with no round document at all',
+    want:'ALLOW', auth:PLAY, path:`${roundPath}-local/subs/${UID}`, method:'create', data:goodSub, mocks:[] },
+  { id:'a local submission still cannot be written as somebody else',
+    want:'DENY',  auth:PLAY, path:`${roundPath}-local/subs/someoneElse`, method:'create', data:goodSub, mocks:[] },
+
   /* ---- the properties that were already true, pinned so they stay ---- */
   { id:'a player may not rewrite a pick after the fact',
     want:'DENY',  auth:PLAY, path:subPath, method:'update', data:goodSub, mocks:roundIs('live') },

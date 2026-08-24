@@ -170,9 +170,28 @@ service cloud.firestore {
         // The main game — the one with the points — never got it. So the
         // same shape, against the round's own state. Once the runner flips
         // a round to 'scored' the key is public and the door is shut.
+        // 24 Aug — found while reviewing this fix before deploy, not after.
+        // index.html's lockPicks() files a SECOND kind of submission, at
+        // roundId + '-local', whenever the built-in practice deck gets
+        // answered instead of a round the host actually pushed. It exists
+        // SPECIFICALLY so those answers can never impersonate a hosted
+        // round and be graded against a key they never saw (that is the
+        // "Denver Broncos" bug this file's own history is full of) — by
+        // construction, a '-local' id never has a matching document in
+        // /rounds. exists() on a document that can never exist is always
+        // false, so gating '-local' writes on roundIsOpen would have
+        // rejected every one of them, not just the ones for a closed
+        // round — a second, different hole opened by closing the first.
+        //
+        // A '-local' id needs no liveness check: it is never read back
+        // against a key, never scored, never shown to another player.
+        // Everything that makes B-71's fix a real security property —
+        // create-only, uid-locked, size-bounded — still applies below,
+        // unchanged, to both kinds of submission.
         function roundIsOpen(n, r) {
-          return exists(/databases/$(database)/documents/nights/$(n)/rounds/$(r))
-            && get(/databases/$(database)/documents/nights/$(n)/rounds/$(r)).data.state == 'live';
+          return r.matches('.*-local$')
+            || (exists(/databases/$(database)/documents/nights/$(n)/rounds/$(r))
+                && get(/databases/$(database)/documents/nights/$(n)/rounds/$(r)).data.state == 'live');
         }
         match /subs/{uid} {
           allow read: if isOwner() || (signedIn() && request.auth.uid == uid);
