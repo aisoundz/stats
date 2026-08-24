@@ -47,7 +47,15 @@ export PATH="/home/higherthan7/.nvm/versions/node/v20.20.2/bin:/usr/local/bin:/u
 export HOME="/home/higherthan7"
 cd "$HOME/stats" || exit 1
 
-MODE="start"
+# 24 Aug — every other setting in this file (LEAGUES, RUN_LEAGUES, MAX_ROOMS,
+# RUN_MINUTES, ...) reads ${VAR:-default}, an env override that quietly wins.
+# MODE was the one exception: hardcoded to "start", settable only through
+# $1. `MODE=build ./host/start-slate.sh` (no --build) silently ran in
+# start mode — no error, no warning, output that looked plausible — for
+# every day re-picked this session before this was caught. Now MODE
+# follows the same convention as everything else here, and $1 still wins
+# when both are given, so nothing that worked before stops working.
+MODE="${MODE:-start}"
 [ "$1" = "--build" ] && MODE="build"
 [ "$1" = "--dry" ]   && MODE="dry"
 

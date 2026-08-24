@@ -25,8 +25,19 @@ const LEAGUES = [
   ['nba',  'basketball/nba'],  ['nhl',  'hockey/nhl'],
 ];
 
+/* 24 Aug — 'USA'/'USA Net'/'USA Network' were missing here even though
+   host/marquee.js's own NATIONAL list already has them, and the room-
+   selection rule itself names USA as national (see leagues.env Rule 7 /
+   the room-selection memory: "USA, ESPN, CBS, ABC, NBC, NBA TV, ION,
+   Peacock/NBCSN, CNBC"). A real consequence, not a hypothetical one:
+   26 Aug's WNBA Tempo @ Storm room reads "USA Net" from ESPN and was
+   being scored as NOT national, taking the only qualifying game that
+   day off the board. Two scripts deciding the same fact and disagreeing
+   is the exact disease this codebase keeps finding — see marquee.js's
+   own list for the one this was brought in line with. */
 const NATIONAL = ['NFL Net','NFL Network','FOX','FS1','FS2','CBS','CBS Sports Network','NBC','ABC',
-  'ION','ESPN','ESPN2','ESPNU','TNT','TBS','truTV','MLB Network','NBA TV','CW','The CW','Peacock','Netflix'];
+  'ION','ESPN','ESPN2','ESPNU','TNT','TBS','truTV','MLB Network','NBA TV','CW','The CW','Peacock','Netflix',
+  'USA','USA Net','USA Network'];
 /* A league with no linear option at all: refusing the streamer refuses the sport. */
 const LEAGUE_ONLY = { mls:['Apple TV'], mlb:['Apple TV'] };
 /* Excluded on purpose. Prime is rule 3 (WNBA); ESPN Unlimited is a paid add-on,
