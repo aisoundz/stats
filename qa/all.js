@@ -342,6 +342,16 @@ const TIER={
      back to .pts when not — whichever listener wrote last decided which
      number a player saw. The fixture used the exact numbers reported. */
   'board-total.js': {tier:'browser'},
+  /* A device showed a round as "not open yet" nine minutes after it had
+     genuinely opened server-side. roomNextRound()/hostedDoc() read correctly
+     on a static trace; the remaining suspect is a round-watch listener that
+     LOOKS attached but has quietly stopped receiving pushes, which nothing
+     detected. A real fix needs the feed's period as a number, which the
+     client only has as free text — not a guess to ship overnight. This is
+     the safe half: SB.lastRoundWatchAt is now recorded at the exact moment
+     a player sees the wait screen, so the next occurrence is one number in
+     the trk stream instead of an hour reconstructing Firestore timestamps. */
+  'round-wait-diagnostic.js': {tier:'browser'},
   /* From the demo: "they had to scroll to the bottom of the page for
      locked in or next... The user shouldn't scroll down to find next or
      lock." A twelve-name roster is 2,000px tall on a phone and the way
