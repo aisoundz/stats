@@ -692,7 +692,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-21-admin.63-server-grades-caught';
+window.ADMIN_BUILD='2026-08-24-admin.64-mlb-r1-no-freebies';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -1009,12 +1009,18 @@ const TEMPLATES = {
       [
         { t: 'The first hit of the game — what was it?', o: ['Single','Double','Triple','Home run'], r:'mlbFirstHitKind',
           t_es: 'El primer hit del partido — ¿qué fue?', o_es: ['Sencillo','Doble','Triple','Jonrón'] },
-        { t: 'Runs through three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand',
-          t_es: 'Carreras en las primeras tres, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una o dos','Tres o cuatro','Cinco o más'] },
+        /* WAS mlbRunsBand (round-1 span) and mlbLeadAfter(p=3) — both read
+           straight off paintLiveScore()'s running total, which by the time
+           this round opens (after the 3rd) IS the score at inning 3. Same
+           free-point shape as the soccer 1H bug: the strip already answers
+           it. Swapped for the round-2/3-proven HR and SB bands, neither of
+           which is painted anywhere on screen. See stats_gametime_free_points. */
+        { t: 'Home runs through three — how many?', o: ['None','One','Two','Three or more'], r:'mlbHomeRunsBand',
+          t_es: 'Jonrones en las primeras tres — ¿cuántos?', o_es: ['Ninguno','Uno','Dos','Tres o más'] },
         { t: 'Strikeouts through three, both staffs combined — how many?', o: ['Two or fewer','Three or four','Five or six','Seven or more'], r:'mlbStrikeoutsBand',
           t_es: 'Ponches en las primeras tres, entre los dos cuerpos de pitcheo — ¿cuántos?', o_es: ['Dos o menos','Tres o cuatro','Cinco o seis','Siete o más'] },
-        { t: 'Who leads after three?', o: ['{HOME}','{AWAY}','Level'], r:'mlbLeadAfter',
-          t_es: '¿Quién gana tras tres entradas?', o_es: ['{HOME}','{AWAY}','Empate'] }
+        { t: 'Stolen bases through three — how many?', o: ['None','One','Two','Three or more'], r:'mlbStolenBasesBand',
+          t_es: 'Bases robadas en las primeras tres — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] }
       ],
       [
         { t: 'Runs in the middle three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand',
