@@ -352,6 +352,15 @@ const TIER={
      a player sees the wait screen, so the next occurrence is one number in
      the trk stream instead of an hour reconstructing Firestore timestamps. */
   'round-wait-diagnostic.js': {tier:'browser'},
+  /* "The heard: ..." debug text — ambient TV dialogue, misrecognised — sat
+     on screen UNCHANGED across two entirely different questions, with two
+     different manually-tapped answers in between. V.lastHeard was written
+     once and never cleared. First attempt at the fix referenced the wrong
+     variable name (V, private inside the VX closure, instead of VX, the
+     name that closure is actually exposed under) — silently swallowed by
+     its own try/catch, would have shipped doing nothing. This suite drove
+     the real code path and caught it before it went out. */
+  'voice-heard-clear.js': {tier:'browser'},
   /* From the demo: "they had to scroll to the bottom of the page for
      locked in or next... The user shouldn't scroll down to find next or
      lock." A twelve-name roster is 2,000px tall on a phone and the way

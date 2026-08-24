@@ -57,5 +57,6 @@
   "inning-end-budget.js": 10,
   "ci-missed-card.js": 7,
   "board-total.js": 6,
-  "round-wait-diagnostic.js": 6
+  "round-wait-diagnostic.js": 6,
+  "voice-heard-clear.js": 3
 }

@@ -14004,6 +14004,32 @@ try{ window.qText=qText; window.qOptsFor=qOptsFor; }catch(_){}
 function nq(){return rounds[S.qi].q.length;}
 function loadQuestion(){
   S.answered=false; pastTime=false;
+  /* ============ A NEW QUESTION, A CLEAN "HEARD" LINE ==================
+     24 Aug, from real screenshots: the same "heard: ..." debug text —
+     ambient TV dialogue, misrecognised — sat on screen UNCHANGED across
+     two entirely different questions, with two different manually-tapped
+     answers made in between. V.lastHeard is written once by the speech
+     recogniser's onresult handler and never cleared anywhere, so once a
+     phrase lands it is permanent set-dressing for the rest of the game —
+     confusing on its own (why does the app still think it heard that?)
+     and actively misleading the one time it would matter: a real mishear
+     on THIS question looking identical to a stale one from three
+     questions ago.
+
+     Cleared here, not inside V itself, because loadQuestion() is the one
+     place that already marks every other piece of the previous question
+     as gone (the reveal box, the lock note, the next button) and this
+     belongs in that same list. V.paint() repaints immediately rather
+     than waiting for the next voice event, so the line is gone the
+     instant the new question is, not a beat behind it. */
+  /* VX, not V: the IIFE that builds voice keeps its state in a variable
+     named V and returns THAT SAME OBJECT under the public name VX — see
+     "return V;" just before "window.VX=VX" in that closure. V itself is
+     not reachable from here; referencing it directly would throw inside
+     the try/catch below and this fix would do nothing, silently, forever.
+     Caught before it shipped by a suite that actually ran this code path
+     instead of only reading it. */
+  try{ if(typeof VX!=='undefined'){ VX.lastHeard=''; VX.paint(); } }catch(_){}
   const q=rounds[S.qi].q[S.ni];const worth=roundWorth(S.qi);
   document.getElementById('qText').textContent=qText(q);
   /* SAY IT ONCE, IN THEIR LANGUAGE. qText sets the flag when it had to fall
@@ -21201,7 +21227,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-24-listen.216';
+const STATS_BUILD='2026-08-24-clean.217';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
