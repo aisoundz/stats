@@ -14862,6 +14862,47 @@ function applySettlement(st){
    round is scored before the buzzer, so no round is live at that point.
 
    Guarded by qa/not-final-yet.js. */
+/* ============ THE FEED SAYS FINAL BEFORE THE LAST ROUND OPENS =======
+   23 Aug, WNBA room, and an outside player lost a whole quarter to it.
+   From the runner's own log:
+
+       01:19:57  score  113 - 90  Final
+       01:19:59  hold   the game is over but not every quarter is scored
+       01:20:31  round  Q4 opens
+
+   Thirty-four seconds. The feed went 'post' BEFORE Q4's questions opened,
+   so the app concluded the night was over and moved him to his final
+   score. Half a minute later Q4 arrived to somebody already looking at
+   the ending. Q1, Q2 and Q3 all took answers from him. Q4 took none from
+   anybody, and he told Anis "the 4th quarter never came on".
+
+   hostedRoundIsLive() below does not catch this and cannot: at 01:19:57
+   no round WAS live. Q3 had been scored twenty-five minutes earlier and
+   Q4 did not exist yet. The check asks "is a round open right now", and
+   the true question is "are there rounds still to come".
+
+   The runner already knows the answer and says it out loud in that hold
+   line. This is the client learning the same rule: a night ends when the
+   LAST round has been scored, not when the broadcast ends. Those are
+   different moments and the gap between them is where a quarter fits. */
+function nightRoundsOutstanding(){
+  try{
+    if(!S || S.mode!=='live') return false;
+    var d = HR && HR.doc; if(!d) return false;
+    /* Same abandonment valve as below, for the same reason: if the host
+       has gone, a player must still be able to reach their own ending. */
+    var seq = Number(d.seq);
+    if(isFinite(seq) && seq > 0 && (Date.now() - seq) > 45*60*1000) return false;
+    var last = (typeof NR === 'number' && NR > 0) ? (NR - 1) : null;
+    if(last == null) return false;
+    var idx = Number(d.idx);
+    if(!isFinite(idx)) return false;
+    if(idx < last) return true;                 // rounds still to come
+    if(!HR.scored[d.id]) return true;           // the last one is not scored yet
+    return false;
+  }catch(_){ return false; }
+}
+try{ window.nightRoundsOutstanding = nightRoundsOutstanding; }catch(_){}
 function hostedRoundIsLive(){
   try{
     if(!S || S.mode!=='live') return false;
@@ -21108,7 +21149,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-22-unfreeze.212';
+const STATS_BUILD='2026-08-23-lastround.213';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -22589,6 +22630,10 @@ function finishNightFromFeed(){
        'post' while the host still has a round open is describing a
        different game, or an older one. Do not bank the night on it. */
     if(hostedRoundIsLive()) return;
+    /* ...and not while quarters are still to come. See the note above
+       nightRoundsOutstanding(): the buzzer and the last round are not the
+       same moment, and a player settled in between loses that round. */
+    if(nightRoundsOutstanding()) return;
     if(S.screen==='final' || S.screen==='predreview') { FINALISED=true; return; }
     if(!inDeadAir()) return;            // mid-question — catch them on the way out
     /* B36 — A PLAYER WITH NO CARD USED TO GET NO ENDING AT ALL. This

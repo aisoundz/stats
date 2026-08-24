@@ -113,7 +113,66 @@ const CASES = [
          means a night that can never be settled. */
       ok(r.wentA, c.name + ' · the settle screen still opens normally',
          'the guard is blocking a night that really has ended');
+      /* The feed path was never asserted here, so when a second guard
+         changed it from SETTLE to held, this suite stayed green and said
+         nothing. An unchecked half is where the next regression lives. */
+      ok(typeof r.wentB === 'boolean', c.name + ' · the feed path was measured');
     }
+  }
+
+  /* ============ THE 34-SECOND RACE THAT COST A REAL PLAYER Q4 ========
+     23 Aug, WNBA room, from the runner's own log:
+
+         01:19:57  score  113 - 90  Final
+         01:19:59  hold   the game is over but not every quarter is scored
+         01:20:31  round  Q4 opens
+
+     The feed said the game was over BEFORE the last round opened, so the
+     player was settled to his final score inside that gap and never saw
+     Q4. Q1, Q2 and Q3 each took his answers. Q4 took none from anybody.
+
+     hostedRoundIsLive() cannot catch this and never could: at 01:19:57 no
+     round WAS live, Q3 having been scored twenty-five minutes earlier and
+     Q4 not existing yet. The question is not "is a round open right now"
+     but "are there rounds still to come". */
+  console.log('\n  --- the buzzer is not the last round ---');
+  const RACE = [
+    /* The 23 Aug night exactly: Q3 scored at 00:54, buzzer at 01:19:57,
+       Q4 not opening until 01:20:31. Nothing is live in that gap. */
+    { name: 'Final, Q3 SCORED, Q4 not yet open', idx: 2, scored: true,  state: 'scored', ageMin: 25, out: true  },
+    { name: 'Final, Q4 open and not yet scored', idx: 3, scored: false, state: 'live',   ageMin: 0,  out: true  },
+    { name: 'Final, Q4 scored, night truly over', idx: 3, scored: true, state: 'scored', ageMin: 0,  out: false },
+    { name: 'the host vanished 90 minutes ago',  idx: 2, scored: true,  state: 'scored', ageMin: 90, out: false }
+  ];
+  for (const c of RACE) {
+    const r = await page.evaluate((c) => {
+      S.mode = 'live'; S.screen = 'lobby'; FINALISED = false;
+      HR.started = {}; HR.submitted = {}; HR.scored = {}; HR.held = {};
+      /* THE FIXTURE HAS TO MATCH THE REAL NIGHT. The first version left
+         the newest round 'live' whenever it was unscored, so
+         hostedRoundIsLive() caught every case and nightRoundsOutstanding
+         was never exercised — disabling it changed nothing and the suite
+         stayed green. On 23 Aug Q3 was SCORED twenty-five minutes before
+         the buzzer; that is precisely why the older guard could not see
+         the problem. `state` comes from the case now. */
+      HR.doc = { id: 'r' + c.idx, idx: c.idx, state: c.state,
+                 seq: Date.now() - (c.ageMin * 60 * 1000) };
+      if (c.scored) HR.scored['r' + c.idx] = true;
+      const out = (typeof nightRoundsOutstanding === 'function') ? nightRoundsOutstanding() : 'NO-FN';
+      S.screen = 'lobby'; FINALISED = false;
+      try { finishNightFromFeed(); } catch (_) {}
+      return { out, settled: S.screen === 'predreview' || FINALISED === true,
+               NR: (typeof NR !== 'undefined' ? NR : null) };
+    }, c);
+    console.log('  ' + c.name.padEnd(42) + ' outstanding=' + String(r.out) +
+                '   feed-final -> ' + (r.settled ? 'SETTLED' : 'held'));
+    ok(r.out !== 'NO-FN', c.name + ' · nightRoundsOutstanding exists');
+    ok(r.out === c.out, c.name + ' · reads the night correctly',
+       'got ' + r.out + ', expected ' + c.out + ' (NR=' + r.NR + ')');
+    ok(r.settled === !c.out, c.name + ' · the feed ' +
+       (c.out ? 'cannot settle a night with rounds to come' : 'settles a finished night'),
+       c.out ? 'a quarter still to come was settled away, which is the 23 Aug bug'
+             : 'the night can never be banked, which is worse');
   }
 
   await browser.close();
