@@ -115,6 +115,139 @@ function isSundayPT() {
   return fmt.format(new Date()) === 'Sun';
 }
 
+/* ============ THE ONE CHECK A STRING MATCH CANNOT DO ==================
+   24 Aug — Anis's own instruction for the manual version of this send:
+   "any score or statistic quoted is real." The team-name/channel check
+   above is a string match against a known list; this is different — the
+   "Last night, settled" recap makes a factual claim about a game that
+   already happened, and a wrong number in it is exactly the failure a
+   mechanical check was said not to be able to catch. It can, for the
+   two claims this template actually makes: a final score, and (when
+   present) one player's line, in the fixed shape "Name had N stat and
+   N stat as Team beat Team".
+
+   SCORE, always checked if the section exists: pulled out with a plain
+   digit-dash-digit regex, then matched against every completed game in
+   the last 3 days across every league this product covers. Two numbers
+   matching some real final is treated as the claim being real — cheap,
+   reliable, and low on false positives because a specific final score
+   pair is not a coincidence.
+
+   PLAYER STAT, best-effort: this codebase does not know every way the
+   drafting routine might phrase a stat line, and refusing a real email
+   because a parser could not follow tonight's exact wording would be
+   its own new failure mode. So: if the fixed "Name had N x and N y"
+   shape matches, it is checked against the real box score of whichever
+   game the SCORE matched. If the shape does not match — different
+   phrasing, no player mentioned at all — that is logged and NOT a
+   refusal. Silence is not the same as a lie; only a checkable claim
+   that turns out wrong blocks the send.
+   ===================================================================== */
+const RECAP_LEAGUES = [
+  ['wnba', 'basketball/wnba'], ['nfl', 'football/nfl'],
+  ['mlb', 'baseball/mlb'], ['mls', 'soccer/usa.1'],
+];
+
+// ESPN's edge rejects a bare Node https.request with no User-Agent (a
+// real, silent 403 — confirmed live, and the ORIGINAL version of this
+// function swallowed it in a bare catch, returning [] indistinguishably
+// from "no games that day". Matching curl's own minimal headers (curl
+// works with no extra effort) is what actually clears it — a browser-
+// looking UA was tried first and did NOT work, so this is specific, not
+// decorative. Errors are now logged, not swallowed, so a future gap
+// like this shows up as a REFUSE with a reason instead of a quiet [].
+const ESPN_HEADERS = { 'User-Agent': 'curl/7.81.0', Accept: '*/*' };
+async function scoreboardDay(sportPath, dateYMD) {
+  const url = `https://site.api.espn.com/apis/site/v2/sports/${sportPath}/scoreboard?dates=${dateYMD.replace(/-/g, '')}`;
+  try {
+    const r = await reqRetry(url, { headers: ESPN_HEADERS });
+    if (r.status !== 200 || !r.body || !r.body.events) {
+      log(`  (scoreboard fetch for ${sportPath} ${dateYMD} returned status ${r.status}, not usable — treating as no games)`);
+      return [];
+    }
+    return r.body.events;
+  } catch (e) {
+    log(`  (scoreboard fetch for ${sportPath} ${dateYMD} failed: ${e.message} — treating as no games)`);
+    return [];
+  }
+}
+
+function ymdOffset(daysAgo) {
+  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' });
+  const d = new Date(Date.now() - daysAgo * 86400000);
+  return fmt.format(d);
+}
+
+async function verifyRecapClaims(html) {
+  const anchor = html.indexOf('Last night, settled');
+  if (anchor < 0) return { ok: true, note: 'no "Last night, settled" section in this draft — nothing to verify' };
+
+  const chunk = html.slice(anchor, anchor + 2500);
+  const text = chunk.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+  const scoreMatch = text.match(/(\d{1,3})\s*[–—-]\s*(\d{1,3})/);
+  if (!scoreMatch) {
+    return { ok: false, reason: 'a "Last night, settled" section exists but no score pattern (N–N) was found in it — cannot verify, refusing rather than guessing' };
+  }
+  const claimed = [Number(scoreMatch[1]), Number(scoreMatch[2])].sort((a, b) => a - b);
+
+  // Scan the last 3 days, every league, for a completed game whose final
+  // score (either order) matches both numbers exactly.
+  let matchedEvent = null, matchedLeague = null;
+  outer:
+  for (let daysAgo = 1; daysAgo <= 3; daysAgo++) {
+    const date = ymdOffset(daysAgo);
+    for (const [key, path] of RECAP_LEAGUES) {
+      const events = await scoreboardDay(path, date);
+      for (const e of events) {
+        const c = (e.competitions || [])[0] || {};
+        if ((c.status || {}).type && c.status.type.name !== 'STATUS_FINAL') continue;
+        const scores = (c.competitors || []).map((t) => Number(t.score)).filter((n) => !isNaN(n)).sort((a, b) => a - b);
+        if (scores.length === 2 && scores[0] === claimed[0] && scores[1] === claimed[1]) {
+          matchedEvent = e; matchedLeague = { key, path };
+          break outer;
+        }
+      }
+    }
+  }
+  if (!matchedEvent) {
+    return { ok: false, reason: `the draft claims a final score of ${scoreMatch[1]}–${scoreMatch[2]}, but no completed game in the last 3 days across wnba/nfl/mlb/mls actually ended with that score` };
+  }
+
+  // Player-stat, best-effort. Only refuse if the shape DID match and the
+  // number turned out wrong — an unrecognized phrasing is not an error.
+  const statMatch = text.match(/([A-Z][a-zA-Z'.]+ [A-Z][a-zA-Z'.]+) had (\d+)\s+(\w+)(?:\s+and\s+(\d+)\s+(\w+))?/);
+  if (!statMatch) {
+    return { ok: true, note: `score ${scoreMatch[1]}–${scoreMatch[2]} verified against a real final (${matchedEvent.shortName}); no player-stat claim in the checkable "Name had N x and N y" shape — not blocking on phrasing this script does not recognize` };
+  }
+  const [, playerName, n1] = statMatch;
+  const n2 = statMatch[4];
+  try {
+    const sumRes = await reqRetry(`https://site.api.espn.com/apis/site/v2/sports/${matchedLeague.path}/summary?event=${matchedEvent.id}`, { headers: ESPN_HEADERS });
+    const playerGroups = (sumRes.body && sumRes.body.boxscore && sumRes.body.boxscore.players) || [];
+    let athleteStats = null;
+    for (const team of playerGroups) {
+      for (const grp of team.statistics || []) {
+        for (const ath of grp.athletes || []) {
+          if ((ath.athlete || {}).displayName === playerName) athleteStats = ath.stats || [];
+        }
+      }
+    }
+    if (!athleteStats) {
+      return { ok: false, reason: `the draft credits "${playerName}" in the ${matchedEvent.shortName} recap, but no player by that exact name appears in the real box score for that game` };
+    }
+    const claimedNums = [n1, n2].filter(Boolean);
+    const realNums = new Set(athleteStats.map(String));
+    const unmatched = claimedNums.filter((n) => !realNums.has(String(n)));
+    if (unmatched.length) {
+      return { ok: false, reason: `"${playerName}" claim of ${claimedNums.join('/')} does not match their real box score line for ${matchedEvent.shortName} (${athleteStats.join(', ')})` };
+    }
+    return { ok: true, note: `score ${scoreMatch[1]}–${scoreMatch[2]} and ${playerName}'s ${claimedNums.join('/')} both verified against the real ${matchedEvent.shortName} box score` };
+  } catch (e) {
+    return { ok: false, reason: `could not fetch the real box score for ${matchedEvent.shortName} to check "${playerName}"'s claimed line — refusing rather than guessing (${e.message})` };
+  }
+}
+
 async function main() {
   log('=== send-tipoff-auto starting ===');
 
@@ -246,6 +379,16 @@ async function main() {
   }
 
   log(`VERIFIED: every room's team names and channel appear in the draft. Subject: "${(draft.emails[0] || {}).subject || draft.name}"`);
+
+  // ---- 3b. the one claim a string match can't check -----------------
+  const recap = await verifyRecapClaims(html);
+  if (!recap.ok) {
+    log(`REFUSE: ${recap.reason}`);
+    log('Nothing sent. Left as a draft for a human to look at.');
+    process.exitCode = 2;
+    return;
+  }
+  log(`VERIFIED: ${recap.note}`);
 
   // ---- 4. send -----------------------------------------------------
   const payload = JSON.stringify({ delivery: 'instant' });
