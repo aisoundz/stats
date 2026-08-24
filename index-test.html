@@ -18745,7 +18745,18 @@ function onHostedRound(r){
 
   if(r.state==='live')   onHostedLive(r, idx);
   if(r.state==='scored') onHostedScored(r, idx);
-  if(S.screen==='lobby') renderLobby(idx);
+  /* qa/late-join.js, 24 Aug — this used to be renderLobby(idx), the raw
+     index of whatever document just arrived. Correct for a device that
+     watched this round happen. Wrong for one whose FIRST ever document
+     is already scored: qa/rearm.js's own comment already establishes
+     that case is real ("the next document arrives already scored").
+     hostedDoc(qi) is an exact idx match with no catching up, so idx
+     alone put an "ended — answer now" button in front of a round
+     onHostedScored() had already refused to score for this device (it
+     never started, submitted, or held it) — a dead end offered as a
+     live one. roomNextRound() already existed to solve exactly this;
+     it just was not being asked here. */
+  if(S.screen==='lobby') renderLobby(roomNextRound(S.nextQ!=null?S.nextQ:S.qi));
 }
 
 function onHostedLive(r, idx){
@@ -21227,7 +21238,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-24-clean.217';
+const STATS_BUILD='2026-08-24-latejoin.218';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

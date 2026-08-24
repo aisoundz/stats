@@ -162,6 +162,13 @@ const TIER={
      only cure was a reload. qa/listeners.js proves every listener is
      CLOSED; nothing proved one is ever re-opened. */
   'rearm.js': {tier:'player'},
+  /* "Innings 1-3 open after the 3rd" — a device's FIRST ever round
+     document can arrive already scored (rearm.js's own comment says
+     so), and onHostedRound() rendered that round's raw index instead
+     of asking roomNextRound() where the room actually is. Drives the
+     real onHostedRound()/renderLobby(), unlike rearm.js which stubs
+     onHostedRound() out and so never exercises this path at all. */
+  'late-join.js': {tier:'player'},
   /* STATS answering the question that was asked — and staying out of
      the way of the broadcast when it was not being spoken to. */
   'stats-answers.js': {tier:'player'},
