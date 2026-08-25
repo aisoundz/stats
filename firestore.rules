@@ -188,8 +188,129 @@ service cloud.firestore {
         // Everything that makes B-71's fix a real security property —
         // create-only, uid-locked, size-bounded — still applies below,
         // unchanged, to both kinds of submission.
+        //
+        // ============ 25 Aug — THE THIRD LANE, AND IT WENT LIVE ========
+        // The review above found the SECOND kind of submission ('-local')
+        // and carved it out. There is a THIRD, it was missed, the rule
+        // shipped ANYWAY on 24 Aug 07:39 as ruleset c707bf5f, and it took
+        // the prediction card off the air in production for two nights.
+        //
+        // index.html's lockPredPicks() files the pre-game card at round id
+        // 'rP' — SB.submit('rP', ...) writing nights/{n}/rounds/rP/subs/
+        // {uid}. Firestore permits a write under a parent document that
+        // does not exist, and nothing in this codebase has EVER created a
+        // nights/{n}/rounds/rP document: the Control Room's writePush()
+        // and the runner both write 'r' + index, so the ids are r0..r3 and
+        // nothing else. Verified against the live database, 25 Aug: thirty
+        // nights, thirty with no rP document.
+        //
+        // So 'rP' did not match '-local', exists() on its round was false,
+        // roundIsOpen() returned false, and every prediction card on every
+        // night was refused — 600 of the night's 1,000 points, the single
+        // biggest lane in the game. It is not a hypothetical: on 24 Aug,
+        // slate-2026-08-24-atl-la took 7 round submissions from 3 seated
+        // players across r0-r3 and ZERO cards, where every night before the
+        // deploy has one card per player. The room was full. The card was
+        // the only thing that could not be saved.
+        //
+        // And it took the anti-cheat with it. index.html's rejoin path uses
+        // the EXISTENCE of subs/rP as the card's lock — "a server fact no
+        // sign-out can clear". Deny the create and the lock can never be
+        // set, so a player could sign out, sign back in and be handed a
+        // blank card after the final buzzer. Closing B-71 for the rounds
+        // re-opened B-71, wider, for the lane that is worth the most.
+        //
+        // THE FIX HERE IS THE NARROW ONE, DELIBERATELY. 'rP' joins '-local'
+        // as a lane this function does not gate. That restores the card to
+        // exactly the behaviour it had for the three weeks before 24 Aug,
+        // and it leaves the timing gate closed on every REAL round — Q1-Q4,
+        // innings, periods, extras — which is where B-71 was reported and
+        // where the gate provably works, because those documents exist.
+        //
+        // It is written as its own named lane and not folded into the
+        // '-local' regex on purpose. These are two different reasons: a
+        // '-local' id is exempt because it is never scored against a key at
+        // all, and 'rP' is exempt because THIS FILE HAS NO FACT TO GATE IT
+        // ON YET. One of those is permanent and one is a debt. A future
+        // reader must be able to tell them apart, and a regex spanning both
+        // would hide the debt inside a settled decision.
+        //
+        // WHAT IS STILL OPEN, SAID PLAINLY. A first card can still be filed
+        // after the game. Backtested against every prediction card ever
+        // filed — 72 of them across 30 nights, 25 Aug — 16 were filed after
+        // round one had already been pushed, one of them 49 hours late.
+        // That is B-71 for the card lane and it is 22% of all cards, so it
+        // is not theoretical. It is NOT closed here.
+        //
+        // THE FIX THAT WOULD CLOSE IT, for whoever picks this up. Gate 'rP'
+        // on the ABSENCE of round one:
+        //
+        //     !exists(/databases/$(database)/documents/nights/$(n)/rounds/r0)
+        //
+        // nights/{n}/rounds/r0 is created the moment round one is pushed,
+        // by the runner (host/run.js:1141) or by hand from the Control Room
+        // (writePush(), admin.html:4007), both with state 'live'. Nothing
+        // pre-creates it — the Control Room INFERS 'draft' from the document
+        // being absent and never writes that state — so "r0 does not exist"
+        // is exactly "this room has not started". Testing an ABSENCE is the
+        // point: every way it can go wrong (nobody publishes, the runner
+        // never boots, a room opens no rounds) leaves the card ACCEPTED,
+        // which is survivable, where the failure we just lived through
+        // refused everything and said nothing. It needs no backfill and
+        // works on nights published before it existed. It is written and
+        // tested — qa/rules.js carries the cases — and it is NOT deployed,
+        // because it would newly refuse that 22%, and refusing a real
+        // player needs the client to stop OFFERING the card once round one
+        // is up (index.html startPredict()) rather than taking it, holding
+        // it, and admitting four minutes later that it never landed.
+        // Rules first is the wrong order for that one. Client first, then
+        // this line.
+        //
+        // ============ AND THE GATE BELOW IS EATING REAL ANSWERS =========
+        // Measured 25 Aug against every real-round submission ever made —
+        // 119 of them with a recorded close time. The gap between a
+        // submission landing and its round closing:
+        //
+        //     p10 -61s    p25 +14.9s    median +80.5s
+        //     landed AFTER closedAt: 18 of 119
+        //     within 5s of the close: 2      within 15s: 12
+        //
+        // A QUARTER of all answers land within fifteen seconds of the
+        // close. Of the 18 that landed late, roughly ten were 0.3s-120s
+        // late — a phone on a cold radio, a queued retry, somebody hitting
+        // the buzzer — and the state=='live' gate below refuses every one
+        // of them. The other eight (372s to 47,500s) are the B-71 pattern
+        // the gate exists to stop, so it is doing real work; it is just
+        // also taking honest answers with it, at something like 8%.
+        //
+        // This is NOT introduced by the 'rP' line above — it has been live
+        // since 24 Aug and this change cannot make it better or worse. It
+        // is recorded here because the measurement was expensive and the
+        // next person to read this function needs it.
+        //
+        // 'state != scored' DOES NOT FIX IT, and it is the obvious thing to
+        // reach for. Every round document ever written carries exactly one
+        // of two states — 'live' (x2 right now) and 'scored' (x93) — plus
+        // absent, which the Control Room reads as 'draft'. The race IS the
+        // transition to 'scored', so both spellings deny identically. Nor
+        // can a grace window be bolted on after it: 89 round documents
+        // carry a public answer key and NOT ONE of them is still 'live'.
+        // The key goes world-readable at the exact moment you would be
+        // extending the window, so any grace after 'scored' is a window
+        // with the answers on screen.
+        //
+        // THE FIX IS A THIRD STATE, and it belongs to the runner, not here.
+        // Close in two phases: write state 'closed' with NO key, wait ~30s,
+        // then write 'scored' WITH the key. The gate becomes
+        //
+        //     state == 'live' || state == 'closed'
+        //
+        // which accepts the late honest answer while the key is still
+        // secret, and shuts the moment it is not. host/run.js:1141-1180 is
+        // where the two writes would split. Not built.
         function roundIsOpen(n, r) {
           return r.matches('.*-local$')
+            || r == 'rP'
             || (exists(/databases/$(database)/documents/nights/$(n)/rounds/$(r))
                 && get(/databases/$(database)/documents/nights/$(n)/rounds/$(r)).data.state == 'live');
         }

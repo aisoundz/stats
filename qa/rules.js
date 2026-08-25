@@ -28,7 +28,15 @@ const { GoogleAuth } = require('google-auth-library');
 const PROJECT = process.env.FIREBASE_PROJECT || 'stats-gametime';
 const KEY = process.env.GOOGLE_APPLICATION_CREDENTIALS
          || path.join(process.env.HOME, '.secrets/stats-firebase-admin.json');
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'firestore.rules'), 'utf8');
+/* RULES_FILE points this at a DIFFERENT ruleset — the one that is live, or
+   the one from before a fix — so a new case can be watched failing against
+   the bug it claims to catch. A check never observed failing is not a
+   check, and every case below that was added after an incident was added
+   because the suite was green while the incident was happening.
+
+       RULES_FILE=/tmp/before.rules node qa/rules.js     # must go RED
+       node qa/rules.js                                  # must go GREEN   */
+const SRC = fs.readFileSync(process.env.RULES_FILE || path.join(__dirname, '..', 'firestore.rules'), 'utf8');
 
 const DB   = '/databases/(default)/documents';
 const NID  = 'slate-2026-08-21-min-wsh';
@@ -39,6 +47,8 @@ const PLAY = { uid:UID,      token:{ email:'someone@example.com', email_verified
 
 const roundPath = `${DB}/nights/${NID}/rounds/${RID}`;
 const subPath   = `${roundPath}/subs/${UID}`;
+const r0Path    = `${DB}/nights/${NID}/rounds/r0`;
+const cardPath  = `${DB}/nights/${NID}/rounds/rP/subs/${UID}`;
 
 /* A stub for the get()/exists() the rule performs on the round document. */
 const roundIs = (state, present) => ([
@@ -46,6 +56,13 @@ const roundIs = (state, present) => ([
     result:{ value:{ data:{ state } } } },
   { function:'exists', args:[{ exactValue: roundPath }],
     result:{ value: present !== false } }
+]);
+
+/* The prediction card asks one question and it is about a DIFFERENT
+   document: has round one been pushed yet? `pushed` false is a room that
+   has not started — the card's whole window. */
+const roundOnePushed = (pushed) => ([
+  { function:'exists', args:[{ exactValue: r0Path }], result:{ value: !!pushed } }
 ]);
 
 const goodSub = { picks:['a','b','c','d'], banks:[1,2,3,4], name:'Sam' };
@@ -73,6 +90,40 @@ const CASES = [
     want:'ALLOW', auth:PLAY, path:`${roundPath}-local/subs/${UID}`, method:'create', data:goodSub, mocks:[] },
   { id:'a local submission still cannot be written as somebody else',
     want:'DENY',  auth:PLAY, path:`${roundPath}-local/subs/someoneElse`, method:'create', data:goodSub, mocks:[] },
+
+  /* ---- 25 Aug — THE THIRD LANE ---------------------------------------
+     The two cases above were written because a review caught the '-local'
+     lane before it shipped. There is a third — the prediction card, at
+     round id 'rP' — and no case here covered it, so this suite ran GREEN
+     while the deployed rule refused every card on every night. 600 of the
+     night's 1,000 points, and fourteen ok lines said the rules were fine.
+
+     A suite that tests the lanes somebody remembered is not a suite. These
+     two are the ones that were missing, and the first of them FAILS
+     against the ruleset that was live between 24 and 25 August — which is
+     the only reason to trust it now.
+
+     NOTHING IS MOCKED for the first two, and that is the assertion. The
+     rule must not look up a rounds/rP document, because no such document
+     has ever been created by anything — the Control Room's writePush() and
+     the runner both write 'r' + index. A rule that consults a document
+     nobody writes is a rule that denies forever, which is what happened.
+     If a future edit makes this lane consult ANY document, these two cases
+     stop being able to run at all rather than quietly passing. */
+  { id:'THE PREDICTION CARD lands with no rounds/rP document in existence',
+    want:'ALLOW', auth:PLAY, path:cardPath, method:'create', data:goodSub, mocks:[] },
+  { id:'THE PREDICTION CARD lands whatever round one is doing (deliberately ungated — see firestore.rules)',
+    want:'ALLOW', auth:PLAY, path:cardPath, method:'create', data:goodSub, mocks:roundOnePushed(true) },
+  { id:'a prediction card cannot be filed in somebody else’s name',
+    want:'DENY',  auth:PLAY, path:`${DB}/nights/${NID}/rounds/rP/subs/someoneElse`,
+    method:'create', data:goodSub, mocks:[] },
+  { id:'a prediction card cannot be rewritten after it is filed',
+    want:'DENY',  auth:PLAY, path:cardPath, method:'update', data:goodSub, mocks:[] },
+  { id:'a signed-out visitor cannot file a prediction card',
+    want:'DENY',  auth:null, path:cardPath, method:'create', data:goodSub, mocks:[] },
+  { id:'a prediction card is still size-bounded',
+    want:'DENY',  auth:PLAY, path:cardPath, method:'create',
+    data:Object.assign({}, goodSub, {picks:new Array(13).fill('a')}), mocks:[] },
 
   /* ---- the properties that were already true, pinned so they stay ---- */
   { id:'a player may not rewrite a pick after the fact',
