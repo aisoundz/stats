@@ -44,7 +44,8 @@ const argFile = (() => {
   const i = process.argv.indexOf('--file');
   if (i > 0 && process.argv[i + 1]) return process.argv[i + 1];
   const pos = process.argv.slice(2).find(a => /\.html$/.test(a) && a[0] !== '-');
-  return pos || 'index.html';
+  /* The working file by default — see qa/rearm.js for why. */
+  return pos || 'index-test.html';
 })();
 const TARGET = path.basename(argFile);
 

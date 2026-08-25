@@ -692,7 +692,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-25-admin.65-nhl-freebies-mlb-extras';
+window.ADMIN_BUILD='2026-08-25-admin.66-caught-it-window-28s';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -5976,7 +5976,7 @@ function lockMsFor(kind){
      below is only a floor for the case where the shared block failed to
      load, and it must never be the smaller number again. */
   try{ if(window.AUTO && AUTO.CI && AUTO.CI.lockMsFor) return AUTO.CI.lockMsFor(kind); }catch(_){}
-  return /^(saw|qtr)/.test(String(kind||'')) ? 20000 : 15000;
+  return 28000;   // floor only — must equal AUTO.CI.CI_WINDOW_MS, never be smaller
 }
   var CI = { on:false, seeded:false, lastSeq:0, openQid:null, lastOpenAt:0, lastPlayAt:0, countPer:{}, pending:null, relT:null,
              pace:'normal', gapMs:80000, capPer:8 };
@@ -9704,7 +9704,33 @@ AUTO.CI = (function(){
      THE RUNNER READS THIS SAME FUNCTION, so the publish delay (locks +
      1200) moves with it and the B23 gap between "the answer is public" and
      "the card is still live" does not reopen. */
-  C.lockMsFor = function(kind){ return /^(saw|qtr)/.test(String(kind||'')) ? 20000 : 15000; };
+  /* ============ 28 SECONDS, AND ONE NUMBER, NOT TWO ==================
+     25 Aug. The founder asked for forty. His own runner log says
+     twenty-eight, and here is the arithmetic he was not looking at.
+
+     A new question cannot open until the previous answer has published,
+     and this loop only notices that on its poll — the log shows questions
+     firing ~31s apart back to back for that reason. The release lands on
+     the first tick at or after `open + locks + 1200`. So a window up to
+     29.8s rides a tick that was already coming and costs nothing;
+     30000 and over misses it and costs a whole extra poll, which halves
+     the question rate in exactly the rooms that are behind. 28s buys 40 %
+     more answering time for free; 40s would buy 100 % more and cut the
+     number of questions a night in half to pay for it.
+
+     The two-tier 20000/15000 is gone with it. The extra five seconds on
+     the saw/qtr family was never asked for by anybody, and a predicate is
+     one more thing that can be true in one file and false in another —
+     which is B23 exactly, described in the comment above lockMsFor() in
+     this same file. One number. THE RUNNER READS THIS FUNCTION, so the
+     publish delay (locks + 1200) moves with it and the gap between "the
+     answer is public" and "the card is still live" cannot reopen.
+
+     The player app holds the matching constant in CI_WINDOW_MS, and its
+     ciWindowMs() prefers the locksMs written into each document — this
+     number — so a phone can never out-wait the host that wrote it. */
+  C.CI_WINDOW_MS = 28000;
+  C.lockMsFor = function(kind){ return C.CI_WINDOW_MS; };
 
   /* ============ THE CAUGHT IT LANE, GRADED BY THE SERVER =============
      The written promise is "submissions are the source of truth", and for

@@ -21,7 +21,10 @@ let pass=0, fail=0;
 const ok =(n,d)=>{pass++; console.log('  ok   '+n+(d?('   '+d):''));};
 const bad=(n,d)=>{fail++; console.log('  FAIL '+n+(d?'\n         '+d:''));};
 
-const src=fs.readFileSync(path.join(__dirname,'..','admin.html'),'utf8');
+/* Selectable — the working file by default, so this suite reads what is
+   being edited rather than what shipped last week. */
+const HOSTFILE=(process.argv.find(a=>/^admin.*\.html$/.test(a)))||'admin-test.html';
+const src=fs.readFileSync(path.join(__dirname,'..',HOSTFILE),'utf8');
 const S='/* @host-shared:start', E='/* @host-shared:end */';
 const ctx=vm.createContext({console, fetch:()=>{throw new Error('no network');}});
 vm.runInContext(src.slice(src.indexOf(S), src.indexOf(E)+E.length), ctx, {filename:'host-shared'});

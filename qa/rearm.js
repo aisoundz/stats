@@ -33,7 +33,12 @@ const { chromium } = require('playwright');
 const { waitReady } = require('./ready.js');
 const http = require('http'), fs = require('fs'), path = require('path');
 
-const TARGET = process.argv.find(a => /\.html$/.test(a)) || 'index.html';
+/* index-test.html by default: this suite exists to catch a re-arm that
+   never happens, and it must be reading the file the fix is going into.
+   Two suites in this repo defaulted to the shipped file while every edit
+   landed in the working one and reported behaviour that no longer
+   existed. Pass a filename to check what is live. */
+const TARGET = process.argv.find(a => /\.html$/.test(a)) || 'index-test.html';
 let pass = 0, fail = 0;
 function ok(name, cond, detail){
   if(cond){ pass++; console.log('  \x1b[32m✓\x1b[0m ' + name); }

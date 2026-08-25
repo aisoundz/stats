@@ -2209,6 +2209,17 @@
       <div class="fca" id="fCallA"></div>
     </div>
 
+    <!-- WHAT YOU MISSED — CAUGHT IT. ciRecapCard() has existed since GN8
+         and until today it had ZERO call sites: six questions fired in a
+         real WNBA room and the app offered no surface anywhere that said
+         so, which is why the report ("I saw none of them") could not be
+         checked from outside. The Board is still deliberately not the
+         place for it — founder, GN10: "you either get it or you don't" —
+         but the end of the night is, and this is the screen where looking
+         back is the point. It renders nothing at all when the room had no
+         Caught It questions, same no-fake-content rule as everything
+         else on this screen. -->
+    <div id="fCaught"></div>
     <div id="finalLb"></div>
     <!-- THE STAT LINE. A season record kept on this device, so game night
          #2 is worth something game night #1 wasn't. Written once per night
@@ -2595,8 +2606,18 @@ window.STATS_FIREBASE = {
     joined:function () { return Promise.resolve(null); },
     top:   function () { return Promise.resolve(null); },
     rank:  function () { return Promise.resolve(null); },
-    watchRound: function () { return function () {}; },
-    watchCallIt: function () { return function () {}; },
+    /* NO LISTENER MEANS NO HANDLE — null, never a no-op function.
+       These two used to hand back `function(){}`, which is truthy, so
+       `HR.unsub = SB.watchRound(...) || null` stored a handle for a
+       listener that was never opened. Every re-arm path in the file is
+       guarded by `if(handle) return`, so one call against a null backend
+       pinned both guards shut for the life of the page while the *WatchOk
+       flags stayed null and the watchdog stayed blind. `pageshow` fires on
+       every single page load, so this was one dispatched event away from
+       costing a whole night. A handle is a promise that something is
+       listening; do not make one you cannot keep. */
+    watchRound: function () { return null; },
+    watchCallIt: function () { return null; },
     callItPick: function () { return Promise.resolve(false); },
     pushCallItBoard: function () { return Promise.resolve(false); },
     submit: function () { return Promise.resolve(false); },
@@ -3865,8 +3886,15 @@ window.STATS_FIREBASE = {
      Reconnect control and by anyone in DevTools who needs the fast answer
      this took a whole game to get to. */
   SB.watchRound = function (cb) {
-    if (!SB.enabled) { SB.lastRoundWatchError = 'disabled'; return function () {}; }
-    if (!nightId) { SB.lastRoundWatchError = 'no-night'; return function () {}; }
+    /* A HANDLE IS A PROMISE THAT SOMETHING IS LISTENING. Both of these
+       returned a truthy `function(){}`, which startHostedWatch stores as
+       HR.unsub — and every re-arm in this file is guarded by `if(HR.unsub)
+       return`. So one call made before the night id landed (pageshow fires
+       on every page load) pinned the guard shut permanently, with
+       roundWatchOk left at whatever it was, so the watchdog could not see
+       it either. Null, and the flag says "unknown" rather than lying. */
+    if (!SB.enabled) { SB.roundWatchOk = null; SB.lastRoundWatchError = 'disabled'; return null; }
+    if (!nightId) { SB.roundWatchOk = null; SB.lastRoundWatchError = 'no-night'; return null; }
     try {
       var q = F.query(
         F.collection(db, 'nights', nightId, 'rounds'),
@@ -3894,7 +3922,7 @@ window.STATS_FIREBASE = {
       var code2 = (e && (e.code || e.message)) || 'threw';
       SB.roundWatchOk = false; SB.lastRoundWatchError = code2;
       try { console.error('[STATS] round watch could not start:', code2); } catch (_) {}
-      return function () {};
+      return null;                     // nothing attached — do not pin the re-arm guard
     }
   };
 
@@ -3988,8 +4016,12 @@ window.STATS_FIREBASE = {
   };
 
   SB.watchCallIt = function (cb) {
-    if (!SB.enabled) { SB.lastCallItWatchError = 'disabled'; return function () {}; }
-    if (!nightId) { SB.lastCallItWatchError = 'no-night'; return function () {}; }
+    /* Same as SB.watchRound above: null, not a truthy no-op. PCI.unsub is
+       the only thing standing between "Caught It is listening" and
+       "Caught It is silent", and a fake handle satisfies its guard for
+       ever. */
+    if (!SB.enabled) { SB.callItWatchOk = null; SB.lastCallItWatchError = 'disabled'; return null; }
+    if (!nightId) { SB.callItWatchOk = null; SB.lastCallItWatchError = 'no-night'; return null; }
     try {
       SB.callItWatchOk = null; SB.lastCallItWatchError = '';
       return F.onSnapshot(F.collection(db, 'nights', nightId, 'callit'), function (snap) {
@@ -4009,7 +4041,7 @@ window.STATS_FIREBASE = {
       var code2 = (e && (e.code || e.message)) || 'threw';
       SB.callItWatchOk = false; SB.lastCallItWatchError = code2;
       try { console.error('[STATS] call-it watch could not start:', code2); } catch (_) {}
-      return function () {};
+      return null;                     // nothing attached — do not pin the re-arm guard
     }
   };
   /* An answer, therefore the answer lane: counted, never refused, retried,
@@ -15582,6 +15614,7 @@ function showFinal(){
   renderBreakdown(livePts);
   renderPending();
   renderBestCall();
+  renderCiRecap();
   // Rank is not known yet in live mode — finishLive() calls this again with
   // it, and renderAwards only replays the animation if the headline changed.
   renderStatLine(recordStatLine(renderAwards(null)));
@@ -16928,6 +16961,15 @@ function roomListenersStop(why){
   try{ HR.unsub=null; HR.doc=null; }catch(_){}
   try{ if(typeof PCI.unsub==='function'){ PCI.unsub(); n++; } }catch(_){}
   try{ PCI.unsub=null; }catch(_){}
+  /* ============ A HEALTH FLAG THAT NOTHING CLEARS IS NOT A HEALTH FLAG.
+     SB.callItWatchOk / SB.roundWatchOk are set true by the first snapshot
+     to arrive and were set false only by an error callback. Detaching is
+     not an error, so after this function ran both flags carried on
+     reporting `true` for listeners that no longer existed — and the room
+     watchdog's Caught It test was ONLY that flag. It was structurally
+     incapable of seeing the failure it was written for. The listener is
+     gone; its health is now unknown, and unknown is spelled null. */
+  try{ SB.callItWatchOk=null; SB.roundWatchOk=null; }catch(_){}
   try{ if(typeof bdUnsub==='function'){ bdUnsub(); n++; } }catch(_){}
   try{ bdUnsub=null; bdLive=false; }catch(_){}
   try{ if(typeof ttRoomStop==='function'){ if(ttUnsub) n++; ttRoomStop(); } }catch(_){}
@@ -16992,14 +17034,38 @@ function roomListenersRearm(why){
   try{
     if(!window.SB || !SB.enabled) return 0;
     if(S.mode !== 'live') return 0;          // practice owns its own screen
-    var wasDeaf = !HR.unsub;
+    /* ============ DEAF IN ONE EAR IS STILL DEAF ======================
+       This asked one question — `!HR.unsub` — and answered for two
+       listeners. On the WNBA night where six Caught It questions arrived
+       and none were seen, the round listener was alive the whole time, so
+       this returned 0, "nothing was wrong", to every caller: pageshow,
+       visibilitychange and the watchdog. The one repair the app owns
+       reported success without looking at the thing that was broken.
+
+       Both are asked now, and the answer says WHICH — because a caller
+       that only knows "something healed" cannot tell the player the truth
+       about what, which is the other half of the same bug. */
+    var roundDeaf = !HR.unsub;
+    var ciDeaf    = ciWatchDeaf();
+    var wasDeaf   = roundDeaf || ciDeaf;
     try{ startHostedWatch(); }catch(_){}
     try{ startRoomPolling(); }catch(_){}
-    try{ trk('listeners_rearm', { why: why||'', wasDeaf: wasDeaf }); }catch(_){}
-    /* Only replay if we had actually gone deaf. Re-arming a live listener
-       is a no-op behind its own guard; replaying on top of one would
-       re-offer a round the player is already answering. */
-    if(wasDeaf){ try{ replayMissedRounds(); }catch(_){} }
+    var roundBack = !!HR.unsub, ciBack = !!PCI.unsub;
+    try{ trk('listeners_rearm', { why: why||'', wasDeaf: wasDeaf,
+                                  roundDeaf: roundDeaf, ciDeaf: ciDeaf,
+                                  roundBack: roundBack, ciBack: ciBack }); }catch(_){}
+    /* Only replay if the ROUND listener had actually gone deaf. Re-arming
+       a live listener is a no-op behind its own guard; replaying on top of
+       one would re-offer a round the player is already answering. Caught
+       It needs no replay of its own — watchCallIt hands back the whole
+       collection on attach, so re-arming it IS the replay. */
+    if(roundDeaf){ try{ replayMissedRounds(); }catch(_){} }
+    /* The detail lives on the function so a caller can name what it fixed
+       without this having to return an object and break every `=== 1`. */
+    try{ roomListenersRearm.last = { why:why||'', roundDeaf:roundDeaf, ciDeaf:ciDeaf,
+                                     roundBack:roundBack, ciBack:ciBack,
+                                     roundHealed: roundDeaf && roundBack,
+                                     ciHealed: ciDeaf && ciBack }; }catch(_){}
     return wasDeaf ? 1 : 0;
   }catch(_){ return 0; }
 }
@@ -17173,21 +17239,51 @@ async function refreshRoom(){
       // to be reserved for a genuinely dead listener.
       const pastGrace = JOIN_STARTED_AT>0 && (Date.now()-JOIN_STARTED_AT)>15000;
       const roundDead = SB.roundWatchOk===false || (!HR.unsub && SB.enabled && pastGrace);
-      const ciDead = SB.callItWatchOk===false;
+      /* ============ CAUGHT IT GETS THE SAME TWO-PART TEST AS ROUNDS ====
+         This was one clause — `SB.callItWatchOk===false` — against a flag
+         that is set true by the first snapshot and cleared by nothing.
+         A detached listener is not an error, so the flag went on reading
+         `true` and this test was structurally incapable of firing. Rounds
+         have had the second clause (never attached / no longer attached)
+         since B-59; Caught It never got it. Six questions, nobody saw one.
+
+         The structural half is gated on joinedNow() rather than on the
+         JOIN grace clock. The grace exists because the ROUND test cannot
+         tell "still joining" from "never attached"; SB.seated() —
+         enabled && nightId && meRef — answers that question directly, and
+         being seated in a room with no Caught It handle is broken, full
+         stop. The worst a race here can cost is a re-arm that was about to
+         happen anyway: the repair runs first and the banner only appears
+         if the repair did not take. */
+      var seatedNow=false; try{ seatedNow = joinedNow(); }catch(_){}
+      const ciDead = SB.callItWatchOk===false || (ciWatchDeaf() && seatedNow);
       if(roundDead || ciDead){
         /* TRY TO FIX IT BEFORE ASKING A HUMAN TO. This branch has painted a
            banner since it was written and never once attempted the repair,
            so the only cure on offer was the reload the founder and his one
            returning player have both been doing all night. Re-arm first;
            only say something if that did not take. */
-        var healed = 0;
-        try{ healed = roomListenersRearm('watchdog'); }catch(_){}
-        if(healed && HR.unsub){
+        try{ roomListenersRearm('watchdog'); }catch(_){}
+        var roundOk = !!HR.unsub || !SB.enabled;
+        var ciOk    = !ciWatchDeaf();
+        if(roundOk && ciOk){
           setRoomBar('Reconnected — you are back on the live questions.');
           try{ setTimeout(function(){ try{ setRoomBar(''); }catch(_){} }, 4000); }catch(_){}
           return;
         }
-        setRoomBar('No connection for live questions — '+RECONNECT_LINK+'.');
+        /* ============ NAME THE THING THAT IS ACTUALLY DOWN =============
+           One sentence covered both listeners, so a Caught It outage
+           painted "No connection for live questions" over a perfectly
+           healthy round listener — a banner that is false about the
+           quarter questions and vague about the one that failed. Whoever
+           reads this next has to be able to tell the two apart from the
+           screen alone; that is the whole reason the bar exists. */
+        if(!roundOk && !ciOk)
+          setRoomBar('No connection for live questions — '+RECONNECT_LINK+'.');
+        else if(!roundOk)
+          setRoomBar('No connection for quarter questions — '+RECONNECT_LINK+'.');
+        else
+          setRoomBar('Caught It is offline — quarter questions are fine. '+RECONNECT_LINK+'.');
         return;
       }
     }
@@ -17541,12 +17637,40 @@ function hostedFor(qi){
   return (d && (HR.started[d.id] || HR.submitted[d.id])) ? d : null;
 }
 
+/* ============ TWO LISTENERS, TWO GUARDS, NOT ONE ======================
+   GN WNBA room, 24 Aug: Caught It fired six times and the founder saw
+   none of them. Server side was healthy the whole night.
+
+   The mechanism was this function's shape. startCallItWatch() sat BELOW
+   the round guard — `if(HR.unsub …) return` — so it was only ever reached
+   on a call where the ROUND listener also needed arming. When only Caught
+   It had dropped (which is the common case: one collection listener
+   detaching says nothing about the other) this function returned at line
+   one and never looked at PCI.unsub. `pageshow`, `visibilitychange` and
+   the room watchdog all funnel through roomListenersRearm() into here, so
+   all three reported success against a listener they had not touched.
+
+   The Caught It arm is now ABOVE the round guard and has only its own.
+   startCallItWatch() is idempotent behind `if(PCI.unsub) return`, so
+   calling it on every pass costs nothing when it is already listening. */
 function startHostedWatch(){
+  try{ startCallItWatch(); }catch(e){}   // Caught It re-arms on its OWN guard
   if(HR.unsub || !window.SB || !SB.watchRound) return;
   try{ HR.unsub = SB.watchRound(onHostedRound) || null; }catch(e){}
-  try{ startCallItWatch(); }catch(e){}   // Caught It rides alongside, isolated
   try{ ttBackgroundStart(); }catch(e){}  // and the room stops being silent
 }
+/* Does Caught It want a listener right now, and has it got one? Two
+   questions the watchdog and the re-arm both have to ask, so they ask the
+   same function and cannot drift apart the way they had. */
+function ciWatchWanted(){
+  try{
+    if(!window.SB || !SB.enabled || typeof SB.watchCallIt!=='function') return false;
+    if(!S || S.mode!=='live') return false;   // practice owns its own card
+    return true;
+  }catch(_){ return false; }
+}
+function ciWatchDeaf(){ try{ return ciWatchWanted() && !PCI.unsub; }catch(_){ return false; } }
+try{ window.ciWatchWanted = ciWatchWanted; window.ciWatchDeaf = ciWatchDeaf; }catch(_){}
 
 /* ================= CAUGHT IT — player side (isolated side-game) =========
    A one-tap, dismissible card that shows the host's live question, locks
@@ -17555,6 +17679,47 @@ function startHostedWatch(){
    SB.join / SB.push / the HR flow, and if the whole thing broke the main
    game would not notice. */
 var PCI = { unsub:null, active:null, picked:{}, graded:{}, paid:{}, streak:0, best:0, called:0, hit:0, heat:0, pts:0, muted:false, tick:null, hideT:null };
+
+/* ============ HOW LONG YOU GET TO ANSWER — ONE OWNER =================
+   The founder asked for a longer window. He said forty seconds; this is
+   twenty-eight, and the reason is in his own runner log.
+
+   A new Caught It cannot open until the previous answer has published,
+   and the runner only notices that on its poll — roughly every 31s. The
+   release lands on the first tick at or after `open + locks + 1200`. So
+   anything up to 29.8s rides the tick that was coming anyway and is FREE;
+   30000 and above slips past it and costs a whole extra poll, halving the
+   question rate at exactly the moment a room is trying to catch up. 28s
+   is a 40 % longer window for nothing.
+
+   The 20 000 / 15 000 tiering is collapsed. It bought five seconds nobody
+   asked for on two thirds of the kinds, and one number is one number to
+   get wrong. There were ELEVEN literals of this window across two files
+   before today — the phone's two fallbacks, the discard deadline, the
+   host's owner, the host's floor, and the practice bank's own private
+   copy of all of it. That last one is not a tidiness problem: practice
+   ran 20 000 while live ran 9 000, which is the whole reason voice worked
+   in rehearsal and could not work in a room. The founder is demoing on
+   PRACTICE this Wednesday, so practice and live have to be the same
+   number or the demo rehearses a rhythm the product does not have.
+
+   THE SAFETY RULE, which is B23's exact shape: the phone's window must
+   never outlast the host's secrecy deadline. That is why ciWindowMs()
+   prefers the DOCUMENT's own locksMs — the number the host that wrote it
+   is counting against — and only falls back to the constant when the
+   field is missing. A phone can never invent a longer window than the
+   host it is talking to. */
+var CI_WINDOW_MS = 28000;
+function ciWindowMs(q){
+  try{
+    var n = q && Number(q.locksMs);
+    if(isFinite(n) && n > 0) return n;      // the host's own number wins
+  }catch(_){}
+  return CI_WINDOW_MS;
+}
+/* How long past the lock a held card is still worth bringing back. */
+function ciGraceMs(){ return 5000; }
+try{ window.CI_WINDOW_MS = CI_WINDOW_MS; window.ciWindowMs = ciWindowMs; window.ciGraceMs = ciGraceMs; }catch(_){}
 
 /* ============ WHAT A CAUGHT IT IS WORTH =============================
    For seven game nights: nothing. ciGrade() incremented five counters,
@@ -17590,6 +17755,19 @@ function startCallItWatch(){
   if(PCI.unsub || S.mode!=='live' || !window.SB || !SB.watchCallIt) return;
   ensureCiCard();
   try{ PCI.unsub = SB.watchCallIt(onCallItQuestions) || null; }catch(e){}
+  /* AN ATTACH THAT DID NOT TAKE IS A FAILURE, AND IT HAS TO SAY SO.
+     callItWatchOk is set true by the first snapshot and was never set back
+     by anything, so it read `true` for a listener that had since detached
+     — which is precisely why the watchdog's one-line test could not see
+     the dead listener it was written to catch. If nothing attached here,
+     the flag is false and the banner/repair path can act on it. */
+  if(!PCI.unsub){
+    var seated=false; try{ seated = (typeof joinedNow==='function') && joinedNow(); }catch(_){}
+    /* Seated and still no handle is a real failure. Not seated yet is not
+       a failure, it is "unknown" — and unknown must never be left reading
+       as the last snapshot's `true`. */
+    try{ SB.callItWatchOk = seated ? false : null; }catch(_){}
+  }
 }
 
 /* ---- Caught It, practice edition ------------------------------------
@@ -18023,10 +18201,13 @@ function demoCallIt(n){
     // card resetting itself for no reason.
     try{ if(PCI.active && PCI.active.state==='open' && PCI.picked[PCI.active.qid]==null){ demoCiFired['slot'+n]=false; return; } }catch(_){}
     const qid='demo-ci-'+n+'-'+opensAt;
+    /* PRACTICE READS THE SAME WINDOW AS LIVE. This was a hardcoded 20000
+       sitting six thousand lines from the live one, and the pair drifting
+       is exactly how the 9-second voice bug survived rehearsal. */
     const live={qid:qid,prompt:q.prompt,options:q.options,state:'open',
-                locksMs:20000,opensAt:{toMillis:function(){return opensAt;}}};
+                locksMs:ciWindowMs(null),opensAt:{toMillis:function(){return opensAt;}}};
     PCI.active=live; renderCiCard(live);
-    ciSettleWhenAnswered(live,q,22000);
+    ciSettleWhenAnswered(live,q,ciWindowMs(null)+2000);
   }, 4000);
 }
 /* Practice questions resolve a beat after you answer. Waiting out a
@@ -18043,7 +18224,7 @@ function ciSettleWhenAnswered(live,q,maxMs){
     if(PCI.active!==live || live.state==='resolved'){ clearInterval(watch); return; }
     if(PCI.picked[live.qid]!=null){ clearInterval(watch); setTimeout(settle,900); }
   },250);
-  setTimeout(function(){ clearInterval(watch); settle(); }, maxMs||22000);
+  setTimeout(function(){ clearInterval(watch); settle(); }, maxMs||(ciWindowMs(null)+2000));
 }
 /* ============ WHAT YOU MISSED ========================================
    B-59 follow-up, GN8's real lesson. "We should have a way to save the
@@ -18101,9 +18282,57 @@ function ciWorthShowing(q){
 }
 try{ window.ciWorthShowing = ciWorthShowing; }catch(_){}
 
+/* ============ THE SERVER'S WORD OVERWRITES OUR COPY OF IT =============
+   B — "it graded me wrong on one I answered."
+
+   A question that RESOLVED while the player was on another screen was
+   re-offered to them as OPEN, and the tap was then refused server-side.
+   The mechanism is two objects and one missing line:
+
+     · renderCiCard() parks an un-showable card in PCI.pending — a
+       snapshot of the document AS IT WAS, state:'open';
+     · the question resolves, a new snapshot arrives, and
+       ciWorthShowing() says "not yours, not worth showing" and RETURNS —
+       without ever touching PCI.pending or PCI.active;
+     · ciFlush(), on the next navigation, reads state:'open' off that
+       stale copy, decides the debt is still owed, and paints a live card
+       with four enabled buttons.
+
+   firestore.rules only creates a pick while the question doc says
+   state=='open', so the tap is denied at the server, the phone records it
+   locally anyway, and the night's tally counts a miss on a question the
+   player answered. Confidently wrong, which is the one direction this is
+   not allowed to fail in.
+
+   So: every snapshot reconciles the copies we are holding against what
+   the server just said. ciFlush's own settled-test then drops the debt
+   using logic that is already proven, rather than a second copy of it. */
+function ciReconcileHeld(qs){
+  if(!qs || !qs.length) return;
+  for(var i=0;i<qs.length;i++){
+    var v=qs[i]; if(!v || v.qid==null) continue;
+    var qid=String(v.qid);
+    try{
+      if(PCI.pending && String(PCI.pending.qid)===qid && PCI.pending!==v){
+        var wasOpen = String(PCI.pending.state||'open')==='open';
+        var nowOpen = String(v.state||'open')==='open';
+        PCI.pending = v;
+        if(wasOpen && !nowOpen){
+          /* Not silent. A question the player was never shown, that has
+             now closed, is exactly the thing the recap exists to report. */
+          try{ trk('callit_missed',{qid:qid, why:'closed-while-held'}); }catch(_){}
+        }
+      }
+    }catch(_){}
+    try{ if(PCI.active && String(PCI.active.qid)===qid) PCI.active = v; }catch(_){}
+  }
+}
+try{ window.ciReconcileHeld = ciReconcileHeld; }catch(_){}
+
 function onCallItQuestions(qs){
   if(!qs || !qs.length) return;
   try{ ciRecapCapture(qs); }catch(_){}
+  try{ ciReconcileHeld(qs); }catch(_){}
   var q = qs[qs.length-1];              // newest
   if(!ciWorthShowing(q)){
     /* Filed in the recap, kept off the screen. PCI.active is NOT set:
@@ -18142,6 +18371,25 @@ function ciRecapCard(){
     + out + '</div>';
 }
 
+/* ============ AND SOMETHING THAT ACTUALLY CALLS IT ====================
+   ciRecapCard() built the list and nothing ever asked for it. A function
+   with no call sites is not a feature, it is a comment that compiles —
+   and this one was the only record the app kept of a Caught It question
+   the player never saw. Six fired in one room and the screen said nothing
+   about any of them.
+
+   One owner, called from showFinal(). It writes into #fCaught and clears
+   it when there is nothing to say, so a re-entry of the final screen can
+   never leave last room's list behind. */
+function renderCiRecap(){
+  try{
+    var el=document.getElementById('fCaught'); if(!el) return;
+    var html=''; try{ html=ciRecapCard()||''; }catch(_){ html=''; }
+    el.innerHTML=html;
+  }catch(_){}
+}
+try{ window.renderCiRecap = renderCiRecap; }catch(_){}
+
 function ensureCiCard(){
   /* A CARD WITHOUT ITS INNER CAN NEVER PAINT, AND SAYS NOTHING ABOUT IT.
      This returned early whenever #ciCard existed, on the assumption that
@@ -18162,7 +18410,29 @@ function ensureCiCard(){
     'transform:translateX(-50%) translateY(0);animation:ciUp .34s cubic-bezier(.16,1,.3,1);'+
       'background:var(--card);border:1px solid #2b3a5e;'+
       'border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.55);padding:14px 15px;display:none;font-family:inherit}'+
-    '@keyframes ciUp{from{transform:translateX(-50%) translateY(-22px) scale(.97);opacity:0}to{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}'+
+    /* ============ IT RISES INTO PLACE. IT NO LONGER DROPS INTO THE ☰ ===
+       This keyframe started at translateY(-22px) — the card fell from
+       ABOVE — and that was right when the card lived at bottom:90px and
+       had nothing above it. ciDock() later moved it to a TOP pin, under
+       the clock, and the entrance was not revisited: for the 340ms of the
+       animation the card sat up to 22px higher than the position ciDock
+       carefully computed to clear the ☰ button.
+
+       ciDock's arithmetic was never wrong — instrumented on WebKit it
+       returned top:55 against a menu bottom of 49 every single time — but
+       the RENDERED rect read 37 while the entrance was still in flight,
+       and the button is z-index 8700 against the card's 8400, so for that
+       moment it cut its 40px bite out of the ✕ and the countdown. It
+       showed up intermittently, on Home only, because Home is the heaviest
+       screen in the app (marquee, backdrop-filter, its own animations) and
+       is where the entrance starts latest.
+
+       So it rises the last 22px instead of falling them, which is what the
+       keyframe has been called since the day it was written, and the
+       travel now happens entirely BELOW the resting position — where
+       there is nothing to collide with. The docked variant has its own
+       ciDrop and is untouched. */
+    '@keyframes ciUp{from{transform:translateX(-50%) translateY(22px) scale(.97);opacity:0}to{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}'+
     /* An open question is the loudest thing on the screen for twenty
        seconds, and then it stops being loud. The ring is what makes it
        impossible to miss without a modal that blocks the game you came
@@ -18189,7 +18459,25 @@ function ensureCiCard(){
     '#ciSlot #ciCard .cilab, #gtSticky #ciCard .cilab{color:var(--teal)}'+
     '@keyframes ciPulse{0%,100%{box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 0 1px rgba(40,224,208,.55),0 0 30px rgba(40,224,208,.22)}50%{box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 0 1px rgba(40,224,208,.85),0 0 46px rgba(40,224,208,.42)}}'+
     '@media (prefers-reduced-motion:reduce){#ciCard{animation:none!important}#ciCard.cilive{animation:none!important}}'+
-    'body.ciopen .screen.active{padding-top:var(--cih,0px);transition:padding-top .2s ease}'+
+    /* ============ !important, AND EXACTLY WHY ========================
+       This is the push-down that stops a top-pinned card lying on the
+       page. It was written as `body.ciopen .screen.active` — specificity
+       (0,3,1) — and worked on Gametime, Stats and Board because none of
+       them set their own padding-top.
+
+       Home does: `#s-landing.mq{padding-top:10px}`, specificity (1,1,0),
+       which wins on the ID. So the moment Home stopped suppressing Caught
+       It, the card landed straight on the wordmark, the tagline and the
+       "Never played? Start here" link — measured on all three phone
+       widths in both engines. The card was correctly positioned and the
+       page simply never moved.
+
+       Raising the selector would fix Home and leave the next screen with
+       an ID rule to be found the same way, on a phone, during a game.
+       This declaration only exists while a floating card is up — ciDock()
+       removes `ciopen` for the docked Gametime case — so it has nothing
+       to lose a fight with, and it must not lose one. */
+    'body.ciopen .screen.active{padding-top:var(--cih,0px)!important;transition:padding-top .2s ease}'+
     /* The pinned block. A solid backdrop so the feed passing underneath
        never bleeds through the score. */
     /* ============ STICKY IS FOR A SCOREBOARD, NOT FOR A QUESTION =====
@@ -18579,6 +18867,21 @@ function ciGrade(q){
 }
 function ciPick(q,v){
   if(PCI.muted || PCI.picked[q.qid]!=null) return;
+  /* ============ THE SERVER'S RULE, MIRRORED ON THE PHONE ==============
+     firestore.rules will only create a pick while the question document
+     says state=='open'. This function did not check, so a card that had
+     been re-offered from a stale copy took the tap, recorded it locally,
+     watched the write get denied, and then graded the player off a pick
+     the room never received. A phone that records an answer the server
+     has refused is worse than a phone that says "too late" — the first
+     one lies about the score. If it cannot be written, it is not a pick. */
+  try{
+    if(String(q.state||'open')!=='open'){
+      try{ toast('That one already closed — the answer is on its way.'); }catch(_){}
+      try{ trk('callit_too_late',{qid:String(q.qid||'')}); }catch(_){}
+      return;
+    }
+  }catch(_){}
   try{ trk('callit_answer',{kind:String(q.qid||'').split('-')[0]}); }catch(_){}
   PCI.picked[q.qid]=v;
   /* FEEDBACK ON THE SAME FRAME. "It feels stuck when you give the answer."
@@ -18699,7 +19002,25 @@ try{
    quarter, you look up, the Caught It is already there.
 
    The clock is the thing being protected, not the screen. */
-var CI_BLOCKED=['name','join','rules','final','tally','landing'];
+/* ============ HOME IS WHERE THE PLAYER IS, SO CAUGHT IT GOES THERE ====
+   `landing` — the Home tab — was on this list, and it was the second
+   cause of the WNBA night where six Caught It questions fired and the
+   founder saw none. chooseGame() lands a player on Home: roomRestore()
+   builds a fresh S with screen 'landing' and go(S.screen||'landing')
+   puts them there. So entering a room through the rail — the ordinary
+   way in — parked every player on the one tab where the card was
+   forbidden, and the block is silent by construction.
+
+   Founder's direction settles the design question underneath it: Home is
+   becoming an endless scroll of scores and news that people stay on
+   DURING the game. A live question is the one thing that should be
+   allowed to interrupt a scroll.
+
+   `final` and `tally` stay blocked — the night is over, and a card
+   offering a choice on a results screen is a choice that cannot be made.
+   `live` mid-quarter stays blocked below, deliberately: a quarter
+   question with the clock running owns the screen. */
+var CI_BLOCKED=['name','join','rules','final','tally'];
 function ciScreenOk(){
   var scr=''; try{ scr=(S&&S.screen)||''; }catch(_){}
   if(CI_BLOCKED.indexOf(scr)>=0) return false;
@@ -18756,9 +19077,18 @@ function ciFlush(){
      cannot be made, on a play the game has long since moved past. */
   try{
     var opened = q.opensAt && q.opensAt.toMillis ? q.opensAt.toMillis() : 0;
-    if(opened && (Date.now() - opened) > (q.locksMs||20000) + 5000) settled=true;
+    if(opened && (Date.now() - opened) > ciWindowMs(q) + ciGraceMs()) settled=true;
   }catch(_){}
-  if(settled){ PCI.pending=null; return; }
+  /* DROPPING IT IS RIGHT. DROPPING IT SILENTLY IS NOT. A question held
+     here and then discarded is a question that happened to this player
+     and that they were never shown — the exact event the founder reported
+     six of and could not prove. It is already filed in CI_RECAP by
+     ciRecapCapture(), which is what "WHAT YOU MISSED" reads at the end of
+     the night; this line is so the same fact reaches the log too. */
+  if(settled){
+    try{ if(PCI.picked[q.qid]==null) trk('callit_missed',{qid:String(q.qid||''), why:'never-shown'}); }catch(_){}
+    PCI.pending=null; return;
+  }
   /* Clear the debt before the screen test, not after. Returning early
      without clearing left `pending` set for the life of the page, so it
      could be re-offered on any later navigation. */
@@ -19009,11 +19339,11 @@ function renderCiCard(q){
      window was raised, or one that lost the field, must not silently drop
      the player back to a six-second card. These two must stay equal or the
      progress bar counts down to a different moment than the lock. */
-  var locksMs=opensMs+(q.locksMs||20000);
+  var locksMs=opensMs+ciWindowMs(q);
   var now=Date.now();
   var pick=PCI.picked[q.qid];
   var locked = now>=locksMs || pick!=null;
-  var msLeft=Math.max(0,locksMs-now), pctLeft=Math.max(0,Math.min(100,(msLeft/(q.locksMs||20000))*100));
+  var msLeft=Math.max(0,locksMs-now), pctLeft=Math.max(0,Math.min(100,(msLeft/ciWindowMs(q))*100));
 
   /* ONCE YOU HAVE ANSWERED, THE CARD SHRINKS. It stops being a question —
      it is a receipt. Keeping the full prompt and four dead buttons on
@@ -21675,7 +22005,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-24-deskreach.221';
+const STATS_BUILD='2026-08-25-caughtit.222';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -26763,9 +27093,9 @@ function ciDemoRun(){
     var qid='ci-try-'+ciDemoN;
     var opensAt=Date.now();
     var live={qid:qid,prompt:q.prompt,options:q.options,state:'open',
-              locksMs:20000,opensAt:{toMillis:function(){return opensAt;}}};
+              locksMs:ciWindowMs(null),opensAt:{toMillis:function(){return opensAt;}}};
     PCI.active=live; renderCiCard(live);
-    ciSettleWhenAnswered(live,q,21000);
+    ciSettleWhenAnswered(live,q,ciWindowMs(null)+1000);
   }catch(e){ try{ toast('Could not start the test — '+e.message); }catch(_){} }
 }
 /* Repainting stale numbers is not a live score. Pull, then paint. */

@@ -31,7 +31,13 @@ const VIEWPORTS = [
   { name: 'iPhone 15   393x852', w: 393, h: 852 },
   { name: 'Pixel 7     412x915', w: 412, h: 915 },
 ];
-const SCREENS = ['gametime', 'stats', 'board', 'home'];
+/* 'landing' is the HOME TAB, and it is here because the card was BLOCKED
+   on it until 25 Aug — chooseGame() lands every player on Home, so the
+   ordinary way into a room was the one screen Caught It could not appear
+   on. Note that 'home' below is not it: there is no #s-home, so go('home')
+   falls through to a screen id the app does not own. Both stay: one is the
+   real tab, the other is the unknown-screen case. */
+const SCREENS = ['gametime', 'stats', 'board', 'home', 'landing'];
 
 let pass = 0, fail = 0;
 const bad = [];

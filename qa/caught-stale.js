@@ -50,7 +50,10 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const file = path.resolve(process.argv[2] || path.join(__dirname, '..', 'index.html'));
+/* The working file by default. This suite's own header warns about being
+   pointed at the shipped file while the edits go elsewhere; the default
+   was doing exactly that. */
+const file = path.resolve(process.argv[2] || path.join(__dirname, '..', 'index-test.html'));
 const src = fs.readFileSync(file, 'utf8');
 let fails = 0;
 
@@ -76,6 +79,18 @@ function body(name) {
 
 const ciFlushSrc = body('ciFlush');
 const ciStashSrc = body('ciStash');
+/* ciFlush's "its clock ran out while it sat here" test used to inline the
+ * window (`q.locksMs||20000`) and the grace (`+5000`). Both moved behind
+ * ciWindowMs()/ciGraceMs() when the answer window became one owned number,
+ * so slice those out of the same file and run the REAL ones. If the build
+ * under test predates them, shim the arithmetic they replaced — this suite
+ * is about what ciFlush hands back, not about which build it is reading,
+ * and a suite that goes red on a refactor that changed no behaviour is a
+ * suite people learn to ignore. */
+const winSrc = body('ciWindowMs') + '\n' + body('ciGraceMs');
+const shim = 'function ciWindowMs(q){return (q&&q.locksMs)||20000;}\n' +
+             'function ciGraceMs(){return 5000;}';
+const helpers = (body('ciWindowMs') && body('ciGraceMs')) ? winSrc : shim;
 if (!ciFlushSrc || !ciStashSrc) {
   console.log('  FAIL could not slice ciFlush/ciStash out of ' + path.basename(file));
   process.exit(1);
@@ -101,7 +116,8 @@ function sandbox(opts) {
   };
   ctx.window = ctx;
   vm.createContext(ctx);
-  vm.runInContext(ciFlushSrc + '\n' + ciStashSrc, ctx);
+  ctx.trk = function () {};
+  vm.runInContext(helpers + '\n' + ciFlushSrc + '\n' + ciStashSrc, ctx);
   return ctx;
 }
 

@@ -3815,7 +3815,44 @@ async function browserTests(){
         // …and the four that must survive
         score:    !!document.querySelector('#gtHead .ascore'),
         yournight:has(/your night/i),
-        ciWatch:  (function(){ PCI.unsub=null; startCallItWatch(); return !!PCI.unsub; })(),
+        /* LEAN MUST NOT GATE CAUGHT IT. This guards the GN8 incident: the
+           host fired questions all night and the player app was simply not
+           listening.
+
+           It used to read `PCI.unsub=null; startCallItWatch(); return
+           !!PCI.unsub` in a harness that never sets up a backend — and it
+           passed only because SB.watchCallIt returned a truthy no-op
+           `function(){}` when there was no night. That sentinel was itself
+           a bug: a handle that unsubscribes nothing permanently satisfies
+           every `if(handle) return` guard, which is how a whole night's
+           Caught It could be lost in silence. Closing it (25 Aug) turned
+           this check red without one line of behaviour changing.
+
+           So give it a backend and assert the INTENT — with a room to
+           attach to, LEAN still lets Caught It attach — instead of the
+           accident. qa/ci-deaf.js asserts the opposite for the NO-night
+           case and is the correct reading there; the two agree now.
+           State is restored so the rest of this block is unaffected. */
+        ciWatch:  (function(){
+                    var _mode=S.mode, _sb=window.SB, _en=(window.SB||{}).enabled,
+                        _w=(window.SB||{}).watchCallIt, attempts=0;
+                    try{
+                      window.SB = window.SB || {};
+                      SB.enabled = true;
+                      SB.watchCallIt = function(){ attempts++; return function(){}; };
+                      S.mode = 'live';
+                      PCI.unsub = null;
+                      startCallItWatch();
+                      /* Both halves matter: that the attach was actually
+                         ATTEMPTED (LEAN did not short-circuit it) and that
+                         the handle came back. Either alone can be faked. */
+                      return attempts === 1 && !!PCI.unsub;
+                    } finally {
+                      PCI.unsub = null;
+                      S.mode = _mode;
+                      if(_sb){ SB.enabled = _en; SB.watchCallIt = _w; } else { window.SB = _sb; }
+                    }
+                  })(),
         catches:  CATCHES.length
       };
       // the tabs

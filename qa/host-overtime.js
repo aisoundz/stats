@@ -44,7 +44,13 @@ const ROOT = path.resolve(__dirname, '..');
    FAILURE, because "I could not check" and "I checked and it is fine" are
    not the same sentence. */
 const DEFAULT_FIX = path.join(ROOT, 'references', 'multisport');
-const DIR = process.argv[2] || process.env.SPORT_FIXTURES || DEFAULT_FIX;
+/* argv MINUS the --file pair. Without this, passing `--file admin-test.html`
+   makes argv[2] the literal string "--file" and the fixtures directory below
+   resolves to nonsense — the suite then fails for a reason that has nothing
+   to do with the banks. Caught by a negative control, not by reading. */
+const ADMIN_ARGV = (function(){ const a = process.argv.slice(2), i = a.indexOf('--file');
+  if(i >= 0) a.splice(i, a[i + 1] ? 2 : 1); return a; })();
+const DIR = ADMIN_ARGV[0] || process.env.SPORT_FIXTURES || DEFAULT_FIX;
 /* EVERY FIXTURE, NOT JUST THE FOLDER. Requiring only the directory was
    half a fix: deleting nfl.json alone took qa/host-resolvers.js from 65
    checks to 27 and it still printed a green verdict, because each league
@@ -68,7 +74,19 @@ if (!fs.existsSync(DIR)) {
   }
 }
 
-const src = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+/* WHICH BUILD THIS GRADES. Defaults to admin.html — what host/run.js
+   actually reads — so running this suite by hand is unchanged. qa/all.js
+   passes `--file admin-test.html` during a gate, so the gate grades what is
+   about to ship instead of what already shipped. Same flag and shape as
+   host-block.js, which already did this correctly.
+
+   Before this, SIX admin suites hardcoded admin.html, so the full gate
+   silently graded the OLD banks: a bank change could pass a green gate
+   having never once been read by it. Found 25 Aug. Named flag, not
+   positional, because argv[2] is already spoken for in these suites. */
+const ADMIN_FILE = (function(){ const a = process.argv.slice(2), i = a.indexOf('--file');
+  return (i >= 0 && a[i + 1]) ? a[i + 1] : 'admin.html'; })();
+const src = fs.readFileSync(path.join(ROOT, ADMIN_FILE), 'utf8');
 const S = '/* @host-shared:start', E = '/* @host-shared:end */';
 const ctx = vm.createContext({ console, fetch: () => { throw new Error('no net'); } });
 vm.runInContext(src.slice(src.indexOf(S), src.indexOf(E) + E.length), ctx, { filename: 'hs' });

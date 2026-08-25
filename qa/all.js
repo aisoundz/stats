@@ -57,6 +57,13 @@ const QUICK      =ARG.includes('--quick');
 const fi=ARG.indexOf('--file');
 const TARGET=fi>=0 && ARG[fi+1] ? ARG[fi+1] : 'index-test.html';
 const TARGET_ABS=path.resolve(__dirname,'..',TARGET);
+/* The admin half's candidate, chosen the same way. Defaults to
+   admin-test.html so a gate grades what is about to ship; pass
+   --admin-file admin.html to run the suites against what is already live,
+   which is how you tell a NEW break from an inherited one — the same
+   reasoning as --file above. */
+const afi=ARG.indexOf('--admin-file');
+const ADMIN_TARGET=afi>=0 && ARG[afi+1] ? ARG[afi+1] : 'admin-test.html';
 /* Only these accept a positional target; handing one to a suite that does
    not read argv[2] is harmless, but claiming it was targeted would not be. */
 const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-lang.js',
@@ -92,7 +99,17 @@ const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-la
      live-smoke.js    drives https://statsgametime.com/               by design */
 const KNOWN_UNTARGETED=['journey.js','live-smoke.js'];
 const ADMIN_READERS=['host-overtime.js','host-resolvers.js','host-sports.js','host-block.js',
-                     'host-banks.js','host-publish-ot.js','bank-shadow.js'];
+                     'host-banks.js','host-publish-ot.js','bank-shadow.js',
+                     /* These two already DEFAULT to admin-test.html, so a gate graded them
+                        correctly without being listed here. They are listed anyway so that
+                        `--admin-file admin.html` reaches them too — otherwise the "run it
+                        against what is live to tell a NEW break from an inherited one"
+                        workflow silently reports on the candidate for these two and on live
+                        for the other seven, which is the worst possible answer: a mixed
+                        reading that looks like one reading. They match a bare admin*.html
+                        token anywhere in argv rather than reading --file, and the value we
+                        push satisfies that. */
+                     'inning-end.js','ci-rotation.js'];
 
 /* The tier of each suite, stated once. A suite added to the directory and
    not named here is REPORTED, not silently ignored — see the sweep below,
@@ -259,6 +276,14 @@ const TIER={
      scoreboard already pushed the card clear, which is why it survived
      every previous look. Geometric, both engines, four screens. */
   'ci-clearance.js': {tier:'browser'},
+  /* The 25 Aug Caught It batch. Registered here at the same time as the
+     suites themselves, because `all.js` treats an unlisted suite as a
+     FAILURE, not a note — "a suite nobody runs is not a safety net". These
+     three were written, were green standalone, and would have shipped
+     never having been run by the gate. */
+  'ci-deaf.js':    {tier:'browser'},
+  'ci-surface.js': {tier:'browser'},
+  'ci-window.js':  {tier:'browser'},
   /* Same tester, same session: pressed Practice inside a Giants-Dolphins
      room and was asked to choose between Denver and Atlanta. hydrateNight
      replaces the GAME's team names but not the question STRINGS, so the
@@ -567,7 +592,7 @@ if(untargeted.length)
   console.log('  player-side suites reading their OWN default build, not '+TARGET+': '+untargeted.join(', '));
 const adminRun=run.filter(f=>ADMIN_READERS.includes(f));
 if(adminRun.length)
-  console.log('  admin-side suites read admin.html (NOT admin-test.html): '+adminRun.join(', '));
+  console.log('  admin-side suites graded against '+ADMIN_TARGET+': '+adminRun.join(', '));
 if(untargeted.length||adminRun.length) console.log('');
 if(missing.length)  console.log('  ! named in the table but not on disk: '+missing.join(', ')+'\n');
 if(unlisted.length) console.log('  ! on disk but in no tier, so never run: '+unlisted.join(', ')+'\n');
@@ -577,6 +602,19 @@ for(const f of run){
   const t0=Date.now();
   const argv=[path.join(DIR,f), ...(TIER[f].args||[])];
   if(TARGETABLE.has(f)) argv.push(TARGET_ABS);
+  /* THE ADMIN HALF NOW GRADES THE CANDIDATE TOO. Every suite in
+     ADMIN_READERS used to read admin.html unconditionally, so a full gate
+     could go green having never once read the banks it was about to
+     promote — the same one-fact-many-copies disease this file exists to
+     catch, sitting inside the catcher. Found 25 Aug, when a promoted bank
+     change had to be re-verified by hand afterwards.
+     All seven take a NAMED --file (positional argv is already the fixtures
+     directory in most of them) and each strips the pair before reading its
+     own positionals. Each was checked with a negative control — a bogus
+     filename must FAIL — because a flag that is silently ignored would let
+     this line claim coverage it does not have, which is worse than the gap
+     it replaces. */
+  if(ADMIN_READERS.includes(f)) argv.push('--file', ADMIN_TARGET);
   const r=spawnSync('node',argv,{encoding:'utf8', timeout:20*60*1000, maxBuffer:64*1024*1024});
   const ms=Date.now()-t0;
   const out=(r.stdout||'')+(r.stderr||'');

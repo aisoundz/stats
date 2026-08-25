@@ -15,7 +15,19 @@
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 
-const src = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+/* WHICH BUILD THIS GRADES. Defaults to admin.html — what host/run.js
+   actually reads — so running this suite by hand is unchanged. qa/all.js
+   passes `--file admin-test.html` during a gate, so the gate grades what is
+   about to ship instead of what already shipped. Same flag and shape as
+   host-block.js, which already did this correctly.
+
+   Before this, SIX admin suites hardcoded admin.html, so the full gate
+   silently graded the OLD banks: a bank change could pass a green gate
+   having never once been read by it. Found 25 Aug. Named flag, not
+   positional, because argv[2] is already spoken for in these suites. */
+const ADMIN_FILE = (function(){ const a = process.argv.slice(2), i = a.indexOf('--file');
+  return (i >= 0 && a[i + 1]) ? a[i + 1] : 'admin.html'; })();
+const src = fs.readFileSync(path.join(ROOT, ADMIN_FILE), 'utf8');
 const S = '/* @host-shared:start', E = '/* @host-shared:end */';
 const ctx = vm.createContext({ console, fetch: () => { throw new Error('no net'); } });
 vm.runInContext(src.slice(src.indexOf(S), src.indexOf(E) + E.length), ctx, { filename: 'hs' });

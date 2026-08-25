@@ -39,10 +39,15 @@ const ok = (c, label, detail) => c ? pass++ : (fail++, bad.push(label + (detail 
 console.log('\n=== INNING END ===\n');
 
 /* ---- load the shared engine exactly as the runner does ---------------- */
-const src = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+/* Selectable, so it can be pointed at the file the edits are going into.
+   Two suites in this repo defaulted to the shipped file while every change
+   landed in the working one, and reported a matcher that had already been
+   replaced. */
+const HOSTFILE = (process.argv.find(a => /^admin.*\.html$/.test(a))) || 'admin-test.html';
+const src = fs.readFileSync(path.join(ROOT, HOSTFILE), 'utf8');
 const S = '/* @host-shared:start', E = '/* @host-shared:end */';
 const a = src.indexOf(S), b = src.indexOf(E);
-if (a < 0 || b < 0) { console.error('FAIL: no @host-shared sentinels in admin.html'); process.exit(1); }
+if (a < 0 || b < 0) { console.error('FAIL: no @host-shared sentinels in ' + HOSTFILE); process.exit(1); }
 const ctx = vm.createContext({ console, fetch: () => { throw new Error('no net'); } });
 vm.runInContext(src.slice(a, b + E.length), ctx, { filename: 'host-shared' });
 const C = ctx.AUTO && ctx.AUTO.CI;
@@ -139,9 +144,26 @@ ok(C.buildInningEnd('football', plays, T, 2, {}) === null,
 const q4 = C.buildInningEnd('baseball', plays, T, 4, {});
 ok(!!q4, 'a mid-game inning builds');
 if (q4) {
-  ok(C.lockMsFor(q4.kind) === 20000,
-     'it gets the 20-second window a spoken answer needs',
-     'kind ' + q4.kind + ' → ' + C.lockMsFor(q4.kind) + 'ms');
+  /* THE GUARANTEE, NOT THE NUMBER. This was pinned to === 20000, which
+     made it a check on a constant rather than on the promise: an inning-end
+     question must get the SAME window as every other kind, and that window
+     must be long enough for somebody to answer it out loud. Reading a
+     prompt and four options aloud takes six to seven seconds and the
+     recogniser wants ~1.5s of silence after that, so a spoken answer
+     reaches the button at ~9s on the best run measured and about twelve
+     typically. Anything under fifteen is unanswerable by voice — which is
+     the 9-second bug, reported as "it automatically says you didn't answer
+     in time". A check pinned to a literal goes red when the number moves
+     for a good reason and trains people to edit the test. */
+  const others = ['saw-shot', 'run', 'nextScore', 'margin', 'qtrFirst'].map(k => C.lockMsFor(k));
+  ok(others.every(w => w === C.lockMsFor(q4.kind)),
+     'an inning end gets the same window as every other kind',
+     'kind ' + q4.kind + ' → ' + C.lockMsFor(q4.kind) + 'ms against ' + JSON.stringify(others) +
+     '. A kind with its own window is a second owner of the number the phones count against.');
+  ok(C.lockMsFor(q4.kind) >= 15000,
+     'and it is long enough to answer out loud',
+     'kind ' + q4.kind + ' → ' + C.lockMsFor(q4.kind) + 'ms. Reading the prompt and four ' +
+     'options aloud takes 6-7s and the recogniser needs ~1.5s of silence after it.');
   ok(Array.isArray(q4.options) && q4.options.length === 4,
      'four options', JSON.stringify(q4.options));
   ok(q4.qid && /^ci_\d+_end_/.test(q4.qid), 'the qid marks it as an inning end', q4.qid);

@@ -34,7 +34,13 @@ const ROOT = path.resolve(__dirname, '..');
    nothing. A test whose inputs live somewhere the repo does not control is
    a test that passes for reasons unrelated to the code.
    Both inputs are in the repo now, and their absence is a failure. */
-const DIR = process.argv[2] || path.join(ROOT, 'references', 'multisport');
+/* argv MINUS the --file pair. Without this, passing `--file admin-test.html`
+   makes argv[2] the literal string "--file" and the fixtures directory below
+   resolves to nonsense — the suite then fails for a reason that has nothing
+   to do with the banks. Caught by a negative control, not by reading. */
+const ADMIN_ARGV = (function(){ const a = process.argv.slice(2), i = a.indexOf('--file');
+  if(i >= 0) a.splice(i, a[i + 1] ? 2 : 1); return a; })();
+const DIR = ADMIN_ARGV[0] || path.join(ROOT, 'references', 'multisport');
 const BANKS_FILE = path.join(ROOT, 'references', 'multisport', 'question-banks.js');
 
 if (!fs.existsSync(DIR)) {
@@ -49,7 +55,19 @@ if (!fs.existsSync(BANKS_FILE)) {
 }
 const { BANKS, fillTeams } = require(BANKS_FILE);
 
-const src = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+/* WHICH BUILD THIS GRADES. Defaults to admin.html — what host/run.js
+   actually reads — so running this suite by hand is unchanged. qa/all.js
+   passes `--file admin-test.html` during a gate, so the gate grades what is
+   about to ship instead of what already shipped. Same flag and shape as
+   host-block.js, which already did this correctly.
+
+   Before this, SIX admin suites hardcoded admin.html, so the full gate
+   silently graded the OLD banks: a bank change could pass a green gate
+   having never once been read by it. Found 25 Aug. Named flag, not
+   positional, because argv[2] is already spoken for in these suites. */
+const ADMIN_FILE = (function(){ const a = process.argv.slice(2), i = a.indexOf('--file');
+  return (i >= 0 && a[i + 1]) ? a[i + 1] : 'admin.html'; })();
+const src = fs.readFileSync(path.join(ROOT, ADMIN_FILE), 'utf8');
 const S = '/* @host-shared:start', E = '/* @host-shared:end */';
 const ctx = vm.createContext({ console, fetch: () => { throw new Error('no net'); } });
 vm.runInContext(src.slice(src.indexOf(S), src.indexOf(E) + E.length), ctx, { filename: 'hs' });

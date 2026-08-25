@@ -26,9 +26,27 @@
    ================================================================== */
 const fs=require('fs'), path=require('path'), vm=require('vm');
 const { loadShared } = require(path.join(__dirname,'..','host','run.js'));
-const SPORT = (process.argv[2] || 'baseball').toLowerCase();
-const N     = Number(process.argv[3] || 8);
-const DATES = process.argv.slice(4);
+/* WHICH BUILD THIS GRADES. Defaults to admin.html — what host/run.js
+   actually reads — so running this by hand is unchanged. qa/all.js passes
+   `--file admin-test.html` during a gate, so the gate grades what is about
+   to ship instead of what already shipped. Before this, SIX admin suites
+   hardcoded admin.html and the gate silently graded the OLD banks: a bank
+   change could pass a green gate having never once been read by it.
+
+   The flag is STRIPPED before the positional args are read. DATES is
+   `slice(4)`, so leaving `--file admin-test.html` in argv would file both
+   tokens as probe dates and this suite would go looking for a game on a
+   date called "--file". */
+const ARGV = (function(){
+  const a = process.argv.slice(2), i = a.indexOf('--file');
+  if(i >= 0) a.splice(i, a[i + 1] ? 2 : 1);
+  return a;
+})();
+const ADMIN_FILE = (function(){ const a = process.argv.slice(2), i = a.indexOf('--file');
+  return (i >= 0 && a[i + 1]) ? a[i + 1] : 'admin.html'; })();
+const SPORT = (ARGV[0] || 'baseball').toLowerCase();
+const N     = Number(ARGV[1] || 8);
+const DATES = ARGV.slice(2);
 
 /* One place that knows a sport's feed path and its default probe dates. */
 const LEAGUES = {
@@ -40,7 +58,7 @@ const LEAGUES = {
 };
 
 function templates(){
-  const src=fs.readFileSync(path.join(__dirname,'..','admin.html'),'utf8');
+  const src=fs.readFileSync(path.join(__dirname,'..',ADMIN_FILE),'utf8');
   const s=src.indexOf('const TEMPLATES = {');
   let d=0,end=-1; const open=src.indexOf('{',s);
   for(let j=open;j<src.length;j++){const c=src[j]; if(c==='{')d++; else if(c==='}'){d--; if(!d){end=j+1;break;}}}
