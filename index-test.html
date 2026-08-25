@@ -21238,7 +21238,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-24-latejoin.218';
+const STATS_BUILD='2026-08-24-roundlead.219';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -22276,6 +22276,26 @@ function roundWord(n){
   return (n === 1) ? (ROUND_WORD_ONE[w] || w) : w;
 }
 function roundCountNow(){ return ROUND_COUNT[famNow()] || 4; }
+/* INNINGS ARE NOT ROUNDS. Every other family's Nth round IS the Nth period
+   the feed reports — quarters, periods, halves, one-to-one. Baseball's
+   three rounds cover nine innings (ROUND_COUNT.baseball above), so a
+   period count has to be divided down to a round count for baseball and
+   left alone everywhere else. Used by checkQuarterLeadBonus(), which is
+   the one place on this page that turns a live period number into a round
+   index without going through roundCountNow()'s own family lookup. */
+var INNINGS_PER_ROUND = { baseball: 3 };
+/* THE QUARTER-LEAD BONUS ONLY KNOWS HOW TO GRADE A PLAYER-STAT PICK.
+   It asks "is MY pick's number ahead of the field's" — which is a real
+   question for "most rebounds" and not a question at all for "Total runs,
+   Under 8.5" or "Does it go past nine?". Every non-basketball sport's
+   prediction sheet is built from picks like that (see BA_PREDS, FO_PREDS,
+   HO_PREDS, SC_PREDS below), so `sportCfg().box` — the table this bonus
+   reads player stats out of — is deliberately empty for them. Gate on
+   that fact directly rather than naming a sport, so the day a sport's
+   picks DO become stat-shaped this turns back on by itself. */
+function statPicksSupported(){
+  try{ var b=sportCfg().box; return !!(b && (b.pts||b.reb||b.ast||b.stl||b.blk)); }catch(_){ return false; }
+}
 function sportCfg(){
   var g=null; try{ g=(typeof GAME!=='undefined'&&GAME)||null; }catch(_){}
   /* Before a room is bound — a fresh arrival on ?game= — the marquee already
@@ -23742,6 +23762,19 @@ function stEmpty(icon,head,sub){
     + '<b style="font-size:15px">'+head+'</b>'
     + '<p class="sub" style="font-size:14px;margin:7px 0 0">'+sub+'</p></div>';
 }
+/* A pick with no honest "leading/behind" to show it. Most sports' cards
+   are pick'em (winner, over/under, first-to-score) rather than player
+   stats, so there is no field of twenty-eight rosters to race — see
+   statPicksSupported(). Printing a fabricated lead was worse than
+   printing none: it read "0 of 5 leading" and "+0 pts" on EVERY baseball
+   card, all night, whether the player's picks were good or not. This is
+   the plain, true alternative — what you picked, nothing invented. */
+function stPlainPickRow(p){
+  var who=String(S.predChoices[p.id]||''); if(!who) return '';
+  return '<div class="stPickRow2"><div class="stPickCat">'+esc(p.label)+'</div>'
+    + '<div class="stPickTop"><span class="stPickMine">'+esc(who)+'</span>'
+    + '<span class="stPickLead2">final buzzer</span></div></div>';
+}
 
 /* ---- YOUR CARD, RACING THE REAL BOX SCORE --------------------------
    Restored after being cut in the STATS rebuild, which was a mistake I
@@ -23760,8 +23793,21 @@ function stYourCard(){
   try{ live=gsInGame(); }catch(_){}
 
     var mine=[]; try{ mine=preds.filter(function(p){ return S.predChoices[p.id] && p.id!=='winner'; }); }catch(_){}
+    var hasStatBox=false; try{ hasStatBox=statPicksSupported(); }catch(_){}
     if(!mine.length){
       out+=stEmpty('📋','Your card isn’t filled in yet','Once you lock a card, this is where you watch it race the real box score, category by category.');
+    } else if(!hasStatBox){
+      /* ============ PICK'EM, NOT PLAYER PROPS =========================
+         "Who leads this category" is not a sentence baseball's card can
+         answer — its five picks are winner/runs/first/hr/ks/extras, not a
+         player stat, so there is no season average and no field of
+         rosters to race (same is true of football, hockey and soccer's
+         sheets). This used to fall into the code below anyway: SEACAT and
+         KEY only know pts/reb/ast/stl/blk, so every row returned '' before
+         computing anything and the card silently printed "0 of N leading"
+         and "+0 pts" — correct-looking, always wrong, every night. Plain
+         beats fabricated: show the pick, say when it settles. */
+      out+=stCard('YOUR CARD', mine.map(stPlainPickRow).join(''));
     } else if(!live){
       /* ============ YOUR PICK, NEXT TO THE ONE YOU HAVE TO BEAT ========
          "I don't like the your card. Before you would have your score next
@@ -23863,7 +23909,7 @@ function stYourCard(){
       // opinion. Only shows once at least one quarter has actually settled.
       try{
         var L=ledger(), qEarned=0, qDone=0;
-        for(var qn=1; qn<=4; qn++){
+        for(var qn=1; qn<=roundCountNow(); qn++){
           if(S.qleadDone && S.qleadDone[qn]){ qDone++; qEarned += (L['qlead-q'+qn]||{}).p||0; }
         }
         if(qDone){
@@ -24743,23 +24789,44 @@ function checkQuarterLeadBonus(){
   try{
     if(S.mode!=='live') return;                 // nothing real to lead in Practice
     if(!gsInGame()) return;
+    /* Nothing to grade a lead FROM outside basketball's player-stat picks —
+       see statPicksSupported(). Bailing here (before S.qleadDone even gets
+       created) is what stops this from ever writing a round "settled" for
+       a sport whose rounds it cannot actually judge. */
+    if(!statPicksSupported()) return;
     if(!S.qleadDone || typeof S.qleadDone!=='object' || Array.isArray(S.qleadDone)) S.qleadDone={};
     if(!S.qleadMissed || typeof S.qleadMissed!=='object' || Array.isArray(S.qleadMissed)) S.qleadMissed={};
     var per=0;
     (GS.plays||[]).forEach(function(p){ if(p.period!=null && p.period>per) per=p.period; });
     var isFinal = String(GS.state||'')==='post';
-    // A quarter's box score is trustworthy once the game has moved past it:
-    // curQ-1 while a later quarter is live, or every quarter once final.
-    var settledThrough = isFinal ? 4 : Math.max(0, per-1);
+    var nRounds = roundCountNow();
+    /* ============ A PERIOD IS NOT A ROUND (24 Aug) ====================
+       Found from a screenshot: TB @ DET, Top 2nd, and the STATS tab read
+       "1 of 3 rounds settled so far". Zero rounds should have settled —
+       baseball's round 1 doesn't close until the 3rd inning does. This
+       line used to be `per - 1` straight, which is exactly right when the
+       Nth period IS the Nth round (basketball, football, hockey, soccer)
+       and exactly wrong for baseball, where `per` is the raw inning
+       number ESPN reports (1-9) and a "round" is three of them. At Top
+       2nd, per=2, so the old math read "1 period complete" and reported
+       it as "round 1 settled" two innings before round 1 actually closes.
+       INNINGS_PER_ROUND divides periods down into rounds; it is 1 for
+       every sport but baseball, so this is a no-op everywhere else.
+       (In practice this whole function now returns above for baseball —
+       its picks aren't stat-shaped — so this fixes the MATH for the day
+       a baseball pick becomes stat-shaped and this bonus is turned back
+       on for it, without waiting for this exact bug to be rediscovered.) */
+    var perRound = INNINGS_PER_ROUND[famNow()] || 1;
+    var settledThrough = isFinal ? nRounds : Math.min(nRounds, Math.floor(Math.max(0, per-1) / perRound));
     if(settledThrough<1) return;
 
-    /* Write down the newest settled quarter WHILE IT IS THE NEWEST. This is
-       the only moment the cumulative box means "through quarter q". */
-    qleadSnap(Math.min(settledThrough,4));
+    /* Write down the newest settled round WHILE IT IS THE NEWEST. This is
+       the only moment the cumulative box means "through round q". */
+    qleadSnap(settledThrough);
 
     var cfg=sportCfg().box, KEY={pts:cfg.pts,reb:cfg.reb,ast:cfg.ast,stl:cfg.stl,blk:cfg.blk};
     var changed=false;
-    for(var q=1; q<=Math.min(settledThrough,4); q++){
+    for(var q=1; q<=settledThrough; q++){
       if(S.qleadDone[q]) continue;
       var box=null;
       try{ box = (S.qleadBox && S.qleadBox[q]) ? S.qleadBox[q] : null; }catch(_){}

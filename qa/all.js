@@ -408,6 +408,13 @@ const TIER={
   'screen-copy.js':   {tier:'live'},
   'journey.js':       {tier:'browser'},
   'live-path.js':     {tier:'live'},
+  /* Founder screenshot, 24 Aug, TB @ DET, Top 2nd: "1 of 3 rounds settled
+     so far" and "0 of 5 leading", both fabricated — checkQuarterLeadBonus
+     and stYourCard's live race were written for basketball, where the
+     Nth period IS the Nth round and every pick is a player stat. Neither
+     is true for baseball/football/hockey/soccer. Two independent levers,
+     each sabotage-verified on its own. */
+  'round-lead.js':    {tier:'browser'},
 };
 
 /* NAME THE SUITES THAT EXIST BUT ARE NOT IN THE TABLE. A manifest that
