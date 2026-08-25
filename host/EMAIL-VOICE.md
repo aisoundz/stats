@@ -269,3 +269,75 @@ slate.
 
 Found by test-firing the tip-off routine on 20 Aug rather than assuming it
 worked. It reached for those files, found nothing, and had to work it out.
+
+---
+
+## 12. Times are numerals. Never spelled out.
+
+Anis, 25 Aug 2026: *"Let it show numbers when you say at a quarter passed
+anything."*
+
+The draft that morning said *"Dodgers and Braves get it going at quarter past
+seven"*, and the subject line said *"tip in Dallas at five"*. Both became `7:15`
+and `5:00`.
+
+Write `7:15`, `4:15`, `8:00`. Never "quarter past seven", "half past", "a
+quarter to", "at five". A time is the single most operational fact in a tip-off
+email, the reader is deciding whether they can be on the sofa for it, and a
+numeral is read at a glance while a spelled-out time has to be translated. It is
+also, plainly, how a person texts a time to a friend.
+
+This generalises: **anywhere a number is the fact, print the number.** "4 taps in
+10", "600 of the 1,000 points", "6 times", "a 7-point game". Not "most", "the
+majority", "several", "a handful".
+
+---
+
+## 13. The Gametime question is a STAT, not a prediction
+
+Anis, 25 Aug 2026: *"ask more stats related questions, not who is going to win.
+Thats predication."*
+
+The 25 Aug draft asked *"Dodgers at Braves tonight. Who wins it?"* That is a
+sportsbook question wearing our clothes. It became *"Dodgers at Braves. Which
+pitching staff piles up more strikeouts?"*
+
+**Why this is a rule and not a preference.** The product is called STATS
+GAMETIME and its tagline is "the game that pays to pay attention". A
+who-wins question is answered by a hunch before the game and never rewards
+watching; a stat comparison is a thing you find out BY watching. Asking the
+sportsbook question in the email teaches the reader the wrong thing about what
+the app is, in the one place the app introduces itself.
+
+Good shapes, all two-option so the tappable card still works: which side records
+more strikeouts, more hits, more rebounds, more shots on target, more takeaways.
+Bad shapes: who wins, who covers, will they score over N.
+
+**Rename the `gt=` id to match the question.** It is a free-form string
+(`gametimeFromLink()` in index.html reads it straight from the URL and uses it
+as a key), so `gt=gn30-strikeouts` is correct and `gt=gn30-winner` on a
+strikeouts question files the tap as something it is not.
+
+---
+
+## 14. The build note may be longer when the platform actually moved
+
+**This qualifies rule 3, item 5** ("the build note, ONE sentence, near the
+bottom"). Anis, 25 Aug 2026: *"Let's also talk about how the platform
+improved."*
+
+Rule 3's test does not change and is still the gate: **would a player FEEL it?**
+What changes is that when several things pass that test at once, they may have
+their own block instead of being cut to one line. The 25 Aug email carried four,
+each of which a reader had personally suffered: the pick card was not saving at
+all, roughly 4 taps in 10 on a player's name did nothing, Caught It went silent
+for a whole room, and the buttons sat below the fold on a laptop.
+
+**Still forbidden, and this is the part that matters:** internals nobody feels.
+"The rounds listener now attaches on its own guard" fails the test however hard
+the night was. Write what the player gets, not what the engineer fixed.
+
+**And say what was broken, plainly.** "Your pick card saves again. It hadn't
+been." reads as honest; "we've made improvements to reliability" reads as a
+company hiding something. The weekly note already names a real failure every
+week on purpose, and a tip-off can borrow that when there is one worth naming.
