@@ -692,7 +692,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-24-admin.64-mlb-r1-no-freebies';
+window.ADMIN_BUILD='2026-08-25-admin.65-nhl-freebies-mlb-extras';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -1053,17 +1053,30 @@ const TEMPLATES = {
         { t: 'Who scores first this inning?', o: ['{HOME}','{AWAY}','Nobody scored'], r:'mlbExtraFirstScoringTeam',
           t_es: '¿Quién anota primero en esta entrada?', o_es: ['{HOME}','{AWAY}','Nadie anotó'] },
         { t: 'Runs this inning, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlbExtraRunsBand',
-          t_es: 'Carreras en esta entrada, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] },
-        { t: 'Does the game end here?', o: ['Yes','No'], r:'mlbExtraDecides',
-          t_es: '¿Se acaba el partido aquí?', o_es: ['Sí','No'] }
+          t_es: 'Carreras en esta entrada, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] }
+        /* WAS mlbExtraDecides — "Does the game end here?" — and it was free.
+           This round opens when the extra inning ENDS, so if the game ended
+           phaseNow() has already flipped to 'final' and the hero reads
+           "🏁 Final". The label alone answers it, which makes it free under
+           the old narrow rule too; it was simply never looked at. The
+           archive has it silent 64 of 71 anyway.
+           NO SWAP, AND THAT IS DELIBERATE. Every unused mlb* resolver goes
+           through mlbInSpan(), and mlbSpan(p) = {lo:p-2, hi:p} — at period
+           10 that window is innings 8-9-10, a duplicate of the 7th-9th round
+           wearing an extras label. Two honest questions beat three where the
+           third lies about which innings it is reading. */
       ]
     ]
-    /* NO EXTRA-INNINGS TEMPLATE YET. run.js splits an overtime round out by
-       AUTO.isOtTag(), which matches OT-shaped tags; 'EXTRAS' is not one, so
-       adding a fourth round here would publish it as regulation and open it
-       on every ninth-inning game. Extras need the tag question settled
-       first — see the overtime work — and until then a game that goes past
-       nine simply has nothing more to answer, which is honest. */
+    /* THE EXTRA-INNINGS ROUND IS THE FOURTH ONE ABOVE. This comment used to
+       say there wasn't one — "NO EXTRA-INNINGS TEMPLATE YET… adding a fourth
+       round here would publish it as regulation" — while the fourth round,
+       tagged 'OT' and carrying period 10, sat directly above it. The tag
+       question it was waiting on got settled: the tag is 'OT', which
+       AUTO.isOtTag() matches, so splitOtRound lifts it out and roundSlots
+       derives the real inning per extra frame. A regulation game never sees
+       it. That stale paragraph is why mlbExtraDecides survived the free-point
+       sweep of 24 Aug — a wrong comment does not just fail to help, it stops
+       the next person looking. */
   },
 
   /* ============================ FOOTBALL ============================
@@ -1310,8 +1323,22 @@ const TEMPLATES = {
     worth:  [15,30,45],
     rounds: [
       [
-        { t: 'Who scored first in the period?', o: ['{HOME}','{AWAY}','Still scoreless'], r:'nhlFirstGoalTeam' },
-        { t: 'Goals in the first, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nhlGoalsBand' },
+        /* WAS nhlFirstGoalTeam and nhlGoalsBand, AND BOTH WERE FREE POINTS.
+           In period ONE cumulative IS the period, so the score strip and the
+           hero card's pinned intermission snapshot already carry both answers:
+           "goals in the first, both teams" is the two numbers on the card
+           added up — arithmetic, not a tendency — and "who scored first" is
+           free whenever one side is on zero at the intermission, which is
+           most first periods. Same cut mlbLeadAfter took in baseball.
+           Faceoffs and penalties are on neither the strip nor the card.
+           COST, PRICED AND RECORDED SO IT IS NOT REDISCOVERED AS A BUG: both
+           of these are cumulative team-box reads (boxCompare / boxTotal), so
+           they are correct live at a period-1 boundary — where cumulative and
+           period agree — and NOT replayable offline. The backtest reports
+           this class as "cannot be replayed: cumulative box stat at a period
+           boundary", exactly as it does for mlsMoreCorners. */
+        { t: 'Who won more faceoffs in the first?', o: ['{HOME}','{AWAY}','Even'], r:'nhlMoreFaceoffs' },
+        { t: 'Penalties in the first, both teams — how many?', o: ['Two or fewer','Three or four','Five to seven','Eight or more'], r:'nhlPenaltiesBand' },
         { t: 'Shots on goal in the first, both teams — how many?', o: ['Eight or fewer','Nine to twelve','Thirteen to sixteen','Seventeen or more'], r:'nhlShotsBand' },
         { t: 'Hits in the first, both teams — how many?', o: ['Twelve or fewer','Thirteen to twenty','Twenty-one to twenty-eight','Twenty-nine or more'], r:'nhlHitsBand' }
       ],
@@ -1319,13 +1346,32 @@ const TEMPLATES = {
         { t: 'Goals in the second, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nhlGoalsBand' },
         { t: 'Shots on goal in the second, both teams — how many?', o: ['Eight or fewer','Nine to twelve','Thirteen to sixteen','Seventeen or more'], r:'nhlShotsBand' },
         { t: 'Blocked shots in the second, both teams — how many?', o: ['Four or fewer','Five to eight','Nine to twelve','Thirteen or more'], r:'nhlBlockedBand' },
-        { t: 'Who leads after two?', o: ['{HOME}','{AWAY}','Level'], r:'nhlLeadAfter' }
+        /* WAS nhlLeadAfter — leadAfterPeriod(), the same helper that got
+           mlbLeadAfter cut this morning. "Who leads after two" is the
+           boundary snapshot read aloud: the score strip and the hero card
+           both say it the instant the round opens.
+           THE REPLACEMENT IS THE HITS BAND, NOT nhlFirstGoalStrength, and
+           the reason is the archive's own lesson. First-goal strength is
+           even-strength around four times in five and goes silent on a
+           scoreless period (~13%), which lands it next to lastBasketAssisted
+           at 81% — a question a person wins by knowing a league-wide fact
+           rather than by watching, plus a void rate on top. Hits per period
+           spread across all four bands. Repeating a resolver across periods
+           is what nhlGoalsBand and nhlShotsBand already do here, and what
+           basketball and MLB do. */
+        { t: 'Hits in the second, both teams — how many?', o: ['Twelve or fewer','Thirteen to twenty','Twenty-one to twenty-eight','Twenty-nine or more'], r:'nhlHitsBand' }
       ],
       [
         { t: 'Goals in the third, both teams — how many?', o: ['None','One','Two','Three or more'], r:'nhlGoalsBand' },
         { t: 'Giveaways in the third, both teams — how many?', o: ['Four or fewer','Five to eight','Nine to twelve','Thirteen or more'], r:'nhlGiveawaysBand' },
-        { t: 'Who threw more hits in the third?', o: ['{HOME}','{AWAY}','Even'], r:'nhlMoreHits' },
-        { t: 'Who put more shots on net in the third?', o: ['{HOME}','{AWAY}','Even'], r:'nhlMoreShots' }
+        /* THESE TWO SAID "in the third" AND ANSWERED "over the whole game".
+           boxCompare() takes p and ignores it — it reads the cumulative team
+           box, full stop. At a round-3 buzzer that is the game total, so the
+           text was simply false. Text-only fix, no resolver risk: both
+           already carry "Even" and tieOpt() matches it. Soccer documents and
+           avoids this trap; hockey had never been given the treatment. */
+        { t: 'Who threw more hits over the game?', o: ['{HOME}','{AWAY}','Even'], r:'nhlMoreHits' },
+        { t: 'Who put more shots on net over the game?', o: ['{HOME}','{AWAY}','Even'], r:'nhlMoreShots' }
       ]
     ]
   }

@@ -69,6 +69,23 @@ const LEVERS = {
     name: 'INNINGS_PER_ROUND (baseball innings -> rounds)',
     from: "var INNINGS_PER_ROUND = { baseball: 3 };",
     to:   "var INNINGS_PER_ROUND = {};"
+  },
+  /* Added 24 Aug, after build .219's gate was found to be inoperative in
+     production. Each of these restores exactly one half of .219's bug. */
+  gate: {
+    name: 'statPicksSupported() asking about THIS CARD rather than about a sport',
+    from: "      if(id && id!=='winner' && b[id]) return true;",
+    to:   "      if(id) return !!(b.pts||b.reb||b.ast||b.stl||b.blk);"
+  },
+  family: {
+    name: "sportCfg()'s refusal to adopt a game from another sport family",
+    from: "    return !own || !f || f===own;",
+    to:   "    return true;"
+  },
+  soccerid: {
+    name: "SC_GAME naming its own sport (the soccer fixture's `sport` field)",
+    from: '  sport:"soccer",',
+    to:   '  /* sabotaged */'
   }
 };
 
@@ -187,6 +204,160 @@ const LOCK_PICKS = () => {
     await p.close();
   }
 
+  /* ========= 3. THE CARD IS BASEBALL AND THE MARQUEE IS BASKETBALL =====
+     Build .219 shipped the gate above and the bug stayed live, because the
+     gate asked "what sport is this?" of a function that will confidently
+     answer with a DIFFERENT sport than the card on the screen.
+
+     sportCfg() decides which league the page is by looking at GAME, and if
+     GAME has no espnEvent it reaches past it — first to the ?game= room,
+     then to tonight's marquee. An event id is a feed target, not an
+     identity: every pick'em sport's practice fixture states its sport and
+     league plainly and carries no event id, while BB_GAME pins a real WNBA
+     one. So an unbound baseball card resolved to basketball, box.pts was
+     'PTS', and .219's gate said "supported".
+
+     Measured on the shipped index.html from a real tap — arrive on the
+     WNBA room link, press Baseball in the practice sport picker:
+
+         YOUR CARD, LIVE · 0 of 5 leading
+         ⚡ +0 pts from leading at the quarters
+         2 of 4 quarters settled so far
+
+     ...on a baseball card. Both numbers fabricated, and the word is wrong
+     as well.
+
+     Reproduced here through TONIGHT rather than through a ?game= link, so
+     this check does not depend on which two games happen to be baked into
+     the slate on the day somebody runs it. TONIGHT is what featureTonight()
+     writes from the live slate; setSport() is literally what the practice
+     sport chip calls. GS is stood up by hand because there is no ESPN from
+     a file:// page — and because that is honestly the state a real player
+     is in after the swap: setSport() does not clear GS, so the previous
+     room's live feed is still sitting there. */
+  {
+    const file=writeCandidate(null);
+    const p=await b.newPage({viewport:PHONE});
+    const errs=[]; p.on('pageerror',e=>errs.push(String(e&&e.message||e)));
+    await p.goto('file://'+file, {waitUntil:'domcontentloaded'});
+    await p.waitForFunction(()=>typeof statPicksSupported==='function', {timeout:15000}).catch(()=>{});
+    await p.waitForTimeout(800);
+
+    const sw = await p.evaluate((lock)=>{
+      /* tonight's marquee is a basketball game (tipISO only has to exist —
+         heroGame() tests it for truthiness, nothing here reads the date) */
+      TONIGHT={ nightId:'marquee', espnEvent:'401857172', tipISO:'2026-01-01T00:00:00Z',
+                sport:'basketball', league:'WNBA' };
+      try{ window.TONIGHT=TONIGHT; }catch(_){}
+      /* the previous room's live feed, still in memory across the swap */
+      S.mode='live'; GS.ok=true; GS.state='in'; GS.ev='401857172';
+      GS.box={'A Player':{PTS:20,REB:5,AST:3,STL:2,BLK:1}};
+      GS.plays=[{period:3, type:'play'}];
+      /* the tap */
+      setSport('baseball'); try{ applySport(); }catch(_){}
+      eval('('+lock+')')();
+
+      var out={ predIds:preds.map(function(x){return x.id;}).join(','),
+                path:sportCfg().path, fam:famNow(), rounds:roundCountNow(),
+                word:roundWord(3), supported:statPicksSupported() };
+      /* THE GATE, ASKED THE HARD WAY. Pin the config to a basketball box
+         underneath a baseball card — the exact disagreement measured on the
+         shipped build — and the gate must still refuse. This is the half of
+         the fix that does not depend on sportCfg() being right, and the
+         reason there are two levers and not one. */
+      var real=window.sportCfg;
+      try{
+        window.sportCfg=function(){ var c=real(); return Object.assign({}, c,
+          {box:{pts:'PTS',reb:'REB',ast:'AST',stl:'STL',blk:'BLK'}}); };
+        out.supportedWithBasketballBox=statPicksSupported();
+      } finally { window.sportCfg=real; }
+
+      S.qleadDone={}; S.qleadMissed={}; S.qleadBox={};
+      checkQuarterLeadBonus();
+      out.qleadDone=S.qleadDone;
+      out.card=stYourCard();
+      return out;
+    }, LOCK_PICKS.toString());
+
+    ok('after the sport swap the card really is baseball',
+       sw.predIds==='winner,runs,first,hr,ks,extras', sw.predIds);
+    ok('sportCfg() names the sport the card belongs to, not the marquee\'s',
+       sw.path==='baseball/mlb', 'sportCfg().path = '+sw.path);
+    ok('the round vocabulary is baseball\'s, not basketball\'s',
+       sw.fam==='baseball' && sw.rounds===3 && sw.word==='rounds',
+       'famNow='+sw.fam+' roundCountNow='+sw.rounds+' roundWord='+sw.word);
+    ok('the gate refuses even when the config hands it a basketball box',
+       sw.supportedWithBasketballBox===false,
+       'statPicksSupported() = '+sw.supportedWithBasketballBox+' on a card of '+sw.predIds);
+    ok('swapped card: no fabricated "N of M leading" claim',
+       !/\d+ of \d+ leading/.test(sw.card),
+       (sw.card.match(/[^"]*of \d+ leading[^"]*/)||[''])[0]);
+    ok('swapped card: no "settled so far" line and no basketball words',
+       !/settled so far/.test(sw.card) && !/quarter/i.test(sw.card),
+       (sw.card.match(/[^<>]*(settled so far|quarter)[^<>]*/i)||[''])[0]);
+    ok('swapped card: no round marked settled',
+       Object.keys(sw.qleadDone).length===0, JSON.stringify(sw.qleadDone));
+    ok('no page errors (sport swap, real build)', errs.length===0, errs.join(' | '));
+    await p.close();
+  }
+
+  /* ========= 4. EVERY SPORT, ON ITS OWN FRONT DOOR ====================
+     ?sport= is the plainest instruction a player can give this app, and
+     until 24 Aug it moved the CARD without moving the CONFIG. Measured on
+     the shipped index.html, all four pick'em sports on ?sport=<sport>:
+
+        baseball / football / hockey / soccer
+        -> sportCfg().path basketball/wnba, famNow "basketball",
+           roundCountNow 4, roundWord "quarters", statPicksSupported TRUE
+
+     Four sports, one basketball answer, and the .219 gate open on every
+     one of them. This walks all five and asks the whole question at once —
+     does the config the page will act on describe the card the page is
+     showing? Hockey has periods, soccer has halves, baseball has rounds,
+     and only basketball's picks are stat shaped.
+
+     Deliberately table-driven and not four copies: the day a sixth sport
+     is added, this fails until it is listed, which is the only way a
+     "every sport" check stays true. */
+  {
+    const file=writeCandidate(null);
+    const WANT = {
+      basketball:{path:'basketball/wnba', fam:'basketball', rounds:4, word:'quarters', supported:true},
+      baseball:  {path:'baseball/mlb',    fam:'baseball',   rounds:3, word:'rounds',   supported:false},
+      football:  {path:'football/nfl',    fam:'football',   rounds:4, word:'quarters', supported:false},
+      hockey:    {path:'hockey/nhl',      fam:'hockey',     rounds:3, word:'periods',  supported:false},
+      soccer:    {path:'soccer/usa.1',    fam:'soccer',     rounds:2, word:'halves',   supported:false}
+    };
+    let seen=[];
+    for(const s of Object.keys(WANT)){
+      const p=await b.newPage({viewport:PHONE});
+      await p.goto('file://'+file+'?sport='+s, {waitUntil:'domcontentloaded'});
+      await p.waitForFunction(()=>typeof sportCfg==='function', {timeout:15000}).catch(()=>{});
+      await p.waitForTimeout(600);
+      const got=await p.evaluate(()=>({ path:sportCfg().path, fam:famNow(),
+        rounds:roundCountNow(), word:roundWord(2), supported:statPicksSupported() }));
+      const w=WANT[s];
+      ok('?sport='+s+' — the config describes the card in front of the player',
+         got.path===w.path && got.fam===w.fam && got.rounds===w.rounds &&
+         got.word===w.word && got.supported===w.supported,
+         JSON.stringify(got)+' wanted '+JSON.stringify(w));
+      seen.push(s);
+      await p.close();
+    }
+    /* A list that has silently stopped covering a sport is worse than no
+       list — same rule qa/all.js applies to itself. */
+    const inApp = await (async()=>{
+      const p=await b.newPage({viewport:PHONE});
+      await p.goto('file://'+file, {waitUntil:'domcontentloaded'});
+      await p.waitForFunction(()=>typeof SPORTS!=='undefined', {timeout:15000}).catch(()=>{});
+      const k=await p.evaluate(()=>Object.keys(SPORTS));
+      await p.close(); return k;
+    })();
+    ok('every sport the app offers is covered above',
+       inApp.every(k=>seen.indexOf(k)>=0) && inApp.length===seen.length,
+       'app has ['+inApp.join(',')+'], this check walks ['+seen.join(',')+']');
+  }
+
   if(SABOTAGE){
     /* ============ LEVER 1: the sport-appropriateness gate ============= */
     const file=writeCandidate('card');
@@ -224,6 +395,63 @@ const LOCK_PICKS = () => {
        !!r2.qleadDone[1],
        'expected round 1 wrongly marked done; got '+JSON.stringify(r2.qleadDone));
     await p2.close();
+
+    /* ==== LEVERS 3 & 4: the two halves of the .219 miss ===============
+       Neither of the levers above can catch these — section 1 stays green
+       with EITHER half of this fix in place, which is exactly how .219
+       shipped a gate that did nothing and a suite that could not say so.
+       Each lever here restores one half and must bring back its own,
+       specific, measured symptom. */
+    /* LEVER 5: the soccer fixture forgetting which sport it is. Its symptom
+       is on ?sport=soccer, not on the swap, so it gets its own run. */
+    {
+      const f=writeCandidate('soccerid');
+      const pg=await b.newPage({viewport:PHONE});
+      await pg.goto('file://'+f+'?sport=soccer', {waitUntil:'domcontentloaded'});
+      await pg.waitForFunction(()=>typeof sportCfg==='function', {timeout:15000}).catch(()=>{});
+      await pg.waitForTimeout(600);
+      const s=await pg.evaluate(()=>({ path:sportCfg().path, word:roundWord(2), rounds:roundCountNow() }));
+      ok('SABOTAGE (soccer fixture cannot name its sport) does put "quarters" on a soccer card',
+         s.path==='basketball/wnba' && s.word==='quarters' && s.rounds===4,
+         'expected the basketball answer back; got '+JSON.stringify(s));
+      await pg.close();
+    }
+
+    for(const key of ['gate','family']){
+      const f=writeCandidate(key);
+      const pg=await b.newPage({viewport:PHONE});
+      await pg.goto('file://'+f, {waitUntil:'domcontentloaded'});
+      await pg.waitForFunction(()=>typeof statPicksSupported==='function', {timeout:15000}).catch(()=>{});
+      await pg.waitForTimeout(800);
+      const s=await pg.evaluate((lock)=>{
+        TONIGHT={ nightId:'marquee', espnEvent:'401857172', tipISO:'2026-01-01T00:00:00Z',
+                  sport:'basketball', league:'WNBA' };
+        try{ window.TONIGHT=TONIGHT; }catch(_){}
+        S.mode='live'; GS.ok=true; GS.state='in'; GS.ev='401857172';
+        GS.box={'A Player':{PTS:20,REB:5,AST:3,STL:2,BLK:1}};
+        GS.plays=[{period:3, type:'play'}];
+        setSport('baseball'); try{ applySport(); }catch(_){}
+        eval('('+lock+')')();
+        var out={ path:sportCfg().path, word:roundWord(3) };
+        var real=window.sportCfg;
+        try{
+          window.sportCfg=function(){ var c=real(); return Object.assign({}, c,
+            {box:{pts:'PTS',reb:'REB',ast:'AST',stl:'STL',blk:'BLK'}}); };
+          out.supportedWithBasketballBox=statPicksSupported();
+        } finally { window.sportCfg=real; }
+        return out;
+      }, LOCK_PICKS.toString());
+      if(key==='gate'){
+        ok('SABOTAGE (card-shaped gate removed) does say "supported" on a baseball card',
+           s.supportedWithBasketballBox===true,
+           'expected the .219 gate back; got '+s.supportedWithBasketballBox);
+      } else {
+        ok('SABOTAGE (family guard removed) does put the baseball card on the basketball config',
+           s.path==='basketball/wnba' && s.word==='quarters',
+           'expected basketball/wnba + "quarters"; got '+s.path+' + "'+s.word+'"');
+      }
+      await pg.close();
+    }
   }
 
   await b.close();

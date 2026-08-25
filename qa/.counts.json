@@ -61,6 +61,8 @@
   "voice-heard-clear.js": 3,
   "late-join.js": 6,
   "rules.js": 14,
-  "round-lead.js": 9,
-  "room-stale.js": 40
+  "round-lead.js": 23,
+  "room-stale.js": 40,
+  "desk-reach.js": 230,
+  "pick-tap.js": 30
 }

@@ -5242,6 +5242,17 @@ const BBALL_ROUNDS=[
    ------------------------------------------------------------------------ */
 const SC_GAME={
   nightId:"sn1-2026-08-04-mia-ame",
+  /* A FIXTURE HAS TO BE ABLE TO SAY WHAT SPORT IT IS. BA_GAME, FO_GAME and
+     HO_GAME all carry sport/league; this one carried neither, so sportCfg()
+     could not identify the soccer practice card and fell through to the
+     basketball default — measured 24 Aug on ?sport=soccer: path
+     basketball/wnba, famNow "basketball", roundCountNow 4, roundWord
+     "quarters". On a soccer card. Two halves, not four quarters.
+     Only `sport` is stated, not `league`: FAMILY_LEAGUE maps soccer to mls
+     and that is the one soccer league SPORT_CFG has, whereas this sample
+     is a Leagues Cup tie — naming a league here would be writing something
+     down that is not true to save a lookup that already works. */
+  sport:"soccer",
   homeName:"Inter Miami CF", homeAbbr:"MIA", homeNick:"Miami", homeEmoji:"🩷",
   awayName:"Club América",   awayAbbr:"AME", awayNick:"América", awayEmoji:"🦅",
   /* A FALLBACK IS STILL SOMETHING A PERSON READS. This carried a note to
@@ -8903,6 +8914,26 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
   document.getElementById(map[k]).classList.add('active');
   document.getElementById('app').scrollTop=0; window.scrollTo(0,0);
   S.screen=k;
+  /* ============ THE PICK SHEET GETS THE WHOLE SCREEN ==================
+     Founder, on a 1850x1053 desktop, card 4 of 6: "theres no place for me
+     to put my point in and press next. I still gotta scroll all the way to
+     the bottom on the desktop."
+
+     The app is a 440px column (.phone) because it is a phone app. On a
+     desktop that renders 408px of roster in the middle of 1850px of black,
+     and the deck overflows the viewport for the same reason it overflows a
+     phone: content height is set by the COLUMN width, not the screen. So
+     the scrolling was self-inflicted — the space to fix it was already on
+     the screen, unused.
+
+     One screen, one exception: on a wide viewport the pick sheet is
+     allowed out of the phone column and lays the question, the exact-number
+     field and the roster side by side. go() is the single writer of
+     .active, so it is the honest place to say which screen is up — the
+     alternative, `body:has(#s-predict.active)`, silently does nothing on a
+     browser without :has(), and a TV browser is exactly where that bites.
+     The class is set on every screen change, so it can never desync. */
+  try{ document.body.classList.toggle('on-predict', k==='predict'); }catch(_){}
   /* THE RAIL HAS TO BE TOLD. Its shape depends on where the player is —
      full tiles while choosing, one line while a question is up — and
      nothing repainted it when that changed, so the collapse only ever
@@ -9828,6 +9859,146 @@ function predRidingPts(){
    card and yanking the page then would be worse than the bug. Only when
    the thing being asked is different from the thing that was being asked.
    ==================================================================== */
+/* ============ PIN BY MEASUREMENT, NOT BY THE SIZE OF THE SCREEN ======
+   The pinned action bar used to un-pin itself at `@media (min-height:860px)`,
+   on this premise: "On a tall screen the viewport floor is nowhere near the
+   card — pinning there strands the button in empty space."
+
+   That is true of a tall PHONE and false of every desktop, because this app
+   renders as a fixed ~430px column: the height of a twelve-name roster does
+   not shrink when the screen gets wider. The founder's desktop is 1053px
+   tall, so the rule fired, #pdBar dropped out of its shelf into the bottom
+   of a 1400px deck, and "scroll to the bottom to find Next" — the exact bug
+   the pinning was built on 22 Aug to kill — came back on the one surface
+   nobody had measured. Sixteen days, and it was fixed for phones only.
+
+   A viewport dimension cannot answer "does the deck overflow the screen".
+   Only a measurement can, so this measures.
+
+   ONE CANONICAL MEASUREMENT STATE, and it is always the same one: controls
+   in the flow, no reservation. That is what makes this stable rather than a
+   feedback loop — pinning changes the page height, so measuring in whatever
+   state the page happens to be in would let the answer chase itself. Ask
+   the single honest question in a fixed state ("with the way forward at the
+   bottom of the deck, does the deck fit?") and the answer depends only on
+   the content and the viewport. Nothing paints between the two states
+   because nothing yields, so there is no flicker.
+
+   AND THE YARDSTICK IS THE NAV, NOT THE PAGE HEIGHT. The first version of
+   this asked `scrollHeight > clientHeight` and it was a dead branch: it
+   answered "does not fit" on a 1850x1400 window showing a two-option card,
+   which is absurd. `.phone` is `min-height:100dvh` and `body.hasnav` adds
+   74px of padding OUTSIDE it, so this page is always at least a viewport
+   plus 74px tall and always "scrolls" — the test could never once return
+   true. Caught by running it at four viewports and noticing the number was
+   74 every single time.
+
+   The real question is where the bottom nav is. It is fixed and 74px tall,
+   so the floor of the readable screen is its top edge, and "reachable
+   without scrolling" means the last control clears that line while the page
+   sits at the top. That is what this measures now. */
+var _pdFitT=null;
+/* The top of the fixed bottom nav, in viewport coordinates — the real floor
+   of the screen. innerHeight when there is no nav. */
+function fitFloor(){
+  try{
+    var n=document.getElementById('botnav');
+    if(!n || getComputedStyle(n).display==='none' || getComputedStyle(n).visibility==='hidden') return window.innerHeight;
+    var r=n.getBoundingClientRect();
+    if(r.height<4) return window.innerHeight;
+    return r.top;
+  }catch(_){ return window.innerHeight; }
+}
+/* Would `el` — the LAST thing in the section's flow — sit above that floor
+   with the page scrolled to the top? Document coordinates on both sides:
+   the page at scrollTop 0 puts an element's document-y at its viewport-y. */
+function fitsAboveFloor(el, air){
+  try{
+    if(!el) return false;
+    var doc=document.scrollingElement||document.documentElement;
+    var r=el.getBoundingClientRect();
+    return (r.bottom + doc.scrollTop + (air||12)) <= fitFloor();
+  }catch(_){ return false; }
+}
+function pdFitPin(){
+  try{
+    var sp=document.getElementById('s-predict'); if(!sp) return;
+    if(!sp.classList.contains('active')) return;
+    var bar=document.getElementById('pdBar'); if(!bar) return;
+    /* ============ THE PROBE MUST NOT MOVE THE PAGE =====================
+       Measured on the shipped build, 393x852, card 3 of 6, scrolled down a
+       thirteen-name roster: scrollTop fell 1898 -> 1776 the instant
+       buildPred() ran, and a finger already resting on "Anastasiia Olairi
+       Kosu" came up over "Chloe Bibby". 122px is exactly the reservation
+       written two lines below (bar.offsetHeight + 88).
+
+       The cause is this function's own measurement. It clears
+       paddingBottom, forces a synchronous reflow to read the un-padded
+       layout, and then puts the padding BACK — but the browser has already
+       clamped scrollTop to the briefly-shorter document, and restoring the
+       padding does not restore the scroll. So every rebuild near the
+       bottom of a long roster yanks the page up by the height of its own
+       scratch space. This is the second half of the lost-tap bug: the
+       first half is a tap that produces no click, this half is a tap that
+       lands on somebody else's name.
+
+       Read the scroll, run the probe, put the scroll back. If the document
+       really did get shorter the browser re-clamps, which is the right
+       answer; if it did not, nothing moves. */
+    var _doc=document.scrollingElement||document.documentElement;
+    var _y0=_doc.scrollTop;
+    sp.classList.add('fitpin');
+    sp.style.paddingBottom='';
+    void sp.offsetHeight;                       /* force the reflow, then read */
+    /* #predFoot is the last element in this section's flow, and #pdBar is
+       immediately above it once un-pinned. If the foot clears the nav, so
+       does every control. */
+    if(!fitsAboveFloor(document.getElementById('predFoot'))){
+      /* It does not fit. Pin, and reserve the bar's REAL measured height so
+         it never lands on the last option — the constant that used to be
+         guessed here was wrong every time the lock button appeared or left. */
+      sp.classList.remove('fitpin');
+      sp.style.paddingBottom = (bar.offsetHeight + 88) + 'px';
+    }
+    if(_doc.scrollTop !== _y0) _doc.scrollTop = _y0;
+  }catch(_){}
+}
+/* A window that is resized, rotated, or has its browser chrome appear is a
+   different answer to the same question. Debounced, because a drag-resize
+   fires this a hundred times and each one is two forced reflows. */
+try{ window.addEventListener('resize', function(){
+  try{ clearTimeout(_pdFitT); }catch(_){}
+  _pdFitT=setTimeout(function(){ try{ pdFitPin(); liveFitPin(); }catch(_){} }, 120);
+}); }catch(_){}
+
+/* The live question's confirm button had the same wrong proxy in the other
+   dimension — `@media (min-width:560px){#nextBtn{position:static}}`, on the
+   premise "on a desktop the page is short enough that pinning is noise."
+   Measured on 24 Aug: on a 1366x768 laptop, the commonest laptop there is,
+   the reveal sits in 756px of scroll and the button lands at y=808 on a
+   625px viewport. The reveal copy says "nothing's final until you hit the
+   button below" and the button was below the fold. Same question, same
+   answer: measure it. */
+function liveFitPin(){
+  try{
+    var sg=document.getElementById('s-gametime'); if(!sg) return;
+    if(!sg.classList.contains('active')) return;
+    var nb=document.getElementById('nextBtn'); if(!nb) return;
+    var gq=document.getElementById('gtQuestion'); if(!gq) return;
+    if(getComputedStyle(nb).display==='none'){ sg.classList.remove('fitpin'); return; }
+    sg.classList.add('fitpin');
+    gq.style.paddingBottom='';
+    void sg.offsetHeight;
+    /* The lock note renders UNDER the button and is the sentence that warns
+       you the answer is final — so it, not the button, is the bottom of this
+       flow. It is display:none on the reveal path, where the button is last. */
+    var ln=document.getElementById('lockNote');
+    var lastEl = (ln && getComputedStyle(ln).display!=='none') ? ln : nb;
+    if(fitsAboveFloor(lastEl)) return;
+    sg.classList.remove('fitpin');
+    gq.style.paddingBottom = (nb.offsetHeight + 96) + 'px';
+  }catch(_){}
+}
 var PD_SHOWN=-1;
 function predFocus(){
   try{
@@ -9976,6 +10147,30 @@ function buildPred(){
   if(PD.i>=L.length) PD.i=L.length-1;
   if(PD.i<0) PD.i=0;
   const p=L[PD.i]; if(!p){ c.innerHTML=''; return; }
+  /* ============ REDRAWING THIS CARD MUST NOT MOVE THE PAGE ============
+     Traced at 393x852 on the "MOST ASSISTS" card, scrolled down a
+     thirteen-name roster with a finger resting on a name: scrollTop fell
+     53px the moment buildPred() ran, and the press came up over the name
+     BELOW the one it went down on.
+
+     The dip is transient and self-inflicted. Between `c.innerHTML=` and
+     the end of this function the document is briefly ~53px shorter, and
+     pdFitPin() forces a synchronous layout inside that window (it reads
+     offsetHeight, by design). The browser clamps scrollTop to the shorter
+     document there and then; the height comes back a few statements later
+     and the scroll does not.
+
+     So the whole rebuild is made scroll-neutral: read the position at the
+     top, put it back at the bottom. It is a no-op whenever nothing
+     shrank. The deliberate scrolls — predFocus() on a new card,
+     predFocusDeck() from predJump() — all run AFTER this returns (the
+     first on a requestAnimationFrame, the second from its caller), so
+     this cannot fight them.
+
+     PD_KEEPY is the flag that lets a caller that MEANT to move the page
+     opt out; nothing does yet, and it is here so that the next one has to
+     say so out loud rather than deleting this. */
+  const _bpY0 = (function(){ try{ var d=document.scrollingElement||document.documentElement; return d.scrollTop; }catch(_){ return null; } })();
   const worth=predWorthOf(p);
   const picked=S.predChoices[p.id]||'';
   const doneN=preds.filter(x=>S.predChoices[x.id]).length;
@@ -9999,7 +10194,12 @@ function buildPred(){
        name may be clipped, the flag never is.
        And it is a real disabled control, because a pick you are told not
        to spend and can still spend is just a trap. */
-    return '<button type="button" class="pdopt'+(on?' on':'')+(out?' isout':'')+'" data-pd="'+esc(String(o))+'"'
+    /* data-pdq + data-pd IS THE OPTION'S IDENTITY, and it is what makes a
+       tap survive a rebuild. See PD_TAP below: the node is thrown away on
+       every buildPred(), so nothing may be remembered ABOUT the node —
+       only the question it belongs to and the value it carries, which are
+       identical on the replacement. */
+    return '<button type="button" class="pdopt'+(on?' on':'')+(out?' isout':'')+'" data-pdq="'+esc(String(p.id))+'" data-pd="'+esc(String(o))+'"'
       +(out?' aria-disabled="true" title="Ruled out tonight — this pick cannot score"':'')+'>'
       +'<span class="pdradio"></span><span class="pdname">'+esc(String(o))+'</span>'
       +(out?'<span class="pdout">OUT</span>':'')+'</button>';
@@ -10051,8 +10251,18 @@ function buildPred(){
       up off-screen above you. Two columns past six options puts a whole
       roster on one phone screen, and `opts` arrives already grouped by team
       when the question is a player pick. */
-   +  opts
-   +  bonus + rank
+   /* ONE WRAPPER, SO THE ROSTER IS ONE THING. A grouped pick renders as
+      `.pdteam` + `.pdopts` per team — several siblings, not one element —
+      so there was nothing for a two-column desktop layout to put in a
+      column. This box is `display:contents` everywhere except that layout,
+      which means on a phone it is not in the box tree at all and the flow
+      is byte-for-byte what it was. */
+   +  '<div class="pdlist">' + opts + '</div>'
+   /* Same trick, other column. On the wide deck this is the block that
+      travels with you down a twenty-nine-name roster carrying the +50
+      field; everywhere else it is `display:contents` and the bonus and the
+      rank sit exactly where they have always sat, after the options. */
+   +  '<div class="pdside">' + bonus + rank + '</div>'
    +'</div>'
    /* ============ THE WAY FORWARD IS NOT AT THE BOTTOM OF A ROSTER =====
       From the demo, 22 Aug: "When someone was putting in their picks they
@@ -10149,27 +10359,26 @@ function buildPred(){
        a player could reasonably not know there was one. Reserve its real
        measured height rather than a guessed constant, because the bar
        changes height depending on whether that button is there. */
-    try{
-      var sp=document.getElementById('s-predict');
-      if(sp) sp.style.paddingBottom = (bar.offsetHeight + 88) + 'px';
-    }catch(_){}
+    /* Reservation AND pinning are one decision now, and it is measured
+       rather than guessed from the viewport. See pdFitPin(). */
+    pdFitPin();
   }
+  /* THE HEADER'S REAL HEIGHT, to the wide deck's side column — see
+     --pdstickh. "Winning team" is one line and "Who grabs the most
+     rebounds?" is three, so this is different on every card, and a
+     stylesheet cannot know it. Harmless on every other viewport: nothing
+     reads the property there. */
+  try{ var _st=c.querySelector('.pdstick');
+       if(_st) c.style.setProperty('--pdstickh', Math.round(_st.getBoundingClientRect().height)+'px'); }catch(_){}
 
   /* VOICE READS THIS CARD TOO. Last thing buildPred does, so everything
      the reader looks at is already painted. Guarded and wrapped: with
      voice off this returns immediately. */
   try{ VX.mount(); VX.askPick(); }catch(_){}
-  Array.prototype.forEach.call(c.querySelectorAll('.pdopt'), function(b){
-    b.onclick=function(){
-      var nm=b.getAttribute('data-pd');
-      if(b.classList.contains('isout')){
-        try{ toast(nm.split(' ')[0]+' is ruled out tonight — she cannot score you anything.'); }catch(_){}
-        try{ b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); }catch(_){}
-        return;
-      }
-      predPick(p.id, nm);
-    };
-  });
+  /* THE OPTION BUTTONS DO NOT GET A HANDLER HERE ANY MORE. They used to —
+     one closure per node, re-bound on every render — and that is the bug
+     PD_TAP exists to kill. The handler lives on `document`, which this
+     function cannot destroy. See PD_TAP. */
   Array.prototype.forEach.call(c.querySelectorAll('[data-pdgo]'), function(b){
     b.onclick=function(){ predGo(Number(b.getAttribute('data-pdgo'))); };
   });
@@ -10219,9 +10428,161 @@ function buildPred(){
     };
   }
   validatePred();
+  /* See _bpY0. Restore last, once every height this function changes has
+     settled. If the page genuinely got shorter the browser re-clamps,
+     which is the correct answer. */
+  try{
+    if(_bpY0!=null && !window.PD_KEEPY){
+      var _d=document.scrollingElement||document.documentElement;
+      if(_d.scrollTop!==_bpY0) _d.scrollTop=_bpY0;
+    }
+  }catch(_){}
 }
 function validatePred(){const done=preds.filter(p=>S.predChoices[p.id]).length;
   document.getElementById('predBtn').disabled=done<preds.length;}
+
+/* ============ PD_TAP — A PICK MUST SURVIVE A REBUILD ==================
+   Live bug, GN of 24 Aug, Firefox, 393x852. A player taps a name, no radio
+   fills, the deck does not move, and NOTHING TELLS THEM. They carry a blank
+   into lockPredictions() on a card worth 600 of the night's 1,000 points.
+   Tapping the same name a second time works, so the people who tap twice
+   never report it and the people who move on lose the points and read it
+   as their own mistake.
+
+   Measured on the shipped build, same tap point, only the press duration
+   varied: instant 7%, a 120ms thumb tap 43%, a 300ms deliberate tap 57%.
+   The loss window is exactly how long the finger is on the glass, which is
+   why every automated click understated it about six-fold.
+
+   THE MECHANISM. buildPred() writes c.innerHTML, destroying and recreating
+   every .pdopt on every call, and the handler used to be a direct property
+   on each node. Three rebuilds land in the first-tap window — startPredict
+   at +15ms, loadInactives at +316ms behind an ESPN fetch, and
+   repaintAfterHydrate at +1234ms behind a Firestore getDoc. If the subtree
+   is swapped BETWEEN mousedown and mouseup, the two targets share no
+   common ancestor and Firefox dispatches NO CLICK EVENT AT ALL.
+
+   Traced with listeners on document at capture AND a delegated listener on
+   #predCard: pointerdown, mousedown, pointerup and mouseup all arrive, and
+   click never does. So "just delegate the click to #predCard" does not
+   catch a single one of these — the click is not late, it does not exist.
+
+   THE FIX IS SLATE_TAP's, 3,000 lines up, which solved this exact class
+   when a re-rendered tile ate taps on the slate. NEVER TRUST THE NODE.
+   Capture a STABLE IDENTITY at pointerdown — question id plus option
+   value, both attributes — re-resolve the element at pointerup, and
+   compare the attribute VALUES. A rebuild that swaps the node is harmless,
+   because the replacement carries the same identity.
+
+   The 12px guard stops a scroll down a long roster being read as a choice.
+   The click listener is kept for the keyboard, for VoiceOver, and for the
+   synthetic .click() several suites dispatch — none of those produce
+   pointer events. PD_TAP_LAST is what stops the real-pointer path firing
+   twice, because a genuine tap produces pointerup AND a click behind it.
+
+   Mismatch is a REFUSAL, not a guess. If layout above the sheet moves
+   under a resting finger and mouseup lands on a different player, the
+   identities differ and nothing is picked — a lost pick is bad, a pick
+   silently spent on the wrong player is worse.                          */
+var PD_TAP={x:0,y:0,q:null,v:null};
+var PD_TAP_LAST={q:null,v:null,t:0};
+/* IDENTITY, NOT ELEMENT, and `.pdopt` rather than `#predCard .pdopt` on
+   purpose: by the time pointerup lands the node under the pointer may
+   already have been DETACHED by a rebuild, and a detached node is not a
+   descendant of #predCard, so the narrower selector would return null on
+   exactly the taps this exists to save. The identity on a detached node is
+   still the identity the player pressed. */
+function pdIdentFrom(e){
+  try{
+    var b=(e && e.target && e.target.closest) ? e.target.closest('.pdopt') : null;
+    if(!b) return null;
+    var v=b.getAttribute('data-pd'), q=b.getAttribute('data-pdq');
+    /* BOTH HALVES OR NOTHING. A .pdopt with no question on it is not an
+       option this handler owns, and predPick('', name) would write a pick
+       under an empty key that no card ever reads back. */
+    if(!v || !q) return null;
+    return {q:q, v:v};
+  }catch(_){ return null; }
+}
+/* The LIVE button carrying that identity, looked up fresh. Never a node
+   held from an earlier frame. */
+function pdOptByIdent(q,v){
+  try{ return document.querySelector('#predCard .pdopt[data-pdq="'+CSS.escape(q)+'"][data-pd="'+CSS.escape(v)+'"]'); }
+  catch(_){ return null; }
+}
+function activatePredOption(q,nm){
+  try{
+    if(!nm) return;
+    var b=pdOptByIdent(q,nm);
+    /* ONE TAP IS ONE PICK. pointerup fires, then the browser fires the
+       click behind it on the very same gesture. Without this the deck
+       would run predPick twice and the OUT toast would speak twice. */
+    var now=Date.now();
+    if(PD_TAP_LAST.q===q && PD_TAP_LAST.v===nm && (now-PD_TAP_LAST.t)<500) return;
+    PD_TAP_LAST={q:q,v:nm,t:now};
+    /* RULED OUT IS ASKED OF THE DATA, not of the button. The .isout class
+       is a rendering of INACTIVE, and the button may have been replaced —
+       or be gone entirely if the deck moved on — by the time we get here.
+       The node is used only for the shake, which is decoration. */
+    var out=false;
+    try{ out = (typeof INACTIVE!=='undefined' && INACTIVE.has(String(nm))) || !!(b && b.classList.contains('isout')); }catch(_){}
+    if(out){
+      try{ toast(nm.split(' ')[0]+' is ruled out tonight — she cannot score you anything.'); }catch(_){}
+      try{ if(b){ b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); } }catch(_){}
+      return;
+    }
+    predPick(q, nm);
+  }catch(_){}
+}
+try{
+  document.addEventListener('pointerdown', function(e){
+    var id=pdIdentFrom(e);
+    PD_TAP = id ? {x:e.clientX, y:e.clientY, q:id.q, v:id.v} : {x:0,y:0,q:null,v:null};
+  }, {passive:true});
+
+  document.addEventListener('pointerup', function(e){
+    var id=pdIdentFrom(e);
+    var t=PD_TAP; PD_TAP={x:0,y:0,q:null,v:null};
+    if(!t.v) return;
+    var moved=Math.abs(e.clientX-t.x)+Math.abs(e.clientY-t.y);
+    if(moved>12) return;                           // the finger travelled: that was a scroll
+    if(id){
+      /* Something is under the finger. If it is a DIFFERENT option, refuse:
+         two names are in play and guessing between them is how a card gets
+         silently spent on the wrong player. */
+      if(id.q!==t.q || id.v!==t.v) return;
+      activatePredOption(t.q, t.v);
+      return;
+    }
+    /* ============ THE FINGER DID NOT MOVE. THE PAGE DID. ==============
+       Third cause, traced on the fixed build and it is the one the other
+       two hide. repaintAfterHydrate() runs applySport() and paintSlate()
+       — painters for the matchup and the room list ABOVE the sheet — and
+       #predCard was measured sliding 69 -> 121, exactly one .pdopt row,
+       with scrollTop unchanged at 74. The press went down on "Golden State
+       Valkyries" and came up on `.pdworth`, the stake line. Not on another
+       option: on no option at all.
+
+       Comparing what is under the pointer cannot save that tap, because by
+       then there is nothing there to compare. But the pointer did not move
+       a pixel, so there is no ambiguity about what the player aimed at —
+       only about what the app slid underneath them. Honour the identity
+       they pressed, provided it is still on the sheet. If the deck has
+       genuinely moved to another card the identity will not resolve and
+       this refuses, which is correct. */
+    if(pdOptByIdent(t.q, t.v)) activatePredOption(t.q, t.v);
+  }, false);
+
+  /* Keyboard (Enter/Space on a focused button), assistive tech, and any
+     synthetic click. None of these emit pointerdown, so PD_TAP is empty
+     and there is nothing to compare — the node under the click IS the
+     node the player chose. A real tap also lands here behind its own
+     pointerup, and PD_TAP_LAST is what keeps that one gesture one pick. */
+  document.addEventListener('click', function(e){
+    var id=pdIdentFrom(e); if(!id) return;
+    activatePredOption(id.q, id.v);
+  }, false);
+}catch(_){}
 /* ---------------- WHO'S OUT TONIGHT (Game #3 ask) -------------------
    "In the opening questions we should have out-to-the-minute updates when
    players are OUT cause there was no way to change my picks."
@@ -14052,6 +14413,10 @@ function loadQuestion(){
   document.getElementById('revealBox').innerHTML='';
   document.getElementById('nextBtn').style.display='none';
   try{ var _gq=document.getElementById('gtQuestion'); if(_gq) _gq.style.paddingBottom=''; }catch(_){}
+  /* The button is gone, so the un-pinned state it may have earned goes with
+     it — a stale `fitpin` on the section would decide the NEXT question's
+     layout from the last question's measurement. */
+  try{ var _sg=document.getElementById('s-gametime'); if(_sg) _sg.classList.remove('fitpin'); }catch(_){}
   hideLockNote();
   document.getElementById('helpNote').textContent='';
   const half=lifelineKey(S.qi);
@@ -14138,6 +14503,9 @@ function showNext(){
   ln.textContent = last
     ? "⚠️ Once you lock it in, your answers are final — they go straight to the host."
     : "⚠️ Once you lock it in, you can't change this answer.";
+  /* The lock note is the sentence that says "the button below". Decide, by
+     measurement, whether "below" is on this screen. See liveFitPin. */
+  liveFitPin();
 }
 function hideLockNote(){ document.getElementById('lockNote').style.display='none'; }
 function freezeOpts(){
@@ -14287,10 +14655,8 @@ function answer(choice,btn){
   var _nb=document.getElementById('nextBtn');
   _nb.style.display='block';
   _nb.textContent = (S.ni<nq()-1)?'Next question →':'See the leaderboard →';
-  try{
-    var gq=document.getElementById('gtQuestion');
-    if(gq) gq.style.paddingBottom = (_nb.offsetHeight + 96) + 'px';
-  }catch(_){}
+  /* Pinning and the reservation are one measured decision — see liveFitPin. */
+  liveFitPin();
   /* AND IT MUST NOT LAND ON THE ANSWERS. The reveal copy invites exactly
      this: "Changed your mind? Tap another one." A confirm button that
      appears on top of the options it is asking you to reconsider is worse
@@ -18238,6 +18604,72 @@ function ciPick(q,v){
   try{ if(window.SB&&SB.callItPick) SB.callItPick(q.qid,v); }catch(e){}
   setTimeout(function(){ try{ renderCiCard(q); }catch(_){} }, 180);
 }
+/* ============ CI_TAP — THE SAME BUG, ON A TWENTY-SECOND CLOCK =========
+   Reproduced on the shipped build at 393x852, Firefox AND Chromium: press
+   a Caught It option, let renderCiCard() land during the press, release —
+   and nothing is answered. ciShow() writes inner.innerHTML, the handler
+   was a direct property on each button, and a subtree swapped between
+   mousedown and mouseup produces no click event at all.
+
+   The card repaints on every listener update and once more when the lock
+   timer fires, so the window is smaller than the pick sheet's — but the
+   question is twenty seconds long and there is no second chance, which
+   makes each lost tap more expensive rather than less.
+
+   Identity is qid + option value. Same shape as PD_TAP; read that comment
+   for why the node is never trusted. The extra guards here are the ones
+   Caught It already had: the question must still be the active one, it
+   must not already be answered, and a button that has gone `disabled`
+   under the finger is a refusal. ciPick() is itself idempotent on
+   PCI.picked, so this is belt and braces.                              */
+var CI_TAP={x:0,y:0,q:null,v:null};
+var CI_TAP_LAST={q:null,v:null,t:0};
+function ciIdentFrom(e){
+  try{
+    var b=(e && e.target && e.target.closest) ? e.target.closest('.ciopt') : null;
+    if(!b) return null;
+    var v=b.getAttribute('data-civ'), q=b.getAttribute('data-ciq');
+    if(v==null || !q) return null;
+    return {q:q, v:v};
+  }catch(_){ return null; }
+}
+function activateCiOption(qid, v){
+  try{
+    if(!qid || v==null) return;
+    var now=Date.now();
+    if(CI_TAP_LAST.q===qid && CI_TAP_LAST.v===v && (now-CI_TAP_LAST.t)<500) return;
+    var q=null; try{ q=PCI.active; }catch(_){}
+    if(!q || String(q.qid)!==String(qid)) return;       // that card has moved on
+    if(PCI.muted) return;
+    if(PCI.picked[qid]!=null) return;                    // already answered
+    var b=null;
+    try{ b=document.querySelector('#ciCard .ciopt[data-ciq="'+CSS.escape(String(qid))+'"][data-civ="'+CSS.escape(String(v))+'"]'); }catch(_){}
+    if(b && b.disabled) return;                          // locked under the finger
+    CI_TAP_LAST={q:qid,v:v,t:now};
+    ciPick(q, v);
+  }catch(_){}
+}
+try{
+  document.addEventListener('pointerdown', function(e){
+    var id=ciIdentFrom(e);
+    CI_TAP = id ? {x:e.clientX, y:e.clientY, q:id.q, v:id.v} : {x:0,y:0,q:null,v:null};
+  }, {passive:true});
+
+  document.addEventListener('pointerup', function(e){
+    var id=ciIdentFrom(e);
+    var t=CI_TAP; CI_TAP={x:0,y:0,q:null,v:null};
+    if(!id || t.v==null) return;
+    if(id.q!==t.q || id.v!==t.v) return;
+    var moved=Math.abs(e.clientX-t.x)+Math.abs(e.clientY-t.y);
+    if(moved>12) return;
+    activateCiOption(t.q, t.v);
+  }, false);
+
+  document.addEventListener('click', function(e){
+    var id=ciIdentFrom(e); if(!id) return;
+    activateCiOption(id.q, id.v);
+  }, false);
+}catch(_){}
 /* ---- WHERE CAUGHT IT IS ALLOWED TO EXIST -------------------------------
    The rule, learned the hard way from a screenshot with two live questions
    stacked on one screen: Caught It NEVER shares space with a quarter
@@ -18603,7 +19035,11 @@ function renderCiCard(q){
            '<button class="cimute" data-cihide="1">hide this</button></div>');
   } else {
     var opts=(q.options||[]).map(function(o){
-      return '<button class="ciopt" '+(locked?'disabled':'')+' data-civ="'+esc(String(o.v))+'">'+esc(o.k)+'</button>';
+      /* data-ciq carries the question, exactly as data-pdq does on the
+         pick sheet, and for the same reason: ciShow() writes innerHTML, so
+         these buttons are destroyed and rebuilt under the player's finger.
+         See CI_TAP. */
+      return '<button class="ciopt" '+(locked?'disabled':'')+' data-ciq="'+esc(String(q.qid))+'" data-civ="'+esc(String(o.v))+'">'+esc(o.k)+'</button>';
     }).join('');
     var status = locked ? 'Time — the answer lands in a moment'
                         : 'Tap one. You’ve got a few seconds.';
@@ -18615,9 +19051,10 @@ function renderCiCard(q){
            '<div class="cifoot"><button class="cimute" data-cimute="1">mute Caught It</button></div>', !locked);
   }
   var card=document.getElementById('ciCard');
-  Array.prototype.forEach.call(card.querySelectorAll('.ciopt'), function(b){
-    b.onclick=function(){ if(!locked) ciPick(q, b.getAttribute('data-civ')); };
-  });
+  /* The option buttons get no handler here. One closure per node, re-bound
+     on every repaint, is the bug CI_TAP exists to kill — reproduced on the
+     shipped build: press an option, let a repaint land, release, and the
+     answer is silently lost on a twenty-second question. */
   /* SAY IT OUT LOUD. This card arrives unasked, lives for seconds, and the
      player it is aimed at is looking at a television. Announced once per
      question — CI_SPOKEN guards a repaint, which happens every tick as the
@@ -21238,7 +21675,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-24-roomstale.220';
+const STATS_BUILD='2026-08-24-deskreach.221';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -22292,17 +22729,99 @@ var INNINGS_PER_ROUND = { baseball: 3 };
    HO_PREDS, SC_PREDS below), so `sportCfg().box` — the table this bonus
    reads player stats out of — is deliberately empty for them. Gate on
    that fact directly rather than naming a sport, so the day a sport's
-   picks DO become stat-shaped this turns back on by itself. */
+   picks DO become stat-shaped this turns back on by itself.
+
+   ============ IT MUST ASK ABOUT THIS CARD, NOT ABOUT A SPORT (24 Aug) ==
+   The first version of this gate (build .219) asked "does sportCfg().box
+   carry pts/reb/ast/stl/blk?" and nothing else. That is a question about
+   whichever league sportCfg() happened to resolve, and sportCfg() can
+   resolve a DIFFERENT SPORT than the card on the screen — measured, on the
+   shipped build: arrive on the WNBA room link, tap the Baseball chip in
+   the practice sport picker, and you get BA_PREDS on the page with
+   basketball/wnba as the config, because setSport() moves the card and the
+   URL's ?game= still names the basketball room. box.pts is 'PTS', the gate
+   said "supported", and the fabricated claim it was written to kill came
+   straight back: "YOUR CARD, LIVE · 0 of 5 leading", "+0 pts from leading
+   at the quarters", on a baseball card.
+
+   So the gate asks the question the mechanic actually needs answered.
+   Downstream, every consumer of this does exactly `KEY[p.id]` against that
+   box — stYourCard()'s live race, qleadSnap(), checkQuarterLeadBonus().
+   If not one of the player's own picks maps into the box, `winning` cannot
+   move off 0 and the bonus cannot pay anything but 0, no matter what
+   sportCfg() thinks the league is. Ask THAT: can this box grade at least
+   one pick on THIS card? It fails closed on every disagreement between the
+   card and the config, in both directions, including ones nobody has
+   thought of yet — which is the property the sport-named version never
+   had. `winner` is excluded because the mechanic excludes it too. */
 function statPicksSupported(){
-  try{ var b=sportCfg().box; return !!(b && (b.pts||b.reb||b.ast||b.stl||b.blk)); }catch(_){ return false; }
+  try{
+    var b=null; try{ b=sportCfg().box; }catch(_){ return false; }
+    if(!b) return false;
+    var ps=null; try{ ps=preds; }catch(_){ return false; }
+    if(!ps || !ps.length) return false;
+    for(var i=0;i<ps.length;i++){
+      var id=ps[i] && ps[i].id;
+      if(id && id!=='winner' && b[id]) return true;
+    }
+    return false;
+  }catch(_){ return false; }
+}
+/* Which FAMILY does this game object describe — basketball, baseball,
+   football, hockey, soccer? Same resolution order sportCfg() uses below
+   (league first, because SPORT_CFG is keyed by league; family only as a
+   fallback), and deliberately '' rather than a guess when it cannot tell.
+   Pulled out as its own reader so the guard below and the lookup below it
+   can never answer this differently. */
+function cfgFamilyOf(g){
+  try{
+    var k=String((g&&g.league)||'').toLowerCase().trim();
+    if(SPORT_CFG[k]) return String(SPORT_CFG[k].family||'');
+    var f=String((g&&g.sport)||'').toLowerCase().trim();
+    if(SPORT_CFG[f]) return String(SPORT_CFG[f].family||'');
+    if(FAMILY_LEAGUE[f]) return String((SPORT_CFG[FAMILY_LEAGUE[f]]||{}).family||f);
+    return '';
+  }catch(_){ return ''; }
 }
 function sportCfg(){
   var g=null; try{ g=(typeof GAME!=='undefined'&&GAME)||null; }catch(_){}
-  /* Before a room is bound — a fresh arrival on ?game= — the marquee already
-     knows the night. Reading it here stops the first few polls going to the
-     wrong league and burning the backoff on failures that were never real. */
-  if(!g || !g.espnEvent){ try{ var _lk=slateGame(slateParam()); if(_lk && _lk.espnEvent) g=_lk; }catch(_){} }
-  if(!g || !g.espnEvent){ try{ var h=heroGame(); if(h && h.espnEvent) g=h; }catch(_){} }
+  /* ============ NEVER ANSWER WITH ANOTHER SPORT'S GAME (24 Aug) ========
+     The two fallbacks below exist for one narrow reason, stated when they
+     were written: before a room is bound — a fresh arrival on ?game= — the
+     marquee already knows the night, and reading it here stops the first
+     few polls going to the wrong league and burning the backoff on
+     failures that were never real. That is a job about the LEAGUE.
+
+     But the test for "is GAME good enough?" is `!g.espnEvent`, and an
+     event id is a FEED TARGET, not an identity. Every sport's practice
+     fixture says exactly which sport it is — BA_GAME is `sport:"baseball",
+     league:"mlb"` — and only basketball's carries an espnEvent (BB_GAME
+     pins a real 19 Aug WNBA game). So on any pick'em sport that is not
+     bound to a room yet, this function threw away a fixture that KNEW it
+     was baseball and adopted a game from a different sport entirely,
+     because that one had an event id.
+
+     Measured on the shipped build, from a real tap: open the WNBA room
+     link, press Baseball in the practice sport picker. setSport() moves
+     GAME/preds to baseball and rewrites ?sport=, and leaves ?game= naming
+     the basketball room — so slateGame(slateParam()) handed a WNBA game
+     back and the whole page went basketball underneath a baseball card.
+     famNow() said basketball, roundCountNow() said 4, roundWord() said
+     "quarters", the ESPN path was basketball/wnba, and the Stats tab
+     printed "2 of 4 quarters settled so far" about a baseball game.
+
+     The fallbacks stay — they sharpen the league inside a sport, which is
+     what they were for. They may no longer CHANGE the sport. If the game
+     in hand already says what family it is, a candidate from another
+     family is not a better answer, it is a different question. */
+  var own=cfgFamilyOf(g);
+  var take=function(c){
+    if(!c || !c.espnEvent) return false;
+    var f=cfgFamilyOf(c);
+    return !own || !f || f===own;
+  };
+  if(!g || !g.espnEvent){ try{ var _lk=slateGame(slateParam()); if(take(_lk)) g=_lk; }catch(_){} }
+  if(!g || !g.espnEvent){ try{ var h=heroGame(); if(take(h)) g=h; }catch(_){} }
   var k=''; try{ k=String((g&&g.league)||'').toLowerCase().trim(); }catch(_){}
   if(!SPORT_CFG[k]){
     var fam=''; try{ fam=String((g&&g.sport)||'').toLowerCase().trim(); }catch(_){}
@@ -27085,6 +27604,12 @@ body.hasgamebar .screen.active{padding-bottom:132px}
 .pdteam{font-size:12px;letter-spacing:.14em;font-weight:900;color:var(--teal);
   margin:14px 0 8px;display:flex;align-items:baseline;gap:7px}
 .pdteam:first-child{margin-top:0}
+/* This rule never matched before the .pdlist wrapper existed — .pdstick was
+   always the card's first child — and the wrapper would have silently
+   switched it on, moving every phone's roster up 14px as a side effect of a
+   desktop change. It stays off where nothing asked for it, and the wide deck
+   turns it back on deliberately, where the roster IS the top of its column. */
+.pdlist>.pdteam:first-child{margin-top:14px}
 .pdteam i{font-style:normal;font-size:12px;letter-spacing:.04em;color:var(--dim);font-weight:700}
 .pdopt.isout{opacity:.5;cursor:not-allowed;border-style:dashed;border-color:#3a2733;background:#12131c}
 .pdopt.isout .pdname{color:#7e8091;text-decoration:line-through;text-decoration-color:rgba(255,107,107,.55);text-decoration-thickness:1px}
@@ -27093,6 +27618,12 @@ body.hasgamebar .screen.active{padding-bottom:132px}
 .pdopt.shake{animation:pdShake .32s}
 @keyframes pdShake{10%,90%{transform:translateX(-2px)}30%,70%{transform:translateX(3px)}50%{transform:translateX(-3px)}}
 @media (prefers-reduced-motion:reduce){ .pdopt.shake{animation:none} }
+/* NOT IN THE BOX TREE UNLESS SOMETHING NEEDS IT. `display:contents` means
+   the roster wrapper generates no box at all, so on every viewport that is
+   not the wide two-column deck the .pdteam headers and .pdopts grids lay
+   out as direct children of .pdcard exactly as they did before it existed.
+   A wrapper that changes a phone is not a wrapper, it is a redesign. */
+.pdlist,.pdside{display:contents}
 .pdopts{display:flex;flex-direction:column;gap:9px}
 /* minmax(0,1fr), not 1fr. A grid track's default min-width is auto, which
    means the widest name in the column — "Sophie Cunningham" — sets the
@@ -27178,10 +27709,13 @@ body.hasgamebar .screen.active{padding-bottom:132px}
    at the same time. */
 #nextBtn{position:fixed;left:14px;right:14px;bottom:calc(76px + env(safe-area-inset-bottom,0px));
   z-index:8600;max-width:430px;margin:0 auto;box-shadow:0 -6px 24px rgba(0,0,0,.45)}
-@media (min-width:560px){
-  /* On a desktop the page is short enough that pinning is noise. */
-  #nextBtn{position:static;margin-top:10px;box-shadow:none;left:auto;right:auto}
-}
+/* WAS: `@media (min-width:560px){#nextBtn{position:static}}`, on the premise
+   "on a desktop the page is short enough that pinning is noise." A width
+   cannot answer a question about height. Measured 24 Aug on a 1366x768
+   laptop — the commonest laptop there is, and comfortably past 560px — the
+   reveal is 756px of scroll and the button lands at y=808 on a 625px
+   viewport. It is now a measured class; see liveFitPin(). */
+#s-gametime.fitpin #nextBtn{position:static;margin-top:10px;box-shadow:none;left:auto;right:auto}
 #pdBar .pdnav{margin-top:0;gap:8px}
 /* Trimmed until it fits the budget on a 667-tall phone. The lock button
    was 18px of padding designed for a card, not for a pinned bar that has
@@ -27194,15 +27728,92 @@ body.hasgamebar .screen.active{padding-bottom:132px}
   font-size:12px;color:var(--dim);font-weight:700;letter-spacing:.04em}
 #pdBar .pdsofar i{font-style:normal;color:var(--muted);font-weight:800}
 #s-predict.active{padding-bottom:250px}
-/* On a tall screen the viewport floor is nowhere near the card — pinning
-   there strands the button in empty space. Above this height it simply
-   follows the deck, which is where the eye already is. */
-@media (min-height:860px){
-  #pdBar{position:static;padding:14px 0 0;background:none;border-top:none;backdrop-filter:none}
-  /* 40px was enough when there was no bottom nav. There is now, it is
-     fixed, and it is ~74px tall — so on a tall phone the lock button
-     ended up underneath it. Clear the nav, then some. */
-  #s-predict.active{padding-bottom:120px}
+/* WAS: `@media (min-height:860px)`, on the premise "on a tall screen the
+   viewport floor is nowhere near the card — pinning there strands the
+   button in empty space." True of a tall PHONE. False of every desktop:
+   this app is a fixed 430px column, so the height of a twelve-name roster
+   is the same whatever the screen is doing, and the founder's 1053px-tall
+   desktop tripped the rule with 1,058px of scroll still under it. The bar
+   left its shelf and Next went back to the bottom of the roster — the exact
+   bug the pinning was built to kill, re-created on the surface nobody had
+   measured.
+
+   The condition is now "does the deck actually overflow", which is a
+   measurement, not a dimension. See pdFitPin(). */
+#s-predict.fitpin #pdBar{position:static;padding:14px 0 0;background:none;border-top:none;backdrop-filter:none}
+/* Nothing is pinned in this state, so the only clearance needed is the
+   fixed 74px nav — body.hasnav already reserves that, and this is the air
+   above it. It is deliberately small: it is measured INSIDE the fit test,
+   so every pixel here is a pixel that can push the deck back into a scroll. */
+#s-predict.fitpin{padding-bottom:24px}
+
+/* ============ THE PICK SHEET, ON A SCREEN THAT HAS ROOM ==============
+   Founder, on a 1850x1053 desktop: "theres no place for me to put my point
+   in and press next. I still gotta scroll all the way to the bottom on the
+   desktop. Gotta be better."
+
+   Pinning the controls answers the second sentence. It does not answer the
+   first, and it does not answer WHY there was a scroll: 408px of roster was
+   being rendered in the middle of 1850px of black, so a card that would fit
+   twice over on this screen overflowed it. Most of that scrolling was
+   self-inflicted, and pinning is a way of living with it rather than a fix.
+
+   So on a wide viewport the deck gets the screen. The question, the stake
+   and the +50 exact-number field sit in one column; the roster sits beside
+   them in the other. The number entry is now four inches from the question
+   that offers the bonus instead of below a twelve-name list — which is the
+   founder's first sentence — and the deck stops overflowing, which is his
+   third. Where it still overflows (two full rosters is twenty-nine names)
+   pdFitPin() pins the controls, so the floor holds either way.
+
+   WIDTH IS THE RIGHT QUESTION HERE and height was not. "Is there room for
+   two columns side by side" is a fact about horizontal space; "does the
+   content overflow" is not, and that one is measured. */
+@media (min-width:1120px){
+  body.on-predict .phone{max-width:1120px}
+  body.on-predict #predCard{padding:16px 18px}
+  body.on-predict .pdcard{display:grid;
+    grid-template-columns:minmax(300px,0.85fr) minmax(340px,1.15fr);
+    grid-template-rows:auto 1fr;
+    column-gap:24px;align-items:start;padding:18px 20px}
+  /* The wrappers stop being invisible and become the two columns. */
+  body.on-predict .pdcard .pdlist{display:block;grid-column:2;grid-row:1 / -1;min-width:0}
+  body.on-predict .pdlist>.pdteam:first-child{margin-top:0}
+  body.on-predict .pdcard .pdstick{grid-column:1;grid-row:1;min-width:0}
+  body.on-predict .pdcard .pdside{display:block;grid-column:1;grid-row:2;min-width:0}
+  /* ============ BOTH HALVES OF THE ANSWER STAY ON SCREEN ==============
+     The question column is short and the roster column is long, so without
+     this the +50 field scrolls away behind the names — measured 116px off
+     the bottom of a 1440x820 laptop — and you are back to hunting for it,
+     which is the founder's first sentence.
+
+     Two sticky blocks, stacked. `align-self:start` is what makes the second
+     one work at all: a sticky box can only travel inside its own containing
+     block, so the side column must be SHORT inside a TALL grid area (the
+     `1fr` row) rather than stretched to fill it. Stretched, its travel is
+     zero and the rule does nothing while looking like it works.
+
+     --pdstickh is written by buildPred() from the rendered header, because
+     the header is one line for "Winning team" and three for a long question
+     — a constant here would tuck the field under the question on one card
+     and leave a gap on the next. Measured, not guessed; the default is only
+     the value before the first paint. */
+  body.on-predict .pdcard .pdstick{position:sticky;top:8px;z-index:3}
+  body.on-predict .pdcard .pdside{align-self:start;position:sticky;
+    top:calc(var(--pdstickh,150px) + 16px);z-index:2;background:var(--card)}
+  body.on-predict .pdcard .pdbonus{margin-top:4px}
+  /* Three columns of names, because the column is 600px wide and two would
+     leave half of it empty. Still minmax(0,1fr) — see the note above about
+     a grid track's auto minimum putting "Sophie Cunningham" past the edge. */
+  body.on-predict .pdopts.many{grid-template-columns:repeat(3,minmax(0,1fr))}
+  /* Back and Next align with the edges of the deck they move, rather than
+     huddling in a 430px column in the middle of a 1120px bar. The lock is
+     one primary action and does not need to be 1,080px wide to be found. */
+  body.on-predict #pdBar .pdnav{max-width:1084px}
+  body.on-predict #pdBar .pdlock{max-width:520px}
+  /* The question can afford to be read at desktop distance. Top of the
+     ramp, not past it. */
+  body.on-predict .pdq{font-size:26px}
 }
 </style>
 </body>

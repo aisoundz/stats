@@ -61,7 +61,14 @@ const TARGET_ABS=path.resolve(__dirname,'..',TARGET);
    not read argv[2] is harmless, but claiming it was targeted would not be. */
 const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-lang.js',
   'board-order.js','payoff.js','slate.js','acceptance.js','host-sportsreg.js','localise.js','i18n.js','season.js',
-  'devices.js','night-config.js','overtime.js','platforms.js','change-it.js','chrome.js','places.js','switch.js','hero.js','listeners.js','practice.js','spanish.js','marquee-order.js']);
+  'devices.js','night-config.js','overtime.js','platforms.js','change-it.js','chrome.js','places.js','switch.js','hero.js','listeners.js','practice.js','spanish.js','marquee-order.js',
+  /* Reads a positional path (absolute or relative) and defaults to
+     index-test.html — verified by reading its argv handling, not assumed
+     from the filename. */
+  'desk-reach.js',
+  /* Same argv shape as desk-reach.js: a positional path, --file, or the
+     index-test.html default. Verified by reading it. */
+  'pick-tap.js']);
 /* Suites that read admin.html rather than the player file. The player half
    of the gate was split across two builds and fixed; the ADMIN half is
    split the same way and is NOT fixed — these seven read admin.html even
@@ -376,6 +383,22 @@ const TIER={
      forward sat under all of it. Measures WHERE the control is when you
      need it, which is the question no existing check asked. */
   'pick-reach.js': {tier:'browser'},
+  /* The same question one viewport to the right. pick-reach.js proved the
+     22 Aug pinning at 375x667 and 393x852 and nothing else, so the two
+     media queries whose whole job was to change behaviour ABOVE those
+     sizes — min-width:560px and min-height:860px — were never once
+     evaluated, and the founder hit the original bug again on a desktop on
+     24 Aug. Runs the reported case at the reported size, on two engines,
+     with the phone alongside it in the same file. */
+  'desk-reach.js': {tier:'browser'},
+  /* A TAP MUST SURVIVE A REBUILD. The prediction sheet lost 43% of normal
+     thumb taps in production because buildPred() rewrote innerHTML between
+     mousedown and mouseup and the browser then dispatched no click at all.
+     Drives pointerdown, holds, forces the rebuild, then pointerup — an
+     instant click reproduces only 7% of it and makes a broken build look
+     nearly fine, which is why this could not be a page.click() suite.
+     Covers Caught It too: same shape, twenty-second clock, no retry. */
+  'pick-tap.js':   {tier:'browser'},
   /* Reads source, not a browser. Guards the shape of bug this repo produces
      more than any other: something that fails and tells nobody. */
   'silence.js':       {tier:'static'},
