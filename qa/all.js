@@ -415,6 +415,19 @@ const TIER={
      is true for baseball/football/hockey/soccer. Two independent levers,
      each sabotage-verified on its own. */
   'round-lead.js':    {tier:'browser'},
+  /* Founder screenshot, 24 Aug, TB @ DET, Top 7th: the header read
+     "35 pts · #2" and the "Your room tonight" card directly beneath it
+     showed the same player on 0. stRoomCard() was the last score surface
+     still keeping its OWN board copy instead of reading `lastStand` —
+     ROOMSTAT.ok was set true on the first fetch and NOTHING in the file
+     ever set it back, so the card was a snapshot of whatever the board
+     said the first time the Stats tab was opened that night, and it was
+     never room-scoped either. It also read `p.pts` where six other
+     readers take `total ?? pts`, so a row carrying `total` rendered 0
+     with perfectly fresh data. Seven levers, each sabotage-verified alone,
+     including the two that guard the ~2,400/sec microtask redraw chain
+     the ok-guard exists to prevent. */
+  'room-stale.js':    {tier:'browser'},
 };
 
 /* NAME THE SUITES THAT EXIST BUT ARE NOT IN THE TABLE. A manifest that

@@ -21238,7 +21238,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-24-roundlead.219';
+const STATS_BUILD='2026-08-24-roomstale.220';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -24011,7 +24011,76 @@ function stShareCard(kicker, text, inner, tone){
    no new read path, no new failure mode. Lazy-loaded and cached like
    the season table above it; repaints the Stats screen once the room
    answers, and says nothing at all if it never does. */
-var ROOMSTAT = { ok:false, loading:false, list:null };
+/* ============ ONE FACT, ONE OWNER — THIS CARD WAS THE STRAGGLER ======
+   `lastStand` is THE room board cache. roomListenersStop()'s comment
+   spells out why: it was never room-scoped, it painted the room you had
+   left, and the founder's "the points on the football switches between
+   players" and "I think my points decreased" were both that cache
+   outliving its room. The fix made myRank(), liveRank(), shownTotal() and
+   the YOUR NIGHT tile all funnel through it, and nulls it on a switch.
+
+   This card kept its OWN copy and was never migrated. Two consequences,
+   both seen live on 24 Aug in the TB@DET room:
+
+   1. IT FROZE. `ok` was set true on the first success and NOTHING in the
+      file ever set it back — no TTL, no invalidation, no reset on a round
+      settling. So "Your room tonight" was a snapshot of whatever the board
+      said the first time the Stats tab was opened, held for the night. The
+      header read 35 pts while this card, on the same screen, showed the
+      same player on 0.
+   2. IT READ THE WRONG FIELD. Every other reader of a board row takes
+      `Number(p.total != null ? p.total : p.pts) || 0` — six call sites.
+      This one took `p.pts` alone, so a row carrying `total` rendered 0
+      even with perfectly fresh data. Fixing the freshness alone would
+      have left the card still showing zeros.
+
+   So it reads the live cache now. ROOMSTAT survives ONLY as a cold start,
+   because the Stats tab can be opened before the room poll has ever
+   answered, and it is stamped with the room it belongs to so the fallback
+   cannot do the very thing this comment is about. */
+var ROOMSTAT = { ok:false, loading:false, list:null, night:'', at:0 };
+function roomStatNight(){
+  try{ return String((typeof ACTIVE_ROOM !== 'undefined' && ACTIVE_ROOM) || ''); }catch(_){ return ''; }
+}
+/* ============ AND THE COLD START HAS TO GET COLD AGAIN ===============
+   Reading the live cache first fixes the room the player STARTED in,
+   because boot's joinNight().then() calls boardRefresh(), which attaches
+   SB.watchBoard, which keeps `lastStand` live for the whole session
+   whatever screen you are on. Switching rooms does not have that.
+   roomListenersStop('switch') drops bdUnsub and nulls lastStand — and the
+   only three callers of boardRefresh() are that boot path, tapping the
+   Board tab, and a 15s interval that itself checks S.screen==='board'.
+   So a player who switches rooms and stays on the Stats tab has NO board
+   listener for the new room, `lastStand` stays null, and the cold-start
+   fallback becomes the only thing drawing this card.
+
+   Measured on index-test.html, 24 Aug: room A -> roomListenersStop
+   ('switch') -> room B, stay on Stats. Board listener attached: false.
+   lastStand: null. Card at cold start: 0 pts. Card after the player scores
+   20: still 0 pts. That is the original disease exactly, one room over,
+   and `ok` was again the thing nothing ever set back.
+
+   A TTL, not a listener. Re-attaching the board watcher on every switch
+   would move a player who never opens the Board tab from 0 persistent
+   listeners to 1, and the ceiling that killed GN13 is ~78. This costs at
+   most one SB.top(3) per window, and only while the Stats screen is
+   rendering AND the live cache is empty — which, in the room the player
+   started in, is never. 45s is the lobby poll's cadence; the room poll is
+   90s, so this is not the slowest thing on the screen.
+
+   `at` is stamped when the attempt STARTS, not when it succeeds, so a
+   failing read re-arms on the same clock instead of once per render. */
+var ROOMSTAT_TTL_MS = 45000;
+function roomStatFresh(){
+  return !!ROOMSTAT.ok
+      && ROOMSTAT.night === roomStatNight()
+      && (Date.now() - (ROOMSTAT.at || 0)) < ROOMSTAT_TTL_MS;
+}
+/* Match the house rule for a board row rather than inventing a third
+   reading of it. `total` wins when present, `pts` is the fallback. */
+function roomStatPts(p){
+  return Number(p && (p.total != null ? p.total : p.pts)) || 0;
+}
 /* ============ A PROMISE THAT DID NOTHING MUST NOT TRIGGER A REDRAW ===
    This is the freeze. `loadRoomStat()` returns an ALREADY-RESOLVED
    promise on every one of its five early-exit conditions, and
@@ -24031,23 +24100,58 @@ var ROOMSTAT = { ok:false, loading:false, list:null };
    promise that did real work is allowed to cause a redraw. Same change
    below for the season table, which has the identical shape. */
 function loadRoomStat(){
-  if(ROOMSTAT.loading || ROOMSTAT.ok || !window.SB || !SB.top || S.mode!=='live') return Promise.resolve(false);
+  /* The ok-guard is still here and still load-bearing — see the microtask
+     note above. It is now scoped to a room instead of to all of time, so a
+     switch re-arms the cold start rather than serving the old room. */
+  if(ROOMSTAT.loading || !window.SB || !SB.top || S.mode!=='live') return Promise.resolve(false);
+  if(roomStatFresh()) return Promise.resolve(false);
+  var want = roomStatNight();
   ROOMSTAT.loading = true;
+  ROOMSTAT.at = Date.now();
   return SB.top(3).then(function(list){
-    ROOMSTAT.loading = false; ROOMSTAT.ok = true;
+    ROOMSTAT.loading = false;
+    /* The player can walk into another room while this is in flight.
+       Filing that room's board under this one is the exact bug being
+       removed, so drop the answer and report no work done. */
+    if(roomStatNight() !== want) return false;
+    ROOMSTAT.ok = true; ROOMSTAT.night = want;
     ROOMSTAT.list = (list && list.length) ? list : null;
     return true;
   }).catch(function(){ ROOMSTAT.loading = false; return false; });
 }
 function stRoomCard(){
-  if(!ROOMSTAT.ok){
+  /* The live cache first, always — it is refreshed by the room poll and
+     the board listener, and it is emptied on a room switch, so it cannot
+     go stale or follow the player out of the room. */
+  var list = null;
+  try{ list = roomStand(); }catch(_){}
+  /* The room check, but deliberately NOT the freshness check. An expired
+     fallback is still this room's board and still the last thing the
+     server said; blanking the card while the refetch flies would trade a
+     45-second-old number for no number at all. roomStatFresh() decides
+     when to go and ASK, not what to show. */
+  var onFallback = false;
+  if((!list || !list.length) && ROOMSTAT.ok && ROOMSTAT.night === roomStatNight()){
+    list = ROOMSTAT.list; onFallback = true;
+  }
+  if(!list || !list.length){
     try{ loadRoomStat().then(function(did){ if(did && S.screen==='stats') renderStats(); }); }catch(_){}
     return '';
   }
-  if(!ROOMSTAT.list || !ROOMSTAT.list.length) return '';
-  var rows = ROOMSTAT.list.map(function(p, i){
+  /* SHOWING an expired fallback is fine. LEAVING it expired is the bug.
+     Nothing else on this path will ever ask — there is no board listener
+     for a room switched into from the Stats tab — so the card asks for
+     itself, draws the number it already has, and repaints if a better one
+     comes back. This terminates in exactly one hop: loadRoomStat() stamps
+     ROOMSTAT.at before it does anything, so the redraw it triggers finds
+     the fallback fresh and asks nothing. Same invariant as everywhere
+     else here — only a promise that did real work redraws. */
+  if(onFallback && !roomStatFresh()){
+    try{ loadRoomStat().then(function(did){ if(did && S.screen==='stats') renderStats(); }); }catch(_){}
+  }
+  var rows = list.slice(0, 3).map(function(p, i){
     var nm = esc(String((p && p.name) || 'player'));
-    var pts = (p && typeof p.pts === 'number') ? p.pts : 0;
+    var pts = roomStatPts(p);
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0'
       + (i ? ';border-top:1px solid var(--line)' : '') + '">'
       + '<span style="font-size:14px;color:var(--ink)">' + (i + 1) + '. ' + nm + '</span>'

@@ -61,5 +61,6 @@
   "voice-heard-clear.js": 3,
   "late-join.js": 6,
   "rules.js": 14,
-  "round-lead.js": 9
+  "round-lead.js": 9,
+  "room-stale.js": 40
 }
