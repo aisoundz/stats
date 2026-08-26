@@ -6356,31 +6356,7 @@ function hydrateNight(cfg){
        does not carry SURVIVES — including the flag that says "I am the
        fallback". Leave it set and every hydrated night is treated as
        expired the day after it plays. See bakedNightIsStale(). */
-    /* ============ UNLESS THE NIGHT WE JUST HYDRATED *IS* THE FALLBACK ==
-       26 Aug, caught on the LIVE site minutes after shipping the guard
-       that depends on this flag. The landing page reported
-       nightId = gn13-2026-08-19-min-gs with __baked = FALSE, which is a
-       state that should not exist: a week-old fallback wearing a real
-       night's clothes.
-
-       hydrateBuiltIn() hydrates BUILTIN_NIGHTS[id].cfg, and that cfg is a
-       deep clone of SPORTS[k].game — which for basketball IS BB_GAME,
-       __baked and all. So the fallback was being hydrated THROUGH this
-       function, the flag copied in and then deleted one line later, and
-       the built-in night laundered into looking published.
-
-       Everything downstream that asks bakedNightIsStale() was therefore
-       answered "not baked, so not stale": gnOf() would print "#13" again,
-       the hero would stop saying "Tonight's games are loading…", and the
-       joinNight() guard written today to stop 76 more seats landing in a
-       dead room WOULD NEVER HAVE FIRED. The fix shipped inert and the
-       only reason we know is that the deployed page was asked what it
-       thought the night was.
-
-       The flag means "this object is the built-in fallback". Hydrating
-       the fallback does not stop it being the fallback, so the flag
-       survives; hydrating a real published night clears it, as before. */
-    if(!g.__baked){ try{ delete GAME.__baked; }catch(_){ GAME.__baked = false; } }
+    try{ delete GAME.__baked; }catch(_){ GAME.__baked = false; }
 
     /* 2. the rosters — SPLICE, do not reassign. `groups` holds references
           to these very arrays, so replacing them would leave the pick
@@ -23151,7 +23127,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-26-notinert.227';
+const STATS_BUILD='2026-08-26-q4phone.226';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

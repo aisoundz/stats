@@ -174,6 +174,50 @@ const check=(id,c,why)=>c?ok(id):bad(id,why);
   }
 
   /* --------------------------------------------------------------
+     1b. HYDRATING THE FALLBACK MUST NOT LAUNDER IT.
+
+     This is the check that would have caught the guard shipping INERT.
+     hydrateBuiltIn() hydrates BUILTIN_NIGHTS[id].cfg, which is a deep
+     clone of SPORTS[k].game — for basketball that IS BB_GAME, __baked
+     and all. hydrateNight() then deleted __baked unconditionally, so the
+     built-in night came out the far side looking published: the live
+     page reported nightId=gn13-2026-08-19-min-gs with __baked=false, and
+     every bakedNightIsStale() caller — including today's join guard —
+     was answered "not baked, so not stale".
+
+     The suite above sets __baked by hand and so could never see this.
+     Drive the real hydration path instead.
+     -------------------------------------------------------------- */
+  {
+    const r=await p.evaluate(()=>{
+      const o={};
+      try{ o.hasFn = (typeof hydrateBuiltIn==='function'); }catch(_){ o.hasFn=false; }
+      if(!o.hasFn) return o;
+      const day=24*3600*1000;
+      /* Put the fallback back the way the file ships it, then hydrate it. */
+      try{ GAME.__baked=true; GAME.nightId='gn13-2026-08-19-min-gs';
+           GAME.tipISO=new Date(Date.now()-7*day).toISOString(); }catch(_){}
+      try{ o.ret = hydrateBuiltIn(GAME.nightId); }catch(e){ o.err=String(e).slice(0,110); }
+      try{ o.bakedAfter = !!GAME.__baked; }catch(_){}
+      try{ o.staleAfter = bakedNightIsStale(GAME); }catch(_){ o.staleAfter='ERR'; }
+      try{ o.nightAfter = GAME.nightId; }catch(_){}
+      return o;
+    });
+    console.log('\n  hydrating the BUILT-IN night (the fallback itself)');
+    console.log('    hydrateBuiltIn()=' + r.ret + '  __baked after=' + r.bakedAfter
+              + '  stale after=' + r.staleAfter + '  night=' + r.nightAfter
+              + (r.err?('   THREW '+r.err):''));
+    check('fallback.hydrating-the-built-in-night-keeps-the-fallback-flag',
+      r.hasFn===false || r.bakedAfter===true,
+      '__baked was cleared by hydrating the FALLBACK — the built-in night now looks '
+      + 'published, so bakedNightIsStale() says no and every guard that depends on it '
+      + 'is inert. This is exactly how the 26 Aug join guard shipped doing nothing.');
+    check('fallback.a-hydrated-fallback-is-still-stale',
+      r.hasFn===false || r.staleAfter===true,
+      'bakedNightIsStale()=' + r.staleAfter + ' for a week-old built-in night after hydration');
+  }
+
+  /* --------------------------------------------------------------
      2. PRACTICE IS UNTOUCHED — AND THE CONTRACT LIVES IN
         ensureJoined(), NOT HERE.
 
