@@ -67,5 +67,9 @@
   "pick-tap.js": 30,
   "ci-deaf.js": 26,
   "ci-surface.js": 30,
-  "ci-window.js": 28
+  "ci-window.js": 28,
+  "final-buzzer.js": 35,
+  "fourth-quarter.js": 61,
+  "card-deadline.js": 49,
+  "desk-pick-fit.js": 80
 }

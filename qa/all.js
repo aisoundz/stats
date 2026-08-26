@@ -75,7 +75,23 @@ const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-la
   'desk-reach.js',
   /* Same argv shape as desk-reach.js: a positional path, --file, or the
      index-test.html default. Verified by reading it. */
-  'pick-tap.js']);
+  'pick-tap.js',
+  /* Takes the first argv token ending in .html and otherwise defaults to
+     index-test.html — verified by reading its argv handling. It must be
+     targetable: the whole point of it is that it goes RED on index.html
+     and green on the candidate, which is how you tell the fix landed. */
+  'final-buzzer.js',
+  /* Same argv shape again — first token ending in .html, else
+     index-test.html. Verified by reading it. Targetable for the same
+     reason: it goes RED on index.html, which reproduces the 32-second
+     race that took Q4 off three nights in a row. */
+  'fourth-quarter.js',
+  /* Same argv shape. Goes RED on index.html: the pre-game sheet reopens
+     mid-game there once S.place has been wiped. */
+  'card-deadline.js',
+  /* Same argv shape. Goes RED on index.html at 1440x788 — the founder's
+     actual window once Chrome's chrome is subtracted. */
+  'desk-pick-fit.js']);
 /* Suites that read admin.html rather than the player file. The player half
    of the gate was split across two builds and fixed; the ADMIN half is
    split the same way and is NOT fixed — these seven read admin.html even
@@ -437,6 +453,47 @@ const TIER={
   'voice-pick.js':    {tier:'browser'},
   'voice-wiring.js':  {tier:'browser'},
   'payoff.js':        {tier:'browser'},
+  /* THE LAST SCREEN OF THE NIGHT. 25 Aug: a stranger played practice end
+     to end and the final buzzer told them, at once, that they scored 380,
+     finished "#8", beat "99% of players", and were not on a six-name board
+     where every listed player was above them — then called 380/1000 "38
+     Season pts" and promised prizes for a practice run. Five surfaces, no
+     two counting the same population, on the screen where somebody decides
+     whether this product knows what their score is.
+
+     Asserts agreement between rendered numbers rather than the wording of
+     any one of them, so a build that computes nonsense politely still goes
+     red. Two engines; WebKit crashes on this Jetson and is not claimed. */
+  'final-buzzer.js':  {tier:'browser'},
+  /* THE LAST ROUND OF THE NIGHT. Three nights in three sports, all within
+     one runner poll cycle: 23 Aug WNBA Final -> Q4 34s later, 25 Aug WNBA
+     Final -> Q4 32s later, 25 Aug MLB Final -> "7th-9th" 34s later. The
+     feed flips to final BEFORE the last round opens, essentially always,
+     and the round it removes is the most valuable one on the card — 70 of
+     150 round points in tonight's baseball plan.
+
+     nightRoundsOutstanding() had known this since 23 Aug and had ONE
+     caller: the settle decision. Every render decision answered the
+     question itself, so the Home tab's banner said "🔴 Q4 is open" while
+     the Gametime tab painted the final card over the top of the answer
+     button. Asserts the decider, the RENDERED tab, and lockPicks()
+     together, plus the 45-minute abandonment valve walked across its
+     boundary so a night can still always end. Two engines. */
+  'fourth-quarter.js':{tier:'browser'},
+  /* THE SEALED CARD. The pre-game sheet is 600 of a night's 1,000 points
+     and its only lock was S.place — a localStorage field the app itself
+     deletes on sign-out, on a room switch, and for the first 60ms of
+     every boot. Founder, live, at 4:03 in the fourth: "all it takes is a
+     refresh." Drives the real path — live phase, S.place wiped the way a
+     reload wipes it, startPredict() — through all three doors into the
+     deck. Two engines. */
+  'card-deadline.js': {tier:'browser'},
+  /* THE PICK SHEET ON A LAPTOP. desk-reach.js proved 1850x1050, where the
+     deck fits; the founder presents from a 1440x900 Mac, which is 788px
+     of viewport once the menu bar, tab strip and address bar are gone,
+     and there it did not. Measures the rendered rectangles at six desk
+     sizes AND on a phone, so a desk fix that moves the phone goes red. */
+  'desk-pick-fit.js': {tier:'browser'},
   'localise.js':      {tier:'browser'},
   'i18n.js':          {tier:'browser'},
   'season.js':        {tier:'browser'},
@@ -805,8 +862,29 @@ if(!bad.length && !shrunk.length && !lostCount.length){
   console.log(bad.length+' of '+results.length+' SUITES RED — DO NOT PROMOTE');
   bad.forEach(r=>{
     console.log('\n--- '+r.f+'  ['+r.how+'] ---');
-    /* Enough of the tail to act on, not the whole log. */
-    console.log(r.out.replace(/\x1b\[[0-9;]*m/g,'').trim().split('\n').slice(-14).map(x=>'    '+x).join('\n'));
+    /* ============ A RED GATE MUST NAME WHAT FAILED ==================
+       25 Aug: voice-wiring.js went red in the gate as "FAIL - 1 of 78"
+       and the last 14 lines were all passing checks, so the one line
+       that mattered - the name of the failing check - had scrolled off
+       the top of its own failure report. Naming it took five re-runs
+       and a reproduction attempt, and it still was not named.
+
+       A failure report that omits the failure is the same disease this
+       file already caught once above ("READ THE WHOLE SUITE, NOT ITS
+       LAST LINE"): looking at a fixed window of a suite's output and
+       hoping the important part landed inside it. The cure is the same.
+       Pull the lines that ANNOUNCE a failure wherever they sit, then
+       show the tail for context. */
+    const clean=r.out.replace(/\x1b\[[0-9;]*m/g,'').trim().split('\n');
+    const named=clean.filter(x=>/^\s*(?:[\u2717\u2718x]|not ok|FAIL[: ]|MISSING|ILLEGAL|THREW)/i.test(x)
+                              || /\bFAILED\b/.test(x));
+    if(named.length){
+      console.log('    failing check(s):');
+      console.log(named.slice(0,40).map(x=>'      '+x.trim()).join('\n'));
+      if(named.length>40) console.log('      ... and '+(named.length-40)+' more');
+      console.log('    --- tail ---');
+    }
+    console.log(clean.slice(-14).map(x=>'    '+x).join('\n'));
   });
 }
 /* A SUITE ON DISK IN NO TIER IS A FAILURE, NOT A FOOTNOTE.

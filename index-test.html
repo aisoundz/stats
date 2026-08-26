@@ -2131,6 +2131,23 @@
 
   <!-- 7. FINAL -->
   <section class="screen" id="s-final">
+    <!-- ============ TWO WRAPPERS THAT ARE NOTHING ON A PHONE ==========
+         display:contents, so on every size this app was designed for these
+         divs do not exist: their children are laid out by `.screen`'s flex
+         column exactly as before, and not one rendered rectangle moves.
+
+         They earn their keep at >=1120px, where they become the two
+         columns of a grid. The pick sheet already does this — measured on
+         the same machine, the deck uses ~1100px while this screen rendered
+         a 440px ribbon in the middle of 1850px with ~700px of black either
+         side. The final card of the night was the narrowest thing in the
+         product on the widest screen it runs on.
+
+         Wrappers rather than per-child `grid-column` because auto-placement
+         with definite columns and auto rows puts the second column's first
+         item on whatever row the cursor has reached — column two would
+         start level with the ring. Two boxes cannot do that. -->
+    <div class="fcolA">
     <div class="center" style="margin-top:14px"><span class="pill" id="finalPill">Final buzzer 🚨</span></div>
     <h1 class="center" style="margin-top:12px" id="finalTitle">You finished!</h1>
     <!-- Says why the prediction card scored nothing, on the two occasions
@@ -2175,10 +2192,19 @@
         </div>
       </div>
       <div class="statgrid">
-        <div class="stat"><div class="v" id="finalRank">–</div><div class="k" id="finalRankK">Final rank</div></div>
-        <div class="stat"><div class="v" id="finalPct">–</div><div class="k" id="finalPctK">Beat this % of players</div></div>
+        <!-- Both captions are written by setStat() before this screen is
+             ever shown, in both modes. They are blank here rather than
+             carrying "Final rank" and "Beat this % of players" as
+             defaults: the second of those was the 99%-out-of-1204 tile,
+             and a string that no longer describes anything the app
+             computes has no business sitting in the markup waiting to be
+             screenshotted during a repaint. -->
+        <div class="stat"><div class="v" id="finalRank">–</div><div class="k" id="finalRankK"></div></div>
+        <div class="stat"><div class="v" id="finalPct">–</div><div class="k" id="finalPctK"></div></div>
       </div>
     </div>
+    </div><!-- /.fcolA -->
+    <div class="fcolB">
 
     <!-- FOLDED AWAY. This screen was nine cards deep — an award, a ring, two
          tiles, a four-bar breakdown, a best call, a stat line, badges, a
@@ -2234,7 +2260,7 @@
              to a night score would be the same number meaning two things,
              which is how this codebase's worst bugs start. -->
         <div class="slc"><div class="v" id="slGames">1</div><div class="k">Nights</div></div>
-        <div class="slc"><div class="v" id="slPts">0</div><div class="k">Season pts</div></div>
+        <div class="slc"><div class="v" id="slPts">0</div><div class="k" id="slPtsK">Season pts</div></div>
         <div class="slc"><div class="v" id="slAcc">—</div><div class="k">Accuracy</div></div>
         <div class="slc"><div class="v">🔥<span id="streakN">1</span></div><div class="k">Streak</div></div>
       </div>
@@ -2308,7 +2334,16 @@
     <button class="btn ghost" style="margin-top:10px" onclick="goHomeFromFinal()">Back to home</button>
     <!-- The "More" drawer moved into the menu. The last screen of the night
          gets to be about the night. -->
-<p class="foot">Prizes awarded to the sponsor's verified top scorers after the final box score is confirmed. Winning never requires payment.</p>
+<!-- ============ A PRACTICE GAME HAS NO PRIZE ======================
+         This sentence is a contest disclosure and it belongs under a
+         contest. Under a practice run it is an advertisement for
+         something that is not being awarded — and it was the last line
+         on the last screen of a session a stranger had just been told
+         "nothing here counts". showFinal() shows it on Game Night and
+         hides it in practice; it is not deleted, because on a live night
+         the disclosure is required. -->
+<p class="foot" id="finalPrizeNote">Prizes awarded to the sponsor's verified top scorers after the final box score is confirmed. Winning never requires payment.</p>
+    </div><!-- /.fcolB -->
   </section>
 
   <!-- 9. LEAGUE -->
@@ -7846,7 +7881,14 @@ const bots=[
 function freshS(){
   return {mode:"demo",practice:false,screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,
     predChoices:{},predOrder:[],qi:0,ni:0,nextQ:0,answered:false,
-    lifelineHalf1:true,lifelineHalf2:true,botScores:[],totalPlayers:1204,
+    /* `totalPlayers:1204` USED TO LIVE HERE. It was a placeholder that
+       shipped, and the final buzzer screen divided by it to print "Beat
+       this % of players: 99%" over a night the player finished eighth of
+       nine in. There is no player population to be a percentile of — the
+       field is measured, not assumed, everywhere else in this file — so
+       the field is gone rather than adjusted. Nothing may reintroduce it
+       without a real count behind it. */
+    lifelineHalf1:true,lifelineHalf2:true,botScores:[],botSheetsSettled:false,
     results:emptyRounds(), liveAnswers:emptyRounds(), streak:0, seasonPts:0,
     catchChoices:{}, catchPts:null, catchesScored:false, led:{}, predSettled:false,
     predTruth:null, predTruthNum:null, lifelineAt:null, tally:null, sport:'', a2hs:null};
@@ -7889,7 +7931,7 @@ var ROOMS = {};
    as an element vanishing from under a click. It is also the exact state
    featureTonight() spends twenty lines defending against, because a saved
    place outlives the night it belongs to. */
-var SESSION_KEYS = ['name','color','seasonPts','sport','totalPlayers','streak','mode'];
+var SESSION_KEYS = ['name','color','seasonPts','sport','streak','mode'];
 
 /* WHICH ROOM AM I IN — TRACKED, NOT DERIVED. The first version keyed the
    store on GAME.nightId, which only changes when hydration SUCCEEDS. On a
@@ -8696,7 +8738,7 @@ function setMode(mode){
     S.catchChoices = {}; S.catchPts = null; S.catchesScored = false;
     S.predSettled = false; S.predTruth = null; S.predTruthNum = null;
     S.lifelineHalf1 = true; S.lifelineHalf2 = true; S.lifelineAt = null;
-    S.botScores = [];
+    S.botScores = []; S.botSheetsSettled = false;
     /* The Caught It record is progress too — a practice streak must not
        walk into the live night wearing the same numbers. */
     if(typeof PCI === 'object'){ PCI.called=0; PCI.hit=0; PCI.streak=0; PCI.best=0; PCI.heat=0; PCI.pts=0; PCI.paid={}; }
@@ -8903,7 +8945,14 @@ function doResume(){
     }
   }catch(_){}
   const scr=S.place||S.screen;
-  if(scr==="predict"){buildPred();go("predict");}
+  /* DOOR THREE, and it is the automatic one. Auto-resume fires 60ms after
+     boot with nobody's finger on anything, so a save that says 'predict'
+     re-serves the pre-game sheet on its own during the third quarter. The
+     save is not lying — that IS where the phone was — it is just from
+     before the ball went up, and where you were is not whether the card
+     is still open. */
+  if(scr==="predict" && predGateShut(true)){ /* handled: bounced into the night */ }
+  else if(scr==="predict"){buildPred();go("predict");}
   else if(scr==="lobby"){renderLobby(roomNextRound(S.nextQ!=null?S.nextQ:S.qi));go("lobby");}
   else if(scr==="live"){
     /* Mid-round refresh. It used to wipe `liveAnswers[S.qi]` so the round
@@ -8966,6 +9015,12 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
      browser without :has(), and a TV browser is exactly where that bites.
      The class is set on every screen change, so it can never desync. */
   try{ document.body.classList.toggle('on-predict', k==='predict'); }catch(_){}
+  /* And the same exception for the last screen of the night, for the same
+     reason and out of the same writer. The final card was rendering a
+     440px column in the middle of 1850px with ~700px of black on each
+     side, on the machine the founder presents from — while the pick sheet
+     four taps earlier correctly used ~1100px of it. */
+  try{ document.body.classList.toggle('on-final', k==='final'); }catch(_){}
   /* THE RAIL HAS TO BE TOLD. Its shape depends on where the player is —
      full tiles while choosing, one line while a question is up — and
      nothing repainted it when that changed, so the collapse only ever
@@ -9775,7 +9830,64 @@ function nightIsOver(){
        long costs nobody anything, and a room that shuts on a live game
        costs somebody their night. */
     try{ if(typeof gsIsAbout === 'function' && !gsIsAbout(GAME)) return false; }catch(_){}
-    return phaseNow() === 'final';
+    if(phaseNow() !== 'final') return false;
+    /* ============ AND THE BROADCAST IS NOT THE BUZZER ==================
+       25 Aug, WNBA room slate-2026-08-25-por-dal, from the runner's log:
+
+           01:49:18  score  78 - 96  Final
+           01:49:19  hold   the game is over but not every quarter is
+                            scored — staying up
+           01:49:50  push   Q4 is live on every phone
+           01:56:07  key    Q4 scored
+
+       THIRTY-TWO SECONDS, and it is the SECOND time: 23 Aug was
+       thirty-four, and a real player told the founder "the 4th quarter
+       never came on". The host side is not the problem and needs no
+       change — it saw Final, explicitly refused to quit, opened Q4 and
+       scored it. The round existed and was answerable for six minutes.
+
+       The player app had already given up, and it gave up on three
+       surfaces at once, all of them downstream of this one line:
+
+         gtGameOver()   rendered the ending over the Gametime tab, so the
+                        "🔴 Quarter 4 is LIVE — answer now" button that
+                        gtStartRow() was correctly producing never reached
+                        the DOM. Measured on the shipped build: with Q4
+                        live and the feed final, gtStartRow() returns the
+                        red button and the tab shows "You finished on 149
+                        points in this room" instead.
+         lockPicks()    returned false, so even a player who got to Q4
+                        would have had their answers silently dropped.
+                        "Q4 took none from anybody."
+         startPredict() shut the pre-game door, which is harmless here.
+
+       Meanwhile the Home tab's banner read "🔴 Q4 is open — tap to
+       answer" and was RIGHT, because it reads the round document. Two
+       surfaces, two sources, one of them guarded.
+
+       nightRoundsOutstanding() was written on 23 Aug for exactly this and
+       is exactly right — measured true on the 25 Aug fixture. It simply
+       had ONE caller, finishNightFromFeed(), which is the SETTLE
+       decision. Every RENDER decision answered the question itself. That
+       is the one-fact-many-copies disease this file keeps catching, and
+       the cure is the same each time: one owner. The guard moves up here,
+       so all three callers of nightIsOver() inherit it and cannot
+       disagree; finishNightFromFeed()'s own call becomes belt and braces.
+
+       NOT A GRACE PERIOD, DELIBERATELY. The gap was 34s once and 32s now.
+       Any delay is a guess that will be wrong on the next game. Deciding
+       from the rounds is right however early or late the feed is.
+
+       THE ABANDONMENT VALVE IS NOT OPTIONAL and it lives inside both
+       helpers: a round whose `seq` is older than 45 minutes is an
+       abandoned round, not one in progress, so a runner that dies
+       mid-night cannot lock a player out of their own ending. Verified
+       against the shipped build across five fixtures — Q4 scored, host
+       gone for 60 minutes, and no host at all all still report the night
+       over, and only the two racing cases change. */
+    try{ if(typeof hostedRoundIsLive === 'function' && hostedRoundIsLive()) return false; }catch(_){}
+    try{ if(typeof nightRoundsOutstanding === 'function' && nightRoundsOutstanding()) return false; }catch(_){}
+    return true;
   }catch(_){ return false; }
 }
 try{ window.nightIsOver = nightIsOver; }catch(_){}
@@ -9796,6 +9908,164 @@ function overSay(){
   }catch(_){}
   return line;
 }
+
+/* =====================================================================
+   THE PRE-GAME CARD HAS A DEADLINE, AND `S.place` IS NOT IT.
+   ---------------------------------------------------------------------
+   Founder, on the live site, POR 68 DAL 84 with 4:03 left in the fourth:
+   "all it takes is a refresh to get the game to refresh and you can
+   reenter your picks." The screenshot is the PRE-GAME PREDICTION SHEET —
+   "Make your picks", "Lock these in before tip-off", "Up to 600 pts",
+   1/6 picked — open in the fourth quarter of a game that was three
+   quarters decided. That card is 600 of the night's 1,000 points.
+
+   WHY IT OPENED. startPredict() had two guards and this walks between
+   them:
+
+     nightIsOver()                  is phaseNow()==='final'. The game was
+                                    LIVE, so this said nothing.
+     GAME_SCREENS.indexOf(S.place)  S.place is LOCAL STATE, and every one
+                                    of these deletes it:
+                                      · doSignOut -> freshStart('') ->
+                                        clearSave() — the GN13 exploit,
+                                        in the founder's words "log out
+                                        and then pick the right people
+                                        because they already know what
+                                        happened";
+                                      · checkResume() clearing a save
+                                        that belongs to another night —
+                                        and LS_KEY() is keyed on nightId,
+                                        so simply moving between two of
+                                        a four-room night's rooms means
+                                        there is no save to restore;
+                                      · the first 60ms of every boot,
+                                        before auto-resume runs;
+                                      · any second device, private
+                                        window, or cleared storage.
+
+   A lock whose key the app itself deletes is not a lock. The card was
+   sealed by nothing but the player's own browser remembering where it
+   had been.
+
+   WHAT THIS ASKS INSTEAD. Not "does this DEVICE think it is mid-game"
+   but "has this GAME started" — a fact about the night, which no reload,
+   sign-out or room switch can wipe. The card is fillable while the phase
+   is 'pre' and at no other time. That is also exactly what the card
+   itself promises in its own subtitle.
+
+   THE ORDER OF EVIDENCE, and it matters:
+
+   1. THE FEED, BUT ONLY WHEN IT IS ABOUT THIS ROOM. phaseFromFeed()
+      reads GS, one global holding one event, so on a multi-room night it
+      is often describing the room the player just left. gsIsAbout() is
+      the same guard nightIsOver() and paintRail() already use. A feed
+      about somebody else's game is not weak evidence, it is none, and it
+      is skipped rather than trusted.
+
+   2. THE TIP TIME. GAME.tipISO ships with the room and survives every
+      reload. hydrateNight() merges keys into the existing object, so a
+      published night that omits it still inherits one.
+
+   3. NEITHER — 'unknown'. See below.
+
+   WHY 'unknown' FAILS CLOSED. The two directions are not symmetrical and
+   they are not equally recoverable.
+
+     Failing OPEN hands a blank 600-point sheet to somebody who has
+     watched three quarters, and it is PERMANENT: picks go to subs/{uid},
+     which firestore.rules makes create-only, so the mis-filed card is
+     the one that settles and the night cannot be un-scored. A rules-side
+     audit measured 22% of all cards filed after round one had already
+     started. This is the behaviour that number describes.
+
+     Failing SHUT costs one tap. It needs BOTH signals missing at once —
+     no feed for this event AND no parseable tip time on the room — and
+     the moment either lands the same button works. So the 'unknown'
+     branch does not navigate anybody anywhere: it kicks the feed, says
+     what it is doing, and leaves the button they just pressed on screen
+     under their thumb.
+
+   PRACTICE IS EXEMPT, for the reason nightIsOver() gives: a practice
+   deck has no real game behind it and is meant to be replayable.
+
+   THREE STATES, NOT THE FEED'S THREE. 'live' versus 'final' is
+   nightIsOver()'s question. The only thing this card wants to know is
+   whether the ball has gone up.
+   ================================================================== */
+function predRoomPhase(){
+  try{
+    var p='';
+    try{ if(typeof gsIsAbout!=='function' || gsIsAbout(GAME)) p=phaseFromFeed(); }catch(_){ p=''; }
+    if(p) return (p==='pre') ? 'pre' : 'started';
+    var t=0;
+    try{ t=Date.parse((typeof GAME!=='undefined' && GAME.tipISO)||'')||0; }catch(_){ t=0; }
+    if(t) return (Date.now() < t) ? 'pre' : 'started';
+    return 'unknown';
+  }catch(_){ return 'unknown'; }
+}
+function predWindowOpen(){
+  try{ if(!S || S.mode!=='live') return true; }catch(_){ return true; }
+  return predRoomPhase()==='pre';
+}
+try{ window.predRoomPhase=predRoomPhase; window.predWindowOpen=predWindowOpen; }catch(_){}
+
+/* Where a bounced player lands: IN THE NIGHT, never on the landing page.
+   Losing the card is correct for somebody who arrived at half-time.
+   Losing the whole night is not, and that is the mistake the first draft
+   of nightIsOver() made in the other direction.
+
+   S.place is used here as a HINT and never as a gate — if the save
+   happens to know they were on the break screen, put them back on it.
+   'predict' is explicitly excluded, because sending them back to the
+   screen this function exists to close is a loop. Absent or unusable, the
+   lobby is the honest default: it is the Gametime tab, it is where you
+   wait between rounds, and on a locked card it is already the read-only
+   receipt — "🔒600 Riding on your picks". */
+function predGoToGame(){
+  try{
+    var pl=''; try{ pl=(S&&S.place)||''; }catch(_){}
+    if(pl && pl!=='predict' && GAME_SCREENS.indexOf(pl)>=0){ returnToGame(); return; }
+  }catch(_){}
+  try{ renderLobby(roomNextRound(S.nextQ!=null?S.nextQ:S.qi)); go('lobby'); return; }catch(_){}
+  try{ go('lobby'); }catch(_){}
+}
+
+/* ONE POLICY, THREE DOORS. startPredict() is the founder's route, but
+   returnToGame() and doResume() BOTH end in `buildPred(); go('predict')`
+   off the same S.place this fix exists because it cannot trust — so a
+   guard in one of them is a guard in none of them.
+
+   Returns true when it has handled the player; every caller must return
+   immediately after a true. `wantsRoute` is false only for the caller
+   that leaves a working button on screen behind it.                    */
+function predGateShut(wantsRoute){
+  try{
+    if(predWindowOpen()) return false;
+    var ph=predRoomPhase();
+    try{ trk('pred_gate_shut',{phase:ph, place:(S&&S.place)||'', screen:(S&&S.screen)||''}); }catch(_){}
+    if(ph==='unknown'){
+      /* Not a refusal — an unfinished sentence. Ask, and say so. */
+      try{ if(typeof loadGameStats==='function') loadGameStats(); }catch(_){}
+      try{ toast('One moment — still checking whether tonight’s game has started. Try that again in a few seconds.'); }catch(_){}
+      if(wantsRoute) predGoToGame();
+      return true;
+    }
+    var made=0;
+    try{
+      Object.keys(S.predChoices||{}).forEach(function(k){
+        if(!/_num$/.test(k) && S.predChoices[k]) made++;
+      });
+    }catch(_){}
+    try{
+      toast(made
+        ? 'Your picks are locked in — the pre-game card closed at tip-off. They settle at the final buzzer.'
+        : 'The pre-game card closed at tip-off, so there is nothing left to pick. You are still in for every live round from here.');
+    }catch(_){}
+    predGoToGame();
+    return true;
+  }catch(_){ return false; }
+}
+try{ window.predGateShut=predGateShut; }catch(_){}
 
 function startPredict(){
   try{ trk('card_start'); }catch(_){}
@@ -9834,6 +10104,20 @@ function startPredict(){
   saveGateEmail();
   try{ rememberProfile(); }catch(_){}
   if(S.mode==="live") ensureJoined();   // B-62: retries; joinNight() alone gave up after 6s
+  /* ============ AND THE CARD ITSELF IS SHUT ONCE THE BALL IS UP =======
+     Deliberately BELOW ensureJoined(), and that placement is the whole
+     of "losing the card is correct, being blocked from the night is not".
+
+     A stranger who arrives at half-time still gets a verified account, a
+     saved profile and a SEAT IN THE ROOM out of this function; the only
+     thing they do not get is a 600-point sheet on a game they have
+     already watched half of. Above the join, this guard would have been
+     a lockout rather than a deadline.
+
+     `false` — do not route on an unknown phase. This caller was reached
+     by pressing a button that is still on the screen behind the toast,
+     so the recovery is the same tap again. See predGateShut().      */
+  if(predGateShut(false)) return;
   /* ============ THE DECK OPENS WHERE THE WORK IS ======================
      Founder, live: "When you start with your selection of your picks for
      the pregame questions. It starts with question 6 and then goes to
@@ -10648,7 +10932,12 @@ function paintInactives(){
   if(INACTIVE.size){
     if(!bar){
       bar=document.createElement('div'); bar.id='inactiveBar';
-      bar.style.cssText='background:rgba(255,77,94,.10);border:1px solid rgba(255,77,94,.35);border-radius:12px;padding:11px 13px;margin-bottom:12px;font-size:14px;line-height:1.5;color:var(--muted,#93a0bd)';
+      /* THE LOOK MOVED TO THE STYLESHEET, unchanged value for value. It was
+         an inline cssText, and an inline style beats every rule short of
+         !important — so at desk width, where this box sits in a half-width
+         column and its nine names wrap to three lines, nothing could trim
+         it. Presentation belongs where presentation can be overridden by a
+         media query. */
       card.parentNode.insertBefore(bar,card);
     }
     bar.innerHTML='<b style="color:#ff8a94">Not playing tonight</b><br>'+esc(INACTIVE_NOTE)+
@@ -10863,7 +11152,7 @@ function renderCatchReview(){
 let prCatchMarks={};
 
 /* ---------------- BOTS ---------------- */
-function seedBots(){S.botScores=bots.map(b=>({...b,pts:0}));}
+function seedBots(){S.botScores=bots.map(b=>({...b,pts:0}));S.botSheetsSettled=false;}
 function bumpBots(maxPer){S.botScores.forEach(b=>{b.pts+=Math.floor(Math.random()*(maxPer+1));});}
 function standings(){
   const all=[{n:S.name||"You",c:S.color,pts:S.pts,me:true},...S.botScores.map(b=>({...b,me:false}))];
@@ -13919,6 +14208,13 @@ var I18N = {
     "rank":"posición",
     "Rank #–":"Posición #–",
     "Final rank":"Posición final",
+    /* The final buzzer's two tiles in practice. "Beat this % of players"
+       is still in the dictionary below because the string is still in the
+       markup as the pre-render default; nothing sets it any more. */
+    "Questions right":"Preguntas acertadas",
+    "Prediction sheet":"Hoja de predicciones",
+    "Points tonight":"Puntos de esta noche",
+    "Night score /100":"Puntuación de la noche /100",
     "Sound":"Sonido",
     "Turn on":"Activar",
     "Close":"Cerrar",
@@ -15594,9 +15890,41 @@ function showFinal(){
   // board compared your predictions-included total against bots who never
   // made predictions — you "won by a mile" over opponents who forgot to
   // play half the game, and the whole night's score read tiny and fake.
-  if(S.mode==="demo" && Array.isArray(S.botScores)){
+  /* ============ ONCE, NOT ONCE PER RENDER ==========================
+     This is the double-add three comments above, wearing the bots'
+     clothes. showFinal() is re-entered on a reload, on a resume, and on
+     any late re-render of the ending — and every one of those handed all
+     eight simulated players ANOTHER random slice of a 600-point sheet.
+     The player's own total is recomputed from the ledger and cannot move;
+     the field around them could, and did. That is one of the two reasons
+     an identical 380 came out #8 on one run and #9 on the next.
+
+     The other reason is that the field is Math.random() to begin with,
+     which is why nothing on this screen ranks the player against it any
+     more — see the practice branch at the bottom of this function. */
+  if(S.mode==="demo" && Array.isArray(S.botScores) && !S.botSheetsSettled){
+    S.botSheetsSettled = true;
     S.botScores.forEach(b=>{ b.pts += Math.floor(PRED_MAX*(0.25+Math.random()*0.4)); });
   }
+  /* ============ THE NIGHT IS OVER; THE CARD IS NOT STILL ASKING =======
+     A Caught It that was still open when the buzzer went travels between
+     screens on purpose (an open question is a live task with a clock on
+     it). It must not travel to THIS one. `body.ciopen` puts
+     `padding-top:var(--cih)!important` on whatever screen is active, and
+     the final screen does not host the card — so the reserved space is
+     just a hole. Measured on the shipped build at 1850x1050: the FINAL
+     BUZZER pill sat at y=328 instead of y=86, a 242px void above the
+     headline, with nothing in it.
+
+     Nothing is owed here. The last thing the night does is close the
+     card, drop the class and give the space back. */
+  try{
+    var _cic=document.getElementById('ciCard');
+    if(_cic){ _cic.style.display='none'; _cic.classList.remove('cilive'); }
+    try{ if(typeof PCI==='object' && PCI){ clearTimeout(PCI.hideT); PCI.pending=null; } }catch(_){}
+    document.body.classList.remove('ciopen');
+    document.documentElement.style.setProperty('--cih','0px');
+  }catch(_){}
   S.streak++;
   const $f = id => document.getElementById(id);
   $f('finalMax').textContent = `OUT OF ${MAXPTS}`;
@@ -15618,6 +15946,21 @@ function showFinal(){
   // Rank is not known yet in live mode — finishLive() calls this again with
   // it, and renderAwards only replays the animation if the headline changed.
   renderStatLine(recordStatLine(renderAwards(null)));
+  /* The prize disclosure belongs under a contest, not under a rehearsal.
+     One writer, here, so the two modes cannot drift the way the practice
+     clock and the two hardcoded Caught It windows did. */
+  try{
+    var _pz=document.getElementById('finalPrizeNote');
+    if(_pz) _pz.style.display = (S.mode==='live') ? '' : 'none';
+  }catch(_){}
+  /* The breakdown is folded on a phone on purpose — see the note on the
+     markup. At >=1120px it is the whole of column two, and folding it
+     there leaves half the screen empty behind a tap. Matches the one
+     breakpoint the layout uses; below it, nothing changes. */
+  try{
+    var _dw=document.getElementById('fDrawer');
+    if(_dw && window.innerWidth>=1120) _dw.open=true;
+  }catch(_){}
 
   if(S.mode==="live"){
     // Rank is the honest headline here and finishLive() fills it in from
@@ -15653,12 +15996,102 @@ function showFinal(){
       `<div class="card tight"><p class="sub" style="font-size:14px;margin:0">📲 Post your result card in the group chat. Highest points wins the night — ⚡ Speed breaks ties. Rematch at the next Game of the Night.</p></div>`;
     finishLive();
   }else{
-    const s=standings();const rank=s.findIndex(x=>x.me)+1;
-    const beat=Math.round((S.totalPlayers-rank)/S.totalPlayers*100);
-    setStat(1,'#'+rank,'Final rank');
-    setStat(2,beat+'%','Beat this % of players');
-    $f('finalTitle').textContent = rank===1?'🏆 You won the pot!':`Great game, ${S.name||'player'}!`;
-    renderLeaderboard('finalLb',6);
+    /* ================================================================
+       FOUR NUMBERS THAT DISAGREED, ON A SCOREBOARD PRODUCT.
+
+       A stranger played practice end to end and this screen said, all at
+       once and all about the same 380 points:
+
+         "#8 Final rank"                  — 9th-place-of-nine arithmetic
+         "Beat this % of players: 99%"    — a percentile out of 1,204
+         a board of six names, all above them, and no row for them
+         "Season pts: 38"                 — 380/1000 as a percentage
+
+       Each one was computing something different from what its label
+       claimed, and no two of them were counting the same population:
+
+       * RANK came from standings() — you plus the eight bots, so a field
+         of NINE. The tile printed "#8" with no denominator, so it read as
+         eighth out of everybody.
+       * THE PERCENTILE came from S.totalPlayers, a hardcoded 1204. There
+         is no population. There has never been a population. Nobody is
+         playing the product right now, so 1,204 was not an estimate that
+         drifted — it was a number typed into a placeholder that shipped.
+         (1204-8)/1204 = 99%, which is why a last-place finish came with a
+         congratulation.
+       * THE BOARD was renderLeaderboard(...,6): the top six of nine. Come
+         seventh or worse — which the bots' random scores make likely —
+         and you are sliced off your own result screen.
+       * And the eight opponents are Math.random(). A rank against noise
+         is noise with a # in front of it.
+
+       THE FIX IS NOT A BETTER FICTION. Practice has no field to be ranked
+       in, so this screen stops ranking. What it shows instead is what it
+       can stand behind: the player's own night, in the same units the
+       breakdown drawer three inches below it uses, so the two agree by
+       construction rather than by coincidence.
+
+       The simulated room is still there during play — it is on every
+       quarter break, where it is the flavour it was built to be. It is
+       the LAST screen that may not hand somebody a rank against people
+       who do not exist.
+       ================================================================ */
+    /* ============ WHY NOT countGraded() ==============================
+       Because it answers zero here, and would have put a second copy of
+       the ring's own number in the tile beside it — 380 next to 380,
+       which is the disease this branch exists to cure.
+
+       countGraded() requires S.liveAnswers[i][j].choice, and answer()
+       only writes S.liveAnswers on the LIVE branch: the early return
+       where a pick is still changeable. In practice a question is graded
+       the moment it is tapped, so that line is never reached and the only
+       record of the tap is the verdict pushed onto S.results.
+
+       That is the right denominator here anyway, and for the same reason
+       countGraded() was written: in practice S.results[i] is pushed to
+       once per question the player actually answered, so its length is
+       what THEY played, not what the room graded. */
+    (function(){
+      var hits=0, tot=0;
+      try{
+        (S.results||[]).forEach(function(rd){
+          (rd||[]).forEach(function(v){
+            if(v===true||v===false){ tot++; if(v===true) hits++; }
+          });
+        });
+      }catch(_){ tot=0; }
+      if(tot>0) setStat(1, hits+'/'+tot, 'Questions right');
+      else      setStat(1, '—', 'Questions right');
+    })();
+
+    /* Second tile: the other half of the night, printed as points out of
+       the points that were on offer — the same pair the breakdown prints
+       under "Prediction sheet". When the sheet could not be settled there
+       is no honest number here, so there is no number here. */
+    (function(){
+      /* S.predPts and PRED_MAX, deliberately — the identical pair
+         renderBreakdown() prints on its own 📝 row. Two expressions for
+         one quantity is how this screen got into trouble in the first
+         place. */
+      if(!S.predSkipped && !S.predUnsettled && typeof PRED_MAX==='number' && PRED_MAX>0){
+        setStat(2, (S.predPts||0)+'/'+PRED_MAX, 'Prediction sheet');
+      } else {
+        setStat(2, '—', 'Prediction sheet');
+      }
+    })();
+
+    /* "🏆 You won the pot!" also lived on this branch. There is no pot in
+       a practice game, and the sentence was fired by beating eight random
+       numbers. */
+    $f('finalTitle').textContent = `Great game, ${S.name||'player'}!`;
+
+    /* Where the board was. Says what the night was instead of listing
+       people who are not there. */
+    $f('finalLb').innerHTML =
+      `<div class="card tight"><p class="sub" style="font-size:14px;margin:0">`
+      + `This was a practice game. The other names you played against are simulated, `
+      + `so there is no board to finish on and nothing here counts toward a season. `
+      + `Play a live Game Night to get on a real one.</p></div>`;
   }
   renderSignup();
   bankNight();
@@ -15679,7 +16112,23 @@ function bankNight(){
     if(S.mode==='live'){
       var nid=(typeof GAME!=='undefined'&&GAME.nightId)||('night-'+new Date().toISOString().slice(0,10));
       var rk=null; try{ rk=liveRank(); }catch(_){}
-      seasonRecord(nid, S.pts||0, rk);
+      /* THE CONFIRMED FIGURE, NOT THE PREVIEW. `S.pts` is this device's
+         running total, and shownTotal()'s own note says why that is not
+         the number to publish: "the server's row wins whenever there is
+         one, and the preview only fills the gap before the first
+         confirmation arrives." This is the moment a night becomes a
+         permanent row in the season, so the preview is precisely the
+         wrong thing to freeze.
+
+         Measured 25 Aug, one player, one room, four surfaces at once:
+         score strip 154, Board TONIGHT 149, Board night-by-night "Game
+         Night 31" 154, final card 149. Two of them read the local
+         counter and two read the server — and this line is the one that
+         wrote 154 into the season for good. shownTotal() still falls
+         back to S.pts when there is no server row, so a hostless or
+         offline night banks exactly what it banked before. */
+      var _bank=0; try{ _bank=shownTotal(); }catch(_){ _bank=S.pts||0; }
+      seasonRecord(nid, _bank, rk);
     }
   }catch(_){}
 }
@@ -16232,6 +16681,9 @@ function recordStatLine(got){
   const line=loadLine();
   const key=String(GAME.nightId || (SPORT_KEY+'|'+(GAME.date||'')));
   const row={ night:key, sport:SPORT_KEY, label:GAME.night||'', date:GAME.shareDate||GAME.short||'',
+              /* Bank the game-night number WITH the night. Without it the board
+                 has only the id, and an auto-built id carries no number. */
+              gn:(function(){ try{ return gnOf(GAME)||''; }catch(_){ return ''; } })(),
               pts:S.pts||0, max:MAXPTS, speed:S.speed||0,
               hits:got.ctx.graded.hits, total:got.ctx.graded.total,
               rank:(got.ctx.rank===undefined?null:got.ctx.rank),
@@ -16314,18 +16766,41 @@ function lineTotals(line){
 
 function renderStatLine(line){
   const box=document.getElementById('fStatLine'); if(!box) return;
+  /* ============ A SEASON CARD ON A GAME THAT JOINS NO SEASON ==========
+     Practice never banks — bankNight() is live-only, and the comment on
+     the markup already says "Practice never touches it". It rendered
+     anyway, with fallbacks, and every tile in it was then a claim nobody
+     could stand behind: "Nights 1" for a night that was not recorded,
+     "Streak 🔥1" for a streak that does not exist, "Accuracy —", and a
+     "Season pts" of 38 that was tonight's 380/1000 expressed as a
+     percentage.
+
+     Four boxes, three of them fiction, on the screen where a stranger
+     decides whether this product knows what their score is. The card is
+     simply not shown when there is no season behind it. */
+  if(S.mode!=='live'){ box.style.display='none'; return; }
+  box.style.display='';
   const t=lineTotals(line||loadLine());
   const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
-  // With no season record yet — practice, or a live night that was not
-  // written — this still has to say something true, so it falls back to
-  // tonight rather than printing zeros over a game that just happened.
+  // With no season record yet — a live night that was not written yet —
+  // this still has to say something true, so it falls back to tonight
+  // rather than printing zeros over a game that just happened.
   const live = t.games>0;
   set('slGames', live?t.games:1);
-  /* With no season record yet, show tonight AS A NIGHT SCORE — S.pts is a
-     raw room total and printing it under "Season pts" would put two
-     different units in the same box. */
+  /* ============ THE LABEL MUST DESCRIBE THE QUANTITY IT PRINTS ========
+     Both branches print a NIGHT SCORE — a percentage of the points that
+     were on offer, capped at 100 per night. The season branch sums them;
+     the fallback branch prints tonight's alone. The label said "Season
+     pts" for both, so a single practice night read "Season pts 38" when
+     the number in the box was the percentage 380/1000.
+
+     Same family as the NFL end-of-regulation bug and the "0 of 6 lines
+     landed beside 72 points" bug: the number was right and the word above
+     it was describing something else. The word now moves with the
+     number. */
   set('slPts',  live ? t.pts.toLocaleString()
                      : (MAXPTS ? Math.round(Math.min(100,(S.pts||0)/MAXPTS*100)) : 0).toLocaleString());
+  set('slPtsK', live ? 'Season pts' : 'Night score /100');
   set('slAcc',  (live && t.total) ? t.acc+'%' : '—');
   set('streakN', S.streak || (live?t.games:1));
   // seasonRating retired — see the note in the final screen markup.
@@ -21042,7 +21517,7 @@ function runEngine(){
 function restart(){
   clearSave();
   S={mode:"demo",practice:false,screen:"landing",name:"",color:COLORS[0],pts:0,speed:0,predChoices:{},predOrder:[],qi:0,ni:0,nextQ:0,answered:false,
-    lifelineHalf1:true,lifelineHalf2:true,botScores:[],totalPlayers:1204,
+    lifelineHalf1:true,lifelineHalf2:true,botScores:[],botSheetsSettled:false,
     results:emptyRounds(),liveAnswers:emptyRounds(),streak:S.streak,seasonPts:S.seasonPts+S.pts,
     catchChoices:{},catchResults:{},catchPts:null,catchesScored:false,
     predTruth:null,predTruthNum:null,lifelineAt:null,tally:null};
@@ -22005,7 +22480,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-25-caughtit.222';
+const STATS_BUILD='2026-08-25-lastround.223';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -22389,6 +22864,13 @@ function gameBarState(){
 function returnToGame(){
   try{
     const place=S.place||'lobby';
+    /* DOOR TWO. This line reads S.place and reopens the pick sheet from
+       it, which is the same trust startPredict()'s guard was built on and
+       the same trust that failed. A save left sitting on 'predict' from
+       before tip — a tab open in the background, a phone that slept on
+       the card — puts the floating "back to your game" bar back on the
+       sheet in the fourth quarter. One policy, every door. */
+    if(place==='predict' && predGateShut(true)) return;
     if(place==='predict'){ buildPred(); go('predict'); return; }
     if(place==='lobby'){ renderLobby(roomNextRound(S.nextQ!=null?S.nextQ:S.qi)); go('lobby'); return; }
     go(place);
@@ -22445,7 +22927,26 @@ function paintRail(show){
   var el=document.getElementById('railScore'); if(el) el.innerHTML=txt;
   var me='—';
   try{
-    var pts=Math.max(0,Math.round((S&&S.pts)||0));
+    /* ============ THE STRIP AND THE CARD TWO INCHES BELOW IT ==========
+       25 Aug, one player, one room, one moment, four surfaces, two
+       answers: this strip said 154, the final card under it said "You
+       finished on 149 points in this room", the Board said 149 under
+       TONIGHT and 154 on its night-by-night row.
+
+       shownTotal() is the owner of "the number to show a player", and its
+       rule is already written down two hundred lines above it: the
+       server's row wins whenever there is one; S.pts is a PREVIEW that
+       exists so the total can move the instant you answer, before the
+       round trip. This strip reached past the owner for the raw local
+       counter — and it was already half-converted, because the RANK on
+       the next line comes out of lastStand, which is the very server row
+       shownTotal() prefers. Server rank beside local points, in one
+       eleven-character string.
+
+       shownTotal() falls back to S.pts by itself when there is no server
+       row, so practice and the gap before the first confirmation render
+       exactly as they did. */
+    var pts=0; try{ pts=shownTotal(); }catch(_){ pts=Math.max(0,Math.round((S&&S.pts)||0)); }
     var rank=null; try{ if(lastStand&&lastStand.length) lastStand.forEach(function(x,i){ if(x.me) rank=i+1; }); }catch(_){}
     me='<b>'+pts+'</b> pts' + (rank?(' · #'+rank):'');
   }catch(_){}
@@ -22780,8 +23281,17 @@ function paintNav(active){
   try{ paintRail(!hide && !onBoard && (typeof S!=='undefined') && S.mode==='live'); }catch(_){}
   try{ paintGameBar(); }catch(_){}
   try{ if(scr==='landing') paintContinueCard(); }catch(_){}
-  // The pick-slip's action bar belongs to exactly one screen.
-  try{ const pb=document.getElementById('pdBar'); if(pb) pb.style.display=(scr==='predict')?'block':'none'; }catch(_){}
+  /* The pick-slip's action bar belongs to exactly one screen.
+
+     `''` AND NOT `'block'`. An inline display beats every stylesheet rule
+     short of !important, so writing 'block' here made the bar's layout
+     un-overridable from CSS — and at desk width it needs to be a flex row
+     rather than two stacked bands (see the min-width:1120px block). The
+     empty string hands the decision back to the stylesheet, where
+     `#s-predict.active #pdBar{display:block}` is the phone's answer and
+     the media query is the desk's. The 'none' branch is kept: it is
+     belt-and-braces over the section's own .active, and it costs nothing. */
+  try{ const pb=document.getElementById('pdBar'); if(pb) pb.style.display=(scr==='predict')?'':'none'; }catch(_){}
   // Caught It is an in-game overlay. On the landing, the handle screen or the
   // pick sheet it is just a box covering the nav — which is exactly how the
   // menu "disappeared".
@@ -23833,12 +24343,45 @@ function seasonRecord(nightId, pts, rank){
    So there is one store now. `stats_statline_v1` wins \u2014 it is the richest
    and the only one deduped by night \u2014 and everything else derives. The old
    store is read once, folded in, and never written again. */
+/* Night keys come in two shapes. Hand-built nights are `gn13-2026-08-19-gsw-lal`
+   and carry their number in the id. Auto-built slate nights are
+   `slate-2026-08-25-lad-atl` and do not — their number lives in the marquee
+   file the slate was built from, and it reaches the client as `gn` on the
+   slate tile. The old label chopped the id at the first hyphen, which printed
+   the literal word "slate" for every auto-built night.
+
+   Three sources, in order of trust: the number banked with the row, the
+   closed backfill map below, then the number written into a hand-built id. */
+var GN_BACKFILL = {
+  'slate-2026-08-20-wsh-tex':14, 'slate-2026-08-20-sf-lac':15,
+  'slate-2026-08-21-nyj-pit':16, 'slate-2026-08-21-laa-tex':17,
+  'slate-2026-08-21-por-tor':18, 'slate-2026-08-22-buf-cle':20,
+  'slate-2026-08-22-nyg-mia':21, 'slate-2026-08-22-pit-lad':22,
+  'slate-2026-08-22-por-lafc':23, 'slate-2026-08-23-sf-bos':24,
+  'slate-2026-08-23-nyc-ne':25, 'slate-2026-08-23-ind-chi':26,
+  'slate-2026-08-23-sea-ten':27, 'slate-2026-08-24-tb-det':28,
+  'slate-2026-08-24-atl-la':29,  'slate-2026-08-25-lad-atl':30,
+  'slate-2026-08-25-por-dal':31, 'slate-2026-08-26-tor-sea':32
+};
+/* CLOSED ON PURPOSE. This covers only the window where auto-built nights
+   existed but the row did not yet save its number. Every night banked from
+   26 Aug 2026 carries its own `gn`, so nothing new is ever added here. */
+function nightLabel(k, row){
+  k = String(k || '');
+  var gn = (row && row.gn) || GN_BACKFILL[k] || '';
+  if (!gn) { var m = k.match(/^gn(\d+)/i); if (m) gn = m[1]; }
+  if (gn) return 'Game Night ' + gn;
+  /* No number we can stand behind. Say what the night was rather than
+     inventing a number or printing "slate" again. */
+  if (row && row.label) return String(row.label);
+  return k.replace(/^slate-/, '').replace(/-/g, ' ');
+}
 function seasonStats(){
   var line = loadLine();
   var nights = {}, keys = [];
   (line.games||[]).forEach(function(g, i){
     if(!g || !g.night) return;
-    nights[g.night] = { pts:Number(g.pts)||0, rank:(g.rank==null?null:g.rank), at:i };
+    nights[g.night] = { pts:Number(g.pts)||0, rank:(g.rank==null?null:g.rank), at:i, gn:g.gn||'', label:g.label||'' };
     keys.push(g.night);
   });
   /* ONE-TIME FOLD-IN. A season recorded before this change lives in the old
@@ -23968,7 +24511,7 @@ function renderBoard(){
   if(ss.played){
     out+='<div class="card" style="padding:14px 16px;margin-top:12px"><div class="stHd">NIGHT BY NIGHT</div>'
       + ss.keys.slice().reverse().map(function(k){ var n=ss.nights[k];
-          return '<div class="stLead"><span class="stLeadN">'+esc(k.replace(/^gn/,'Game Night ').replace(/-.*$/,''))+'</span>'
+          return '<div class="stLead"><span class="stLeadN">'+esc(nightLabel(k, n))+'</span>'
             + '<span class="stLeadV">'+(Number(n.pts)||0)+' pts'+(n.rank?(' · #'+n.rank):'')+'</span></div>'; }).join('')
       + '</div>';
   }
@@ -24567,7 +25110,12 @@ function shareCardText(id){
   }catch(_){}
   var me='';
   try{
-    var pts=Math.max(0,Math.round((S&&S.pts)||0));
+    /* The fifth unconverted caller, found while fixing the rail. The
+       share text is the one surface built to be posted in public — the
+       roast card's own note says so and was converted to shownTotal()
+       for that reason; this builder was missed. Same one-line change,
+       same self-fallback. */
+    var pts=0; try{ pts=shownTotal(); }catch(_){ pts=Math.max(0,Math.round((S&&S.pts)||0)); }
     var rank=null; try{ if(lastStand&&lastStand.length) lastStand.forEach(function(x,i){ if(x.me) rank=i+1; }); }catch(_){}
     if(S&&S.mode==='live') me='Me: '+pts+' pts'+(rank?(' · #'+rank):'');
   }catch(_){}
@@ -27882,6 +28430,14 @@ body.hasgamebar .screen.active{padding-bottom:132px}
 .bdK{font-size:12px;letter-spacing:.12em;color:var(--muted);font-weight:800}
 
 /* ---- pick-slip ---- */
+/* THE INJURY REPORT. Every value here is the inline cssText paintInactives()
+   used to write, moved verbatim so the phone renders to the pixel it did.
+   It is a rule rather than an inline style for one reason: an inline style
+   cannot be answered by a media query, and at desk width this box needs to
+   be smaller than it is on a phone. */
+#inactiveBar{background:rgba(255,77,94,.10);border:1px solid rgba(255,77,94,.35);
+  border-radius:12px;padding:11px 13px;margin-bottom:12px;font-size:14px;
+  line-height:1.5;color:var(--muted,#93a0bd)}
 #predCard{padding:14px}
 .pdhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .pdhead b{font-size:20px;color:var(--teal);letter-spacing:.2px}
@@ -28027,6 +28583,10 @@ body.hasgamebar .screen.active{padding-bottom:132px}
 
 #pdBar{display:none;position:fixed;left:0;right:0;bottom:72px;z-index:8600;padding:9px 14px calc(9px + env(safe-area-inset-bottom,0px));
   background:rgba(10,14,23,.96);backdrop-filter:blur(14px);border-top:1px solid var(--line2)}
+/* The phone's answer to "is this bar on screen". It used to be an inline
+   style.display='block' written by the nav painter, which no stylesheet
+   could then override — see that call site, and the desk-width rules. */
+#s-predict.active #pdBar{display:block}
 #pdBar .pdlock,#pdBar .pdnav{max-width:430px;margin-left:auto;margin-right:auto}
 /* TWO ROWS AND NOT ONE PIXEL MORE. This bar sits above the nav on a
    screen that also has to show a question and its answers, so every pixel
@@ -28101,7 +28661,21 @@ body.hasgamebar .screen.active{padding-bottom:132px}
    content overflow" is not, and that one is measured. */
 @media (min-width:1120px){
   body.on-predict .phone{max-width:1120px}
-  body.on-predict #predCard{padding:16px 18px}
+  /* ============ THREE STACKED ROWS THAT ARE ONE LINE OF INFORMATION ===
+     "Your card · 100 pts riding" / "1 / 6 picked ▬▬▬▬" / ●○○○○○ — three
+     full-width rows, 101px, above the question, saying one thing: how far
+     through the deck you are. Stacked is right in a 430px column and
+     wasteful in an 1120px one, where all three fit on a line with room
+     over. Flex-wrap rather than a fixed grid so a narrow desk window puts
+     them back on separate lines instead of squeezing the progress bar to
+     nothing — wrapping cannot hide anything, which is the rule the game
+     rail was rebuilt around. */
+  body.on-predict #predCard{padding:16px 18px;
+    display:flex;flex-wrap:wrap;align-items:center;column-gap:20px}
+  body.on-predict #predCard > .pdhead{flex:0 0 auto;margin-bottom:0;gap:14px}
+  body.on-predict #predCard > .pdprog{flex:1 1 200px;min-width:170px;margin-bottom:0}
+  body.on-predict #predCard > .pddots{flex:0 0 auto;margin:0}
+  body.on-predict #predCard > .pdcard{flex:0 0 100%;margin-top:14px}
   body.on-predict .pdcard{display:grid;
     grid-template-columns:minmax(300px,0.85fr) minmax(340px,1.15fr);
     grid-template-rows:auto 1fr;
@@ -28136,14 +28710,171 @@ body.hasgamebar .screen.active{padding-bottom:132px}
      leave half of it empty. Still minmax(0,1fr) — see the note above about
      a grid track's auto minimum putting "Sophie Cunningham" past the edge. */
   body.on-predict .pdopts.many{grid-template-columns:repeat(3,minmax(0,1fr))}
+  /* ============ ONE ROW, BECAUSE THERE ARE 1,440 PIXELS OF IT =========
+     MEASURED on the founder's own window — Chrome on a Mac, 1440x788
+     after the menu bar, tab strip and address bar, which is what a
+     "2000x1250 screenshot" is once you divide by the Retina scale. On the
+     shipped build, in the state his screenshot shows (one pick made, so
+     the lock row is rendered):
+
+         #pdBar   y 610 - 716   106px
+         #botnav  y 722 - 788    66px
+                                ----
+                                172px = 21.8% of the window,
+                                        opaque, on top of the card
+
+     The bar was TWO STACKED BANDS across the full width: [← Back]
+     [2 of 6 · 1 locked] [Next →] on one, and one 520px button on the
+     other. That is 106 vertical pixels spent to hold four controls, on a
+     bar 1,440px wide with 920px of it empty. On a phone the second row
+     is right — there is no horizontal room. Here it was charging rent in
+     the one dimension that is scarce.
+
+     This is the founder's third symptom, exactly: "a yellow Still need
+     most points → bar sits over the content above the pinned Back /
+     Next bar." It is not sitting over the content any more; it is beside
+     Next, where there was already room for it.
+
+     The display is set here rather than by the nav painter's inline
+     `style.display='block'`, which would win over any of this. See the
+     note at that call site. */
+  body.on-predict #s-predict.active #pdBar{
+    display:flex;align-items:center;justify-content:center;gap:20px;
+    padding-top:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
   /* Back and Next align with the edges of the deck they move, rather than
      huddling in a 430px column in the middle of a 1120px bar. The lock is
      one primary action and does not need to be 1,080px wide to be found. */
-  body.on-predict #pdBar .pdnav{max-width:1084px}
-  body.on-predict #pdBar .pdlock{max-width:520px}
+  body.on-predict #pdBar .pdnav{flex:1 1 520px;max-width:560px;margin:0}
+  body.on-predict #pdBar .pdlock{flex:0 1 420px;max-width:420px;width:auto;
+    margin:0;padding:13px 20px}
   /* The question can afford to be read at desktop distance. Top of the
      ramp, not past it. */
   body.on-predict .pdq{font-size:26px}
+
+  /* ============ THE PREAMBLE STOPS PUSHING THE QUESTION OFF THE SCREEN
+     The other half of the same 1440x788 measurement, and the cause of the
+     founder's first two symptoms:
+
+         #gameRail   (the chooser)          52px
+         .qmeta + h1 + p.sub                105px
+         #inactiveBar (nine names OUT)      113px
+         "Your card / 1 of 6 / dots"       101px
+                                           -----
+                                            371px of preamble
+         the card itself                    210px visible
+         #pdBar + #botnav                   172px of chrome
+
+     The thing the player is on this screen to do got 27% of the window,
+     and the two things his screenshot shows clipped fell in the last
+     100px of it:
+
+         "How many pts?" input   y 576-624, bar top 610  — 14px CLIPPED
+         nine roster options     underneath the pinned bar
+         fourteen more           below the fold entirely
+
+     `pdFitPin()` is NOT mis-measuring here. It ran, it correctly found
+     the deck does not fit (fitpin=false, 194px reserved), and it pinned
+     the controls — which is all it was ever asked to do. The overflow it
+     is living with is real: twenty-nine names cannot be made to fit in
+     788px however the columns are arranged, and any attempt to force it
+     would end in a scroller with its bar hidden, which is the failure
+     this whole file exists to stop.
+
+     So the fix is not "make it fit". It is: STOP SPENDING THE HEIGHT ON
+     THINGS THAT DO NOT NEED IT. This screen is a two-column layout with
+     478px of empty left column below the number field, and directly
+     above it 218px of header and injury report stacked one on the other
+     across the full width. They are siblings; at desk width they sit
+     side by side and 105 of those pixels go back to the question.
+
+     WHY A GRID ON THE SECTION AND NOT A WRAPPER DIV. `display:contents`
+     wrappers are the pattern this file uses elsewhere and they were the
+     first draft here — but `.qmeta` is targeted by
+     `body.hasback .screen.active > .qmeta:first-child > .qn`, which is
+     what keeps "PRE-GAME PREDICTION SHEET" out from under the back
+     arrow. `>` walks the DOM, not the box tree, so a `display:contents`
+     wrapper silently breaks it and the arrow lands on the label. Placing
+     the existing children in a grid changes no parentage at all, so
+     every selector in the file still means what it meant.
+
+     Below 1120px not one of these rules exists and the screen is
+     byte-identical to the phone it was designed for. */
+  body.on-predict #s-predict.active{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    column-gap:24px;align-items:start;align-content:start}
+  body.on-predict #s-predict.active > .qmeta      {grid-column:1;grid-row:1}
+  body.on-predict #s-predict.active > #predHead   {grid-column:1;grid-row:2}
+  body.on-predict #s-predict.active > #predSub    {grid-column:1;grid-row:3}
+  /* The injury report is a REFERENCE, read once, and it is the widest
+     thing on the screen for the shortest reason. Beside the headline it
+     is still the first thing under the title and it costs nothing. */
+  body.on-predict #s-predict.active > #inactiveBar{grid-column:2;grid-row:1 / span 3;
+    margin-bottom:0;align-self:start;
+    /* Half the width means the same nine names wrap to three lines
+       instead of two, so the box that was 113px on a phone came out at
+       134px here — it would have given back some of what the side-by-side
+       just won. One step down THE RAMP (14 -> 12; the first draft of this
+       used 13px and qa.js's type.one-ramp check refused it, correctly:
+       the ramp is not mine to extend) and tighter leading, on a reference
+       line nobody reads twice. */
+    font-size:12px;line-height:1.5;padding:9px 12px}
+  /* Everything from the deck down is full width and in its existing
+     order. Explicit rows rather than auto-placement: #predBtn is
+     display:none most of the time and #pdBar leaves the flow entirely
+     when it is pinned, so auto-placement would shuffle the rest. */
+  body.on-predict #s-predict.active > #predCard   {grid-column:1 / -1;grid-row:4}
+  body.on-predict #s-predict.active > #predBtn    {grid-column:1 / -1;grid-row:5}
+  body.on-predict #s-predict.active > #pdBar      {grid-column:1 / -1;grid-row:6}
+  body.on-predict #s-predict.active > #predFoot   {grid-column:1 / -1;grid-row:7}
+}
+
+/* =====================================================================
+   THE LAST SCREEN OF THE NIGHT, AT DESK WIDTH.
+   ---------------------------------------------------------------------
+   Measured on the founder's 1850x1050 display, on the shipped build,
+   after a real practice game played end to end: `.phone` 440px wide at
+   x=705, i.e. a 440px ribbon with 705px of black on the left and 705px on
+   the right — 76% of the screen showing nothing — while the pick sheet on
+   the same machine correctly took 1120px. The result card is the one
+   screen people screenshot and it was the narrowest thing in the product.
+
+   Same mechanism as the pick sheet, deliberately: one body class written
+   by go(), one min-width query, `display:contents` wrappers that do not
+   exist below the breakpoint. The ramp is untouched, the cards are
+   untouched, and nothing about the phone layout changes — this is only
+   about which of the two columns a card is in.
+
+   COLUMN ONE is the ending: the buzzer, the headline, anything unsettled,
+   the award, the ring and its two tiles. COLUMN TWO is what you do next:
+   the breakdown drawer, the list, the buttons, the disclosure. On a phone
+   that is a scroll; here it is a glance, and the breakdown is no longer
+   700px below the number it breaks down.
+   ================================================================== */
+.fcolA,.fcolB{display:contents}
+@media (min-width:1120px){
+  body.on-final .phone{max-width:1120px}
+  /* The wrappers stop being invisible and become the two columns. */
+  body.on-final .fcolA,
+  body.on-final .fcolB{display:flex;flex-direction:column;min-width:0}
+  body.on-final #s-final{display:grid;
+    grid-template-columns:minmax(0,1.05fr) minmax(0,0.95fr);
+    column-gap:28px;align-items:start;
+    padding-left:24px;padding-right:24px}
+  /* The two columns start level. `margin-top:14px` on the pill wrapper is
+     the phone's air under the rail; it must not become a 14px stagger
+     between two columns that are supposed to line up. */
+  body.on-final .fcolB > :first-child{margin-top:0}
+  /* The drawer is the point of column two, so showFinal() opens it here —
+     there is room for it, and a summary row saying "See the full
+     breakdown" beside 500px of empty column is a tap that buys nothing.
+     It stays a <details>, so it can still be shut, and the phone keeps it
+     folded. */
+  body.on-final #fDrawer{margin-top:0}
+  /* The ring can afford to be read at desk distance. Top of the ramp, not
+     past it — `.bignum` is the ramp's own headline size and this only
+     stops it being the phone size on a 1120px column. */
+  body.on-final .fhero{padding-top:22px;padding-bottom:22px}
 }
 </style>
 </body>
