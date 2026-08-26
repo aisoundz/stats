@@ -277,6 +277,42 @@ async function browserPromises(){
     await pg.addInitScript(() => {
       try { localStorage.setItem('stats_has_account_v1','1'); } catch(_){}
     });
+    /* ============ THE NIGHT THIS SUITE PLAYS IS A HYDRATED ONE ========
+       From 26 Aug joinNight() refuses to seat anybody into a BAKED night
+       that has expired — see qa/stale-seat.js, written after 76 real
+       visitors were filed into gn13-2026-08-19-min-gs over the week
+       AFTER that game finished.
+
+       This suite loads the app from file:// with no slate to read, so
+       GAME stays BB_GAME, and BB_GAME is stale eighteen hours after its
+       tip. Left alone, the join-dependent promises below stop testing
+       what they claim and start testing the staleness guard.
+
+       Clearing `__baked` is exactly what hydrateNight() does when a real
+       night lands, so this models production rather than the one state
+       production exists to prevent.
+
+       IT IS AN initScript, NOT A ONE-SHOT evaluate, because freshStart()
+       — the sign-out path — ends in location.reload(). A single
+       post-boot evaluate is wiped by that reload and GAME comes back
+       baked, which is how "a night belongs to the person, not the
+       browser session" failed on a build where nothing it covers was
+       broken. This runs on every navigation, including that one.
+
+       The poll is deliberate: GAME does not exist at init time. It stops
+       at the first success and gives up after 15s rather than spinning. */
+    await pg.addInitScript(() => {
+      try {
+        var t = setInterval(function () {
+          try {
+            if (typeof GAME !== 'undefined' && GAME && GAME.__baked) {
+              delete GAME.__baked; clearInterval(t);
+            }
+          } catch (_) {}
+        }, 10);
+        setTimeout(function () { try { clearInterval(t); } catch (_) {} }, 15000);
+      } catch (_) {}
+    });
     await pg.route('**/site.api.espn.com/**', r => r.fulfill({
       status:200, contentType:'application/json', body:JSON.stringify(F.LIVE) }));
     await pg.route('**/site.web.api.espn.com/**', r => r.abort());

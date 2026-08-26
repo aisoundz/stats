@@ -4023,8 +4023,28 @@ window.STATS_FIREBASE = {
     v = v || {};
     var live = (typeof v.livePts === 'number' && isFinite(v.livePts)) ? v.livePts : null;
     if (live === null) return Number(v.pts) || 0;
+    /* ============ THE CAUGHT LANE THE SERVER GRADED WINS =============
+       26 Aug. host/run.js grades the caught lane from the server's own
+       record of the picks, because a phone that never saw the resolution
+       reports zero. It used to fold that figure into `pts` and nothing
+       else — and this function does not read `pts`, so the board dropped
+       every server-graded catch. Measured on four nights: por-dal 90 vs
+       80, nyc-ne 10 vs 0, por-lafc 85 vs 80, nyj-pit 15 vs 10.
+
+       `caughtSrv` is the runner's own lane, written by nothing else, in
+       the same spirit as livePts above. When it is present it is the
+       better number by construction: it was computed from the picks
+       collection rather than from one device's memory of them.
+
+       The fallback is not a formality. A room with no runner — a hostless
+       night, a room the launcher never picked up — has no caughtSrv at
+       all, and there the phone's own figure is the only evidence there
+       is. Absent means "nobody graded this", not "zero". */
+    var caught = (typeof v.caughtSrv === 'number' && isFinite(v.caughtSrv))
+                   ? v.caughtSrv
+                   : (Number(v.caughtPts) || 0);
     return live + (Number(v.predPts) || 0)
-                + (Number(v.catchPts) || 0) + (Number(v.caughtPts) || 0);
+                + (Number(v.catchPts) || 0) + caught;
   }
   SB.nightTotal = nightTotal;
 
@@ -4041,7 +4061,11 @@ window.STATS_FIREBASE = {
         pts: Number(v.pts) || 0, speed: Number(v.speed) || 0,
         livePts: (typeof v.livePts === 'number' && isFinite(v.livePts)) ? v.livePts : null,
         predPts: Number(v.predPts) || 0, catchPts: Number(v.catchPts) || 0,
-        caughtPts: Number(v.caughtPts) || 0,
+        /* The same preference nightTotal() applies, so a breakdown row and
+           the total above it cannot disagree — that split is what
+           qa/board-total.js exists to stop. */
+        caughtPts: (typeof v.caughtSrv === 'number' && isFinite(v.caughtSrv))
+                     ? v.caughtSrv : (Number(v.caughtPts) || 0),
         total: nightTotal(v),
         me: d.id === uid()
       });
@@ -16089,7 +16113,40 @@ function applySettlement(st){
 function nightRoundsOutstanding(){
   try{
     if(!S || S.mode!=='live') return false;
-    var d = HR && HR.doc; if(!d) return false;
+    var d = HR && HR.doc;
+    /* ============ A LOCKED PHONE IS NOT A FINISHED NIGHT =============
+       26 Aug, founder: "the last 2 days of basketball the 4th quarter has
+       not fired. We've had problems on the smart phone."
+
+       `doc` is null in two completely different situations and this
+       guard used to answer both the same way:
+
+         no host has EVER pushed a round here   -> the night can end
+         we had one and the listener just went  -> we do not know yet
+
+       The second is what a phone does at every quarter break. `pagehide`
+       fires on screen lock, roomListenersStop() nulls `doc`, and until
+       the re-armed listener delivers its first snapshot the app knew
+       nothing about rounds — so it took the feed's word, and the feed
+       says Final ~33s before the last round opens. The player came back
+       to their result card with Q4 live on the server.
+
+       So: if we HAD a document and lost it recently, say the rounds are
+       outstanding. That is the honest answer — we do not know — and it
+       is the safe one, because being wrong here costs a player a few
+       seconds before their result card, while being wrong the other way
+       costs them the most valuable round of the night.
+
+       The window is deliberately short and is NOT the 45-minute
+       abandonment valve below. A snapshot that has not arrived in ninety
+       seconds is a listener that is genuinely dead, and at that point
+       the reconnect path owns the problem, not this guard. */
+    if(!d){
+      if(!HR.everHad) return false;             // no host here, ever: let it end
+      var lost = Number(HR.lostAt);
+      if(!isFinite(lost) || lost <= 0) return false;
+      return (Date.now() - lost) <= 90*1000;    // heard from recently: wait
+    }
     /* Same abandonment valve as below, for the same reason: if the host
        has gone, a player must still be able to reach their own ending. */
     var seq = Number(d.seq);
@@ -17745,6 +17802,42 @@ function nightKey(){ return GAME.nightId || (SPORT.key+'-unscheduled'); }
 async function joinNight(){
   JOIN_STARTED_AT=Date.now();
   try{ trkNow('night_join'); }catch(_){}
+  /* ============ NEVER SEAT ANYBODY IN A NIGHT THAT HAS EXPIRED ========
+     26 Aug, found by counting seats. gn13-2026-08-19-min-gs — a WNBA game
+     from 19 August — holds 83 player documents. Every other room in the
+     product's history holds two to four. SEVENTY-SIX of them are named
+     "player", the default handle nobody ever set, and new ones were still
+     appearing this morning: 29 on the 22nd, 22 on the 23rd, 12 on the
+     24th.
+
+     That is BB_GAME, the night this file ships with as a fallback. When
+     the slate read is slow, fails, or the visitor is on a cold cache,
+     GAME is still the baked object — and this function seated them into
+     it. A stranger opening statsgametime.com landed in a room that ended
+     a week ago, with no rounds coming and nothing to answer.
+
+     bakedNightIsStale() has known this since 21 August and SIX display
+     sites already ask it: gnOf() refuses to print "#13", and the hero
+     literally renders "Tonight's games are loading…". So the screen was
+     honest while the write path was not — the same shape as
+     nightRoundsOutstanding() having one caller, and as every other
+     one-fact-many-copies bug in this codebase. The predicate existed. The
+     thing that mattered never called it.
+
+     Refusing is safe because ensureJoined() retries unboundedly — 2s, 4s,
+     8s, 16s, then every 30s for as long as S.mode is 'live' — so the
+     moment hydrateNight() lands a real night the join succeeds on its
+     own. Nobody is locked out; they are just not filed under a dead game
+     while we wait.
+
+     The counter is the point as much as the guard: `join_blocked_stale`
+     turns "is anybody actually arriving?" from a guess into a number. */
+  try{
+    if(typeof bakedNightIsStale === 'function' && bakedNightIsStale(GAME)){
+      try{ trk('join_blocked_stale', { night: (GAME && GAME.nightId) || '' }); }catch(_){}
+      return false;
+    }
+  }catch(_){}
   // Subscribe first, unconditionally. `enabled` is false while the backend
   // is still booting and stays false if the boot fails — so hooking after
   // the guard means the one case that most needs a repaint (dead network)
@@ -17953,6 +18046,20 @@ try{
 function roomListenersStop(why){
   var n = 0;
   try{ if(typeof HR.unsub==='function'){ HR.unsub(); n++; } }catch(_){}
+  /* ============ REMEMBER THAT WE HAD ONE, AND WHEN WE LOST IT =======
+     Dropping `doc` is correct — it belonged to a listener that no longer
+     exists. What was missing is the note saying so. Without it
+     nightRoundsOutstanding() could not distinguish a hostless night from
+     a phone that had just been unlocked, and chose the reading that ends
+     the night. See HR.everHad.
+
+     `switch` is the one why that must CLEAR everHad: the next room has
+     its own host and its own history, and carrying this one's across
+     would block the new room's ending on evidence about a room the
+     player has left. pagehide and reconnect are the same room, so the
+     memory is exactly what we want to keep. */
+  try{ if(HR.doc) HR.lostAt = Date.now(); }catch(_){}
+  try{ if(why === 'switch'){ HR.everHad = false; HR.lostAt = 0; } }catch(_){}
   try{ HR.unsub=null; HR.doc=null; }catch(_){}
   try{ if(typeof PCI.unsub==='function'){ PCI.unsub(); n++; } }catch(_){}
   try{ PCI.unsub=null; }catch(_){}
@@ -18581,7 +18688,25 @@ const HR={
   pending:null,        // a live round waiting for the player to reach the lobby
   pendingScore:null,   // host revealed while they were still answering
   held:{},             // round INDEX -> played off the built-in questions, unscored
-  heldQs:{}            // round INDEX -> the exact question texts that phone answered
+  heldQs:{},           // round INDEX -> the exact question texts that phone answered
+  /* ============ "NO DOC" MEANT TWO THINGS AND COST Q4 ON PHONES =====
+     26 Aug. `doc` above is nulled by roomListenersStop(), and on iOS the
+     event that calls it is `pagehide` — which fires when the SCREEN
+     LOCKS, not only when the tab closes. So a player who put the phone
+     down to watch the break came back with doc:null for as long as the
+     re-armed listener took to deliver its first snapshot.
+
+     nightRoundsOutstanding() read that null as "no rounds outstanding"
+     and the app painted the ending over a live Q4. On a laptop that
+     never sleeps the window barely opens, which is exactly why this read
+     as "problems on the smart phone".
+
+     These two fields are what let the guard tell the difference between
+     a night with NO HOST (end it — a hostless room must still reach its
+     result card) and a night whose host we simply have not heard from
+     for two seconds (wait). */
+  everHad:false,       // a round document has arrived in THIS room at least once
+  lostAt:0             // ms stamp of the last teardown that nulled `doc`
 };
 
 /* ============ THE ROOM KNOWS WHICH QUARTER IT IS. ASK IT. ===========
@@ -20493,6 +20618,8 @@ function onHostedRound(r){
   if(idx>=rounds.length) return;           // a round this build doesn't have
   r.idx = idx;
   HR.doc = r;
+  /* This room has a host and we have heard from it. See HR.everHad. */
+  try{ HR.everHad = true; }catch(_){}
 
   // Adopt the questions the host actually asked. A pushed question carries
   // text and options only — never an answer.
@@ -23000,7 +23127,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-26-firstlook.225';
+const STATS_BUILD='2026-08-26-q4phone.226';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

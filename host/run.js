@@ -457,7 +457,49 @@ async function scoreRoom(db, FieldValue, AUTO){
          what lets the board compose a total instead of guessing at one.
          See nightTotal() in index.html — GN12 ranked on a double-counted
          sum because `pts` was the only thing ever written. */
+      /* ============ AND THE CAUGHT LANE, OR THE BOARD LOSES IT ========
+         26 Aug. The block above grades the caught lane server-side and
+         corrects `players[uid].caughtPts` IN MEMORY. tally() folds it
+         into row.pts, so the TOTAL written here was always right — and
+         the lane was not written at all, so the stored `caughtPts` kept
+         whatever the phone last put there, which for a server-graded
+         catch is 0.
+
+         That matters because the client does not read `pts`. It
+         RECOMPOSES the total from the four lanes — nightTotal() in
+         index.html is livePts + predPts + catchPts + caughtPts — and
+         readRoom() ranks the board on that. So every point this runner
+         awarded for a catch was invisible on the board that decides who
+         won, and the runner re-detected the same correction on every
+         tick forever because nothing ever persisted it.
+
+         Measured on live data before the fix: 08-25 por-dal pts=90 vs
+         lanes=80, 08-23 nyc-ne 10 vs 0, 08-22 por-lafc 85 vs 80,
+         08-21 nyj-pit 15 vs 10 — the gap is exactly the catch each time.
+
+         The lane persisted ONLY when the device wrote it itself, so this
+         hit precisely the players whose catches the server had to grade,
+         which is the case server-side grading exists for. This function's
+         own comment two lines up says "silently trusting the device again
+         is exactly the thing being fixed". Until now it was not.
+
+         WHY A NEW FIELD AND NOT `caughtPts` ITSELF. caughtPts is
+         CLIENT-owned: index.html pushes it in SCORE_LANES and
+         firestore.rules bounds it as "still client-reported, honestly".
+         Writing it here would make two writers for one fact — the exact
+         disease this codebase keeps paying for — and the phone would win
+         the next time it pushed, mid-game, when the live board matters
+         most. That is not hypothetical: "the zeroed local state was then
+         pushed back over the server: caughtPts measured going 40 -> 0 in
+         the database."
+
+         So this follows the precedent livePts set on the line above, and
+         for the same reason: when the server knows something the phone
+         cannot, it publishes its OWN lane rather than fighting for the
+         phone's. Nothing client-side writes caughtSrv, so it needs no
+         rules change to protect it — exactly as livePts needs none. */
       pts: row.pts, livePts: row.live, speed: row.speed, roundsDone: row.rounds,
+      caughtSrv: row.caughtPts,
       lastScoredBy: 'runner', lastScoredAt: FieldValue.serverTimestamp()
     }, { merge: true });
     n++;

@@ -158,6 +158,22 @@ async function night(p, c){
                       seq: Date.now() - (c.doc.agoMin||1)*60*1000, questions:[]};
     (c.scored||[]).forEach(function(id){ HR.scored[id]=true; });
 
+    /* ============ THE PHONE THAT WAS LOCKED THROUGH THE BREAK ========
+       roomListenersStop('pagehide') nulls HR.doc, and on iOS `pagehide`
+       is what fires when the screen locks or the player switches apps —
+       which is precisely what somebody watching the game on television
+       does during a quarter break. On return, pageshow re-arms the
+       listener, but HR.doc stays null until the first snapshot lands.
+
+       So "HR.doc is null" has TWO meanings and the guard could not tell
+       them apart: a night with no host at all, and a night whose host we
+       simply have not heard from for two seconds. `everHad`/`lostAt` are
+       what separate them. Setting them here rather than driving a real
+       pagehide keeps the fixture about the GUARD; roomListenersStop's own
+       bookkeeping is asserted separately at the bottom of this file. */
+    try{ HR.everHad = !!c.hadDoc; }catch(_){}
+    try{ HR.lostAt  = (c.lostMin==null) ? 0 : (Date.now() - c.lostMin*60*1000); }catch(_){}
+
     /* The board's own row for this player, so shownTotal() has a server
        figure to prefer and the two-surfaces check has something to
        disagree about. 149 on the server, 154 in the local preview — the
@@ -237,7 +253,42 @@ const CASES=[
 
   { key:'no-host',
     name:'no host at all, feed Final — a hostless night still ends',
-    doc:null, scored:[],
+    doc:null, scored:[], hadDoc:false,
+    over:true, ending:true,
+    roundLive:false, roundsOut:false },
+
+  /* ============ THE SMARTPHONE CASES ================================
+     Founder, 26 Aug: "the last 2 days of basketball the 4th quarter has
+     not fired. We've had problems on the smart phone."
+
+     Both of those nights predate the 25 Aug guard, so the buzzer race
+     explains them. These two cases are about the hole the guard still
+     has, which is phone-shaped and survives it:
+
+       Q3 ends · the player locks the phone and watches the break on TV
+       pagehide -> roomListenersStop -> HR.doc = null
+       the game ends while the phone is asleep · the feed flips to final
+       the player picks the phone back up
+       pageshow re-arms the listener — but no snapshot has landed yet
+       ANY render in that window asks nightIsOver()
+
+     With HR.doc null the guard had no evidence and returned false, so
+     the app decided the night was over and painted the ending — with Q4
+     live on the server and its own listener about to say so. On a laptop
+     that never sleeps this window essentially never opens, which is why
+     it reads as "a problem on the smart phone".
+
+     The valve stays: a doc lost an hour ago is a host that has gone, and
+     the player must still be able to reach their ending. */
+  { key:'phone-woke-up',
+    name:'phone was locked through the break: doc dropped 4s ago, feed Final',
+    doc:null, scored:['r2'], hadDoc:true, lostMin:0.07,
+    over:false, ending:false,
+    roundLive:false, roundsOut:true },
+
+  { key:'phone-woke-up-late',
+    name:'the doc was lost 60 minutes ago — that is a host that has gone',
+    doc:null, scored:['r2'], hadDoc:true, lostMin:60,
     over:true, ending:true,
     roundLive:false, roundsOut:false },
 
@@ -368,6 +419,68 @@ const CASES=[
     ok('practice.the-guard-does-not-touch-a-rehearsal',
        r.over===false && r.roundsOut===false,
        'nightIsOver()=' + r.over + ' roundsOutstanding=' + r.roundsOut + ' in demo mode');
+  }
+
+  /* ============ THE WIRING, NOT THE FIXTURE ===========================
+     Every case above SETS HR.everHad/HR.lostAt by hand, so all of them
+     would still pass if roomListenersStop() never wrote them — the guard
+     would be right and nothing would ever feed it. That is precisely the
+     "the correct function existed and nothing called it" shape this
+     codebase keeps producing, so the real bookkeeping is asserted here
+     against the actual functions.
+
+     onHostedRound() is driven with a genuine round document rather than
+     assigning HR.doc, because setting everHad is ITS job. */
+  console.log('\n  --- the bookkeeping roomListenersStop actually writes ---');
+  {
+    const r=await p.evaluate(()=>{
+      var o={};
+      S.mode='live';
+      HR.doc=null; HR.everHad=false; HR.lostAt=0; HR.scored={};
+      /* a real pushed round, through the real handler */
+      try{ onHostedRound({id:'r2', idx:2, state:'scored', seq:Date.now()-60000,
+                          tag:'Q3', name:'Quarter 3', worth:30, questions:[]}); }catch(e){ o.pushErr=String(e).slice(0,80); }
+      o.everHadAfterPush = HR.everHad;
+      o.docAfterPush     = !!HR.doc;
+
+      /* the phone locks */
+      try{ roomListenersStop('pagehide'); }catch(e){ o.stopErr=String(e).slice(0,80); }
+      o.docAfterHide     = !!HR.doc;
+      o.everHadAfterHide = HR.everHad;
+      o.lostAtSet        = (Number(HR.lostAt) > 0);
+      o.lostAtRecent     = (Date.now() - Number(HR.lostAt)) < 5000;
+
+      /* and the same teardown for a ROOM SWITCH must forget instead */
+      HR.doc=null; HR.everHad=true; HR.lostAt=Date.now();
+      try{ roomListenersStop('switch'); }catch(_){}
+      o.everHadAfterSwitch = HR.everHad;
+      o.lostAtAfterSwitch  = Number(HR.lostAt);
+      return o;
+    });
+    console.log('    after a pushed round : everHad=' + r.everHadAfterPush + '  doc=' + r.docAfterPush);
+    console.log('    after pagehide       : doc=' + r.docAfterHide + '  everHad=' + r.everHadAfterHide
+                + '  lostAt set=' + r.lostAtSet);
+    console.log('    after a room switch  : everHad=' + r.everHadAfterSwitch
+                + '  lostAt=' + r.lostAtAfterSwitch);
+    if(r.pushErr) console.log('    PUSH ERROR ' + r.pushErr);
+    if(r.stopErr) console.log('    STOP ERROR ' + r.stopErr);
+
+    ok('wiring.a-pushed-round-records-that-this-room-has-a-host',
+       r.everHadAfterPush===true && r.docAfterPush===true,
+       'onHostedRound() left everHad=' + r.everHadAfterPush + ' doc=' + r.docAfterPush);
+    ok('wiring.pagehide-drops-the-doc',
+       r.docAfterHide===false,
+       'roomListenersStop kept HR.doc');
+    ok('wiring.pagehide-remembers-we-had-one',
+       r.everHadAfterHide===true,
+       'everHad=' + r.everHadAfterHide + ' after pagehide — the guard will read this as a hostless night');
+    ok('wiring.pagehide-stamps-when-we-lost-it',
+       r.lostAtSet===true && r.lostAtRecent===true,
+       'lostAt was not stamped with a recent time');
+    ok('wiring.a-room-switch-forgets-the-previous-rooms-host',
+       r.everHadAfterSwitch===false && r.lostAtAfterSwitch===0,
+       'everHad=' + r.everHadAfterSwitch + ' lostAt=' + r.lostAtAfterSwitch
+       + ' — the room the player LEFT would block the new room from ending');
   }
 
   await b.close();

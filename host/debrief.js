@@ -1,4 +1,4 @@
-/* GAME NIGHT #11 DEBRIEF — the two numbers, read from the archive.
+/* NIGHT DEBRIEF — the two numbers, read from the archive.
    Round completion, and how far the server's recomputed score is from the
    score actually stored on each player. Nothing here is estimated: if a
    fact is not in the archive it is reported as unknown rather than guessed. */
@@ -23,7 +23,13 @@ function loadAuto() {
 
 (async () => {
   const AUTO = loadAuto();
-  console.log(`\n══ GAME NIGHT #11 · ${NIGHT} ══\n`);
+  /* The header used to read "GAME NIGHT #11" for every night this was
+     ever pointed at, because it was written to debrief exactly one. A
+     literal that was true once and silently rots is the same defect as
+     the baked BB_GAME night and the rotted hero fixture — and "Game Night
+     #N has one owner" was a whole commit on 22 Aug. The night names
+     itself. */
+  console.log(`\n══ ${NIGHT} ══\n`);
 
   // ---- the archive -------------------------------------------------
   const snaps = await db.collection(`nights/${NIGHT}/archive`).get();
@@ -78,10 +84,13 @@ function loadAuto() {
   // ---- NUMBER 2: recomputed vs stored ------------------------------
   console.log(`\n─ SCORE AGREEMENT (recomputed from submissions vs stored) ─`);
   const uids = Object.keys(players);
+  /* Hoisted so the machine-readable line at the end can reach it. */
+  var AGREED = null;
   if (!uids.length) console.log('  no player rows in the archive');
   else {
     const tally = AUTO.tally(scored, players, subs);
     let agree = 0, diff = 0;
+    AGREED = 0;
     /* ============ COMPARE THE NUMBER THE BOARD ACTUALLY SHOWS ========
        This read `players[uid].pts` and called it the stored score. It is
        not the score: SB.nightTotal() in index.html — the one function both
@@ -102,8 +111,17 @@ function loadAuto() {
 
        NOTE speed is deliberately absent from both sides. Neither
        nightTotal() nor tally() counts it toward a night total. */
+    /* MIRRORS nightTotal() IN index.html, INCLUDING THE caughtSrv
+       PREFERENCE. From 26 Aug the runner publishes its own graded caught
+       lane as `caughtSrv`, because caughtPts is client-owned and two
+       writers for one fact is what caused the bug in the first place. If
+       this function did not prefer it too, every server-graded catch
+       would show up here as "drift" — a debrief inventing failures is
+       worse than no debrief, and this is the third copy of this sum. */
     const lanes = (v) => Number(v.livePts || 0) + Number(v.predPts || 0)
-                       + Number(v.catchPts || 0) + Number(v.caughtPts || 0);
+                       + Number(v.catchPts || 0)
+                       + ((typeof v.caughtSrv === 'number' && isFinite(v.caughtSrv))
+                            ? v.caughtSrv : Number(v.caughtPts || 0));
     const drifted = [];
     uids.forEach(uid => {
       const v = players[uid] || {};
@@ -112,14 +130,35 @@ function loadAuto() {
       const name = v.name || uid.slice(0, 6);
       const ok = stored === recomputed;
       ok ? agree++ : diff++;
+      if (ok) AGREED++;
       if (v.livePts != null && Number(v.pts || 0) !== lanes(v))
         drifted.push(`${name}: pts=${Number(v.pts || 0)} but its lanes sum to ${lanes(v)}`);
       console.log(`    ${String(name).padEnd(14)} stored=${String(stored).padStart(5)}  recomputed=${String(recomputed).padStart(5)}  ${ok ? 'agree' : '← DIFFERS by ' + (recomputed - stored)}`);
     });
     if (drifted.length) {
-      console.log(`\n  LEGACY pts FIELD HAS DRIFTED from the lanes it should equal —`);
-      console.log(`  nothing authoritative reads it (the board composes from lanes), so`);
-      console.log(`  this is not a wrong score on anyone's screen. It is a stale number:`);
+      /* ============ THIS MESSAGE WAS WRONG, AND IT COST A MONTH ========
+         It used to end "so this is not a wrong score on anyone's screen.
+         It is a stale number." That reading assumed `pts` is the rotted
+         field and the lanes are the truth.
+
+         On 25 Aug it printed, correctly:
+
+             Courtside: pts=90 but its lanes sum to 80
+
+         and called it harmless. It was not. The runner had graded a catch
+         worth 10, folded it into `pts`, and published no lane for it — so
+         `pts=90` was the RIGHT number and the lane sum of 80 was the wrong
+         one, and the board, which composes from lanes, showed 80. The
+         detection worked perfectly and the conclusion sent everybody away.
+
+         Drift means the two disagree. It does NOT say which is right, and
+         a tool that guesses is worse than one that reports. */
+      console.log(`\n  pts AND ITS OWN LANES DISAGREE — one of them is wrong:`);
+      console.log(`  the board and every rank compose from the LANES (nightTotal),`);
+      console.log(`  the archive and this file's totals read pts. If a lane the`);
+      console.log(`  server grades is missing, pts is the correct one and the`);
+      console.log(`  player's screen is short. Check before calling it cosmetic —`);
+      console.log(`  on 25 Aug this exact line was a real 10 points and was dismissed.`);
       drifted.forEach(d => console.log(`    ${d}`));
     }
     console.log(`  → ${agree} of ${uids.length} players agree`);
@@ -147,5 +186,26 @@ function loadAuto() {
     console.log('  nothing threw, or that the failure never surfaced. GN11 logged zero');
     console.log('  while a real tab-switch problem was being reported live.');
   }
+  /* ============ ONE LINE A MACHINE CAN KEEP ==========================
+     Round completion and score agreement were THE two headline numbers,
+     and both stopped being reported after 19 Aug — the last figure on
+     record is "1 of 4 players agree". Reconstructing the month from
+     runner logs on 26 Aug is what a missing ledger costs.
+
+     Everything above is for a human reading one night. This line is for
+     host/debrief-nightly.sh to append to a file, so the trend exists
+     without anybody deciding to look. Tab-separated, stable column
+     order, and it prints even when a section had nothing to say —
+     "unknown" is a value, and a gap in the ledger must be visible rather
+     than absent. */
+  const F = (x) => (x == null ? 'unknown' : String(x));
+  console.log('\nMETRICS\t' + [
+    NIGHT,
+    'rounds=' + F(scored.length) + '/' + F(rounds.length),
+    'completion=' + F(pct) + '%',
+    'seats=' + F(uids.length),
+    'agree=' + F(AGREED) + '/' + F(uids.length),
+    'errors=' + F(errs.size)
+  ].join('\t'));
   process.exit(0);
 })().catch(e => { console.error('debrief failed: ' + (e && e.stack || e)); process.exit(1); });

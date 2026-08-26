@@ -424,6 +424,38 @@ async function browserTests(){
       try{ await _close(); }catch(_){}
       try{ await c.close(); }catch(_){}
     };
+    /* ============ EVERY PAGE PLAYS A HYDRATED NIGHT ===================
+       From 26 Aug joinNight() refuses to seat anybody into a BAKED night
+       that has expired — see qa/stale-seat.js, written after 76 real
+       visitors were filed into gn13-2026-08-19-min-gs over the week
+       after that game finished.
+
+       Suites load the app from file:// with no slate to read, so GAME
+       stays BB_GAME and BB_GAME is stale eighteen hours after its tip.
+       Left alone the ident checks stop testing identity and start
+       testing the staleness guard: `wrote` stays null because the join
+       never reached SB.join, and the suite reports "a fresh device
+       overwrote the seat" on a build where the seat was never touched.
+
+       Registered HERE, on every page this helper makes, and as an
+       initScript rather than a post-boot evaluate — freshStart() ends in
+       location.reload(), which wipes a one-shot. GAME does not exist at
+       init time, so this polls, stops on the first success, and gives up
+       after 15s rather than spinning. */
+    try{
+      await pg.addInitScript(() => {
+        try {
+          var t = setInterval(function () {
+            try {
+              if (typeof GAME !== 'undefined' && GAME && GAME.__baked) {
+                delete GAME.__baked; clearInterval(t);
+              }
+            } catch (_) {}
+          }, 10);
+          setTimeout(function () { try { clearInterval(t); } catch (_) {} }, 15000);
+        } catch (_) {}
+      });
+    }catch(_){}
     return pg;
   };
   /* A GATE MUST NEVER HANG. Measured: the live feed group blocked for
@@ -497,6 +529,9 @@ async function browserTests(){
     });
     await p.goto(url,{waitUntil:'domcontentloaded'});
     await p.waitForTimeout(1800);
+    /* The hydrated-night initScript is registered in the newPage helper
+       above, so it survives freshStart()'s reload and covers every page
+       this file makes, not just this one. */
     /* ---- THE SUITE'S DEFAULT PERSONA IS A SIGNED-IN MEMBER --------
        The five nav tabs are behind the door now (see TAB_LOCKED /
        tabsUnlocked in the player), so a suite that drives navGo() as an

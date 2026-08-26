@@ -73,6 +73,11 @@ const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-la
      index-test.html — verified by reading its argv handling, not assumed
      from the filename. */
   'desk-reach.js',
+  /* Positional path, defaults to index.html, ignores --flags — verified
+     by reading its argv handling, and by the negative control on 26 Aug:
+     it is RED against index.html and GREEN against index-test.html, which
+     is only possible if the flag really reaches it. */
+  'stale-seat.js',
   /* Same argv shape as desk-reach.js: a positional path, --file, or the
      index-test.html default. Verified by reading it. */
   'pick-tap.js',
@@ -146,6 +151,16 @@ const ADMIN_READERS=['host-overtime.js','host-resolvers.js','host-sports.js','ho
                         token anywhere in argv rather than reading --file, and the value we
                         push satisfies that. */
                      'inning-end.js','ci-rotation.js'];
+
+/* ============ AND ONE SUITE READS BOTH SIDES AT ONCE =================
+   lane-persist.js compares what host/run.js WRITES against what
+   index.html's nightTotal() READS, and needs AUTO.tally out of the admin
+   build to run the arithmetic. Neither list above fits it: TARGETABLE
+   pushes a positional it does not read, and ADMIN_READERS would hand it
+   `--file admin.html`, pointing its PLAYER half at the Control Room —
+   green for the wrong reason, which is the failure mode this whole file
+   exists to stop. So it takes both named flags explicitly. */
+const DUAL_READERS=['lane-persist.js'];
 
 /* The tier of each suite, stated once. A suite added to the directory and
    not named here is REPORTED, not silently ignored — see the sweep below,
@@ -419,6 +434,20 @@ const TIER={
      back to .pts when not — whichever listener wrote last decided which
      number a player saw. The fixture used the exact numbers reported. */
   'board-total.js': {tier:'browser'},
+  /* board-total.js above proves the SURFACES agree with each other. This
+     one proves the two SIDES do: every lane the board sums has exactly one
+     writer, and any lane the server grades is published under a name no
+     phone can overwrite. 26 Aug — host/run.js graded the caught lane,
+     folded it into `pts`, and published nothing, so the board (which
+     recomposes from lanes and never reads `pts`) dropped every
+     server-graded catch. Measured on four real nights before the fix. */
+  'lane-persist.js': {tier:'static'},
+  /* 76 of the 83 seats in gn13-2026-08-19-min-gs are named "player", and
+     new ones were still being written a week after that game ended.
+     bakedNightIsStale() existed since 21 Aug and six DISPLAY sites asked
+     it; joinNight() never did, so the hero said "Tonight's games are
+     loading…" while the visitor was filed under a dead room. */
+  'stale-seat.js': {tier:'browser'},
   /* A device showed a round as "not open yet" nine minutes after it had
      genuinely opened server-side. roomNextRound()/hostedDoc() read correctly
      on a static trace; the remaining suspect is a round-watch listener that
@@ -743,6 +772,7 @@ for(const f of run){
      this line claim coverage it does not have, which is worse than the gap
      it replaces. */
   if(ADMIN_READERS.includes(f)) argv.push('--file', ADMIN_TARGET);
+  if(DUAL_READERS.includes(f)) argv.push('--file', TARGET, '--admin-file', ADMIN_TARGET);
   const r=spawnSync('node',argv,{encoding:'utf8', timeout:20*60*1000, maxBuffer:64*1024*1024});
   const ms=Date.now()-t0;
   const out=(r.stdout||'')+(r.stderr||'');
