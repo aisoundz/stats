@@ -86,6 +86,16 @@ const check=(id,c,why)=>c?ok(id):bad(id,why);
     try{ out.staleOld   = bakedNightIsStale({__baked:true, tipISO:new Date(Date.now()-7*day).toISOString()}); }catch(e){ out.staleOld='ERR'; }
     try{ out.staleFresh = bakedNightIsStale({__baked:true, tipISO:new Date(Date.now()+2*3600*1000).toISOString()}); }catch(e){ out.staleFresh='ERR'; }
     try{ out.staleHydr  = bakedNightIsStale({__baked:false, tipISO:new Date(Date.now()-7*day).toISOString()}); }catch(e){ out.staleHydr='ERR'; }
+    /* THE PREDICATE THE GUARD ACTUALLY READS. Two builds shipped asking
+       bakedNightIsStale() and both were inert, because the room that
+       collects the seats is PUBLISHED, not baked. */
+    try{ out.hasExpiredFn = (typeof nightHasExpired==='function'); }catch(_){ out.hasExpiredFn=false; }
+    if(out.hasExpiredFn){
+      try{ out.expOldPub   = nightHasExpired({tipISO:new Date(Date.now()-7*day).toISOString()}); }catch(e){ out.expOldPub='ERR'; }
+      try{ out.expTonight  = nightHasExpired({tipISO:new Date(Date.now()+3*3600*1000).toISOString()}); }catch(e){ out.expTonight='ERR'; }
+      try{ out.expJustDone = nightHasExpired({tipISO:new Date(Date.now()-2*3600*1000).toISOString()}); }catch(e){ out.expJustDone='ERR'; }
+      try{ out.expNoDate   = nightHasExpired({}); }catch(e){ out.expNoDate='ERR'; }
+    }
     return out;
   });
   console.log('    bakedNightIsStale: week-old-baked=' + pred.staleOld
@@ -99,6 +109,23 @@ const check=(id,c,why)=>c?ok(id):bad(id,why);
     'bakedNightIsStale() calls tonight stale — nobody could ever join');
   check('predicate.a-hydrated-night-is-never-stale', pred.staleHydr===false,
     'a real night the player chose was called stale because of its date');
+
+  console.log('    nightHasExpired: week-old-published=' + pred.expOldPub
+            + '  tips-in-3h=' + pred.expTonight
+            + '  ended-2h-ago=' + pred.expJustDone
+            + '  no-date=' + pred.expNoDate);
+  check('expiry.the-guard-has-its-own-predicate', pred.hasExpiredFn===true,
+    'nightHasExpired() is not on window — the join guard is reading bakedNightIsStale(), '
+    + 'which is a question about the FALLBACK and is why two builds shipped inert');
+  check('expiry.a-week-old-PUBLISHED-night-has-expired', pred.expOldPub===true,
+    'a published night from a week ago is not reported as expired — this is the gn13 case');
+  check('expiry.tonights-game-has-not-expired', pred.expTonight===false,
+    'a game that tips in three hours was called expired — nobody could join tonight');
+  check('expiry.a-game-that-just-ended-has-not-expired', pred.expJustDone===false,
+    'a game that ended two hours ago was called expired — a player finishing their board is locked out');
+  check('expiry.an-unreadable-date-does-NOT-lock-anyone-out', pred.expNoDate===false,
+    'a night with no readable tip was treated as over — this guard must fail OPEN, '
+    + 'unlike bakedNightIsStale(), because a wrong true here costs somebody a live game');
 
   /* --------------------------------------------------------------
      1. THE SEAT. joinNight() is driven with the backend stubbed so
@@ -146,10 +173,21 @@ const check=(id,c,why)=>c?ok(id):bad(id,why);
       name:'the baked night has not tipped yet — somebody arriving early',
       nightId:'gn13-2026-08-19-min-gs', baked:true, agoDays:0,
       seat:true },
+    /* ============ THIS CASE WAS DECIDED WRONG, AND gn13 PROVED IT ====
+       It used to assert seat:true — "a REAL night, a week old, the
+       player chose it, it is theirs". That reasoning assumed a hydrated
+       night means a night somebody picked.
+
+       gn13-2026-08-19-min-gs disproves it. It HAS a real published
+       schedule doc, so the app hydrates it and clears __baked, and it is
+       the night the app is holding at boot before anybody chooses
+       anything. 76 seats named "player" arrived that way over the week
+       after the game ended. A hydrated old night is exactly the case
+       that has to be refused, not the exception to it. */
     { key:'hydrated-old',
-      name:'a REAL night, a week old — the player chose it, it is theirs',
-      nightId:'slate-2026-08-19-tor-wsh', baked:false, agoDays:7,
-      seat:true },
+      name:'a REAL published night, a week old — the gn13 case as it actually is',
+      nightId:'gn13-2026-08-19-min-gs', baked:false, agoDays:7,
+      seat:false },
     { key:'hydrated-tonight',
       name:'a real night, tonight — the ordinary case',
       nightId:'slate-2026-08-26-tor-sea', baked:false, agoDays:0,
@@ -174,48 +212,26 @@ const check=(id,c,why)=>c?ok(id):bad(id,why);
   }
 
   /* --------------------------------------------------------------
-     1b. HYDRATING THE FALLBACK MUST NOT LAUNDER IT.
+     1b. WHY THIS FILE NO LONGER ASKS ABOUT __baked AT ALL.
 
-     This is the check that would have caught the guard shipping INERT.
-     hydrateBuiltIn() hydrates BUILTIN_NIGHTS[id].cfg, which is a deep
-     clone of SPORTS[k].game — for basketball that IS BB_GAME, __baked
-     and all. hydrateNight() then deleted __baked unconditionally, so the
-     built-in night came out the far side looking published: the live
-     page reported nightId=gn13-2026-08-19-min-gs with __baked=false, and
-     every bakedNightIsStale() caller — including today's join guard —
-     was answered "not baked, so not stale".
+     Two builds shipped today trying to keep people out of gn13 by
+     asking bakedNightIsStale(), and both were INERT. The reason is that
+     `schedule/gn13-2026-08-19-min-gs` is a REAL published config in
+     Firestore: the app hydrates it like any other night, clears __baked
+     correctly, and holds it as the current night until somebody picks a
+     room. It is not the fallback wearing a disguise. It is a published
+     night that is a week old.
 
-     The suite above sets __baked by hand and so could never see this.
-     Drive the real hydration path instead.
+     A third attempt preserved __baked through hydrateBuiltIn(), which
+     made this suite green and broke qa/stale-default.js's "hydrating a
+     real night clears the flag" — a check that has been right since
+     21 Aug. That change was reverted rather than argued with: once the
+     guard asks nightHasExpired() the flag is not load-bearing for seats
+     at all, and changing display behaviour hours before a live demo buys
+     nothing.
+
+     The expiry checks at the top of this file are what guard the seat.
      -------------------------------------------------------------- */
-  {
-    const r=await p.evaluate(()=>{
-      const o={};
-      try{ o.hasFn = (typeof hydrateBuiltIn==='function'); }catch(_){ o.hasFn=false; }
-      if(!o.hasFn) return o;
-      const day=24*3600*1000;
-      /* Put the fallback back the way the file ships it, then hydrate it. */
-      try{ GAME.__baked=true; GAME.nightId='gn13-2026-08-19-min-gs';
-           GAME.tipISO=new Date(Date.now()-7*day).toISOString(); }catch(_){}
-      try{ o.ret = hydrateBuiltIn(GAME.nightId); }catch(e){ o.err=String(e).slice(0,110); }
-      try{ o.bakedAfter = !!GAME.__baked; }catch(_){}
-      try{ o.staleAfter = bakedNightIsStale(GAME); }catch(_){ o.staleAfter='ERR'; }
-      try{ o.nightAfter = GAME.nightId; }catch(_){}
-      return o;
-    });
-    console.log('\n  hydrating the BUILT-IN night (the fallback itself)');
-    console.log('    hydrateBuiltIn()=' + r.ret + '  __baked after=' + r.bakedAfter
-              + '  stale after=' + r.staleAfter + '  night=' + r.nightAfter
-              + (r.err?('   THREW '+r.err):''));
-    check('fallback.hydrating-the-built-in-night-keeps-the-fallback-flag',
-      r.hasFn===false || r.bakedAfter===true,
-      '__baked was cleared by hydrating the FALLBACK — the built-in night now looks '
-      + 'published, so bakedNightIsStale() says no and every guard that depends on it '
-      + 'is inert. This is exactly how the 26 Aug join guard shipped doing nothing.');
-    check('fallback.a-hydrated-fallback-is-still-stale',
-      r.hasFn===false || r.staleAfter===true,
-      'bakedNightIsStale()=' + r.staleAfter + ' for a week-old built-in night after hydration');
-  }
 
   /* --------------------------------------------------------------
      2. PRACTICE IS UNTOUCHED — AND THE CONTRACT LIVES IN

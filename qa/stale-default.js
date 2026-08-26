@@ -20,7 +20,21 @@
    to present it as tonight.
    ================================================================== */
 const fs=require('fs'), path=require('path');
-const SRC=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+/* ============ READ THE BUILD UNDER TEST, NOT ALWAYS THE LIVE ONE ====
+   This hardcoded index.html and ignored its argument, so `node
+   qa/stale-default.js index-test.html` silently graded the SHIPPED file.
+   Found 26 Aug when it reported a failure for a line that had already
+   been reverted in the candidate — the suite was right about a file
+   nobody had asked it about.
+
+   Exactly the defect fixed for the seven admin suites on 25 Aug: "a
+   green gate could promote banks it had never read". A suite that
+   ignores the target cannot tell a new break from an inherited one. */
+const TARGET=(function(){
+  const a=process.argv.slice(2).filter(x=>!x.startsWith('--'));
+  return a[0] ? path.resolve(a[0]) : path.join(__dirname,'..','index.html');
+})();
+const SRC=fs.readFileSync(TARGET,'utf8');
 let pass=0, fail=0;
 const ok =(n)=>{pass++; console.log('  ok   '+n);};
 const bad=(n,d)=>{fail++; console.log('  FAIL '+n+(d?'\n         '+d:''));};

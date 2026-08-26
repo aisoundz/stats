@@ -78,6 +78,11 @@ const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-la
      it is RED against index.html and GREEN against index-test.html, which
      is only possible if the flag really reaches it. */
   'stale-seat.js',
+  /* Reads a positional path, defaults to index.html — made targetable
+     26 Aug after it graded the shipped file while the banner named the
+     candidate. Verified with a negative control: 14/0 on the candidate,
+     13/1 on the live build. */
+  'stale-default.js',
   /* Same argv shape as desk-reach.js: a positional path, --file, or the
      index-test.html default. Verified by reading it. */
   'pick-tap.js',

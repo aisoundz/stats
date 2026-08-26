@@ -6356,31 +6356,7 @@ function hydrateNight(cfg){
        does not carry SURVIVES — including the flag that says "I am the
        fallback". Leave it set and every hydrated night is treated as
        expired the day after it plays. See bakedNightIsStale(). */
-    /* ============ UNLESS THE NIGHT WE JUST HYDRATED *IS* THE FALLBACK ==
-       26 Aug, caught on the LIVE site minutes after shipping the guard
-       that depends on this flag. The landing page reported
-       nightId = gn13-2026-08-19-min-gs with __baked = FALSE, which is a
-       state that should not exist: a week-old fallback wearing a real
-       night's clothes.
-
-       hydrateBuiltIn() hydrates BUILTIN_NIGHTS[id].cfg, and that cfg is a
-       deep clone of SPORTS[k].game — which for basketball IS BB_GAME,
-       __baked and all. So the fallback was being hydrated THROUGH this
-       function, the flag copied in and then deleted one line later, and
-       the built-in night laundered into looking published.
-
-       Everything downstream that asks bakedNightIsStale() was therefore
-       answered "not baked, so not stale": gnOf() would print "#13" again,
-       the hero would stop saying "Tonight's games are loading…", and the
-       joinNight() guard written today to stop 76 more seats landing in a
-       dead room WOULD NEVER HAVE FIRED. The fix shipped inert and the
-       only reason we know is that the deployed page was asked what it
-       thought the night was.
-
-       The flag means "this object is the built-in fallback". Hydrating
-       the fallback does not stop it being the fallback, so the flag
-       survives; hydrating a real published night clears it, as before. */
-    if(!g.__baked){ try{ delete GAME.__baked; }catch(_){ GAME.__baked = false; } }
+    try{ delete GAME.__baked; }catch(_){ GAME.__baked = false; }
 
     /* 2. the rosters — SPLICE, do not reassign. `groups` holds references
           to these very arrays, so replacing them would leave the pick
@@ -6693,6 +6669,47 @@ function bakedNightIsStale(g){
   }catch(_){ return false; }
 }
 try{ window.bakedNightIsStale = bakedNightIsStale; }catch(_){}
+
+/* ============ AND THE QUESTION THE SEAT GUARD ACTUALLY NEEDS =========
+   26 Aug. Two builds shipped today trying to stop players being filed
+   into gn13-2026-08-19-min-gs, a room that ended on the 19th and has
+   collected 83 seats — 76 of them named "player" — over the week since.
+   Both were inert, and both for the same reason: they asked
+   bakedNightIsStale(), which is a question about the BUILT-IN FALLBACK.
+
+   `schedule/gn13-2026-08-19-min-gs` exists in Firestore and is a real
+   published config. The app boots, reads the schedule doc for whatever
+   GAME.nightId it is holding, hydrates it, and clears `__baked` — which
+   is CORRECT, because that night genuinely was published. It is not the
+   fallback. It is simply a week old.
+
+   Measured on the deployed page, twice, after two attempted fixes:
+
+       nightId = gn13-2026-08-19-min-gs   __baked = false   stale = false
+
+   So "is this the baked default" and "is this night over" are different
+   questions, and only the second one keeps anybody out of a dead room.
+   This asks the second, of any night, however it arrived.
+
+   FAILS OPEN ON AN UNREADABLE DATE, and that is the opposite of
+   bakedNightIsStale's choice directly above. That function is deciding
+   whether to PRINT a game number, where refusing costs a label. This one
+   is deciding whether a player may take a seat at all, where a wrong
+   `true` locks somebody out of a live game they are watching. A night
+   with no readable tip is not evidence that it is over.
+
+   Eighteen hours matches the constant above, for the reason stated
+   there: a 7pm tip is still "tonight" at 1am to somebody finishing the
+   board, and is nobody's tonight by the next afternoon. */
+function nightHasExpired(g){
+  try{
+    if(!g) return false;
+    var tip = Date.parse(g.tipISO || '');
+    if(!isFinite(tip)) return false;            // unreadable: do not lock anyone out
+    return (Date.now() - tip) > 18*3600*1000;
+  }catch(_){ return false; }
+}
+try{ window.nightHasExpired = nightHasExpired; }catch(_){}
 
 function gnOf(g){
   /* An expired default has no number worth printing. "#13" on a Friday in
@@ -17857,7 +17874,14 @@ async function joinNight(){
      The counter is the point as much as the guard: `join_blocked_stale`
      turns "is anybody actually arriving?" from a guess into a number. */
   try{
-    if(typeof bakedNightIsStale === 'function' && bakedNightIsStale(GAME)){
+    /* nightHasExpired(), NOT bakedNightIsStale(). The first two attempts
+       at this guard asked whether GAME was the built-in fallback, and
+       both shipped INERT — `schedule/gn13-2026-08-19-min-gs` is a real
+       published config, so hydration clears `__baked` and the night that
+       has collected 76 stray seats reports itself as neither baked nor
+       stale. "Is this the default night" and "is this night over" are
+       different questions and only the second one empties the room. */
+    if(typeof nightHasExpired === 'function' && nightHasExpired(GAME)){
       try{ trk('join_blocked_stale', { night: (GAME && GAME.nightId) || '' }); }catch(_){}
       return false;
     }
@@ -23151,7 +23175,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-26-notinert.227';
+const STATS_BUILD='2026-08-26-deadroom.228';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

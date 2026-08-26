@@ -447,8 +447,16 @@ async function browserTests(){
         try {
           var t = setInterval(function () {
             try {
-              if (typeof GAME !== 'undefined' && GAME && GAME.__baked) {
-                delete GAME.__baked; clearInterval(t);
+              if (typeof GAME !== 'undefined' && GAME) {
+                /* Un-baked is no longer enough. joinNight() now asks
+                   nightHasExpired(), which is about the TIP, so a fixture
+                   night whose tipISO is a week old is refused however the
+                   flag reads. Give it a tip an hour ago: the game is
+                   over, nobody is locked out, and none of these checks
+                   is about dates. */
+                delete GAME.__baked;
+                GAME.tipISO = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+                clearInterval(t);
               }
             } catch (_) {}
           }, 10);
