@@ -23833,6 +23833,23 @@ function seasonRecord(nightId, pts, rank){
    So there is one store now. `stats_statline_v1` wins \u2014 it is the richest
    and the only one deduped by night \u2014 and everything else derives. The old
    store is read once, folded in, and never written again. */
+/* Night keys come in two shapes. Hand-built nights are `gn13-2026-08-19-gsw-lal`
+   and read as "Game Night 13". Auto-built slate nights are
+   `slate-2026-08-25-lad-atl` — there is no game-night number to show, so name
+   them the way a player remembers them: the date and the matchup. The old code
+   chopped at the first hyphen, which turned every slate night into the literal
+   word "slate", so every night after GN13 looked identical on the board. */
+function nightLabel(k){
+  k = String(k || '');
+  var m = k.match(/^gn(\d+)/i);
+  if (m) return 'Game Night ' + m[1];
+  m = k.match(/^slate-(\d{4})-(\d{2})-(\d{2})-([a-z0-9]+)-([a-z0-9]+)$/i);
+  if (m) {
+    var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return MON[(+m[2]) - 1] + ' ' + (+m[3]) + ' · ' + m[4].toUpperCase() + ' @ ' + m[5].toUpperCase();
+  }
+  return k.replace(/^slate-/, '').replace(/-/g, ' ');
+}
 function seasonStats(){
   var line = loadLine();
   var nights = {}, keys = [];
@@ -23968,7 +23985,7 @@ function renderBoard(){
   if(ss.played){
     out+='<div class="card" style="padding:14px 16px;margin-top:12px"><div class="stHd">NIGHT BY NIGHT</div>'
       + ss.keys.slice().reverse().map(function(k){ var n=ss.nights[k];
-          return '<div class="stLead"><span class="stLeadN">'+esc(k.replace(/^gn/,'Game Night ').replace(/-.*$/,''))+'</span>'
+          return '<div class="stLead"><span class="stLeadN">'+esc(nightLabel(k))+'</span>'
             + '<span class="stLeadV">'+(Number(n.pts)||0)+' pts'+(n.rank?(' · #'+n.rank):'')+'</span></div>'; }).join('')
       + '</div>';
   }
