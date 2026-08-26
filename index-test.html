@@ -429,6 +429,74 @@
     color:var(--muted) !important;margin:9px 0 0 !important;letter-spacing:.01em}
   #s-landing.mq .chips{margin-top:14px}
 
+  /* ── THE WAY IN. See the long note on .mq-door in the markup for the
+        measurement that put it here. One control, one accent, and the
+        same teal the practice card's own button wears — it is the same
+        offer and it should not read as a different one.
+
+        44px IS THE FLOOR FOR A THUMB and .btn's 16px padding around a
+        15px line clears it comfortably; the min-height is stated anyway,
+        because padding cannot guarantee a height when the font can
+        change out from under it (the lesson .btn.sm was written from).
+
+        The sub-line is 12px — the ramp floor, and a caption is what the
+        floor is for. It is doing real work: "free" and "no account" are
+        the two objections that stop somebody tapping, and they are
+        answered before they are raised rather than three cards down. ── */
+  .mq-door{display:block;margin-top:18px}
+  #s-landing.mq .mq-door{margin-top:20px}
+  .mq-door .mq-try{margin-top:0;min-height:44px}
+  .mq-doorsub{display:block;text-align:center;margin-top:9px;
+    font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.01em}
+
+  /* ── A SHORTER SCREEN GETS A SHORTER POSTER ───────────────────────────
+     The button clears the fold on a 390x844 iPhone and on both desktop
+     sizes with the hero untouched. It did NOT on a 360x640 Android — the
+     commonest cheap phone there is, and measured at y=648 of 640, eight
+     pixels short at the top and fifty-eight at the bottom. Eight pixels is
+     still below the fold; below the fold is still "nobody reaches it".
+
+     A WIDTH CANNOT ANSWER A QUESTION ABOUT HEIGHT — the mistake
+     #nextBtn's old `@media (min-width:560px)` was built on, and the reason
+     desk-reach.js exists. This asks about height, which is the dimension
+     the fold is measured in.
+
+     Nothing is removed and nothing is hidden: the poster gives up 66px of
+     air and one step of the type ramp (40 → 34, both on the ramp; a
+     fourteenth size is a decision, not a breakpoint). The matchup is still
+     the biggest thing in the hero on every screen this applies to.
+
+     NOT CLAIMED: a phone in LANDSCAPE, where the viewport is ~390px tall.
+     A poster, a wordmark, a three-tile chooser and a control do not fit in
+     390px however they are arranged, and pretending otherwise with a
+     third breakpoint would be tuning rather than designing. Measured and
+     reported rather than rounded up. ── */
+  @media (max-height:700px){
+    /* The !important is fighting an INLINE style="margin-top:14px" written
+       into the markup, and an inline declaration beats any selector however
+       specific. Same idiom, and the same reason, as #landingTip and
+       #landingMatch b above — not laziness, arithmetic. 14px of the ten
+       this screen was short by came from that one attribute. */
+    #s-landing.mq #tonightCard{padding:12px 16px 12px;margin-top:4px !important}
+    #s-landing.mq #landingHead{margin:0 0 6px}
+    #s-landing.mq .brand{margin:0 0 8px}
+    #s-landing.mq #landingPill{margin:6px 0 10px}
+    .mq-nick{font-size:34px}
+    .mq-at{margin:7px auto}
+    #s-landing.mq #landingMatch{margin-top:5px}
+    .mq-clock{margin-top:9px;padding-top:9px}
+    #s-landing.mq .mq-door{margin-top:13px}
+    .mq-doorsub{margin-top:7px}
+  }
+  /* Below ~600px of viewport the poster gives up one more step of the ramp
+     (34 → 30). Measured: at 360x640 the control cleared the fold at 34px
+     with 15px to spare, and at 320x568 it did not. Same rule, one size
+     smaller, and the nicknames are still the biggest thing in the hero. */
+  @media (max-height:600px){
+    .mq-nick{font-size:30px}
+    .mq-at{margin:5px auto}
+  }
+
   /* ── the clock. This is #heroRibbon, moved inside the hero and painted
         by the same paintHeroRibbon() that always painted it. ── */
   .mq-clock{display:none;align-items:baseline;gap:9px;margin-top:16px;
@@ -506,7 +574,19 @@
      path, which is the one flow where a missed tap loses the player
      entirely. Padding alone cannot guarantee it because the font can be
      smaller than assumed, so the height is stated. */
-  .btn.sm{padding:11px;font-size:14px;margin-top:0;min-height:44px}
+  /* 45, NOT 44, AND THE PIXEL IS NOT AESTHETIC. Set to exactly the floor,
+     this control sat one subpixel from red for as long as it existed:
+     inside .notifyRow it is a stretched flex item, and Chromium resolves
+     the stretched cross size in 1/64px layout units — so on some vertical
+     positions #notifyBtn measures 43.99993896484375 and on others exactly
+     44. Nothing about the button changes; the FRACTIONAL POSITION OF THE
+     PAGE does, which means any layout change anywhere above it can flip
+     qa/platforms.js red on two devices with no defect underneath it.
+     Reproduced on Pixel 7 and iPad Mini on 25 Aug by adding 72px to the
+     landing hero. A floor you can land exactly on is a floor you will
+     eventually fall through; one pixel of headroom is what makes the
+     44px promise survive arithmetic. */
+  .btn.sm{padding:11px;font-size:14px;margin-top:0;min-height:45px}
 
   /* how it works steps */
   .step{display:flex;gap:12px;align-items:flex-start;margin:12px 0}
@@ -853,12 +933,68 @@
     background:rgba(5,8,14,.6);border:1px solid var(--line);
     transition:border-color .2s,background .2s,transform .2s}
   .grTile:hover{border-color:var(--line2)}
+  /* ============ THE ROOM YOU ARE IN IS NOT AN UNAVAILABLE ROOM =========
+     Founder, 25 Aug, with a screenshot. The URL was
+     ?game=slate-2026-08-25-lad-atl, the hero read "Dodgers at Braves", the
+     star was correctly on MLB #30 — and in the rail the MLB tile was the
+     DIM, borderless one while the WNBA tile beside it was bright and
+     clearly outlined. "when I highlight a game, it's not the one
+     highlighted." The star was right. The selected state read backwards.
+
+     TWO RULES WERE FIGHTING OVER ONE ELEMENT. The current tile is marked
+     `disabled`, which is correct behaviour — you cannot switch to the room
+     you are already standing in — and `.grTile[disabled]{opacity:.5}` then
+     drew the ENTIRE selected state, gradient border included, at half
+     strength on a small dark tile, where it simply vanishes. Measured on
+     the shipped build at 390x844: current tile opacity 0.5 with a
+     transparent border-color, the tile next to it opacity 1 with a visible
+     rgba(255,255,255,.09) hairline.
+
+     GREYED OUT MEANS UNAVAILABLE in every interface anybody has ever used,
+     so the app was telling him the one room he could reach was the one he
+     could not have. The behaviour was never the bug; the appearance was.
+     `disabled` stays. The unavailable STYLING stops applying to it. */
+  .grTile[disabled]:not([aria-current="true"]){opacity:.5;cursor:default}
   .grTile[aria-current="true"]{transform:translateY(-1px);border-color:transparent;
-    background:linear-gradient(var(--card),var(--card)) padding-box,
+    cursor:default;
+    /* Three layers, painted back to front: the team-colour gradient in the
+       border box, the card colour over it in the padding box, and a teal
+       wash on top so the tile you are IN reads brighter than the ones you
+       are not — which is the direction the whole bug had backwards. */
+    background:linear-gradient(rgba(40,224,208,.10),rgba(40,224,208,.10)) padding-box,
+               linear-gradient(var(--card),var(--card)) padding-box,
                linear-gradient(120deg,var(--gA),var(--gH)) border-box;
     border:1px solid transparent}
   .grTile:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-  .grTile[disabled]{opacity:.5;cursor:default}
+  /* ============ AND A WORD, NOT ONLY A TREATMENT ======================
+     He asked for more than the bug: "we need to have a better way of
+     showing which game is highlighted." He is right that a gradient border
+     is not enough. A treatment is something a person has to be TAUGHT; on
+     a 132px dark tile seen for four seconds by somebody who has never used
+     this product, it is decoration.
+
+     The rail's own header asks "Which game are you watching?". The current
+     tile answers it, in those words, in the one colour this app uses for
+     now/live/you — the same teal the current tile's clock already wears.
+
+     IT IS NOT THE STAR, and must never be mistaken for it: the star is
+     gold and says Game of the Night, which is a fact about the SLATE. This
+     is teal and says which room YOU are in. Two marks, two colours, two
+     sentences, and both can be true of the same tile at once.
+
+     ONE MARKUP, BOTH DENSITIES — the same rule the matchup lines follow,
+     so there is no second render path to keep in step. 12px is the ramp
+     floor and this is a label; the floor is what labels are for. */
+  .grHere{display:flex;align-items:center;gap:5px;margin-bottom:4px;min-width:0;
+    font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--teal);line-height:1.2;white-space:nowrap}
+  .grHere i{width:6px;height:6px;border-radius:50%;background:var(--teal);
+    display:block;flex:0 0 auto;font-style:normal}
+  /* Mid-game the tile is a third of the height, so the marker gives up its
+     letter-spacing and its dot rather than its word. A dot alone is a
+     treatment again, which is what this element exists to stop. */
+  #gameRail[data-mode="compact"] .grHere{margin-bottom:2px;letter-spacing:.02em;gap:4px}
+  #gameRail[data-mode="compact"] .grHere i{width:5px;height:5px}
   /* WRAPS RATHER THAN OVERFLOWS. Putting the tip time on the league line
      saved 34px of sticky rail, and on a 320px phone it then pushed the
      time out past the tile edge — the exact bug this change was fixing,
@@ -1519,6 +1655,43 @@
            a countdown is the most persuasive thing a live product can put
            in front of a stranger. -->
       <div id="heroRibbon" class="mq-clock"></div>
+      <!-- ============ THE WAY IN, ON THE FIRST SCREEN =================
+           MEASURED ON THE SHIPPED BUILD, 25 Aug, with three games on the
+           slate — which is the state a classmate arriving tomorrow will
+           actually meet:
+
+             rail (three tiles, two rows)      0 – 191
+             wordmark · tagline · pill       201 – 331
+             the hero                        327 – 661
+             "Never played? Start here"      677 – 1468
+             "Try it now"                    964 – 1014   ← 1.14 screens
+
+           On a 360x640 Android the button was at y=1015, 1.59 screens
+           down. On the founder's 1850x1050 desktop, y=885. The tester's
+           verdict was exact: "The practice card itself, once you scroll to
+           it, is good. NOBODY REACHES IT." A stranger sent a link met a
+           poster and a countdown to a game three hours away, and the only
+           thing on the page they could DO was below the fold on every
+           device measured.
+
+           THE HERO IS NOT THE PROBLEM AND IS NOT BEING DELETED. It is the
+           Game of the Night and it carries the four facts the front page
+           exists for — there is a game, these two teams, this time, this
+           channel. What it did not carry was an answer to the question a
+           person has immediately after reading it, which is "can I play?"
+
+           So the answer goes where the question is asked, in the same
+           block, under the countdown. It costs ~76px of hero and it is the
+           only control above the fold. The card below keeps the full
+           flow — five sports, a name, the explanation — for anybody who
+           wants to choose; this is the door for everybody who does not.
+
+           `strangers` because a member has #landingActions and does not
+           need to be sold a practice round they have already played. -->
+      <div class="mq-door strangers">
+        <button class="btn tryGo mq-try" onclick="heroPractice()">Try a practice round</button>
+        <span class="mq-doorsub">Free, no account, about two minutes</span>
+      </div>
       <p style="font-size:14px;font-weight:800;color:var(--gold);margin:0 0 8px" id="landingTip">🕐 Tip-off 1:00 ET · 12:00 CT · 10:00 PT · ABC</p>
       <!-- "1,000 points" came out: it is the theoretical maximum, not a
            fact about tonight, and it was the chip that pushed the row onto
@@ -7160,6 +7333,12 @@ function paintGameRail(){
     return '<button type="button" class="grTile'+(live?' onair':'')+'" data-slate="'+esc(g.nightId)+'"'
       + ' style="--gA:'+esc(g.awayColor||'#666')+';--gH:'+esc(g.homeColor||'#666')+'"'
       + (on ? ' aria-current="true" disabled' : '') + '>'
+      /* THE ANSWER TO THE HEADER, ON THE TILE. See .grHere. It is emitted
+         once and rendered in both densities, unlike .grLg which the
+         compact rule hides — and mid-game, inside a room, "which room am I
+         in" is the question this element exists for, so vanishing exactly
+         then would be the wrong half to lose. */
+      + (on ? '<span class="grHere"><i></i>Watching</span>' : '')
       /* LEAGUE AND TIME ON ONE LINE. They are both metadata; the matchup is
          the content. Three stacked lines per tile made the rail 192px tall
          and sticky — nearly a quarter of a phone screen given permanently
@@ -8405,6 +8584,37 @@ function startDemo(){
      require an identity the rules will accept, and the rules refuse
      anonymous writes. Practice is the part that never needed one.        */
   setMode("demo");try{Object.keys(demoCiFired).forEach(k=>delete demoCiFired[k]);PCI.muted=false;}catch(e){}go('name');prefillGate();}
+
+/* ============ THE HERO'S DOOR IS THE SAME DOOR ======================
+   The button under the countdown starts the SAME practice run the card
+   below starts — startDemo(), one function, one flow — with one thing
+   decided for you: the sport is the sport of the game you are looking at.
+
+   That is the whole reason it can exist without being a second door. A
+   stranger who reads "LYNX at VALKYRIES, tip-off in 3 hours" and taps the
+   button directly underneath it has plainly asked for basketball, and
+   making them scroll to a five-way chooser to say so again is the friction
+   this is here to remove. Anybody who wants a different sport scrolls to
+   the card and picks one, which is what that card is for.
+
+   It falls through to whatever sport the page is already on if the hero
+   has no sport of its own, or if that sport has no practice bank — an
+   empty practice room is worse than a button that does the ordinary
+   thing. Same rule paintTryPick() applies when it decides what to offer. */
+function heroPractice(){
+  try{
+    var g = (typeof heroGame === 'function') ? heroGame() : null;
+    var sp = g && g.sport;
+    if(sp && sp !== SPORT_KEY && SPORTS[sp] && (SPORTS[sp].rounds || []).length > 0){
+      if(setSport(sp)){
+        try{ applySport(); }catch(_){}
+        try{ paintTryPick(); }catch(_){}
+      }
+    }
+  }catch(_){}
+  startDemo();
+}
+try{ window.heroPractice = heroPractice; }catch(_){}
 
 /* ---------------- PERSISTENCE (Game Night only) ---------------- */
 /* ============ A SAVE BELONGS TO ONE NIGHT, BY CONSTRUCTION ==========
@@ -10302,6 +10512,17 @@ function liveFitPin(){
     var nb=document.getElementById('nextBtn'); if(!nb) return;
     var gq=document.getElementById('gtQuestion'); if(!gq) return;
     if(getComputedStyle(nb).display==='none'){ sg.classList.remove('fitpin'); return; }
+    /* THE PROBE MUST NOT MOVE THE PAGE — the same trap pdFitPin() carries a
+       forty-line note about, in the other half of the app, and it bites
+       here for the same reason. Clearing paddingBottom shortens the
+       document; the browser clamps scrollTop to the briefly-shorter page;
+       restoring the padding does not restore the scroll. Harmless while
+       this only ever ran at scrollTop 0, and not harmless now that
+       revealClear() calls it after the page has been scrolled to lift the
+       reward panel clear — the probe put the panel straight back under the
+       button. Read the scroll, run the probe, put the scroll back. */
+    var _doc=document.scrollingElement||document.documentElement;
+    var _y0=_doc.scrollTop;
     sg.classList.add('fitpin');
     gq.style.paddingBottom='';
     void sg.offsetHeight;
@@ -10310,11 +10531,169 @@ function liveFitPin(){
        flow. It is display:none on the reveal path, where the button is last. */
     var ln=document.getElementById('lockNote');
     var lastEl = (ln && getComputedStyle(ln).display!=='none') ? ln : nb;
-    if(fitsAboveFloor(lastEl)) return;
-    sg.classList.remove('fitpin');
-    gq.style.paddingBottom = (nb.offsetHeight + 96) + 'px';
+    var fits = fitsAboveFloor(lastEl);
+    if(!fits){
+      sg.classList.remove('fitpin');
+      gq.style.paddingBottom = (nb.offsetHeight + 96) + 'px';
+    }
+    if(_doc.scrollTop !== _y0) _doc.scrollTop = _y0;
   }catch(_){}
 }
+
+/* ============ THE PAYOFF DOES NOT GET DRAWN OVER =====================
+   Founder, 25 Aug: on every correct answer, on every quarter, the confetti
+   fires, "+10" and the new total go big and green — and "See the
+   leaderboard →" is painted straight across the bottom half of that panel.
+
+   MEASURED ON THE SHIPPED BUILD at 360x640, driving a real correct answer
+   through the real answer():
+
+       .reveal        542 – 646
+       .payoff        582 – 631      the +10 and the running total
+       THIS ONE / YOUR POINTS  616 – 631
+       #nextBtn       514 – 564      fixed, straight over both numbers
+       #botnav        574 – 640      and the labels are under the tab bar
+
+   The reward moment has been fought over once before, when it was 12px
+   beside a 40px scoreboard, and it was rebuilt to be the biggest thing on
+   the screen. It is 46px now and it was losing the same fight to a button.
+
+   WHY liveFitPin() DID NOT CATCH IT. That function asks one question — can
+   the BUTTON, or the lock note under it, sit above the nav — and when the
+   answer is no it pins the button and reserves space at the end of the
+   flow so everything can be scrolled clear. Both halves are correct and
+   neither is about the reveal, which did not exist when it was written.
+   The panel is the LAST thing in that flow and the pinned button floats
+   over the end of it.
+
+   The old nudge underneath answer() measured the last ANSWER OPTION
+   against the button, for a different reason (the reveal copy invites you
+   to change your pick, so the options must stay tappable). The reveal sits
+   below the options, so clearing the panel clears the options too — one
+   measurement instead of two, and the one that matters most.
+
+   AND IT DOES NOT HOPE THERE IS ROOM. If the page cannot scroll far enough
+   to lift the panel clear, the reservation at the end of the flow is grown
+   until it can. A nudge that silently does half its job is the failure
+   mode, not the fix for it. */
+function revealClear(){
+  try{
+    var nb=document.getElementById('nextBtn'); if(!nb) return;
+    if(getComputedStyle(nb).display==='none') return;
+    /* RE-DECIDE THE PIN FIRST. liveFitPin() runs once, at the instant the
+       button is shown, and the screen it measured then is not the screen a
+       tenth of a second later: measured at 390x844, the section grows 53px
+       as the answered options take their marks, and a button that fitted
+       above the tab bar when the decision was made ends up 9px underneath
+       it. The decision is cheap and idempotent; making it again on each
+       beat is how it stops being a snapshot. */
+    try{ liveFitPin(); }catch(_){}
+    /* Only a PINNED button can land on the panel. The static one is laid
+       out after the card and is physically incapable of it, so moving the
+       page for it would be motion with no cause. */
+    if(getComputedStyle(nb).position!=='fixed') return;
+    var rb=document.getElementById('revealBox');
+    var rev=rb && rb.querySelector('.reveal');
+    var opts=document.querySelectorAll('#qOpts .opt, #qOpts button');
+    var target = rev || (opts.length ? opts[opts.length-1] : null);
+    if(!target) return;
+    /* TWO FLOORS, WHICHEVER IS HIGHER. The button is one; the tab bar is
+       the other, and the founder's screenshot had the panel's labels under
+       BOTH. fitFloor() already owns the second question. */
+    var floor=Math.min(nb.getBoundingClientRect().top, fitFloor());
+    var over=Math.round(target.getBoundingClientRect().bottom - floor + 12);
+    if(over<=0) return;
+    var d=document.scrollingElement||document.documentElement;
+    var room=d.scrollHeight - d.clientHeight - d.scrollTop;
+    if(room < over){
+      var gq=document.getElementById('gtQuestion');
+      if(gq){
+        var cur=parseFloat(gq.style.paddingBottom)||0;
+        gq.style.paddingBottom = (cur + (over - room) + 8) + 'px';
+      }
+    }
+    d.scrollTop = d.scrollTop + over;
+    RC_AT = Math.round(d.scrollTop);
+    return true;                      /* it moved — see revealClearSweep */
+  }catch(_){}
+  return false;
+}
+try{ window.revealClear = revealClear; }catch(_){}
+
+/* ---- AND IT IS CHECKED ACROSS THE BEAT, NOT ONCE ---------------------
+   One pass at 60ms is not enough, and the reason is measured rather than
+   guessed. On a 390x844 phone, driving a real correct answer:
+
+       t+0ms     .reveal bottom 717, pinned button top 718 — clears by 1px
+       t+150ms   the section grows 53px as the answered options settle,
+                 and the panel is back under the button by 44px
+       t+620ms   nothing further moves
+
+   A one-shot nudge is correct for exactly as long as nothing else on the
+   screen changes size, and this screen is mid-render: the options take
+   their marks, a webfont can still swap, the total is counting up for
+   900ms, and `.screen`'s own fade animation makes an ancestor transformed
+   — which quietly turns `position:fixed` into "fixed to the section" and
+   makes every rect read in that window a lie.
+
+   So it is measured again on each beat of the settle. Every pass is a
+   no-op unless something has actually put the panel back under the
+   button, so in normal play this scrolls once and the rest cost a
+   getBoundingClientRect each.
+
+   IT STOPS WHEN THE SCREEN STOPS, NOT WHEN A LIST OF NUMBERS RUNS OUT.
+   The first version of this was six fixed beats ending at 1040ms, and the
+   full gate — twenty browsers deep on a Jetson — caught it out twice: the
+   options finished taking their marks after the last beat, and the panel
+   stayed 43px behind the button with nothing left to fix it. That is the
+   nineteen-different-guesses failure qa/ready.js exists to delete, written
+   into a new file.
+
+   So the sweep is adaptive. It checks every 150ms and keeps going until
+   four checks in a row have found nothing to do AND at least 1.2s has
+   passed, with a hard three-second ceiling so a screen that never settles
+   cannot leave a timer running all night. On a screen that settles
+   immediately it costs four measurements and stops.
+
+   AND IT LETS GO. If the player has moved the page THEMSELVES, the sweep
+   stops at once — a later pass yanking the page out from under a thumb
+   would be a worse bug than the one this fixes.
+
+   "Themselves" is read from an INPUT EVENT and not from the scroll
+   position, and the difference is not pedantry: the 53px settle above
+   resets scrollTop on its own, so a sweep that treated any scroll change
+   as the player's intent switched itself off at exactly the moment it was
+   needed. Measured — 360x640 went from clear to 46px covered when the
+   guard was written that way. A wheel, a finger or an arrow key is a
+   person; a relayout is not. */
+var RC_AT = -1, RC_TIMERS = [], RC_TOUCHED = false;
+function rcHandsOff(){ RC_TOUCHED = true; }
+try{
+  ['wheel','touchstart','touchmove','pointerdown','keydown'].forEach(function(e){
+    window.addEventListener(e, rcHandsOff, {passive:true});
+  });
+}catch(_){}
+function revealClearSweep(){
+  try{ RC_TIMERS.forEach(function(t){ clearTimeout(t); }); }catch(_){}
+  RC_TIMERS = []; RC_AT = -1; RC_TOUCHED = false;
+  var t0=Date.now(), quiet=0;
+  var tick=function(){
+    if(RC_TOUCHED) return;
+    var moved=false;
+    try{ moved = revealClear(); }catch(_){}
+    quiet = moved ? 0 : (quiet+1);
+    var age = Date.now()-t0;
+    /* Settled: nothing to do four checks running, and past the window in
+       which the options take their marks and the total finishes counting.
+       Or three seconds, whichever comes first — a ceiling, so nothing here
+       can outlive the moment it is about. */
+    if(age >= 3000) return;
+    if(quiet >= 4 && age >= 1200) return;
+    RC_TIMERS.push(setTimeout(tick, 150));
+  };
+  RC_TIMERS.push(setTimeout(tick, 60));
+}
+try{ window.revealClearSweep = revealClearSweep; }catch(_){}
 var PD_SHOWN=-1;
 function predFocus(){
   try{
@@ -14036,8 +14415,20 @@ var I18N = {
     "Free to play · Not gambling · Prizes are sponsor-funded":
       "Gratis · No es apuesta · Los premios los pagan los patrocinadores",
     "Which game are you watching?":"¿Qué partido estás viendo?",
+    /* The rail's answer to the line above it. One word, and it has to move
+       with the question or the tile answers a Spanish question in English. */
+    "Watching":"Viendo",
     "Never played? Start here":"¿Primera vez? Empieza aquí",
     "Try it now":"Pruébalo ahora",
+    /* The hero's own door, and the two objections it answers before they
+       are raised. Both are on the FIRST screen a stranger sees, so leaving
+       either in English is leaving the front page half-translated. */
+    /* "Prueba", not "Juega". The practice card's step 2 already reads
+       "Juega una ronda de práctica"; giving two different controls the
+       same Spanish sentence would make the page read as one instruction
+       printed twice, which is not what the English says either. */
+    "Try a practice round":"Prueba una ronda de práctica",
+    "Free, no account, about two minutes":"Gratis, sin cuenta, unos dos minutos",
     "Pick a sport":"Elige un deporte",
     "Play a practice round":"Juega una ronda de práctica",
     "A practice game, right now, with real questions and simulated players. No account needed, just a name to play under.":"Un juego de práctica, ahora mismo, con preguntas reales y jugadores simulados. No necesitas cuenta, solo un nombre para jugar.",
@@ -14298,6 +14689,7 @@ var I18N = {
     "Voice":"Voz", "off":"apagada", "on":"activada",
     "Voice off":"Voz apagada", "Voice on":"Voz activada",
     "Simulated · nothing here is a real result":"Simulado · nada de esto es un resultado real",
+    "Simulated · the score moves when the round is scored":"Simulado · el marcador avanza cuando se puntúa la ronda",
     "Score this quarter ✅":"Puntuar este cuarto ✅",
     "Confirm & score quarter":"Confirmar y puntuar el cuarto",
     "Confirm & see my final score":"Confirmar y ver mi puntuación final",
@@ -14307,7 +14699,21 @@ var I18N = {
     "Host mode":"Modo anfitrión", "Host tally":"Conteo del anfitrión",
     /* --- the board --- */
     "TONIGHT":"ESTA NOCHE", "YOUR SEASON":"TU TEMPORADA",
+    /* The night-by-night list only renders on a device that HAS a season,
+       so the coverage walk — which opens every screen on a fresh page —
+       has never seen this heading and never will. Found by rendering the
+       card with a season in it and reading the Spanish. */
+    "NIGHT BY NIGHT":"NOCHE A NOCHE",
     "TOTAL PTS":"PTS TOTALES", "NIGHTS":"NOCHES", "BEST NIGHT":"MEJOR NOCHE",
+    /* SEASON PTS replaced TOTAL PTS on the Board when the season stopped
+       being a raw sum of rooms. TOTAL PTS stays in the table above: an
+       entry costs nothing and a rollback that finds it missing would put
+       an English label back on a Spanish screen. */
+    "SEASON PTS":"PTS DE TEMPORADA",
+    "Your best game each night, scored out of 100. Two rooms in one evening is still one night.":
+      "Tu mejor partido de cada noche, puntuado sobre 100. Dos salas en una misma noche siguen siendo una noche.",
+    "A night from before the season rule has no recorded ceiling, so it cannot be scored out of 100. It still counts as a night and its points are still here.":
+      "Una noche anterior a la regla de temporada no tiene tope registrado, así que no se puede puntuar sobre 100. Sigue contando como noche y sus puntos siguen aquí.",
     "Nights":"Noches", "Season pts":"Pts de temporada",
     "Play a night through to the final buzzer and it banks here. Points carry all season.":
       "Juega una noche hasta la bocina final y queda registrada aquí. Los puntos cuentan toda la temporada.",
@@ -14447,6 +14853,17 @@ var I18N_PATTERNS = {
     [/^Worth (\d+) pts \+ ⚡$/,           'Vale $1 puntos + ⚡'],
     [/^(\d+) of (\d+)$/,                 '$1 de $2'],
     [/^(\d+) pts$/,                      '$1 pts'],
+    /* The raw room score beside a night's score on the Board. Identical in
+       Spanish — "pts" is the abbreviation the rest of this table already
+       uses — and it is listed so the coverage walk can tell "needs no
+       translation" apart from "nobody has done it yet". */
+    [/^· (\d+) pts$/,                    '· $1 pts'],
+    /* BEFORE Q2 — the practice board is a period behind the questions on
+       purpose. Listed ahead of the generic PRACTICE pattern below, which
+       would otherwise match first and leave the word BEFORE in English
+       inside a Spanish pill. */
+    [/^PRACTICE · BEFORE Q(\d)$/,        'PRÁCTICA · ANTES DEL C$1'],
+    [/^PRACTICE · BEFORE (.+)$/,         'PRÁCTICA · ANTES DE $1'],
     [/^PRACTICE · Q(\d)$/,               'PRÁCTICA · C$1'],
     [/^LIVE · Q(\d)$/,                   'EN VIVO · C$1'],
     [/^PRACTICE · (.+)$/,                'PRÁCTICA · $1'],
@@ -14985,28 +15402,33 @@ function answer(choice,btn){
   _nb.textContent = (S.ni<nq()-1)?'Next question →':'See the leaderboard →';
   /* Pinning and the reservation are one measured decision — see liveFitPin. */
   liveFitPin();
-  /* AND IT MUST NOT LAND ON THE ANSWERS. The reveal copy invites exactly
-     this: "Changed your mind? Tap another one." A confirm button that
-     appears on top of the options it is asking you to reconsider is worse
-     than one you have to scroll to. Reserving space at the end of the
-     screen lets you scroll them clear; it does not put them clear NOW.
-     So if the button has landed over the list, move the page the exact
-     amount needed and no more. Measured, not a guessed constant. */
-  try{
-    setTimeout(function(){
-      try{
-        var opts=document.querySelectorAll('#qOpts button, #qOpts .opt');
-        if(!opts.length) return;
-        var last=opts[opts.length-1].getBoundingClientRect();
-        var btn=_nb.getBoundingClientRect();
-        var over=last.bottom - btn.top;
-        if(over > -8){
-          var d=document.scrollingElement||document.documentElement;
-          d.scrollTop = d.scrollTop + over + 16;
-        }
-      }catch(_){}
-    }, 60);
-  }catch(_){}
+  /* AND IT MUST NOT LAND ON THE ANSWERS — OR ON THE PAYOFF. The reveal
+     copy invites exactly this: "Changed your mind? Tap another one." A
+     confirm button that appears on top of the options it is asking you to
+     reconsider is worse than one you have to scroll to. Reserving space at
+     the end of the screen lets you scroll them clear; it does not put them
+     clear NOW. So if the button has landed over the list, move the page
+     the exact amount needed and no more. Measured, not a guessed constant.
+
+     This measured the last OPTION and nothing else, which is why the
+     reward panel — rendered below the options, and the whole point of the
+     moment — was left underneath the button on every phone short enough to
+     pin it. revealClear() measures the panel instead; the panel is below
+     the options, so the options come clear with it. One measurement, and
+     it is the one the founder photographed.
+
+     TWICE, AND THE SECOND ONE IS NOT BELT-AND-BRACES. `.screen` carries
+     `animation:fade`, whose keyframes include a transform — and an
+     ancestor with a transform becomes the containing block for
+     `position:fixed`, so while that animation is running the pinned button
+     is fixed TO THE SECTION rather than to the viewport. Measured on this
+     build at 360x640: #nextBtn reads y=963 for the first ~500ms after a
+     screen transition and then snaps to its real y=514. A single pass
+     inside that window measures a button that is not where it is about to
+     be. In normal play the animation finished minutes ago and the second
+     pass finds nothing to do; on the path where a reveal lands right after
+     a transition, it is the pass that does the work. */
+  try{ revealClearSweep(); }catch(_){}
 }
 function useLifeline(){
   const half=lifelineKey(S.qi);
@@ -16128,9 +16550,51 @@ function bankNight(){
          back to S.pts when there is no server row, so a hostless or
          offline night banks exactly what it banked before. */
       var _bank=0; try{ _bank=shownTotal(); }catch(_){ _bank=S.pts||0; }
+      /* ============ A NIGHT YOU DID NOT PLAY IS NOT A NIGHT ===========
+         Measured 26 Aug while checking the season card: open the app in
+         live mode after the game has ended — which is what anybody who
+         got the email late does — and the feed's phase clock reaches
+         'final', finishNightFromFeed() sees no locked card, and this
+         function wrote a ZERO-POINT row for tonight's id into the season.
+         Every distinct night a device merely LOADED after the buzzer
+         became a night on their record. That is part of how a Board
+         reached "18 NIGHTS", and it is the same class of wrong as
+         counting a room as a night: the count is a claim about what the
+         person did.
+
+         The guarantee above is untouched, because it is about a different
+         person: somebody who ANSWERED and skipped the pre-game sheet is
+         still banked — they have answers, and a score if the room gave
+         them one. What is refused is a record with nothing behind it.
+
+         The score alone is not the test: a player who answered every
+         question and got them all wrong earned their night. Any evidence
+         of playing counts.                                             */
+      if(_bank<=0 && !playedTonight()) return;
       seasonRecord(nid, _bank, rk);
     }
   }catch(_){}
+}
+/* DID THIS DEVICE ACTUALLY PLAY TONIGHT? Any answer, any pick, any catch.
+   Deliberately generous — the cost of a false yes is one honest-looking
+   zero, and the cost of a false no is deleting a night somebody played. */
+function playedTonight(){
+  try{
+    if((S.pts||0)>0) return true;
+    if(S.predChoices && Object.keys(S.predChoices).length) return true;
+    if(S.catchChoices && Object.keys(S.catchChoices).length) return true;
+    var la=S.liveAnswers||[];
+    for(var i=0;i<la.length;i++){
+      var r=la[i]||[];
+      for(var j=0;j<r.length;j++){ var m=r[j]; if(m && m.choice!=null && m.choice!=='') return true; }
+    }
+    var rs=S.results||[];
+    for(var a=0;a<rs.length;a++){
+      var rr=rs[a]||[];
+      for(var b=0;b<rr.length;b++) if(rr[b]!==undefined && rr[b]!==null) return true;
+    }
+  }catch(_){}
+  return false;
 }
 
 /* One writer for the two tiles. They used to be set by
@@ -16737,7 +17201,7 @@ function nightDay(row){
 function lineTotals(line){
   let ptsRaw=0,hits=0,total=0,speed=0,best=0; const trophies={};
   const byNight={};
-  (line.games||[]).forEach(x=>{
+  (line.games||[]).forEach((x,i)=>{
     ptsRaw+=Number(x.pts)||0; hits+=Number(x.hits)||0; total+=Number(x.total)||0;
     speed+=Number(x.speed)||0; if((Number(x.pts)||0)>best) best=Number(x.pts)||0;
     (x.awards||[]).forEach(id=>{ trophies[id]=(trophies[id]||0)+1; });
@@ -16750,17 +17214,33 @@ function lineTotals(line){
     const pct=max>0 ? Math.max(0, Math.min(100, (Number(x.pts)||0)/max*100)) : null;
     const cur=byNight[day];
     const score = pct==null ? (Number(x.pts)||0) : pct;
-    if(!cur || score>cur.score) byNight[day]={score, pct, raw:Number(x.pts)||0, rooms:(cur?cur.rooms:0)+1};
-    else cur.rooms++;
+    /* WHICH ROOM WON THE NIGHT, not just what it scored. The Board prints a
+       line per night — "Game Night 30" — and the number in a night's name
+       lives on the ROW, so the winning row has to survive the reduction.
+       Without this the only way to label a night was to key the whole
+       season by room again, which is the bug this rule exists to end. */
+    const win={score, pct, raw:Number(x.pts)||0,
+               night:x.night||day, gn:x.gn||'', label:x.label||'', sport:x.sport||'',
+               rank:(x.rank==null?null:x.rank), max:max,
+               rooms:(cur?cur.rooms:0)+1, at:Math.max(i,(cur?cur.at:0)||0)};
+    if(!cur || score>cur.score) byNight[day]=win;
+    else { cur.rooms++; cur.at=Math.max(cur.at||0, i); }
   });
   const nights=Object.keys(byNight);
   const seasonPts=Math.round(nights.reduce((a,d)=>a+(byNight[d].pct==null?0:byNight[d].pct),0));
+  /* THE BEST NIGHT, IN THE UNIT THE SEASON IS IN. `best` below is the best
+     RAW room score and it is kept, because the stat book is a record of
+     what happened — but a season where every night is worth at most 100
+     cannot put 740 under a label that sits beside it. A season percentage
+     under a points label is exactly the bug that shipped on the final
+     screen once already. */
+  const bestPct=Math.round(nights.reduce((a,d)=>Math.max(a,(byNight[d].pct==null?0:byNight[d].pct)),0));
   const roomsPlayed=(line.games||[]).length;
   return { games:nights.length,            // NIGHTS, not rooms — the thing a streak counts
            rooms:roomsPlayed,
            pts:seasonPts,                  // the season score: best room per night, capped at 100
            ptsRaw,                         // everything, for the stat book
-           hits, total, speed, best, trophies, byNight,
+           hits, total, speed, best, bestPct, trophies, byNight,
            acc: total ? Math.round(hits/total*100) : null };
 }
 
@@ -16780,7 +17260,14 @@ function renderStatLine(line){
      simply not shown when there is no season behind it. */
   if(S.mode!=='live'){ box.style.display='none'; return; }
   box.style.display='';
-  const t=lineTotals(line||loadLine());
+  /* THE SAME ROWS THE BOARD COUNTS. This read loadLine() alone, so a
+     device carrying nights from before B10 — the ones the fold-in exists
+     to protect — finished a game night being told it had played one
+     FEWER night than the Board said thirty seconds later. Same rule, same
+     rows, both screens. The line recordStatLine() just wrote is still the
+     one used when it is handed over — it is fresher than storage — the
+     pre-B10 nights are folded in on top of it. */
+  const t=lineTotals({v:1, games:seasonRows(line)});
   const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
   // With no season record yet — a live night that was not written yet —
   // this still has to say something true, so it falls back to tonight
@@ -22480,7 +22967,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-25-lastround.223';
+const STATS_BUILD='2026-08-26-firstlook.224';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -24376,32 +24863,89 @@ function nightLabel(k, row){
   if (row && row.label) return String(row.label);
   return k.replace(/^slate-/, '').replace(/-/g, ' ');
 }
-function seasonStats(){
-  var line = loadLine();
-  var nights = {}, keys = [];
-  (line.games||[]).forEach(function(g, i){
-    if(!g || !g.night) return;
-    nights[g.night] = { pts:Number(g.pts)||0, rank:(g.rank==null?null:g.rank), at:i, gn:g.gn||'', label:g.label||'' };
-    keys.push(g.night);
-  });
-  /* ONE-TIME FOLD-IN. A season recorded before this change lives in the old
-     key. Read it, keep any night the statline does not already have, and
-     never write there again. Deleting it outright would silently shorten
-     somebody's season, which is the one thing a season record must never
-     do to the person who earned it. */
+/* ============ A ROOM IS NOT A NIGHT ==================================
+   This function used to key the season by `g.night` — WHICH IS THE ROOM ID
+   — and sum the raw points in it. So the Board read 3455 TOTAL PTS over 18
+   NIGHTS on a night when only nine games had been played, and it was
+   watched going 3301/17 → 3455/18 in nine minutes as a SECOND ROOM banked:
+   one evening, two rooms, counted as two whole nights.
+
+   That number cannot exist under the rule this product agreed on 19 Aug —
+   "every game night is worth up to 100, your best game that night is the
+   one that counts" — under which 18 nights cannot exceed 1800 and one
+   night cannot exceed 100. The rule was already written, already tested
+   (qa/season.js) and already rendering on the final screen, in
+   lineTotals(). There were simply TWO calculators of "your season" and the
+   Board, the member card and the Me tab all read the wrong one.
+
+   So there is one calculator now: everything below hands its rows to
+   lineTotals() and reads the answer back. Fixing the three surfaces
+   instead of the owner would have left the next surface to find it again.
+
+   THE FOLD-IN SURVIVES, and it is the reason this is not a two-line
+   repoint. A season recorded before B10 lives in the old key; it is read,
+   any night the statline does not already have is kept, and it is never
+   written again. Deleting it outright would silently shorten somebody's
+   season, which is the one thing a season record must never do to the
+   person who earned it. Those old rows carry no ceiling — nobody recorded
+   one — so they cannot be turned into a score out of 100. They still count
+   as nights, and their raw points still print on their own line; what they
+   cannot do is contribute an uncheckable number to a total that claims to
+   be capped. `unscored` below is how the Board says so out loud. */
+/* EVERY NIGHT THIS DEVICE HAS EVER PLAYED, in one list, deduped by room
+   id — the statline first, then the nights that only the retired store
+   ever knew about. Its own function because the FINAL SCREEN reads the
+   season too (renderStatLine), and reading it from a different list is
+   how the final screen and the Board came to disagree in the first place.
+   One list, two readers, no third opinion. */
+function seasonRows(line){
+  var rows = [], have = {};
+  try{
+    ((line||loadLine()).games||[]).forEach(function(g){
+      if(!g || !g.night || have[g.night]) return;
+      have[g.night]=1; rows.push(g);
+    });
+  }catch(_){}
   try{
     var legacy = seasonRead().nights || {};
     Object.keys(legacy).forEach(function(k){
-      if(nights[k]) return;
-      nights[k] = { pts:Number(legacy[k].pts)||0, rank:legacy[k].rank||null, at:legacy[k].at||0 };
-      keys.push(k);
+      if(have[k]) return;
+      have[k]=1;
+      rows.push({ night:k, pts:Number(legacy[k].pts)||0, max:0,
+                  rank:legacy[k].rank||null, legacy:true });
     });
   }catch(_){}
-  keys = keys.filter(function(k,i){ return keys.indexOf(k)===i; })
-             .sort(function(a,b){ return (nights[a].at||0)-(nights[b].at||0); });
-  var total = keys.reduce(function(a,k){ return a + (nights[k].pts||0); }, 0);
-  var best  = keys.reduce(function(a,k){ return Math.max(a, nights[k].pts||0); }, 0);
-  return { total:total, played:keys.length, best:best,
+  return rows;
+}
+function seasonStats(){
+  var t = lineTotals({v:1, games:seasonRows()});
+  var byNight = t.byNight || {};
+  /* Oldest first, the order the Board's night-by-night list already
+     expects — it reverses this to put the newest on top. BY DATE, not by
+     the order the rows happen to sit in storage: the folded-in legacy
+     nights are appended last and are the OLDEST nights there are, so
+     ordering on position alone printed a night from 1 Aug above last
+     night's. A key that is not a date is older than every key that is —
+     those rows predate night ids carrying their date at all. */
+  var dk=function(d){ return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : ''; };
+  var keys = Object.keys(byNight).sort(function(a,b){
+    var x=dk(a), y=dk(b);
+    if(x!==y) return x<y ? -1 : 1;
+    return (byNight[a].at||0)-(byNight[b].at||0); });
+  var nights = {};
+  keys.forEach(function(d){
+    var n = byNight[d];
+    nights[d] = { pts: (n.pct==null ? 0 : Math.round(n.pct)),   // the night score, out of 100
+                  raw: n.raw,                                    // what the best room actually scored
+                  unscored: (n.pct==null),                       // no ceiling was ever recorded
+                  rooms: n.rooms||1, night:n.night||d, gn:n.gn||'', label:n.label||'',
+                  rank:(n.rank==null?null:n.rank), at:n.at||0 };
+  });
+  return { total:t.pts,                 // sum of night scores — each one capped at 100
+           played:t.games,              // NIGHTS, not rooms
+           best:t.bestPct,              // the best night, in the same unit as total
+           bestRaw:t.best,              // the biggest raw room score, for the stat book
+           rooms:t.rooms, ptsRaw:t.ptsRaw,
            last:keys.length?nights[keys[keys.length-1]]:null, keys:keys, nights:nights };
 }
 /* The Board used to render whatever the LOBBY poller had last cached. Open
@@ -24499,20 +25043,43 @@ function renderBoard(){
      a moment, and a list of expired moments is a scoreboard for something
      that already finished. ciRecapCard() is left intact for the post-game
      screens, where looking back is the point. */
+  /* ============ THREE NUMBERS, ONE UNIT ==============================
+     SEASON PTS is the sum of night scores and BEST NIGHT is the best one
+     of them, so both are out of 100 a night and the second is always the
+     largest term in the first. They used to be raw room points under a
+     count of ROOMS, which is how 3455 over "18 nights" reached a screen
+     that also promises a night is worth at most 100.
+
+     The line underneath is the rule in one sentence. It is on the screen
+     where somebody first meets these numbers, because a cap nobody was
+     told about looks like a bug the first time it costs them a room. */
   var ss=seasonStats();
+  var anyUnscored=ss.keys.some(function(k){ return ss.nights[k].unscored; });
   out+='<div class="card" style="padding:14px 16px;margin-top:12px"><div class="stHd">YOUR SEASON</div>'
     + '<div style="display:flex;text-align:center">'
-    +   '<div style="flex:1"><div class="bdBig">'+ss.total+'</div><div class="bdK">TOTAL PTS</div></div>'
+    +   '<div style="flex:1"><div class="bdBig">'+ss.total+'</div><div class="bdK">SEASON PTS</div></div>'
     +   '<div style="flex:1"><div class="bdBig">'+ss.played+'</div><div class="bdK">NIGHTS</div></div>'
     +   '<div style="flex:1"><div class="bdBig" style="color:var(--gold)">'+ss.best+'</div><div class="bdK">BEST NIGHT</div></div>'
     + '</div>'
-    + (ss.played? '' : '<div class="sub" style="font-size:12px;margin-top:10px">Play a night through to the final buzzer and it banks here. Points carry all season.</div>')
+    + (ss.played
+        ? '<div class="sub" style="font-size:12px;margin-top:10px">Your best game each night, scored out of 100. Two rooms in one evening is still one night.</div>'
+        : '<div class="sub" style="font-size:12px;margin-top:10px">Play a night through to the final buzzer and it banks here. Points carry all season.</div>')
     + '</div>';
   if(ss.played){
+    /* Each line carries BOTH: the night score the season is made of, and
+       what the best room in it actually scored. The raw number is the stat
+       book — it happened — and this is where it belongs, beside the room
+       it happened in, rather than under a headline label describing a
+       different quantity. */
     out+='<div class="card" style="padding:14px 16px;margin-top:12px"><div class="stHd">NIGHT BY NIGHT</div>'
       + ss.keys.slice().reverse().map(function(k){ var n=ss.nights[k];
-          return '<div class="stLead"><span class="stLeadN">'+esc(nightLabel(k, n))+'</span>'
-            + '<span class="stLeadV">'+(Number(n.pts)||0)+' pts'+(n.rank?(' · #'+n.rank):'')+'</span></div>'; }).join('')
+          var v = n.unscored ? '—' : (n.pts+' / 100');
+          return '<div class="stLead"><span class="stLeadN">'+esc(nightLabel(n.night||k, n))+'</span>'
+            + '<span class="stLeadV">'+v+' <span style="color:var(--muted);font-weight:700">· '+(Number(n.raw)||0)+' pts</span>'
+            + (n.rank?(' · #'+n.rank):'')+'</span></div>'; }).join('')
+      + (anyUnscored
+          ? '<div class="sub" style="font-size:12px;margin-top:8px">A night from before the season rule has no recorded ceiling, so it cannot be scored out of 100. It still counts as a night and its points are still here.</div>'
+          : '')
       + '</div>';
   }
   el.innerHTML=out;
@@ -26815,6 +27382,54 @@ function gtRunBlock(A,H,AC,HC){
   }catch(_){ return ''; }
 }
 
+/* ============ THE PRACTICE BOARD PRINTED THE ANSWER =================
+   Measured on the live site, basketball practice: the board read 20–24
+   before Q1's questions, 41–48 at Q2, 63–72 at Q3, 88–97 at Q4. Those are
+   the END-of-quarter scores, and the questions underneath are about that
+   quarter — so "Who led at halftime?" was asked with 41–48 printed two
+   inches above it, and a Q3 question could be answered by subtracting two
+   scoreboards. Every one of those is a free point, and free points are the
+   defect this product is named against: it teaches a first-time player, in
+   the one mode a stranger meets first, that watching is optional.
+
+   The questions are fine. The SCORE WAS RUNNING AHEAD OF THEM. So the
+   practice board shows the game as it stood GOING INTO the period being
+   asked about, and it only moves once that period's questions are done —
+   which turns the score into the reveal it always should have been.
+
+   Returns the index of the last round whose questions are all answered,
+   or -1 for "nothing has happened yet, this is 0–0".
+
+   TWO CEILINGS, and the second one is not belt-and-braces. WHILE A
+   QUESTION IS ON SCREEN the board is never allowed to reach the round
+   being asked, whatever the results array says — because a SECOND
+   practice run inherits the first one's results (setMode() returns early
+   when the mode has not changed), and without this line the replay would
+   put 20–24 back above Q1's questions and hand the free point straight
+   back to the one player most likely to be watching: the founder, on his
+   second run, in front of somebody. */
+function practiceShownRound(){
+  try{
+    var n=liveRounds();
+    if(!n) return -1;
+    var here=Math.max(0, Math.min(n-1, S.qi||0));
+    if(S.screen==='final') return n-1;      // the game is over; show the final score
+    var last=-1;
+    for(var i=0;i<n;i++){
+      var qs=((rounds[i]&&rounds[i].q)||[]).length;
+      var res=(S.results&&S.results[i])||[];
+      var got=0;
+      for(var j=0;j<qs;j++) if(res[j]!==undefined && res[j]!==null) got++;
+      if(qs && got>=qs) last=i; else break;
+    }
+    var asking=false;
+    try{
+      var gq=document.getElementById('gtQuestion');
+      asking = (S.screen==='live') || !!(gq && gq.style.display!=='none' && gq.getClientRects().length);
+    }catch(_){}
+    return Math.min(last, asking ? here-1 : here);
+  }catch(_){ return -1; }
+}
 function renderGametime(){
   const head=document.getElementById('gtHead');
   if(!head) return;
@@ -26833,8 +27448,15 @@ function renderGametime(){
   try{
     if(S && S.mode==='demo'){
       var qi=Math.max(0,Math.min(liveRounds()-1, S.qi||0));
-      var r0=rounds[qi]||{};
-      var ph=(S.screen==='final') ? 'PRACTICE · FINAL' : ('PRACTICE · '+roundTag(qi));
+      /* See practiceShownRound(). The board is one period behind the
+         questions on purpose: it shows what was on the wall when the
+         period being asked about began, and catches up the moment that
+         period is scored. -1 is before anything has happened at all. */
+      var si=practiceShownRound();
+      var r0=(si>=0 && rounds[si]) ? rounds[si] : {home:0, away:0};
+      var pend=(si<qi) || (S.screen!=='final' && si<0);
+      var ph=(S.screen==='final') ? 'PRACTICE · FINAL'
+           : (pend ? ('PRACTICE · BEFORE '+roundTag(qi)) : ('PRACTICE · '+roundTag(qi)));
       head.innerHTML='<div class="card gtBoard" style="padding:15px 16px 14px">'
         + '<div class="ascore">'
         +   '<span class="alive pre"><i></i>'+esc(ph)+'</span>'
@@ -26845,7 +27467,16 @@ function renderGametime(){
         +     '<div class="atm"><div class="ab" style="color:var(--home)">'+esc(String(H))+'</div>'
         +       '<div class="n">'+(r0.home==null?'0':r0.home)+'</div></div>'
         +   '</div>'
-        +   '<div class="acap" style="margin-top:10px">Simulated · nothing here is a real result</div>'
+        /* ONE CAPTION, NOT TWO. The explanation started life as a second
+           line under this one and cost 35px of a 640px phone — measured —
+           for a sentence the pill above it half says already. Both
+           versions open with the word that has to be there: a fake score
+           that does not announce itself is the one thing this product
+           must never ship. */
+        +   '<div class="acap" style="margin-top:10px">'
+        +     (pend ? 'Simulated · the score moves when the round is scored'
+                    : 'Simulated · nothing here is a real result')
+        +   '</div>'
         + '</div></div>';
       return renderGametimeRest();
     }
@@ -28597,7 +29228,14 @@ body.hasgamebar .screen.active{padding-bottom:132px}
    thing a sentence just pointed at. Same shelf as #pdBar — above the nav,
    inside the safe area — so the two never fight: they are never on screen
    at the same time. */
-#nextBtn{position:fixed;left:14px;right:14px;bottom:calc(76px + env(safe-area-inset-bottom,0px));
+/* width:auto, AND IT IS NOT COSMETIC. `.btn` sets width:100%, and 100% of
+   a fixed element's containing block is the whole viewport — so with
+   left:14px also set, the browser honoured the left and dropped the right
+   and the button was 14px wider than the screen. Measured on the shipped
+   build at 360x640: the button ran 14px–374px in a 360px window, which is
+   the founder's "the button also runs off the right edge". right:14px was
+   in this rule the whole time and was being ignored. */
+#nextBtn{position:fixed;left:14px;right:14px;width:auto;bottom:calc(76px + env(safe-area-inset-bottom,0px));
   z-index:8600;max-width:430px;margin:0 auto;box-shadow:0 -6px 24px rgba(0,0,0,.45)}
 /* WAS: `@media (min-width:560px){#nextBtn{position:static}}`, on the premise
    "on a desktop the page is short enough that pinning is noise." A width
@@ -28605,7 +29243,14 @@ body.hasgamebar .screen.active{padding-bottom:132px}
    laptop — the commonest laptop there is, and comfortably past 560px — the
    reveal is 756px of scroll and the button lands at y=808 on a 625px
    viewport. It is now a measured class; see liveFitPin(). */
-#s-gametime.fitpin #nextBtn{position:static;margin-top:10px;box-shadow:none;left:auto;right:auto}
+/* …and width:100% comes BACK the moment it is static. `width:auto` on a
+   fixed box with left and right set is "fill between them", which is what
+   the pinned button wants; on a static child of a flex or grid section it
+   is shrink-to-fit, and the button rendered 167px wide and centred on a
+   390px phone. One value cannot mean both things, so each state states its
+   own. Measured, not reasoned: this is why the phone sizes are in the
+   suite alongside the short ones. */
+#s-gametime.fitpin #nextBtn{position:static;margin-top:10px;box-shadow:none;left:auto;right:auto;width:100%}
 #pdBar .pdnav{margin-top:0;gap:8px}
 /* Trimmed until it fits the budget on a 667-tall phone. The lock button
    was 18px of padding designed for a card, not for a pinned bar that has

@@ -91,7 +91,23 @@ const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-la
   'card-deadline.js',
   /* Same argv shape. Goes RED on index.html at 1440x788 — the founder's
      actual window once Chrome's chrome is subtracted. */
-  'desk-pick-fit.js']);
+  'desk-pick-fit.js',
+  /* THE THREE FIRST-IMPRESSION SUITES, 25 Aug, written the night before the
+     founder showed the product to his classmates — the first outside
+     players it has ever had. Same argv shape as the four above: the first
+     token ending in .html, else index-test.html. All three are RED on
+     index.html, which is how you tell the fixes landed rather than taking
+     a green run's word for it. */
+  'rail-current.js',
+  'way-in.js',
+  'payoff-clear.js',
+  /* 26 Aug, same argv shape (first .html token, else index-test.html) and
+     the same reason for being targetable: both are RED on index.html.
+     season-board.js because the Board there prints a season that cannot
+     exist; practice-score.js because practice there prints the answer
+     above the question. Both also take --engine firefox|chromium. */
+  'season-board.js',
+  'practice-score.js']);
 /* Suites that read admin.html rather than the player file. The player half
    of the gate was split across two builds and fixed; the ADMIN half is
    split the same way and is NOT fixed — these seven read admin.html even
@@ -494,6 +510,49 @@ const TIER={
      and there it did not. Measures the rendered rectangles at six desk
      sizes AND on a phone, so a desk fix that moves the phone goes red. */
   'desk-pick-fit.js': {tier:'browser'},
+  /* ---- THE THREE FIRST-IMPRESSION SUITES, 25 Aug -------------------
+     Written the night before the founder showed the product to his
+     classmates. Thirteen humans have ever played it and every one was him
+     or one of his own devices, so these three screens had never been seen
+     by a stranger, and all three were wrong in ways 114 automated checks
+     had nothing to say about.
+
+     The rail told the founder the room he was IN was the one he could not
+     have: the current tile is `disabled`, and .grTile[disabled] dropped
+     opacity:.5 over the whole selected state. Every attribute was correct
+     and every attribute check passed, so this suite screenshots the rail,
+     reads it back through a canvas and compares the painted luminance of
+     the tile you are in against the tile you are not. */
+  'rail-current.js':  {tier:'browser'},
+  /* "The practice card itself, once you scroll to it, is good. Nobody
+      reaches it." The one control a stranger can act on was 1.12 screens
+     down on an iPhone and 1.59 on a small Android. Looks for ANY visible
+     control that starts practice, requires the topmost to be entirely
+     above the fold, big enough for a thumb and reachable by a keyboard —
+     and requires the hero it sits in to survive, because deleting the
+     poster would pass a fold check and lose the page's only job. */
+  'way-in.js':        {tier:'browser'},
+  /* The reward moment was rebuilt on 19 Aug to be the biggest thing on the
+     screen and qa/payoff.js guards its SIZE. This guards the other half:
+     "See the leaderboard →" was drawn straight across the bottom of it,
+     THIS ONE / YOUR POINTS rendered under the tab bar, and the button ran
+     14px off the right edge of a 360px phone. Rectangles and hit-testing,
+     on the real answer() path, correct answer and miss. */
+  'payoff-clear.js':  {tier:'browser'},
+  /* ---- 26 Aug: TWO NUMBERS THAT WERE LYING ------------------------
+     The Board printed 3455 TOTAL PTS over 18 NIGHTS under a rule that
+     caps a night at 100 — a second room in one evening counted as a
+     whole extra night, watched live going 3301/17 → 3455/18 in nine
+     minutes. It asserts the RENDERED card, because the rule had been
+     implemented and tested for a week in a function the Board did not
+     read: an internal test would have been green the whole time. */
+  'season-board.js':  {tier:'browser'},
+  /* Practice pre-loaded the quarter's score above the question about
+     that quarter — "Who led at halftime?" with 41–48 two inches above
+     it — in the one mode a stranger meets first. Plays a whole practice
+     game with real clicks and asks, at every round, whether the answer
+     is printed above the question. */
+  'practice-score.js':{tier:'browser'},
   'localise.js':      {tier:'browser'},
   'i18n.js':          {tier:'browser'},
   'season.js':        {tier:'browser'},

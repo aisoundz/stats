@@ -4122,14 +4122,17 @@ async function browserTests(){
     const r = await p.evaluate(async()=>{
       localStorage.removeItem('stats_statline_v1');
       localStorage.removeItem('stats_season_v1');
-      // two banked nights in the statline…
+      /* Two banked nights in the statline. They carry `max`, because every
+         row this product has ever written does — the ceiling is what turns
+         a room's points into a night score, and 26 Aug is when the Board
+         started reading it. */
       localStorage.setItem('stats_statline_v1', JSON.stringify({v:1, games:[
-        {night:'gn7-x', pts:180, speed:20, hits:4, total:8, rank:1, awards:[]},
-        {night:'gn8-x', pts:90,  speed:10, hits:2, total:8, rank:2, awards:[]}
+        {night:'gn7-2026-08-10-x', pts:180, max:1000, speed:20, hits:4, total:8, rank:1, awards:[]},
+        {night:'gn8-2026-08-11-x', pts:90,  max:1000, speed:10, hits:2, total:8, rank:2, awards:[]}
       ]}));
       // …and one older night that only the retired store ever knew about
       localStorage.setItem('stats_season_v1', JSON.stringify({
-        nights:{ 'gn6-x':{pts:50, rank:3, at:1} }, total:50, played:1, best:50 }));
+        nights:{ 'gn6-2026-08-09-x':{pts:50, rank:3, at:1} }, total:50, played:1, best:50 }));
       const ss = seasonStats();
       // what the two member cards would print
       S.seasonPts = 0; S.streak = 0;      // the blob showFinal() clears
@@ -4140,13 +4143,19 @@ async function browserTests(){
       return { total:ss.total, played:ss.played, best:ss.best,
                portal:grab('portalCard') };
     });
+    /* THIS CHECK USED TO ASSERT THE BUG. It wanted 320 \u2014 the RAW SUM of
+       180+90+50 \u2014 which is the arithmetic that put 3455 TOTAL PTS over 18
+       NIGHTS on the Board on 26 Aug, on a rule that caps a night at 100.
+       Same three facts, judged by the rule the product actually agreed:
+       180/1000 = 18, 90/1000 = 9, and a folded-in row with no recorded
+       ceiling that still counts as a NIGHT. */
     check('season.one-total-from-the-per-night-rows',
-      r.total===320 && r.played===3,
-      `total=${r.total} (want 320: 180+90+50), nights=${r.played} (want 3)`,
+      r.total===27 && r.played===3,
+      `total=${r.total} (want 27: 18+9+an unscorable pre-rule night), nights=${r.played} (want 3)`,
       'the statline is the source and the retired store folds in \u2014 deleting it outright would silently shorten a season somebody earned');
-    check('season.best-night-is-derived-too', r.best===180,
-      `best=${r.best}, want 180`,
-      'a third number that used to be stored separately and could disagree with the rows it summarised');
+    check('season.best-night-is-derived-too', r.best===18,
+      `best=${r.best}, want 18`,
+      'a third number that used to be stored separately and could disagree with the rows it summarised \u2014 and it has to be in the same unit as the total it sits beside');
     check('season.the-member-card-does-not-print-zero',
       !/\b0\s*SEASON/i.test(String(r.portal||'').replace(/\n/g,' ')),
       `member card read: ${String(r.portal||'').replace(/\n/g,' ').slice(0,140)}`,
