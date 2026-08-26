@@ -107,7 +107,11 @@ const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-la
      exist; practice-score.js because practice there prints the answer
      above the question. Both also take --engine firefox|chromium. */
   'season-board.js',
-  'practice-score.js']);
+  'practice-score.js',
+  /* Same argv shape, and RED on index.html for the same reason it was
+     written: the shipped landing has TWO full-width teal buttons that
+     both start practice. Also takes --chromium. */
+  'one-door.js']);
 /* Suites that read admin.html rather than the player file. The player half
    of the gate was split across two builds and fixed; the ADMIN half is
    split the same way and is NOT fixed — these seven read admin.html even
@@ -553,6 +557,14 @@ const TIER={
      game with real clicks and asks, at every round, whether the answer
      is printed above the question. */
   'practice-score.js':{tier:'browser'},
+  /* Founder, 26 Aug: "We don't need 2 try it out. It's redundant." The
+     landing had two full-width teal buttons calling the same practice
+     flow, 1,100px apart, each under its own copy of the same pitch.
+     way-in.js guards WHERE the way in is; this guards that there is only
+     one of it — by how the controls are PAINTED (filled vs ghost), not
+     by class name — while requiring the sport chooser underneath to
+     survive and to not launch a game on a browse. */
+  'one-door.js':      {tier:'browser'},
   'localise.js':      {tier:'browser'},
   'i18n.js':          {tier:'browser'},
   'season.js':        {tier:'browser'},

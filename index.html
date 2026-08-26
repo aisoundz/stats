@@ -1106,7 +1106,14 @@
      button underneath it was the generic blue every other .btn uses, so
      the two controls that make up a single action were in two different
      colour languages and the button read as unrelated furniture. It is
-     the end of the step the teal chip began; it should look like it. */
+     the end of the step the teal chip began; it should look like it.
+
+     26 Aug: that argument won a card that no longer exists. The chooser's
+     button was a SECOND full-width teal button calling the same practice
+     flow as the hero's, 1,100px below it — founder: "We don't need 2 try
+     it out." So the card's control is a ghost now and .tryGo dresses ONE
+     element on this page: the hero's door. It is the teal, singular, and
+     qa/one-door.js fails if a second filled practice button appears. */
   .btn.tryGo{background:var(--teal);color:#04201e;border:none;font-weight:900}
   .btn.tryGo:hover{filter:brightness(1.06)}
   /* The overflow control reads as a tile so it wraps with them, but it is
@@ -1735,24 +1742,42 @@
            in, so somebody who tried the game and left had no way to hear
            about the next one. -->
 
-      <b class="doorLbl">Never played? Start here</b>
-      <!-- THE DASH IS OUT. Founder, 20 Aug: "take away the dashe and use ,
-           make it seem less Ai and more human no ai tells." That rule was
-           written for the emails and applied to the emails; this is the
-           first thing a stranger reads on the front door and it still had
-           one. -->
-      <p class="sub" style="margin:6px 0 14px">A practice game, right now, with real questions and simulated players. No account needed, just a name to play under.</p>
-      <!-- PICK THE SPORT YOU CAME FOR. Practice used to run whatever sport
-           the page happened to be on — basketball at the front door, always
-           — so a football fan on an NFL night tried the product and was
-           handed basketball questions. Five leagues are built; there was no
-           way to reach four of them without knowing to type ?sport= into
-           the URL. Founder, 20 Aug: "if a guest wants to try a sport they
-           can select the sport and try it. We dont limit everyone." -->
-      <div class="tryStep"><i>1</i><span>Pick a sport</span></div>
+      <!-- ============ THIS IS NOT A SECOND INVITATION ================
+           It was one. Until 26 Aug this card opened "Never played? Start
+           here", repeated the hero's pitch in a longer sentence, numbered
+           itself 1 and 2, and finished on a second full-width teal button
+           reading "Try it now" — the same colour, the same width and the
+           same destination as the one under the countdown, about 1,100px
+           apart on a phone. Founder: "We don't need 2 try it out. It's
+           redundant."
+
+           The hero's button is the invitation now and it decides one
+           thing for you: it practises the sport of the game you are
+           looking at. So the ONLY job left down here is the one thing the
+           hero cannot do — a different sport — and the copy says that
+           instead of selling the round again.
+
+           PICK THE SPORT YOU CAME FOR is why the chooser stays. Practice
+           used to run whatever sport the page happened to be on —
+           basketball at the front door, always — so a football fan on an
+           NFL night tried the product and was handed basketball
+           questions. Five leagues are built; there was no way to reach
+           four of them without knowing to type ?sport= into the URL.
+           Founder, 20 Aug: "if a guest wants to try a sport they can
+           select the sport and try it. We dont limit everyone."
+
+           THE PILLS DO NOT LAUNCH. Tapping one selects, repaints and
+           rewrites ?sport=, and that is deliberate: somebody thumbing
+           along five pills to see what is on offer must not be thrown
+           into a game by the act of looking. The cost of that is one
+           control to finish the sentence, so it stays — DEMOTED. Ghost,
+           small, one line of 14px, no teal, no shadow. There is exactly
+           one thing on this screen that reads as "the button" and it is
+           1,100px above this one. qa/one-door.js holds that line. -->
+      <b class="doorLbl">Or practice a different sport</b>
+      <p class="sub" style="margin:6px 0 12px">Practice runs tonight’s sport by default. Pick another one and start it here.</p>
       <div id="tryPick" class="tryPick" role="group" aria-label="Choose a sport to practise"></div>
-      <div class="tryStep"><i>2</i><span>Play a practice round</span></div>
-      <button class="btn tryGo" onclick="startDemo()">Try it now</button>
+      <button class="btn ghost sm" id="tryAltBtn" onclick="startDemo()">Start practice</button>
 
       <div class="doorSplit"><span>when you want a seat</span></div>
 
@@ -14418,6 +14443,14 @@ var I18N = {
     /* The rail's answer to the line above it. One word, and it has to move
        with the question or the tile answers a Spanish question in English. */
     "Watching":"Viendo",
+    /* The practice card stopped being a second invitation on 26 Aug and
+       became the sport chooser. These two are what it says now; the three
+       below them are what it used to say and are kept because the phrases
+       are still reachable from the archived copy paths. */
+    "Or practice a different sport":"O practica con otro deporte",
+    "Practice runs tonight’s sport by default. Pick another one and start it here.":
+      "La práctica usa el deporte del partido de hoy. Elige otro y empiézalo aquí.",
+    "Start practice":"Empezar la práctica",
     "Never played? Start here":"¿Primera vez? Empieza aquí",
     "Try it now":"Pruébalo ahora",
     /* The hero's own door, and the two objections it answers before they
@@ -22967,7 +23000,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-26-firstlook.224';
+const STATS_BUILD='2026-08-26-firstlook.225';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
