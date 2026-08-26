@@ -16232,6 +16232,9 @@ function recordStatLine(got){
   const line=loadLine();
   const key=String(GAME.nightId || (SPORT_KEY+'|'+(GAME.date||'')));
   const row={ night:key, sport:SPORT_KEY, label:GAME.night||'', date:GAME.shareDate||GAME.short||'',
+              /* Bank the game-night number WITH the night. Without it the board
+                 has only the id, and an auto-built id carries no number. */
+              gn:(function(){ try{ return gnOf(GAME)||''; }catch(_){ return ''; } })(),
               pts:S.pts||0, max:MAXPTS, speed:S.speed||0,
               hits:got.ctx.graded.hits, total:got.ctx.graded.total,
               rank:(got.ctx.rank===undefined?null:got.ctx.rank),
@@ -23834,20 +23837,35 @@ function seasonRecord(nightId, pts, rank){
    and the only one deduped by night \u2014 and everything else derives. The old
    store is read once, folded in, and never written again. */
 /* Night keys come in two shapes. Hand-built nights are `gn13-2026-08-19-gsw-lal`
-   and read as "Game Night 13". Auto-built slate nights are
-   `slate-2026-08-25-lad-atl` — there is no game-night number to show, so name
-   them the way a player remembers them: the date and the matchup. The old code
-   chopped at the first hyphen, which turned every slate night into the literal
-   word "slate", so every night after GN13 looked identical on the board. */
-function nightLabel(k){
+   and carry their number in the id. Auto-built slate nights are
+   `slate-2026-08-25-lad-atl` and do not — their number lives in the marquee
+   file the slate was built from, and it reaches the client as `gn` on the
+   slate tile. The old label chopped the id at the first hyphen, which printed
+   the literal word "slate" for every auto-built night.
+
+   Three sources, in order of trust: the number banked with the row, the
+   closed backfill map below, then the number written into a hand-built id. */
+var GN_BACKFILL = {
+  'slate-2026-08-20-wsh-tex':14, 'slate-2026-08-20-sf-lac':15,
+  'slate-2026-08-21-nyj-pit':16, 'slate-2026-08-21-laa-tex':17,
+  'slate-2026-08-21-por-tor':18, 'slate-2026-08-22-buf-cle':20,
+  'slate-2026-08-22-nyg-mia':21, 'slate-2026-08-22-pit-lad':22,
+  'slate-2026-08-22-por-lafc':23, 'slate-2026-08-23-sf-bos':24,
+  'slate-2026-08-23-nyc-ne':25, 'slate-2026-08-23-ind-chi':26,
+  'slate-2026-08-23-sea-ten':27, 'slate-2026-08-25-lad-atl':30,
+  'slate-2026-08-25-por-dal':31, 'slate-2026-08-26-tor-sea':32
+};
+/* CLOSED ON PURPOSE. This covers only the window where auto-built nights
+   existed but the row did not yet save its number. Every night banked from
+   26 Aug 2026 carries its own `gn`, so nothing new is ever added here. */
+function nightLabel(k, row){
   k = String(k || '');
-  var m = k.match(/^gn(\d+)/i);
-  if (m) return 'Game Night ' + m[1];
-  m = k.match(/^slate-(\d{4})-(\d{2})-(\d{2})-([a-z0-9]+)-([a-z0-9]+)$/i);
-  if (m) {
-    var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return MON[(+m[2]) - 1] + ' ' + (+m[3]) + ' · ' + m[4].toUpperCase() + ' @ ' + m[5].toUpperCase();
-  }
+  var gn = (row && row.gn) || GN_BACKFILL[k] || '';
+  if (!gn) { var m = k.match(/^gn(\d+)/i); if (m) gn = m[1]; }
+  if (gn) return 'Game Night ' + gn;
+  /* No number we can stand behind. Say what the night was rather than
+     inventing a number or printing "slate" again. */
+  if (row && row.label) return String(row.label);
   return k.replace(/^slate-/, '').replace(/-/g, ' ');
 }
 function seasonStats(){
@@ -23855,7 +23873,7 @@ function seasonStats(){
   var nights = {}, keys = [];
   (line.games||[]).forEach(function(g, i){
     if(!g || !g.night) return;
-    nights[g.night] = { pts:Number(g.pts)||0, rank:(g.rank==null?null:g.rank), at:i };
+    nights[g.night] = { pts:Number(g.pts)||0, rank:(g.rank==null?null:g.rank), at:i, gn:g.gn||'', label:g.label||'' };
     keys.push(g.night);
   });
   /* ONE-TIME FOLD-IN. A season recorded before this change lives in the old
@@ -23985,7 +24003,7 @@ function renderBoard(){
   if(ss.played){
     out+='<div class="card" style="padding:14px 16px;margin-top:12px"><div class="stHd">NIGHT BY NIGHT</div>'
       + ss.keys.slice().reverse().map(function(k){ var n=ss.nights[k];
-          return '<div class="stLead"><span class="stLeadN">'+esc(nightLabel(k))+'</span>'
+          return '<div class="stLead"><span class="stLeadN">'+esc(nightLabel(k, n))+'</span>'
             + '<span class="stLeadV">'+(Number(n.pts)||0)+' pts'+(n.rank?(' · #'+n.rank):'')+'</span></div>'; }).join('')
       + '</div>';
   }
