@@ -6188,6 +6188,37 @@ function setSport(key){
   /* LEAN applies to EVERY sport, not just the one loaded at boot. */
   CATCHES   = (typeof leanCatches==='function') ? leanCatches(SPORT.catches) : SPORT.catches;
 
+  /* ============ AND THE OUT LIST IS NOT THIS SPORT'S ANY MORE ========
+     26 Aug, caught by the GUEST during the soccer demo, seconds after the
+     founder said "we also give you the reports, who's not playing":
+
+       "It needs to be to the right sport, because the players that
+        you're seeing there is actually basketball players."
+
+     `INACTIVE` is `let INACTIVE = new Set()` declared once, and until now
+     cleared NOWHERE — loadInactives() only ever adds. This function
+     rebinds GAME, roster, preds, rounds and CATCHES four lines up, so it
+     is the moment the app stops being about one sport; the injury report
+     was the one piece of night state that did not move with them, and it
+     printed WNBA names under "Not playing tonight" on a soccer card.
+
+     Same disease as lastStand and HR.started: module state outliving the
+     room it describes. hydrateNight() clears it too, for the path where
+     a new NIGHT lands without a sport change — these are the only two
+     ways what-is-being-played changes, and both now let go of it.
+
+     `typeof` guarded because INACTIVE is a `let` declared far below this
+     function: during boot, setSport can run before that line has been
+     evaluated, and a bare reference would throw in the temporal dead
+     zone. It is not defensive padding, it is the TDZ. */
+  try{
+    if(typeof INACTIVE !== 'undefined' && INACTIVE && INACTIVE.clear){
+      INACTIVE.clear();
+      INACTIVE_NOTE = '';
+      try{ if(typeof paintInactives === 'function') paintInactives(); }catch(_){}
+    }
+  }catch(_){}
+
   try{ LS_BASE = "stats_gamenight_v1_" + SPORT_KEY; }catch(_){}
   sportTotals();
 
@@ -6318,6 +6349,28 @@ try{ window.SPORTS = SPORTS; window.SPORT = SPORT; }catch(_){}
    the one outcome worse than the deploy-per-night it replaces.            */
 var NIGHT_CFG_SOURCE = 'built-in';
 
+/* ============ WHO THESE PLAYERS ACTUALLY ARE ========================
+   Founder, 26 Aug, from the first outside feedback session this product
+   has ever had: "the user wants to get more statistics… if I click on
+   Olivia Miles, give her her season statistics… so it makes it easier
+   for the user to get more information about that player before they
+   make the pick."
+
+   The sharpest note the product has had. The pick sheet asks somebody to
+   choose between thirteen names and tells them nothing about any of
+   them, so a stranger picks the name they recognise — which is not
+   paying attention, it is brand recall.
+
+   Keyed by DISPLAY NAME because that is what the sheet renders and what
+   every resolver matches on. An id here would be a second way to say who
+   a player is, and this file has paid for that more than once.
+
+   Written by host/build-slate.js at 08:10 from ESPN's core API, once a
+   day, server-side — so the phone spends nothing. Empty is the normal
+   state for a sport whose sheet names no people. */
+var PRED_STATS = {};
+try{ window.PRED_STATS = PRED_STATS; }catch(_){}
+
 function hydrateNight(cfg){
   if(!cfg || typeof cfg !== 'object') return false;
   var g = cfg.game, r = cfg.roster, p = cfg.preds;
@@ -6365,6 +6418,48 @@ function hydrateNight(cfg){
       if(Array.isArray(r.home)){ roster.home.length = 0; Array.prototype.push.apply(roster.home, r.home); }
       if(Array.isArray(r.away)){ roster.away.length = 0; Array.prototype.push.apply(roster.away, r.away); }
     }
+    /* The season numbers that describe the roster we just installed, and
+       they REPLACE rather than merge: carrying last room's averages into
+       this one would put Seattle's numbers under Toronto's names, which
+       is the same room-state-outlives-its-room bug as lastStand. A night
+       with no stats block correctly leaves this empty and the sheet
+       simply says nothing, which is the honest state. See PRED_STATS. */
+    try{
+      PRED_STATS = (cfg.stats && typeof cfg.stats === 'object') ? cfg.stats : {};
+      window.PRED_STATS = PRED_STATS;
+    }catch(_){}
+    /* ============ AND THE OUT LIST BELONGS TO THE NIGHT TOO ===========
+       26 Aug, first outside feedback session, caught by the GUEST during
+       the soccer demo — moments after the founder said "we also give you
+       the reports, who's not playing":
+
+         "It needs to be to the right sport, because the players that
+          you're seeing there is actually basketball players."
+
+       `INACTIVE` is declared once — `let INACTIVE = new Set()` — and was
+       cleared NOWHERE. Not on a sport swap, not on a room switch, not on
+       a new night. loadInactives() only ever ADDS. So the WNBA injury
+       report from tonight's basketball room was still in the Set when the
+       soccer practice deck rendered, and paintInactives() printed
+       basketball players under "Not playing tonight" on a soccer card.
+
+       This is the same disease as lastStand (the board cache that painted
+       the room you LEFT) and HR.started (round ids that blocked the next
+       room's first round): module state that outlives the room it
+       describes. The cure is the same — it is installed with the night,
+       so it is cleared with the night.
+
+       Here rather than in setSport() because every path that changes what
+       is being played comes through hydrateNight — a sport swap, a room
+       switch, and a fresh boot all do. One owner, not three. */
+    try{
+      if(typeof INACTIVE !== 'undefined' && INACTIVE && INACTIVE.clear) INACTIVE.clear();
+      INACTIVE_NOTE = '';
+      /* And take the rendered bar down with it: an empty Set still leaves
+         last night's names on screen until something repaints, and the
+         thing that repaints is the very function we just emptied. */
+      try{ if(typeof paintInactives === 'function') paintInactives(); }catch(_){}
+    }catch(_){}
 
     /* 3. groups captured abbreviations and names as VALUES at load. */
     try{
@@ -10984,9 +11079,32 @@ function buildPred(){
        every buildPred(), so nothing may be remembered ABOUT the node —
        only the question it belongs to and the value it carries, which are
        identical on the replacement. */
+    /* ============ AND WHAT WE KNOW ABOUT HER ==========================
+       The stat line lives INSIDE the button, deliberately. Every other
+       shape considered — an ⓘ beside the name, a long-press, a separate
+       sheet — puts a second tap target on the one screen in this product
+       with a measured tap-loss history: 43% of 120ms presses lost before
+       .221, because buildPred() rebuilds every option through innerHTML
+       and the node moves under the finger. One button per row, one
+       target, and the numbers come along for free.
+
+       Absent means ABSENT. A player with no season row renders no line
+       rather than 0.0 — a rookie, a mid-season signing, somebody hurt all
+       year. "0.0 PPG" reads as "she is bad"; nothing reads as "we do not
+       know", and only one of those is true. Same reason the runner refuses
+       to invent a number. */
+    var st = null;
+    try{ st = PRED_STATS && PRED_STATS[String(o)]; }catch(_){}
+    var line = '';
+    if(st && st.ppg != null){
+      var bits = [st.ppg + ' PPG'];
+      if(st.reb != null) bits.push(st.reb + ' REB');
+      if(st.ast != null) bits.push(st.ast + ' AST');
+      line = '<span class="pdstat">' + esc(bits.join(' · ')) + '</span>';
+    }
     return '<button type="button" class="pdopt'+(on?' on':'')+(out?' isout':'')+'" data-pdq="'+esc(String(p.id))+'" data-pd="'+esc(String(o))+'"'
       +(out?' aria-disabled="true" title="Ruled out tonight — this pick cannot score"':'')+'>'
-      +'<span class="pdradio"></span><span class="pdname">'+esc(String(o))+'</span>'
+      +'<span class="pdradio"></span><span class="pdname">'+esc(String(o))+line+'</span>'
       +(out?'<span class="pdout">OUT</span>':'')+'</button>';
   };
   /* GROUPED BY TEAM. Two full rosters is twenty-seven names, and twenty-seven
@@ -11199,6 +11317,33 @@ function buildPred(){
   const nb=c.querySelector('.pdbonus input');
   if(nb) nb.oninput=function(){ S.predChoices[p.id+'_num']=nb.value;
     const t=c.querySelector('.pdpts'); if(t) t.textContent=predRidingPts()+' pts riding'; };
+  /* ============ AND ENTER MEANS NEXT ================================
+     26 Aug, first outside feedback session, watched live: "So I put in
+     ten, and then you hit enter. Right? … Enter isn't working now. You
+     gotta go to Next, but we should get the Enter to work."
+
+     He is right and it is the oldest convention there is — a number field
+     that ignores Enter reads as broken, and on a phone the keyboard's
+     blue GO key is the same event. There was no key handler on this input
+     at all; `oninput` above was its only wiring.
+
+     `predGo(1)` rather than a synthetic click on the Next button: the
+     button is re-rendered by every buildPred() and clicking a node we
+     looked up earlier is exactly the stale-node bug that lost 43% of
+     thumb taps. Call the function, never the element.
+
+     On the LAST card there is nowhere forward, so Enter commits the value
+     and closes the keyboard instead of doing nothing — blur() is what
+     tells a phone the entry is finished. */
+  if(nb) nb.onkeydown=function(ev){
+    if(!ev || (ev.key !== 'Enter' && ev.keyCode !== 13)) return;
+    ev.preventDefault();
+    try{ S.predChoices[p.id+'_num']=nb.value; }catch(_){}
+    var last = false;
+    try{ last = (PD.i >= L.length-1); }catch(_){}
+    if(last){ try{ nb.blur(); }catch(_){} }
+    else    { try{ predGo(1); }catch(_){} }
+  };
 
   // Swipe. Horizontal only, and only past a real threshold — a vertical
   // scroll must never be mistaken for a decision.
@@ -17100,8 +17245,23 @@ const AWARDS=[
      empty-handed again. */
   { id:'everyq', emoji:'🏆', name:'NEVER LOOKED AWAY',
     test:c=>Array.isArray(c.roundHits) && c.roundHits.length>=NR && c.roundHits.every(n=>n>=1),
-    why:c=>`You scored in <b>all ${NR} ${L.periods||'quarters'}</b> — first to last. Most people fade after half; you did not.`,
-    short:()=>`scored in every ${L.period||'quarter'}` }
+    /* ============ AND IT SAYS THE SPORT'S OWN WORD =====================
+       26 Aug, first outside feedback session, on a soccer card: "For
+       soccer, this should be you scored in all TWO HALVES, not two
+       quarters."
+
+       `L.periods` and `L.period` are not defined anywhere in this file —
+       grep them — so both fell through to the hardcoded 'quarters' and
+       every soccer, baseball and hockey card said the basketball word.
+       Same family as "the baseball scoreboard said OT in the 4th" and
+       "the final whistle went at half-time".
+
+       roundWord(n) already exists, already keys off famNow(), and already
+       knows soccer is halves and baseball is rounds — including the
+       singular, which is why it takes the count. It was written for
+       exactly this and this line never called it. One owner. */
+    why:c=>`You scored in <b>all ${NR} ${roundWord(NR)}</b> — first to last. Most people fade after half; you did not.`,
+    short:()=>`scored in every ${roundWord(1)}` }
 ];
 
 
@@ -20755,7 +20915,73 @@ function openHostedRound(r, idx){
   }else if(S.screen==='live' || S.screen==='review'){
     toast(`🔴 ${roundName(idx)} is live — finish this one first.`);
   }else{
-    toast(`🔴 Host pushed ${roundName(idx).toLowerCase()} — head back to the lobby.`);
+    /* ============ COME, GO. THE QUESTION FINDS THE PLAYER ==============
+       26 Aug, first outside feedback session. This branch is what he was
+       describing, and it is the strongest note the product has had:
+
+         "I think it should be more less reading. The first question comes
+          up, then you choose, you see the ticker ticking down, and that's
+          it. Then the next one comes up instead of having to search."
+         "We have to figure out a way for it to just COME, GO. COME, GO."
+         "Here, it's more like, I GOTTA HUNT. I'M HUNTING AROUND."
+         "Like an arcade game."
+
+       And the room he was describing it for: "if I'm sitting in a stadium,
+       the kids running, my wife is talking about what happened at work, I
+       need to be as easy as a notification."
+
+       Until now this line TOLD HIM TO WALK. A round opens while he is on
+       Home or the Board, and the app's answer was a toast asking him to
+       navigate to the lobby and find it. On a 20-second clock, next to a
+       television, with a child in the room. That is the hunting, and it is
+       one branch of one function.
+
+       So: take him there. The round already auto-starts from the lobby a
+       few lines up — this makes every other tab behave the way the lobby
+       already does.
+
+       THREE THINGS IT DELIBERATELY WILL NOT DO, because a screen that
+       takes itself over is worse than a screen you have to find:
+
+       1. NEVER off the prediction card. `predict` is a sealed sheet worth
+          600 of the night's 1,000 points and a player is mid-decision on
+          it. The comment thirty lines above says the same thing about the
+          review screen and it was right. `predreview` too.
+       2. NEVER in practice. This is the hosted path so S.mode is 'live',
+          but the guard is explicit rather than inferred.
+       3. NEVER without a seat. Somebody signed out is looking at a door,
+          not a game, and moving them mid-tap would land them nowhere.
+
+       The beat before it moves is the same 2.2s the lobby uses, and for
+       the reason written there: a screen change you watched happen is
+       different from one that happened to you. The toast fires first so
+       the move is explained before it occurs. */
+    var canTake = false;
+    try{
+      canTake = (S.mode === 'live')
+             && (S.screen !== 'predict') && (S.screen !== 'predreview')
+             && (typeof SB !== 'undefined' && SB.seated && SB.seated());
+    }catch(_){ canTake = false; }
+
+    if(canTake){
+      toast(`🔴 ${roundName(idx)} is live — taking you in…`);
+      setTimeout(function(){
+        /* Re-check EVERYTHING at the moment of the move, not at the moment
+           of the decision. In 2.2 seconds a player can open their card,
+           answer on another device, or the host can score the round out
+           from under them. HR.pending===r is the same staleness test the
+           lobby branch uses. */
+        try{
+          if(HR.pending !== r) return;                 // superseded or scored
+          if(S.screen === 'predict' || S.screen === 'predreview') return;
+          if(S.screen === 'live' || S.screen === 'review') return;
+          if(HR.submitted && HR.submitted[r.id]) return;
+          startHostedQuarter(idx);
+        }catch(_){}
+      }, 2200);
+    }else{
+      toast(`🔴 Host pushed ${roundName(idx).toLowerCase()} — head back to the lobby.`);
+    }
   }
 }
 
@@ -23175,7 +23401,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-26-deadroom.228';
+const STATS_BUILD='2026-08-27-comego.229';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -29389,6 +29615,25 @@ body.hasgamebar .screen.active{padding-bottom:132px}
 .pdopt.on .pdradio{border-color:var(--teal)}
 .pdopt.on .pdradio:after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--teal)}
 .pdname{flex:1;min-width:0}
+/* ============ THE SEASON LINE UNDER A NAME =========================
+   12px is the FLOOR of the locked type ramp, not a number picked to make
+   something fit — see interface-keeper. It is the smallest the design
+   system allows and this is exactly what it is for: a secondary fact
+   under a primary one.
+
+   `tabular-nums` because these are columns of digits read by comparison.
+   Without it "7.4" and "17.0" set at different widths and the eye cannot
+   scan thirteen players down a list, which is the entire job. */
+.pdstat{display:block;margin-top:3px;font-size:12px;font-weight:600;
+  line-height:1.25;color:var(--muted);letter-spacing:.01em;
+  font-variant-numeric:tabular-nums;white-space:normal}
+/* A ruled-out player keeps her numbers legible. The strike-through says
+   "you cannot spend this pick"; striking the averages too would say the
+   averages are wrong, which they are not. */
+.pdopt.isout .pdstat{text-decoration:none;color:#6b6d7e}
+/* The selected row already carries a teal border and tint; the line
+   brightens with it rather than staying grey against a lit background. */
+.pdopt.on .pdstat{color:var(--ink);opacity:.72}
 .stLeadR{display:block;font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.02em}
 .pdout{flex:0 0 auto;margin-left:auto;font-size:12px;font-weight:900;line-height:1.5;letter-spacing:.06em;
   color:#ff8a94;border:1px solid rgba(255,107,107,.45);background:rgba(255,107,107,.10);

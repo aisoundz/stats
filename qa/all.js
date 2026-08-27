@@ -83,6 +83,13 @@ const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-la
      candidate. Verified with a negative control: 14/0 on the candidate,
      13/1 on the live build. */
   'stale-default.js',
+  /* Positional path, defaults to index.html. RED on index.html by design:
+     it holds the three defects the first outside guest found on 26 Aug. */
+  'feedback-26aug.js',
+  /* Positional path, defaults to index.html. RED there by design: the
+     shipped build tells a player to walk to the lobby instead of taking
+     them to the round that just opened. */
+  'arcade.js',
   /* Same argv shape as desk-reach.js: a positional path, --file, or the
      index-test.html default. Verified by reading it. */
   'pick-tap.js',
@@ -453,6 +460,17 @@ const TIER={
      it; joinNight() never did, so the hero said "Tonight's games are
      loading…" while the visitor was filed under a dead room. */
   'stale-seat.js': {tier:'browser'},
+  /* The first outside feedback session, as executable checks: Enter must
+     submit the exact-number field; a sport swap must not leave the
+     previous sport's injury list on screen ("the players you're seeing
+     there is actually basketball players"); and the end-of-night award
+     must say the sport's own word ("two HALVES, not two quarters"). */
+  'feedback-26aug.js': {tier:'browser'},
+  /* "Come, go. Come, go." The round must find the player wherever they
+     are, and must NEVER take over the sealed prediction card, a round
+     they are already answering, a signed-out screen or a practice deck.
+     Also pins the three staleness races inside the 2.2s beat. */
+  'arcade.js': {tier:'browser'},
   /* A device showed a round as "not open yet" nine minutes after it had
      genuinely opened server-side. roomNextRound()/hostedDoc() read correctly
      on a static trace; the remaining suspect is a round-watch listener that

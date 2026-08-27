@@ -312,7 +312,11 @@ async function browserPromises(){
                  flag reads. Give it a tip an hour ago: the game is over,
                  nobody is locked out, and nothing here is about dates. */
               delete GAME.__baked;
-              GAME.tipISO = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+              /* Safe to set page-wide HERE (unlike qa.js, which has pretip
+                 checks that need both a pre- and post-tip state): nothing in
+                 this file reads the clock, and every join-dependent promise
+                 needs a night that has not expired. */
+              GAME.tipISO = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
               clearInterval(t);
             }
           } catch (_) {}

@@ -6188,6 +6188,37 @@ function setSport(key){
   /* LEAN applies to EVERY sport, not just the one loaded at boot. */
   CATCHES   = (typeof leanCatches==='function') ? leanCatches(SPORT.catches) : SPORT.catches;
 
+  /* ============ AND THE OUT LIST IS NOT THIS SPORT'S ANY MORE ========
+     26 Aug, caught by the GUEST during the soccer demo, seconds after the
+     founder said "we also give you the reports, who's not playing":
+
+       "It needs to be to the right sport, because the players that
+        you're seeing there is actually basketball players."
+
+     `INACTIVE` is `let INACTIVE = new Set()` declared once, and until now
+     cleared NOWHERE — loadInactives() only ever adds. This function
+     rebinds GAME, roster, preds, rounds and CATCHES four lines up, so it
+     is the moment the app stops being about one sport; the injury report
+     was the one piece of night state that did not move with them, and it
+     printed WNBA names under "Not playing tonight" on a soccer card.
+
+     Same disease as lastStand and HR.started: module state outliving the
+     room it describes. hydrateNight() clears it too, for the path where
+     a new NIGHT lands without a sport change — these are the only two
+     ways what-is-being-played changes, and both now let go of it.
+
+     `typeof` guarded because INACTIVE is a `let` declared far below this
+     function: during boot, setSport can run before that line has been
+     evaluated, and a bare reference would throw in the temporal dead
+     zone. It is not defensive padding, it is the TDZ. */
+  try{
+    if(typeof INACTIVE !== 'undefined' && INACTIVE && INACTIVE.clear){
+      INACTIVE.clear();
+      INACTIVE_NOTE = '';
+      try{ if(typeof paintInactives === 'function') paintInactives(); }catch(_){}
+    }
+  }catch(_){}
+
   try{ LS_BASE = "stats_gamenight_v1_" + SPORT_KEY; }catch(_){}
   sportTotals();
 
@@ -6396,6 +6427,38 @@ function hydrateNight(cfg){
     try{
       PRED_STATS = (cfg.stats && typeof cfg.stats === 'object') ? cfg.stats : {};
       window.PRED_STATS = PRED_STATS;
+    }catch(_){}
+    /* ============ AND THE OUT LIST BELONGS TO THE NIGHT TOO ===========
+       26 Aug, first outside feedback session, caught by the GUEST during
+       the soccer demo — moments after the founder said "we also give you
+       the reports, who's not playing":
+
+         "It needs to be to the right sport, because the players that
+          you're seeing there is actually basketball players."
+
+       `INACTIVE` is declared once — `let INACTIVE = new Set()` — and was
+       cleared NOWHERE. Not on a sport swap, not on a room switch, not on
+       a new night. loadInactives() only ever ADDS. So the WNBA injury
+       report from tonight's basketball room was still in the Set when the
+       soccer practice deck rendered, and paintInactives() printed
+       basketball players under "Not playing tonight" on a soccer card.
+
+       This is the same disease as lastStand (the board cache that painted
+       the room you LEFT) and HR.started (round ids that blocked the next
+       room's first round): module state that outlives the room it
+       describes. The cure is the same — it is installed with the night,
+       so it is cleared with the night.
+
+       Here rather than in setSport() because every path that changes what
+       is being played comes through hydrateNight — a sport swap, a room
+       switch, and a fresh boot all do. One owner, not three. */
+    try{
+      if(typeof INACTIVE !== 'undefined' && INACTIVE && INACTIVE.clear) INACTIVE.clear();
+      INACTIVE_NOTE = '';
+      /* And take the rendered bar down with it: an empty Set still leaves
+         last night's names on screen until something repaints, and the
+         thing that repaints is the very function we just emptied. */
+      try{ if(typeof paintInactives === 'function') paintInactives(); }catch(_){}
     }catch(_){}
 
     /* 3. groups captured abbreviations and names as VALUES at load. */
@@ -11254,6 +11317,33 @@ function buildPred(){
   const nb=c.querySelector('.pdbonus input');
   if(nb) nb.oninput=function(){ S.predChoices[p.id+'_num']=nb.value;
     const t=c.querySelector('.pdpts'); if(t) t.textContent=predRidingPts()+' pts riding'; };
+  /* ============ AND ENTER MEANS NEXT ================================
+     26 Aug, first outside feedback session, watched live: "So I put in
+     ten, and then you hit enter. Right? … Enter isn't working now. You
+     gotta go to Next, but we should get the Enter to work."
+
+     He is right and it is the oldest convention there is — a number field
+     that ignores Enter reads as broken, and on a phone the keyboard's
+     blue GO key is the same event. There was no key handler on this input
+     at all; `oninput` above was its only wiring.
+
+     `predGo(1)` rather than a synthetic click on the Next button: the
+     button is re-rendered by every buildPred() and clicking a node we
+     looked up earlier is exactly the stale-node bug that lost 43% of
+     thumb taps. Call the function, never the element.
+
+     On the LAST card there is nowhere forward, so Enter commits the value
+     and closes the keyboard instead of doing nothing — blur() is what
+     tells a phone the entry is finished. */
+  if(nb) nb.onkeydown=function(ev){
+    if(!ev || (ev.key !== 'Enter' && ev.keyCode !== 13)) return;
+    ev.preventDefault();
+    try{ S.predChoices[p.id+'_num']=nb.value; }catch(_){}
+    var last = false;
+    try{ last = (PD.i >= L.length-1); }catch(_){}
+    if(last){ try{ nb.blur(); }catch(_){} }
+    else    { try{ predGo(1); }catch(_){} }
+  };
 
   // Swipe. Horizontal only, and only past a real threshold — a vertical
   // scroll must never be mistaken for a decision.
@@ -17155,8 +17245,23 @@ const AWARDS=[
      empty-handed again. */
   { id:'everyq', emoji:'🏆', name:'NEVER LOOKED AWAY',
     test:c=>Array.isArray(c.roundHits) && c.roundHits.length>=NR && c.roundHits.every(n=>n>=1),
-    why:c=>`You scored in <b>all ${NR} ${L.periods||'quarters'}</b> — first to last. Most people fade after half; you did not.`,
-    short:()=>`scored in every ${L.period||'quarter'}` }
+    /* ============ AND IT SAYS THE SPORT'S OWN WORD =====================
+       26 Aug, first outside feedback session, on a soccer card: "For
+       soccer, this should be you scored in all TWO HALVES, not two
+       quarters."
+
+       `L.periods` and `L.period` are not defined anywhere in this file —
+       grep them — so both fell through to the hardcoded 'quarters' and
+       every soccer, baseball and hockey card said the basketball word.
+       Same family as "the baseball scoreboard said OT in the 4th" and
+       "the final whistle went at half-time".
+
+       roundWord(n) already exists, already keys off famNow(), and already
+       knows soccer is halves and baseball is rounds — including the
+       singular, which is why it takes the count. It was written for
+       exactly this and this line never called it. One owner. */
+    why:c=>`You scored in <b>all ${NR} ${roundWord(NR)}</b> — first to last. Most people fade after half; you did not.`,
+    short:()=>`scored in every ${roundWord(1)}` }
 ];
 
 
@@ -20810,7 +20915,73 @@ function openHostedRound(r, idx){
   }else if(S.screen==='live' || S.screen==='review'){
     toast(`🔴 ${roundName(idx)} is live — finish this one first.`);
   }else{
-    toast(`🔴 Host pushed ${roundName(idx).toLowerCase()} — head back to the lobby.`);
+    /* ============ COME, GO. THE QUESTION FINDS THE PLAYER ==============
+       26 Aug, first outside feedback session. This branch is what he was
+       describing, and it is the strongest note the product has had:
+
+         "I think it should be more less reading. The first question comes
+          up, then you choose, you see the ticker ticking down, and that's
+          it. Then the next one comes up instead of having to search."
+         "We have to figure out a way for it to just COME, GO. COME, GO."
+         "Here, it's more like, I GOTTA HUNT. I'M HUNTING AROUND."
+         "Like an arcade game."
+
+       And the room he was describing it for: "if I'm sitting in a stadium,
+       the kids running, my wife is talking about what happened at work, I
+       need to be as easy as a notification."
+
+       Until now this line TOLD HIM TO WALK. A round opens while he is on
+       Home or the Board, and the app's answer was a toast asking him to
+       navigate to the lobby and find it. On a 20-second clock, next to a
+       television, with a child in the room. That is the hunting, and it is
+       one branch of one function.
+
+       So: take him there. The round already auto-starts from the lobby a
+       few lines up — this makes every other tab behave the way the lobby
+       already does.
+
+       THREE THINGS IT DELIBERATELY WILL NOT DO, because a screen that
+       takes itself over is worse than a screen you have to find:
+
+       1. NEVER off the prediction card. `predict` is a sealed sheet worth
+          600 of the night's 1,000 points and a player is mid-decision on
+          it. The comment thirty lines above says the same thing about the
+          review screen and it was right. `predreview` too.
+       2. NEVER in practice. This is the hosted path so S.mode is 'live',
+          but the guard is explicit rather than inferred.
+       3. NEVER without a seat. Somebody signed out is looking at a door,
+          not a game, and moving them mid-tap would land them nowhere.
+
+       The beat before it moves is the same 2.2s the lobby uses, and for
+       the reason written there: a screen change you watched happen is
+       different from one that happened to you. The toast fires first so
+       the move is explained before it occurs. */
+    var canTake = false;
+    try{
+      canTake = (S.mode === 'live')
+             && (S.screen !== 'predict') && (S.screen !== 'predreview')
+             && (typeof SB !== 'undefined' && SB.seated && SB.seated());
+    }catch(_){ canTake = false; }
+
+    if(canTake){
+      toast(`🔴 ${roundName(idx)} is live — taking you in…`);
+      setTimeout(function(){
+        /* Re-check EVERYTHING at the moment of the move, not at the moment
+           of the decision. In 2.2 seconds a player can open their card,
+           answer on another device, or the host can score the round out
+           from under them. HR.pending===r is the same staleness test the
+           lobby branch uses. */
+        try{
+          if(HR.pending !== r) return;                 // superseded or scored
+          if(S.screen === 'predict' || S.screen === 'predreview') return;
+          if(S.screen === 'live' || S.screen === 'review') return;
+          if(HR.submitted && HR.submitted[r.id]) return;
+          startHostedQuarter(idx);
+        }catch(_){}
+      }, 2200);
+    }else{
+      toast(`🔴 Host pushed ${roundName(idx).toLowerCase()} — head back to the lobby.`);
+    }
   }
 }
 
@@ -23230,7 +23401,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-26-deadroom.228';
+const STATS_BUILD='2026-08-27-comego.229';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

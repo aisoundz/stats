@@ -451,11 +451,17 @@ async function browserTests(){
                 /* Un-baked is no longer enough. joinNight() now asks
                    nightHasExpired(), which is about the TIP, so a fixture
                    night whose tipISO is a week old is refused however the
-                   flag reads. Give it a tip an hour ago: the game is
-                   over, nobody is locked out, and none of these checks
-                   is about dates. */
+                   flag reads.
+
+                   DO NOT TOUCH tipISO HERE. Two attempts did and both
+                   broke a pretip check, in opposite directions: a PAST tip
+                   turns feed-down-before-tip's 'not-started' into
+                   'no-host', and a FUTURE tip turns no-push-feed-down's
+                   'no-host' into 'not-started'. No single value satisfies
+                   both, because those two checks exist precisely to tell
+                   the two states apart. The suites that care about the
+                   clock set it themselves. */
                 delete GAME.__baked;
-                GAME.tipISO = new Date(Date.now() - 60 * 60 * 1000).toISOString();
                 clearInterval(t);
               }
             } catch (_) {}
@@ -1121,6 +1127,14 @@ async function browserTests(){
       };
       S.name=''; S.color='#2f6bff';            // fresh device: no idea who you are
       try{ localStorage.removeItem('stats_profile_v1'); }catch(e){}
+      /* A CURRENT NIGHT, SCOPED TO THIS CHECK. joinNight() refuses a night
+         whose tip is more than 18h past (qa/stale-seat.js), and the build's
+         baked fallback tipped on 19 August. This block is about IDENTITY,
+         not about the clock, so give it a night somebody could actually be
+         sitting in. Deliberately NOT page-wide: the pretip checks in this
+         same file need a pre-tip AND a post-tip state, and no single value
+         satisfies all three. */
+      try{ GAME.tipISO = new Date(Date.now() + 3*60*60*1000).toISOString(); }catch(e){}
       await joinNight();
       R.seatKeptItsName   = !!(wrote && wrote.name==='Anis');
       R.seatKeptItsColour = !!(wrote && wrote.color==='#28e0d0');

@@ -181,7 +181,27 @@ async function seasonStatsFor(teamId, season){
          is a claim. */
       if(row.gp && Number(row.gp) > 0){ out[p.name] = row; got++; }
       else missed++;
-    }catch(_){ missed++; }        // one athlete's 404 must not lose the team
+    }catch(e){
+      /* One athlete's 404 must not lose the team, but it must not be
+         SILENT either. qa/silence.js is a ratchet on exactly this: 52
+         catch blocks in the host path say nothing and the number is
+         only ever allowed to go down. My first version of this handler
+         incremented the counter and said nothing, which pushed the count
+         to 53 and failed the gate. That is the suite doing its job.
+
+         NOTE FOR THE NEXT PERSON: do not paste an example of a silent
+         handler into a comment here. The suite finds catch blocks by
+         pattern, so a specimen written out in prose is counted as a real
+         one and reported at this line. I did that too, and spent a pass
+         hunting a 53rd offender that was my own paragraph.
+
+         It also earns the line on its own merits. A player whose season
+         row fails to fetch shows NO stats on the pick sheet, and the
+         difference between "she has not played this season" and "ESPN
+         404'd on her id" is invisible on that screen and obvious here. */
+      missed++;
+      log('stats', `no season row for ${p.name} (${p.id}): ${e && e.message}`);
+    }
   }
   log('stats', `team ${teamId}: ${got} player(s) with season numbers, ${missed} without`);
   return out;
