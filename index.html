@@ -6370,6 +6370,11 @@ var NIGHT_CFG_SOURCE = 'built-in';
    state for a sport whose sheet names no people. */
 var PRED_STATS = {};
 try{ window.PRED_STATS = PRED_STATS; }catch(_){}
+/* The head-to-head, filled by paintChrome() once the summary lands. Null
+   until then, and the pick sheet simply says nothing rather than showing a
+   frame with no numbers in it. See the note at its assignment. */
+var H2H = null;
+try{ window.H2H = H2H; }catch(_){}
 
 function hydrateNight(cfg){
   if(!cfg || typeof cfg !== 'object') return false;
@@ -11164,6 +11169,41 @@ function buildPred(){
     '<div class="pdhead"><b>Your card</b><span class="pdpts">'+predRidingPts()+' pts riding</span></div>'
    +'<div class="pdprog"><span class="pdn">'+preds.filter(function(x){return S.predChoices[x.id];}).length+' / '+L.length+' picked</span>'
    +  '<div class="pdbar"><i style="width:'+pct+'%"></i></div></div>'
+   /* ============ THE HISTORY BETWEEN THESE TWO TEAMS ==================
+      Asked for twice, unprompted, in two different sports, by the first
+      outside person to play this. It already existed on the landing page
+      and he was on THIS screen when he asked for it.
+
+      ALWAYS VISIBLE, not behind a tap. Same call as the season stats a
+      line below: this screen has a measured tap-loss history, and a second
+      target next to the pick target is how that bug happened. It also
+      wants to be READ while deciding, not fetched — a fact you have to go
+      and get is a fact most people will not get.
+
+      Above the card and below the progress bar, so it is clear of the
+      option buttons entirely and cannot be mistaken for one. Renders
+      nothing at all until paintChrome has the summary. */
+   + (function(){
+       try{
+         if(!H2H || (!H2H.summary && !(H2H.meetings||[]).length)) return '';
+         var last = (H2H.meetings||[]).slice(-2).map(function(m){
+           return '<span class="pdh2hg">'+esc(m.when)+'</span> '
+                + esc(m.won)+' '+esc(String(m.a))+'\u2013'+esc(String(m.b));
+         }).join('  \u00b7  ');
+         var frm = function(arr){ return (arr||[]).map(function(r){
+           return '<i class="'+(r==='W'?'w':'l')+'">'+esc(r)+'</i>'; }).join(''); };
+         var formRow = (H2H.form && ((H2H.form.away||[]).length || (H2H.form.home||[]).length))
+           ? '<div class="pdh2hf">'
+             + '<span>'+esc(H2H.A)+' '+frm(H2H.form.away)+'</span>'
+             + '<span>'+esc(H2H.H)+' '+frm(H2H.form.home)+'</span></div>'
+           : '';
+         return '<div class="pdh2h">'
+              + (H2H.summary ? '<b>'+esc(H2H.summary)+'</b>' : '')
+              + (last ? '<div class="pdh2hl">'+last+'</div>' : '')
+              + formRow
+              + '</div>';
+       }catch(_){ return ''; }
+     })()
    /* One dot per pick, filled when answered, hollow when not, ringed for the
       one you're on — and every one of them is a tap. This is the whole
       answer to "which one did I miss": you can see it. */
@@ -22759,6 +22799,42 @@ async function mountMatchup(){
         const extra=(r&&r.who===p.who)?` · ${r.val} RPG`:''; return `<div class="mu-star"><div class="mu-swho">${emoji} ${p.who}</div><div class="mu-sline">${p.val} PPG${extra}</div></div>`; };
       duel=`<div class="mu-div"></div><div class="mu-lab">Top scorers</div><div class="mu-duel">${star(A,GAME.awayEmoji)}<div class="mu-vs">VS</div>${star(H,GAME.homeEmoji)}</div>`;
     }
+    /* ============ AND THE PICK SHEET GETS IT TOO =======================
+       27 Aug. The guest asked for this TWICE, unprompted, in two different
+       sports, and the second time was the sharper one:
+
+         "Somewhere up here, if I could click, and it would tell me the
+          history between these two teams, stats wise. Because I see that
+          these people are out, but when they were in, América's a better
+          team."
+
+       He was standing on the PICK SHEET when he said it. All of this
+       already existed and has since Game Night #7 — the season series, the
+       last five, the top scorers — on the LANDING page, which is the one
+       screen he was not on while deciding.
+
+       Same shape as everything else this week: the thing exists and the
+       place that needs it cannot reach it. So it is stashed here, at the
+       one point in the file that has already done the work and already
+       applied the B1 filter, and buildPred() reads it.
+
+       B1 MATTERS AND IS ALREADY HANDLED ABOVE, twice over: tonight's own
+       event is dropped by id, and the score>0 filter drops it again. Both
+       are needed — ESPN returns `status` as a STRING on the MLB summary,
+       so the completed===false branch cannot fire there at all. Verified
+       against tonight's LAD@ATL payload before shipping this. */
+    try{
+      H2H = { summary: seriesSummary || '',
+              meetings: meetings.slice(-3).map(function(m){
+                var s2=m.cs.slice().sort(function(x,y){return y.score-x.score;});
+                var d=new Date(m.date);
+                return { when: d.toLocaleDateString('en-US',{month:'short',day:'numeric'}),
+                         won: s2[0].ab, a: s2[0].score, b: s2[1].score };
+              }),
+              form: { away: (form[A]||[]).slice(0,5), home: (form[H]||[]).slice(0,5) },
+              A: A, H: H };
+      window.H2H = H2H;
+    }catch(_){}
     let h2h='';
     if(seriesSummary||meetings.length){
       const lines=meetings.map(m=>{ const s2=m.cs.slice().sort((x,y)=>y.score-x.score); const d=new Date(m.date);
@@ -23436,7 +23512,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-27-ninth.230';
+const STATS_BUILD='2026-08-27-h2h.231';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -29650,6 +29726,23 @@ body.hasgamebar .screen.active{padding-bottom:132px}
 .pdopt.on .pdradio{border-color:var(--teal)}
 .pdopt.on .pdradio:after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--teal)}
 .pdname{flex:1;min-width:0}
+/* ============ THE HEAD-TO-HEAD STRIP ON THE PICK SHEET ==============
+   Sits between the progress bar and the card, clear of every option
+   button so it can never read as one. 12px is the floor of the locked
+   type ramp, which is what a secondary fact under a primary one is for.
+   tabular-nums because these are scores read by comparison. */
+.pdh2h{background:#111a2b;border:1px solid var(--line2);border-radius:12px;
+  padding:11px 13px;margin:0 0 12px;font-variant-numeric:tabular-nums}
+.pdh2h>b{display:block;font-size:14px;font-weight:800;color:var(--ink);
+  letter-spacing:.01em}
+.pdh2hl{margin-top:5px;font-size:12px;font-weight:600;color:var(--muted);
+  line-height:1.45}
+.pdh2hg{color:var(--dim,#5f6d8f)}
+.pdh2hf{display:flex;gap:14px;margin-top:7px;font-size:12px;
+  font-weight:700;color:var(--muted);letter-spacing:.06em}
+.pdh2hf i{font-style:normal;display:inline-block;width:13px;text-align:center}
+.pdh2hf i.w{color:var(--teal)}
+.pdh2hf i.l{color:#7e8091}
 /* ============ THE SEASON LINE UNDER A NAME =========================
    12px is the FLOOR of the locked type ramp, not a number picked to make
    something fit — see interface-keeper. It is the smallest the design
