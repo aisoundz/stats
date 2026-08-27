@@ -90,6 +90,7 @@ const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-la
      shipped build tells a player to walk to the lobby instead of taking
      them to the round that just opened. */
   'arcade.js',
+  'builtin-night.js',
   /* Same argv shape as desk-reach.js: a positional path, --file, or the
      index-test.html default. Verified by reading it. */
   'pick-tap.js',
@@ -471,6 +472,7 @@ const TIER={
      they are already answering, a signed-out screen or a practice deck.
      Also pins the three staleness races inside the 2.2s beat. */
   'arcade.js': {tier:'browser'},
+  'builtin-night.js': {tier:'browser'},
   /* A device showed a round as "not open yet" nine minutes after it had
      genuinely opened server-side. roomNextRound()/hostedDoc() read correctly
      on a static trace; the remaining suspect is a round-watch listener that

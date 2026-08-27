@@ -10500,6 +10500,61 @@ try{ window.predGateShut=predGateShut; }catch(_){}
 
 function startPredict(){
   try{ trk('card_start'); }catch(_){}
+  /* ============ YOU HAVE NOT PICKED A ROOM YET ========================
+     Reported three times on 27 Aug, the last of them from a live room
+     during a demo, with the rail overhead reading "Dodgers at Braves ·
+     Top 1st":
+
+         "This game finished 77 to 66, Minnesota Lynx.
+          Nothing left to pick."
+
+     Until a room is chosen GAME is the night baked into this file —
+     gn13-2026-08-19-min-gs, Lynx at Valkyries, tipped 2026-08-20T02:00Z.
+     A real game, and eight days finished. GS loads its feed, phaseNow()
+     says final, gsIsAbout() honestly agrees the feed is about GAME, and
+     nightIsOver() answers truthfully about the wrong week. Nothing was
+     broken. Everything was correct about a game nobody asked about.
+
+     WHAT THIS CONDITION HAD TO BE, and it took four wrong ones to learn:
+
+       nightIsOver() -> 'built-in' is not over   TWELVE red in
+         final-buzzer.js. 'built-in' is also a REAL night whose hydration
+         has not finished, and a night that can never end accepts answers
+         after the buzzer and never shows the ending.
+       the same test, moved to this door         card-deadline.js red: it
+         is the state of every local live-mode fixture, so the guard fired
+         in tests that were asking something else entirely.
+       ...without a mode check                   ONE HUNDRED AND FOURTEEN
+         red in desk-reach.js, which opens the card with startDemo() —
+         practice, which has no real game behind it and must always open.
+
+     The honest question is not "how was this night loaded" but the one
+     the player is actually being asked: THERE ARE ROOMS ON OFFER AND
+     THIS IS NOT ONE OF THEM. That is false in every fixture, because a
+     fixture has no slate, and false in a real room, because a real room
+     is on the slate. It is true in exactly one place — the front door
+     with the placeholder still loaded, which is where all three reports
+     came from.
+
+     nightIsOver() is left alone entirely. This door does not decide
+     whether a night ended; it declines to answer for a night nobody is
+     in, and points at the rail instead. */
+  try{
+    var rooms = [];
+    try{ rooms = (SLATE && SLATE.games) ? SLATE.games : []; }catch(_){ rooms = []; }
+    var onSlate = false;
+    try{
+      var myId = (GAME && GAME.nightId) || '';
+      onSlate = !!myId && rooms.some(function(g){ return g && g.nightId === myId; });
+    }catch(_){ onSlate = true; }        // unsure: leave the door alone
+    if(S.mode === 'live' && rooms.length && !onSlate){
+      try{ trk('blocked_no_room',{where:'predict', night:(GAME&&GAME.nightId)||''}); }catch(_){}
+      toast('Pick tonight’s game above and the card opens with it.');
+      try{ if(typeof paintSlate==='function') paintSlate(); }catch(_){}
+      try{ go('landing'); }catch(_){}
+      return;
+    }
+  }catch(_){}
   /* THE DOOR IS SHUT. Taking picks for a decided game is worse than
      refusing them: the player spends the time, and then the card settles
      against a result that was already public before they started. */
@@ -19495,6 +19550,63 @@ function ciLiveBank(){
    popped up on every single lobby repaint. Shuffling belongs to the caller
    that actually wants variety (the practice button), never to the bank. */
 function ciBank(){
+  /* ============ THIS BANK IS BASKETBALL, AND ONLY BASKETBALL =========
+     27 Aug, from the founder's phone during a BASEBALL practice deck,
+     forty minutes before a demo:
+
+         CAUGHT IT — "More assists so far?"   [ LAD ]  [ ATL ]
+
+     Everything below this line reads points, rebounds, assists, field
+     goal percentage and threes. None of those exist in baseball. The
+     generator was written when there was one sport and was never told
+     that there are now six, so every practice deck in every sport has
+     been asking basketball questions over the top of the right game.
+
+     THE SCOPE IS PRACTICE ONLY, and that is worth stating because it
+     decides how alarming this is: ciBank() has exactly two consumers,
+     ciDemoRun() and demoCiSet(), both of them the rehearsal. A LIVE room
+     gets its Caught It from the host runner, which has always been
+     sport-correct. No real night ever asked a baseball crowd about
+     assists.
+
+     WHAT THE OTHER SPORTS GET INSTEAD. Their own bank — the same
+     questions the live room asks, which for baseball is "First
+     strikeout", "First hit", "First run scored". Two things make that
+     safe to settle here and nowhere else:
+
+       - hydrateNight() rebuilds every `teams:true` row's options to the
+         REAL two teams and deliberately NULLS its baked answer, so the
+         answer cannot be read off the bank. Practice is allowed to
+         settle one anyway because practice is a simulation and says so
+         on screen — "SIMULATED — THE SCORE MOVES WHEN THE ROUND IS
+         SCORED". A live night settles from the host's marks and never
+         from here.
+       - a row whose options did not survive hydration is skipped rather
+         than guessed at, so a half-built bank produces fewer questions
+         instead of wrong ones.
+
+     Basketball falls through untouched, which is also why this is safe
+     to ship on a deadline: every QA fixture in this repo runs on the
+     built-in basketball night, so none of them reach this branch. */
+  if(typeof SPORT_KEY !== 'undefined' && SPORT_KEY !== 'basketball'){
+    var simOut = [];
+    var simH = (GAME && GAME.homeAbbr) || '', simA = (GAME && GAME.awayAbbr) || '';
+    (CATCHES || []).forEach(function(c, i){
+      if(!c) return;
+      var opts = c.teams ? [simH, simA] : (c.opts || []);
+      if(opts.length < 2 || !opts[0] || !opts[1]) return;
+      /* A team row's real answer was nulled on hydrate. Alternating by
+         position keeps the rehearsal from always rewarding the same tap,
+         which is the only property a simulated answer needs. */
+      var ans = c.teams ? (i % 2) : opts.indexOf(c.answer);
+      if(ans < 0) ans = 0;
+      simOut.push({ qid:'ci-sim-'+c.id, prompt:(c.label || ''),
+        options: opts.map(function(o, k){ return {k:String(o), v:'o'+k}; }),
+        answer: 'o'+ans,
+        resolveText:'' });
+    });
+    return simOut;
+  }
   if(!GS.ok) return [];
   if(!gsInGame()) return ciPreBank();
   /* Quarter-retrospective questions FIRST. The state lookups behind them
@@ -23512,7 +23624,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-27-h2h.231';
+const STATS_BUILD='2026-08-27-door.232';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
