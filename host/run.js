@@ -769,6 +769,11 @@ async function main(){
   let ciOpenedAt = 0;
   let ciPending = null;      // {qid, ans, text, at} — the answer, held back
   let ciLastPer = null;      // the period we last saw, so we can spot the turn
+  /* The last inning we actually ASKED about. Needed only for the
+     game-is-final branch below, which is re-evaluated on every poll for as
+     long as the runner stays up after the buzzer — about fifty times on a
+     normal night — and would otherwise ask about the 9th fifty times. */
+  let ciLastAsked = null;
   let lastFeedSig = '';
   let lastScoreSig = '';
   /* ============ FOUR HOURS OF THE GAME, NOT OF THE PROCESS ==========
@@ -962,6 +967,54 @@ async function main(){
               let inningEnded = null;
               if(sportFam === 'baseball'){
                 if(ciLastPer != null && per > ciLastPer) inningEnded = ciLastPer;
+                /* ============ THE LAST INNING HAS NOTHING AFTER IT =======
+                   27 Aug. Founder: "I thought baseball asks you a question
+                   at the end of each inning." It does, and it works: eight
+                   fired on 24 Aug, eight on the 25th, eight on the 23rd.
+
+                   EIGHT. Not nine.
+
+                   The trigger above is a period ADVANCE — inning n is over
+                   the moment the feed reports inning n+1. That is right for
+                   the first eight and structurally impossible for the last
+                   one, because there is no tenth inning to advance to. The
+                   game simply ends, and the question about the inning that
+                   decided it is the one nobody is ever asked.
+
+                   Checked before assuming: on 25 Aug the home side led 4-3
+                   so there was no bottom of the 9th and eight is CORRECT
+                   there. But 24 Aug finished 4-1 to the AWAY team, so the
+                   home side batted out the 9th and it completed properly.
+                   Eight questions, nine innings played.
+
+                   This is the same shape as the Q4 bug and the same shape
+                   as the buzzer race: the most valuable moment of the night
+                   is the one the trigger cannot reach, because every
+                   trigger in this codebase has been written as "when the
+                   next thing starts" rather than "when this thing ends".
+
+                   So: when the feed says the game is over, the inning on
+                   the field ended too. `ciLastAsked` stops it being asked
+                   twice, which matters because this branch is re-evaluated
+                   on every poll for as long as the runner stays up after
+                   the final — roughly fifty times on a normal night. */
+                if(inningEnded == null && per && ciLastAsked !== per){
+                  /* Walked rather than wrapped in a try/catch. The deep path
+                     legitimately may not exist on a malformed poll, and a
+                     silent catch here would have pushed qa/silence.js's
+                     ratchet from 52 to 53 — the suite caught it. Safe
+                     navigation says the same thing and stays quiet without
+                     swallowing anything. */
+                  const _c = (sum && sum.header && sum.header.competitions) || [];
+                  const _st = (_c[0] || {}).status || {};
+                  const over = !!(_st.type && _st.type.completed);
+                  if(over){
+                    inningEnded = per;
+                    log('callit', `the game is final and the ${per}th never turned over — `
+                                + 'asking its inning question now, which nothing used to');
+                  }
+                }
+                if(inningEnded != null) ciLastAsked = inningEnded;
                 ciLastPer = per;
               }
               const mo = inningEnded != null

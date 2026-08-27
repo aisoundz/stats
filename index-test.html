@@ -6455,6 +6455,8 @@ function hydrateNight(cfg){
     try{
       if(typeof INACTIVE !== 'undefined' && INACTIVE && INACTIVE.clear) INACTIVE.clear();
       INACTIVE_NOTE = '';
+      /* A new night is a new chance to activate, so the flag goes with it. */
+      try{ TRK_SCORED = false; }catch(_){}
       /* And take the rendered bar down with it: an empty Set still leaves
          last night's names on screen until something repaints, and the
          thing that repaints is the very function we just emptied. */
@@ -8836,6 +8838,10 @@ const GAME_SCREENS=["predict","lobby","live","review","predreview","break"];
    observer that watches for its own edits. See applyLang's caller. */
 var LANG_REPAINTING = false;
 let resumeData=null;
+/* ONE first_score EVENT PER NIGHT. See recomputeScore(). Cleared wherever
+   the night changes, so a second night sends a second event and a fourth
+   point on the same night sends none. */
+let TRK_SCORED=false;
 /* ====================================================================
    LIVE ENERGY — the room changes colour with the game
 
@@ -8934,6 +8940,31 @@ function recomputeScore(){
     if(e.k==='pred') pp+=v; else if(e.k==='catch') cp+=v; else if(e.k==='caught') gp+=v; else lv+=v;
   });
   S.pts=p; S.speed=s; S.predPts=pp; S.catchPts=cp; S.caughtPts=gp; S.livePts=lv;
+  /* ============ THE ACTIVATION MOMENT, RECORDED ONCE A NIGHT =========
+     27 Aug. Measured against live Firestore the day before: NINETY-SIX
+     people have opened a room and SIX have ever scored a point. Those six
+     came back 9.3 nights each.
+
+     That is not a retention problem, it is an activation problem, and it
+     is the number the whole plan rests on — but nothing measured WHERE
+     the other ninety fell out. The funnel already had app_open, night_join
+     and round_answer. The one step missing was the step that matters:
+     going from zero to a first point.
+
+     This is the honest place for it because recomputeScore() is the one
+     function that knows the total (see B18 above), whatever lane the
+     point came from — a round, a caught call, the prediction card. It
+     does not care WHICH, only that the player has stopped being on zero.
+
+     Once per night, not once per point: TRK_SCORED is cleared with the
+     night, so a player who scores four times sends one event and a player
+     who plays two nights sends two. */
+  try{
+    if(!TRK_SCORED && S.mode === 'live' && p > 0){
+      TRK_SCORED = true;
+      trk('first_score', { pts: p, lane: (lv>0?'round':(pp>0?'card':(gp>0?'caught':'other'))) });
+    }
+  }catch(_){}
   /* B20 — WHEN THE SCORE CHANGES, SAY SO. Caught It resolved "+5", wrote
      the ledger, and left YOUR NIGHT reading 50 — the total was 55 in
      memory and nothing on screen had been told. The founder saw a card
@@ -20964,6 +20995,10 @@ function openHostedRound(r, idx){
     }catch(_){ canTake = false; }
 
     if(canTake){
+      /* Did the arcade flow actually fire, and from where? Without this
+         we ship the change and cannot say whether it moved the number it
+         was built to move. `from` is the tab they were standing on. */
+      try{ trk('arcade_take', { from: S.screen, round: idx }); }catch(_){}
       toast(`🔴 ${roundName(idx)} is live — taking you in…`);
       setTimeout(function(){
         /* Re-check EVERYTHING at the moment of the move, not at the moment
@@ -23401,7 +23436,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-27-comego.229';
+const STATS_BUILD='2026-08-27-ninth.230';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
