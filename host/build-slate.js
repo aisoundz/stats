@@ -102,6 +102,91 @@ async function rosterFor(teamId){
     .filter(Boolean);
 }
 
+/* ---- and WHO THEY ARE, so a picker is not guessing ------------------
+   Founder, 26 Aug, from the first outside feedback session ever held on
+   this product: "the user wants to get more statistics… if I click on
+   Olivia Miles, give her her season statistics… so it makes it easier
+   for the user to get more information about that player before they
+   make the pick."
+
+   He is right, and it is the sharpest note the product has had: the pick
+   sheet asks somebody to choose between thirteen names and tells them
+   nothing about any of them. A stranger picks the name they recognise.
+
+   WHERE THE NUMBERS COME FROM, because "no invented numbers" is a rule
+   here and every figure has to name its field. Three endpoints were
+   probed before this one:
+
+     summary?event=          `leaders` carries ONE name per category per
+                             team — three players, not a roster.
+     teams/{id}/roster       has ids, no stats at all.
+     .../roster?enable=stats returns a `statistics` object that is an
+                             empty stub: {splits:{id,name,abbreviation}}.
+                             It LOOKS like the answer and contains nothing.
+
+   So it is the core API, one call per athlete, and that is why this runs
+   HERE and not on a phone: the night is built once each morning and the
+   config a player downloads already carries the roster. Twenty-six extra
+   fetches a day per room, server-side, against zero on the device. */
+function coreStatsUrl(athleteId, season){
+  /* L.path is "basketball/wnba"; the core API wants
+     "basketball/leagues/wnba". Split rather than keep a second copy of
+     the league table — that is how the four NATIONAL lists drifted. */
+  const bits  = String(L.path).split('/');
+  const sport = bits[0], league = bits.slice(1).join('/');
+  return `https://sports.core.api.espn.com/v2/sports/${sport}/leagues/${league}`
+       + `/seasons/${season}/types/2/athletes/${athleteId}/statistics`;
+}
+
+/* The eight a picker actually uses. `name` is ESPN's own field name, kept
+   verbatim so any number on a screen can be traced back to it. */
+const STAT_FIELDS = [
+  ['gamesPlayed',            'gp'  ],
+  ['avgMinutes',             'min' ],
+  ['avgPoints',              'ppg' ],
+  ['avgRebounds',            'reb' ],
+  ['avgAssists',             'ast' ],
+  ['fieldGoalPct',           'fg'  ],
+  ['threePointFieldGoalPct', 'tp'  ],
+  ['freeThrowPct',           'ft'  ]
+];
+
+async function seasonStatsFor(teamId, season){
+  const out = {};
+  let j;
+  try{ j = await getJSON(`${API}/teams/${teamId}/roster`); }
+  catch(e){ log('stats', `roster fetch failed for team ${teamId}: ${e.message}`); return out; }
+
+  const people = (j.athletes || [])
+    .map(a => ({ id: a.id, name: String(a.displayName || a.fullName || '').trim() }))
+    .filter(p => p.id && p.name);
+
+  let got = 0, missed = 0;
+  for(const p of people){
+    try{
+      const s   = await getJSON(coreStatsUrl(p.id, season));
+      const row = {};
+      const cats = ((s.splits || {}).categories) || [];
+      for(const c of cats){
+        for(const st of (c.stats || [])){
+          for(const [espn, key] of STAT_FIELDS){
+            if(st.name === espn && st.displayValue != null) row[key] = String(st.displayValue);
+          }
+        }
+      }
+      /* A ROW WITH NO GAMES IS NOT A ROW OF ZEROES. A player who has not
+         appeared this season — a rookie, a signing, somebody hurt all
+         year — must show NOTHING rather than 0.0 PPG, which reads as
+         "she is bad" instead of "we do not know". Absent is a fact; zero
+         is a claim. */
+      if(row.gp && Number(row.gp) > 0){ out[p.name] = row; got++; }
+      else missed++;
+    }catch(_){ missed++; }        // one athlete's 404 must not lose the team
+  }
+  log('stats', `team ${teamId}: ${got} player(s) with season numbers, ${missed} without`);
+  return out;
+}
+
 /* ---- the pick sheet, generated ------------------------------------- */
 /* `answer` is what Practice mode pretends happened. It is not a claim about
    a real game and a slate night never reads it; it is filled only so the
@@ -382,8 +467,20 @@ function tipLine(iso, net, sport){
     }
 
     let roster = { home:[], away:[] };
+    let stats  = {};
     if(sheet.needsRoster){
       roster = { home: await rosterFor(H.team.id), away: await rosterFor(A.team.id) };
+      /* Season numbers ride along with the roster they describe, so the
+         phone gets them free with a config it already downloads. Keyed by
+         DISPLAY NAME because that is what the pick sheet renders and what
+         every resolver matches on — an id here would be a second way to
+         say who a player is, and this codebase has paid for that. */
+      if(roster.home.length && roster.away.length){
+        const season = Number(String(DATE).slice(0,4));
+        stats = Object.assign({},
+          await seasonStatsFor(H.team.id, season),
+          await seasonStatsFor(A.team.id, season));
+      }
       if(!roster.home.length || !roster.away.length){
         skipped.push(`${A.team.abbreviation} @ ${H.team.abbreviation} — a roster came back empty and this sheet names players, refusing to build a half night`);
         offered.pop();
@@ -391,7 +488,7 @@ function tipLine(iso, net, sport){
       }
     }
 
-    games.push({ g, roster, preds: sheet.build(g, roster) });
+    games.push({ g, roster, stats, preds: sheet.build(g, roster) });
     log('game', `${nightId}  ${A.team.name} @ ${H.team.name}  ` +
                 (sheet.needsRoster ? `${roster.away.length}+${roster.home.length} players  ` : 'team picks  ') +
                 (net || '(no tv)'));
@@ -654,7 +751,7 @@ function tipLine(iso, net, sport){
 
   for(const x of games){
     await db.doc(`schedule/${x.g.nightId}`).set(
-      { game: x.g, roster: x.roster, preds: x.preds,
+      { game: x.g, roster: x.roster, stats: x.stats || {}, preds: x.preds,
         at: admin.firestore.FieldValue.serverTimestamp(), by: 'build-slate.js' },
       { merge: true });
     log('wrote', `schedule/${x.g.nightId}`);
@@ -814,6 +911,45 @@ function tipLine(iso, net, sport){
       { date: DATE, leagues, games: merged.length,
         at: admin.firestore.FieldValue.serverTimestamp() });
     log('key', `slate/current → ${DATE} · ${merged.length} game(s) across ${leagues.join(', ')}`);
+
+    /* ============ AND THE NIGHT POINTER, WHICH NOTHING WROTE ==========
+       26 Aug, found live, fifty minutes before a demo in front of an
+       audience. The founder's own tablet showed tonight's hero — GAME
+       NIGHT #32, TEMPO AT STORM, TIP-OFF IN 00:53 — above a card reading
+       "This game finished 77 to 66, Minnesota Lynx. Nothing left to pick."
+       He could not pick, on the night he was demoing.
+
+       Minnesota at Golden State is gn13, from 19 AUGUST. loadNightConfig()
+       has three sources in order — the game the player CHOSE, then
+       `schedule/current`, then the night baked into the build — and
+       **`schedule/current` has never existed.** slate/current, written
+       eight lines up, names a DATE; nothing has ever named a NIGHT. So
+       every boot for a week fell through to the baked default and the app
+       held a finished game while showing tonight's poster.
+
+       That is also the true cause of the 76 stray seats in gn13's room:
+       people were not landing there because a read was slow, they were
+       landing there because the app had no other answer. The join guard
+       shipped this afternoon stops the seat; this stops the wrong night.
+
+       Flagship first, because the pointer's own job is to name what we are
+       PROMOTING. Earliest tip otherwise, so a night with no flagship still
+       opens on the game that starts first rather than on nothing. A
+       player's own choice still outranks this — that is the first branch
+       of loadNightConfig and it should stay that way. */
+    const pointTo = (merged.filter(g => g.flagship)[0] || merged[0] || null);
+    if(pointTo && pointTo.nightId){
+      await db.doc('schedule/current').set(
+        { nightId: pointTo.nightId, date: DATE,
+          at: admin.firestore.FieldValue.serverTimestamp(), by: 'build-slate.js' });
+      log('key', `schedule/current → ${pointTo.nightId}`
+                 + (pointTo.flagship ? '  (flagship)' : '  (earliest tip)'));
+    } else {
+      /* Loud. A day with a slate and no night to point at means the app
+         will fall back to the baked game again, which is the bug above. */
+      log('warn', 'no game to point schedule/current at — the app will fall back to its '
+                + 'built-in night, which is how gn13 collected 76 seats');
+    }
   } else {
     log('note', `${DATE} is not today (${today}) — slate/${DATE} is written and ready, ` +
                 'but slate/current is left alone so tonight keeps pointing at tonight');

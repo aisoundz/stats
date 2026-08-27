@@ -6318,6 +6318,28 @@ try{ window.SPORTS = SPORTS; window.SPORT = SPORT; }catch(_){}
    the one outcome worse than the deploy-per-night it replaces.            */
 var NIGHT_CFG_SOURCE = 'built-in';
 
+/* ============ WHO THESE PLAYERS ACTUALLY ARE ========================
+   Founder, 26 Aug, from the first outside feedback session this product
+   has ever had: "the user wants to get more statistics… if I click on
+   Olivia Miles, give her her season statistics… so it makes it easier
+   for the user to get more information about that player before they
+   make the pick."
+
+   The sharpest note the product has had. The pick sheet asks somebody to
+   choose between thirteen names and tells them nothing about any of
+   them, so a stranger picks the name they recognise — which is not
+   paying attention, it is brand recall.
+
+   Keyed by DISPLAY NAME because that is what the sheet renders and what
+   every resolver matches on. An id here would be a second way to say who
+   a player is, and this file has paid for that more than once.
+
+   Written by host/build-slate.js at 08:10 from ESPN's core API, once a
+   day, server-side — so the phone spends nothing. Empty is the normal
+   state for a sport whose sheet names no people. */
+var PRED_STATS = {};
+try{ window.PRED_STATS = PRED_STATS; }catch(_){}
+
 function hydrateNight(cfg){
   if(!cfg || typeof cfg !== 'object') return false;
   var g = cfg.game, r = cfg.roster, p = cfg.preds;
@@ -6365,6 +6387,16 @@ function hydrateNight(cfg){
       if(Array.isArray(r.home)){ roster.home.length = 0; Array.prototype.push.apply(roster.home, r.home); }
       if(Array.isArray(r.away)){ roster.away.length = 0; Array.prototype.push.apply(roster.away, r.away); }
     }
+    /* The season numbers that describe the roster we just installed, and
+       they REPLACE rather than merge: carrying last room's averages into
+       this one would put Seattle's numbers under Toronto's names, which
+       is the same room-state-outlives-its-room bug as lastStand. A night
+       with no stats block correctly leaves this empty and the sheet
+       simply says nothing, which is the honest state. See PRED_STATS. */
+    try{
+      PRED_STATS = (cfg.stats && typeof cfg.stats === 'object') ? cfg.stats : {};
+      window.PRED_STATS = PRED_STATS;
+    }catch(_){}
 
     /* 3. groups captured abbreviations and names as VALUES at load. */
     try{
@@ -10984,9 +11016,32 @@ function buildPred(){
        every buildPred(), so nothing may be remembered ABOUT the node —
        only the question it belongs to and the value it carries, which are
        identical on the replacement. */
+    /* ============ AND WHAT WE KNOW ABOUT HER ==========================
+       The stat line lives INSIDE the button, deliberately. Every other
+       shape considered — an ⓘ beside the name, a long-press, a separate
+       sheet — puts a second tap target on the one screen in this product
+       with a measured tap-loss history: 43% of 120ms presses lost before
+       .221, because buildPred() rebuilds every option through innerHTML
+       and the node moves under the finger. One button per row, one
+       target, and the numbers come along for free.
+
+       Absent means ABSENT. A player with no season row renders no line
+       rather than 0.0 — a rookie, a mid-season signing, somebody hurt all
+       year. "0.0 PPG" reads as "she is bad"; nothing reads as "we do not
+       know", and only one of those is true. Same reason the runner refuses
+       to invent a number. */
+    var st = null;
+    try{ st = PRED_STATS && PRED_STATS[String(o)]; }catch(_){}
+    var line = '';
+    if(st && st.ppg != null){
+      var bits = [st.ppg + ' PPG'];
+      if(st.reb != null) bits.push(st.reb + ' REB');
+      if(st.ast != null) bits.push(st.ast + ' AST');
+      line = '<span class="pdstat">' + esc(bits.join(' · ')) + '</span>';
+    }
     return '<button type="button" class="pdopt'+(on?' on':'')+(out?' isout':'')+'" data-pdq="'+esc(String(p.id))+'" data-pd="'+esc(String(o))+'"'
       +(out?' aria-disabled="true" title="Ruled out tonight — this pick cannot score"':'')+'>'
-      +'<span class="pdradio"></span><span class="pdname">'+esc(String(o))+'</span>'
+      +'<span class="pdradio"></span><span class="pdname">'+esc(String(o))+line+'</span>'
       +(out?'<span class="pdout">OUT</span>':'')+'</button>';
   };
   /* GROUPED BY TEAM. Two full rosters is twenty-seven names, and twenty-seven
@@ -29389,6 +29444,25 @@ body.hasgamebar .screen.active{padding-bottom:132px}
 .pdopt.on .pdradio{border-color:var(--teal)}
 .pdopt.on .pdradio:after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--teal)}
 .pdname{flex:1;min-width:0}
+/* ============ THE SEASON LINE UNDER A NAME =========================
+   12px is the FLOOR of the locked type ramp, not a number picked to make
+   something fit — see interface-keeper. It is the smallest the design
+   system allows and this is exactly what it is for: a secondary fact
+   under a primary one.
+
+   `tabular-nums` because these are columns of digits read by comparison.
+   Without it "7.4" and "17.0" set at different widths and the eye cannot
+   scan thirteen players down a list, which is the entire job. */
+.pdstat{display:block;margin-top:3px;font-size:12px;font-weight:600;
+  line-height:1.25;color:var(--muted);letter-spacing:.01em;
+  font-variant-numeric:tabular-nums;white-space:normal}
+/* A ruled-out player keeps her numbers legible. The strike-through says
+   "you cannot spend this pick"; striking the averages too would say the
+   averages are wrong, which they are not. */
+.pdopt.isout .pdstat{text-decoration:none;color:#6b6d7e}
+/* The selected row already carries a teal border and tint; the line
+   brightens with it rather than staying grey against a lit background. */
+.pdopt.on .pdstat{color:var(--ink);opacity:.72}
 .stLeadR{display:block;font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.02em}
 .pdout{flex:0 0 auto;margin-left:auto;font-size:12px;font-weight:900;line-height:1.5;letter-spacing:.06em;
   color:#ff8a94;border:1px solid rgba(255,107,107,.45);background:rgba(255,107,107,.10);
