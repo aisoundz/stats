@@ -42,6 +42,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const SHAPE = require('./email-shape.js');
 
 const KEYFILE = path.join(process.env.HOME, '.secrets', 'mailerlite-api-key');
 const FIREBASE_KEY = 'AIzaSyB1g4u3L85sks1Phjz_Tim98urv1-IZBps'; // public web key, not a secret — see index.html window.STATS_FIREBASE
@@ -379,6 +380,26 @@ async function main() {
   }
 
   log(`VERIFIED: every room's team names and channel appear in the draft. Subject: "${(draft.emails[0] || {}).subject || draft.name}"`);
+
+  /* ============ AND IS IT THE RIGHT SHAPE? ===========================
+     The same questions check-draft.js asks at 09:20, from the same file,
+     so the two cannot drift apart. The difference is what happens next:
+     at 09:20 a missing STATS card is FATAL because there are ninety
+     minutes to add one. Here, at 10:45, it is a warning — an incomplete
+     tip-off still beats no tip-off on a game night, and the refusal
+     above is reserved for a draft that names the wrong GAMES.
+
+     If this is shouting, check-draft already shouted at 09:20 and
+     nobody acted. That is the useful signal. */
+  try {
+    const shape = SHAPE.check(html, (draft.emails[0] || {}).subject || '', { rooms: [], settled: false });
+    shape.fatal.forEach((f) => log(`  SHAPE (was fatal at 09:20): ${f}`));
+    shape.warn.forEach((w) => log(`  SHAPE: ${w}`));
+    if (!shape.fatal.length && !shape.warn.length) log('VERIFIED: the email is the right shape and every time names its zone.');
+    else log('    Sending anyway. See host/EMAIL-VOICE.md and ~/gamenight-logs/draft-verdict.json.');
+  } catch (e) {
+    log(`  (shape check failed to run — ${(e && e.message) || e})`);
+  }
 
   // ---- 3b. the one claim a string match can't check -----------------
   const recap = await verifyRecapClaims(html);

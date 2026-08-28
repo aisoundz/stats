@@ -32,6 +32,39 @@ The middot `·` stays. It separates times and channels in the room cards and is
 typographic furniture, not punctuation inside a sentence. En dashes stay in
 scores and ranges: `4–1`, `50–77`, `.310`.
 
+## Every clock time carries a zone. Every one.
+
+Founder, 28 Aug 2026: *"lets add in the mail the time zone cause 7 to
+someone in la is different than 7 in ny"*.
+
+The room cards were already right — `Kickoff 6:00 PM ET · 3:00 PM PT on NFL
+Network`. The prose was not, and the subject line was not:
+
+| Sent on 28 Aug | Should have been |
+|---|---|
+| `kick it off at 3:00` (subject) | `kick it off at 3:00 PT` |
+| `first tip at 3:00, last at 7:00` | `first tip at 3:00 PT, last at 7:00` |
+| `Boston goes into the Bronx at 4:15` | `Boston goes into the Bronx at 4:15 PT` |
+| `Tap one before 6:00` | `Tap one before 6:00 PT` |
+| `See you at 3:00.` | `See you at 3:00 PT.` |
+
+Every one of those is Pacific and none of them said so. A reader in New York
+is three hours wrong about their own game night, and the email that was
+supposed to bring them is what made them late.
+
+**The rule.** A time in prose or in a subject line names its zone the first
+time it appears in a sentence, and after that the sentence may run on
+without repeating it — `first tip at 3:00 PT, last at 7:00` is fine, because
+one zone governs the list. A time standing alone always carries it.
+
+**Which zone.** PT, because the schedule is built and staggered in PT and the
+room cards already give ET beside it. One zone in the prose, both in the
+cards. Do not mix them in a sentence: `3:00 PT` and never `3:00 PM ET / 12:00
+PT` in running text, which is a schedule pretending to be a sentence.
+
+**The subject line is not exempt.** It is the only line most people read and
+it is the one most likely to decide whether somebody turns up.
+
 ## 2. The other tells, in the order they show up
 
 - **The tricolon.** "It is faster, cleaner, and more reliable." Three parallel
