@@ -19,10 +19,31 @@
    is in the STATS group that has never been welcomed, and if there is
    anyone it leaves a DRAFT campaign addressed to exactly those people.
 
-   IT NEVER SENDS. Not once, not "just this time". A human sends it, the
-   same rule every outward email in this project follows. When the
-   founder switches the real automation on in the dashboard, delete the
-   cron line and this file stops mattering — nothing else depends on it.
+   IT SENDS. That is a deliberate exception to the rule every other
+   outward email here follows, granted explicitly on 27 Aug: "yes make it
+   send automatically". A welcome that waits for a human is not a welcome,
+   it is a delay, and the person who just signed up is the one person
+   guaranteed to be paying attention right now.
+
+   THE EXCEPTION IS PAID FOR WITH FOUR GUARDS, because a machine sending
+   mail in the founder's name with nobody reading it first is exactly how
+   a list gets burned:
+
+     1. MAX_PER_RUN. More new people than this in one run means something
+        is wrong with the reckoning — a state file lost, a group
+        re-imported — and mailing the whole list a second welcome is not
+        recoverable. Over the cap it DRAFTS and shouts, and a human looks.
+     2. Never a retry on the send. A timeout on the schedule call is
+        ambiguous: it may already have gone. Retrying an ambiguous send
+        risks sending twice, which is worse than sending zero times.
+        [[signal_double_send]] is what that costs.
+     3. Nobody is marked welcomed until MailerLite reports the campaign
+        `sent`. Attempting is not delivering.
+     4. Active addresses only, and only people absent from `welcomed`.
+
+   --draft-only restores the old behaviour for testing without mailing a
+   living person. When the founder switches the real automation on in the
+   dashboard, delete the cron line and this file stops mattering.
 
    WHY A GROUP AND NOT A LIST OF ADDRESSES. A MailerLite campaign is
    addressed to a group or a segment, never to an array of emails. So
@@ -67,6 +88,13 @@ const WELCOME_GROUP_NAME = 'Welcome pending';
 const SUBJECT      = 'Welcome to STATS GAMETIME';
 
 const DRY = process.argv.includes('--dry-run');
+const DRAFT_ONLY = process.argv.includes('--draft-only');
+
+/* More than this many new people in one run is not a good week, it is a
+   broken reckoning — a lost state file, a re-imported group. Mailing a
+   list a second welcome cannot be taken back, so over the cap this
+   refuses to send, leaves a draft, and says so loudly. */
+const MAX_PER_RUN = 25;
 
 function log(line) {
   const msg = `${new Date().toISOString()}  ${line}\n`;
@@ -238,8 +266,7 @@ function writeState(s) {
   const back = await get(`https://connect.mailerlite.com/api/campaigns/${camp.id}`);
   const bd = back.body && back.body.data;
   const gotContent = ((bd && bd.emails && bd.emails[0] && bd.emails[0].content) || '').length;
-  log(`DRAFT ${camp.id} — "${SUBJECT}" to ${fresh.length} person(s), ${gotContent} bytes of content`);
-  if (!gotContent) log('  WARN: the draft read back with NO content. Open it before sending.');
+  log(`campaign ${camp.id} — "${SUBJECT}" to ${fresh.length} person(s), ${gotContent} bytes of content`);
 
   state.pending = {
     campaignId: String(camp.id),
@@ -247,6 +274,57 @@ function writeState(s) {
     createdAt: new Date().toISOString()
   };
   writeState(state);
-  log('waiting on a human to send it. This script never will.');
+
+  /* ---- 7. send it, or refuse and leave it for a human -------------- */
+  if (!gotContent) {
+    log('REFUSE TO SEND: the campaign read back with NO content. Left as a draft for a human.');
+    process.exit(1);
+  }
+  if (DRAFT_ONLY) { log('--draft-only: leaving it as a draft.'); process.exit(0); }
+  if (fresh.length > MAX_PER_RUN) {
+    log(`REFUSE TO SEND: ${fresh.length} new people in one run is over the cap of ${MAX_PER_RUN}.`);
+    log('  That is a broken reckoning, not a good week. Left as a draft — a human should look.');
+    process.exit(1);
+  }
+
+  /* NO RETRY HERE, DELIBERATELY, and this is the one call in the file
+     that uses req() instead of reqRetry(). A timeout on a send is
+     ambiguous: MailerLite may already have acted on it before the
+     response was lost. Sending twice is unrecoverable; sending zero
+     times leaves a draft and a log line a human can act on. */
+  const sent = await req(`https://connect.mailerlite.com/api/campaigns/${camp.id}/schedule`, {
+    method: 'POST', headers: HJ, _payload: JSON.stringify({ delivery: 'instant' })
+  });
+  if (sent.status >= 300) {
+    log(`send failed (status ${sent.status}) — ${JSON.stringify(sent.body).slice(0, 200)}`);
+    log('  left as a draft. Nobody was marked welcomed.');
+    process.exit(1);
+  }
+  log(`sent — ${fresh.length} welcome(s) on their way`);
+
+  /* ---- 8. and nobody is welcomed until MailerLite says so ---------- */
+  /* `status: sent` flips before the counters populate — measured on the
+     27 Aug tip-off, which read "sent, 0 delivered" for a minute before
+     settling at 7/7. So this waits for finished_at, which is the field
+     that actually means the send drained, and reports what it finds
+     rather than what it hoped. */
+  let done = null;
+  for (let i = 0; i < 20; i++) {
+    await new Promise((r) => setTimeout(r, 6000));
+    const c = await get(`https://connect.mailerlite.com/api/campaigns/${camp.id}`);
+    const cd = c.body && c.body.data;
+    if (cd && cd.finished_at) { done = cd; break; }
+  }
+  if (!done) {
+    log('the send has not reported finished after two minutes. NOT marking anyone welcomed —');
+    log('  the next run will settle it from the campaign status rather than guess.');
+    process.exit(0);
+  }
+  const st = done.stats || {};
+  log(`delivered ${st.deliveries_count}/${st.sent}  ·  bounces ${st.hard_bounces_count} hard`);
+  state.welcomed = state.welcomed.concat(state.pending.emails || []);
+  state.pending = null;
+  writeState(state);
+  log(`${(done.stats || {}).sent || 0} address(es) recorded as welcomed. Done.`);
   process.exit(0);
 })().catch((e) => { log(`CRASHED: ${(e && e.stack) || e}`); process.exit(1); });
