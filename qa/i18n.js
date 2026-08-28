@@ -118,12 +118,57 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
        translation layer does not touch them. So read them in English
        FIRST, then switch, then demand the same set back. Date-independent,
        sport-independent, and it now fails for exactly one reason. */
+    /* ============ AND ONLY THE NAMES IT IS ACTUALLY SHOWING ===========
+       28 Aug 2026, the first five-room night. This read the team names out
+       of SLATE.games — the DATA — and demanded every one of them in the
+       rail's rendered text. At five games the rail deliberately collapses
+       to four behind a "+1 more game" button, so the fifth name was in the
+       data, correctly absent from the screen, and reported as a
+       translation failure. Nothing had been translated.
+
+       The comment above already says the right thing — compare the rail to
+       itself — and this now does it: read the names the rail is SHOWING
+       while it is still English, then demand those same names back in
+       Spanish. A name the rail chose not to show is not this check's
+       business, and a rail that shows nothing at all is caught by the
+       length guard below.
+
+       Expanding the rail first was the other option and was rejected: the
+       collapsed state is what a player actually sees, so it is the state
+       worth asserting about. */
+    /* The page is ALREADY Spanish here — the switch happens far above — so
+       reading the baseline now and comparing it to the same rail would be
+       a tautology that passes whatever the translator does. Caught while
+       writing this. Go back to English for the baseline, then forward
+       again for the comparison, so the assertion genuinely crosses the
+       switch. */
+    const before = await p.evaluate(()=>{
+      try{ VX.setLang('en'); applyLang(); }catch(_){}
+      const names=(window.SLATE&&SLATE.games||[]).map(g=>String(g.home||g.homeAbbr||'')).filter(Boolean);
+      const t=(document.getElementById('gameRail')||{}).innerText||'';
+      return { shown: names.filter(n=>t.indexOf(n)>=0), all: names, englishRail: t.slice(0,60) };
+    });
+    await p.waitForTimeout(250);
+    /* Set the language and READ IT IN SEPARATE TURNS. applyLang() repaints
+       asynchronously, so reading innerText in the same evaluate returns the
+       old text and the header check fails for a reason that has nothing to
+       do with the translator. */
+    await p.evaluate(()=>{ try{ VX.setLang('es'); applyLang(); }catch(_){} });
+    /* 400ms was not enough and the failure read "the live rail header
+       stayed English", which points at the translator and is a lie.
+       Measured: the rail comes back Spanish somewhere between 0.5s and
+       1.2s after applyLang(). Wait for the header itself rather than
+       guessing again. */
+    await p.waitForFunction(
+      ()=>/qu. partido est.s viendo/i.test(((document.getElementById('gameRail')||{}).innerText||'')),
+      {timeout:6000}
+    ).catch(()=>{});
     const live = await p.evaluate(()=>{
       const t=(document.getElementById('gameRail')||{}).innerText||'';
       return { es:/qu. partido est.s viendo/i.test((document.getElementById('app')||document.body).innerText),
-               teams:(window.SLATE&&SLATE.games||[]).map(g=>String(g.home||g.homeAbbr||'')).filter(Boolean),
                railText:t };
     });
+    live.teams = before.shown;
     const kept = live.teams.length>0 && live.teams.every(n=>live.railText.indexOf(n)>=0);
     ok('i18n.the-real-rail-is-translated-too', live.es, 'the live rail header stayed English');
     ok('i18n.the-real-rail-keeps-its-team-names', kept,

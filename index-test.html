@@ -7910,6 +7910,26 @@ async function loadSlate(db, F){
     }
 
     try{ featureTonight(); }catch(_){}
+    /* ============ AND REPAINT, OR THE HERO KEEPS ITS OLD ANSWER ========
+       Founder, 28 Aug, with a screenshot of a rail listing FIVE games and
+       "No game tonight" printed directly underneath it. Same screen the
+       day before.
+
+       featureTonight() above sets TONIGHT correctly — measured, it returns
+       the right nightId. What nothing did was tell the hero. The card had
+       already painted, and on a slow or failed slate read it painted the
+       only thing it could: no slate, no game tonight. When the slate
+       finally landed the RAIL repainted and the hero did not, so the page
+       ended up holding two answers to one question and showing both.
+
+       That is why it looked intermittent and why a clean browser never
+       reproduced it: on a fast read the slate is there before the first
+       paint, and the bug needs a slow one.
+
+       heroTick() is the painter that reads heroState(). Calling it here
+       costs nothing when the answer has not changed. */
+    try{ if(typeof heroTick === 'function') heroTick(); }catch(_){}
+    try{ if(typeof paintHeroRibbon === 'function') paintHeroRibbon(); }catch(_){}
     /* After the slate, so the toast lands on a page that already knows what
        tonight is rather than on a half-painted one. */
     try{ gametimeFromLink(); }catch(_){}
@@ -9955,6 +9975,7 @@ var PUSH = {
         p256dh: (j.keys && j.keys.p256dh) || '',
         auth:   (j.keys && j.keys.auth)   || ''
       });
+      try{ S.pushOn = true; save(); }catch(_){}
       try{ trk('push_on', {}); }catch(_){}
     }catch(_){}
   },
@@ -15099,6 +15120,13 @@ var I18N = {
     "My card &amp; season":"Mi tarjeta y mi temporada",
     "My card & season":"Mi tarjeta y mi temporada",
     "Game night emails":"Correos de noche de juego",
+    /* The menu's alerts row. Every state gets a phrase because the
+       right-hand slot reports STATE, and an untranslated one is the only
+       English left on a Spanish screen. */
+    "Alerts on this phone":"Avisos en este teléfono",
+    "Phone only":"Solo con la app abierta",
+    "Blocked":"Bloqueado",
+    "Add to Home Screen":"Añádela a tu pantalla de inicio",
     "Muted":"Silenciado",
     "Tonight’s slate is on its way":"La cartelera de hoy está en camino",
     "Try again":"Intentar de nuevo",
@@ -23856,7 +23884,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-28-push.235';
+const STATS_BUILD='2026-08-28-hero.236';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -24471,6 +24499,44 @@ function menuRows(){
     row(_ciMuted?'🔕':'🔔', 'Caught It', 'cimute', _ciMuted ? 'Muted' : 'On');
   }catch(_){}
   R.push('<div class="mgrp">Yours</div>');
+  /* ============ ALERTS BELONG WHERE A PERSON CAN FIND THEM ==========
+     Founder, 28 Aug, having installed the app to his home screen
+     specifically to turn notifications on: "There is no place for
+     alerts."
+
+     He was right. The one control lived on the Gametime tab and rendered
+     only while S.mode==='live' — so it existed exclusively during a game,
+     which is the one moment nobody wants to go hunting through settings.
+     Before kick-off, which is when a person decides they want to be told
+     things, there was nowhere at all.
+
+     The right-hand slot reports STATE, like every other row here, and it
+     tells the truth about three different situations rather than
+     collapsing them into on/off:
+
+       Off        never asked
+       On         permission granted AND a subscription is stored
+       Phone only permission granted but no push subscription — alerts
+                  work while the app is open and will NOT reach a locked
+                  phone. That is the state an iPhone lands in when it is
+                  opened from a Safari tab rather than the Home Screen,
+                  and calling it "On" would be a lie the player only
+                  discovers by missing a round.
+       Blocked    denied at the OS level; the app cannot undo that. */
+  try{
+    var _ap = (typeof ALERTS!=='undefined' && ALERTS.perm) ? ALERTS.perm() : 'unsupported';
+    var _note, _fn = 'alerts';
+    if(_ap === 'granted'){
+      var _pushed = false;
+      try{ _pushed = !!(S && S.pushOn); }catch(_){}
+      _note = _pushed ? 'On' : 'Phone only';
+    }
+    else if(_ap === 'denied')      _note = 'Blocked';
+    else if(_ap === 'unsupported') _note = 'Add to Home Screen';
+    else                           _note = 'Off';
+    row(_ap==='granted' ? '🔔' : '🔕', 'Alerts on this phone', _fn, _note);
+  }catch(_){}
+
   row('👤','My card &amp; season','me');
   /* One row for the list, and it reports which way it is set — rather
      than one row that asks you to join and a second, elsewhere, that asks
@@ -24501,6 +24567,48 @@ function menuRows(){
 }
 var MENU_GO={
   rules:function(){ go('rules'); },
+  /* The menu's alerts row. It does the honest thing in each state rather
+     than one action that half-works in three of them. */
+  alerts:function(){
+    var p='unsupported';
+    try{ p = ALERTS.perm(); }catch(_){}
+
+    if(p==='denied'){
+      toast('Your phone is blocking alerts for this app — turn them back on in Settings.');
+      return;
+    }
+    /* iPhone in a Safari tab: window.Notification does not exist, so there
+       is nothing to grant. The install card is the only route and this
+       says so instead of offering a button that cannot work. */
+    if(p==='unsupported'){
+      toast('Add STATS to your Home Screen first — iPhone only allows alerts from an installed app.');
+      try{ if(typeof renderInstall==='function') renderInstall(); }catch(_){}
+      return;
+    }
+    if(p==='granted'){
+      /* Already allowed. The useful action is not a toggle — it is making
+         sure a push subscription actually exists, because permission
+         without one is the silent half-working state. */
+      toast('Checking your alerts…');
+      Promise.resolve(PUSH && PUSH.subscribe ? PUSH.subscribe() : null)
+        .then(function(sub){
+          try{ S.pushOn = !!sub; save(); }catch(_){}
+          toast(sub ? '🔔 Alerts on — we can reach this phone with the app closed.'
+                    : '🔔 Alerts on while the app is open. Add it to your Home Screen to be pinged with it closed.');
+          try{ var mb=document.getElementById('menuBody'); if(mb) mb.innerHTML=menuRows(); }catch(_){}
+        })
+        .catch(function(){
+          try{ var mb=document.getElementById('menuBody'); if(mb) mb.innerHTML=menuRows(); }catch(_){}
+        });
+      return;
+    }
+    /* Never asked. One door for that decision — askAlerts() — which also
+       subscribes on a grant. */
+    try{ askAlerts(); }catch(_){}
+    setTimeout(function(){
+      try{ var mb=document.getElementById('menuBody'); if(mb) mb.innerHTML=menuRows(); }catch(_){}
+    }, 1500);
+  },
   cimute:function(){
     try{
       PCI.muted = !PCI.muted;
