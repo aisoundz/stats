@@ -67,16 +67,36 @@ self.addEventListener('notificationclick', (event) => {
   const want = (event.notification.data && event.notification.data.url) || '/';
   event.waitUntil((async () => {
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    /* Already open somewhere? Focus it and steer it. Opening a second tab
-       on a live game is how a player ends up with two of themselves in
-       one room. */
+
+    /* ============ FOCUS. DO NOT NAVIGATE. ============================
+       28 Aug 2026, first real push, founder: "I got the notification but
+       when I clicked on it it brought me to restart signing in."
+
+       This used to focus the open app and then call navigate(url) on it.
+       navigate() is a FULL PAGE LOAD. It threw away a running, signed-in
+       session to arrive at the same app a second later with none of its
+       state — so the tap that was supposed to drop somebody straight into
+       a live round dropped them at the front door instead, mid-quarter.
+
+       The player is already in the app. Bringing it forward IS the job.
+       Reloading it to reach a room it is already showing costs them their
+       session and buys nothing.
+
+       postMessage() is the right way to steer an already-open app to a
+       different room, and it needs a listener on the page — a change to
+       index.html, which is not something to ship into a live game night.
+       Until then: focus, and let the app be where it was. */
     for (const c of all) {
       if (c.url && c.url.indexOf(self.registration.scope) === 0) {
         try { await c.focus(); } catch (_) {}
-        try { if ('navigate' in c) await c.navigate(want); } catch (_) {}
+        /* Tell the page which room the alert was about. Harmless if
+           nothing is listening yet, and it is what the listener will
+           read when it exists. */
+        try { c.postMessage({ type: 'stats-open-room', url: want }); } catch (_) {}
         return;
       }
     }
+    /* Nothing open at all — this is the only case that should load a page. */
     try { await self.clients.openWindow(want); } catch (_) {}
   })());
 });
