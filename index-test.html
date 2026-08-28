@@ -8082,7 +8082,12 @@ async function chooseGame(db, F, nightId){
      one, and leaving them on that screen is how you get a card that says
      the wrong teams. */
   try{
-    if(GAME_SCREENS.indexOf(S.place||'') >= 0 && !ROOMS[nightId]) { S.place=''; S.screen='landing'; }
+    /* The stamp decides this now, not "have we been here before". A place
+       restored from another room is not a place in this one, whether or
+       not this room has a record of its own. */
+    if(GAME_SCREENS.indexOf(S.place||'') >= 0 && String(S.placeRoom||'') !== String(nightId||'')){
+      S.place=''; S.placeRoom=''; S.screen='landing';
+    }
     go(S.screen || 'landing');
   }catch(_){}
 
@@ -8408,7 +8413,7 @@ function startLive(){
      sheet guard — the home page kept offering to begin a game the player
      was already three quarters into. */
   try{
-    if(S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0 && S.place!=='predict'){ returnToGame(); return; }
+    if(resumable()){ returnToGame(); return; }
   }catch(_){}
   if(!signedInNow()){ promptSignIn('live'); return; }
   setMode("live");go('name');prefillGate();
@@ -8570,9 +8575,35 @@ function landingTipLine(){
     return '\uD83D\uDD34 Live \u00B7 '+line+(det?(' \u00B7 '+det):'');
   }catch(_){ try{ return GAME.tip; }catch(_2){ return ''; } }
 }
+/* ============ IS THERE A NIGHT TO GO BACK INTO, HERE? ===============
+   The test below existed in three separate copies — startLive(),
+   landingActionsWanted() and paintContinueCard() — and all three were
+   missing the same thing: WHICH ROOM the saved place belongs to. On
+   27 Aug that put a finished baseball night's settle screen on top of a
+   football game four minutes after kickoff, and the player could not
+   reach a live round with four questions in it.
+
+   One owner now, and it asks the whole question: are we live, is the
+   saved place a game screen, is it not the pick sheet, and was it made
+   in the room we are actually standing in.
+
+   A place with no room stamped on it is from a build before this line
+   existed. Those are treated as NOT resumable — the cost of asking
+   somebody to tap Play once is nothing next to dropping them onto the
+   wrong game's ending. */
+function resumable(){
+  try{
+    if(S.mode !== 'live') return false;
+    if(GAME_SCREENS.indexOf(S.place||'') < 0) return false;
+    if(S.place === 'predict') return false;
+    return String(S.placeRoom||'') === String(ACTIVE_ROOM||'');
+  }catch(_){ return false; }
+}
+try{ window.resumable = resumable; }catch(_){}
+
 function landingActionsWanted(){
   try{ if(signedInNow()) return true; }catch(_){}
-  try{ return (S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0 && S.place!=='predict'); }catch(_){}
+  try{ return resumable(); }catch(_){}
   return false;
 }
 function syncLandingActions(){
@@ -8586,7 +8617,7 @@ function paintContinueCard(){
     const btn=document.getElementById('landingBtn');
     const demo=document.getElementById('landingDemoBtn');
     if(!btn) return;
-    const live = (S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0 && S.place!=='predict');
+    const live = resumable();
     let note=document.getElementById('contNote');
     let esc=document.getElementById('contEsc');
     if(!live){
@@ -9471,7 +9502,23 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
      A tab is a VIEW. Where you are in the night is a POSITION. They are
      different facts and they now live in different fields. Looking at the
      leaderboard can never again cost somebody their game. */
-  try{ if(GAME_SCREENS.indexOf(k)>=0) S.place=k; }catch(_){}
+  /* ============ A PLACE BELONGS TO THE ROOM IT WAS MADE IN ===========
+     27 Aug, from the founder's phone, four minutes into a football game
+     that had just kicked off: "FINAL WHISTLE · Score your predictions ·
+     Settling your card". The rail above it read LAR at LAC, 13:48 in the
+     1st. It was the BASEBALL night's ending, and it followed him in.
+
+     `place` is already per-room — it is deliberately kept out of
+     SESSION_KEYS and restored from ROOMS[id] on a switch. That is right
+     and it was not enough: a place can also arrive from a persisted save
+     at boot, and boot does not know which room the save came from. Three
+     separate readers then asked "is there a place to resume?" and all
+     three said yes about a room he had left.
+
+     So the place now carries its own room and every reader checks it.
+     Whichever path lost track becomes irrelevant — a place that cannot
+     name the room it was made in is not resumable anywhere. */
+  try{ if(GAME_SCREENS.indexOf(k)>=0){ S.place=k; S.placeRoom = ACTIVE_ROOM || ''; } }catch(_){}
   pendingBack=false;
   // where ← goes from each screen; null = no back button
   /* THE FIVE NAV TABS HAVE NO BACK ARROW. A ← on a tab is a question with
@@ -10005,6 +10052,17 @@ async function googleVerify(){
     return;
   }
   const why=(r&&r.why)||'unknown';
+  /* ============ A FAILED SIGN-IN LEFT NO TRACE AT ALL ================
+     27 Aug. Somebody stood on the door screen, tapped, and got nothing:
+     no account in Firebase, no address on the list, and nothing in any
+     log to say they had tried. The founder only knew because they told
+     him. `sign_in` fires on success and had no counterpart, so the most
+     expensive event in the product was the one it did not record.
+
+     Fired BEFORE the cancelled-popup return below but recorded with the
+     reason, so the two can be told apart later: a person who closes the
+     window changed their mind, and a person whose sign-in broke did not. */
+  try{ trk('sign_in_failed', { why: String(why).slice(0,60), door: 'gate' }); }catch(_){}
   if(why==='auth/popup-closed-by-user' || why==='auth/cancelled-popup-request') return; // they changed their mind — not an error
   const SAY={
     'auth/popup-blocked':'Your browser blocked the sign-in window — tap the button again, or use email below.',
@@ -23410,6 +23468,9 @@ async function portalGoogle(){
     return;
   }
   const why=(r&&r.why)||'unknown';
+  /* Same blind spot, the other door — this is the front-of-house portal,
+     which is the one the 27 Aug player was actually looking at. */
+  try{ trk('sign_in_failed', { why: String(why).slice(0,60), door: 'portal' }); }catch(_){}
   if(why==='auth/popup-closed-by-user' || why==='auth/cancelled-popup-request') return;
   toast(why==='auth/popup-blocked'
     ? 'Your browser blocked the sign-in window — tap the button again.'
@@ -23624,7 +23685,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-27-door.232';
+const STATS_BUILD='2026-08-28-place.233';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

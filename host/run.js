@@ -58,6 +58,12 @@ const SPORT   = process.env.SPORT_PATH || 'basketball/wnba';
    refreshing a phone, and 2m30 is shorter than the break itself.
    Six minutes, and it still closes the moment everyone has answered. */
 const ANSWER_MS = Number(process.env.ANSWER_MS || 360000);   // 6m
+/* HOW RECENTLY A SEAT MUST HAVE BEEN SEEN TO COUNT AS SOMEBODY WE ARE
+   WAITING FOR. Longer than any quarter on purpose: a locked phone stops
+   reporting, and shutting a round on somebody who put their handset down
+   is a worse bug than the wait this exists to end. See the note at the
+   early-close for the night that produced it. */
+const PRESENT_MS = Number(process.env.PRESENT_MS || 1500000); // 25m
 const GRACE_MS  = Number(process.env.GRACE_MS  || 20000);
 /* Caught It is ON by default now that the runner can host it. A room with
    no host for it is a room where `callit:true` tells every phone to watch
@@ -1250,9 +1256,74 @@ async function main(){
           const opened = doc.openedAt && doc.openedAt.toMillis ? doc.openedAt.toMillis() : 0;
           const waited = opened ? (now - opened) : 0;
           const subs = (await db.collection(`nights/${NIGHT}/rounds/${rid}/subs`).get()).size;
-          const everyoneIn = seats > 0 && subs >= seats;
+
+          /* ============ A SEAT IS NOT A PERSON =============================
+             27 Aug, founder, the moment the football ended: "The scoring
+             takes too long after 4th quarter ends. We filled out our 4th
+             quarter but now it takes so long waiting."
+
+             Measured in that room. Three seats, two of them answering:
+
+               Courtside   roundsDone 4   last seen  30m ago
+               Danthefan   roundsDone 3   last seen  42m ago
+               Smakk       roundsDone 0   last seen 382m ago
+
+             Smakk joined before first pitch and left. He was counted as a
+             seat for the whole night, so `subs >= seats` was never true,
+             the early close never fired, and every round ran the full
+             six-minute fallback. During the game that is invisible — the
+             next quarter hides it. After the last one there is nothing
+             left to hide it, and six minutes of dead air lands on the
+             payoff, which is the worst place in the night to put it.
+
+             So the question stops being "how many ever sat down" and
+             becomes "how many are still here". A seat nobody has seen in
+             PRESENT_MS is not somebody we are waiting for.
+
+             GENEROUS ON PURPOSE, and this is the number to be careful
+             with. A phone that locks stops reporting — `pagehide` is the
+             same mechanism that once cost a player their fourth quarter.
+             Twenty-five minutes is longer than any quarter, so somebody
+             who put their phone down mid-round still counts; only a
+             person hours gone is dropped. Smakk was at 382 minutes.
+
+             FAILS TOWARDS WAITING. If no seat has a lastSeen at all — an
+             older client, a room mid-migration — `present` is zero and
+             the original count stands. Closing a round early on a room we
+             cannot assess would take somebody's answer away, and that is
+             worse than making everyone wait. */
+          let waitingOn = seats;
+          if(seats > 0 && subs < seats){
+            let present = 0;
+            try{
+              const ps = await db.collection(`nights/${NIGHT}/players`).get();
+              ps.forEach(p => {
+                const v = p.data() || {};
+                const ls = v.lastSeen && v.lastSeen.toMillis ? v.lastSeen.toMillis() : 0;
+                if(ls && (now - ls) <= PRESENT_MS) present++;
+              });
+            }catch(e){
+              /* NOT SILENT, and the ratchet was right to refuse it. If the
+                 seat read fails we fall back to waiting the full window,
+                 which is the safe answer — but a fallback nobody can see
+                 is indistinguishable from the fix never running. */
+              present = 0;
+              log('room', `could not read seats to see who is still here — `
+                        + `waiting the full window instead (${(e && e.message) || e})`);
+            }
+            if(present > 0 && present < seats){
+              waitingOn = present;
+              if(!acted['pres' + i]){
+                acted['pres' + i] = true;
+                log('room', `${R.tag} — ${seats} seat(s) but ${present} still here; `
+                          + `not holding the room for ${seats - present} who left`);
+              }
+            }
+          }
+
+          const everyoneIn = waitingOn > 0 && subs >= waitingOn;
           if(!everyoneIn && waited < ANSWER_MS) continue;
-          if(everyoneIn) log('room', `everyone has answered ${R.tag} — closing early`);
+          if(everyoneIn) log('room', `everyone still here has answered ${R.tag} — closing early`);
 
           const { key, why, voided } = resolveRound(AUTO, R, sum, period, doc.earlyKey);
 
