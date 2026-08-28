@@ -9893,7 +9893,34 @@ var PUSH = {
   },
   async register(){
     if(!this.supported()) return null;
-    try{ return await navigator.serviceWorker.register('/sw.js', {scope:'/'}); }
+    try{
+      const reg = await navigator.serviceWorker.register('/sw.js', {scope:'/'});
+      /* ============ REGISTERED IS NOT ACTIVE ==========================
+         Caught on the live site before a single player saw it: register()
+         resolves as soon as the worker is INSTALLING, and
+         pushManager.subscribe() throws "no active Service Worker" against
+         one that has not taken over yet.
+
+         The window between the two is milliseconds, which is exactly why
+         it would have survived every hand test and failed for the first
+         real person — because the one moment we call this is the instant
+         they tap "allow", when the worker has never run before.
+
+         navigator.serviceWorker.ready resolves only on an ACTIVE worker.
+         It is raced against a timeout because a promise that never
+         settles would hang the tap that triggered it, and a missed push
+         is worth less than a frozen button. */
+      try{
+        await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise((_, rej) => setTimeout(() => rej(new Error('sw-not-ready')), 8000))
+        ]);
+      }catch(e){
+        try{ trk('push_sw_slow', {why:String(e&&e.message||e).slice(0,40)}); }catch(_){}
+        return null;
+      }
+      return reg;
+    }
     catch(e){ try{ trk('push_sw_failed', {why:String(e&&e.message||e).slice(0,60)}); }catch(_){ } return null; }
   },
   async subscribe(){
@@ -23829,7 +23856,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-28-push.234';
+const STATS_BUILD='2026-08-28-push.235';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
