@@ -1818,6 +1818,28 @@
     <div id="landingActions" style="display:none">
       <button class="btn" id="landingBtn" onclick="startLive()">Play Game Night</button>
       <button class="btn ghost" id="landingDemoBtn" onclick="startDemo()">Practice with a simulated game</button>
+      <!-- ============ THE ROOM, FROM THE FRONT DOOR =====================
+           28 Aug 2026. The trash talk room has been built, gated and live
+           for weeks — a live feed, per-player colours, canned lines, push
+           when somebody speaks, 140 characters, 120 a night. The founder
+           did not know it existed.
+
+           Every one of its four entry points was mid-game: the Gametime
+           tab, the break screen, the final screen. So it existed only
+           while a game was running, which is the one time nobody goes
+           looking for a room to chat in — and never on Home, which is
+           where they would.
+
+           Third feature this week found built and unreachable, after the
+           head-to-head strip and the alerts control. The pattern is not
+           that things are missing. It is that they are somewhere nobody
+           stands.
+
+           Hidden until there is a room to be in: an empty room on the
+           front door is worse than no door. paintContinueCard() owns
+           that decision — see ttFromHomeWanted(). -->
+      <button class="btn ghost" id="landingTalkBtn" style="display:none"
+              onclick="openTalk()">🔥 Talk trash</button>
     </div>
     <!-- HOW IT WORKS, in three lines, BELOW the door. It used to sit above
          it, on the theory that a stranger should understand the whole game
@@ -8672,8 +8694,31 @@ function syncLandingActions(){
        if(la) la.style.display = landingActionsWanted() ? 'block' : 'none'; }catch(_){}
 }
 
+/* ============ IS THERE A ROOM TO TALK IN, FROM HERE? ================
+   The front-door trash-talk button. It borrows ttHasRoom() rather than
+   asking again — that predicate already answers signed in, backend up,
+   not a rehearsal, and a night to be in, and a second copy of that
+   question is exactly how this codebase produces two surfaces that
+   disagree.
+
+   One thing on top of it: LEAN. openTalk() refuses in lean mode, so a
+   button that opens nothing must not be on the front door either. */
+function ttFromHomeWanted(){
+  try{
+    if(lean()) return false;
+    return ttHasRoom();
+  }catch(_){ return false; }
+}
+try{ window.ttFromHomeWanted = ttFromHomeWanted; }catch(_){}
+
 function paintContinueCard(){
   try{ syncLandingActions(); }catch(_){}
+  /* Show the room on Home only when there is a room. An empty one on the
+     front door is worse than no door at all. */
+  try{
+    var _tb=document.getElementById('landingTalkBtn');
+    if(_tb) _tb.style.display = ttFromHomeWanted() ? '' : 'none';
+  }catch(_){}
   try{
     const btn=document.getElementById('landingBtn');
     const demo=document.getElementById('landingDemoBtn');
@@ -23884,7 +23929,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-28-hero.236';
+const STATS_BUILD='2026-08-28-room.237';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
