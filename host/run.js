@@ -45,6 +45,16 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+/* MODULE SCOPE, and the first attempt was not. It landed inside loadDb()
+   because that is where the first require('firebase-admin') happens, so
+   PUSH was a local in a function nobody calls from the round loop and
+   every push threw "PUSH is not defined" — caught, logged and ignored,
+   28 Aug, Q1 of the Commanders room.
+
+   It was VISIBLE only because the silence ratchet made that catch log
+   earlier the same morning. The version I wrote first swallowed it, and
+   push would have been dead for as long as nobody thought to check. */
+const PUSH = require('./push.js');
 
 const NIGHT   = process.env.NIGHT_ID   || '';
 const EVENT   = process.env.ESPN_EVENT || '';
@@ -144,7 +154,6 @@ function loadDb(){
   if(!raw) die('FIREBASE_SERVICE_ACCOUNT is not set. See host/SETUP.md — this is the one thing that cannot be committed.');
   let creds; try{ creds = JSON.parse(raw); }catch(e){ die('FIREBASE_SERVICE_ACCOUNT is not valid JSON'); }
   const admin = require('firebase-admin');
-const PUSH  = require('./push.js');
   admin.initializeApp({ credential: admin.credential.cert(creds) });
   return { db: admin.firestore(), FieldValue: admin.firestore.FieldValue };
 }
