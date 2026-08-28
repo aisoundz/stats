@@ -308,12 +308,36 @@ function writeState(s) {
      settling at 7/7. So this waits for finished_at, which is the field
      that actually means the send drained, and reports what it finds
      rather than what it hoped. */
-  let done = null;
+  let done = null, held = null;
   for (let i = 0; i < 20; i++) {
     await new Promise((r) => setTimeout(r, 6000));
     const c = await get(`https://connect.mailerlite.com/api/campaigns/${camp.id}`);
     const cd = c.body && c.body.data;
-    if (cd && cd.finished_at) { done = cd; break; }
+    if (!cd) continue;
+    /* ============ ACCEPTED IS NOT SENT ================================
+       28 Aug 2026. The tip-off sender logged "SENT. 10 recipient(s)" on a
+       campaign MailerLite had accepted and then STOPPED for manual
+       content review. Nothing was delivered and the founder went looking
+       for an email that was never coming.
+
+       This script already waited for finished_at, which is better — but
+       it would have waited out its two minutes and said "not finished",
+       which is true and useless. A held campaign never finishes, and
+       "still draining" and "a human is holding this" need completely
+       different responses.
+
+       So look for the hold explicitly and name it. */
+    const warn = Array.isArray(cd.warnings) ? cd.warnings : [];
+    if (cd.is_stopped || warn.length) { held = { status: cd.status, warn }; break; }
+    if (cd.finished_at) { done = cd; break; }
+  }
+
+  if (held) {
+    log(`HELD BY MAILERLITE: campaign ${camp.id} was accepted and then stopped. `
+      + `status=${held.status} warnings=${JSON.stringify(held.warn)}. Nothing was delivered.`);
+    log('  NOBODY marked welcomed — they are still owed one. This needs a human in the');
+    log('  MailerLite dashboard. Do NOT re-run to force it; that makes a second held campaign.');
+    process.exit(1);
   }
   if (!done) {
     log('the send has not reported finished after two minutes. NOT marking anyone welcomed —');

@@ -403,18 +403,98 @@ async function main() {
     _payload: payload,
   });
 
-  if (sendRes.status >= 200 && sendRes.status < 300) {
-    // 24 Aug — the schedule response itself doesn't carry recipients_count
-    // (confirmed live: this always printed "? recipient(s)", a cosmetic
-    // bug, not a sign the send failed). It's on the campaign object
-    // already fetched above for the content check, at the top level.
-    const recipients = (sendRes.body && sendRes.body.data && sendRes.body.data.recipients_count) ||
-      (campDetailRes.body && campDetailRes.body.data && campDetailRes.body.data.recipients_count) || '?';
-    log(`SENT. campaign ${draft.id}, ${recipients} recipient(s).`);
-  } else {
+  if (!(sendRes.status >= 200 && sendRes.status < 300)) {
     log(`SEND FAILED: MailerLite returned status ${sendRes.status}. ${JSON.stringify(sendRes.body).slice(0, 300)}`);
     process.exitCode = 2;
+    return;
   }
+
+  /* ============ A 2xx IS NOT A SEND ==================================
+     28 Aug 2026. This logged
+
+         SENT. campaign 197063306449519963, 10 recipient(s).
+
+     and nothing had been sent. The schedule call returned 2xx, the script
+     believed it, and the founder went looking for an email that was never
+     going to arrive. Read back a minute later, the campaign said:
+
+         status   ready
+         is_stopped  true
+         warnings ['needs_manual_content_review']
+
+     MailerLite had accepted the request and then held the campaign for a
+     human on their side. Every previous campaign this account has ever
+     sent went straight through, so nothing about the 2xx was unusual —
+     which is exactly why trusting it was wrong.
+
+     This is the same failure the rest of this project spent the week
+     removing: believing a response instead of checking the effect. It was
+     sitting in the one script that reports to the founder.
+
+     So the send is now VERIFIED. Poll the campaign until it says `sent`,
+     and treat everything else as a failure loud enough to act on. The
+     three states worth telling apart:
+
+       sent                  it went. Say how many.
+       is_stopped / warnings  a human at MailerLite is holding it. Say so
+                              by name — "didn't send" and "is being
+                              reviewed" need completely different actions.
+       still ready after 3m   unknown. Do NOT claim success. Name the
+                              campaign so it can be chased by hand.
+
+     NEVER RE-SENDS. A held campaign that is retried becomes two held
+     campaigns, and a slow one that is retried becomes two emails to the
+     same ten people. Retrying is the one thing this must not do. */
+  const VERIFY_TRIES = 12;      // 12 x 15s = three minutes
+  const VERIFY_GAP_MS = 15000;
+  let verdict = null;
+
+  for (let i = 0; i < VERIFY_TRIES; i++) {
+    await new Promise((r) => setTimeout(r, VERIFY_GAP_MS));
+    const back = await reqRetry(`https://connect.mailerlite.com/api/campaigns/${draft.id}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${apiKey}`, Accept: 'application/json' },
+    });
+    const c = (back.body && back.body.data) || null;
+    if (!c) continue;
+
+    const warn = Array.isArray(c.warnings) ? c.warnings : [];
+    if (c.is_stopped || warn.length) {
+      verdict = {
+        ok: false,
+        why: 'held',
+        text: `HELD BY MAILERLITE: campaign ${draft.id} was accepted and then stopped. ` +
+              `status=${c.status} is_stopped=${c.is_stopped} warnings=${JSON.stringify(warn)}. ` +
+              'Nothing was delivered. This needs a human in the MailerLite dashboard; ' +
+              'do NOT re-send, that just creates a second held campaign.',
+      };
+      break;
+    }
+    if (c.status === 'sent') {
+      const st = c.stats || {};
+      verdict = {
+        ok: true,
+        text: `SENT AND CONFIRMED. campaign ${draft.id} — ` +
+              `${st.sent != null ? st.sent : '?'} sent, ` +
+              `${st.deliveries_count != null ? st.deliveries_count : '?'} delivered, ` +
+              `${st.hard_bounces_count != null ? st.hard_bounces_count : '?'} hard bounce(s).`,
+      };
+      break;
+    }
+  }
+
+  if (!verdict) {
+    /* Counters lag behind the status flip — measured on 27 Aug, `sent`
+       with 0 delivered for a full minute — so an unfinished send is not
+       the same as a failed one. Say what is true: unknown. */
+    log(`UNVERIFIED: campaign ${draft.id} was accepted but has not reported \`sent\` after three minutes. ` +
+        'It may still be draining, or it may be held. Check it by hand. Nothing was re-sent.');
+    process.exitCode = 3;
+    return;
+  }
+
+  log(verdict.text);
+  if (!verdict.ok) process.exitCode = 2;
 }
 
 main().catch((e) => {
