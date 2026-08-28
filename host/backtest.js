@@ -42,13 +42,33 @@ const OUT    = ARG('out', path.join(process.env.HOME||'/home/higherthan7','gamen
 const REPORT = HAS('report');
 const QUIET  = HAS('quiet');
 
+/* ============ THE SHADOW LIST IS AHEAD OF THE LIVE ONE =============
+   `cfb` and `epl` are here and NOT in build-slate.js, deliberately, and
+   the asymmetry is the point: this file plays finished games with nobody
+   watching, so a league can be proved here long before a person is ever
+   offered a room in it.
+
+   Ohio State at Texas is requested for 12 Sept. Between now and then the
+   only honest way to answer "do the NFL resolvers read a college feed?"
+   is to run them against real completed college games and count what
+   resolved. College football week 1 is 3–7 Sept; the first finished game
+   of any kind is San José State at USC on 29 Aug.
+
+   THE LEAGUE TABLE STILL LIVES IN FOUR FILES — here, build-slate.js:52,
+   snapshot.js:36 and factbook.js:58 — and consolidating them is still
+   owed. It is not being done at 05:45 on a game day three hours before
+   the slate builds. Adding a row to an existing copy is not the same sin
+   as writing a fifth copy, but it is the same disease and it should not
+   survive the weekend. */
 const LEAGUE={
   wnba:{path:'basketball/wnba', sport:'basketball'},
   nba :{path:'basketball/nba',  sport:'basketball'},
   mlb :{path:'baseball/mlb',    sport:'baseball'},
   nfl :{path:'football/nfl',    sport:'football'},
   nhl :{path:'hockey/nhl',      sport:'hockey'},
-  mls :{path:'soccer/usa.1',    sport:'soccer'}
+  mls :{path:'soccer/usa.1',    sport:'soccer'},
+  cfb :{path:'football/college-football', sport:'football'},
+  epl :{path:'soccer/eng.1',    sport:'soccer'}
 };
 const log=(k,m)=>{ if(!QUIET) console.log(`  ${String(k).padEnd(8)} ${m}`); };
 const die=(m)=>{ console.error('FATAL: '+m); process.exit(1); };
