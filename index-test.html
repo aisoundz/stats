@@ -4726,6 +4726,47 @@ window.STATS_FIREBASE = {
     } catch (e) {}
   }
 
+  /* ============ WHERE A PUSH SUBSCRIPTION LIVES ======================
+     One document per browser, keyed by a hash of its endpoint rather than
+     by uid: the same person on a phone and a laptop is two subscriptions
+     and both are real, while one uid keyed document would silently
+     overwrite whichever they used second.
+
+     `uid` is stored alongside so the runner can find every device
+     belonging to a player in a room. `night` is not stored at all — a
+     subscription outlives any one night, and writing tonight's id onto it
+     is how you end up pushing last week's game.
+
+     A dead subscription is normal, not an error. Browsers revoke them
+     whenever they like, so the sender prunes on rejection; nothing here
+     tries to keep them alive. */
+  SB.savePush = async function (o) {
+    if (!SB.enabled || !SB.me) return { ok:false, why:'offline' };
+    if (!o || !o.endpoint || !o.p256dh || !o.auth) return { ok:false, why:'empty' };
+    if (!budgetWrite('push')) return { ok:false, why:'budget' };
+    var ep = String(o.endpoint);
+    if (ep.length > 800) return { ok:false, why:'endpoint' };
+    /* A stable, short id from the endpoint. Not security — the endpoint is
+       not a secret — just a key Firestore will accept and that lands the
+       same browser on the same document every time. */
+    var h = 0;
+    for (var i = 0; i < ep.length; i++) { h = ((h << 5) - h + ep.charCodeAt(i)) | 0; }
+    var id = 'p' + Math.abs(h).toString(36) + '_' + ep.length.toString(36);
+    try {
+      await F.setDoc(F.doc(db, 'push', id), {
+        endpoint: ep,
+        p256dh: String(o.p256dh).slice(0, 200),
+        auth: String(o.auth).slice(0, 60),
+        uid: SB.me.uid,
+        name: String((typeof S !== 'undefined' && S.name) || '').slice(0, 24),
+        at: F.serverTimestamp()
+      }, { merge: true });
+      return { ok:true };
+    } catch (e) {
+      return { ok:false, why:(e && (e.code || e.name)) || 'threw' };
+    }
+  };
+
   SB.signup = async function (o) {
     // Split deliberately: "the backend never came up" and "we hit the call
     // ceiling" are different problems with different fixes, and lumping
@@ -9791,7 +9832,14 @@ function askAlerts(){
   const done=(res)=>{
     S.alerts = (res==='granted') ? true : S.alerts;
     save(); renderAlertRow();
-    if(res==='granted') toast('🔔 You\'re set — we\'ll ping you when a round drops.');
+    if(res==='granted'){
+      toast('🔔 You\'re set — we\'ll ping you when a round drops.');
+      /* PERMISSION IS NOT DELIVERY, and that gap is the whole bug this
+         answers. notify() only fires while the PAGE is alive; lock the
+         phone and there is no JavaScript left to run. The subscription
+         below is what lets the round reach a handset in a pocket. */
+      try{ PUSH.subscribe(); }catch(_){}
+    }
     else if(res==='denied') toast('No problem — keep the tab open and you won\'t miss it.');
   };
   // Safari hands back a callback, everyone else a promise. Support both.
@@ -9799,6 +9847,102 @@ function askAlerts(){
   else if(typeof r==='undefined'){ try{ window.Notification.requestPermission(done); }catch(e){} }
   else done(r);
 }
+
+/* ============ WEB PUSH — REACHING A PHONE THAT IS ASLEEP ============
+   notify() below is the LOCAL half and it has always worked: it raises a
+   notification while the page is running and hidden. What it cannot do is
+   reach a locked phone, because a suspended tab runs no code. On iOS in a
+   Safari tab it cannot even do that — window.Notification is absent, not
+   blocked, so every call fell into its own catch and did nothing.
+
+   This is the other half. A service worker is registered, the browser is
+   asked for a push subscription, and that subscription is handed to the
+   database so the RUNNER can push a round to it later — with the app shut
+   and the handset in a pocket.
+
+   THREE HONEST LIMITS, stated here so nobody has to rediscover them:
+
+     - iOS gives no push at all until the site is on the HOME SCREEN
+       (16.4+). The INSTALL card already argues for that and now has a
+       real reason to. In a plain Safari tab this quietly does nothing,
+       which is correct.
+     - a subscription belongs to one browser on one device. The same
+       person on a phone and a laptop is two subscriptions, and that is
+       right — they may only have one of them to hand.
+     - the browser can revoke it at any time. Every send has to treat a
+       dead subscription as normal and prune it, never as an error.
+
+   It never asks for permission itself. It runs only where permission has
+   ALREADY been granted, which keeps one door for that decision. */
+var PUSH = {
+  key: 'BG-sZGhJOp0L6o9wm0wvJsGg8h_OrCn58lWPV-ZmuTzOVQJZWGYRG79YDFFeCsg8vB6F8oYLcvIAyhzBk6qI6SA',
+  supported(){
+    try{
+      return ('serviceWorker' in navigator)
+          && (typeof window.PushManager === 'function')
+          && (typeof window.Notification === 'function');
+    }catch(_){ return false; }
+  },
+  b64(base64){
+    /* The VAPID key ships as URL-safe base64; PushManager wants bytes. */
+    var pad = '='.repeat((4 - base64.length % 4) % 4);
+    var raw = atob((base64 + pad).replace(/-/g,'+').replace(/_/g,'/'));
+    var out = new Uint8Array(raw.length);
+    for(var i=0;i<raw.length;i++) out[i] = raw.charCodeAt(i);
+    return out;
+  },
+  async register(){
+    if(!this.supported()) return null;
+    try{ return await navigator.serviceWorker.register('/sw.js', {scope:'/'}); }
+    catch(e){ try{ trk('push_sw_failed', {why:String(e&&e.message||e).slice(0,60)}); }catch(_){ } return null; }
+  },
+  async subscribe(){
+    if(!this.supported()) return null;
+    try{ if(window.Notification.permission !== 'granted') return null; }catch(_){ return null; }
+    var reg = await this.register();
+    if(!reg) return null;
+    var sub = null;
+    try{ sub = await reg.pushManager.getSubscription(); }catch(_){}
+    if(!sub){
+      try{
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: this.b64(this.key)
+        });
+      }catch(e){
+        try{ trk('push_sub_failed', {why:String(e&&e.message||e).slice(0,60)}); }catch(_){}
+        return null;
+      }
+    }
+    try{ await this.save(sub); }catch(_){}
+    return sub;
+  },
+  async save(sub){
+    if(!sub || !window.SB || !SB.enabled || !SB.savePush) return;
+    var j = null;
+    try{ j = sub.toJSON(); }catch(_){ return; }
+    if(!j || !j.endpoint) return;
+    try{
+      await SB.savePush({
+        endpoint: j.endpoint,
+        p256dh: (j.keys && j.keys.p256dh) || '',
+        auth:   (j.keys && j.keys.auth)   || ''
+      });
+      try{ trk('push_on', {}); }catch(_){}
+    }catch(_){}
+  },
+  /* Called at boot. Silent by design: it re-registers and refreshes an
+     EXISTING subscription so a returning player keeps working, and does
+     nothing at all where permission was never given. */
+  async resume(){
+    try{
+      if(!this.supported()) return;
+      if(window.Notification.permission !== 'granted') return;
+      await this.subscribe();
+    }catch(_){}
+  }
+};
+try{ window.PUSH = PUSH; }catch(_){}
 
 /* One alert per tag replaces the last, so a player who was away for two
    rounds comes back to one current notification, not a stack of stale ones. */
@@ -23685,7 +23829,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-28-place.233';
+const STATS_BUILD='2026-08-28-push.234';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -29039,6 +29183,12 @@ try{
   var _statsReady = function(){
     try{ window.STATS_READY = true; }catch(_){}
     try{ document.documentElement.setAttribute('data-stats-ready','1'); }catch(_){}
+    /* A returning player already said yes. Re-register the worker and
+       refresh their subscription so it survives a browser that quietly
+       rotated it — silent, and a complete no-op where permission was
+       never granted. Deliberately AFTER readiness so a suite that fakes
+       the backend is never held up by it. */
+    try{ if(window.PUSH && PUSH.resume) setTimeout(function(){ PUSH.resume(); }, 1200); }catch(_){}
   };
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', function(){ setTimeout(_statsReady, 0); }, {once:true});

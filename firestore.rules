@@ -517,6 +517,44 @@ service cloud.firestore {
       allow write: if isOwner();
     }
 
+    /* ============ PUSH SUBSCRIPTIONS ==================================
+       One document per BROWSER, not per person: the same player on a
+       phone and a laptop is two subscriptions and both are real. The id
+       is derived from the endpoint by the client, so a browser always
+       lands on its own row rather than overwriting somebody else's.
+
+       A subscription is not a secret — the endpoint is a public URL the
+       push service issues — but it IS a way to reach somebody, so:
+         - only a signed-in player may write one
+         - the uid on the row must be their own, which is what stops one
+           player from pointing a subscription at another's device
+         - nobody may read this collection from a browser at all. Only
+           the runner, on the server, ever needs to enumerate it.
+
+       Deleting is allowed for the owner so a player who turns alerts off
+       can take themselves off it. The server prunes dead ones too, and
+       admin bypasses rules entirely. */
+    match /push/{subId} {
+      allow read: if false;
+
+      allow create, update: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.endpoint is string
+        && request.resource.data.endpoint.size() > 20
+        && request.resource.data.endpoint.size() <= 800
+        && request.resource.data.endpoint.matches('^https://.*')
+        && request.resource.data.p256dh is string
+        && request.resource.data.p256dh.size() <= 200
+        && request.resource.data.auth is string
+        && request.resource.data.auth.size() <= 60
+        && (!('name' in request.resource.data) || (
+              request.resource.data.name is string
+              && request.resource.data.name.size() <= 24
+           ));
+
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
     match /signups/{uid} {
       allow read: if isOwner();
 

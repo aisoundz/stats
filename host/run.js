@@ -144,6 +144,7 @@ function loadDb(){
   if(!raw) die('FIREBASE_SERVICE_ACCOUNT is not set. See host/SETUP.md — this is the one thing that cannot be committed.');
   let creds; try{ creds = JSON.parse(raw); }catch(e){ die('FIREBASE_SERVICE_ACCOUNT is not valid JSON'); }
   const admin = require('firebase-admin');
+const PUSH  = require('./push.js');
   admin.initializeApp({ credential: admin.credential.cert(creds) });
   return { db: admin.firestore(), FieldValue: admin.firestore.FieldValue };
 }
@@ -1248,6 +1249,30 @@ async function main(){
           }, { merge: true });
           log('push', `${R.tag} is live on every phone` +
                       (earlyN ? ` · ${earlyN}/${R.qs.length} already readable at the buzzer` : ''));
+          /* ============ AND ON A PHONE THAT IS ASLEEP ==================
+             The round document above reaches every screen that is AWAKE.
+             This reaches the ones that are not. Founder, 28 Aug: "why do
+             we not have notifications to our phone when the quarter
+             ends?" — because nothing was ever sending one.
+
+             Deliberately after the write and deliberately not awaited
+             into the round's critical path: a push is a nice-to-have
+             arriving beside a question the player can already see. If the
+             push service is slow or down, the round still opened. */
+          try{
+            const r = await PUSH.send(db, NIGHT, {
+              title: `\u{1F534} ${R.name} is open`,
+              body: `${R.qs.length} question(s). Tap to answer.`,
+              tag: 'stats-round',
+              url: `https://statsgametime.com/?game=${NIGHT}`
+            });
+            if(r.skipped) log('alert', `no push sent — ${r.skipped}`);
+            else log('alert', `pushed ${R.tag} to ${r.sent} device(s)`
+                            + (r.pruned ? ` · pruned ${r.pruned} dead` : '')
+                            + (r.failed ? ` · ${r.failed} failed` : ''));
+          }catch(e){
+            log('alert', `push threw and was ignored — ${(e && e.message) || e}`);
+          }
           continue;
         }
 
