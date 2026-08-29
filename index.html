@@ -1707,13 +1707,18 @@
         <button class="btn tryGo mq-try" onclick="heroPractice()">Try a practice round</button>
         <span class="mq-doorsub">Free, no account, about two minutes</span>
       </div>
-      <p style="font-size:14px;font-weight:800;color:var(--gold);margin:0 0 8px" id="landingTip">🕐 Tip-off 1:00 ET · 12:00 CT · 10:00 PT · ABC</p>
+      <!-- EMPTY, FOR THE SAME REASON AS THE MARQUEE ABOVE. This read
+           "Tip-off 1:00 ET · 12:00 CT · 10:00 PT · ABC" — a time and a
+           channel for a game in early August. paintTip() owns this line and
+           fills it from the night; the literal only ever reached a crawler
+           and the pre-boot frame, where a WRONG time is worse than none. -->
+      <p style="font-size:14px;font-weight:800;color:var(--gold);margin:0 0 8px" id="landingTip"></p>
       <!-- "1,000 points" came out: it is the theoretical maximum, not a
            fact about tonight, and it was the chip that pushed the row onto
            a second line. -->
       <div class="chips">
-        <span class="chip" id="landingChip1">WNBA</span>
-        <span class="chip" id="landingChip3">4 quarters</span>
+        <span class="chip" id="landingChip1"></span><!-- nightLeagueLabel() owns this; a baked "WNBA" is a league label on a night that may be football -->
+        <span class="chip" id="landingChip3"></span><!-- cadence comes from the sport; soccer has halves and baseball has innings -->
       </div>
     </div>
 
@@ -2686,7 +2691,10 @@
       <div class="sharecard" id="shareCard">
         <div style="display:flex;justify-content:space-between;align-items:flex-start">
           <div><span class="sc-logo" style="letter-spacing:1.2px;font-size:17px">STATS GAMETIME</span>
-            <div class="sc-game" id="scGameLine">GAME NIGHT #2 · FEVER vs LYNX · AUG 2</div></div>
+            <!-- THIS DISAGREED WITH THE MARQUEE. The hero said Lynx at Valkyries and
+                 the share card said FEVER vs LYNX · AUG 2 — two baked copies of
+                 "which game is on", both stale, and stale differently. -->
+            <div class="sc-game" id="scGameLine"></div></div>
           <div style="font-size:22px" id="scEmoji">🏀</div>
         </div>
         <div class="sc-pts" id="scPts">0 <span style="font-size:15px;color:var(--muted);font-weight:800">pts</span></div>
