@@ -19185,6 +19185,17 @@ async function refreshRoom(){
    reads. Most people glance for thirty seconds and go back to the game. */
 const LOBBY_MS=45000;
 let lobbyTimer=null, lobbyTick=0, lastScore=null, lastStand=null;
+/* Which room lastScore came from. Empty means nobody has posted one. */
+let lastScoreRoom='';
+/* THE ONLY WAY lastScore SHOULD BE READ. A score from another room is
+   not a stale number, it is a different game's number, and printing it
+   under these teams is a lie the player can check against the TV. */
+function lastScoreMine(){
+  try{
+    if(!lastScore || lastScore.home==null) return null;
+    return (String(lastScoreRoom||'') === String((typeof ACTIVE_ROOM!=='undefined' && ACTIVE_ROOM) || '')) ? lastScore : null;
+  }catch(_){ return null; }
+}
 
 /* The room poll follows the ROOM BAR, and the room bar now lives on the
    Gametime page. So "am I in the waiting room" is no longer a question
@@ -19244,6 +19255,13 @@ async function refreshLiveHud(){
     ? Promise.resolve(fn(...a)).catch(()=>null) : Promise.resolve(null));
   const wantStand = (liveTick % 2 === 0);
   liveTick++;
+  /* WHOSE SCORE THIS WILL BE, captured BEFORE the await. SB is room
+     scoped, so the answer belongs to the room that was active when the
+     read started, not to whatever room the player has switched to by the
+     time it lands. Reading ACTIVE_ROOM afterwards would stamp an
+     in-flight answer with the wrong room, which is the same class of bug
+     as the one the stamp exists to prevent. */
+  var _scoreRoom = ''; try{ _scoreRoom = ACTIVE_ROOM || ''; }catch(_){}
   const [sc,rk,tp]=await Promise.all([
     ask(SB.scoreboard),
     ask(SB.rank),
@@ -19251,7 +19269,13 @@ async function refreshLiveHud(){
   ]);
   // Only overwrite on a real answer. A failed read must not blank a number the
   // player is already looking at — stale and true beats fresh and empty.
-  if(sc) lastScore=sc;
+  /* SECOND WRITER, AND IT MUST STAMP TOO. 29 Aug: the room stamp was
+     added to paintScore() and missed here, so a poll for the CURRENT
+     room left the stamp naming the PREVIOUS one and lastScoreMine()
+     refused a score that was perfectly valid. Fixing one writer of a
+     shared fact and not the other is exactly the disease the stamp was
+     introduced to cure. */
+  if(sc){ lastScore=sc; lastScoreRoom=_scoreRoom; }
   if(rk!=null && roomLast) roomLast.rank=rk;
   if(tp!==undefined && tp && tp.length) lastStand=tp;
   if(liveScreenOn()) renderScore();
@@ -19302,8 +19326,26 @@ function paintScore(sc){
   // Nothing from the host yet means no card. A scoreboard reading 0-0 in
   // the third quarter is a lie told by a placeholder, and the player is
   // sitting in front of the television that proves it.
-  if(!sc){ card.style.display='none'; lastScore=null; return; }
+  if(!sc){ card.style.display='none'; lastScore=null; lastScoreRoom=''; return; }
   lastScore=sc;
+  /* ============ A SCORE BELONGS TO ITS ROOM ========================
+     29 Aug 2026, from the founder's phone. The Gametime scoreboard read
+     "CHI 66 AT TEN 85" for Bears at Titans, a game that had not kicked
+     off. 66-85 was the Sky at Liberty FINAL from that morning, drawn
+     under this room's abbreviations.
+
+     `lastScore` was a bare global. Switching rooms left the previous
+     room's score in it, and the scoreboard's fallback below reads it
+     whenever the current room has no score of its own, which is exactly
+     the pre-tip window. So the biggest card on the screen showed one
+     game's teams over another game's score.
+
+     That the two rooms both had CHI as the away side made it look
+     plausible rather than obviously broken, which is worse.
+
+     Same fix as S.placeRoom: stamp the room, and refuse the value when
+     it belongs to a different one. */
+  try{ lastScoreRoom = ACTIVE_ROOM || ''; }catch(_){ lastScoreRoom = ''; }
   card.style.display='block';
   document.getElementById('sbAwayEmo').textContent=GAME.awayEmoji||'';
   document.getElementById('sbHomeEmo').textContent=GAME.homeEmoji||'';
@@ -20039,7 +20081,10 @@ function demoCiSet(){
      prediction the player can't see. A demo question you cannot verify
      teaches nothing except that the app makes things up. */
   let hs=null, as=null;
-  try{ if(typeof lastScore!=='undefined' && lastScore && lastScore.home!=null){ hs=Number(lastScore.home); as=Number(lastScore.away); } }catch(_){}
+  /* Same rule: a demo question built from another room's score is a
+     question the player can disprove by looking up at the television. */
+  try{ var _ls=(typeof lastScoreMine==='function')?lastScoreMine():null;
+       if(_ls){ hs=Number(_ls.home); as=Number(_ls.away); } }catch(_){}
   const haveScore = hs!=null && as!=null && !isNaN(hs) && !isNaN(as);
   const leader = !haveScore ? null : (hs===as ? 'tie' : (hs>as ? 'home' : 'away'));
   const margin = !haveScore ? null : Math.abs(hs-as);
@@ -24071,7 +24116,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-29-season.239';
+const STATS_BUILD='2026-08-29-roomzone.240';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -28468,12 +28513,51 @@ function gtTeams(){
     return {a:a,h:h};
   }catch(_){ return null; }
 }
+/* ============ BEFORE TIP, SAY IT IN THE READER'S OWN ZONE ===========
+   29 Aug 2026, from the founder's phone in California. The pill on the
+   biggest card on the Gametime screen read
+
+       8/29 - 6:00 PM EDT
+
+   directly under a rail that said 3:00 PM. Both were correct and the
+   screen still contradicted itself, because one was in his zone and the
+   other was not.
+
+   The EDT is not ours. `GS.detail` is ESPN's own status string and ESPN
+   writes it in Eastern. So before tip we stop printing theirs and print
+   the tip instant in the zone the reader is actually standing in.
+
+   No timeZone argument, on purpose: omitting it uses the browser's,
+   which IS the reader's, and it is the same idiom tonightHeadLine()
+   already uses for the date. timeZoneName:'short' makes the zone
+   explicit rather than leaving a bare time to be read as whatever the
+   reader assumes, which is the rule the emails have followed since
+   28 Aug: every clock time names a zone.
+
+   Live and final keep ESPN's detail. "Q2 8:14" is a game clock, not a
+   time of day, and has no zone to be wrong about. */
+function localTipPill(g){
+  try{
+    g = g || GAME;
+    var d = new Date(g && g.tipISO); if(isNaN(d)) return '';
+    var day  = d.toLocaleDateString('en-US', {month:'numeric', day:'numeric'});
+    var time = d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+    var zone = '';
+    try{
+      var parts = new Intl.DateTimeFormat('en-US', {timeZoneName:'short'}).formatToParts(d);
+      var z = parts.find(function(x){ return x.type === 'timeZoneName'; });
+      zone = z ? (' ' + z.value) : '';
+    }catch(_){}
+    return day + ' \u00B7 ' + time + zone;
+  }catch(_){ return ''; }
+}
 function gtStatusPill(){
   var ph=''; try{ ph=phaseNow(); }catch(_){}
   var det=''; try{ det=String(GS.detail||''); }catch(_){}
   if(ph==='final') return {cls:'final', txt:det||'FINAL'};
   if(ph==='live')  return {cls:'',      txt:det||'LIVE'};
-  return {cls:'pre', txt:det||'NOT STARTED'};
+  var mine=''; try{ mine = localTipPill(); }catch(_){}
+  return {cls:'pre', txt: mine || det || 'NOT STARTED'};
 }
 
 /* ---- WIN PROBABILITY ------------------------------------------------
@@ -28671,7 +28755,9 @@ function renderGametime(){
     if(T.a.score!=null && T.h.score!=null){ as=T.a.score; hs=T.h.score; }
     recA=T.a.rec||''; recH=T.h.rec||'';
   }
-  try{ if(hs==null && typeof lastScore!=='undefined'&&lastScore&&lastScore.home!=null){ hs=lastScore.home; as=lastScore.away; } }catch(_){}
+  /* Only this room's score. See lastScoreMine(). */
+  try{ var _ls=(typeof lastScoreMine==='function')?lastScoreMine():null;
+       if(hs==null && _ls){ hs=_ls.home; as=_ls.away; } }catch(_){}
   const live = hs!=null && as!=null;
 
   /* BEFORE TIP, TWO DASHES AND THE WORD "NOT STARTED" IS NOT A SCOREBOARD.

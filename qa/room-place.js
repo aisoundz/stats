@@ -140,8 +140,68 @@ const check = (id, c, why) => c ? ok(id) : bad(id, why);
     'the landing still offers to take the player back into a night recorded in a DIFFERENT '
     + 'room — this is the observable form of the 27 Aug bug and it runs on both builds');
 
+  /* ============ AND A SCORE BELONGS TO ITS ROOM TOO ================
+     29 Aug 2026, same disease, different global. The Gametime scoreboard
+     read "CHI 66 AT TEN 85" for Bears at Titans, a game that had not
+     kicked off. 66-85 was the Sky at Liberty FINAL from that morning,
+     printed under this room's abbreviations because `lastScore` was a
+     bare global and the scoreboard falls back to it whenever the current
+     room has posted no score of its own, which is exactly the pre-tip
+     window a player sits in.
+
+     Both rooms had CHI as the away side, so it read as plausible rather
+     than obviously broken. That is the expensive kind of wrong. */
+  const crossScore = await p.evaluate(() => {
+    try {
+      ACTIVE_ROOM = 'room-A';
+      paintScore({ home: 85, away: 66 });
+      ACTIVE_ROOM = 'room-B';
+      if (typeof lastScoreMine !== 'function') return 'NO GUARD';
+      const m = lastScoreMine();
+      return m ? (m.away + '-' + m.home) : 'refused';
+    } catch (e) { return 'THREW ' + String(e).slice(0, 100); }
+  });
+  console.log(`     a score posted in room A, read from room B     -> ${crossScore}\n`);
+  check('cross-room.score-does-not-follow-you', crossScore === 'refused',
+    'the scoreboard served room B a score posted in room A (' + crossScore + '). That is one '
+    + "game's teams over another game's numbers, on the biggest card on the screen, and the "
+    + 'player can disprove it by looking up at the television');
+
+  /* The other direction, which is the regression the first fix caused.
+     A score posted FOR the room you are in must still be served. The room
+     stamp was added to paintScore() and missed on the live poller, so a
+     perfectly valid score came back refused. */
+  const ownScore = await p.evaluate(() => {
+    try {
+      ACTIVE_ROOM = 'room-B';
+      paintScore({ home: 21, away: 14 });
+      const m = (typeof lastScoreMine === 'function') ? lastScoreMine() : null;
+      return m ? (m.away + '-' + m.home) : 'refused';
+    } catch (e) { return 'THREW ' + String(e).slice(0, 100); }
+  });
+  console.log(`     a score posted in room B, read from room B     -> ${ownScore}\n`);
+  check('cross-room.your-own-score-is-not-refused', ownScore === '14-21',
+    'the scoreboard refused a score posted in the room the player is actually in (' + ownScore
+    + '). A guard that hides real scores is worse than the bug it replaced');
+
   await b.close();
   check('no-page-errors', errs.length === 0, errs.slice(0, 3).join(' · '));
+
+  /* ---- STATIC: every writer of lastScore stamps the room -------------
+     The runtime checks above only exercise the writers they happen to
+     reach. `lastScore` is written in more than one place and fixing one
+     of them is how the refusal regression happened in the first place, so
+     this reads the source and insists that every assignment carries a
+     stamp beside it. A third writer added later fails here rather than in
+     front of a player. */
+  const src = fs.readFileSync(TARGET, 'utf8');
+  const writers = [...src.matchAll(/(^|[^.\w])lastScore\s*=\s*(?!=)/gm)]
+    .map(m => src.slice(Math.max(0, m.index - 40), m.index + 220));
+  const noStamp = writers.filter(w => !/lastScoreRoom\s*=/.test(w));
+  console.log(`     writers of lastScore: ${writers.length}, unstamped: ${noStamp.length}`);
+  check('cross-room.every-writer-of-lastScore-stamps-its-room', noStamp.length === 0,
+    noStamp.length + ' assignment(s) to lastScore have no lastScoreRoom beside them. '
+    + 'One fact with two writers and one stamp is how a score from another room gets served.');
   try { fs.unlinkSync(tmp); } catch (_) {}
 
   console.log(fail
