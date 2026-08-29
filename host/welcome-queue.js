@@ -287,6 +287,48 @@ function writeState(s) {
     process.exit(1);
   }
 
+  /* ============ WAIT FOR THE AUDIENCE TO EXIST ======================
+     29 Aug 2026. A welcome went out and reached NOBODY. Everything in
+     this file reported success: the group was filled, the campaign was
+     created "to 1 person(s)", the schedule call returned 2xx, and the
+     log said "sent — 1 welcome(s) on their way". MailerLite recorded
+     sent=0, delivered=0.
+
+     The cause is a race this file created. It empties and refills
+     WELCOME_GROUP and then creates and sends within about three seconds:
+
+         21:45:04  "Welcome pending" now holds exactly the 1 new person(s)
+         21:45:07  campaign ... to 1 person(s)
+         21:45:07  sent
+
+     MailerLite resolves a campaign's audience on its own side, and that
+     membership write had not been indexed yet, so the campaign went out
+     to an empty group. Proven afterwards: a fresh draft aimed at the same
+     unchanged group reported recipients_count 1.
+
+     That it worked on 27 Aug is the worst part. A race does not fail
+     every time; it fails SOMETIMES, silently, and the person who signed
+     up never knows they were skipped.
+
+     So the audience is now confirmed to exist before the send, out of
+     MailerLite's own reckoning rather than ours. `recipients_count` is
+     the field that answers "who will this actually reach" — `groups` is
+     not populated on a draft and reading it reports an empty audience on
+     a campaign addressed to ten people. */
+  let reach = 0;
+  for (let attempt = 1; attempt <= 12; attempt++) {
+    const look = await reqRetry(`https://connect.mailerlite.com/api/campaigns/${camp.id}`, { method: 'GET', headers: H });
+    reach = Number(((look.body || {}).data || {}).recipients_count || 0);
+    if (reach > 0) { log(`audience confirmed: ${reach} recipient(s) after ${attempt * 5}s`); break; }
+    await new Promise((r) => setTimeout(r, 5000));
+  }
+  if (reach < 1) {
+    log('REFUSE TO SEND: MailerLite still reports 0 recipients for this campaign after 60s.');
+    log('  Sending now would deliver to nobody while reporting success, which is the exact');
+    log('  failure this check exists for. Left as a draft. Nobody was marked welcomed.');
+    process.exit(1);
+  }
+
   /* NO RETRY HERE, DELIBERATELY, and this is the one call in the file
      that uses req() instead of reqRetry(). A timeout on a send is
      ambiguous: MailerLite may already have acted on it before the
@@ -346,9 +388,32 @@ function writeState(s) {
   }
   const st = done.stats || {};
   log(`delivered ${st.deliveries_count}/${st.sent}  ·  bounces ${st.hard_bounces_count} hard`);
+
+  /* ============ FINISHED IS NOT DELIVERED ===========================
+     29 Aug 2026. This marked people welcomed as soon as the campaign
+     reported finished_at, without ever reading how many it reached. A
+     campaign that goes out to an empty group finishes perfectly happily
+     with sent=0, and this would have written those addresses into
+     `welcomed` permanently. They are then, by this file's own rules,
+     people who have "provably been sent one" and will NEVER be welcomed
+     again. A silent zero would have become a permanent zero.
+
+     That is not hypothetical: it happened today, on the test that found
+     the audience race above. Guard 3 in the header says "nobody is
+     marked welcomed until MailerLite reports the campaign sent", and
+     that was true of the STATUS and false of the COUNT. Attempting is
+     not delivering, and finishing is not delivering either. */
+  const reached = Number(st.sent || 0);
+  if (reached < 1) {
+    log('REACHED NOBODY. The campaign finished with sent=0, so these addresses are');
+    log('  NOT being marked welcomed and the next run will try again. Left pending:');
+    log('  ' + (state.pending.emails || []).join(', '));
+    process.exit(1);
+  }
+
   state.welcomed = state.welcomed.concat(state.pending.emails || []);
   state.pending = null;
   writeState(state);
-  log(`${(done.stats || {}).sent || 0} address(es) recorded as welcomed. Done.`);
+  log(`${reached} address(es) recorded as welcomed. Done.`);
   process.exit(0);
 })().catch((e) => { log(`CRASHED: ${(e && e.stack) || e}`); process.exit(1); });
