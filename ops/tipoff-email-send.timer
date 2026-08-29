@@ -1,0 +1,38 @@
+# /home/higherthan7/.config/systemd/user/tipoff-email-send.timer
+[Unit]
+Description=STATS GAMETIME tip-off email — daily, after the cloud draft routine (9:13am PT) has had time to finish
+
+[Timer]
+# ============ IT USED TO BE ONE FIRE, AT 10:45, AND THAT WAS LATE =====
+# 29 Aug 2026. Founder, Saturday morning: "Where's the email for today?
+# It should go out before the game."
+#
+# 17:45 UTC = 10:45am PDT was chosen when every room was an evening room,
+# and it was right for weeks: the earliest tip all week was 15:00 PT. The
+# weekend is not like that. Saturday 29 Aug opens with Sky at Liberty at
+# 10:00am PT, so the letter announcing the day's rooms would have landed
+# 45 minutes after the first game had already started. A tip-off email
+# that arrives after the tip-off is not a late email, it is a wrong one.
+#
+# TWO FIRES, EARLY THEN LATE, and the second cannot double-send:
+# send-tipoff-auto.js only ever acts on a campaign that is still
+# status=draft and was created today. Once the 09:35 fire sends it, the
+# campaign leaves the draft filter, and the 10:45 fire finds nothing and
+# does nothing. So the late fire costs nothing on a normal day and saves
+# the day the cloud draft routine runs slow.
+#
+# 09:35 is deliberate, not "as early as possible": the draft is written at
+# 09:13 by a cloud routine and host/check-draft.js validates it at 09:20.
+# Sending before either has run would be sending nothing, or sending
+# something nobody checked.
+#
+# SUNDAY needs no change. EMAIL-VOICE.md section 8: the tip-off routine
+# stops on a Sunday whatever the slate says, and the weekly note owns the
+# day at 7:00am PT, which is already ahead of Sunday's 9:15am first pitch.
+OnCalendar=*-*-* 16:35:00 UTC
+OnCalendar=*-*-* 17:45:00 UTC
+Persistent=true
+Unit=tipoff-email-send.service
+
+[Install]
+WantedBy=timers.target
