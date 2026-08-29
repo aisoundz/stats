@@ -160,6 +160,48 @@ function loadAuto() {
       console.log(`  player's screen is short. Check before calling it cosmetic —`);
       console.log(`  on 25 Aug this exact line was a real 10 points and was dismissed.`);
       drifted.forEach(d => console.log(`    ${d}`));
+
+      /* ============ AND THEN GO AND LOOK, 28 Aug ======================
+         The block above is a real detector with a real incident behind
+         it, and it was still not enough — because everything it reads is
+         the ARCHIVE, a snapshot the runner writes at one instant. The
+         runner updates `pts` and the lane fields at slightly different
+         moments, so a snapshot taken mid-grade freezes a row whose two
+         halves disagree, and this file then reported that frozen
+         disagreement in the present tense.
+
+         28 Aug, five rooms: it reported four players short by 5 to 15
+         points, and it was read as "the board under-reported 40 points
+         tonight" and told to the founder that way. Every one of those
+         rows had already reconciled in the LIVE player doc — Dog Bird's
+         archive held caughtPts=75 with pts=390, and the live row holds
+         caughtSrv=90, which is 390 exactly. Nobody's screen was ever
+         short.
+
+         A detector that cannot tell a stale snapshot from a live fault
+         produces exactly one behaviour: the next real one gets dismissed.
+         So it now finishes the job it starts — read the live row and say
+         whether the night settled. */
+      const live = db.collection(`nights/${NIGHT}/players`);
+      let unreconciled = 0;
+      for (const uid of uids) {
+        const v = players[uid] || {};
+        if (v.livePts == null || Number(v.pts || 0) === lanes(v)) continue;
+        const name = v.name || uid.slice(0, 6);
+        let now = null;
+        try { const d = await live.doc(uid).get(); now = d.exists ? d.data() : null; } catch (_) {}
+        if (!now) { console.log(`    ${name}: LIVE ROW MISSING — cannot say whether it settled`); unreconciled++; continue; }
+        const nPts = Number(now.pts || 0), nLanes = lanes(now);
+        if (nPts === nLanes) {
+          console.log(`    ${name}: settled live at ${nPts} — the archive was taken mid-grade, no screen was short`);
+        } else {
+          unreconciled++;
+          console.log(`    ${name}: STILL DISAGREES LIVE — pts=${nPts}, lanes=${nLanes}. THIS ONE IS REAL.`);
+        }
+      }
+      console.log(unreconciled
+        ? `  → ${unreconciled} row(s) still disagree in the live data. Do not dismiss these.`
+        : `  → every drifted row reconciled live. The archive was a snapshot, not a fault.`);
     }
     console.log(`  → ${agree} of ${uids.length} players agree`);
     console.log(`  NOTE: this is server-side only. pred/catch/caught points settle on the`);
