@@ -5292,6 +5292,35 @@ const BB_GAME={
    with it on. */
 var LEAN_ON = true;
 function lean(){ try{ return !!LEAN_ON; }catch(_){ return false; } }
+/* ============ TALK IS BACK ON, AND ONLY TALK ========================
+   28 Aug 2026. Founder, with three people in a live room: "We have 3
+   people on this would be good to trash talk or have a discussion board
+   or messaging board to make it fun and active."
+
+   It was already built — a live room, per-player colours, canned lines,
+   push when somebody speaks, 140 characters, 120 a night — and it was
+   SWITCHED OFF. LEAN sweeps every "Talk trash" button off the page by
+   label and openTalk() refuses outright, so the feature has existed and
+   been unreachable the entire time. Nobody has ever sent a message in
+   any room, on any night.
+
+   I made that worse this morning: I shipped a "Talk trash" button onto
+   Home, gated it on !lean() as the others are, verified the bytes were
+   deployed, and told him it was live. It could never have appeared. The
+   bytes were there and the feature was off, which is the difference
+   between shipping and working.
+
+   TALK_ON is separate from LEAN on purpose. LEAN is still doing its job
+   — the retired tabs, the deep cuts, the win probability, the run
+   blocks, the Caught It cap — and turning all of it off to get a chat
+   room back would be trading one blunt switch for another.
+
+   One predicate, three call sites: the button sweep, openTalk() and the
+   Home button. Three copies of "is talk allowed" is exactly how the four
+   entry points got out of step with each other in the first place. */
+var TALK_ON = true;
+function talkHidden(){ try{ return lean() && !TALK_ON; }catch(_){ return false; } }
+try{ window.talkHidden = talkHidden; }catch(_){}
 /* FOUR TABS: Home \u00B7 STATS \u00B7 Gametime \u00B7 Board, with Gametime dead centre
    under the thumb.
 
@@ -5360,7 +5389,7 @@ function leanStripTabs(){
          a stylesheet, so the strip now holds through any later render.
          Still toggles both ways: a one-way strip is a deletion wearing a
          flag. */
-      if(lean()){ b.dataset.leanHid='1'; b.classList.add('leanHidden'); }
+      if(talkHidden()){ b.dataset.leanHid='1'; b.classList.add('leanHidden'); }
       else if(b.dataset.leanHid){ delete b.dataset.leanHid; b.classList.remove('leanHidden'); }
     });
   }catch(_){}
@@ -8705,7 +8734,7 @@ function syncLandingActions(){
    button that opens nothing must not be on the front door either. */
 function ttFromHomeWanted(){
   try{
-    if(lean()) return false;
+    if(talkHidden()) return false;
     return ttHasRoom();
   }catch(_){ return false; }
 }
@@ -21186,11 +21215,43 @@ function renderCiCard(q){
     }).join('');
     var status = locked ? 'Time — the answer lands in a moment'
                         : 'Tap one. You’ve got a few seconds.';
+    /* ============ SAY WHAT THIS ONE IS WORTH, BEFORE THEY ANSWER ======
+       28 Aug 2026. The founder, playing his own game: "I am on as two
+       times and my points should be 105 but its 75."
+
+       It was 75 and the grading was right. He had one catch correct and
+       the player above him had five IN A ROW — and a run escalates:
+       CAUGHT_BASE × streak, so five consecutive is 5+10+15+20+25 = 75
+       while one on its own is 5. Fifteen times the reward for five times
+       the answers, which is the whole point of the mechanic.
+
+       None of that was on screen. The card said "🔥 2 in a row" AFTER an
+       answer and never what the NEXT one paid, so the escalation — the
+       actual reason to keep watching — was invisible. A player cannot
+       chase a stake nobody told them about, and if the person who
+       commissioned the rule cannot reconcile his own score, nobody can.
+
+       So the open card now names the stake while the question is still
+       open. Not a decoration: it is the difference between "answer this"
+       and "answer this, it is worth four times the last one". */
+    var stake = '';
+    try{
+      var _cap = (Number(PCI.pts) || 0) >= CAUGHT_NIGHT_CAP;
+      if(_cap){
+        stake = ' · all ' + CAUGHT_NIGHT_CAP + ' caught points banked — the rest is pride';
+      }else{
+        var _next = caughtWorth((Number(PCI.streak) || 0) + 1);
+        if(_next > 0){
+          stake = ' · worth <b>' + _next + '</b>'
+                + ((Number(PCI.streak) || 0) > 0 ? ' if you keep the run' : '');
+        }
+      }
+    }catch(_){ stake = ''; }
     ciShow((locked?'':'<div class="cilockbar"><i style="width:'+pctLeft+'%;transition:width .25s linear"></i></div>')+
            '<div class="cihead">'+ico('live')+' Caught It</div>'+
            '<div class="ciq">'+esc(q.prompt)+'</div>'+
            '<div class="ciopts">'+opts+'</div>'+
-           '<div class="cistat">'+status+(PCI.streak?(' · 🔥 '+PCI.streak+' in a row'):'')+'</div>'+
+           '<div class="cistat">'+status+(PCI.streak?(' · 🔥 '+PCI.streak+' in a row'):'')+stake+'</div>'+
            '<div class="cifoot"><button class="cimute" data-cimute="1">mute Caught It</button></div>', !locked);
   }
   var card=document.getElementById('ciCard');
@@ -22215,7 +22276,7 @@ const TT_EMOJI=['🔥','😂','👀','💀','🎯','🐐','😭','🥶','🙌','
 function openTalk(){
   /* Belt and braces with the sweep above: a hidden button is not a closed
      door, and openTalk is reachable from a stale onclick and from go(). */
-  if(lean()) return;
+  if(talkHidden()) return;
   /* JOINING IS PART OF OPENING. Trash Talk is reachable from the nav at
      any moment, including before the player has ever pressed Play — and
      until they join, the backend has no nightId, so every read returns
@@ -23929,7 +23990,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-28-room.237';
+const STATS_BUILD='2026-08-28-talk.238';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

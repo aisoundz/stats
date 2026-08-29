@@ -3964,14 +3964,40 @@ async function browserTests(){
          !important. Simulate exactly that and confirm the button stays
          shut, because without this the !important can be dropped and
          nothing notices until a screenshot finds four live Talk buttons. */
+      /* ============ MEASURE THE MECHANISM, NOT THE SETTING =============
+         28 Aug 2026: talk was turned back on. TALK_ON now sits beside
+         LEAN_ON and only governs the talk surfaces, so "is a Talk button
+         visible" is no longer the same question as "does the strip work".
+
+         Both still matter and they are measured separately. The strip is
+         exercised by forcing TALK_ON off and re-running the sweep — the
+         !important behaviour it exists for is unchanged and still guarded.
+         Whether talk is ON is recorded as a fact, not asserted here. */
+      out.talkOn = (typeof TALK_ON !== 'undefined') ? !!TALK_ON : null;
       out.talkSurvivesInlineWrite = (function(){
         var b = document.getElementById('revTalkBtn');
         if(!b) return null;
+        var wasOn = (typeof TALK_ON !== 'undefined') ? TALK_ON : null;
+        try{ if(wasOn !== null) window.TALK_ON = false; leanStripTabs(); }catch(_){}
         var before = b.style.display;
         b.style.display = 'block';
         var held = getComputedStyle(b).display === 'none';
         b.style.display = before;
+        try{ if(wasOn !== null) window.TALK_ON = wasOn; leanStripTabs(); }catch(_){}
         return held;
+      })();
+      /* And with talk OFF, every door must still shut — the four buttons
+         plus the one on Home. Same forced state as above. */
+      out.talkDoorsShutWhenOff = (function(){
+        var wasOn = (typeof TALK_ON !== 'undefined') ? TALK_ON : null;
+        try{ if(wasOn !== null) window.TALK_ON = false; leanStripTabs(); }catch(_){}
+        var n = Array.prototype.filter.call(document.querySelectorAll('button'), function(b){
+          if(!/talk trash/i.test(b.textContent||'')) return false;
+          var cs = getComputedStyle(b);
+          return cs.display!=='none' && cs.visibility!=='hidden';
+        }).length;
+        try{ if(wasOn !== null) window.TALK_ON = wasOn; leanStripTabs(); }catch(_){}
+        return n;
       })();
       navGo('stats'); out.screenAfterStats = S.screen;
       navGo('crew');  out.screenAfterTalk  = S.screen;
@@ -4015,10 +4041,22 @@ async function browserTests(){
       r.talkSurvivesInlineWrite!==false,
       `revTalkBtn was re-shown by an inline display write (held=${r.talkSurvivesInlineWrite})`,
       'the strip uses .leanHidden with !important precisely because the review screen shows revTalkBtn again with its own inline style; drop the !important and the button comes back');
-    check('lean.every-talk-door-is-shut',
-      r.talkButtonsVisible===0,
-      `${r.talkButtonsVisible} "Talk trash" button(s) still visible under LEAN (computed display)`,
-      'removing the tab does not remove Talk. There are four other buttons that open it \u2014 review, Gametime, break and the FINAL screen \u2014 and the first version of LEAN shipped with all four live. A player screenshot found it');
+    /* REVERSED 28 AUG, and for the same reason the Caught It check above
+       was reversed on GN8. This asserted talkButtonsVisible===0: talk was
+       held back by LEAN and every door had to be shut. Then the founder,
+       with three people in a live room and an empty leaderboard, asked
+       for it back — and it turned out the room, the rules, the rate
+       limits and the push had been built and unreachable the whole time.
+       Nobody had ever sent a message on any night.
+
+       The DECISION changed; the MECHANISM must not rot. So the check now
+       asks the question that still has a right answer: with talk off,
+       does every door still shut? A check guarding a reversed decision is
+       a false alarm that trains you to ignore the gate. */
+    check('lean.every-talk-door-shuts-when-talk-is-off',
+      r.talkDoorsShutWhenOff===0,
+      `${r.talkDoorsShutWhenOff} "Talk trash" button(s) still visible with TALK_ON=false`,
+      'removing the tab does not remove Talk. There are five buttons that open it \u2014 review, Gametime, break, the FINAL screen and now Home \u2014 and the first version of LEAN shipped with all of them live. A player screenshot found it');
     check('lean.stats-is-reachable-and-lean-still-holds',
       r.statsBtn!=='none' && r.screenAfterStats==='stats'
       && r.winprob===false && r.deepcut===false && r.feed===false,
