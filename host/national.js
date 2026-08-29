@@ -19,11 +19,13 @@
    printed a blank channel for Saints at Rams while ESPN was carrying the
    answer in the other field the whole time.                                */
 
-const LEAGUES = [
-  ['wnba', 'basketball/wnba'], ['nfl',  'football/nfl'],
-  ['mlb',  'baseball/mlb'],    ['mls',  'soccer/usa.1'],
-  ['nba',  'basketball/nba'],  ['nhl',  'hockey/nhl'],
-];
+/* 28 Aug: built from host/leagues.js, which is now the one owner of both
+   the league table and the national list below. This file was the one
+   that got USA Network RIGHT on 24 Aug and had no way to tell the other
+   three — see its comment below, which is the whole argument for the
+   consolidation in one paragraph. */
+const LG = require('./leagues.js');
+const LEAGUES = ['wnba','nfl','mlb','mls','nba','nhl','epl'].map(k => [k, LG.get(k).path]);
 
 /* 24 Aug — 'USA'/'USA Net'/'USA Network' were missing here even though
    host/marquee.js's own NATIONAL list already has them, and the room-
@@ -35,9 +37,11 @@ const LEAGUES = [
    day off the board. Two scripts deciding the same fact and disagreeing
    is the exact disease this codebase keeps finding — see marquee.js's
    own list for the one this was brought in line with. */
-const NATIONAL = ['NFL Net','NFL Network','FOX','FS1','FS2','CBS','CBS Sports Network','NBC','ABC',
-  'ION','ESPN','ESPN2','ESPNU','TNT','TBS','truTV','MLB Network','NBA TV','CW','The CW','Peacock','Netflix',
-  'USA','USA Net','USA Network'];
+/* The list itself moved to host/leagues.js on 28 Aug. The comment above
+   stays because it is the evidence: this file fixed USA Network on the
+   24th, and build-slate.js and pick-national.js were still wrong four
+   days later. A fix that cannot reach its own duplicates is not a fix. */
+const NATIONAL = LG.NATIONAL;
 /* A league with no linear option at all: refusing the streamer refuses the sport. */
 const LEAGUE_ONLY = { mls:['Apple TV'], mlb:['Apple TV'] };
 /* Excluded on purpose. Prime is rule 3 (WNBA); ESPN Unlimited is a paid add-on,

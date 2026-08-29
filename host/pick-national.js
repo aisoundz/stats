@@ -50,27 +50,23 @@ const log = (k,m) => console.log('  ' + String(k).padEnd(8) + ' ' + m);
    the exact trap Rule 7 exists for. Add to it on purpose, never by
    pattern. NBC Sports <City> and Fox <n> are regional and must not match,
    so the word boundaries matter. */
-const NATIONAL = [
-  'NBC','Peacock','FOX','FS1','FS2','CBS','Paramount+','ABC','ESPN','ESPN2','ESPNU',
-  'ESPN Unlmtd','NFL Net','NFL Network','NBA TV','TNT','TBS','truTV','MLB Net',
-  'MLB Network','Prime Video','Apple TV','Netflix','Ion','ION','CW','Telemundo','Universo'
-];
-const isNational = (name) => {
-  const n = String(name || '').trim();
-  if (/NBC Sports\s+\S/i.test(n)) return false;            // NBC Sports Bay Area &c
-  if (/^Fox\s*\d/i.test(n) || /Fox\s+\d+\s*Plus/i.test(n)) return false;
-  if (/League Pass|MSG|YES|NESN|Marquee|SNY|Bally|Spectrum|Altitude|Space City|Vegas \d/i.test(n)) return false;
-  return NATIONAL.some(x => n.toLowerCase() === x.toLowerCase()
-                         || n.toLowerCase().startsWith(x.toLowerCase() + ' ')
-                         || n.toLowerCase() === x.toLowerCase().replace(/\+$/,''));
-};
+/* 28 Aug: the copy that used to sit here is gone, and it was the worst of
+   the four. It had no USA Network — so the Premier League's only US
+   carrier did not count — while listing 'ESPN Unlmtd' and 'Prime Video',
+   which leagues.env Rule 7 and Rule 3 reject by name. Measured on three
+   real days, that combination proposed an ESPN Unlimited game as the
+   Game of the Night on all three, including Monday 31 Aug. One owner
+   now: host/leagues.js. */
+const LG = require('./leagues.js');
+const isNational = (name, league) => LG.isNational(name, league);
 
-const LEAGUES = [
-  { sport:'football',   key:'NFL',  path:'football/nfl' },
-  { sport:'basketball', key:'WNBA', path:'basketball/wnba' },
-  { sport:'baseball',   key:'MLB',  path:'baseball/mlb' },
-  { sport:'soccer',     key:'MLS',  path:'soccer/usa.1' }
-];
+/* Built from the one owner rather than typed again. The order is the
+   order the day is considered in, so it stays explicit here — but every
+   path and sport comes from host/leagues.js, which is why `epl` needed
+   adding in exactly one place to become visible to this script. */
+const LEAGUES = ['nfl','wnba','mlb','mls','epl'].map(k => ({
+  sport: LG.get(k).sport, key: k.toUpperCase(), league: k, path: LG.get(k).path,
+}));
 
 const abbr = (c) => String((c.team && (c.team.abbreviation || c.team.shortDisplayName)) || '')
   .toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -92,7 +88,10 @@ const abbr = (c) => String((c.team && (c.team.abbreviation || c.team.shortDispla
       const comps = c.competitors || [];
       if (comps.length !== 2) return;
       const nets = [...new Set((c.broadcasts || []).flatMap(b => b.names || []))];
-      const on = nets.filter(isNational);
+      /* The league goes in now, because "is this national" is not a
+         property of the channel alone: Apple TV is the only carrier MLS
+         has, so it counts there and nowhere else. */
+      const on = nets.filter(n => isNational(n, lg.league));
       if (!on.length) return;
       nat++;
       const away = comps.find(x => x.homeAway === 'away') || comps[0];

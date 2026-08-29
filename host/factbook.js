@@ -49,14 +49,14 @@ const OUT   = path.join(__dirname, '..', 'facts.json');
 /* The six this product actually runs. `sport` and `league` are ESPN's own
    path segments — the same pair SPORT_CFG uses, so a room's league maps
    straight onto a shelf of the record book. */
-const LEAGUES = [
-  { key:'nfl',  sport:'football',   league:'nfl',   label:'the NFL' },
-  { key:'nba',  sport:'basketball', league:'nba',   label:'the NBA' },
-  { key:'wnba', sport:'basketball', league:'wnba',  label:'the WNBA' },
-  { key:'mlb',  sport:'baseball',   league:'mlb',   label:'Major League Baseball' },
-  { key:'nhl',  sport:'hockey',     league:'nhl',   label:'the NHL' },
-  { key:'mls',  sport:'soccer',     league:'usa.1', label:'MLS' }
-];
+/* 28 Aug: built from host/leagues.js. The `league` here is ESPN's path
+   segment, not our key — ours is 'mls', theirs is 'usa.1' — which is
+   exactly the confusion segments() exists to stop anyone re-deriving by
+   hand for a seventh time. */
+const LG = require('./leagues.js');
+const LEAGUES = ['nfl','nba','wnba','mlb','nhl','mls','epl'].map(k => ({
+  key: k, ...LG.segments(k), label: LG.get(k).label,
+}));
 
 const log = (k, m) => console.log('  ' + String(k).padEnd(7) + m);
 

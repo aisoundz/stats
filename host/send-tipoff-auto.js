@@ -144,10 +144,12 @@ function isSundayPT() {
    refusal. Silence is not the same as a lie; only a checkable claim
    that turns out wrong blocks the send.
    ===================================================================== */
-const RECAP_LEAGUES = [
-  ['wnba', 'basketball/wnba'], ['nfl', 'football/nfl'],
-  ['mlb', 'baseball/mlb'], ['mls', 'soccer/usa.1'],
-];
+/* 28 Aug: from host/leagues.js, the one owner. This list decides which
+   leagues "Last night, settled" can check a claim against — so a league
+   missing here means the email cannot verify its own recap of that sport
+   and silently checks nothing. epl added with the rest of the wiring. */
+const RECAP_LEAGUES = ['wnba','nfl','mlb','mls','epl']
+  .map(k => [k, require('./leagues.js').get(k).path]);
 
 // ESPN's edge rejects a bare Node https.request with no User-Agent (a
 // real, silent 403 — confirmed live, and the ORIGINAL version of this

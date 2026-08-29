@@ -31,11 +31,27 @@ const build=R('host/build-slate.js');
 const start=R('host/start-slate.sh');
 const run  =R('host/run.js');
 
-/* ---- 1. every league in PATHS has a path that is not its family ----- */
-const PB=build.slice(build.indexOf('const PATHS'), build.indexOf('};', build.indexOf('const PATHS')));
+/* ---- 1. every league in the table has a path that is not its family --
+   28 Aug 2026: this used to slice the `const PATHS` literal out of
+   build-slate.js. There were FOUR league tables in host/ and they had
+   drifted — build-slate.js and pick-national.js did not know `epl` while
+   backtest.js did, which is why the Premier League was provably gradable
+   and could not be given a room. host/leagues.js is the one owner now,
+   so this reads the owner. It went RED on the refactor, which is the
+   correct behaviour and the reason it is worth having. */
+const table=R('host/leagues.js');
+const PB=table.slice(table.indexOf('const LEAGUES = {'), table.indexOf('\n};', table.indexOf('const LEAGUES = {')));
 const rows=[...PB.matchAll(/(\w+):\s*\{\s*path:\s*'([^']+)'\s*,\s*sport:\s*'([^']+)'/g)]
   .map(m=>({lg:m[1], p:m[2], fam:m[3]}));
 ok('feedpath.every-league-declares-both', rows.length>=6, `${rows.length} league(s) parsed`);
+/* AND THE CONSUMERS MUST READ THE OWNER, NOT KEEP A COPY. A fifth table
+   appearing anywhere in host/ is the disease coming back, and it would be
+   invisible to every other check in this file. */
+['build-slate.js','backtest.js','marquee.js','pick-national.js','national.js']
+  .forEach(f=>{
+    ok('feedpath.reads-the-one-owner ('+f+')', /require\(['"]\.\/leagues\.js['"]\)/.test(R('host/'+f)),
+       `${f} does not read host/leagues.js — if it holds its own league or national list, they will drift`);
+  });
 rows.forEach(r=>{
   ok('feedpath.the-path-is-a-path ('+r.lg+')', r.p.includes('/') && r.p.split('/')[0]===r.fam,
      `path=${r.p} family=${r.fam}`);

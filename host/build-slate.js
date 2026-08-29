@@ -43,14 +43,13 @@ const JSONOUT = process.argv.includes('--manifest');
 const LEAGUE = (process.env.LEAGUE || 'wnba').toLowerCase();
 const DATE   = (process.env.DATE || '').trim();
 
-const PATHS = {
-  wnba: { path:'basketball/wnba', sport:'basketball' },
-  nba:  { path:'basketball/nba',  sport:'basketball' },
-  mlb:  { path:'baseball/mlb',    sport:'baseball'   },
-  nfl:  { path:'football/nfl',    sport:'football'   },
-  nhl:  { path:'hockey/nhl',      sport:'hockey'     },
-  mls:  { path:'soccer/usa.1',    sport:'soccer'     }
-};
+/* THE LEAGUE TABLE HAS ONE OWNER — host/leagues.js. It used to be a
+   literal right here, and a second copy in backtest.js, and they had
+   already disagreed: the shadow runner knew `epl` and `cfb` and this
+   file did not, so the Premier League was provably gradable and still
+   could not be handed a room. See host/leagues.js for the full story. */
+const LEAGUES_TABLE = require('./leagues.js');
+const PATHS = LEAGUES_TABLE.LEAGUES;
 
 const die = (m) => { console.error('FATAL: ' + m); process.exit(1); };
 const log = (k, m) => (process.argv.includes('--manifest') ? console.error : console.log)(`  ${String(k).padEnd(7)} ${m}`);
@@ -673,17 +672,11 @@ function tipLine(iso, net, sport){
      streamer alongside local affiliates, when the same league has a linear
      game the same day, is NOT good enough. Prime is excluded separately by
      the WNBA rule in leagues.env. */
-  const NATIONAL = [
-    'NFL Net','NFL Network','FOX','FS1','FS2','CBS','CBS Sports Network','NBC','ABC','ION',
-    'ESPN','ESPN2','ESPNU','TNT','TBS','truTV','MLB Network','NBA TV','CW','The CW','Peacock','Netflix',
-  ];
-  const LEAGUE_ONLY_STREAMER = { mls: ['Apple TV'], mlb: ['Apple TV'] };
-  const isNational = g => {
-    const parts = String(g.net || '').split('·').map(x => x.trim()).filter(Boolean);
-    if(parts.some(n => NATIONAL.includes(n))) return true;
-    const ok = LEAGUE_ONLY_STREAMER[String(g.league||'').toLowerCase()] || [];
-    return parts.some(n => ok.includes(n));
-  };
+  /* 28 Aug: the list and the streamer exception both moved to
+     host/leagues.js. This copy was the one with NO USA Network in it,
+     which is why the first Premier League room warned that USA Net —
+     the only way to watch it in America — was not national carriage. */
+  const isNational = g => LEAGUES_TABLE.isNational(g.net, g.league);
   const picked = offered.filter(g => PICK ? PICK.has(g.nightId) : true);
   picked.filter(g => !String(g.net || '').trim()).forEach(g => log('WARN',
     `${g.nightId} has NO channel in the feed at all. Do not host it; nobody can be told where to watch.`));

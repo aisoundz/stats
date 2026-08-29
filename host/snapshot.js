@@ -33,8 +33,12 @@ const LEAGUES=(ARG('leagues','mls')).split(',').map(s=>s.trim()).filter(Boolean)
 const TICK_MS=Number(ARG('tick', 60000));
 const OUT=path.join(process.env.HOME,'gamenight-logs','snapshots');
 
-const PATHS={ mls:{path:'soccer/usa.1', sport:'soccer', breakAt:'HALFTIME'},
-              nhl:{path:'hockey/nhl',   sport:'hockey', breakAt:'END_PERIOD'} };
+/* 28 Aug: from host/leagues.js, which carries breakAt for exactly the
+   leagues that need it — the ones whose rounds come from box-score deltas
+   across a break rather than from a play stream. epl arrives with a
+   HALFTIME break already declared, so soccer's second league needed no
+   change here at all. That is the point of one owner. */
+const PATHS=require('./leagues.js').LEAGUES;
 
 const pad=s=>String(s).padEnd(7);
 const log=(k,m)=>console.log(`  ${pad(k)} ${m}`);

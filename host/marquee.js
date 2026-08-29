@@ -45,9 +45,13 @@ if(!DATE) die('usage: node host/marquee.js YYYY-MM-DD [--apply] [--gn N]');
 
 /* NATIONAL IS THE FIRST CUT, NOT A TIEBREAKER. If it is on one of these it
    is a candidate before any regional game is looked at. */
-const NATIONAL = ['ESPN','ESPN2','ABC','CBS','NBC','FOX','FS1','NFL Net','NFL Network',
-                  'ION','Apple TV','USA','USA Net','USA Network','TBS','TNT','MLB Network','Peacock',
-                  'Netflix','NBA TV','truTV','ESPNU','CBSSN'];
+/* 28 Aug: the fourth and last copy of this list is gone. This one was the
+   RIGHT one about USA Network and the wrong one about Apple TV, which it
+   treated as national for every league rather than as the streamer
+   exception it is. host/leagues.js now owns both the list and the
+   exception, so the game of the night and the slate builder can no longer
+   disagree about what a person can watch. */
+const LG = require('./leagues.js');
 /* A CHANNEL HE DOES NOT GET IS NOT A NATIONAL GAME. The first run of this
    proposed Dream @ Sparks as the Game of the Night — national, SoCal, 7pm
    PT, and Prime Video only, which is not in the package. "Nationally
@@ -86,10 +90,9 @@ const SOCAL = ['Sparks','Dodgers','Angels','Padres','Rams','Chargers','LAFC','Ga
    national channel is the WHOLE name of one of the carriers, or it is not
    the national feed. */
 function parts(net){ return String(net||'').split(/\s*·\s*|,\s*/).map(x=>x.trim()).filter(Boolean); }
-function isNational(net){
-  const P = parts(net).map(x => x.toLowerCase());
-  return NATIONAL.some(x => P.includes(x.toLowerCase()));
-}
+/* The league goes in because Apple TV counts for MLS and MLB — the two
+   leagues with no linear option — and for nothing else. */
+function isNational(net, league){ return LG.isNational(net, league); }
 function isSoCal(g){
   const s = `${g.away||''} ${g.home||''} ${g.awayAbbr||''} ${g.homeAbbr||''}`;
   return SOCAL.some(t => s.toLowerCase().includes(t.toLowerCase()));
@@ -103,7 +106,7 @@ function ptHour(iso){
 function score(g){
   let s = 0;
   if(onlyUnavailable(g.net)) return -1;     // cannot be featured at all
-  if(isNational(g.net)) s += 100;
+  if(isNational(g.net, g.league)) s += 100;
   else if(isLocalLA(g.net)) s += 80;       // reaches Anaheim, just not the network feed
   if(isSoCal(g))        s += 40;
   if(/^gn\d/i.test(String(g.nightId||''))) s += 25;   // a hand-written night owns the evening
@@ -114,7 +117,7 @@ function score(g){
 }
 function why(g){
   const bits = [];
-  bits.push(isNational(g.net) ? 'national' : isLocalLA(g.net) ? 'LA local' : 'regional');
+  bits.push(isNational(g.net, g.league) ? 'national' : isLocalLA(g.net) ? 'LA local' : 'regional');
   if(isSoCal(g)) bits.push('SoCal');
   /* `flagship` is set by a hand-written night AND by a previous marquee run
      — this file's own stamp. Reading it back and calling every featured game

@@ -60,16 +60,11 @@ const QUIET  = HAS('quiet');
    the slate builds. Adding a row to an existing copy is not the same sin
    as writing a fifth copy, but it is the same disease and it should not
    survive the weekend. */
-const LEAGUE={
-  wnba:{path:'basketball/wnba', sport:'basketball'},
-  nba :{path:'basketball/nba',  sport:'basketball'},
-  mlb :{path:'baseball/mlb',    sport:'baseball'},
-  nfl :{path:'football/nfl',    sport:'football'},
-  nhl :{path:'hockey/nhl',      sport:'hockey'},
-  mls :{path:'soccer/usa.1',    sport:'soccer'},
-  cfb :{path:'football/college-football', sport:'football'},
-  epl :{path:'soccer/eng.1',    sport:'soccer'}
-};
+/* SETTLED 28 Aug: the copy that used to sit here is gone. This file was
+   the one that knew about epl and cfb while build-slate.js did not, which
+   is exactly the disagreement the comment above predicted. One owner now:
+   host/leagues.js. */
+const LEAGUE=require('./leagues.js').LEAGUES;
 const log=(k,m)=>{ if(!QUIET) console.log(`  ${String(k).padEnd(8)} ${m}`); };
 const die=(m)=>{ console.error('FATAL: '+m); process.exit(1); };
 
