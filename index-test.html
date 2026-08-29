@@ -6278,6 +6278,13 @@ function sportTotals(){
   try{ CATCH_PTS = CATCHES.length * 10; }catch(_){}
   try{ PRED_MAX  = preds.reduce(function(a,p){ return a + (p.base||0) + (p.bonus||0); }, 0); }catch(_){}
   try{ LIVE_MAX  = rounds.reduce(function(a,r,i){ return a + r.q.length * roundWorth(i); }, 0); }catch(_){}
+  /* 28 Aug: THE FIFTH ONE. Everything above is recomputed because a value
+     worked out once from basketball is a wrong number about baseball —
+     and MAXPTS, which is the sum of all four and the denominator the
+     whole season is expressed in, was not in this list. It is now. It has
+     to be assigned AFTER the four it is made of, which is why it sits at
+     the bottom rather than beside its own declaration. */
+  try{ MAXPTS = PRED_MAX + LIVE_MAX + CATCH_PTS + CAUGHT_NIGHT_CAP; }catch(_){}
 }
 try{ window.sportTotals = sportTotals; }catch(_){}
 
@@ -15230,7 +15237,6 @@ var I18N = {
     "Score Q1":"Puntuar 1er cuarto",
     "When the host posts the answers in the group chat, tap the correct answer for each question. Your picks are marked 🔵.":
       "Cuando el anfitrión publique las respuestas en el chat, toca la respuesta correcta de cada pregunta. Tus elecciones están marcadas 🔵.",
-    "OUT OF 1000":"DE 1000",
 
     /* --- the list and the consent copy. A legal sentence translated
            loosely is worse than one left in English, so these keep their
@@ -15428,8 +15434,8 @@ var I18N = {
     "SEASON PTS":"PTS DE TEMPORADA",
     "Your best game each night, scored out of 100. Two rooms in one evening is still one night.":
       "Tu mejor partido de cada noche, puntuado sobre 100. Dos salas en una misma noche siguen siendo una noche.",
-    "A night from before the season rule has no recorded ceiling, so it cannot be scored out of 100. It still counts as a night and its points are still here.":
-      "Una noche anterior a la regla de temporada no tiene tope registrado, así que no se puede puntuar sobre 100. Sigue contando como noche y sus puntos siguen aquí.",
+    "This room never recorded what a full night was worth, so it cannot be scored out of 100. It still counts as a night and its points are still here.":
+      "Esta sala nunca registró cuánto valía una noche completa, así que no se puede puntuar sobre 100. Sigue contando como noche y sus puntos siguen aquí.",
     "Nights":"Noches", "Season pts":"Pts de temporada",
     "Play a night through to the final buzzer and it banks here. Points carry all season.":
       "Juega una noche hasta la bocina final y queda registrada aquí. Los puntos cuentan toda la temporada.",
@@ -15536,7 +15542,6 @@ var I18N = {
     "At the end of each quarter, answer 4 questions about the quarter you just watched. They are not box-score trivia — they're the stuff you only catch if the game is actually on in front of you. Correct answers are worth 10 pts each in Q1, 20 in Q2, 30 in Q3, and 40 in Q4 — 400 points across the night, and the fourth quarter alone is worth 160 of them. You have 20 seconds per question. No lookups — the whole game is that you were paying attention.": "Al final de cada cuarto respondes 4 preguntas sobre el cuarto que acabas de ver. No son trivia de hoja de estadísticas: son cosas que solo captas si tienes el partido delante. Cada acierto vale 10 ptos en el 1.º cuarto, 20 en el 2.º, 30 en el 3.º y 40 en el 4.º, o sea 400 puntos en la noche, y el último cuarto solo ya vale 160 de ellos. Tienes 20 segundos por pregunta. Nada de buscar: todo el juego consiste en que estabas atento.",
     "Every correct quarter answer also banks the seconds you had left on the clock as Speed points. Example: answer correctly with 14 seconds left → +14 ⚡. Ties in total points are broken by Speed. Speed never beats accuracy — it only settles ties.": "Cada respuesta correcta también guarda los segundos que te quedaban en el reloj como puntos de velocidad. Ejemplo: aciertas con 14 segundos restantes → +14 ⚡. Los empates en puntos totales se deciden por velocidad. La velocidad nunca le gana a la precisión, solo desempata.",
     "Once per half you can fire your Lifeline: in Practice mode it removes wrong options; on Game Night it adds +15 seconds to the clock (time to ask the room — just like the arena timeout).": "Una vez por mitad puedes usar tu comodín: en modo práctica elimina opciones incorrectas; en la noche de juego suma 15 segundos al reloj, tiempo para preguntarle a la sala, como el tiempo muerto en la cancha.",
-    "When the host posts each quarter's answers (from the broadcast + official box score), your quarter scores itself on your phone — there is nothing for you to tap in. After the final buzzer the host settles the official stat leaders and your prediction sheet scores too. Max score: 1000. Post your result card to the group chat — highest score wins the night, ⚡ Speed breaks ties.": "Cuando el anfitrión publica las respuestas del cuarto (desde la transmisión y la hoja oficial), tu cuarto se puntúa solo en tu teléfono y no tienes que escribir nada. Después de la chicharra final el anfitrión confirma los líderes oficiales y tu hoja de predicciones también se puntúa. Puntaje máximo: 1000. Publica tu tarjeta de resultado en el chat del grupo: el puntaje más alto gana la noche y ⚡ la velocidad desempata.",
     "Answer from what you watched — not from a box score mid-question. The 20-second clock exists so lookups don't pay. Host's announced answers are final (official box score settles disputes). Be cool: it's game night, not the SEC.": "Responde con lo que viste, no con una hoja de estadísticas a media pregunta. El reloj de 20 segundos existe para que buscar no valga la pena. Las respuestas que anuncia el anfitrión son definitivas y la hoja oficial resuelve cualquier disputa. Tómatelo con calma: es noche de juego, no una auditoría.",
     "Free to play; no purchase or payment ever required to play or win. 18+. This beta is for entertainment among friends; any prizes are provided by the host/sponsor and awarded on final verified stats. STATS is not affiliated with any league, club or broadcaster — we're a game about watching the game. Full sweepstakes rules will govern public seasons.": "Gratis para jugar; nunca hace falta comprar ni pagar nada para jugar o ganar. Mayores de 18. Esta beta es entretenimiento entre amigos; los premios los pone el anfitrión o el patrocinador y se entregan según las estadísticas finales verificadas. STATS no está afiliado a ninguna liga, club ni cadena: somos un juego sobre ver el partido. Las temporadas públicas se regirán por las bases completas del sorteo.",
     "Enter each player's final score from their result card. Highest points wins — ⚡ Speed breaks ties automatically.": "Introduce el puntaje final de cada jugador desde su tarjeta de resultado. Gana quien tenga más puntos; ⚡ la velocidad desempata automáticamente.",
@@ -15557,6 +15562,21 @@ var I18N = {
    without ^ and $, the safety property of this whole design is gone. */
 var I18N_PATTERNS = {
   es: [
+    /* ============ THE CEILING IS NOT A CONSTANT ANY MORE ==============
+       29 Aug 2026. These two lived in the dictionary as EXACT strings with
+       "1000" written into them — "OUT OF 1000":"DE 1000". That was only
+       ever right for basketball, so a Spanish player in a baseball room
+       (ceiling 1300) or a soccer room (940) read an English line where a
+       Spanish one belonged, and nothing said so: the coverage walk loads
+       the default sport, which is basketball, so the one case that worked
+       was the only case anybody measured.
+
+       Making MAXPTS per-sport is what surfaced it — the English changed to
+       the true number and the baked key stopped matching at all. Patterns
+       carry the number through instead of freezing one. */
+    [/^OUT OF (\d+)$/,                   'DE $1'],
+    [/^When the host posts each quarter's answers \(from the broadcast \+ official box score\), your quarter scores itself on your phone — there is nothing for you to tap in\. After the final buzzer the host settles the official stat leaders and your prediction sheet scores too\. Max score: (\d+)\. Post your result card to the group chat — highest score wins the night, ⚡ Speed breaks ties\.$/,
+      'Cuando el anfitrión publica las respuestas del cuarto (desde la transmisión y la hoja oficial), tu cuarto se puntúa solo en tu teléfono y no tienes que escribir nada. Después de la chicharra final el anfitrión confirma los líderes oficiales y tu hoja de predicciones también se puntúa. Puntaje máximo: $1. Publica tu tarjeta de resultado en el chat del grupo: el puntaje más alto gana la noche y ⚡ la velocidad desempata.'],
     [/^Question (\d+) of (\d+)$/,        'Pregunta $1 de $2'],
     /* SINGULAR AND PLURAL. "Vale 1 pts" is the kind of thing that tells a
        native speaker instantly that a machine wrote this — and the whole
@@ -17983,11 +18003,33 @@ function lineTotals(line){
        lives on the ROW, so the winning row has to survive the reduction.
        Without this the only way to label a night was to key the whole
        season by room again, which is the bug this rule exists to end. */
-    const win={score, pct, raw:Number(x.pts)||0,
+    const win={score, pct, raw:Number(x.pts)||0, scorable:(pct!=null),
                night:x.night||day, gn:x.gn||'', label:x.label||'', sport:x.sport||'',
                rank:(x.rank==null?null:x.rank), max:max,
                rooms:(cur?cur.rooms:0)+1, at:Math.max(i,(cur?cur.at:0)||0)};
-    if(!cur || score>cur.score) byNight[day]=win;
+    /* ============ AN UNSCORED ROOM MUST NOT WIN A NIGHT ==============
+       28 Aug 2026. THE SECOND FAULT behind the founder's "150 points,
+       season zero", and the more expensive of the two.
+
+       `score` above is a percentage for a row that recorded a ceiling and
+       RAW POINTS for a row that did not. Those are different units, and
+       they were being compared with `>`. A legacy row carrying 150 raw
+       points therefore beat a real row worth 45% of its room — and then
+       contributed NOTHING, because seasonPts sums `pct` and that row's
+       pct is null. The night was not merely uncounted: a row with no
+       ceiling actively evicted the row that would have counted.
+
+       The comment ten lines up promised "an old row must not silently
+       vanish from a season". It vanished, and took the night with it.
+
+       So the comparison happens in one unit. Any scorable row beats any
+       unscored one, whatever the raw numbers say; two scorable rows
+       compare on pct; and a night with nothing scorable keeps its best
+       raw row so the Board can still show it and say honestly that it
+       has no ceiling — which is a missing denominator, not a zero. */
+    if(!cur) byNight[day]=win;
+    else if(win.scorable && !cur.scorable) byNight[day]=win;
+    else if(win.scorable === cur.scorable && score > cur.score) byNight[day]=win;
     else { cur.rooms++; cur.at=Math.max(cur.at||0, i); }
   });
   const nights=Object.keys(byNight);
@@ -23095,7 +23137,30 @@ let LIVE_MAX=rounds.reduce((a,r,i)=>a+r.q.length*roundWorth(i),0);
    denominator — and it only counts when Caught It is actually running. A
    denominator that includes a switched-off feature is a wrong total, which
    is exactly the class of thing LEAN exists to avoid rather than create. */
-const MAXPTS=PRED_MAX+LIVE_MAX+CATCH_PTS+(lean()?0:CAUGHT_NIGHT_CAP);
+/* ============ WHAT A NIGHT IS WORTH — AND IT MOVES ==================
+   28 Aug 2026. Founder, from his own Board: a 150-point night showing a
+   dash and a season total of zero.
+
+   TWO FAULTS, AND THIS IS THE FIRST. MAXPTS was a `const`, worked out
+   once at page load from whatever night happened to be built in — 600 +
+   400 from basketball — and never again. sportTotals() exists precisely
+   because NR, CATCH_PTS, PRED_MAX and LIVE_MAX all had this bug and were
+   fixed together; its own comment says "Leaving any of them behind is
+   this codebase's whole disease." MAXPTS was left behind. So a football
+   room's score was recorded out of a basketball ceiling.
+
+   THE CAUGHT CAP IS NO LONGER GATED ON LEAN, and that gate was simply
+   wrong. LEAN empties CATCHES — the watchlist — and CATCH_PTS follows it
+   to zero correctly. Caught It is a DIFFERENT feature: the runner fires
+   it server-side in every hosted room and publishes what it graded as
+   `caughtSrv`, whatever LEAN says on the phone. Measured on 28 Aug across
+   five lean rooms, every single one paid caught points — Dog Bird 90,
+   Two Times 15, 10 and 10. A denominator that leaves out a lane the
+   numerator counts is a wrong total, and it was making a good night read
+   as exactly 100%.
+
+   Practice never reaches here: recordStatLine() returns before it. */
+let MAXPTS=PRED_MAX+LIVE_MAX+CATCH_PTS+CAUGHT_NIGHT_CAP;
 /* ---------------- BROADCAST CHROME ----------------
    Reusable team-crest + court/arena artwork carried across the in-game
    screens (live question header + final buzzer card). All original SVG/CSS,
@@ -24006,7 +24071,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-28-talk.238';
+const STATS_BUILD='2026-08-29-season.239';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -26197,7 +26262,7 @@ function renderBoard(){
             + '<span class="stLeadV">'+v+' <span style="color:var(--muted);font-weight:700">· '+(Number(n.raw)||0)+' pts</span>'
             + (n.rank?(' · #'+n.rank):'')+'</span></div>'; }).join('')
       + (anyUnscored
-          ? '<div class="sub" style="font-size:12px;margin-top:8px">A night from before the season rule has no recorded ceiling, so it cannot be scored out of 100. It still counts as a night and its points are still here.</div>'
+          ? '<div class="sub" style="font-size:12px;margin-top:8px">This room never recorded what a full night was worth, so it cannot be scored out of 100. It still counts as a night and its points are still here.</div>'
           : '')
       + '</div>';
   }

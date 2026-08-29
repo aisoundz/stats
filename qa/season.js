@@ -89,6 +89,74 @@ const row=(night,pts,max,extra)=>Object.assign({night, pts, max, hits:0, total:0
      hopped.ptsRaw === 920,
      `ptsRaw=${hopped.ptsRaw} — the stat book is a record of what happened and 920 points did happen`);
 
+  /* ---- 4b. AN UNSCORED ROOM MUST NOT EVICT A SCORED ONE --------------
+     28 Aug 2026, from the founder's own Board: a night he scored 150 in
+     printed a dash and added zero to the season.
+
+     Section 4 above already checked that a legacy row survives ALONE.
+     What nothing checked was a legacy row sharing a night with a real
+     one — and that is where it broke. `score` is a PERCENTAGE for a row
+     with a ceiling and RAW POINTS for a row without, and the two were
+     compared with `>`. 150 raw beat 45%, so the row with no ceiling won
+     the night, and then contributed nothing because the season sums
+     `pct` and its pct is null.
+
+     A row with no denominator did not just fail to count. It evicted the
+     row that would have. */
+  const mixed = await t([
+    row('slate-2026-08-28-wsh-bal', 150, 0),      // legacy: no ceiling
+    row('slate-2026-08-28-por-atl', 450, 1000),   // real: 45% of its room
+  ]);
+  ok('season.an-unscored-room-does-not-evict-a-scored-one',
+     mixed.pts === 45,
+     `expected the night to count 45, got ${mixed.pts} — a row with no ceiling took the night and scored nothing for it`);
+  ok('season.the-scored-room-represents-the-night',
+     mixed.byNight && mixed.byNight['2026-08-28'] &&
+     mixed.byNight['2026-08-28'].night === 'slate-2026-08-28-por-atl',
+     `the night is represented by ${mixed.byNight && mixed.byNight['2026-08-28'] && mixed.byNight['2026-08-28'].night}`);
+  ok('season.both-rooms-are-still-counted-as-played',
+     mixed.rooms === 2, `rooms=${mixed.rooms}`);
+
+  /* And the reverse order, because "the legacy one came second" is a
+     different code path through the same comparison. */
+  const mixedRev = await t([
+    row('slate-2026-08-28-por-atl', 450, 1000),
+    row('slate-2026-08-28-wsh-bal', 150, 0),
+  ]);
+  ok('season.order-does-not-decide-which-room-represents-a-night',
+     mixedRev.pts === 45, `expected 45, got ${mixedRev.pts}`);
+
+  /* ---- 4c. THE DENOMINATOR BELONGS TO THE SPORT ----------------------
+     The season is a percentage, so every check above is only as honest as
+     MAXPTS. It was a `const` computed once at page load from whatever
+     night happened to be built in, and never again — so a baseball room
+     whose parts sum to 1300 was recorded out of basketball's 1000, and
+     every sport reported the identical ceiling.
+
+     sportTotals() exists because NR, CATCH_PTS, PRED_MAX and LIVE_MAX all
+     had this bug; its own comment reads "Leaving any of them behind is
+     this codebase's whole disease." MAXPTS was the one left behind.
+
+     Measured before the fix: 1000 for all five sports. After: 1100
+     basketball, 940 soccer, 1300 baseball, 1100 football, 1060 hockey. */
+  const ceilings = await p.evaluate(() => {
+    const out = [];
+    for (const k of Object.keys(SPORTS || {})) {
+      try { setSport(k); sportTotals(); } catch (e) { out.push({k, err:e.message}); continue; }
+      out.push({ k, max: MAXPTS,
+                 parts: PRED_MAX + LIVE_MAX + CATCH_PTS
+                        + (typeof CAUGHT_NIGHT_CAP === 'number' ? CAUGHT_NIGHT_CAP : 0) });
+    }
+    return out;
+  });
+  ok('season.every-sport-reports-its-own-ceiling',
+     ceilings.length > 0 && ceilings.every(c => !c.err && c.max === c.parts),
+     ceilings.map(c => c.err ? `${c.k} threw ${c.err}` : `${c.k}: MAXPTS=${c.max} but its parts sum to ${c.parts}`)
+             .join('; ') || 'no sports walked');
+  ok('season.the-ceiling-is-not-one-number-for-every-sport',
+     new Set(ceilings.filter(c => !c.err).map(c => c.max)).size > 1,
+     `every sport reported the same ceiling (${ceilings[0] && ceilings[0].max}) — MAXPTS is frozen at load again`);
+
   /* ---- 5. IT CANNOT EXCEED THE CAP ----------------------------------- */
   const silly = await t([ row('gn13-2026-08-19-min-gs', 5000, 1000) ]);
   ok('season.one-night-can-never-exceed-100',

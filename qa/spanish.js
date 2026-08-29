@@ -177,7 +177,37 @@ function serve() {
         const t = n.nodeValue.trim();
         if (skip(t)) continue;
         count++;
-        if (!Object.prototype.hasOwnProperty.call(dict, t) && !found.has(t)) {
+        /* ============ THE DICTIONARY IS NOT THE ONLY TRANSLATOR ========
+           29 Aug 2026. This asked one question — "is `t` a key in the
+           dictionary?" — and applyLang() answers a different one. When
+           there is no exact entry it falls through to I18N_PATTERNS, the
+           anchored regex list that carries a NUMBER through a sentence:
+           "Question 3 of 4", "Worth 20 pts", "OUT OF 1100".
+
+           So every string translated by a pattern was counted here as
+           untranslated. It had not bitten because the patterned strings
+           were not on the walked screens — until MAXPTS became per-sport
+           and "OUT OF 1000" could no longer be a dictionary key, because
+           the ceiling is 1100 in basketball and 1300 in baseball.
+
+           A coverage check that does not model the thing it is measuring
+           reports work that is done as work outstanding, and the fix for
+           THAT is to raise --max, which quietly blinds it to the real
+           gaps. Mirror applyLang() instead.
+
+           I18N_PATTERNS.es, NOT I18N_PATTERNS[VX.lang]: this walk reads
+           `I18N.es` directly and never switches the page, so VX.lang is
+           still 'en' here and keying on it silently returns an empty list
+           — the same silent-no-op shape as the VX.lang bug recorded in
+           applyLang() itself, which turned the entire translation pass
+           into a no-op that reported nothing. */
+        const patterned = (() => {
+          try {
+            const pats = (I18N_PATTERNS && I18N_PATTERNS.es) || [];
+            return pats.some(pr => pr[0].test(t));
+          } catch (_) { return false; }
+        })();
+        if (!Object.prototype.hasOwnProperty.call(dict, t) && !patterned && !found.has(t)) {
           found.set(t, id);
         }
       }
