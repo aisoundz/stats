@@ -71,9 +71,16 @@ function check(html, subject, opts) {
   const subj = String(subject || '');
 
   /* ---- 1. the four sections ------------------------------------- */
-  const hasSchedule = /Tonight/i.test(t) && /Game Night #\d+/i.test(t);
+  /* "TONIGHT" OR "TODAY", AND THE DIFFERENCE MATTERS. This demanded the
+     literal word "Tonight", which was right for every edition until the
+     weekend: the earliest tip all week was 15:00 PT. Saturday 29 Aug opens
+     with Sky at Liberty at 10:00 AM PT, and calling that "Tonight" is the
+     stale-tonight tell EMAIL-VOICE.md rule 5 bans in the same breath
+     ("Never write 'tonight' where it would read wrong a day later"). One
+     rule was forcing a word another rule forbids. */
+  const hasSchedule = /\b(Tonight|Today)\b/i.test(t) && /Game Night #\d+/i.test(t);
   hasSchedule ? out.ok.push('the schedule is at the top')
-              : out.fatal.push('NO SCHEDULE. "Tonight" and the room rows are the thing the reader opened this for.');
+              : out.fatal.push('NO SCHEDULE. "Tonight" or "Today" and the room rows are the thing the reader opened this for.');
 
   /* The STATS card is not just the word — it is the two big figures.
      A heading with nothing under it passed the first version of this. */
