@@ -76,8 +76,48 @@ async function slateRooms(date) {
   return (f.games.arrayValue.values || []).map((v) => {
     const g = (v.mapValue && v.mapValue.fields) || {};
     const s = (k) => (g[k] && g[k].stringValue) || '';
-    return { nightId: s('nightId'), away: s('away'), home: s('home') };
+    return { nightId: s('nightId'), away: s('away'), home: s('home'), tipISO: s('tipISO') };
   }).filter((g) => g.nightId);
+}
+
+/* =====================================================================
+   DOES THE EMAIL ARRIVE BEFORE THE GAMES IT IS ABOUT?
+   ---------------------------------------------------------------------
+   29 Aug 2026. The send fires at 10:45 PT every day — a time chosen when
+   every room was an evening room, and it has been right for weeks because
+   the earliest tip all week was 15:00 PT.
+
+   The weekend is not like that. Saturday 29 Aug opens with Sky at Liberty
+   at 10:00 PT and Sunday 30 Aug with Marlins at Nationals at 09:15 PT, so
+   the letter announcing the day's rooms would land 45 and 90 minutes
+   AFTER the first one had already tipped. A tip-off email that arrives
+   after the tip-off is not a late email, it is a wrong one — and nothing
+   anywhere would have said so.
+
+   This cannot fix it: the draft is written at 09:13 by a cloud routine
+   this box does not schedule, and the send is a systemd timer. What it
+   can do is refuse to let the morning pass quietly. It is a WARNING
+   rather than fatal, because an email that arrives late still beats no
+   email on a game night — the same line this file draws everywhere else.
+   ================================================================== */
+const SEND_HOUR_PT = 10, SEND_MIN_PT = 45;   // tipoff-email-send.timer, 17:45 UTC
+function tipsBeforeTheSend(rooms, date) {
+  const withTips = rooms.filter((r) => r.tipISO);
+  if (!withTips.length) return null;
+  const send = new Date(`${date}T00:00:00-07:00`);
+  send.setHours(SEND_HOUR_PT, SEND_MIN_PT, 0, 0);
+  const early = withTips
+    .map((r) => ({ ...r, at: new Date(r.tipISO) }))
+    .filter((r) => r.at < send)
+    .sort((a, b) => a.at - b.at);
+  if (!early.length) return null;
+  const fmt = (d) => new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles', hour: 'numeric', minute: '2-digit',
+  }).format(d);
+  return {
+    count: early.length,
+    lines: early.map((r) => `${r.away} at ${r.home} tips ${fmt(r.at)} PT — ${Math.round((send - r.at) / 60000)} min before the send`),
+  };
 }
 
 (async () => {
@@ -128,6 +168,18 @@ async function slateRooms(date) {
   log(`yesterday asked a question: ${settled ? 'yes — today owes the answer' : 'no'}`);
 
   const res = SHAPE.check(html, subject, { rooms, settled });
+
+  /* The shape can be perfect and the timing still wrong. Checked here
+     rather than in email-shape.js because it is a fact about the DAY, not
+     about the document — the sender asks the same question at 10:45 and
+     by then the answer cannot be acted on. */
+  const late = tipsBeforeTheSend(rooms, date);
+  if (late) {
+    res.warn.push(`THE SEND IS AFTER THE FIRST TIP. ${late.count} room(s) start before 10:45 AM PT.`);
+    late.lines.forEach((l) => res.warn.push('    ' + l));
+    res.warn.push('    A tip-off email that arrives after the tip-off is a wrong email, not a late one.');
+    res.warn.push('    Move the draft and the send earlier, or say "already under way" in the copy.');
+  }
 
   res.ok.forEach((o) => log(`  ok    ${o}`));
   res.warn.forEach((w) => log(`  warn  ${w}`));
