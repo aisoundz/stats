@@ -197,8 +197,23 @@ async function verifyRecapClaims(html) {
   // Scan the last 3 days, every league, for a completed game whose final
   // score (either order) matches both numbers exactly.
   let matchedEvent = null, matchedLeague = null;
+  /* ============ TODAY COUNTS TOO, 29 Aug 2026 =======================
+     This started at 1, so it scanned yesterday, the day before and the
+     day before that, and never TODAY. That was right for as long as
+     every room was an evening room and "Last night, settled" always
+     meant a game from a previous day.
+
+     Saturday 29 Aug broke it. The first room tipped at 10:00 AM PT and
+     finished before lunch, so the edition that settles it goes out the
+     same afternoon. The guard then refused a completely real score,
+     twice: New York beat Chicago 85–66 that morning and this loop could
+     not see the game because it only ever looked backwards.
+
+     Starting at 0 is a widening that costs nothing. It still demands a
+     COMPLETED game whose final score matches both numbers exactly; it
+     just no longer assumes the game was on another day. */
   outer:
-  for (let daysAgo = 1; daysAgo <= 3; daysAgo++) {
+  for (let daysAgo = 0; daysAgo <= 3; daysAgo++) {
     const date = ymdOffset(daysAgo);
     for (const [key, path] of RECAP_LEAGUES) {
       const events = await scoreboardDay(path, date);

@@ -85,7 +85,13 @@ function gnOf(nightId) {
 
 const esc = (s) => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  .replace(/·/g, '&middot;').replace(/’/g, '&rsquo;').replace(/–/g, '&ndash;');
+  .replace(/·/g, '&middot;').replace(/’/g, '&rsquo;');
+/* THE EN DASH STAYS A CHARACTER. It used to become &ndash; here, and
+   host/send-tipoff-auto.js verifies the settle by stripping TAGS and
+   looking for a score, which means it never sees an entity. A settle
+   reading "4–4" was therefore invisible to the check that exists to
+   confirm it, and the send refused twice on 29 Aug over an escape this
+   file did to its own copy. UTF-8 is what the rest of the email uses. */
 
 /* EVERY CLOCK TIME NAMES A ZONE. Both of them, every time, because 7:00 in
    Los Angeles is not 7:00 in New York and a reader has exactly one of
@@ -120,6 +126,9 @@ const RULE = { wnba:'#ff8a3d', nba:'#ff8a3d', nfl:'#28e0d0', cfb:'#28e0d0',
   </div>`;
   }).join('\n');
 
+  /* The first tip is the default sign-off. An edition sent AFTER a room
+     has already played needs to name the next one instead, so the copy
+     may override it. */
   const first = times(rs[0].tipISO).pt;
   const q = copy.question;
   const st = copy.settled;
@@ -206,7 +215,7 @@ ${optCell(q.options[1], 'r')}
   </table>
 
 ${copy.buildNote ? `  <p style="margin:22px 0 6px;font-size:14.5px;color:#9fb0cc;line-height:1.5;">${esc(copy.buildNote)}</p>` : ''}
-  <p style="margin:26px 0 6px;">See you at ${esc(first)} PT.</p>
+  <p style="margin:26px 0 6px;">See you at ${esc(copy.signoff || (first + ' PT'))}.</p>
   <p style="margin:0 0 22px;font-weight:700;color:#c9d4e8;">STATS GAMETIME</p>
   <div style="border-top:1px solid #223049;padding-top:14px;font-size:13px;color:#6b7a94;">Free to enter, always. One email a game night.<br><a href="#" style="color:#6b7a94;">Unsubscribe</a></div>
 </div></div>`;

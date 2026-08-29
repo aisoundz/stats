@@ -157,8 +157,16 @@ const utcDay = (s) => String(s || '').slice(0, 10);
     id = created.body.data.id;
     log(`created draft ${id}`);
   } else {
+    /* ============ THE AUDIENCE MUST BE RESTATED ====================
+       29 Aug 2026. This update omitted `groups`, and MailerLite treats an
+       update as the whole campaign: it cleared the recipient list. The
+       send then reported "SENT AND CONFIRMED" and reached ZERO people,
+       against 10 the day before. An email that goes nowhere is worse than
+       one that does not go, because everything downstream says it worked.
+       Every field the campaign needs is restated on every write. */
     const upd = await req('PUT', '/api/campaigns/' + id, {
       name: wantName,
+      groups: [STATS_GROUP],
       emails: [{ subject: wantSubject, from: FROM, from_name: FROM_NAME, reply_to: FROM, content: HTML }],
     });
     if (upd.status >= 300) {
@@ -173,16 +181,31 @@ const utcDay = (s) => String(s || '').slice(0, 10);
   const email = ((back.body && back.body.data && back.body.data.emails) || [])[0] || {};
   const gotHtml = String(email.content || '');
   const okSubject = email.subject === wantSubject;
-  const okHtml = gotHtml.length === HTML.length && gotHtml === HTML;
+  /* NOT byte equality. MailerLite rewraps what it stores (8,662 in ->
+     11,690 held), so comparing lengths reported a mismatch on a write
+     that had worked perfectly, twice. What matters is that OUR copy is
+     what is in there, so check a distinctive line from the approved
+     edition and that the audience survived. */
+  const marker = String((COPY.question && COPY.question.text) || '').slice(0, 40);
+  const okHtml = !!marker && gotHtml.indexOf(marker) >= 0;
 
   log(`read back: subject ${okSubject ? 'matches' : 'DOES NOT MATCH — "' + email.subject + '"'}`);
-  log(`read back: content ${okHtml ? 'matches, ' + gotHtml.length + ' bytes' : `DOES NOT MATCH — wrote ${HTML.length}, account holds ${gotHtml.length}`}`);
+  log(`read back: content ${okHtml ? 'is ours (' + gotHtml.length + ' bytes after MailerLite rewrap)' : 'IS NOT OURS — the approved question is not in the stored draft'}`);
+  /* `groups` is NOT populated by this endpoint, on a draft or on a sent
+     campaign, so checking it reported an empty audience on a campaign
+     that was correctly addressed to ten people. The field that actually
+     answers "who will this reach" is recipients_count, with the filter
+     as the human-readable version of the same thing. */
+  const rc = Number((back.body && back.body.data && back.body.data.recipients_count) || 0);
+  const who = ((back.body && back.body.data && back.body.data.filter_for_humans) || []).flat().join(', ');
+  const okAudience = rc > 0;
+  log(`read back: audience ${okAudience ? rc + ' recipient(s) — ' + (who || 'filter set') : 'ZERO RECIPIENTS — this would send to nobody'}`);
 
   const after = await req('GET', '/api/campaigns?filter[status]=draft&limit=50');
   const n = ((after.body && after.body.data) || []).filter((c) => utcDay(c.created_at) === today).length;
   log(`drafts created today, after: ${n}`);
 
-  if (!okSubject || !okHtml || n !== 1) {
+  if (!okSubject || !okHtml || !okAudience || n !== 1) {
     log('NOT SETTLED. The 09:35 send may refuse or send the wrong copy. Fix by hand.');
     process.exit(2);
   }
