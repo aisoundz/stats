@@ -1641,22 +1641,30 @@
            off it: the design system already bans emoji in the interface,
            because they render at a different size on every platform and
            that is most of why a screen reads homemade. -->
-      <h2 id="landingHead">Game Night #2 · Sun · August 2</h2>
+      <!-- THE PRE-JS STATE MAKES NO CLAIM ABOUT A SPECIFIC GAME. This markup
+           used to read "Game Night #2 · Sun · August 2" with Lynx at Valkyries
+           baked in, and every one of these nodes is repainted at boot from
+           schedule/current — so the literal was only ever visible to a crawler,
+           a shared-link preview, and the frame before boot. It went stale on
+           3 August and stayed wrong for weeks, which is B6 with a longer fuse:
+           one fact (which game is on) with a second copy nobody updates.
+           Neutral text cannot go stale. The feed still owns the answer. -->
+      <h2 id="landingHead">Game Night</h2>
       <!-- THE MATCHUP IS THE PAGE. Two codes, 52px, in the two colours the
            feed already owns — --away and --home, whose only writer is
            paintTeamColours(), which lifts a near-black team hex and splits
            a two-navy matchup before either one reaches this line. -->
       <div class="mq-vs">
-        <span class="mq-side mq-a"><span class="mq-code" id="mqAway">MIN</span><span class="mq-nick" id="mqAwayNick">Lynx</span></span>
+        <span class="mq-side mq-a"><span class="mq-code" id="mqAway">&mdash;</span><span class="mq-nick" id="mqAwayNick"></span></span>
         <span class="mq-at">at</span>
-        <span class="mq-side mq-h"><span class="mq-code" id="mqHome">GS</span><span class="mq-nick" id="mqHomeNick">Valkyries</span></span>
+        <span class="mq-side mq-h"><span class="mq-code" id="mqHome">&mdash;</span><span class="mq-nick" id="mqHomeNick"></span></span>
       </div>
       <!-- THE MATCHUP IS THE HEADLINE, not a footnote under the times. It
            used to trail a sentence explaining the game for the third time
            on one page ("watch the broadcast, play from your couch, predict
            before tip-off, answer at every quarter break…"). Two teams and
            a time is the whole message. -->
-      <p class="sub" id="landingMatch" style="margin:4px 0 2px"><b style="color:var(--ink)">Minnesota Lynx @ Golden State Valkyries</b></p>
+      <p class="sub" id="landingMatch" style="margin:4px 0 2px"><b style="color:var(--ink)">Free live play-along for people watching sport.</b></p>
       <!-- THE CLOCK. Same element, same painter, promoted out of a
            bordered 14px strip above the wordmark and into the hero, where
            a countdown is the most persuasive thing a live product can put
@@ -2623,7 +2631,7 @@
     <p class="sub">This is what <b>you</b> (or an automation) control on game night. It's the seed of the "auto-post & auto-score" pipeline.</p>
 
     <div class="card tight">
-      <h2 style="font-size:14px" id="hostToolTitle">🔴 Game Night toolkit — August 2</h2>
+      <h2 style="font-size:14px" id="hostToolTitle">🔴 Game Night toolkit</h2>
       <p class="sub" style="font-size:12px" id="hostToolSub">You're the host. At each quarter break: (1) tell the crew to answer in the app, (2) check the broadcast + box score, (3) post the answers in the group chat. ~60 seconds of work per quarter.</p>
       <div class="segbtns" id="hostSegs"></div>
       <p class="sub" style="font-size:12px;margin-top:8px;color:var(--dim)" id="hostToolFoot">Tap a quarter to copy its questions for the group chat. Answers come from watching + the live box score.</p>
