@@ -165,14 +165,40 @@ const ok = (n, c, d) => { if (c) { pass++; console.log('  ok   ' + n + (d ? '   
      : !sub.el ? '#prSub not found'
      : `settling="${sub.settling.slice(0,60)}" manual="${sub.manual.slice(0,60)}"`);
 
-  /* The resume bar must not send somebody back into a round that finished. */
-  const src = await p.evaluate(() => document.documentElement.innerHTML.length);
-  const resume = require('fs').readFileSync(TARGET, 'utf8')
-    .replace(/\/\*[\s\S]*?\*\//g, ' ');
+  /* THE RESUME BAR, DRIVEN RATHER THAN GREPPED.
+     This was a source check for three revisions — it confirmed the guard
+     was in the file, not that the button changed. A string being present
+     is the weakest thing a suite can say, and it is exactly what this
+     session keeps catching elsewhere. So it now puts the app in the state
+     that produced the founder's screenshot — lobby, last round, and a
+     CACHED round doc that still reads `live` — and presses paint twice:
+     once with the night running, once with it over. Two-sided on purpose,
+     because a guard that never lets the bar offer anything would pass a
+     one-sided check while breaking the feature. */
+  const resume = await p.evaluate(async () => {
+    const out = { has: false };
+    const btn = document.getElementById('landingBtn');
+    if (!btn) return out;
+    out.has = true;
+    S.mode = 'live'; S.place = 'lobby';
+    S.qi = Math.max(0, rounds.length - 1); S.nextQ = S.qi;
+    window.resumable = () => true;
+    window.hostedDoc = () => ({ state: 'live' });   // the stale cached doc
+    try {
+      window.nightIsOver = () => false;
+      paintContinueCard(); out.playing = btn.textContent || '';
+      window.nightIsOver = () => true;
+      paintContinueCard(); out.over = btn.textContent || '';
+    } catch (e) { out.threw = String(e && e.message || e); }
+    return out;
+  });
   ok('the resume bar does not offer a round on a night that is over',
-     /nightIsOver\(\)/.test(resume.slice(resume.indexOf('roomNextRound(S.nextQ'), resume.indexOf('roomNextRound(S.nextQ') + 900)),
-     'Home said "Continue tonight\'s game · Q4 is open — answer now" AFTER the game went final, because it '
-     + 'read this device\'s cached round doc instead of asking whether the night was over');
+     resume.has && /answer now/i.test(resume.playing || '') && !/answer now/i.test(resume.over || ''),
+     resume.threw ? ('paintContinueCard threw: ' + resume.threw)
+     : !resume.has ? 'no #landingBtn to drive'
+     : `mid-game it said "${(resume.playing||'').trim()}" and after the buzzer "${(resume.over||'').trim()}". `
+       + 'Home told the founder "Q4 is open — answer now" AFTER the game went final, because it read this '
+       + "device's cached round doc instead of asking whether the night was over.");
 
   ok('no page errors', errs.length === 0, errs.slice(0, 2).join(' · '));
 
