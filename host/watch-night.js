@@ -76,11 +76,18 @@ async function sample(r){
   /* Seats but no answers once a round has scored is the GN8 failure:
      mechanically perfect, nobody actually playing. */
   if(scored>0 && out.seats>0){
-    const first=rd.docs.find(x=>(x.data()||{}).state==='scored');
-    if(first){ const ss=await db.collection(`nights/${r.id}/rounds/${first.id}/subs`).count().get();
-      subs=ss.data().count;
-      if(subs===0) out.alerts.push('SCORED WITH ZERO ANSWERS');
-    }
+    /* 30 Aug 2026: this counted the FIRST scored round only and reported it as
+       the room. The first Premier League room scored r0 with 0 answers and r1
+       with 1 — a real player, handle set — and the watch log called the night
+       empty. A proxy (round one) printed as the thing (the room).
+       Sum every scored round, and only warn when the whole room is silent. */
+    const scoredIds=rd.docs.filter(x=>(x.data()||{}).state==='scored').map(x=>x.id);
+    const counts=await Promise.all(scoredIds.map(id=>
+      db.collection(`nights/${r.id}/rounds/${id}/subs`).count().get()
+        .then(c=>c.data().count).catch(()=>0)));
+    subs=counts.reduce((a,b)=>a+b,0);
+    if(subs===0) out.alerts.push(`SCORED WITH ZERO ANSWERS (all ${scoredIds.length} scored round(s))`);
+    else if(counts[0]===0) out.alerts.push(`round 1 had no answers · ${subs} across the room`);
   }
   out.subs=subs;
   return out;
