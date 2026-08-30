@@ -679,6 +679,14 @@ const TIER={
      email reached anybody, and every count taken from it was double.
      Reads the real crontab and the real logs on disk. */
   'log-writers.js':   {tier:'static'},
+  /* ENTER SUBMITS. Reported 26 Aug by the first outsider ever to play,
+     ranked #1 in that session's own list, and still broken on 30 Aug —
+     by which time it had cost two people who typed an email address,
+     pressed Go and got nothing: no submit, no error, no record. There is
+     no <form> in this app, so the native behaviour never applied, and a
+     per-element handler cannot survive the card's innerHTML repaint. This
+     presses the real key on the real element. Browser-tier. */
+  'enter-submits.js': {tier:'browser'},
 };
 
 /* NAME THE SUITES THAT EXIST BUT ARE NOT IN THE TABLE. A manifest that

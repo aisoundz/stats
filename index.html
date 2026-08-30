@@ -4751,16 +4751,43 @@ window.STATS_FIREBASE = {
      player's night is untouched — which is the right way round.     */
   var ML_ACCOUNT = '2549193';
   var ML_FORM    = '194583086735820648';   // "STATS — Join the List" → group "STATS"
+  /* ONE RETRY, AND THE FAILURE IS NO LONGER SILENT.
+     30 Aug. This was a single fire-and-forget with `.catch(function(){})`,
+     so when it failed nothing anywhere recorded it. Measured: on 29 Aug
+     at 6:29 PM a real address reached `signups/` and never reached the
+     mailing list, and there is no trace of why. A person who consented to
+     be emailed and cannot be emailed is the worst outcome this function
+     has, and it was the one it reported least.
+
+     The browser CANNOT confirm success here — the form endpoint is opaque
+     to it, which is exactly why this was written fire-and-forget in the
+     first place and why that was defensible. So this does not pretend to
+     verify. It retries once, it says so in the console, and the guarantee
+     lives where it can actually be kept: host/list-reconcile.js compares
+     `signups/` against the group with the API key and adds anyone the
+     browser lost. Best effort here, correctness there. */
   function mlSubscribe(email, name) {
     try {
-      var fd = new FormData();
-      fd.append('fields[email]', email);
-      if (name) fd.append('fields[name]', String(name).slice(0, 40));
-      fd.append('ml-submit', '1');
-      fd.append('anticsrf', 'true');
-      fetch('https://assets.mailerlite.com/jsonp/' + ML_ACCOUNT + '/forms/' + ML_FORM + '/subscribe',
-            { method: 'POST', body: fd, keepalive: true })
-        .catch(function () {});
+      var post = function () {
+        var fd = new FormData();
+        fd.append('fields[email]', email);
+        if (name) fd.append('fields[name]', String(name).slice(0, 40));
+        fd.append('ml-submit', '1');
+        fd.append('anticsrf', 'true');
+        return fetch('https://assets.mailerlite.com/jsonp/' + ML_ACCOUNT + '/forms/' + ML_FORM + '/subscribe',
+                     { method: 'POST', body: fd, keepalive: true });
+      };
+      post().catch(function () {
+        try { console.error('[STATS] mailing-list hand-off failed once, retrying'); } catch (_) {}
+        return post().catch(function (e) {
+          try {
+            console.error('[STATS] mailing-list hand-off FAILED for this signup. '
+              + 'The consent row in signups/ is still the record; run host/list-reconcile.js '
+              + 'to place them on the list.', (e && e.message) || e);
+          } catch (_) {}
+          try { trk('signup_list_failed', {}); } catch (_) {}
+        });
+      });
     } catch (e) {}
   }
 
@@ -16469,6 +16496,72 @@ try{
   });
 }catch(_){}
 
+/* ============ ENTER SUBMITS. IT NEVER HAS. ===========================
+   Reported 26 Aug 2026 by the first person outside the building ever to
+   play this, and ranked #1 in that session's own list — "A real bug, seen
+   by a stranger, tiny fix":
+
+     "So I put in ten, and then you hit enter. Right? … Enter isn't
+      working now. You gotta go to Next, but we should get the Enter to
+      work."
+
+   It was still not working on 30 Aug, by which time it had cost something
+   larger than a number field. THERE IS NO <form> ELEMENT ANYWHERE IN THIS
+   APP — zero — so the browser's own "Enter submits" never applied to any
+   input here, including the five that take an email address. On a phone
+   the keyboard offers Go, a person types their address, presses it, and
+   NOTHING HAPPENS: no submit, no error, no record. That happened to a
+   guest in front of the founder on 26 Aug and to somebody else on the
+   morning of 30 Aug — the same failure, four days apart, both invisible.
+
+   WHY THIS IS ONE DELEGATED LISTENER AND NOT onkeydown ON EACH INPUT.
+   `num_{id}` lives inside the prediction card, which is rendered by
+   assigning `c.innerHTML` — and that destroys every handler bound to the
+   elements inside it. A per-element binding would work until the first
+   repaint and then silently stop, which is the exact shape of the lost
+   tap this codebase is still chasing. A listener on `document` cannot be
+   destroyed by a repaint.
+
+   THE BUTTON REMAINS THE OWNER OF THE BEHAVIOUR. Enter calls the same
+   function the visible control already calls — it never carries its own
+   copy of what submitting means, and it refuses when the button itself is
+   disabled, so it can never do something the screen says you cannot. */
+try{
+  document.addEventListener('keydown', function(e){
+    if(!e || e.key !== 'Enter' || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) return;
+    var t = e.target;
+    if(!t || t.tagName !== 'INPUT') return;               // textarea keeps its newline
+    var type = String(t.type || '').toLowerCase();
+    if(type==='checkbox' || type==='radio' || type==='button' || type==='submit') return;
+    if(t.disabled || t.readOnly) return;
+    var id = String(t.id || '');
+    var call = function(fn){ return function(){ if(typeof window[fn]==='function') window[fn](); }; };
+    var go = null;
+
+    /* The exact-number box on a prediction card. "Next" here is the deck's
+       own arrow, so Enter is literally the same call it makes. */
+    if(/^num_/.test(id)) go = function(){ if(typeof predGo==='function') predGo(1); };
+    else if(id==='suEmail')                                  go = call('submitSignup');
+    else if(id==='notifyEmail')                              go = call('notifyOnly');
+    else if(id==='jEmail'||id==='jName'||id==='jPhone'||id==='jTeams') go = call('submitJoin');
+    else if(id==='gateEmail'||id==='playerName'){
+      /* The gate's primary control, and ONLY when it is live. checkName()
+         enables it; if it is disabled the name or the address is not good
+         enough yet and Enter must not pretend otherwise. */
+      go = function(){
+        var b=document.getElementById('nameBtn');
+        if(b && !b.disabled) b.click();
+      };
+    }
+    if(!go) return;
+    e.preventDefault();
+    /* Take the keyboard down on a phone. Leaving it up over a screen that
+       has just moved on is how a person cannot tell whether it worked. */
+    try{ t.blur(); }catch(_){}
+    try{ go(); }catch(err){ try{ console.error('[STATS] Enter submit failed:', id, err && err.message); }catch(_){} }
+  });
+}catch(_){}
+
 function lockPicks(idx, tries){
   if(S.mode!=="live") return false;
   /* Belt and braces for the same rule. startPredict shuts the front door;
@@ -24476,7 +24569,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-30-earned.244';
+const STATS_BUILD='2026-08-30-enter.245';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
