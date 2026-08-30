@@ -374,3 +374,46 @@ the night was. Write what the player gets, not what the engineer fixed.
 been." reads as honest; "we've made improvements to reliability" reads as a
 company hiding something. The weekly note already names a real failure every
 week on purpose, and a tip-off can borrow that when there is one worth naming.
+
+---
+
+## 15. Every Sunday note carries its edition number, and the reader can see it
+
+Anis, 29 Aug 2026: *"We should number the weekly emails."*
+
+They were already numbered where only we could see it. The MailerLite campaigns
+have read `Weekly #1` and `Weekly #2` since 16 August; the eyebrow the reader
+actually sees said `The Build · Week 2 · 23 August`. Same number, different word,
+in two places, which is this codebase's oldest disease wearing a newsletter.
+
+**The rule.** One number, written the same way in both:
+
+| Where | Exactly |
+|---|---|
+| The eyebrow, first line of the letter | `The Build · Weekly #3 · 30 August` |
+| The campaign name | `Weekly #3 — Sunday 30 Aug — <the theme>` |
+
+`Weekly #N`, with the hash. Never `Week N`, never `Edition N`, never `#N` alone.
+
+**Where N comes from.** The count of Sunday notes actually SENT, not the number
+of Sundays that have passed and not the week of the year. Read it off the sent
+campaigns, which is the only record of what a reader received:
+
+    Weekly #1  Sunday 16 Aug 2026   sent to 4
+    Weekly #2  Sunday 23 Aug 2026   sent to 5
+    Weekly #3  Sunday 30 Aug 2026
+
+A Sunday that produces no letter does not consume a number. If a Sunday is ever
+missed, the next one is still the next integer, because the number counts what
+went out rather than what was owed.
+
+**Check it before writing, not after.** The routine already fetches the sent
+campaigns to avoid repeating a subject line (rule 12). While it is there, take
+the highest `Weekly #N` and add one. Do not count the drafts: an unsent draft
+has a number and a reader has never seen it, and two drafts for one Sunday is a
+thing that has already happened.
+
+**The tip-off emails are NOT numbered this way.** They carry Game Night numbers,
+which come from the `gn` field on the slate and count rooms, not letters. GN #44
+and Weekly #3 can and do sit in the same email. They are different counters of
+different things and neither is derived from the other.
