@@ -457,6 +457,47 @@ function tipLine(iso, net, sport){
       sport: L.sport, path: L.path, league: LEAGUE, slate: DATE
     };
 
+    /* ============ TWO TEAMS CAN SHARE A NICKNAME ====================
+       29 Aug 2026. The first college room picked was Clemson at LSU, and
+       the manifest read:
+
+           slate-2026-09-05-clem-lsu   Tigers   Tigers
+
+       The rail, the email and the scoreboard all take `away` and `home`
+       from the NICKNAME, which is right for the leagues built so far —
+       "Bears at Titans" is how a person says it. College football is not
+       like that. Tigers, Bulldogs, Wildcats and Cougars each belong to a
+       dozen programmes, so the nickname stops identifying anybody.
+
+       When the two collide, fall back to the full display name for BOTH
+       sides, because "Clemson Tigers at Tigers" would be worse than
+       either. Same fact, one place, and it only fires when the nickname
+       has actually failed to do its job. */
+    /* ============ TWO TEAMS CAN SHARE A NICKNAME ====================
+       29 Aug 2026. The first college room picked was Clemson at LSU, and
+       the manifest read:
+
+           slate-2026-09-05-clem-lsu   Tigers   Tigers
+
+       The rail, the email and the scoreboard all take the matchup from the
+       NICKNAME, which is right for every league built so far — "Bears at
+       Titans" is how a person says it. College football is not like that.
+       Tigers, Bulldogs, Wildcats and Cougars each belong to a dozen
+       programmes, so the nickname stops identifying anybody.
+
+       CORRECTED HERE, ON `g`, AND NOWHERE ELSE. The first version of this
+       fix patched the `offered` entry and the manifest kept reading
+       g.awayNick, so it still said Tigers at Tigers — one fact with two
+       readers and a fix applied to one of them, which is the disease this
+       file is full of comments about. Setting it on g means every reader
+       downstream gets it for free: the rail, the TSV manifest, and the
+       publish command line. */
+    if(String(g.awayNick || '').toLowerCase() === String(g.homeNick || '').toLowerCase()){
+      log('name', `${g.awayAbbr} at ${g.homeAbbr}: both nicknamed "${g.homeNick}" — using full names`);
+      g.awayNick = g.awayName;
+      g.homeNick = g.homeName;
+    }
+
     /* Every game is OFFERED, whoever owns it. */
     offered.push({
       nightId, espnEvent: g.espnEvent, tipISO: g.tipISO,
