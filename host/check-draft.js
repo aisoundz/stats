@@ -120,8 +120,28 @@ function tipsBeforeTheSend(rooms, date) {
   };
 }
 
+
+/* ============ SUNDAY BELONGS TO THE WEEKLY NOTE ====================
+   EMAIL-VOICE.md section 8: the tip-off routine stops on a Sunday
+   whatever the slate says, and the weekly note owns the day at 7:00am.
+   host/send-tipoff-auto.js has always known that. This did not, so on
+   every Sunday it would have announced that nobody was told there was a
+   game — about an email that is not supposed to exist.
+
+   A detector that cries wolf on a schedule is worse than no detector,
+   because it teaches the person to stop reading it. */
+function isSundayPT() {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles', weekday: 'short',
+  }).format(new Date()) === 'Sun';
+}
+
 (async () => {
   log('=== check-draft starting ===');
+  if (isSundayPT()) {
+    log('SKIP: Sunday belongs to the weekly note, not the tip-off (EMAIL-VOICE.md section 8). Nothing to check.');
+    process.exit(0);
+  }
   let KEY;
   try { KEY = fs.readFileSync(KEYFILE, 'utf8').trim(); }
   catch (e) { log(`REFUSE: cannot read ${KEYFILE} — ${e.message}`); process.exit(1); }

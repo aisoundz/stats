@@ -46,9 +46,29 @@ const todayPT = () => new Intl.DateTimeFormat('en-CA', {
    a 9:23 AM draft came to look like a 4:23 PM one. */
 const utcDay = (s) => String(s || '').slice(0, 10);
 
+
+/* ============ SUNDAY BELONGS TO THE WEEKLY NOTE ====================
+   EMAIL-VOICE.md section 8: the tip-off routine stops on a Sunday
+   whatever the slate says, and the weekly note owns the day at 7:00am.
+   host/send-tipoff-auto.js has always known that. This did not, so on
+   every Sunday it would have announced that nobody was told there was a
+   game — about an email that is not supposed to exist.
+
+   A detector that cries wolf on a schedule is worse than no detector,
+   because it teaches the person to stop reading it. */
+function isSundayPT() {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles', weekday: 'short',
+  }).format(new Date()) === 'Sun';
+}
+
 (async () => {
   const today = todayPT();
   log(`=== tipoff-verify, ${today} ===`);
+  if (isSundayPT()) {
+    log('SKIP: Sunday belongs to the weekly note. No tip-off is expected today, so there is nothing to verify.');
+    process.exit(0);
+  }
 
   const drafts = await get('/api/campaigns?filter[status]=draft&limit=50');
   const stillDraft = (((drafts.body || {}).data) || []).filter((c) => utcDay(c.created_at) === today);
