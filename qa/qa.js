@@ -2610,9 +2610,25 @@ async function browserTests(){
       !/S\.pts\s*\+=/.test(code) && !/S\.speed\s*\+=/.test(code),
       'the score is still accumulated somewhere',
       'six write paths into one running total; any one of them wrong corrupts the night permanently');
+    /* 30 Aug. The second half of this used to be
+       `/const livePts = livePtsOnly\(\)/.test(src)` — it required one
+       LINE to exist rather than requiring the property to hold, so
+       extracting the ending's paint into one function failed it while
+       the invariant it names was untouched. A check pinned to an
+       implementation detail votes against every legitimate change to
+       that detail, and the next person's cheapest way to green is to
+       put the line back rather than to keep the property.
+
+       The property is: the quarter-questions figure handed to the
+       breakdown is DERIVED at the moment of paint, never accumulated
+       and never carried from earlier in the screen's life. B18 made
+       `live` a lane out of recomputeScore()'s switch precisely so it
+       could be asked for rather than remembered. */
     check('fail.score.final-does-not-double-add',
-      !/S\.pts\s*\+=\s*\(S\.predPts/.test(src) && /const livePts\s*=\s*livePtsOnly\(\)/.test(src),
-      'the final screen still adds the prediction card into the total',
+      !/S\.pts\s*\+=\s*\(S\.predPts/.test(src)
+      && /renderBreakdown\(\s*livePtsOnly\(\)\s*\)/.test(code),
+      'the final screen still adds the prediction card into the total, '
+      + 'or the breakdown is fed a remembered live figure instead of a derived one',
       'a re-entered final screen paid the card out twice');
     /* ---- B18: the explanation must add up to the number -------------
        livePtsOnly() computed the quarter-questions figure by SUBTRACTING
@@ -3443,7 +3459,14 @@ async function browserTests(){
       ? r.abort()
       : r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(CASE.feed)}));
     await pg.route('**/site.web.api.espn.com/**', r=>r.abort());
-    await pg.goto(url,{waitUntil:'domcontentloaded'});
+    /* ?fixture=1 — this block fakes the clock relative to the tipISO it
+       read out of the BUILD, then let the app hydrate a different night
+       with a different tip time. The faked clock was measured against a
+       game the app was no longer showing, which is why
+       pretip.blocked-for-the-right-reason flipped between 'no-host' and
+       'not-started' depending on the hour the gate ran. Hold the fixture
+       and the clock and the game describe the same thing again. */
+    await pg.goto(url+'?fixture=1',{waitUntil:'domcontentloaded'});
     await pg.waitForTimeout(1500);
     const got = await pg.evaluate(async(HOST)=>{
       S.mode='live'; S.name='QA'; S.place='lobby'; S.qi=0; S.nextQ=0;
@@ -3785,22 +3808,44 @@ async function browserTests(){
       const out={};
       S.mode='live'; S.name='QA';
       const nQ = rounds[0].q.length;
+      /* POINTS ON THE BOARD, AND A ROOM WITH PEOPLE IN IT.
+         30 Aug. This block used to score nothing and rank against nobody,
+         and it still passed — which meant the two `B7` checks under it
+         were green because NO award fired at all, not because the guard
+         withheld the right ones. A check that cannot observe its own
+         failure is not a check. The zero-night gate and the field>=2 rule
+         both make the old setup produce an empty award list, so the setup
+         is now a night that genuinely earned something: real points, and
+         a field of six to be first in. */
+      ledgerSet('qa-live', 300, 0, 'live');
+      const FIELD = 6;
       // Answered Q1 perfectly and it WAS graded; answered Q2 and it never was.
       S.liveAnswers[0]=rounds[0].q.map(()=>({choice:'x',bank:0}));
       S.results[0]=rounds[0].q.map(()=>true);
       S.liveAnswers[1]=rounds[1].q.map(()=>({choice:'x',bank:0}));
       S.results[1]=[];
-      let c=awardCtx(1);
+      let c=awardCtx(1, FIELD);
       out.unsettled=c.unsettled; out.settled=c.settled;
-      out.awardsWhileOwed = earnedAwards(1).all.map(a=>a.id);
+      out.pts=c.pts; out.field=c.field;
+      out.awardsWhileOwed = earnedAwards(1, FIELD).all.map(a=>a.id);
       // now settle it
       S.results[1]=rounds[1].q.map(()=>true);
-      out.awardsWhenSettled = earnedAwards(1).all.map(a=>a.id);
+      out.awardsWhenSettled = earnedAwards(1, FIELD).all.map(a=>a.id);
       return out;
     });
     check('award.an-owed-round-is-counted', r.unsettled===1 && r.settled===false,
       `unsettled=${r.unsettled} settled=${r.settled}`,
       'a round you answered that never came back with a score. The engine had no concept of this and so could not avoid celebrating it');
+    /* THE GUARD ON THE GUARD. The three checks below are all of the form
+       "this award did NOT fire", and every one of them passes trivially on
+       a night that earned nothing — which is exactly the state this block
+       was in until 30 Aug. Assert the setup is a scoring night with a real
+       field FIRST, so a future change that quietly empties it fails here
+       instead of turning the next three green for the wrong reason. */
+    check('award.the-setup-is-a-night-that-could-win',
+      r.pts>0 && r.field>=2,
+      `pts=${r.pts} field=${r.field}`,
+      'the B7 checks below only mean something on a night that would otherwise be celebrated');
     check('award.no-perfect-night-while-a-round-is-owed',
       r.awardsWhileOwed.indexOf('perfect')<0 && r.awardsWhileOwed.indexOf('wire')<0,
       `awards given on an unsettled night: ${JSON.stringify(r.awardsWhileOwed)}`,

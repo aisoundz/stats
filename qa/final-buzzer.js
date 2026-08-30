@@ -569,6 +569,204 @@ function sabotage(html){
   await b.close();
 }
 
+/* ============ AN AWARD HAS TO BE EARNED ===========================
+   30 Aug 2026. The founder's final screen, alone in a room, on a night
+   the ring said 0:
+
+       🏆 You won the night!
+       👑 THE GAME BALL
+       First place. 0 points — nobody in the room read this game better
+       than you.
+       #1  Final rank of 1
+
+   finishLive() computes the size of the field one line before it prints
+   "Final rank of 1", and then handed renderAwards() the rank WITHOUT it.
+   So "first" and "beat everybody" were the same sentence to the award
+   engine.
+
+   THE GAME BALL is the only COMPARATIVE award of the four. Perfect
+   Night, Perfect Quarter and Never Looked Away are claims about
+   behaviour and stay true alone in a room, so they must keep firing —
+   this checks that too, because an over-tight gate that silenced them
+   would be its own bug. */
+{
+  const b = await ENG.launch();
+  const p = await b.newPage();
+  const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
+  await p.goto('file://'+TARGET+'?fixture=1');
+  await p.waitForFunction(()=>typeof earnedAwards==='function',{timeout:20000}).catch(()=>{});
+  const r = await p.evaluate(()=>{
+    /* A NIGHT THAT WOULD OTHERWISE BE CELEBRATED. This used to set points
+       and nothing else, so no behaviour award could fire either — and
+       `ptsSolo !== 'gameball'` passed because the award list came back
+       EMPTY, not because the crown was withheld. A check that cannot
+       observe its own failure is not a check, and this one was green
+       against the very bug it names. Every round is answered and graded
+       correctly here, so Perfect Night genuinely fires and the solo case
+       is a real question: does the comparative award drop out while the
+       behavioural ones stay? */
+    const run=(pts, rank, field)=>{
+      try{
+        S.mode='live'; S.name='QA'; S.streak=1; S.speed=0;
+        try{ ledgerClear(); if(pts) ledgerSet('x',pts,0,'live'); recomputeScore(); }catch(_){}
+        try{
+          S.liveAnswers=[]; S.results=[];
+          if(pts) (rounds||[]).forEach((rd,i)=>{
+            const qs=(rd&&rd.q)||[];
+            S.liveAnswers[i]=qs.map(()=>({choice:'x',bank:0}));
+            S.results[i]=qs.map(()=>true);
+          });
+        }catch(_){}
+        /* Fall back to the OLD one-argument call when the fix is absent,
+           so this catches the original bug rather than passing because a
+           parameter is missing. */
+        const g=(earnedAwards.length>=2)?earnedAwards(rank,field):earnedAwards(rank);
+        const head=g.list[0];
+        return { head: head?head.id:null, all:(g.all||[]).map(a=>a.id) };
+      }catch(e){ return { head:'THREW', all:['THREW'] }; }
+    };
+    const zs=run(0,1,1), zf=run(0,1,6), ps=run(585,1,1), pf=run(585,1,6);
+    /* AN UNKNOWN FIELD IS NOT A FIELD OF ONE, AND IT IS NOT A FIELD OF SIX.
+       The rule written next to the gameball test says "`c.field>=2` —
+       never `!==1`, because field is null when the denominator is unknown
+       and an unknown field must not crown." This block passed only 1 and
+       6, so the one sentence the rule is made of was the one thing never
+       tested: `!==1` satisfies every case here and restores crowning on
+       every path where the denominator did not arrive. */
+    const pn=run(585,1,null), pu=run(585,1,undefined);
+    return {
+      zeroSolo: zs.head, zeroField: zf.head,
+      ptsSolo:  ps.head, ptsField:  pf.head,
+      zeroSoloAll: zs.all, zeroFieldAll: zf.all,
+      ptsSoloAll:  ps.all, ptsFieldAll:  pf.all,
+      ptsNull: pn.head, ptsUndef: pu.head,
+      ptsNullAll: pn.all, ptsUndefAll: pu.all,
+    };
+  });
+  console.log(`     0 pts alone -> ${r.zeroSolo} · 0 pts in 6 -> ${r.zeroField}`);
+  console.log(`     585 alone   -> ${r.ptsSolo} · 585 in 6   -> ${r.ptsField}`);
+  ok('award.nothing-is-awarded-for-nothing',
+     !r.zeroSolo && !r.zeroField,
+     `a zero night was given "${r.zeroSolo || r.zeroField}". The chime and the vibration live `
+     + 'inside renderAwards, so silencing this in copy alone would still leave the phone singing '
+     + 'over a night that scored nothing.');
+  ok('award.no-crown-for-beating-nobody',
+     r.ptsSolo !== 'gameball' && r.ptsSoloAll.indexOf('gameball') < 0,
+     `alone in the room the app awarded "${r.ptsSolo}" (all: ${JSON.stringify(r.ptsSoloAll)}) — `
+     + 'THE GAME BALL says "nobody read this game better than you" and there was nobody.');
+  /* THE OTHER HALF, and without it the check above is satisfied by an
+     award engine that has simply gone quiet. An over-tight gate that
+     silences Perfect Night alone in a room is its own bug, and this is
+     the assertion that would have caught the version of this suite that
+     passed on the unfixed build because NOTHING fired. */
+  /* NAMED, not "some award fired". The first version of this asserted only
+     that the list was non-empty and something other than the crown was in
+     it — and an over-tight gate that silenced PERFECT NIGHT sailed through
+     it, because PERFECT QUARTER fired in its place and satisfied the
+     wording. "Did not miss a single graded question all night" is true
+     alone in a room, so the suite says which award it means. */
+  ok('award.a-solo-night-still-earns-perfect-night',
+     r.ptsSoloAll.indexOf('perfect') >= 0 && r.ptsSoloAll.indexOf('gameball') < 0,
+     `alone in the room a flawless 585 earned ${JSON.stringify(r.ptsSoloAll)} — PERFECT NIGHT is `
+     + 'a claim about behaviour and stays true with nobody else in the room. A field gate tight '
+     + 'enough to eat it is the same mistake as the crown, pointing the other way');
+  ok('award.an-unknown-field-does-not-crown',
+     r.ptsNullAll.indexOf('gameball') < 0 && r.ptsUndefAll.indexOf('gameball') < 0,
+     `first place out of an UNKNOWN field awarded ${JSON.stringify(r.ptsNullAll)} (null) and `
+     + `${JSON.stringify(r.ptsUndefAll)} (undefined). The denominator not having arrived is not `
+     + 'evidence that you beat anybody — this is the case `field>=2` exists for and `field!==1` '
+     + 'silently gets wrong');
+  ok('award.a-real-field-still-earns-the-game-ball',
+     r.ptsField === 'gameball',
+     `first place out of six awarded "${r.ptsField}". A gate tight enough to silence a real win `
+     + 'is worse than the bug it replaced.');
+  ok('award.no-page-errors-award', errs.length===0, errs.slice(0,2).join(' · '));
+  await b.close();
+}
+
+/* ============ RECONCILING WITH THE SERVER MUST NOT EAT THE LANES =====
+   30 Aug. The founder's card on slate-2026-08-29-phi-laa settled at 585:
+   470 graded live + 100 from the prediction sheet + 15 caught. His phone
+   showed 0, because the board cache is nulled on screen lock and
+   showFinal() clears the local save — so the ending asked the server.
+
+   The first version of that fix floored the COMPOSITE total. ledgerSet
+   files the gap under kind `server`, and recomputeScore()'s switch sends
+   every unrecognised kind to `live`, so all four lanes collapsed into
+   one. The ring still read 585 and nothing on screen looked wrong.
+
+   What was wrong was in the database. pushScore() sends predPts,
+   catchPts and caughtPts straight off S; admin.html's tally() re-grades
+   `live` itself from the submissions but takes those three VERBATIM from
+   the player row; run.js writes the sum back as `pts`. So the next
+   runner tick after any late settle would have recomputed 585 as 470 and
+   written the loss into the board and the archive — the incident run.js
+   already records as "caughtPts measured going 40 -> 0 in the database".
+
+   Both checks fall back to the OLD behaviour when ledgerServerReconcile
+   is absent, so they go red on the unfixed build instead of passing
+   because a function is missing. */
+{
+  const {b,p,errs}=await stage(PHONE);
+  const r=await p.evaluate(()=>{
+    const out={};
+    /* The founder's real row. caughtSrv is the server's own caught lane;
+       it outranks the phone's caughtPts on purpose. */
+    const SV={ pts:585, livePts:470, predPts:100, catchPts:0, caughtPts:5, caughtSrv:15, speed:0 };
+    const OLD_FLOOR=function(sv){                 // what the unfixed build did
+      let t; try{ t=(window.SB&&SB.nightTotal)?SB.nightTotal(sv):sv.pts; }catch(_){ t=sv.pts; }
+      return ledgerServerFloor({pts:Number(t)||0, speed:Number(sv.speed)||0});
+    };
+    const REC=(typeof ledgerServerReconcile==='function') ? ledgerServerReconcile : OLD_FLOOR;
+
+    /* A COLD PHONE: the ledger empty, exactly as showFinal() leaves it. */
+    ledgerClear(); recomputeScore();
+    REC(SV); recomputeScore();
+    out.cold={pts:S.pts, live:S.livePts, pred:S.predPts, catch:S.catchPts, caught:S.caughtPts};
+    /* pushScore()'s payload, composed here the way pushScore composes it. */
+    out.push={predPts:S.predPts||0, catchPts:S.catchPts||0, caughtPts:S.caughtPts||0};
+
+    /* THE WIPED-PHONE DOUBLE COUNT. joinNight used to floor the composite
+       and THEN raise the three lanes on top of it, and a floor only ever
+       goes up, so 690 on a 585 night never corrected itself. Running the
+       reconcile twice is the same shape and must be a no-op. */
+    ledgerClear(); recomputeScore();
+    REC(SV); recomputeScore();
+    if(typeof ledgerServerReconcile!=='function'){
+      // the unfixed joinNight, verbatim: lanes raised on top of the floor
+      if((Number(SV.caughtPts)||0)>(Number(S.caughtPts)||0)) ledgerSet('caught',Number(SV.caughtPts)||0,0,'caught');
+      if((Number(SV.predPts)||0) >(Number(S.predPts)||0))    ledgerSet('pred',  Number(SV.predPts)||0,  0,'pred');
+      if((Number(SV.catchPts)||0)>(Number(S.catchPts)||0))   ledgerSet('catch', Number(SV.catchPts)||0, 0,'catch');
+    }else{
+      REC(SV);
+    }
+    recomputeScore();
+    out.twice=S.pts;
+    return out;
+  });
+
+  ok('ledger.the-server-total-lands-on-the-final-ring',
+     r.cold.pts===585,
+     `a cold phone reconciled to ${r.cold.pts}, and the night paid 585`);
+  ok('ledger.reconciling-does-not-collapse-the-lanes',
+     r.cold.pred===100 && r.cold.caught===15 && r.cold.live===470,
+     `after reconciling, the night reads live=${r.cold.live} pred=${r.cold.pred} `
+     + `catch=${r.cold.catch} caught=${r.cold.caught}, and it was 470/100/0/15. `
+     + 'The total can be right while every lane under it is wrong, and it is the lanes '
+     + 'that get written back to the row');
+  ok('ledger.the-phone-never-pushes-a-lane-back-as-zero',
+     r.push.predPts===100 && r.push.caughtPts===15,
+     `pushScore would send predPts=${r.push.predPts} catchPts=${r.push.catchPts} `
+     + `caughtPts=${r.push.caughtPts}. tally() reads those three off the row verbatim, so a zero `
+     + `here deletes ${100-r.push.predPts+15-r.push.caughtPts} real points from the board and the archive`);
+  ok('ledger.reconciling-twice-is-not-worth-twice',
+     r.twice===585,
+     `a wiped phone that reconciled twice reads ${r.twice} for a 585 night. A floor only ever `
+     + 'goes up, so an over-count here never corrects itself');
+  ok('ledger.no-page-errors-reconcile', errs.length===0, errs.slice(0,2).join(' · '));
+  await b.close();
+}
+
 const verdict = fail? 'RED' : 'GREEN';
 console.log(`\n${verdict}   ${pass} passed, ${fail} failed   [${path.basename(TARGET)} · ${ENGNAME}]`
             + (SABOTAGE?'   [SABOTAGED — red is the correct result]':''));

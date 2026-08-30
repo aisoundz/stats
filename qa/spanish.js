@@ -82,7 +82,12 @@ function serve() {
   const page = await browser.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push(String(e)));
-  await page.goto(`http://127.0.0.1:${port}/${TARGET}`, { waitUntil: 'domcontentloaded' });
+  /* ?fixture=1 — hold the built-in night. Without it this suite reads
+     TONIGHT'S live roster and fails at breakfast while passing at
+     midnight, against identical bytes. See LOCK_FIXTURE in
+     index.html. A gate whose answer depends on the hour is worse
+     than a slow one. */
+  await page.goto(`http://127.0.0.1:${port}/${TARGET}?fixture=1`, { waitUntil: 'domcontentloaded' });
   await waitReady(page);
 
   const r = await page.evaluate(async () => {

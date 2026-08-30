@@ -585,6 +585,112 @@ async function browserPromises(){
     await ctx.close();
   }
 
+  /* ---------------------------------------------------------------
+     THE NUMBER ON THE FINAL SCREEN IS THE ONE THE NIGHT PAID
+     -----------------------------------------------------------------
+     30 Aug 2026. Founder's phone, Phillies at Angels. The server row held
+     585. The ring on his final screen said 0, and the leaderboard four
+     centimetres below it said 585.
+
+     shownTotal() has preferred the server since B-65 — but it asks
+     myServerRow(), which reads `lastStand`, a BROWSER CACHE of the board.
+     roomListenersStop() nulls that on pagehide, which is what a phone
+     does when its screen locks, and showFinal() calls clearSave() by
+     design. Cold cache plus cleared save reads as zero.
+
+     THE SETUP IS THE LOAD-BEARING PART OF THIS CHECK. The cache is
+     emptied through the app's OWN production door — roomListenersStop
+     with the same 'pagehide' reason the real listener uses — not by
+     assigning lastStand=null. A check that pokes the variable is testing
+     its own stub. qa/qa.js:964 seeds lastStand by hand and asserts the
+     fallback equals the preview, which is correct about shownTotal() in
+     isolation and says nothing at all about this screen.
+
+     `>=`, not `===`, deliberately. The phone may legitimately hold MORE
+     than the server for a few seconds (a settled prediction card waiting
+     on the write queue), and the fix is a floor rather than an overwrite
+     for exactly that reason. `>=` survives that, still fails hard on
+     0-vs-585, and encodes no preference between server and client, so it
+     cannot be used to smuggle a scoring rule in later. */
+  {
+    const { pg, ctx } = await device();
+    await pg.evaluate(AUTH_SHIM);
+    const r = await pg.evaluate(async () => {
+      const nid = GAME.nightId;
+      /* The night as the SERVER holds it: 470 live, a 100 card, 15 caught
+         that the runner graded. 585 in total, by nightTotal's own rules. */
+      window.__FB.docs.set('nights/' + nid + '/players/player-1',
+        { name:'QA', color:'#fff', pts:585, speed:0,
+          livePts:470, predPts:100, catchPts:0, caughtSrv:15, caughtPts:5, roundsDone:3 });
+      await SB.googleSignIn();
+      S.name='QA'; S.color='#fff'; setMode('live');
+      await joinNight();
+      await new Promise(x => setTimeout(x, 900));
+
+      const seat = window.__FB.docs.get('nights/' + nid + '/players/player-1') || {};
+      const owed = (typeof SB.nightTotal === 'function') ? SB.nightTotal(seat) : Number(seat.pts);
+
+      /* Now be a phone that locked and came back: the app's own listener
+         teardown, then the save cleared the way showFinal() clears it. */
+      try{ roomListenersStop('pagehide'); }catch(_){}
+      try{ clearSave(); }catch(_){}
+      try{ ledgerClear(); }catch(_){}
+
+      try{ showFinal(); }catch(_){}
+      try{ await finishLive(); }catch(_){}
+      await new Promise(x => setTimeout(x, 1400));
+
+      const ring = Number(String((document.getElementById('finalPts')||{}).textContent||'')
+                            .replace(/[^0-9.]/g,'')) || 0;
+      let board = null;
+      try{
+        const row = [...document.querySelectorAll('#finalLb *')]
+          .map(e => e.textContent||'').join(' ');
+        const m = row.match(/585/);
+        board = m ? 585 : null;
+      }catch(_){}
+      /* THE ROW AFTER THE ENDING RAN. The ring is a pixel; this is the
+         artifact. finishLive() published the player's score before it
+         asked the server for it, so on this exact cold phone it wrote
+         predPts:0 / caughtPts:0 over a row that held 100 and 5 — and the
+         ring painted 585 off the composite total either way, which is
+         why every assertion above stayed green through it. */
+      const after = window.__FB.docs.get('nights/' + nid + '/players/player-1') || {};
+      return { owed, ring, board,
+               lanesAfter: { pred: Number(after.predPts)||0,
+                             watch: Number(after.catchPts)||0,
+                             caught: Number(after.caughtPts)||0 },
+               cacheWasCold: (typeof lastStand === 'undefined' || lastStand === null) };
+    });
+    promise('acceptance.the-number-on-the-final-screen-is-the-one-the-night-paid',
+      r.cacheWasCold && r.ring >= r.owed && r.ring > 0,
+      `the server owed this player ${r.owed} and the final ring showed ${r.ring} `
+      + `(board cache cold: ${r.cacheWasCold}). A phone whose screen locked during the game `
+      + 'empties the board cache, and showFinal() clears the local save by design, so the '
+      + 'ending must ask the SERVER rather than a cache of it. Showing a player zero on a '
+      + 'night that paid is the one error this product cannot afford.');
+    /* THE HALF THAT IS NOT A PIXEL. The board sat four centimetres under a
+       ring reading 0 and said 585 — the reported failure was two surfaces
+       DISAGREEING, and asserting only the ring mistakes presence for
+       agreement. */
+    promise('acceptance.the-ending-and-the-board-agree',
+      r.board === 585 && r.ring === r.board,
+      `the ring showed ${r.ring} and the leaderboard beneath it showed ${r.board}. `
+      + 'The founder\'s report was not "the ring is wrong", it was "the ring says 0 and the '
+      + 'board four centimetres below it says 585". Two surfaces, one night, one number.');
+    /* AND THE ARTIFACT. This is the assertion that catches a screen which
+       looks perfect and quietly deletes points: finishLive() published
+       before it read, so a cold phone wrote its empty lanes over a row
+       holding 100 and 5, and the ring painted 585 regardless. */
+    promise('acceptance.the-ending-never-writes-a-lane-back-as-zero',
+      r.lanesAfter.pred >= 100 && r.lanesAfter.caught >= 5,
+      `after the ending ran, the server row holds predPts=${r.lanesAfter.pred} `
+      + `catchPts=${r.lanesAfter.watch} caughtPts=${r.lanesAfter.caught}, and it was seeded with `
+      + '100 and 5. The board rebuilds a player\'s score from those lanes, so a zero written here '
+      + 'deletes real points from the board and the archive while the ring still reads 585.');
+    await ctx.close();
+  }
+
   await browser.close();
 }
 
@@ -596,8 +702,40 @@ const BROWSER_PROMISES = [
   'acceptance.a-night-belongs-to-the-person-not-the-browser-session',
   'acceptance.signing-out-never-destroys-points-already-earned',
   'acceptance.a-round-the-host-pushed-stays-answerable',
-  'acceptance.the-same-key-posted-twice-pays-once'
+  'acceptance.the-same-key-posted-twice-pays-once',
+  /* 30 Aug. This list is a SECOND COPY of "which promises this file
+     makes", and the moment a promise was added below without being added
+     here it stopped existing on the two paths that matter most: when the
+     harness throws, and under --no-browser. Every other promise would be
+     reported NOT TESTED and this one would have been reported nothing at
+     all — no pass, no fail, no skip — which reads as a clean run. */
+  'acceptance.the-number-on-the-final-screen-is-the-one-the-night-paid',
+  'acceptance.the-ending-and-the-board-agree',
+  'acceptance.the-ending-never-writes-a-lane-back-as-zero'
 ];
+
+/* AND THE LIST MUST NOT DRIFT AGAIN. The promises are declared by name in
+   the browser block; if one of them is missing from the roster above, say
+   so loudly rather than silently omitting it from the report. */
+try{
+  const _self = require('fs').readFileSync(__filename, 'utf8');
+  /* ONLY the promises inside browserPromises(). The static promises above
+     it run with no browser and are reported by their own path — sweeping
+     the whole file in named every one of them and made this check a false
+     alarm on its first run, which is the failure mode it exists to
+     prevent in something else. */
+  const body = _self.slice(_self.indexOf('async function browserPromises'),
+                           _self.indexOf('const BROWSER_PROMISES'));
+  const declared = new Set((body.match(/'acceptance\.[a-z0-9-]+'/g) || [])
+    .map(s => s.slice(1, -1)));
+  const missing = [...declared].filter(n => BROWSER_PROMISES.indexOf(n) < 0);
+  if (missing.length) {
+    console.log('  FAIL acceptance.every-promise-is-on-the-roster');
+    missing.forEach(n => console.log('         ' + n + ' is promised below but not listed in BROWSER_PROMISES,'
+      + '\n           so it vanishes from the report when the harness throws or --no-browser runs'));
+    process.exitCode = 1;
+  }
+}catch(_){}
 
 (async () => {
   if (WANT_BROWSER) {

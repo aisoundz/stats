@@ -56,7 +56,12 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
     };
     def('SpeechRecognition', R); def('webkitSpeechRecognition', R);
   });
-  await p.goto('file://'+TARGET);
+  /* ?fixture=1 — hold the built-in night. Without it this suite reads
+     TONIGHT'S live roster and fails at breakfast while passing at
+     midnight, against identical bytes. See LOCK_FIXTURE in
+     index.html. A gate whose answer depends on the hour is worse
+     than a slow one. */
+  await p.goto('file://'+TARGET+'?fixture=1');
   await p.waitForFunction(()=>typeof window.VX==='object'||typeof VX==='object',{timeout:15000}).catch(()=>{});
   await waitReady(p);   /* was await p.waitForTimeout(1800); — a guess at boot */
 

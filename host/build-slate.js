@@ -555,7 +555,21 @@ function tipLine(iso, net, sport){
   }
 
   skipped.forEach(s => log('skip', s));
-  log('offer', `${offered.length} game(s) will appear in the picker` +
+  /* NOT "will appear in the picker". The pick file has not been READ yet at
+     this point in the run — it is loaded forty lines below — so this number
+     cannot possibly know what the picker will show, and for weeks it said so
+     anyway. From the real 3am log of 29 Aug, two lines apart, about the same
+     fourteen games:
+
+         offer   17 game(s) will appear in the picker
+         rail    17 MLB game(s) built but NOT offered — not in the pick file
+
+     Seventeen offered and seventeen withheld. The true answer was zero. This
+     is the same disease as everything else in this file — one fact with two
+     writers — except here the second writer is a sentence. A log a person
+     reads at 3am is part of the product; a number in it that is not true is
+     a bug whether or not any code depends on it. */
+  log('cand', `${offered.length} ${LEAGUE.toUpperCase()} game(s) built as candidates` +
                (offered.some(o => o.flagship) ? ', flagship included' : ''));
   if(!games.length && !offered.length)
     die('nothing to build and nothing to offer on this date');
@@ -786,6 +800,17 @@ function tipLine(iso, net, sport){
     log('rail', `${withheld} ${LEAGUE.toUpperCase()} game(s) built but NOT offered — `
       + (PICK ? `not in the pick file for ${DATE}` : `no runner hosts ${LEAGUE} today`));
 
+  /* ============ THE ONE HONEST OFFER COUNT ==========================
+     Printed on BOTH paths, on purpose. It used to live inside the dry-run
+     block below, which meant the 3am --apply cron — the only run that
+     actually writes the rail players will see — never once stated how many
+     rooms it had offered. The single offer-shaped number in that log was the
+     candidate count above, and that one was wrong.
+
+     So the run that matters is now the run that says what it did. */
+  log('offer', `${railGames.length} of ${slate.games.length} ${LEAGUE.toUpperCase()} game(s) OFFERED to players`
+             + (railGames.length ? `: ${railGames.map(g => `${g.away}@${g.home}`).join(', ')}` : ''));
+
   if(!APPLY){
     log('dry', `would write ${games.length} schedule doc(s) + slate/${DATE} + slate/current = ${writes + 1} write(s)`);
     log('dry', `then: ${games.length} plan(s) via publish.js — ${writes + games.length} writes total`);
@@ -793,7 +818,6 @@ function tipLine(iso, net, sport){
     games.forEach(x => log('  →', `schedule/${x.g.nightId}  (${JSON.stringify(x).length} bytes)`));
     log('picker', JSON.stringify(railGames.map(g => `${g.away}@${g.home}`
       + (g.gotn ? ' ★★ GAME OF THE NIGHT' : g.marquee ? ' ★ featured' : g.flagship ? ' ★' : ''))));
-    log('dry', `${railGames.length} of ${slate.games.length} ${LEAGUE.toUpperCase()} game(s) would be OFFERED to players`);
     return;
   }
 

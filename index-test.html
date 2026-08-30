@@ -7873,6 +7873,9 @@ function activateSlateTile(b, e){
 }
 
 async function loadSlate(db, F){
+  /* Same lock. A live rail is the other half of what makes a suite's
+     answer depend on the hour. */
+  if(LOCK_FIXTURE) return false;
   if(!db || !F) return false;
   try{
     /* ============ TODAY FIRST, THE POINTER SECOND ====================
@@ -8240,7 +8243,62 @@ async function chooseGame(db, F, nightId){
 try{ window.loadSlate = loadSlate; window.chooseGame = chooseGame;
      window.SLATE = SLATE; window.slatePick = slatePick; }catch(_){}
 
+/* ============ A SUITE MUST BE ABLE TO PIN THE FIXTURE ==============
+   29 Aug 2026. Six of ninety-eight suites could not give a straight answer
+   during a game day, and three of those were the same fault: the app
+   hydrates TONIGHT'S REAL NIGHT over the built-in fixture, so a suite that
+   speaks roster names passes at midnight and fails at breakfast.
+
+   Measured. voice-pick.js was GREEN at 22:48 with every room Final and
+   nothing to hydrate, and RED at 07:26 the next morning against the SAME
+   BYTES, because by then the app had loaded slate-2026-08-29-chi-ny and
+   put Rebecca Allen and Pauline Astier on the card in place of the
+   fixture's Kayla Thornton. qa.js's pretip check and spanish.js fail the
+   same way, on live status detail and a live host-toolkit string.
+
+   A gate whose answer depends on the hour it is run is worse than a slow
+   one, because the next REAL regression gets waved through as "probably
+   the morning thing". That very sentence was written twice on 29 Aug
+   while reasoning around a red gate.
+
+   THE FIX IS NOT TO PIN THE CLOCK, it is to stop the suites reaching live
+   data at all. `?fixture=1` holds the built-in night: no schedule pointer,
+   no slate, no rail. Everything else in the app behaves exactly as it
+   does in production, which is the point — a lock that changed behaviour
+   would be testing a different app.
+
+   Harmless if a person ever lands on it: they get the built-in night,
+   which is what practice already plays. */
+/* ---- AND IT IS A TEST HARNESS, SO IT STAYS ON THE TEST BENCH -------
+   The claim above — "harmless if a person ever lands on it" — was checked
+   on 30 Aug and is false in a live browser. The built-in night is dated,
+   so on any day after it nightHasExpired(GAME) is true: joinNight() hits
+   the stale guard, fires join_blocked_stale and refuses. The player is
+   not seated in a dead room, which is the guard doing its job — but they
+   get a live app with no seat, no rail and no slate, and NOTHING on
+   screen saying why. That is the stale-seat failure wearing a different
+   hat, and a pasted link carries it.
+
+   The suites all load the file from disk or from localhost, so scoping
+   the lock to those two origins costs them nothing and takes the dead
+   end off the public site entirely. A global that changes how the app
+   behaves is allowed to exist; one that can do it to a stranger, with no
+   visible sign, is not. */
+var LOCK_FIXTURE = (function(){
+  try{
+    if(new URLSearchParams(location.search).get('fixture') !== '1') return false;
+    var pr = location.protocol, hn = location.hostname;
+    var bench = (pr === 'file:') || hn === 'localhost' || hn === '127.0.0.1' || hn === '::1' || hn === '';
+    if(!bench){
+      try{ console.warn('[STATS] ?fixture=1 ignored: it is a test-bench flag and this is ' + hn); }catch(_){}
+      return false;
+    }
+    return true;
+  }catch(_){ return false; }
+})();
+try{ window.LOCK_FIXTURE = LOCK_FIXTURE; }catch(_){}
 async function loadNightConfig(db, F){
+  if(LOCK_FIXTURE) return false;
   if(!db || !F) return false;
   try{
     /* THE ORDER OF PRECEDENCE, and it is the whole of the slate feature:
@@ -9299,6 +9357,62 @@ function ledgerServerFloor(sv){
   ledgerSet('server',(Number(prev.p)||0)+gapP,(Number(prev.s)||0)+gapS,'server');
   return true;
 }
+/* ============ THE ONE DOOR FROM A SEAT TO THE LEDGER =================
+   30 Aug, found by review before it ever ran on a phone.
+
+   ledgerServerFloor() files its gap under the kind `server`, and
+   recomputeScore()'s switch — the one place that knows what the lanes are
+   — sends every unrecognised kind to `live`. So flooring the COMPOSITE
+   total collapses four lanes into one:
+
+       before   pts 585 = live 470 + pred 100 + catch 0 + caught 15
+       after    pts 585 = live 585 + pred   0 + catch 0 + caught  0
+
+   The total is preserved, so it looks correct on the screen. It is not
+   correct in the database. pushScore() sends predPts/catchPts/caughtPts
+   from exactly those now-zeroed fields; admin.html's tally() re-grades
+   `live` itself from the submissions but reads the other three VERBATIM
+   off the player row, and run.js writes the sum back as `pts`. So the
+   next runner tick after a settle would have recomputed the founder's
+   585 as 470 and written the loss into the board and the archive.
+
+   That is not a new failure. It is the one already recorded in run.js:
+   "caughtPts measured going 40 -> 0 in the database." The fix that
+   caused it and the fix that would have caused it again are the same
+   shape: a screen reconciling with the server by writing to a lane that
+   is not the lane the number came from.
+
+   So the lanes are floored FIRST, each into its own lane, and only the
+   remainder — the part the server grades and the phone cannot — is left
+   for ledgerServerFloor(). Every caller goes through here, because three
+   call sites each doing their own version of this is what produced the
+   double-count in joinNight: it floored the composite AND THEN added the
+   three lanes on top, reading 690 for a 585 night on a wiped phone.
+
+   caughtSrv outranks caughtPts on purpose: run.js publishes the server's
+   own caught lane precisely so the phone cannot write it back down. */
+function ledgerServerReconcile(sv){
+  if(!sv) return false;
+  var moved = false;
+  var pd = Number(sv.predPts)||0,
+      ct = Number(sv.catchPts)||0,
+      cg = (typeof sv.caughtSrv === 'number' && isFinite(sv.caughtSrv))
+             ? sv.caughtSrv : (Number(sv.caughtPts)||0);
+  if(pd > (Number(S.predPts)||0)){   ledgerSet('pred',   pd, 0, 'pred');   moved = true; }
+  if(ct > (Number(S.catchPts)||0)){  ledgerSet('catch',  ct, 0, 'catch');  moved = true; }
+  if(cg > (Number(S.caughtPts)||0)){ ledgerSet('caught', cg, 0, 'caught'); moved = true; }
+  /* nightTotal() is the ONE composer of a seat's total — never re-add the
+     lanes here, which is the bug this function exists to end. */
+  var total;
+  try{ total = (window.SB && SB.nightTotal) ? Number(SB.nightTotal(sv)) : Number(sv.pts); }
+  catch(e){
+    total = Number(sv.pts);
+    try{ console.error('[STATS] SB.nightTotal threw; fell back to sv.pts:', e && e.message); }catch(_){}
+  }
+  if(!isFinite(total)) total = Number(sv.pts)||0;
+  if(ledgerServerFloor({ pts: total, speed: Number(sv.speed)||0 })) moved = true;
+  return moved;
+}
 function ledgerClear(){ S.led={}; return recomputeScore(); }
 
 /* ============ THE SERVER'S NUMBER OUTRANKS THE PREVIEW ================
@@ -9605,7 +9719,7 @@ function doResume(){
       SB.myScore().then(function(sv){
         if(!sv) return;
         var moved=false;
-        try{ moved = ledgerServerFloor(sv); }catch(_){ moved=false; }
+        try{ moved = ledgerServerReconcile(sv); }catch(_){ moved=false; }
         if(moved){ try{ save(); }catch(_){}
           try{ toast('Your points are back — '+(S.pts||0)+' from the scoreboard.'); }catch(_){}
           try{ if(S.screen==='lobby') renderLobby(roomNextRound(S.nextQ!=null?S.nextQ:S.qi)); }catch(_){}
@@ -16337,6 +16451,21 @@ try{
       if(document.getElementById('s-gametime') && map[S.screen]==='s-gametime') renderGametime();
     }catch(_){}
     try{ if(typeof paintHeroRibbon==='function') paintHeroRibbon(); }catch(_){}
+    /* ============ AND THE ENDING, IF THAT IS WHERE THEY ARE ==========
+       30 Aug. This listener repainted the Gametime tab and the hero
+       ribbon and nothing else, so the final screen was painted ONCE and
+       never listened again. That is the structural half of the founder's
+       585: the ring painted inside the window where the board cache was
+       cold, the board arrived four centimetres below it a moment later,
+       and there was no path back to the number above it.
+
+       finishLive() asking the server once is the other half, and on its
+       own it is a one-shot — if that read is slow, rejected or absent the
+       screen is wrong again with nobody told. This is the half that does
+       not depend on a single well-timed request: whenever the score
+       actually changes, if the player is looking at the ending, repaint
+       the ending. */
+    try{ if(S.screen==='final') paintFinalTotals(400); }catch(_){}
   });
 }catch(_){}
 
@@ -17111,6 +17240,35 @@ function finalCardNote(){
     } else el.style.display='none';
   }catch(_){}
 }
+/* ============ THE ENDING HAS ONE PAINTER =============================
+   30 Aug. finishLive() repainted `#finalPts` and the ring after
+   reconciling with the server, and left the two stat tiles and the
+   breakdown alone. On a cold phone that produced the B18 shape exactly:
+   the ring reading 585 with "Quarter questions 0 / 400" and "Prediction
+   sheet 0 / 600" printed underneath it — the ring right and the
+   explanation wrong, which this file already calls the worse of the two
+   ways to be wrong.
+
+   The cause was two copies of the same four lines. So there is one
+   painter now, and both callers use it. Change what the ending shows and
+   it changes everywhere the ending is shown.
+
+   livePtsOnly() rather than a value captured earlier: B18 made `live` a
+   DERIVED lane out of recomputeScore()'s switch, so it no longer matters
+   whether the card has settled by the time it is read — which is the
+   whole reason the old "capture it before the sheet lands" line above
+   showFinal could go. */
+function paintFinalTotals(ms){
+  var t = Math.max(0, Math.round(Number(shownTotal())||0));
+  var el = document.getElementById('finalPts');
+  if(el){ try{ countUp(el, t, ms||600); }catch(e){ el.textContent = String(t); } }
+  try{ paintRing(t, MAXPTS); }
+  catch(e){ try{ console.error('[STATS] final ring repaint failed:', e && e.message); }catch(_){} }
+  try{ renderBreakdown(livePtsOnly()); }
+  catch(e){ try{ console.error('[STATS] final breakdown repaint failed:', e && e.message); }catch(_){} }
+  return t;
+}
+
 function showFinal(){
   try{ trkNow('night_complete',{pts:Math.round((S&&S.pts)||0), mins:Math.round((Date.now()-TRK.t0)/60000)}); }catch(_){}
   // Whatever is already on S.pts came from live rounds. Capture it before
@@ -17122,7 +17280,12 @@ function showFinal(){
      a resume, a late host reveal that re-ran the ending — paid the card
      out again. The total is now the sum of the ledger and adding to it is
      not a thing this function can do. */
-  const livePts = livePtsOnly();
+  /* The live figure used to be captured HERE, before the sheet and the
+     catches settled, because the breakdown could not otherwise tell the
+     two halves of the night apart. B18 made `live` a derived lane out of
+     recomputeScore()'s switch, so the capture stopped being needed and
+     paintFinalTotals() reads it fresh at paint time — which is what lets
+     the ending repaint correctly when the board arrives late. */
   recomputeScore();
   // Practice only: the bots' sheets settle too. Without this the final
   // board compared your predictions-included total against bots who never
@@ -17174,10 +17337,7 @@ function showFinal(){
      Both players' final cards on GN10 printed exactly their live-only
      figure against a 1,000 ceiling that includes the 600-point card —
      under-reporting At by 358 and Moon by 181. */
-  var _final = shownTotal();
-  countUp($f('finalPts'), _final, 900);
-  paintRing(_final, MAXPTS);
-  renderBreakdown(livePts);
+  paintFinalTotals(900);
   renderPending();
   renderBestCall();
   renderCiRecap();
@@ -17666,9 +17826,25 @@ function renderBestCall(){
 
 /* Everything the tests below are allowed to look at, gathered once, so no
    award can quietly disagree with another about what happened tonight. */
-function awardCtx(rank){
+function awardCtx(rank, field){
   const c={
     rank:(rank===undefined?null:rank),
+    /* ============ HOW MANY PEOPLE WAS THAT FIRST PLACE OVER? ==========
+       30 Aug 2026. The founder's final screen read
+
+           👑 THE GAME BALL
+           First place. 0 points — nobody in the room read this game
+           better than you.
+           #1  Final rank of 1
+
+       He was the only player. finishLive() computes that denominator one
+       line before it prints "Final rank of 1", and then called
+       renderAwards(rank) WITHOUT it — so `rank===1` and "I beat
+       everybody" were the same sentence to this function.
+
+       `field` is that denominator, threaded through. null means unknown,
+       and an award that needs a field must not fire on unknown. */
+    field:(field===undefined?null:field),
     pts:S.pts||0, speed:S.speed||0, streak:S.streak||1, mode:S.mode,
     graded:countGraded(), preds:predHits(),
     roundClean:[], roundGraded:[], roundHits:[],
@@ -17755,8 +17931,14 @@ const AWARDS=[
     name:()=> SPORT_KEY==='soccer' ? 'PLAYER OF THE MATCH' : 'THE GAME BALL',
     /* A first place declared while your own rounds are still unscored is a
        guess dressed as a trophy. Wait for the night to settle. */
-    test:c=>c.rank===1 && c.settled,
-    why:c=>`First place. <b>${c.pts} points</b> — nobody in the room read this ${L.unit} better than you.`,
+    /* THE ONLY COMPARATIVE AWARD OF THE FOUR. Perfect Night, Perfect
+       Quarter and Never Looked Away are claims about BEHAVIOUR and stay
+       true alone in a room, so they keep firing. This one is a claim
+       about other people, and it needs there to have been some.
+       `c.field>=2` — never `!==1`, because field is null when the
+       denominator is unknown and an unknown field must not crown. */
+    test:c=>c.rank===1 && c.settled && Number(c.field)>=2,
+    why:c=>`First place out of ${c.field}. <b>${c.pts} points</b> — nobody in the room read this ${L.unit} better than you.`,
     short:()=>'won the night' },
 
   { id:'perfect', emoji:'💎', name:'PERFECT NIGHT',
@@ -17816,8 +17998,14 @@ function awardEmoji(a,ctx){ try{ return (typeof a.emoji==='function') ? a.emoji(
 /* Returns { ctx, list (headline first, max 3), all }. A test that throws
    loses its own award and nothing else — one bad line must never be able
    to take the last screen of the night down with it. */
-function earnedAwards(rank){
-  const ctx=awardCtx(rank);
+function earnedAwards(rank, field){
+  const ctx=awardCtx(rank, field);
+  /* ============ NOTHING IS AWARDED FOR NOTHING ======================
+     A zero night is not a triumph, and the crown fired on one. This gate
+     is global rather than per-award so no award added later can regress
+     it: the chime and the vibration both live inside renderAwards, so
+     silencing them in copy alone would still leave the phone singing. */
+  if((Number(ctx.pts)||0) <= 0) return { ctx, all:[], list:[] };
   const hit=[];
   AWARDS.forEach(a=>{ let ok=false; try{ ok=!!a.test(ctx); }catch(e){ ok=false; } if(ok) hit.push(a); });
   const hidden={};
@@ -17853,9 +18041,9 @@ function gradedHits(){
     return n;
   }catch(_){ return 0; }
 }
-function renderAwards(rank){
+function renderAwards(rank, field){
   const card=document.getElementById('fAward'); if(!card) return null;
-  const got=earnedAwards(rank);
+  const got=earnedAwards(rank, field);
   const head=got.list[0];
   if(!head){ card.style.display='none'; return got; }
   const prev = AW_LAST && AW_LAST.list[0] ? AW_LAST.list[0].id : null;
@@ -18695,16 +18883,14 @@ async function joinNight(){
     try{
       var sv = SB.myScore ? await SB.myScore() : null;
       if(sv){
-        try{ ledgerServerFloor(sv); }catch(_){}
-        /* The client lanes too. ledgerServerFloor covers what the tally
-           owns; these three are computed on the device, and they are
-           exactly the ones that got written back as zeros. */
-        if((Number(sv.caughtPts)||0) > (Number(S.caughtPts)||0))
-          ledgerSet('caught', Number(sv.caughtPts)||0, 0, 'caught');
-        if((Number(sv.predPts)||0)   > (Number(S.predPts)||0))
-          ledgerSet('pred',   Number(sv.predPts)||0,   0, 'pred');
-        if((Number(sv.catchPts)||0)  > (Number(S.catchPts)||0))
-          ledgerSet('catch',  Number(sv.catchPts)||0,  0, 'catch');
+        /* ONE DOOR. This used to floor the composite total and THEN raise
+           the three device lanes on top of it, so a wiped phone counted
+           the card and the caught points twice — 690 on a 585 night, and
+           a floor can only ever go up, so it never corrected itself.
+           ledgerServerReconcile() raises the lanes first and floors only
+           the remainder, which is the same thing this block was reaching
+           for and the arithmetic it got wrong. */
+        try{ ledgerServerReconcile(sv); }catch(_){}
         try{ recomputeScore(); }catch(_){}
         try{ save(); }catch(_){}
       }
@@ -21957,6 +22143,45 @@ function holdForHost(idx){
    players, real top 10 — or the group-chat card we already had. */
 async function finishLive(){
   if(!window.SB || !SB.enabled) return;
+  /* ============ READ BEFORE YOU WRITE ================================
+     30 Aug, found by an adversarial pass over the check that was supposed
+     to guard this, and it is the defect the check could not see.
+
+     `await pushScore()` used to be the FIRST line of this function. On the
+     phone this whole screen exists for — board cache nulled by the screen
+     lock, local save cleared by showFinal() — every lane is locally zero
+     at this moment. So the push wrote predPts:0, catchPts:0, caughtPts:0
+     onto the server row, and ledgerServerReconcile() then read back the
+     row it had just damaged: pd, ct and cg all zero, nothing to raise,
+     the reconcile a no-op. The ring still painted 585 off the composite
+     total, so every check watching the ring stayed green while the row
+     lost 100 points of prediction card.
+
+     Measured on this build before the fix:
+
+         after showFinal   predPts=100  caughtPts=5
+         after finishLive  predPts=0    caughtPts=0     ring 585
+
+     The order is the whole fix. Read the seat, raise the lanes to it,
+     and only then publish — at which point the push writes the corrected
+     lanes rather than the empty ones, and is safe by construction.
+
+     ask() is declared here rather than below because the read now happens
+     before the ranks. */
+  const ask = (fn, ...a) => (typeof fn === 'function'
+    ? Promise.resolve(fn(...a)).catch(() => null)
+    : Promise.resolve(null));
+  var seat = await ask(SB.myScore);
+  if(seat){ try{ ledgerServerReconcile(seat); }catch(e){
+    try{ console.error('[STATS] final: reconcile threw before the push:', e && e.message); }catch(_){} } }
+  else {
+    /* ask() turns any rejection into null, so a permission error, an
+       offline phone or an older bundle with no myScore all arrive here
+       looking identical to "nothing to do" — and the player is shown the
+       zero this whole function exists to prevent, silently. Say so. */
+    try{ console.error('[STATS] final: no server seat available; the ring is showing the local total only'); }catch(_){}
+    try{ trk('final_floor_unavailable', { night: (GAME&&GAME.nightId)||'' }); }catch(_){}
+  }
   await pushScore();
   // joined(), not count(). A final rank is a rank out of everyone who
   // played tonight — not out of whoever still had the tab open when the
@@ -21964,15 +22189,86 @@ async function finishLive(){
   // screen that was simultaneously listing five other people.
   // Same guard as refreshRoom: an older bundle without joined() should cost
   // us the denominator, not the entire final screen.
-  const ask = (fn, ...a) => (typeof fn === 'function'
-    ? Promise.resolve(fn(...a)).catch(() => null)
-    : Promise.resolve(null));
   const [rank,top,joined]=await Promise.all([ask(SB.rank), ask(SB.top,10), ask(SB.joined)]);
+
+  /* ============ THE RING SAID 0 ON A NIGHT THAT PAID 585 =============
+     30 Aug 2026, founder's phone, Phillies at Angels. The server row held
+     pts 585 (live 470 + card 100 + caught 15). The ring said 0, and the
+     leaderboard four centimetres below it said 585.
+
+     shownTotal() already prefers the server and has since B-65 — but it
+     asks myServerRow(), which reads `lastStand`, a BROWSER CACHE of the
+     board. roomListenersStop() nulls that on pagehide, which is what a
+     phone does the moment its screen locks, and again on a room switch.
+     showFinal() then calls clearSave() by design, so the local ledger is
+     empty on any second visit. Cold cache plus cleared save is not an
+     edge case, it is the ordinary state of a phone that locked and came
+     back — and the two together read as zero.
+
+     "The server's total wins" was already the rule. What was wrong was
+     WHERE this screen went to ask. It asks the server now, through the
+     same door doResume() has always used.
+
+     A FLOOR, NEVER AN OVERWRITE, which is this file's own idiom (see
+     ledgerServerFloor and the lane floors in doResume). The phone can
+     legitimately hold MORE than the server for a few seconds: a
+     prediction card worth up to 600 settles locally and reaches the
+     server through a write queue, and a Caught It resolved after the
+     runner's last grading tick is on the device before it is in the row.
+     Overwriting would under-report a player at the exact moment their
+     night ends, which is the one error this product cannot afford.
+
+     THE CONSEQUENCE, WRITTEN DOWN because line 9351 says a divergence
+     must be: for those few seconds the card can read HIGHER than the
+     board beneath it. That is the deliberate trade. Under-reporting is
+     worse than briefly over-reporting, because the board catches up and
+     a person's memory of being shown zero does not. */
+  try{
+    /* The seat was read and reconciled at the top of this function, before
+       the push — see READ BEFORE YOU WRITE. Nothing is re-fetched here: a
+       second myScore() would be a second answer to a question already
+       asked, and the two could disagree.
+
+       ONE PAINTER — see paintFinalTotals. This used to repaint the ring
+       and #finalPts by hand and leave the breakdown beneath them on 0,
+       and it reached for `$f`, which is a const declared inside
+       showFinal(): the ReferenceError was swallowed by the catch below,
+       the floor ran, S.pts became 585 and the ring stayed on 0 with
+       nothing reported. */
+    paintFinalTotals(600);
+  }catch(e){
+    /* NOT `catch(_){}`. This exact catch swallowed the $f ReferenceError
+       a few hours ago: the floor ran, S.pts became 585, the ring stayed
+       on 0, and nothing anywhere said a word. A6/B-67. The screen must
+       still survive a throw — a final screen that renders nothing is
+       worse than one showing a stale number — but it no longer does it
+       in silence. */
+    try{ console.error('[STATS] final reconcile threw; the ring may be showing a stale total:', (e && e.stack) || e); }catch(_){}
+    try{ trk('final_floor_threw', { night: (GAME&&GAME.nightId)||'', msg: String((e && e.message) || e).slice(0,120) }); }catch(_){}
+  }
   // Never let the denominator be smaller than the board it sits above.
   const total = (joined!==null && joined!==undefined && top && top.length)
     ? Math.max(joined, top.length) : joined;
   if(rank!==null && rank!==undefined && total){
-    setStat(1,'#'+rank,`Final rank of ${total.toLocaleString()}`);
+    /* ============ A ROOM OF ONE HAS NO RANK ==========================
+       "#1 · Final rank of 1" is a sentence that makes the screen look
+       broken, and it sat one line under a crown for beating nobody. The
+       file already has the precedent: practice stops ranking because it
+       has no field to be ranked in. A solo live room has no field either,
+       so it shows what it actually knows. */
+    if(Number(total) >= 2){
+      setStat(1,'#'+rank,`Final rank of ${total.toLocaleString()}`);
+    } else {
+      /* NOT THE FACT BESIDE IT. Tile 2 already owns "Questions right" and
+         falls back to "Points tonight", so printing either of those here
+         gives a solo player the same number twice under the same caption
+         — 380 next to 380, which showFinal's own practice branch calls
+         the disease that branch exists to cure. Speed is the other thing
+         the night actually measured and nothing else on this screen says
+         it. */
+      var _sp = Math.max(0, Math.round(Number(S.speed)||0));
+      setStat(1, _sp>0 ? String(_sp) : '—', 'Speed banked');
+    }
     /* `B7` · DO NOT CROWN AN UNFINISHED NIGHT. On Game Night #7 this fired
        before the host had revealed, and again for a player whose last three
        quarters were never scored. A trophy handed out over incomplete data
@@ -22017,9 +22313,29 @@ async function finishLive(){
       }
     }catch(_){}
     var _stuck = Math.max(0, _un - _live);
-    document.getElementById('finalTitle').textContent =
-      _stuck>0 ? `Hold on — ${_stuck} ${_stuck===1?'round is':'rounds are'} still unscored`
-            : (rank===1 ? '🏆 You won the night!' : `Great game, ${S.name||'player'}!`);
+    /* ============ THE HEADLINE KEYS ON POINTS, NOT ON RANK ===========
+       30 Aug 2026. "🏆 You won the night!" printed over a ring reading 0,
+       in a room of one. Rank alone cannot carry this sentence: #1 of 1 is
+       not a win, and "Great game" over a zero is the same lie said more
+       quietly. So points first, then the size of the field, then rank.
+
+       A zero night gets neither a trophy nor a scolding. It says what
+       happened and hands them the next one. */
+    var _tot = Math.max(0, Math.round(Number(shownTotal())||0));
+    var _who = S.name || 'player';
+    var _title;
+    if(_stuck>0){
+      _title = `Hold on — ${_stuck} ${_stuck===1?'round is':'rounds are'} still unscored`;
+    } else if(_tot <= 0){
+      _title = `Tough night, ${_who} — nothing landed.`;
+    } else if(!(Number(total) >= 2)){
+      /* Alone in the room. The ring is the story; there is nobody to have
+         beaten and saying otherwise is what made the crown absurd. */
+      _title = `Night complete, ${_who}.`;
+    } else {
+      _title = (rank===1) ? '🏆 You won the night!' : `Great game, ${_who}!`;
+    }
+    document.getElementById('finalTitle').textContent = _title;
     try{
       var _ub=document.getElementById('finalUnsettled');
       if(_ub){
@@ -22042,7 +22358,10 @@ async function finishLive(){
     document.getElementById('scRankLine').textContent=`Rank #${rank} of ${total.toLocaleString()}`;
     // The two rarest awards in the table need the room. Now that we have it,
     // re-run the engine and rewrite tonight's row in the season record.
-    renderStatLine(recordStatLine(renderAwards(rank)));
+    /* `total` is the denominator printed as "Final rank of N" three
+       lines above. Passing it is the whole fix: the award engine could
+       see the position and not the size of the field. */
+    renderStatLine(recordStatLine(renderAwards(rank, total)));
   }
   if(top && top.length) renderRealLb('finalLb', top, total);
 }
@@ -24157,7 +24476,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-29-extras.241';
+const STATS_BUILD='2026-08-30-earned.244';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

@@ -59,6 +59,45 @@ const { waitReady } = require('./ready.js');
 const ARG = process.argv.slice(2);
 const argOf = (flag, dflt) => { const i = ARG.indexOf(flag); return (i >= 0 && ARG[i + 1]) ? ARG[i + 1] : dflt; };
 const POS = ARG.filter((a, i) => !a.startsWith('--') && !(i > 0 && ARG[i - 1].startsWith('--')));
+/* ============ AND IT STOPS READING TONIGHT ==========================
+   30 Aug. This suite has been intermittently red for a week — 30/0, then
+   29/1, then 28/2, then 30/0 — and on the same build in the same hour it
+   went 28/2 and then 30/0. A check whose answer changes between two runs
+   of one file is not measuring the file.
+
+   The cause was that it loaded `?sport=basketball` and nothing else, so
+   it read the LIVE slate and the live clock: which rooms exist right now,
+   whether a night has expired, what slate/current happens to point at.
+   All of that moves under it while it runs, and none of it is what the
+   suite is about — it is about whether a finger on a name survives a
+   rebuild of the sheet.
+
+   `?fixture=1` holds the built-in night, which is what the rest of the
+   gate uses for exactly this reason. It is kept because reading tonight's
+   live slate in a suite about touch handling is wrong regardless.
+
+   IT DID NOT FIX THE FLAKE, and saying so here matters more than the
+   change did. Measured immediately after pinning, three consecutive runs
+   of the same file: 30/0, 29/1, 30/0. So the live slate was never the
+   cause and the first version of this comment — which claimed the pin as
+   the fix — was wrong before anybody read it.
+
+   BASELINE CONTROL, run before blaming the build, and then run three more
+   times because one green run is what a flake looks like half the time.
+   The DEPLOYED .241 — which contains none of that night's work — went
+   30/0, 30/0, 30/0, 29/1 on the same quiet box, against 28/2, 30/0, 29/1,
+   30/0 for the staged build. Both flake, at about the same rate. So this
+   is not a regression, and it is not a staging artifact: THE RACE IS LIVE
+   IN PRODUCTION RIGHT NOW.
+
+   WHAT THAT LEAVES IS THE UNCOMFORTABLE READING. The two checks that fail
+   are the two shortest presses — 0ms and 120ms — and they fail by the
+   press being lost across a rebuild. That is not a property of this
+   suite; it is the exact product bug the suite was written for, and the
+   founder's report of it was "a second tap on the same name works". An
+   intermittently red check here most likely means the race is still
+   winnable by the repaint and was made rarer rather than closed. Do not
+   quiet this suite. It is reporting something. */
 const TARGET = POS[0] || argOf('--file', 'index-test.html');
 const FILE = 'file://' + (path.isAbsolute(TARGET) ? TARGET : path.join(__dirname, '..', TARGET));
 const ENGINES = argOf('--engine', 'firefox,chromium').split(',').map(s => s.trim()).filter(Boolean);
@@ -78,7 +117,7 @@ async function bootPredict(b) {
   const p = await b.newPage({ viewport: VP });
   const errs = [];
   p.on('pageerror', e => errs.push(String(e && e.message || e)));
-  await p.goto(FILE + '?sport=basketball', { waitUntil: 'domcontentloaded' });
+  await p.goto(FILE + '?sport=basketball&fixture=1', { waitUntil: 'domcontentloaded' });
   await waitReady(p);
   await p.evaluate(() => { try { window.loadGameStats = async function () { return null; }; } catch (_) {} });
   await p.evaluate(() => { startDemo(); S.name = 'QA'; startPredict(); });
@@ -356,7 +395,7 @@ async function caughtIt(b, eng) {
   const p = await b.newPage({ viewport: VP });
   const errs = [];
   p.on('pageerror', e => errs.push(String(e && e.message || e)));
-  await p.goto(FILE + '?sport=basketball', { waitUntil: 'domcontentloaded' });
+  await p.goto(FILE + '?sport=basketball&fixture=1', { waitUntil: 'domcontentloaded' });
   await waitReady(p);
   /* Caught It refuses to draw on screens it must not share — see
      ciScreenOk(). The lobby is where it belongs. */

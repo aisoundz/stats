@@ -660,6 +660,25 @@ const TIER={
      including the two that guard the ~2,400/sec microtask redraw chain
      the ok-guard exists to prevent. */
   'room-stale.js':    {tier:'browser'},
+  /* THE LOG IS PART OF THE PRODUCT. From the real 3am cron output of
+     29 Aug, two lines apart, about the same fourteen games: "offer 17
+     game(s) will appear in the picker" and "rail 17 MLB game(s) built but
+     NOT offered". Seventeen both ways; the true answer was zero. The
+     count was printed forty lines before the pick file is even read, so
+     it could not have known, and the honest count that CAN know lived
+     inside the dry-run block — meaning the --apply run that actually
+     writes the rail was the one run that never stated its own size.
+     Static-tier: it reads host/build-slate.js and the real slate.log,
+     and it announces rather than fails when no fixed-build group has
+     reached the log yet. */
+  'slate-offer.js':   {tier:'static'},
+  /* A LOG FILE HAS ONE WRITER. Half of welcome-queue.log — 1,830 of 3,735
+     timestamped lines — was a copy of the other half, because the script
+     appended to it AND the cron line redirected its stdout into the same
+     file. It is the log the founder reads to find out whether a welcome
+     email reached anybody, and every count taken from it was double.
+     Reads the real crontab and the real logs on disk. */
+  'log-writers.js':   {tier:'static'},
 };
 
 /* NAME THE SUITES THAT EXIST BUT ARE NOT IN THE TABLE. A manifest that
