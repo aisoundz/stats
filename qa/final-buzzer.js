@@ -506,6 +506,69 @@ function sabotage(html){
   ok('final.no-page-errors-7', errs.length===0, errs.slice(0,2).join(' · '));
 }
 
+/* ============ EXTRA INNINGS ARE STILL THE GAME =====================
+   29 Aug 2026, Phillies at Angels, tied 1-1 in the TOP OF THE 10TH. The
+   founder's phone read "FINAL OUT · Score your predictions · Settling
+   your card". The runner disagreed in its own log at the same minute
+   (`score 1 — 1  OT in progress`) and so did ESPN: state `in`,
+   STATUS_IN_PROGRESS, period 10.
+
+   Baseball ships three scheduled rounds. When the 7th-9th scored,
+   isLastRound() went true and four separate call sites read that as "the
+   game is finished" and offered to settle the card. A tied game has more
+   innings and the runner publishes an overtime round for exactly that.
+
+   The question is now asked in one place, afterRoundLabel(), and this
+   checks the state that produced the bug: last scheduled round, feed
+   still live. */
+{
+  const b = await ENG.launch();
+  const p = await b.newPage();
+  const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
+  await p.goto('file://'+TARGET);
+  await p.waitForFunction(()=>typeof isLastRound==='function',{timeout:20000}).catch(()=>{});
+  const r = await p.evaluate(()=>{
+    const out={};
+    try{
+      startDemo(); S.mode='live';
+      GS.ok=true; GS.ev=String(GAME.espnEvent||'');
+      const last = liveRounds()-1;
+      GS.state='in';
+      /* FALL BACK TO THE OLD LOGIC when the owner is absent, so this
+         check catches the ORIGINAL bug rather than passing because a
+         function is missing. A test that goes green on a build without
+         the fix is not a test. */
+      const label = (i) => (typeof afterRoundLabel === 'function')
+        ? afterRoundLabel(i)
+        : (!isLastRound(i)
+            ? ('Back to the ' + L.unit + ' — next →')
+            : (L.End + ' — score predictions →'));
+      out.live = label(last);
+      out.moreLive = (typeof moreGameToCome==='function') ? moreGameToCome() : null;
+      GS.state='post';
+      out.post = label(last);
+      out.morePost = (typeof moreGameToCome==='function') ? moreGameToCome() : null;
+    }catch(e){ out.err=String(e).slice(0,120); }
+    return out;
+  });
+  console.log(`     last round, feed live -> "${r.live}"`);
+  console.log(`     last round, feed post -> "${r.post}"`);
+  ok('final.extra-innings-do-not-offer-to-settle',
+     !!r.live && !/score predictions/i.test(r.live),
+     `with the last scheduled round scored and the feed still LIVE the app said "${r.live}". `
+     + 'That walks a player off a game that is still being played, which is what happened to the '
+     + 'founder in the top of the 10th on 29 Aug.');
+  ok('final.a-finished-game-still-settles',
+     !!r.post && /score predictions/i.test(r.post),
+     `when the feed genuinely says post the app must offer to settle, and it said "${r.post}". `
+     + 'A guard that never lets anyone finish is worse than the bug.');
+  ok('final.moreGameToCome-reads-the-feed',
+     r.moreLive === true && r.morePost === false,
+     `moreGameToCome() returned ${r.moreLive} while live and ${r.morePost} while post`);
+  ok('final.no-page-errors-extra', errs.length===0, errs.slice(0,2).join(' · '));
+  await b.close();
+}
+
 const verdict = fail? 'RED' : 'GREEN';
 console.log(`\n${verdict}   ${pass} passed, ${fail} failed   [${path.basename(TARGET)} · ${ENGNAME}]`
             + (SABOTAGE?'   [SABOTAGED — red is the correct result]':''));
