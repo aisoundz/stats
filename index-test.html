@@ -2352,7 +2352,7 @@
   <section class="screen" id="s-predreview">
     <div class="center" style="margin-top:6px"><span class="pill" id="prPill">Final buzzer 🚨</span></div>
     <h1 class="center" style="margin-top:8px">Score your predictions 📝</h1>
-    <p class="sub center">Enter the official results (host announces from the final box score). Your picks are shown under each.</p>
+    <p class="sub center" id="prSub">Enter the official results (host announces from the final box score). Your picks are shown under each.</p>
     <div class="card" id="prCard"></div>
     <div class="card" id="prCatchCard" style="display:none">
       <div class="catchhead"><b>⚡ Your watchlist</b><span class="cpts" id="prCatchPts">6 × 1 pt</span></div>
@@ -4430,15 +4430,44 @@ window.STATS_FIREBASE = {
      not turn into a thousand writes and a bill. Six per session, one every
      ten seconds, message truncated, no personal data beyond the handle. */
   var errN = 0, errAt = 0, ERR_MAX = 6, ERR_GAP = 10000;
+  /* ============ IT REPORTS WITHOUT A NIGHT NOW ========================
+     30 Aug 2026. Two things were wrong here and each hid the other.
+
+     `if (!nightId) return false` meant every failure that happens BEFORE
+     somebody joins a night — the home page, the landing page, the signup
+     form, sign-in, the email field — was unreportable by design. That is
+     precisely where a stranger is, and it is why a signup that could not
+     be submitted survived four days and two people with nothing logged.
+
+     And the writes that DID happen went to nights/{id}/errors, a path no
+     rule in firestore.rules had ever named, so the catch-all denied every
+     one and the `.catch(function(){})` below swallowed the denial.
+     Measured before the rule was written: 312 nights, ZERO error
+     documents, ever. Every "0 errors logged" in every debrief was a
+     permission failure wearing the costume of a quiet night.
+
+     So: no night is no longer a reason to stay silent — it falls back to
+     the top-level `errors` collection — and a rejected write says so in
+     the console instead of disappearing. */
   SB.logError = function (where, msg, extra) {
     try {
-      if (!SB.enabled || !nightId) return false;
+      if (!SB.enabled) return false;
       var now = Date.now();
       if (errN >= ERR_MAX || now - errAt < ERR_GAP) return false;
       if (!budgetChore('error-log')) return false;
       errN++; errAt = now;
-      F.addDoc(F.collection(db, 'nights', nightId, 'errors'), {
+      /* In a night it files against the night, because which room a thing
+         broke in is half the report. Outside one it files at the top
+         level rather than not at all. */
+      var target = nightId
+        ? F.collection(db, 'nights', nightId, 'errors')
+        : F.collection(db, 'errors');
+      F.addDoc(target, {
         uid: uid(),
+        /* Which screen they were on. Outside a night this is the only
+           thing that says WHERE, and "the signup sheet" versus "the
+           landing page" is the difference between a report and a shrug. */
+        screen: String((typeof S === 'object' && S && (S.place || S.screen)) || '').slice(0, 40),
         name: String(mine.name || '').slice(0, 24),
         where: String(where || '').slice(0, 40),
         msg: String(msg || '').slice(0, 300),
@@ -4454,7 +4483,17 @@ window.STATS_FIREBASE = {
         build: String(window.STATS_BUILD || '').slice(0, 40),
         ua: String(navigator.userAgent || '').slice(0, 160),
         at: F.serverTimestamp()
-      }).catch(function () {});
+      }).catch(function (e) {
+        /* NOT `.catch(function(){})`. That empty catch is why nobody knew
+           for 312 nights that every one of these was being refused. If
+           the error log itself cannot write, that is the one failure that
+           must never be quiet — it is the thing that makes every other
+           failure invisible. */
+        try {
+          console.error('[STATS] THE ERROR LOG ITSELF FAILED TO WRITE — every other '
+            + 'failure is now invisible too:', (e && (e.code || e.message)) || e);
+        } catch (_) {}
+      });
       return true;
     } catch (e) { return false; }
   };
@@ -4924,6 +4963,13 @@ window.STATS_FIREBASE = {
           // Log it. This is the line that would have told us on Tuesday
           // night what the card could not.
           try { console.error('[STATS] signup failed:', code, e && e.message); } catch (_) {}
+          /* AND SOMEWHERE A PERSON WILL SEE IT. The console line above was
+             the only record a failed signup has ever left, and a browser
+             console is not a place anybody was ever going to look. This is
+             the single most expensive failure the product has — it is the
+             only conversion it has — so it now files a report that
+             survives the tab being closed. */
+          try { if (SB.logError) SB.logError('signup', code, (e && e.message) || ''); } catch (_) {}
           return { ok:false, why:code, detail:(e && e.message) || '' };
         }
         await new Promise(function (r) { setTimeout(r, 700); });
@@ -8422,6 +8468,30 @@ function roundWorth(i){return (HOSTW[i]!=null?HOSTW[i]:SPORT.worth[i]);}
 function roundTag(i){return SPORT.tags[i];}
 function roundName(i){return SPORT.names[i];}
 function startLabel(i){return (SPORT.startLbl||"Start {n} ▶").replace("{n}",roundName(i));}
+/* ============ ONE SCREEN, ONE INSTRUCTION ===========================
+   30 Aug 2026, founder's phone, straight after the Lynx buzzer:
+
+       Score your predictions 📝
+       Enter the official results (host announces from the final box
+         score). Your picks are shown under each.
+       Settling your card… nothing for you to do.
+
+   The heading gives an order and the card two lines below it cancels the
+   order. That subtitle is static markup written for the HOST-ANNOUNCED
+   path, and nothing ever took it down when the app settles the card
+   itself — so on every auto-settled night it has told people to do a job
+   that does not exist, directly above a box saying not to.
+
+   One owner for that sentence, so the screen cannot argue with itself. */
+function prSubSay(mode){
+  try{
+    var el=document.getElementById('prSub'); if(!el) return;
+    el.textContent = (mode==='settling')
+      ? 'Your picks are shown under each. Nothing to enter — the card settles itself.'
+      : 'Enter the official results (host announces from the final box score). Your picks are shown under each.';
+  }catch(_){}
+}
+try{ window.prSubSay = prSubSay; }catch(_){}
 /* The last round that EXISTS, not the last one regulation has. Otherwise
    "Lock it in — wait for answers" fires at the end of Q4 while an overtime
    round is open behind it. */
@@ -8934,7 +9004,24 @@ function paintContinueCard(){
            tonight's game · Q1 opens at the break". See roomNextRound(). */
         var nq=roomNextRound(S.nextQ!=null?S.nextQ:S.qi);
         var open=false; try{ var hd=hostedDoc(nq); open=!!(hd && hd.state==='live'); }catch(_){}
-        where = open ? (roundTag(nq)+' is open \u2014 answer now')
+        /* ============ AND NOT ON A NIGHT THAT IS OVER ==================
+           30 Aug 2026, founder's phone, minutes after Lynx at Dream went
+           FINAL 81-89. Home said, in the biggest button on the screen:
+
+               Continue tonight's game \u00b7 Q4 is open \u2014 answer now
+
+           Q4 was scored. `hostedDoc(nq)` is this device's CACHED copy of
+           the round, and the round moved to `scored` while the phone was
+           not listening \u2014 the same missed update that left S.results
+           empty and made the ending call a settled night unsettled.
+
+           Reading a cached flag is how the app ends up shouting at
+           somebody to go and answer a round that finished. nightIsOver()
+           is room-guarded and already the authority everywhere else that
+           refuses to act after the buzzer, so it is the authority here. */
+        var done=false; try{ done=nightIsOver(); }catch(_){}
+        where = done ? 'see how the night finished'
+              : open ? (roundTag(nq)+' is open \u2014 answer now')
                      : (roundTag(nq)+' opens at the break');
       }
       else if(S.place==='review'||S.place==='break') where='between quarters';
@@ -17174,6 +17261,7 @@ function openPredReview(){
         + '<div style="font-size:26px">🧮</div>'
         + '<b style="font-size:15px">Settling your card…</b>'
         + '<p class="sub" style="font-size:14px;margin:8px 0 0">Reading the final box score. You don’t have to enter anything.</p></div>';
+      try{ prSubSay('settling'); }catch(_){}
       try{ document.getElementById('prBtn').style.display='none'; }catch(_){}
       go('predreview');
       loadGameStats(true).then(function(){ predReviewDecide(); });
@@ -17201,6 +17289,7 @@ function predReviewDecide(){
         + '<b style="font-size:15px">Settling your card…</b>'
         + '<p class="sub" style="font-size:14px;margin:8px 0 0">Waiting on the official final box score. '
         + 'It lands a minute or two after the buzzer — nothing for you to do.</p></div>';
+      try{ prSubSay('settling'); }catch(_){}
       var b=document.getElementById('prBtn'); if(b) b.style.display='none';
     }catch(_){}
     go('predreview');
@@ -17213,6 +17302,10 @@ function predReviewDecide(){
 }
 function predReviewManual(){
   const c=document.getElementById('prCard');c.innerHTML='';
+  /* Back to the host-announced wording, because this IS that path — and a
+     screen that told you not to enter anything and then hands you a form
+     is the same contradiction pointing the other way. */
+  try{ prSubSay('manual'); }catch(_){}
   try{ document.getElementById('prBtn').style.display=''; }catch(_){}
   try{
     var h=document.querySelector('#s-predreview h1'); if(h) h.textContent='The feed didn’t settle it 📝';
@@ -19221,6 +19314,94 @@ function roomListenersRearm(why){
   }catch(_){ return 0; }
 }
 try{ window.roomListenersRearm = roomListenersRearm; }catch(_){}
+
+/* ============ THE PHONE COULD NOT SEE A ROUND IT HAD BEEN PAID FOR ===
+   30 Aug 2026, founder's phone, Lynx at Dream, immediately after the
+   buzzer. The final screen said:
+
+       Hold on — 1 round is still unscored
+       You answered a round that never came back with a score
+       6 / 12 questions right
+
+   Every word of that was false. The server had all four rounds scored and
+   keyed, had paid him 130 live points, and recorded roundsDone=4. His ring
+   even read the right total — 135 — because the seat reconcile put it
+   there. What was wrong was everything computed from `S.results`.
+
+   `confirmReview()` is the ONLY thing in this file that fills S.results,
+   and it runs when the player walks through that round's reveal screen. So
+   a round the SERVER graded while the player was somewhere else — another
+   tab, a locked phone, or already on the ending — is paid but invisible:
+   `unsettled` counts it as owed, and countGraded() drops its four
+   questions out of the denominator, which is why 16 became 12.
+
+   replayMissedRounds() cannot help. It routes through onHostedRound(),
+   which refuses by design any round this device has already submitted, so
+   the results array stays empty forever.
+
+   THIS PAYS NOTHING. The points arrived through the server floor already;
+   calling ledgerSet here would add a second copy of a round that has been
+   paid and push the card ABOVE the board — the exact over-count the
+   reconcile door was built to end. It fills in what the phone missed so
+   the screen can describe the night truthfully, and it touches no lane. */
+async function reconcileResultsFromServer(){
+  try{
+    if(!window.SB || !SB.enabled || !SB.recentRounds) return 0;
+    var list = await SB.recentRounds(12);
+    if(!Array.isArray(list) || !list.length) return 0;
+    var filled = 0;
+    list.forEach(function(v){
+      try{
+        if(!v || !Array.isArray(v.key) || !v.key.length) return;   // not keyed yet
+        /* `idx` IS THE ROUND'S OWN NUMBER — the runner writes it on every
+           round doc. The first draft of this parsed it out of the document
+           id instead, which works only for as long as every id is "r<n>",
+           and would have gone silently quiet the day one was not. That is
+           the shape of failure this whole session has been about, so the
+           declared field is the owner and the id is only a fallback. */
+        var i = (typeof v.idx === 'number' && isFinite(v.idx)) ? v.idx : null;
+        if(i === null){
+          var m = String(v.id||'').match(/^r(\d+)$/);
+          if(!m){
+            try{ console.error('[STATS] round doc has no idx and an unreadable id — cannot place it:', v.id); }catch(_){}
+            return;
+          }
+          i = Number(m[1]);
+        }
+        if(!(i >= 0) || i >= rounds.length) return;
+        var ans = S.liveAnswers[i] || [];
+        var res = S.results[i] || [];
+        /* Walk the SERVER'S key, not this device's copy of the questions.
+           A phone that never rendered the round has an empty local q list,
+           and keying off that would skip the one case most likely to need
+           this — the round the player answered on another screen. */
+        var qs = v.key;
+        /* Only where the player ACTUALLY ANSWERED and nothing came back.
+           A round they never played is not a hole to fill — it was never
+           their chance to miss, and inventing a false for it would count
+           against them on a question they never saw. */
+        var touched = false;
+        qs.forEach(function(q, j){
+          var my = ans[j];
+          if(!my || my.choice === null || my.choice === undefined || my.choice === '') return;
+          if(res[j] !== undefined && res[j] !== null) return;      // already known
+          res[j] = String(my.choice) === String(v.key[j]);
+          touched = true;
+        });
+        if(touched){ S.results[i] = res; filled++; }
+      }catch(_){}
+    });
+    if(filled){
+      try{ console.log('[STATS] filled results for ' + filled + ' round(s) the server had already scored'); }catch(_){}
+      try{ save(); }catch(_){}
+    }
+    return filled;
+  }catch(e){
+    try{ console.error('[STATS] could not reconcile round results:', e && e.message); }catch(_){}
+    return 0;
+  }
+}
+try{ window.reconcileResultsFromServer = reconcileResultsFromServer; }catch(_){}
 
 async function replayMissedRounds(){
   try{
@@ -22264,6 +22445,14 @@ async function finishLive(){
   const ask = (fn, ...a) => (typeof fn === 'function'
     ? Promise.resolve(fn(...a)).catch(() => null)
     : Promise.resolve(null));
+  /* BEFORE ANYTHING JUDGES THE NIGHT. The ending's verdict — "1 round is
+     still unscored", the questions-right denominator, every award gate —
+     is computed from S.results, which only confirmReview() ever fills. A
+     round the server scored while the player was elsewhere is paid and
+     invisible, and the ending then calls a settled night unsettled. Ask
+     the server what it keyed before deciding what to say. Pays nothing. */
+  try{ await reconcileResultsFromServer(); }catch(e){
+    try{ console.error('[STATS] final: could not reconcile round results:', e && e.message); }catch(_){} }
   var seat = await ask(SB.myScore);
   if(seat){ try{ ledgerServerReconcile(seat); }catch(e){
     try{ console.error('[STATS] final: reconcile threw before the push:', e && e.message); }catch(_){} } }
@@ -24569,7 +24758,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-30-enter.245';
+const STATS_BUILD='2026-08-30-settled.248';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

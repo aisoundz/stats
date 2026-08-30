@@ -687,6 +687,22 @@ const TIER={
      per-element handler cannot survive the card's innerHTML repaint. This
      presses the real key on the real element. Browser-tier. */
   'enter-submits.js': {tier:'browser'},
+  /* THE ERROR LOG COULD NEVER WRITE. Measured 30 Aug against production:
+     312 nights, ZERO error documents, ever. SB.logError wrote to
+     nights/{id}/errors, no rule named that path, the catch-all denied it
+     and an empty .catch() swallowed the denial — so every "0 errors
+     logged" in every debrief was a permission failure. And it bailed
+     entirely without a nightId, so the home page, the signup form and
+     sign-in could not report anything even in principle. Static: reads
+     firestore.rules and the app source. */
+  'error-path.js':    {tier:'static'},
+  /* A NIGHT THE SERVER SETTLED MUST NOT BE CALLED UNSETTLED. Founder's
+     phone, 30 Aug, seconds after Lynx at Dream went final: "Hold on — 1
+     round is still unscored" and "6/12 questions right" on a night where
+     Firestore held r0-r3 all scored/keyed and had paid him 135. Only
+     confirmReview() ever filled S.results, so a round the SERVER graded
+     while he was elsewhere was paid and invisible. Browser-tier. */
+  'settled-night.js': {tier:'browser'},
 };
 
 /* NAME THE SUITES THAT EXIST BUT ARE NOT IN THE TABLE. A manifest that

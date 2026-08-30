@@ -40,6 +40,37 @@ service cloud.firestore {
     function signedIn() {
       return request.auth != null;
     }
+    /* One shape for an error report, named once and used by both error
+       paths, so the in-night log and the front-door log cannot drift into
+       accepting different things. Sizes match what SB.logError already
+       truncates to on the way out. */
+    function validError() {
+      return request.resource.data.uid == request.auth.uid
+          && request.resource.data.where is string
+          && request.resource.data.where.size() <= 40
+          && request.resource.data.msg is string
+          && request.resource.data.msg.size() <= 300
+          && (!('extra' in request.resource.data) || (
+                request.resource.data.extra is string
+                && request.resource.data.extra.size() <= 200
+             ))
+          && (!('name' in request.resource.data) || (
+                request.resource.data.name is string
+                && request.resource.data.name.size() <= 24
+             ))
+          && (!('build' in request.resource.data) || (
+                request.resource.data.build is string
+                && request.resource.data.build.size() <= 40
+             ))
+          && (!('ua' in request.resource.data) || (
+                request.resource.data.ua is string
+                && request.resource.data.ua.size() <= 160
+             ))
+          && (!('screen' in request.resource.data) || (
+                request.resource.data.screen is string
+                && request.resource.data.screen.size() <= 40
+             ));
+    }
     // ---- Call It: live in-game side-game (isolated; never touches pts) ----
     match /nights/{nightId}/callit/{qid} {
       allow read:  if true;
@@ -633,6 +664,48 @@ service cloud.firestore {
       // consent copy that describes a button nobody built is the kind of
       // thing that is fine right up until the first person asks.
       allow delete: if isOwner() || (signedIn() && request.auth.uid == uid);
+    }
+
+    /* ============ THE ERROR LOG HAS NEVER WORKED ======================
+       30 Aug 2026. SB.logError() has been writing to
+       nights/{nightId}/errors since it was added, and NO RULE HAS EVER
+       NAMED THAT PATH — so the catch-all below denied every one of them,
+       and the `.catch(function(){})` on the write swallowed the denial.
+
+       Measured before writing this rule: 312 nights, ZERO error
+       documents, ever. Every "0 error document(s)" line in every debrief
+       was the rules refusing the write, not a quiet night. The debrief
+       already warned that zero was a finding rather than a clean bill of
+       health; it was the stronger reading the whole time.
+
+       WRITE-ONLY FOR PLAYERS. A phone may add a report and may never read
+       one back, list them, edit one or delete one — an error row carries
+       another person's user agent and uid, and nothing about it belongs
+       to the person who happened to trigger it. The owner reads them.
+
+       Bounded here as well as in the client, because the client is a
+       suggestion and this is not. */
+    match /nights/{nightId}/errors/{errId} {
+      allow read:   if isOwner();
+      allow create: if signedIn() && validError();
+      allow update, delete: if isOwner();
+    }
+
+    /* ============ AND THE FRONT DOOR HAD NOWHERE AT ALL ===============
+       Every failure that happens BEFORE somebody joins a night — the home
+       page, the landing page, the signup form, sign-in, the email field —
+       could not be reported even in principle, because the only error
+       path in the app was scoped to a night id and bailed without one.
+
+       That is the exact blind spot that let a broken signup survive four
+       days and two people: nothing was wrong with the monitoring, there
+       was no monitoring where strangers actually are.
+
+       Same shape as above, at the top level, keyed by auto-id. */
+    match /errors/{errId} {
+      allow read:   if isOwner();
+      allow create: if signedIn() && validError();
+      allow update, delete: if isOwner();
     }
 
     // Everything not named above is closed.
