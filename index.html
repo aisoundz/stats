@@ -8777,6 +8777,7 @@ const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-gameti
    It falls through to startLive() untouched whenever the player is already
    in tonight's room, or when there is no hero room to enter — so every
    guard inside that door still runs and still gets to refuse. */
+var DOOR_TRIED = false;   /* see the guard inside startLive() */
 function playTonight(){
   try{
     var here = (typeof GAME!=='undefined' && GAME) ? (GAME.nightId||'') : '';
@@ -11240,7 +11241,44 @@ function startPredict(){
     }catch(_){ onSlate = true; }        // unsure: leave the door alone
     if(S.mode === 'live' && rooms.length && !onSlate){
       try{ trk('blocked_no_room',{where:'predict', night:(GAME&&GAME.nightId)||''}); }catch(_){}
-      toast('Pick tonight’s game above and the card opens with it.');
+      /* ── AND THE SAME DEAD END WAS STILL HERE ────────────────────────
+         31 Aug. playTonight() gave the BUTTON a door, and this guard —
+         the other half of the same bug — still answered every other
+         caller by pointing at a rail that a one-game night does not
+         render. The resume path (`mem==='live'` in checkResume) calls
+         startLive() directly, so a returning player whose saved night is
+         not tonight's got "Pick tonight's game above" and no way to obey
+         it. Fixing the control a person taps and leaving the guard behind
+         it lying is one fact with two copies again.
+
+         So route, do not refuse: if the hero is holding a real room on
+         tonight's slate, open it. DOOR_TRIED bounds this to ONE
+         delegation per page load, which is what makes it safe —
+         playTonight() ends in startLive(), so without the latch a failed
+         chooseGame() would bounce between the two forever. After a
+         successful switch GAME is on the slate and this branch is not
+         reached at all; after a failed one we fall through to a sentence
+         that is true. */
+      if(!DOOR_TRIED){
+        var _hg=null; try{ _hg = heroGame(); }catch(_){}
+        var _want = _hg && _hg.nightId;
+        if(_want && _want !== ((GAME&&GAME.nightId)||'') && slateGame(_want)){
+          DOOR_TRIED = true;
+          try{ playTonight(); return; }catch(_){}
+        }
+      }
+      /* AND IF THERE IS NOTHING ABOVE, DO NOT SAY "ABOVE". paintGameRail()
+         hides itself below two games, so on a one-game night that word
+         named an element with display:none. Ask the rail whether it is
+         actually on screen rather than assuming it is. */
+      var _railUp = false;
+      try{
+        var _rl = document.getElementById('gameRail');
+        _railUp = !!_rl && getComputedStyle(_rl).display !== 'none';
+      }catch(_){}
+      toast(_railUp
+        ? 'Pick tonight’s game above and the card opens with it.'
+        : 'That game is not on tonight’s slate — tap Play on the front page to join tonight’s.');
       try{ if(typeof paintSlate==='function') paintSlate(); }catch(_){}
       try{ go('landing'); }catch(_){}
       return;
@@ -24918,7 +24956,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-31-door.251';
+const STATS_BUILD='2026-08-31-door.252';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

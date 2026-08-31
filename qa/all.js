@@ -239,6 +239,13 @@ const TIER={
      it — its fixtures roll a passed tip to tomorrow, so it can never reach
      the state the bug lives in. This one starts a game in the past. */
   'hero-live.js':     {tier:'browser'},
+  /* 31 Aug, the other half: the hero named tonight's game and the button
+     under it said "Pick a game above" with nothing above to pick — the rail
+     hides below two games and the slate had one. Pins that a one-game night
+     still has a door, and that the sport follows the room ON A TAP (a
+     choice), which is the line practice-score.js and pick-reach.js hold
+     from the other side. */
+  'one-game-door.js': {tier:'browser'},
   'marquee-order.js': {tier:'browser'},
   /* NODE ONLY, and that is the point: it drives the real host engine over
      the real recorded feed for all five leagues with no browser at all, so
