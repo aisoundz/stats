@@ -1981,12 +1981,12 @@
     </div>
 
     <div class="card tight">
-      <h2 style="font-size:14px" id="rulePredH">📝 Predictions — up to 60 pts</h2>
+      <h2 style="font-size:14px" id="rulePredH">Predictions — up to 60 pts</h2>
       <p class="sub" style="font-size:14px" id="rulePredP">Lock 6 picks before tip-off: winning team (10 pts) and the leader in points, assists, steals, rebounds &amp; blocks (5 pts each). Nail the leader's exact stat total for a +5 bonus per category — so a category you fully nail is worth 10. Predictions can't be changed after tip-off.</p>
     </div>
 
     <div class="card tight" id="ruleCatch" style="display:none">
-      <h2 style="font-size:14px">⚡ Your watchlist — 1 pt each</h2>
+      <h2 style="font-size:14px">Your watchlist — 1 pt each</h2>
       <p class="sub" style="font-size:14px" id="ruleCatchP"></p>
     </div>
 
@@ -1996,7 +1996,7 @@
     </div>
 
     <div class="card tight">
-      <h2 style="font-size:14px">⚡ Speed points — the tiebreaker</h2>
+      <h2 style="font-size:14px">Speed points — the tiebreaker</h2>
       <p class="sub" style="font-size:14px" id="ruleSpeedP">Every correct quarter answer also banks the seconds you had left on the clock as Speed points. Example: answer correctly with 14 seconds left → +14 ⚡. Ties in total points are broken by Speed. Speed never beats accuracy — it only settles ties.</p>
     </div>
 
@@ -8880,7 +8880,16 @@ function landingTipLine(){
 
        I wrote a second author directly beneath the note explaining why
        not to. The rule holds; the knowledge moves in here. */
-    if(bakedNightIsStale(typeof GAME!=='undefined' ? GAME : null)) return '';
+    /* ============ AND IT MUST ASK ABOUT THE GAME IT IS DESCRIBING ====
+       The stale test below is about GAME, and this line is not always
+       about GAME. On 31 Aug the hero was tonight's soccer match while GAME
+       still held the built-in night from the 19th, so the stale guard
+       returned '' and the page lost the only line that carries the kickoff
+       TIME and the CHANNEL — the third and fourth facts in the founder's
+       ordering rule for this page, after "there is a game" and "these two
+       teams". A guard has to ask its question about the thing it is
+       guarding, so the marquee is resolved first and the expired-default
+       test is left to the branch that actually reads GAME. */
     /* THE MARQUEE CASE LIVES HERE, not at the call site. It was written as
        a ternary in applySport() — set('landingTip', marquee ? a : b) — and
        qa.js caught it, because that check demands this element have exactly
@@ -8891,6 +8900,7 @@ function landingTipLine(){
        is how a second author starts. */
     var hg = heroGame();
     if(typeof GAME !== 'undefined' && hg !== GAME) return tonightTipLine(hg);
+    if(bakedNightIsStale(typeof GAME!=='undefined' ? GAME : null)) return '';
     var ph=''; try{ ph=phaseNow(); }catch(_){}
     /* Before the phase branches: if this is still the pre-game line, it is
        GAME.tip — the string a builder baked — so correct its word to this
@@ -9028,7 +9038,20 @@ function paintContinueCard(){
       else where='in progress';
     }catch(_){ where='in progress'; }
     btn.textContent='Continue tonight’s game · '+where;
-    btn.classList.add('teal');
+    /* ============ BLUE IS THE PRIMARY ACTION ========================
+       v7 design review, 30 Aug: "The practice CTA is teal — teal means
+       you, blue is the primary action, so the most important button on
+       the site breaks the one rule the palette rests on."
+
+       The Arena Book locks five colours to five meanings: teal is YOU
+       (your handle, your streak, your row), blue is the ACT. This line
+       turned the resume button teal exactly when it mattered most — the
+       one button a returning player is meant to press — so the screen
+       said "this is you" where it meant "press this".
+
+       A palette whose meanings are locked and then broken on the most
+       important control is not a palette, it is a suggestion. */
+    btn.classList.remove('teal');
     /* PRACTICE IS NEVER TAKEN AWAY. This used to hide itself the moment a
        live save existed, on the theory that somebody mid-game does not want
        a rehearsal. The cost of being wrong about that is total: a stale save
@@ -15581,9 +15604,9 @@ var I18N = {
     "Up to 600 pts":"Hasta 600 pts",
     "📝 Predictions — up to 600 pts":"📝 Predicciones — hasta 600 pts",
     "⏱️ Quarter questions — up to 400 pts":"⏱️ Preguntas por cuarto — hasta 400 pts",
-    "⚡ Speed points — the tiebreaker":"⚡ Puntos de velocidad — el desempate",
+    "Speed points — the tiebreaker":"Puntos de velocidad — el desempate",
     "⚡ Your watchlist":"⚡ Tu lista",
-    "⚡ Your watchlist — 1 pt each":"⚡ Tu lista — 1 pt cada una",
+    "Your watchlist — 1 pt each":"Tu lista — 1 pt cada una",
     /* --- in the game --- */
     "Next":"Siguiente",
     "Continue":"Continuar",
@@ -24297,11 +24320,52 @@ window.hydrateFromCache = function(want){
   return true;
 };
 
+/* ── A LINK TO A FINISHED NIGHT IS NOT A LINK TO TONIGHT ─────────────
+   31 Aug 2026. Founder, five minutes before Arsenal at Villa Park:
+   "trying to play right now and this is what I get." The tab carried
+   ?game=slate-2026-08-30-cin-chc from the night before, so the bar read
+   "CIN 7 CHC 5 Final" and the button offered "Play Reds at Cubs" — while
+   the hero, correctly, counted down to Arsenal. Two facts, one screen,
+   and the wrong one had the button.
+
+   slateParam() already documents the rule: "a link to a game that is not
+   on tonight refuses rather than half-applying." That check happens when
+   the slate lands. This replay runs BEFORE it, straight out of
+   localStorage, so a stale id repainted a finished game and the guard
+   arrived too late to matter.
+
+   The nightId carries its own date — slate-YYYY-MM-DD-away-home — so the
+   date can be checked here with no network and no slate. A yesterday is
+   dropped, and the remembered pick is cleared with it so it cannot haunt
+   the next open. Anything whose shape we cannot read is left alone rather
+   than guessed at. */
+function nightIdDate(id){
+  var m=/^slate-(\d{4}-\d{2}-\d{2})-/.exec(String(id||''));
+  return m ? m[1] : null;
+}
+function todayPTDate(){
+  try{
+    return new Intl.DateTimeFormat('en-CA',{ timeZone:'America/Los_Angeles',
+      year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date());
+  }catch(_){ return null; }
+}
+function staleNightId(id){
+  var d=nightIdDate(id), t=todayPTDate();
+  return !!(d && t && d !== t);          /* unreadable shape → not stale */
+}
+try{ window.nightIdDate=nightIdDate; window.staleNightId=staleNightId; }catch(_){}
+
 try{
   (function(){
-    var want=null;
-    try{ want=new URLSearchParams(location.search).get('game'); }catch(_){}
+    var want=null, fromLink=false;
+    try{ want=new URLSearchParams(location.search).get('game'); fromLink=!!want; }catch(_){}
     if(!want){ try{ want=localStorage.getItem('stats_slate_pick_v1'); }catch(_){} }
+    if(want && staleNightId(want)){
+      try{ console.warn('ignoring '+(fromLink?'link':'remembered')+' game '+want
+        +' — it is not tonight ('+todayPTDate()+')'); }catch(_){}
+      try{ localStorage.removeItem('stats_slate_pick_v1'); }catch(_){}
+      want=null;
+    }
     hydrateFromCache(want);
   })();
 }catch(e){ try{ console.error('cached night replay failed', e); }catch(_){} }
@@ -24704,7 +24768,40 @@ async function paintHeroRibbon(){
     }
 
     var ms = heroTipMs();
-    if(!isFinite(ms) || ms <= 0){ el.style.display = 'none'; return; }
+    if(!isFinite(ms)){ el.style.display = 'none'; return; }
+    /* ============ A TIP THAT HAS PASSED IS NOT "NO GAME TONIGHT" ======
+       31 Aug 2026, Arsenal at Aston Villa, twenty-three minutes after
+       kickoff. The front page read "No game tonight" while the room was up
+       and the runner was hosting it — and the matchup, the game number and
+       the chips were all hidden underneath that sentence.
+
+       This test used to be `!isFinite(ms) || ms <= 0` and it returned
+       WITHOUT calling put(). put() is the ONLY writer of the card's
+       `mq-rest` class, so an early return here cannot clear it. At boot the
+       card had been painted `rest` from the built-in night, which is twelve
+       days old and therefore genuinely over: the state was correct when it
+       was painted, and then nothing was allowed to repaint it. A guard that
+       declines to speak leaves the last thing said standing.
+
+       A marquee game arrives here with ms <= 0 because heroState() blanks
+       the ROOM's phase for the marquee — the room's phase says nothing
+       about a game the player is not in — so a game that has already
+       kicked off still reads 'pre'. heroState() has separately refused
+       anything more than REST_AFTER_MS past its tip, so reaching this line
+       means exactly one thing: this game has started and we have no score
+       for it.
+
+       So say that, and say it through put(). The two teams and no number —
+       the same honest fallback the live branch above already uses when the
+       feed has nothing — because the one thing this line may never do is
+       invent a score, and the one thing this CARD may never do is claim
+       the night is empty while a room of it is open. */
+    if(ms <= 0){
+      put('<i class="mq-dot"></i>' + lab('Live now')
+        + '<b class="mq-cbig">' + esc(String(heroGame().awayAbbr || '')) + ' at '
+        + esc(String(heroGame().homeAbbr || '')) + '</b>', 'live');
+      return;
+    }
     /* "Tips in" is a basketball phrase, and it sat directly above a tip line
        that had just been corrected to say Kickoff. Same bug as the line
        below it, one element over — fixed as a class rather than where it
@@ -24758,7 +24855,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-30-settled.248';
+const STATS_BUILD='2026-08-31-tonight.250';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

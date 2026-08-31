@@ -83,5 +83,6 @@
   "log-writers.js": 2,
   "enter-submits.js": 9,
   "error-path.js": 8,
-  "settled-night.js": 9
+  "settled-night.js": 9,
+  "stale-night.js": 9
 }

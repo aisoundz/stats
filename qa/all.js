@@ -228,6 +228,17 @@ const TIER={
      can reach turns the gate red. Sabotage-tested by deleting one entry, and
      it failed naming the string, so this can actually fail. */
   'spanish.js':       {tier:'browser', args:['--max','0']},
+  /* 31 Aug: a stale ?game= replayed a FINISHED night out of localStorage
+     before the slate could refuse it — the founder opened the app five
+     minutes before Arsenal at Villa Park and was offered "Play Reds at
+     Cubs". Boot-time, so it needs the browser tier. */
+  'stale-night.js':   {tier:'browser'},
+  /* 31 Aug: the front page read "No game tonight" twenty-three minutes into
+     Arsenal at Villa Park, with the matchup and the game number hidden under
+     it. hero.js owns a check NAMED for this guarantee and was green through
+     it — its fixtures roll a passed tip to tomorrow, so it can never reach
+     the state the bug lives in. This one starts a game in the past. */
+  'hero-live.js':     {tier:'browser'},
   'marquee-order.js': {tier:'browser'},
   /* NODE ONLY, and that is the point: it drives the real host engine over
      the real recorded feed for all five leagues with no browser at all, so
