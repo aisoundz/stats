@@ -1829,7 +1829,7 @@
          that is already on the page. They belong to a MEMBER, who has no
          sign-in card, so they hide while it is showing. -->
     <div id="landingActions" style="display:none">
-      <button class="btn" id="landingBtn" onclick="startLive()">Play Game Night</button>
+      <button class="btn" id="landingBtn" onclick="playTonight()">Play Game Night</button>
       <button class="btn ghost" id="landingDemoBtn" onclick="startDemo()">Practice with a simulated game</button>
       <!-- ============ THE ROOM, FROM THE FRONT DOOR =====================
            28 Aug 2026. The trash talk room has been built, gated and live
@@ -8747,6 +8747,50 @@ const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-gameti
    only hit the wall at "Continue to picks" — which is a wall in the wrong
    place: they've already invested effort, and we've collected nothing durable.
    Now the Play button IS the sign-in when you're signed out. */
+/* ── THE ONE-GAME NIGHT HAD NO DOOR ───────────────────────────────────
+   31 Aug 2026, and it is the second half of the "No game tonight" bug.
+   With the hero repaired the founder could finally SEE Arsenal at Villa
+   Park — and still could not get in. The button read "Pick a game above",
+   and startLive() answered a tap with "Pick tonight's game above and the
+   card opens with it."
+
+   THERE WAS NOTHING ABOVE. paintGameRail() hides itself below two games —
+   "one game is not a choice", which is correct and stays — and tonight's
+   slate had exactly one room. Both of those sentences were written when a
+   night that was not yours meant the rail would be offering you another
+   one; on a one-game night that assumption has no rail behind it, and the
+   two guards pointed at each other.
+
+   So the door opens the room the hero is already naming.
+
+   THIS IS NOT THE BOOT-TIME SPORT ADOPTION THAT WAS REFUSED EARLIER TODAY,
+   and the difference is the whole reason this is safe. That change moved
+   the app's sport from a DEFAULT, with nobody asking, and
+   qa/practice-score.js and qa/pick-reach.js were right to go red over it:
+   somebody who opens the site to practise basketball must not be handed
+   another sport because of what is on television. This runs only when a
+   person taps a button that NAMES the game. A tap is a choice, and
+   chooseGame() is the path built for one — it moves the sport first and
+   hydrates second, exactly as a rail tile does. One entry path, two ways
+   to reach it, rather than a second door with its own opinions.
+
+   It falls through to startLive() untouched whenever the player is already
+   in tonight's room, or when there is no hero room to enter — so every
+   guard inside that door still runs and still gets to refuse. */
+function playTonight(){
+  try{
+    var here = (typeof GAME!=='undefined' && GAME) ? (GAME.nightId||'') : '';
+    if(here && slateGame(here)) return startLive();      // already in tonight's room
+    var hg = null; try{ hg = heroGame(); }catch(_){}
+    var want = hg && hg.nightId;
+    if(!want || want === here || !slateGame(want)) return startLive();
+    Promise.resolve(chooseGame(window.__SB_DB, window.__SB_FS, want))
+      .then(function(){ try{ paintSlate(); }catch(_){} startLive(); })
+      .catch(function(){ startLive(); });
+  }catch(_){ try{ startLive(); }catch(_){} }
+}
+try{ window.playTonight = playTonight; }catch(_){}
+
 function startLive(){
   /* Mid-night, this is CONTINUE, not START. Same reasoning as the pick
      sheet guard — the home page kept offering to begin a game the player
@@ -24229,7 +24273,26 @@ function applySport(){
        a real night without one          -> name the teams */
   (function(){
     var _stale=false; try{ _stale = bakedNightIsStale(GAME); }catch(_){}
-    if(_stale){ set('landingBtn','Pick a game above'); return; }
+    if(_stale){
+      /* AND IF THERE IS A GAME TO OPEN, NAME IT. "Pick a game above" is
+         only true when there is something above to pick, and the rail
+         hides itself on a one-game night. When the hero is holding a real
+         room on tonight's slate, playTonight() will open THAT — so the
+         button says so, in the same words it would use for a room the
+         player was already in. A control must describe what pressing it
+         does. */
+      var _hg=null; try{ _hg = heroGame(); }catch(_){}
+      var _hid = _hg && _hg.nightId;
+      if(_hid && _hid !== GAME.nightId && slateGame(_hid)){
+        var _hgn=''; try{ _hgn = gnOf(_hg); }catch(_){}
+        if(_hgn){ set('landingBtn','Play Game Night #'+_hgn); return; }
+        var _ha=String(_hg.awayNick||_hg.awayAbbr||''),
+            _hh=String(_hg.homeNick||_hg.homeAbbr||'');
+        set('landingBtn', (_ha&&_hh) ? ('Play '+_ha+' at '+_hh) : 'Play tonight\u2019s game');
+        return;
+      }
+      set('landingBtn','Pick a game above'); return;
+    }
     var g=''; try{ g=gnOf(GAME); }catch(_){}
     if(g){ set('landingBtn','Play Game Night #'+g); return; }
     var a=String(GAME.awayNick||GAME.awayAbbr||''), h=String(GAME.homeNick||GAME.homeAbbr||'');
@@ -24855,7 +24918,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-31-tonight.250';
+const STATS_BUILD='2026-08-31-door.251';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
