@@ -246,6 +246,20 @@ const TIER={
      choice), which is the line practice-score.js and pick-reach.js hold
      from the other side. */
   'one-game-door.js': {tier:'browser'},
+  /* 31 Aug: "1H opens when the game tips" — the wrong word for four sports
+     out of five and, worse, the one moment a round is guaranteed NOT to open.
+     run.js opens a round only once its period is DONE. The founder watched
+     from kickoff for forty-five minutes and reported the app broken; it was
+     working perfectly and lying about when. Nothing guarded timing copy
+     against run.js until this. */
+  'round-timing.js':  {tier:'browser'},
+  /* Was on disk in NO tier since it was written, so it had never once run
+     and the gate said so on every pass. Turned RED the first time it did:
+     translation keys stranded behind emoji the English markup had dropped,
+     so those strings rendered untranslated in Spanish. Registered now, and
+     the emoji came off the runtime writers as well as the markup — cleaning
+     one and not the other is what stranded the keys in the first place. */
+  'palette.js':       {tier:'browser'},
   'marquee-order.js': {tier:'browser'},
   /* NODE ONLY, and that is the point: it drives the real host engine over
      the real recorded feed for all five leagues with no browser at all, so

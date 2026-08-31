@@ -101,8 +101,51 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
 
   /* And the REAL page, once it has actually loaded — waited for rather
      than assumed, so a slow Firestore read is a wait and not a failure. */
-  let railSeen=false;
+  let railSeen=false, railSynthetic=false;
   try{ await p.waitForFunction(()=>!!document.querySelector('#gameRail [data-slate]'),{timeout:20000}); railSeen=true; }catch(_){}
+  /* ============ A CHECK MAY NOT DEPEND ON WHAT IS ON TELEVISION =======
+     31 Aug 2026. The gate went red on COVERAGE SHRANK — i18n.js 23 -> 21 —
+     and the two missing checks were these, skipped with a console note
+     while the suite still printed GREEN. The cause was not a regression:
+     paintGameRail() hides the rail below two games ("one game is not a
+     choice", which is correct), and that night's slate had exactly one
+     room. So the translation of the rail went unchecked on any night with
+     a single game, silently, and would have gone unchecked all winter on
+     a quiet schedule.
+
+     A suite whose coverage rises and falls with the fixture list is a
+     suite nobody can read a verdict from — which is the whole reason
+     qa/.counts.json exists. So if the real slate cannot raise the rail,
+     build one that can. The live rail is still preferred when it is
+     there, because it is the thing a player sees; this is the floor
+     underneath it, not a replacement for it. */
+  if(!railSeen){
+    await p.evaluate(()=>{
+      const isoIn = ms => new Date(Date.now()+ms).toISOString();
+      const mk = (id,aw,hm,aa,ha,gn) => ({
+        nightId:id, espnEvent:'', tipISO:isoIn(2*3600e3),
+        away:aw, home:hm, awayAbbr:aa, homeAbbr:ha, net:'QA Net',
+        sport:(typeof SPORT_KEY!=='undefined'?SPORT_KEY:'basketball'),
+        league:'QA', gn:gn, flagship:false, marquee:false, gotn:false });
+      try{
+        SLATE.date='qa'; SLATE.loaded=true;
+        SLATE.games=[ mk('slate-qa-rail-a','Away Alpha','Home Alpha','AWA','HMA','901'),
+                      mk('slate-qa-rail-b','Away Bravo','Home Bravo','AWB','HMB','902') ];
+      }catch(_){}
+      /* HOLD IT. loadSlate() may still be in flight from boot, and when it
+         lands it rewrites SLATE.games from tonight's real (one-game) slate
+         and the rail hides again mid-check — which is what made the first
+         version of this fail with "the rail header stayed English" when
+         the translator was working perfectly. */
+      try{ window.__QA_RAIL_FIXTURE = SLATE.games; }catch(_){}
+      try{ window.loadSlate = async function(){ return; }; }catch(_){}
+      try{ paintSlate(); }catch(_){}
+      try{ paintGameRail(); }catch(_){}
+    });
+    try{ await p.waitForFunction(()=>!!document.querySelector('#gameRail [data-slate]'),{timeout:8000});
+         railSeen=true; railSynthetic=true; }catch(_){}
+    if(railSynthetic) console.log('       (one-game night: the rail was raised with a two-game fixture so its checks still run)');
+  }
   if(railSeen){
     await p.waitForTimeout(500);
     /* ============ COMPARE THE RAIL TO ITSELF, NOT TO A TEAM NAME =======
@@ -143,6 +186,8 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
        again for the comparison, so the assertion genuinely crosses the
        switch. */
     const before = await p.evaluate(()=>{
+      try{ if(window.__QA_RAIL_FIXTURE){ SLATE.games = window.__QA_RAIL_FIXTURE;
+             SLATE.loaded = true; paintSlate(); paintGameRail(); } }catch(_){}
       try{ VX.setLang('en'); applyLang(); }catch(_){}
       const names=(window.SLATE&&SLATE.games||[]).map(g=>String(g.home||g.homeAbbr||'')).filter(Boolean);
       const t=(document.getElementById('gameRail')||{}).innerText||'';
@@ -176,7 +221,14 @@ const ok=(n,c,d)=>{ if(c) pass++; else { fail++; bad.push(n+(d?'  — '+d:'')); 
          ? 'the slate carried no team names to check — the rail loaded but is empty, which is its own bug'
          : `the rail should still name ${JSON.stringify(live.teams)} after switching to Spanish; it reads ${JSON.stringify(live.railText.slice(0,120))}`);
   }else{
-    console.log('       (the rail did not load — its two checks were not run)');
+    /* NOT A SKIP ANY MORE. With the synthetic fixture above, a rail that
+       still will not render is a real fault in paintGameRail(), not a
+       quiet schedule — so it fails rather than silently costing two
+       checks and printing GREEN. */
+    ok('i18n.the-real-rail-is-translated-too', false,
+       'the rail would not render even with a two-game fixture');
+    ok('i18n.the-real-rail-keeps-its-team-names', false,
+       'the rail would not render even with a two-game fixture');
   }
 
   /* ---- 4. IT DOES NOT LOOP ON ITS OWN EDITS -------------------------- */

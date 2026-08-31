@@ -84,5 +84,9 @@
   "enter-submits.js": 9,
   "error-path.js": 8,
   "settled-night.js": 9,
-  "stale-night.js": 9
+  "stale-night.js": 9,
+  "hero-live.js": 7,
+  "one-game-door.js": 7,
+  "palette.js": 7,
+  "round-timing.js": 17
 }

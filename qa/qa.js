@@ -3378,10 +3378,25 @@ async function browserTests(){
       r.phase==='pre' && r.screenAfter!=='live',
       `phase=${r.phase}, startQuarter left us on ${r.screenAfter}`,
       'REGRESSION: a real submission with 10 points and 19 speed landed in Game Night #7\'s Q1 grid ten hours before tip, answering the built-in bank about a game nobody had played');
+    /* THIS CHECK USED TO DEMAND THE WORD "tips", AND THAT WAS THE BUG.
+       It read `/tips/i.test(b.t)` — pinning one sport's word for the start
+       of play, and pinning the wrong MOMENT with it. A round is ABOUT its
+       period, so run.js opens it only once that period is DONE; "opens when
+       the game tips" is the one time it is guaranteed not to. The founder
+       watched Arsenal at Villa Park from kickoff for forty-five minutes on
+       the strength of that sentence and reported the app broken.
+
+       So the assertion reverses with the behaviour, which is the rule: the
+       button must still be DEAD before tip (that is the regression this
+       check exists for — a live "Q1 ended? Answer now" at four in the
+       afternoon), and it must name something ENDING rather than the game
+       starting. The words are no longer pinned to a sport. */
     check('pretip.the-button-says-so',
-      r.btns.length>0 && r.btns.every(b=>b.off===true) && r.btns.some(b=>/tips/i.test(b.t)),
+      r.btns.length>0 && r.btns.every(b=>b.off===true)
+        && r.btns.some(b=>/\b(ends?|after)\b/i.test(b.t))
+        && !r.btns.some(b=>/answer now|ended\?/i.test(b.t)),
       `buttons on the board before tip: ${JSON.stringify(r.btns)}`,
-      'a live button reading "Q1 ended? Answer now" at four in the afternoon is the app asking somebody to make something up');
+      'a live button reading "Q1 ended? Answer now" at four in the afternoon is the app asking somebody to make something up — and a button promising the round opens at tip-off sent the founder to watch 45 minutes of nothing');
     check('pretip.a-host-push-outranks-the-clock',
       r.hostOverride===null,
       `with the Control Room saying a round is live, the block still returned ${JSON.stringify(r.hostOverride)}`,
