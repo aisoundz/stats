@@ -49,7 +49,7 @@ CSS = """  /* ============ THE TAPE — one question a day =====================
     letter-spacing:.1em;color:var(--gold);white-space:nowrap}
   #tapeCard .tpFrom{font-family:var(--ui);font-size:12px;color:var(--dim);
     letter-spacing:.02em;margin:0 0 12px}
-  #tapeCard .tpQ{font-size:16px;font-weight:700;color:var(--ink);margin:0 0 12px;
+  #tapeCard .tpQ{font-size:17px;font-weight:700;color:var(--ink);margin:0 0 12px;
     line-height:1.35}
   #tapeCard .tpOpts{display:flex;flex-direction:column;gap:8px}
   #tapeCard .tpO{display:block;width:100%;text-align:left;padding:12px 14px;

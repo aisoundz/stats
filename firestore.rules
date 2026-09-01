@@ -122,6 +122,46 @@ service cloud.firestore {
       allow write: if isOwner();
     }
 
+    /* ============ WHO YOU ARE, ACROSS DEVICES ========================
+       Founder: "I thought we were going to do @ handle so people can have
+       the same one forever. Right now you have to sign up and get a new
+       name every single time. Its exhausting."
+
+       He was right, and the code already admitted it. savedProfile() reads
+       localStorage and nothing else, with a comment saying: "Device-local
+       on purpose. The durable, cross-phone version of this belongs in a
+       users/{uid} doc, and that needs a rules change." This is that rules
+       change. Meanwhile the verify screen has been promising "sign in to
+       save your handle... across phones", which was never true: signing in
+       saved the POINTS and left the handle on the device.
+
+       users/{uid} — your handle, colour and sport, readable by anyone
+       because a leaderboard shows other people's names, writable only by
+       you.
+
+       handles/{handle} — the RESERVATION, lower-cased, one document per
+       claimed name. It is a lock rather than a list: Firestore refuses a
+       create on a document that already exists, so `allow create` with no
+       update is the whole uniqueness mechanism, with no transaction and no
+       race. A player can claim a free handle and can never take one that
+       is held — update and delete are the owner's alone, so nobody can
+       reassign somebody else's name to themselves.
+
+       The uid inside must be the caller's, or a player could reserve a
+       handle and point it at somebody else. */
+    match /users/{uid} {
+      allow read:            if true;
+      allow create, update:  if signedIn() && request.auth.uid == uid;
+      allow delete:          if isOwner();
+    }
+
+    match /handles/{handle} {
+      allow read:            if true;
+      allow create:          if signedIn()
+                             && request.resource.data.uid == request.auth.uid;
+      allow update, delete:  if isOwner();
+    }
+
     /* ============ THE TAPE — one question a day ======================
        Published each morning by host/tape.js from the backtest archive:
        one question about a game that already finished, its real options
