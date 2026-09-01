@@ -84,7 +84,27 @@ function check(html, subject, opts) {
 
   /* The STATS card is not just the word — it is the two big figures.
      A heading with nothing under it passed the first version of this. */
-  const bigFigures = (raw.match(/font-size:34px[^>]*>\s*([^<]{1,14})</g) || []).length;
+  /* WHITESPACE, BECAUSE MAILERLITE PRETTY-PRINTS WHAT IT STORES.
+     This was /font-size:34px[^>]*>\s*([^<]{1,14})</ and it matched three
+     figures in the file we build and ZERO in the draft read back. The
+     leading \s* handled the newline; nothing handled the TRAILING one.
+     MailerLite rewraps
+
+         ...-.02em;">1.73</div>
+     into
+         ...-.02em;">\n                      1.73\n                    </div>
+
+     so the capture had to cross "1.73" plus a newline and twenty spaces —
+     25 characters against a cap of 14 — and never reached the closing tag.
+     The card was there every time. The check could not see it, and told
+     the founder his complete email was missing a section, which is the
+     way a guard teaches somebody to stop reading it.
+
+     Capture lazily to the tag, trim, then apply the length rule to the
+     TEXT rather than to the text plus its indentation. */
+  const bigFigures = (raw.match(/font-size:34px[^>]*>([\s\S]{0,80}?)</g) || [])
+    .map((m) => m.replace(/^[\s\S]*?>/, '').replace(/<$/, '').trim())
+    .filter((v) => v.length >= 1 && v.length <= 14).length;
   const hasStats = /\bSTATS\b/.test(t) && bigFigures >= 2;
   hasStats ? out.ok.push(`the STATS card is there, with ${bigFigures} figure(s)`)
            : out.fatal.push(`NO STATS CARD. EMAIL-VOICE.md rule 4. Found ${bigFigures} big figure(s); it needs two with attribution.`);
