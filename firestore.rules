@@ -122,6 +122,31 @@ service cloud.firestore {
       allow write: if isOwner();
     }
 
+    /* ============ HUSTLE — THE PRESENCE LEDGER =======================
+       The second currency. Points are earned by being RIGHT; HUSTLE is
+       earned by SHOWING UP, and that split is the whole reason this is a
+       loyalty programme rather than a sweepstakes.
+
+       READ BY EVERYONE, WRITTEN BY NOBODY WITH A PHONE. Note the contrast
+       with callitboard directly below, where a signed-in player writes
+       their own row: that is a REPORT of what they did, and firestore.rules
+       bounds it as "still client-reported, honestly". A currency cannot be
+       client-reported. A balance a phone can write is a balance a phone can
+       forge, and "a count a phone can write is not a ledger" is the whole
+       reason this path looks like the feed rather than like the board.
+
+       So the runner computes it from evidence it already holds — chiefly
+       nights/{n}/rounds/{r}/times/{uid}, which records who answered inside
+       each window — and publishes it with the service account, exactly as
+       it publishes caughtSrv precisely so the phone cannot write that down.
+
+       isOwner() here means the founder's verified email; the Admin SDK the
+       runner uses bypasses rules altogether. Either way: not a player. */
+    match /nights/{nightId}/hustle/{uid} {
+      allow read:  if true;
+      allow write: if isOwner();
+    }
+
     match /nights/{nightId}/callitboard/{uid} {
       allow read:           if true;
       allow create, update: if signedIn() && request.auth.uid == uid;
