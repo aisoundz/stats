@@ -36,6 +36,40 @@ is('number two',YN,'pick:No'); is('say three',BAND,'pick:Two or three','a number
 is('I pick four',BAND,'pick:Four or five','chatty or terse, same answer');
 is('4',BAND,'pick:Four or five');
 
+/* ============ THE BANDS BASEBALL ACTUALLY ASKS ======================
+   Every case above is a WNBA option shape. Baseball went to nine rounds on
+   31 Aug and six of the nine ask "Runs in the Nth" against
+   ["None","One","Two","Three or more"] — so this set is now the single most
+   common thing a player speaks to, and nothing here had ever tested it.
+
+   These are not hypotheticals. Measured against the shipped .269 matcher:
+
+       "a run"    -> picked None            "a few"    -> picked None
+       "a couple" -> picked None            "for sure" -> picked Three or more
+       "a bomb"   -> picked Single
+
+   'a' was in NUM as the LETTER A and in STOP as the article at the same
+   time: meaningless to the word matcher, decisive to the position
+   fallback. The <=2 token guard was written for exactly this and is too
+   loose, because "a run" IS two tokens.
+
+   A REFUSAL IS THE RIGHT ANSWER HERE. It costs a repeat. A wrong pick
+   costs the question, and in practice it settles instantly with no
+   read-back — confidently wrong and unrecoverable, which is the one
+   outcome this product has ruled out in writing. */
+const RUNS=['None','One','Two','Three or more'], HITS=['Single','Double','Triple','Home run'];
+
+console.log('\nBASEBALL BANDS — the numbers still work');
+is('one',RUNS,'pick:One'); is('two',RUNS,'pick:Two');
+is('three',RUNS,'pick:Three or more','a number means the band that holds it');
+is('1',RUNS,'pick:One'); is('none',RUNS,'pick:None','said out loud, not as a number');
+
+console.log('\nAN ARTICLE IS NOT A NUMBER');
+is('a run',RUNS,'null','"a" was the letter A in NUM and the article in STOP at once');
+is('a couple',RUNS,'null'); is('a few',RUNS,'null'); is('a lot',RUNS,'null');
+is('a bomb',HITS,'null','picked Single on the shipped build');
+is('for sure',RUNS,'null','"for" is a homophone of four only on its own');
+
 console.log('\nTHE OPTION, SAID OUT LOUD');
 is('yes',YN,'pick:Yes'); is('nope',YN,'pick:No');
 is('wings',TEAM,'pick:Wings'); is('the wings',TEAM,'pick:Wings');
