@@ -110,6 +110,17 @@
     --away:#7fe3c7; --home:#4a86ff; --mile:#ffc54d;
   }
 
+  /* ============ WHICH GAME IS THIS — v7.5's role line ==============
+     Ported from v75 hero(). 12px, not its 9.5px: the floor is the shipped
+     rule and uppercase + wide tracking already reads as a label. Teal only
+     when it is YOUR room, because teal means you and nothing else. */
+  #mqRole{display:flex;justify-content:space-between;align-items:center;gap:10px;
+    font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.19em;
+    text-transform:uppercase;color:var(--muted);margin:0 0 6px;white-space:nowrap}
+  #mqRole.mine #mqRoleTxt{color:var(--teal)}
+  #mqRole #mqStateTxt{color:var(--dim);letter-spacing:.15em;font-weight:400}
+
+
   /* ============ v7.5 FACES, APPLIED ================================
      Headings and the marquee codes take the display face; labels, chips,
      buttons and the nav take the UI face; anything that is a FIGURE takes
@@ -1710,6 +1721,7 @@
            3 August and stayed wrong for weeks, which is B6 with a longer fuse:
            one fact (which game is on) with a second copy nobody updates.
            Neutral text cannot go stale. The feed still owns the answer. -->
+      <p id="mqRole" style="display:none"><span id="mqRoleTxt"></span><span id="mqStateTxt"></span></p>
       <h2 id="landingHead">Game Night</h2>
       <!-- THE MATCHUP IS THE PAGE. Two codes, 52px, in the two colours the
            feed already owns — --away and --home, whose only writer is
@@ -5860,7 +5872,9 @@ const SOCCER_ROUNDS=[
     {t:"How many corners in the first half (both teams)?", o:["0–2","3–4","5–6","7+"], a:"3–4",
      t_es:"¿Cuántos córners en el primer tiempo (entre los dos equipos)?", o_es:["0–2","3–4","5–6","7+"]},
     {t:"How many minutes of added time at the end of the half?", o:["1","2","3","4+"], a:"2",
-     t_es:"¿Cuántos minutos de tiempo añadido al final del primer tiempo?", o_es:["1","2","3","4+"]}
+     t_es:"¿Cuántos minutos de tiempo añadido al final del primer tiempo?", o_es:["1","2","3","4+"]},
+    {t:"Who had more shots in the first half?", o:["Inter Miami","Club América","Level"], a:"Inter Miami",
+     t_es:"¿Quién remató más en el primer tiempo?", o_es:["Inter Miami","Club América","Iguales"]}
   ]},
   {home:2,away:1, q:[
     {t:"Who won the second half on goals?", o:["Inter Miami","Club América","Drawn"], a:"Inter Miami",
@@ -5868,7 +5882,9 @@ const SOCCER_ROUNDS=[
     {t:"How many yellow cards in the whole match?", o:["0–1","2–3","4–5","6+"], a:"2–3",
      t_es:"¿Cuántas tarjetas amarillas en todo el partido?", o_es:["0–1","2–3","4–5","6+"]},
     {t:"How many minutes of added time at the end of the match?", o:["1–2","3–4","5–6","7+"], a:"5–6",
-     t_es:"¿Cuántos minutos de tiempo añadido al final del partido?", o_es:["1–2","3–4","5–6","7+"]}
+     t_es:"¿Cuántos minutos de tiempo añadido al final del partido?", o_es:["1–2","3–4","5–6","7+"]},
+    {t:"Who kept more of the ball over the match?", o:["Inter Miami","Club América","Even split"], a:"Club América",
+     t_es:"¿Quién mantuvo más la pelota en el partido?", o_es:["Inter Miami","Club América","Repartida"]}
   ]}
 ];
 
@@ -6210,7 +6226,7 @@ const SPORTS={
        what anybody is watching. A real matchup beats a tournament window;
        the guard below still refuses to overwrite it with a blank. */
     game:SC_GAME, roster:SC_ROSTER, groups:SC_ROSTER.groups, landingFromGame:true, preds:SC_PREDS, rounds:SOCCER_ROUNDS, catches:SC_CATCHES,
-    worth:[30,50],                                    // halftime=30, full-time=50 → 240 pts
+    worth:[40,60],                                    // halftime=30, full-time=50 → 240 pts
     tags:["1H","FT"],
     names:["1st half","Full time"],
     L:{ start:"kickoff", Start:"Kickoff", starting:"Kicking off",
@@ -6222,9 +6238,9 @@ const SPORTS={
     step1:"Six picks before kickoff — result, goals, first scorer, corners and cards. All of them always resolve. Worth 600 of the night\u2019s 1,000.",
     step2h:"Set your 6-item watchlist, then just watch",
     step2:"First corner, first card, first sub, first offside. You set them before kickoff and they flip themselves as the match happens — no tapping, no phone during a counter-attack. 1 pt each.",
-    step3:"Two question rounds only — halftime (3 pts each) and full time (5 pts each). Most points wins the night; ⚡ Speed breaks ties.",
+    step3:"Two question rounds only — halftime (40 pts each) and full time (60 pts each). Most points wins the night; ⚡ Speed breaks ties.",
     rulePred:"Six picks before kickoff, 100 points each: result, total goals, first goal, both teams to score, who wins more corners and who picks up more cards. Every one of them resolves — there are no dead picks. Locked at kickoff.",
-    ruleLive:"Two rounds only, because soccer only gives you two breaks. At halftime, 3 questions about the first 45 (3 pts each). At the final whistle, 3 questions about the whole match (5 pts each). 20 seconds per question, no lookups.",
+    ruleLive:"Two rounds only, because soccer only gives you two breaks. At halftime, 4 questions about the first 45 (40 pts each). At the final whistle, 4 questions about the whole match (60 pts each). 20 seconds per question, no lookups.",
     ruleScore:"When the host posts the halftime and full-time answers (from the broadcast + official match stats), your half scores itself — nothing for you to tap in. At the final whistle the host settles your pre-match sheet and your watchlist too."
   }
 };
@@ -6239,7 +6255,7 @@ SPORTS.baseball={
   /* NINE ROUNDS, ONE PER INNING (31 Aug 2026, founder's rule). These
      four lists describe the same rounds and must be the same length;
      the totals still come to 150, the same as the old 30/50/70. */
-  worth:[20,20,30,30,30,40,40,40,50], tags:["1st","2nd","3rd","4th","5th","6th","7th","8th","9th"],
+  worth:[10,10,15,15,20,25,30,35,40], tags:["1st","2nd","3rd","4th","5th","6th","7th","8th","9th"],
   names:["1st inning","2nd inning","3rd inning","4th inning","5th inning","6th inning","7th inning","8th inning","9th inning"],
   L:{ start:"first pitch", Start:"First pitch", starting:"Warming up",
       end:"final out", End:"Final out", unit:"game", Unit:"Game",
@@ -6275,7 +6291,7 @@ SPORTS.football={
 SPORTS.hockey={
   key:"hockey", emoji:"\uD83C\uDFD2", word:"hockey",
   game:HO_GAME, roster:HO_ROSTER, groups:HO_ROSTER.groups, landingFromGame:true, preds:HO_PREDS, rounds:HO_ROUNDS, catches:HO_CATCHES,
-  worth:[15,30,45], tags:["1st","2nd","3rd"],
+  worth:[20,30,50], tags:["1st","2nd","3rd"],
   names:["1st period","2nd period","3rd period"],
   L:{ start:"puck drop", Start:"Puck drop", starting:"Dropping the puck",
       end:"final horn", End:"Final horn", unit:"game", Unit:"Game",
@@ -6287,7 +6303,7 @@ SPORTS.hockey={
   step2:"Four questions a period about what you just watched \u2014 not only the goals. Hits, blocks and giveaways all count, because that is most of a hockey game.",
   step3:"Rounds settle from the official play-by-play at the horn. Most points wins; Speed breaks ties.",
   rulePred:"Six picks before puck drop, 100 points each: winner, total goals, first goal, who puts more on net, who plays it heavier, and whether it needs overtime. Locked at puck drop.",
-  ruleLive:"Three rounds, one an intermission, four questions each, worth 15, 30 and 45 points. Twenty seconds a question, no lookups.",
+  ruleLive:"Three rounds, one an intermission, four questions each, worth 20, 30 and 50 points. Twenty seconds a question, no lookups.",
   ruleScore:"Every question settles from the play-by-play at the end of the period. Nothing for you to tap."
 };
 
@@ -24469,6 +24485,43 @@ function applySport(){
      read once, and every line on this card comes from it. */
   var _hg = heroGame();
   var _marquee = (_hg !== GAME);
+  /* ============ AND THE HERO SAYS WHICH GAME IT IS =================
+     The one thing 31 Aug proved this card could not do. heroGame() already
+     decides WHICH game is on the hero; this only reports that decision, so
+     there is no second opinion to drift. Reads ACTIVE_ROOM first because
+     that is the room this app decided you are in — GAME.nightId only
+     changes when hydration succeeds, which is exactly the case that failed
+     today. */
+  (function(){
+    var role='', mine=false, st='';
+    try{
+      var here='';
+      try{ here = (typeof ACTIVE_ROOM!=='undefined' && ACTIVE_ROOM) || (GAME&&GAME.nightId) || ''; }catch(_){}
+      var hid = _hg && _hg.nightId;
+      /* THE FLAGS LIVE ON THE SLATE ROW, NOT ON TONIGHT. TONIGHT is a HERO,
+         not a night: it carries the ids, the tip, the league and the four
+         team strings and nothing else. Asking _hg.gotn asked an object that
+         never had the field, so a game of the night reported itself as
+         merely on the slate. */
+      var _row = null;
+      try{ if(hid && typeof slateGame==='function') _row = slateGame(hid); }catch(_){}
+      if(hid && here && hid===here){ role='Your room'; mine=true; }
+      else if(_row && (_row.gotn || _row.marquee || _row.flagship)) role='Game of the night';
+      else if(_row) role='On tonight\u2019s slate';
+      /* The state chip is the phase, in this sport's own words, and it says
+         nothing at all rather than guessing when the clock cannot answer. */
+      try{
+        var hs = (typeof heroState==='function') ? heroState() : '';
+        st = hs==='live' ? 'Live' : hs==='final' ? (L&&L.End ? L.End : 'Final') : '';
+      }catch(_){ st=''; }
+    }catch(_){ role=''; }
+    set('mqRoleTxt', role);
+    set('mqStateTxt', st);
+    try{
+      var _rl=document.getElementById('mqRole');
+      if(_rl){ _rl.classList.toggle('mine', mine); _rl.style.display = role ? 'flex' : 'none'; }
+    }catch(_){}
+  })();
   /* ============ AND THE SAME EXPIRED DEFAULT, ON THE BIG TYPE ========
      tonightHeadLine() refuses a stale baked night, and this branch never
      called it: with no marquee it built the eyebrow straight out of
@@ -25225,7 +25278,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-01-combo.261';
+const STATS_BUILD='2026-08-31-thousand.263';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
