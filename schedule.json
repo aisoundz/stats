@@ -1,77 +1,24 @@
 {
-  "generated": "2026-09-01T06:28:50.879Z",
-  "generatedPT": "Mon, Aug 31, 11:28 PM PT",
+  "generated": "2026-09-01T08:16:46.887Z",
+  "generatedPT": "Tue, Sep 1, 1:16 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-08-31",
-    "to": "2026-09-13",
+    "from": "2026-09-01",
+    "to": "2026-09-14",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 8,
+    "built": 7,
     "off": 0,
-    "unbuilt": 6,
-    "games": 27,
-    "featured": 16,
-    "unresolvedPicks": 3
+    "unbuilt": 7,
+    "games": 29,
+    "featured": 15,
+    "unresolvedPicks": 0
   },
-  "_diagnostics": [
-    {
-      "level": "note",
-      "date": "2026-08-31",
-      "code": "manifest-duplicate",
-      "message": "slate-all-2026-08-31.tsv has 26 rows but only 13 distinct nightIds — 13 duplicate row(s), deduped"
-    },
-    {
-      "level": "error",
-      "date": "2026-09-12",
-      "code": "pick-not-in-manifest",
-      "message": "slate-2026-09-12-ou-mich is picked in slate-pick-2026-09-12.txt but is NOT in slate-all-2026-09-12.tsv — it CANNOT be listed. Rebuild the manifest for 2026-09-12 or drop the pick."
-    },
-    {
-      "level": "error",
-      "date": "2026-09-12",
-      "code": "pick-not-in-manifest",
-      "message": "slate-2026-09-12-ala-uk is picked in slate-pick-2026-09-12.txt but is NOT in slate-all-2026-09-12.tsv — it CANNOT be listed. Rebuild the manifest for 2026-09-12 or drop the pick."
-    },
-    {
-      "level": "error",
-      "date": "2026-09-12",
-      "code": "pick-not-in-manifest",
-      "message": "slate-2026-09-12-osu-tex is picked in slate-pick-2026-09-12.txt but is NOT in slate-all-2026-09-12.tsv — it CANNOT be listed. Rebuild the manifest for 2026-09-12 or drop the pick."
-    }
-  ],
+  "_diagnostics": [],
   "days": [
-    {
-      "date": "2026-08-31",
-      "weekday": "Mon",
-      "label": "Mon, Aug 31",
-      "status": "built",
-      "gameCount": 1,
-      "games": [
-        {
-          "nightId": "slate-2026-08-31-ars-avl",
-          "date": "2026-08-31",
-          "league": "epl",
-          "leagueLabel": "Premier League",
-          "leagueProse": "the Premier League",
-          "sport": "soccer",
-          "path": "soccer/eng.1",
-          "espnEvent": "401879295",
-          "home": "Aston Villa",
-          "away": "Arsenal",
-          "matchup": "Arsenal at Aston Villa",
-          "tipISO": "2026-08-31T19:00:00.000Z",
-          "tipPT": "12:00 PM PT",
-          "tipPTLong": "Mon, Aug 31, 12:00 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "48"
-        }
-      ]
-    },
     {
       "date": "2026-09-01",
       "weekday": "Tue",
@@ -518,8 +465,46 @@
       "weekday": "Sat",
       "label": "Sat, Sep 12",
       "status": "built",
-      "gameCount": 3,
+      "gameCount": 6,
       "games": [
+        {
+          "nightId": "slate-2026-09-12-ou-mich",
+          "date": "2026-09-12",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401856679",
+          "home": "Michigan",
+          "away": "Oklahoma",
+          "matchup": "Oklahoma at Michigan",
+          "tipISO": "2026-09-12T16:00:00.000Z",
+          "tipPT": "9:00 AM PT",
+          "tipPTLong": "Sat, Sep 12, 9:00 AM PT",
+          "featured": false,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-12-ala-uk",
+          "date": "2026-09-12",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401856674",
+          "home": "Kentucky",
+          "away": "Alabama",
+          "matchup": "Alabama at Kentucky",
+          "tipISO": "2026-09-12T19:30:00.000Z",
+          "tipPT": "12:30 PM PT",
+          "tipPTLong": "Sat, Sep 12, 12:30 PM PT",
+          "featured": false,
+          "mainEvent": false,
+          "gameNight": null
+        },
         {
           "nightId": "slate-2026-09-12-nsh-mia",
           "date": "2026-09-12",
@@ -532,6 +517,25 @@
           "home": "Inter Miami CF",
           "away": "Nashville SC",
           "matchup": "Nashville SC at Inter Miami CF",
+          "tipISO": "2026-09-12T23:30:00.000Z",
+          "tipPT": "4:30 PM PT",
+          "tipPTLong": "Sat, Sep 12, 4:30 PM PT",
+          "featured": false,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-12-osu-tex",
+          "date": "2026-09-12",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401856682",
+          "home": "Texas",
+          "away": "Ohio State",
+          "matchup": "Ohio State at Texas",
           "tipISO": "2026-09-12T23:30:00.000Z",
           "tipPT": "4:30 PM PT",
           "tipPTLong": "Sat, Sep 12, 4:30 PM PT",
@@ -577,11 +581,6 @@
           "mainEvent": true,
           "gameNight": "3"
         }
-      ],
-      "unresolved": [
-        "slate-2026-09-12-ou-mich",
-        "slate-2026-09-12-ala-uk",
-        "slate-2026-09-12-osu-tex"
       ]
     },
     {
@@ -687,6 +686,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-09-14",
+      "weekday": "Mon",
+      "label": "Mon, Sep 14",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
