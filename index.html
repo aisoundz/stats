@@ -2026,6 +2026,8 @@
            Hidden until there is a room to be in: an empty room on the
            front door is worse than no door. paintContinueCard() owns
            that decision — see ttFromHomeWanted(). -->
+      <button class="btn ghost" id="landingInviteBtn" style="display:none"
+              onclick="inviteToRoom()">📩 Invite a friend</button>
       <button class="btn ghost" id="landingTalkBtn" style="display:none"
               onclick="openTalk()">🔥 Talk trash</button>
     </div>
@@ -23257,6 +23259,95 @@ function backendBadge(){
 }
 
 /* ---------------- SHARE CARD ---------------- */
+
+/* ============ INVITE — hand somebody the room ========================
+   openShare() shares a RESULT CARD: a score, after the fact, for a group
+   chat. This shares the ROOM, before or during, to somebody who is not
+   here yet. They are different products and only one of them can produce
+   a second player. See host/invite.py.
+
+   The link is ?game={nightId}&src=invite. Both halves already work:
+   `game` is how the rail opens a room directly, and `src` is read at boot
+   by TRK_SRC and written to telemetry, so an invited arrival is
+   attributable without anything new being built. */
+function inviteText(){
+  var g = null;
+  try{ g = (typeof heroGame === 'function') ? heroGame() : null; }catch(_){}
+  try{ if(!g && typeof GAME !== 'undefined') g = GAME; }catch(_){}
+  if(!g) return null;
+  var id = String(g.nightId || '');
+  if(!id) return null;
+
+  var away = String(g.awayNick || g.awayName || g.awayAbbr || '');
+  var home = String(g.homeNick || g.homeName || g.homeAbbr || '');
+  var gn = ''; try{ gn = gnOf(g) || ''; }catch(_){}
+  /* THE APP'S OWN FORMATTER, not a second one. tipShort() is what the
+     hero and the rail already print, so an invite says the same time the
+     page says. The first draft of this called tipMsOf(), which does not
+     exist — inside a try, so it would have failed in silence and every
+     invite would have gone out with no time in it. */
+  var when = '';
+  try{
+    if(typeof tipShort === 'function') when = tipShort(g.tipISO) || '';
+    if(!when && g.tipISO){
+      var ms = Date.parse(g.tipISO);
+      if(!isNaN(ms)) when = new Date(ms).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+    }
+  }catch(_){}
+
+  /* A SPECIFIC THING AT A SPECIFIC TIME. "Come play STATS" is an advert;
+     this is an invitation, and only one of those gets accepted. */
+  var what = (away && home) ? (away + ' at ' + home) : 'tonight’s game';
+  var line = 'Play along with me — ' + what
+           + (when ? (' at ' + when) : '')
+           + (gn ? ('. Game Night #' + gn + '.') : '.')
+           + ' Free, no account needed.';
+  var url = 'https://statsgametime.com/?game=' + encodeURIComponent(id) + '&src=invite';
+  return { title: 'STATS GAMETIME', text: line, url: url, full: line + '\n' + url };
+}
+
+function inviteToRoom(){
+  var v = inviteText();
+  if(!v){ try{ toast('No room to invite to yet.'); }catch(_){} return; }
+  try{ trk('invite_open', { room: 1 }); }catch(_){}
+
+  /* 1. The native sheet. On a phone this IS the feature — it offers the
+        apps people actually message in. A CANCEL is not a failure:
+        navigator.share rejects when the user backs out, and toasting
+        "could not share" at somebody who changed their mind is worse than
+        saying nothing. */
+  if(navigator.share){
+    navigator.share({ title: v.title, text: v.text, url: v.url })
+      .then(function(){ try{ trk('invite_sent', { how: 'native' }); }catch(_){} })
+      .catch(function(){ /* cancelled, or unavailable — say nothing */ });
+    return;
+  }
+  /* 2. Clipboard — desktop and anything without the sheet. */
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(v.full).then(function(){
+      try{ toast('Invite copied — paste it to a friend.'); }catch(_){}
+      try{ trk('invite_sent', { how: 'clipboard' }); }catch(_){}
+    }).catch(function(){ invitePrompt(v); });
+    return;
+  }
+  /* 3. Always works. */
+  invitePrompt(v);
+}
+
+function invitePrompt(v){
+  try{ window.prompt('Copy this and send it to a friend:', v.full); }catch(_){}
+}
+
+/* Shown only when there IS a room to invite to. A share button that
+   produces a link to nothing is worse than no share button. */
+function paintInvite(){
+  try{
+    var b = document.getElementById('landingInviteBtn');
+    if(!b) return;
+    b.style.display = inviteText() ? '' : 'none';
+  }catch(_){}
+}
+
 function openShare(){
   document.getElementById('scEmoji').textContent=SPORT.emoji;
   /* ============ THE CARD SAID THE MATCHUP TWICE, BACKWARDS ============
@@ -25494,7 +25585,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-01-hustle.269';
+const STATS_BUILD='2026-09-01-invite.270';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -30341,6 +30432,7 @@ function renderGametime(){
     + '</div>';
   return renderGametimeRest();
   try{ paintYou(); }catch(_){}
+  try{ paintInvite(); }catch(_){}
   try{ if(!SCHED) schedLoad(); }catch(_){}
 }
 /* ---- SHOT ZONES -----------------------------------------------------
