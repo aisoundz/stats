@@ -1334,7 +1334,13 @@
   .status.live{background:rgba(46,230,166,.15);color:var(--green)}
   .status.queued{background:rgba(255,197,77,.14);color:var(--gold)}
 
-  .statgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:6px}
+  /* auto-fit, not a third column: .statgrid is used in three places and
+     two tiles must still lay out as two. */
+  .statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));
+    gap:9px;margin-top:6px}
+  /* HUSTLE is gold because gold is what a number you KEEP looks like in
+     this app, and teal already means YOU. */
+  .stat.hus .v{color:var(--gold)}
   .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
   .stat .v{font-size:22px;font-weight:900}
   .stat .k{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px}
@@ -2604,6 +2610,12 @@
              screenshotted during a repaint. -->
         <div class="stat"><div class="v" id="finalRank">–</div><div class="k" id="finalRankK"></div></div>
         <div class="stat"><div class="v" id="finalPct">–</div><div class="k" id="finalPctK"></div></div>
+        <!-- HUSTLE. A box-score stat, never a countable noun: the value is
+             a bare number under the label, the way REB 12 reads. "—" until
+             the ledger answers, because unknown and zero are not the same
+             fact — the same rule the pick sheet follows for an absent
+             player. -->
+        <div class="stat hus"><div class="v" id="finalHustle">—</div><div class="k">HUSTLE</div></div>
       </div>
     </div>
     </div><!-- /.fcolA -->
@@ -4478,6 +4490,35 @@ window.STATS_FIREBASE = {
       SB._feedCache[id] = { at: Date.now(), data: parsed };
       return parsed;
     } catch (e) { SB.lastFeedError = (e && (e.code || e.message)) || 'unknown'; return null; }
+  };
+
+  /* ============ HUSTLE — read the night's balance ==================
+     The ledger is written by the runner with the service account and is
+     readable by anyone; firestore.rules bounds it as read:true /
+     write:isOwner(), so nothing on a phone can put a number here.
+
+     Cached per night: paintFinalTotals() runs on every stats:score event
+     while the ending is up, and an uncached fetch would be a read a
+     repaint. Returns null — never 0 — when it cannot answer, because the
+     caller must be able to tell "no balance yet" from "earned nothing". */
+  SB._husCache = {};
+  SB.hustleFor = async function (nid) {
+    if (!SB.enabled || !F || !db) return null;
+    var id = String(nid || nightId || '');
+    if (!id) return null;
+    var who = ''; try { who = uid() || ''; } catch (_) { who = ''; }
+    if (!who) return null;
+    var k = id + '/' + who;
+    var c = SB._husCache[k];
+    if (c && (Date.now() - c.at) < 15000) return c.v;
+    try {
+      var snap = await F.getDoc(F.doc(db, 'nights', id, 'hustle', who));
+      if (!snap || !snap.exists()) return null;
+      var v = snap.data() || {};
+      var n = (typeof v.h === 'number') ? v.h : null;
+      SB._husCache[k] = { at: Date.now(), v: n };
+      return n;
+    } catch (e) { return null; }
   };
 
   SB.watchCallIt = function (cb) {
@@ -16107,6 +16148,14 @@ var I18N = {
     "No rooms this day":"Sin salas este día",
     "Today":"Hoy",
     "Tomorrow":"Mañana",
+    /* HUSTLE IS NOT TRANSLATED, AND THAT IS A DECISION RATHER THAN A GAP.
+       It is the name of a currency, the way a brand is a name — "ganaste 4
+       ESFUERZO" would make a Spanish reader hunt for a second currency
+       that does not exist. The identity mapping is here so qa/spanish.js
+       records that the string was CONSIDERED: an entry that maps to itself
+       is a decision on the record, an absent entry is an oversight, and
+       the suite cannot tell those apart without this line. */
+    "HUSTLE":"HUSTLE",
     "AT":"VS", "PRACTICE":"PRÁCTICA", "Practice":"Práctica", "LIVE":"EN VIVO",
     "↑ new":"↑ nuevo",
     "Set these before kickoff. They score themselves while you watch — no tapping during the match.":
@@ -17913,6 +17962,22 @@ function finalCardNote(){
    whole reason the old "capture it before the sheet lands" line above
    showFinal could go. */
 function paintFinalTotals(ms){
+  /* HUSTLE, fetched once and painted when it lands. Fire-and-forget on
+     purpose: the ending must draw at full speed whether or not a currency
+     nobody has been told about yet answers in time. Every failure leaves
+     the tile at "—". */
+  try{
+    if(typeof SB !== 'undefined' && SB && typeof SB.hustleFor === 'function'){
+      var _hid = ''; try{ _hid = (typeof GAME !== 'undefined' && GAME) ? (GAME.nightId || '') : ''; }catch(_){}
+      Promise.resolve(SB.hustleFor(_hid)).then(function(h){
+        try{
+          var el = document.getElementById('finalHustle');
+          if(el && typeof h === 'number') el.textContent = String(h);
+        }catch(_){}
+      }).catch(function(){});
+    }
+  }catch(_){}
+
   var t = Math.max(0, Math.round(Number(shownTotal())||0));
   var el = document.getElementById('finalPts');
   if(el){ try{ countUp(el, t, ms||600); }catch(e){ el.textContent = String(t); } }
@@ -25429,7 +25494,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-01-tap.267';
+const STATS_BUILD='2026-09-01-hustle.269';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
