@@ -138,7 +138,7 @@
      colour and this is the game worth the most attention. */
   .schG.main .schT{color:var(--ink);font-weight:600}
   .schG.main .schStar{color:var(--gold);flex:none;font-size:12px}
-  .schNone{font-size:13.5px;color:var(--dim)}
+  .schNone{font-size:14px;color:var(--dim)}
   #schedMore{margin-top:12px;width:100%}
 
 
@@ -1984,10 +1984,10 @@
     <div class="card" id="schedCard" style="display:none;margin-top:16px">
       <div class="schHead">
         <h2>What's coming</h2>
-        <span class="schSub" id="schedSub"></span>
+        <span class="schSub" id="schedSub">Next two weeks</span>
       </div>
       <div id="schedList"></div>
-      <button class="btn ghost" id="schedMore" style="display:none">Show all 14 days</button>
+      <button class="btn ghost" id="schedMore" style="display:none">Show every day</button>
     </div>
 
     <div class="card" id="welcomeStrip" style="display:none;margin-top:14px;padding:11px 14px;border-color:rgba(46,230,166,.35)"></div>
@@ -16060,6 +16060,16 @@ var I18N = {
     "Your room":"Tu sala",
     "Game of the night":"Juego de la noche",
     "On tonight\u2019s slate":"En la cartelera de hoy",
+    /* THE SCHEDULE MENU. Every string here is FIXED — no interpolated
+       counts — because the walker matches whole text nodes. */
+    "What\u2019s coming":"Lo que viene",
+    "What's coming":"Lo que viene",
+    "Next two weeks":"Las próximas dos semanas",
+    "Show every day":"Ver todos los días",
+    "Not announced yet":"Aún no anunciado",
+    "No rooms this day":"Sin salas este día",
+    "Today":"Hoy",
+    "Tomorrow":"Mañana",
     "AT":"VS", "PRACTICE":"PRÁCTICA", "Practice":"Práctica", "LIVE":"EN VIVO",
     "↑ new":"↑ nuevo",
     "Set these before kickoff. They score themselves while you watch — no tapping during the match.":
@@ -30094,16 +30104,13 @@ function schedRender(){
     });
     list.innerHTML = html;
 
-    var sub = document.getElementById('schedSub');
-    if(sub){
-      var n = days.reduce(function(a,d){ return a + ((d.games||[]).length); }, 0);
-      sub.textContent = n ? (n + ' game' + (n===1?'':'s') + ' scheduled') : '';
-    }
+    /* THE LABELS ARE FIXED AND THE COUNTS ARE GONE, ON PURPOSE. The
+       Spanish layer walks text nodes and matches EXACT English strings, so
+       "Show all 14 days" could never be translated — it would read English
+       inside a Spanish page forever, which is the precise thing
+       qa/spanish.js exists to prevent. The counts were decoration. */
     var more = document.getElementById('schedMore');
-    if(more){
-      more.style.display = (days.length > 5 && !SCHED_ALL) ? '' : 'none';
-      more.textContent = 'Show all ' + days.length + ' days';
-    }
+    if(more) more.style.display = (days.length > 5 && !SCHED_ALL) ? '' : 'none';
     card.style.display = '';
   }catch(_){}
 }
