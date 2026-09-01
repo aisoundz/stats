@@ -49,6 +49,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const { dayPlan, hhmm } = require('./tipoff-when.js');
 
 const APPLY = process.argv.includes('--apply');
 const HOME = process.env.HOME;
@@ -119,6 +120,35 @@ async function slate() {
     process.exit(0);
   }
   log('slate: ' + games.length + ' room(s) on ' + DATE);
+
+  /* ---- WHEN — owned by host/tipoff-when.js, shared with the send ----
+     This job used to be a fixed 09:13 cron. That is too late for a
+     Premier League morning: twenty-one of twenty-six EPL rooms this
+     product has hosted had already kicked off by 09:13, so the draft was
+     being written about matches in progress or finished. It now runs
+     every fifteen minutes and asks the shared owner whether the day's
+     draft is due, which for an ordinary evening slate is still 10:23 →
+     10:45 and for a 7:00 AM kickoff is 05:08 → 05:30.
+
+     It also stands down once the day has actually sent. tipoff-ensure.js
+     guarantees exactly one DRAFT, but a draft that has been sent is no
+     longer a draft, so without this the job would mint a fresh one every
+     tick for the rest of the morning. */
+  const tips = games.map((v) => {
+    const f = (v.mapValue || {}).fields || {};
+    return (f.tipISO && f.tipISO.stringValue) || '';
+  });
+  const PLAN = dayPlan(tips, new Date());
+  log('when: ' + PLAN.describe());
+  const sentMark = LOGDIR + '/tipoff-sent-' + PLAN.day + '.txt';
+  if (fs.existsSync(sentMark)) {
+    log('SKIP: today\u2019s tip-off already sent (' + sentMark + '). Nothing left to draft.');
+    process.exit(0);
+  }
+  if (!PLAN.draftDue) {
+    log('SKIP: not due yet \u2014 the draft comes due at ' + hhmm(PLAN.draftPT) + ' PT.');
+    process.exit(0);
+  }
 
   /* ---- the approved edition, if a person wrote one ---------------- */
   const copyPath = path.join(LOGDIR, 'tipoff-copy-' + DATE + '.json');

@@ -3,7 +3,7 @@
   "board-order.js": 14,
   "feed-path.js": 21,
   "voice-lang.js": 55,
-  "voice.js": 85,
+  "voice.js": 96,
   "night-config.js": 55,
   "overtime.js": 16,
   "payoff.js": 9,
@@ -92,5 +92,9 @@
   "arcade-counter.js": 6,
   "night-ceiling.js": 5,
   "schedule-menu.js": 8,
-  "hustle.js": 15
+  "hustle.js": 15,
+  "invite.js": 8,
+  "tape.js": 10,
+  "handle.js": 9,
+  "tipoff-when.js": 43
 }

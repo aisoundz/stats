@@ -40,9 +40,17 @@
    ===================================================================== */
 
 const fs = require('fs');
+/* One file per Pacific day. The day is the unit because the product's
+   day is — a night, a slate, an email. */
+function sentMarkPath() {
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles',
+    year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  return `${process.env.HOME}/gamenight-logs/tipoff-sent-${day}.txt`;
+}
 const path = require('path');
 const https = require('https');
 const SHAPE = require('./email-shape.js');
+const { dayPlan, hhmm, ptMinutes, DEFAULT_SEND_PT: LATEST_SEND } = require('./tipoff-when.js');
 
 const KEYFILE = path.join(process.env.HOME, '.secrets', 'mailerlite-api-key');
 const FIREBASE_KEY = 'AIzaSyB1g4u3L85sks1Phjz_Tim98urv1-IZBps'; // public web key, not a secret — see index.html window.STATS_FIREBASE
@@ -293,6 +301,23 @@ async function main() {
   const slateURL = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents/slate/${today}?key=${FIREBASE_KEY}`;
   const slateRes = await reqRetry(slateURL);
   if (slateRes.status !== 200 || !slateRes.body || !slateRes.body.fields) {
+    /* AN ABSENT SLATE IS ONLY ALARMING ONCE IT IS LATE.
+       This used to fire twice a day, at 09:35 and 10:45, by which time
+       the 03:00 build has long finished — so a missing slate could only
+       mean something was broken, and shouting was right. This now ticks
+       from 03:00, when the slate legitimately does not exist yet, and an
+       exit-2 on every tick would put a dozen false alarms in front of the
+       founder every morning. A detector that cries wolf on a schedule
+       teaches the person to stop reading it, which costs more than the
+       bug it was built to catch.
+
+       So: before the latest possible send it is "not built yet" and quiet;
+       at or after it, the slate really is missing and this still shouts. */
+    const nowPT = ptMinutes(new Date());
+    if (nowPT < LATEST_SEND) {
+      log(`slate/${today} not readable yet (status ${slateRes.status}) — the 03:00 build may not have finished. Not due until ${hhmm(LATEST_SEND)} PT at the latest, so this is not an error.`);
+      return;
+    }
     log(`REFUSE: could not read slate/${today} from Firestore (status ${slateRes.status}). Nothing was sent — a wrong email cannot be recalled, and an email cannot be checked against a slate that could not be read.`);
     process.exitCode = 2;
     return;
@@ -310,9 +335,26 @@ async function main() {
       home: s('homeName') || s('home'),
       away: s('awayName') || s('away'),
       net: s('net') || s('network') || s('channel'),
+      tipISO: s('tipISO'),
     };
   }).filter((g) => g.id);
   log(`slate: ${games.length} room(s) — ${games.map((g) => g.id).join(', ')}`);
+
+  /* WHEN — owned by host/tipoff-when.js, shared with the draft job.
+     Read its header for why the whole chain had to stop being a fixed
+     clock time. Too early is NOT an error: this timer now ticks every
+     fifteen minutes across the morning, so a job that reported failure
+     on every tick before it was due is a job somebody mutes. */
+  const PLAN = dayPlan(games.map((g) => g.tipISO), new Date());
+  log(`when: ${PLAN.describe()}`);
+  if (!PLAN.sendDue) {
+    log(`Not due yet — waiting for ${hhmm(PLAN.sendPT)} PT. Nothing sent, nothing wrong.`);
+    return;
+  }
+  if (fs.existsSync(sentMarkPath())) {
+    log(`A tip-off already went out today — ${sentMarkPath()}. Refusing a second one.`);
+    return;
+  }
 
   const missingNet = games.filter((g) => !g.net);
   if (missingNet.length) {
@@ -429,6 +471,25 @@ async function main() {
   log(`VERIFIED: ${recap.note}`);
 
   // ---- 4. send -----------------------------------------------------
+  /* CLAIM THE DAY BEFORE ASKING, NEVER AFTER.
+     The timer used to fire once a day, so nothing could send twice. It
+     now fires every fifteen minutes, and that turns the ambiguous case
+     this file already worries about at the top — request reaches
+     MailerLite, response is lost — from a one-off into an automatic
+     retry that sends the letter twice. Readers got the Signal weekly
+     twice on 23 Aug; that is what this costs. Writing the marker first
+     means a lost response ends the day quietly and a human looks, which
+     is this file's stated preference: sending zero times and needing a
+     human beats sending twice. */
+  try {
+    fs.writeFileSync(sentMarkPath(),
+      `${new Date().toISOString()} campaign ${draft.id} — about to POST /schedule\n`);
+  } catch (e) {
+    log(`REFUSE: cannot write ${sentMarkPath()} (${e.message}). Without the marker a`
+      + ` retry could send twice, so this stops here.`);
+    process.exitCode = 2;
+    return;
+  }
   const payload = JSON.stringify({ delivery: 'instant' });
   const sendRes = await req(`https://connect.mailerlite.com/api/campaigns/${draft.id}/schedule`, {
     method: 'POST',

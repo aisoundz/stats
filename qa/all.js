@@ -182,6 +182,7 @@ const DUAL_READERS=['lane-persist.js','night-ceiling.js'];
 const TIER={
   'qa.js':            {tier:'browser', args:QUICK?['--quick']:[]},
   'acceptance.js':    {tier:'static'},
+  'tipoff-when.js':   {tier:'static'},
   'board-order.js':   {tier:'static'},
   /* 21 Aug: a finished Caught It card came back on every tab change, and
      "usually the same one" — one stale question sat in PCI.pending and

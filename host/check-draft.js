@@ -27,6 +27,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const SHAPE = require('./email-shape.js');
+const { dayPlan, hhmm } = require('./tipoff-when.js');
 
 const KEYFILE = path.join(process.env.HOME, '.secrets', 'mailerlite-api-key');
 const LOG     = path.join(process.env.HOME, 'gamenight-logs', 'check-draft.log');
@@ -100,12 +101,19 @@ async function slateRooms(date) {
    rather than fatal, because an email that arrives late still beats no
    email on a game night — the same line this file draws everywhere else.
    ================================================================== */
-const SEND_HOUR_PT = 10, SEND_MIN_PT = 45;   // tipoff-email-send.timer, 17:45 UTC
-function tipsBeforeTheSend(rooms, date) {
+/* The send time is no longer a constant anybody may copy: it is a
+   function of the day's first kickoff, owned by host/tipoff-when.js.
+   The old `SEND_HOUR_PT = 10, SEND_MIN_PT = 45` lived here naming a
+   timer schedule that no longer exists. */
+/* Takes the day's ACTUAL send minute rather than the old fixed 10:45.
+   Since 1 Sept the send targets 90 minutes before the first room, so this
+   should now stay quiet — except when the 03:30 floor clamps it on a very
+   early kickoff, which is exactly the case still worth warning about. */
+function tipsBeforeTheSend(rooms, date, sendPT) {
   const withTips = rooms.filter((r) => r.tipISO);
   if (!withTips.length) return null;
   const send = new Date(`${date}T00:00:00-07:00`);
-  send.setHours(SEND_HOUR_PT, SEND_MIN_PT, 0, 0);
+  send.setHours(Math.floor(sendPT / 60), sendPT % 60, 0, 0);
   const early = withTips
     .map((r) => ({ ...r, at: new Date(r.tipISO) }))
     .filter((r) => r.at < send)
@@ -148,6 +156,18 @@ function isSundayPT() {
 
   const date = todayPT();
   const rooms = await slateRooms(date).catch(() => []);
+
+  /* WHEN — host/tipoff-when.js, the same owner the draft and send use.
+     This ran at a fixed 09:28 because the draft ran at a fixed 09:13.
+     Now that the draft follows the day's first kickoff, a fixed 09:28
+     would shout "NO DRAFT" every ordinary evening, when the draft is not
+     due until 10:23. It asks the owner instead. */
+  const PLAN = dayPlan(rooms.map((g) => g.tipISO), new Date());
+  log(`when: ${PLAN.describe()}`);
+  if (!PLAN.checkDue) {
+    log(`SKIP: nothing to check yet — the draft is not due until ${hhmm(PLAN.draftPT)} PT.`);
+    process.exit(0);
+  }
   log(`today (PT) = ${date} · ${rooms.length} room(s) on the slate`);
 
   const H = { Authorization: `Bearer ${KEY}`, Accept: 'application/json' };
@@ -193,12 +213,13 @@ function isSundayPT() {
      rather than in email-shape.js because it is a fact about the DAY, not
      about the document — the sender asks the same question at 10:45 and
      by then the answer cannot be acted on. */
-  const late = tipsBeforeTheSend(rooms, date);
+  const late = tipsBeforeTheSend(rooms, date, PLAN.sendPT);
   if (late) {
-    res.warn.push(`THE SEND IS AFTER THE FIRST TIP. ${late.count} room(s) start before 10:45 AM PT.`);
+    res.warn.push(`THE SEND IS AFTER THE FIRST TIP. ${late.count} room(s) start before the ${hhmm(PLAN.sendPT)} AM PT send.`);
     late.lines.forEach((l) => res.warn.push('    ' + l));
     res.warn.push('    A tip-off email that arrives after the tip-off is a wrong email, not a late one.');
-    res.warn.push('    Move the draft and the send earlier, or say "already under way" in the copy.');
+    res.warn.push('    The send already tracks the first kickoff, so this means the 03:30 floor clamped it:');
+    res.warn.push('    the slate builds at 03:00 and there is no earlier email to be had. Say "already under way".');
   }
 
   res.ok.forEach((o) => log(`  ok    ${o}`));
@@ -207,8 +228,9 @@ function isSundayPT() {
 
   const ok = res.fatal.length === 0;
   log(ok
-    ? `DRAFT IS THE RIGHT SHAPE. ${res.warn.length} warning(s). It sends itself at 10:45.`
-    : `DRAFT IS INCOMPLETE — ${res.fatal.length} section(s) missing, and there are ~85 minutes to fix it before 10:45.`);
+    ? `DRAFT IS THE RIGHT SHAPE. ${res.warn.length} warning(s). It sends itself at ${hhmm(PLAN.sendPT)} PT.`
+    : `DRAFT IS INCOMPLETE — ${res.fatal.length} section(s) missing, and there are `
+      + `~${Math.max(0, PLAN.sendPT - PLAN.nowPT)} minutes to fix it before the ${hhmm(PLAN.sendPT)} PT send.`);
 
   try {
     fs.writeFileSync(VERDICT, JSON.stringify({
