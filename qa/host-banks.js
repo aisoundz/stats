@@ -77,7 +77,19 @@ const AUTO = ctx.AUTO;
    and are named for the LAST of them, which is why this is a table rather
    than an index+1. Getting it wrong here would resolve every question
    against the wrong part of the game and still look fine. */
-const PERIODS = { mlb: [3, 6, 9], nfl: [1, 2, 3, 4], nhl: [1, 2, 3], mls: [1, 2] };
+/* THE ROUND -> PERIOD MAP BELONGS TO THE BANK, NOT TO THIS FILE. This was
+   `const PERIODS = { mlb:[3,6,9], ... }`, a hardcoded second copy. When
+   baseball moved to one round per inning the copy went stale, this suite
+   kept handing period 3 to resolvers that now read a single inning, and
+   it STAYED GREEN — band() never returns null, so `answered` never drops
+   and the floor was still met while every "through three" question was
+   quietly being resolved over the 3rd alone. A suite that cannot go red
+   when the thing it grades changes underneath it is not a check.
+   A bank that spans periods declares `periods`; everything else is
+   index+1, which is what those leagues have always been. */
+const periodsFor = (league, bank, ri) =>
+  (bank && Array.isArray(bank.periods) && bank.periods[ri] != null)
+    ? bank.periods[ri] : (ri + 1);
 const FIXTURE = { mlb: 'mlb.json', nfl: 'nfl.json', nhl: 'nhl.json', mls: 'mls.json' };
 
 let answered = 0, silent = 0, missing = 0, illegal = 0, threw = 0;
@@ -96,7 +108,7 @@ for (const league of Object.keys(BANKS)) {
   let lAns = 0, lSil = 0;
 
   bank.rounds.forEach((round, ri) => {
-    const period = PERIODS[league][ri];
+    const period = periodsFor(league, BANKS[league], ri);   // the RAW bank — fillTeams may not carry the field
     console.log(`  ${bank.tags[ri]} (period ${period}, worth ${bank.worth[ri]})`);
     round.forEach(q => {
       const fn = AUTO.R[q.r];

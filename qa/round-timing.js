@@ -83,6 +83,7 @@ const END_WORDS   = /\b(ends?|after|final|full time|half time)\b/i;
 
 (async () => {
   const { chromium } = require('playwright');
+  const { waitReady } = require(path.join(__dirname,'ready.js'));
   const { srv, port } = await serve(T.dir);
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -92,8 +93,17 @@ const END_WORDS   = /\b(ends?|after|final|full time|half time)\b/i;
                               : (fail++, console.log('  FAIL ' + n + (d ? '   ' + d : ''))); };
 
   await page.goto(`http://127.0.0.1:${port}/${T.base}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => typeof window.gtStartRow === 'function'
-                                || typeof gtStartRow === 'function', { timeout: 25000 }).catch(() => {});
+  /* WAIT ON THE APP'S OWN STATEMENT, NOT ON A SYMBOL EXISTING.
+     This waited for `typeof window.featureTonight === 'function'` and
+     swallowed the timeout with .catch(()=>{}) — both of the exact mistakes
+     qa/ready.js was written to end. A function is defined thousands of
+     lines before boot finishes, so under gate load this suite ran its
+     checks against a half-built page: GREEN standalone, RED in the gate,
+     and failing in 1780ms instead of ~10s because it never waited at all.
+     I then blamed concurrency twice. waitReady() throws rather than
+     continuing, which is the point — a boot failure must not be reported
+     as a defect in the feature under test. */
+  await waitReady(page);
 
   /* Drive the PRE-TIP waiting card in every sport that has rounds. This is
      the state the founder was in: a live night, before the game starts. */

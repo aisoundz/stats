@@ -88,19 +88,7 @@
     --page:#05080e; --bg:#070b12; --bg2:#0c1220; --card:#111a2b; --card2:#162034;
     --glass:rgba(255,255,255,.045); --glass2:rgba(255,255,255,.075);
     --chrome:rgba(7,11,18,.84);
-    /* ============ v7.5 FACES, APPLIED ================================
-     Headings and the marquee codes take the display face; labels, chips,
-     buttons and the nav take the UI face; anything that is a FIGURE takes
-     the mono. No font-size is set here — the thirteen-size ramp and the
-     12px floor are the shipped design system and this patch does not get
-     an opinion about them. */
-  h1, h2, h3, .abig, .mq-code, .mq-cbig, .arc .v{
-    font-family:var(--disp); letter-spacing:-.01em }
-  .lab, .alab, .acap, .chip, .btn, .abdg, #botnav, .grLg, .mq-clab{
-    font-family:var(--ui) }
-  .num, .ascore, .mq-cbig, .arc .v, [style*="tabular-nums"]{
-    font-family:var(--mono); font-variant-numeric:tabular-nums }
-
+  
   /* hairlines — alpha, never solid */
     --line:rgba(255,255,255,.09); --line2:rgba(255,255,255,.14);
     --line3:rgba(255,255,255,.05);
@@ -121,6 +109,22 @@
     /* the two the feed owns */
     --away:#7fe3c7; --home:#4a86ff; --mile:#ffc54d;
   }
+
+  /* ============ v7.5 FACES, APPLIED ================================
+     Headings and the marquee codes take the display face; labels, chips,
+     buttons and the nav take the UI face; anything that is a FIGURE takes
+     the mono. No font-size is set here — the thirteen-size ramp and the
+     12px floor are the shipped design system and this patch does not get
+     an opinion about them. */
+  h1, h2, h3, .abig, .mq-code, .arc .v{
+    font-family:var(--disp); letter-spacing:-.01em }
+  .lab, .alab, .acap, .chip, .btn, .abdg, #botnav, .grLg, .mq-clab{
+    font-family:var(--ui) }
+  .num, .ascore, .mq-cbig, [style*="tabular-nums"]{
+    font-family:var(--mono); font-variant-numeric:tabular-nums }
+
+
+
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0;background:var(--page);color:var(--body);
     font-family:var(--f);
@@ -5837,7 +5841,7 @@ const SOCCER_ROUNDS=[
    Add a sport by adding a key. Pick one with ?sport=soccer in the URL.
    ------------------------------------------------------------------------ */
 
-/* ============ MLB — Three rounds — after the 3rd, the 6th and the 9th. =============================
+/* ============ MLB — one round at the end of EVERY inning. ===========================
    Practice replays a REAL finished game: every answer below is what the
    live resolver returned against ARI @ ATL, so practice
    teaches exactly the game the night grades. 12 questions.
@@ -6197,19 +6201,19 @@ SPORTS.baseball={
   /* NINE ROUNDS, ONE PER INNING (31 Aug 2026, founder's rule). These
      four lists describe the same rounds and must be the same length;
      the totals still come to 150, the same as the old 30/50/70. */
-  worth:[10,10,15,15,15,20,20,20,25], tags:["1st","2nd","3rd","4th","5th","6th","7th","8th","9th"],
+  worth:[20,20,30,30,30,40,40,40,50], tags:["1st","2nd","3rd","4th","5th","6th","7th","8th","9th"],
   names:["1st inning","2nd inning","3rd inning","4th inning","5th inning","6th inning","7th inning","8th inning","9th inning"],
   L:{ start:"first pitch", Start:"First pitch", starting:"Warming up",
       end:"final out", End:"Final out", unit:"game", Unit:"Game",
-      period:"stretch", Period:"Stretch", league:"MLB", cadence:"3 rounds" },
+      period:"stretch", Period:"Stretch", league:"MLB", cadence:"9 innings" },
   startLbl:"Start {n} \u25B6", lifelineNote:"like a mound visit",
   landing:"<b style=\"color:var(--ink)\">"+BA_GAME.awayName+" @ "+BA_GAME.homeName+"</b>",
   step1:"Lock six picks before first pitch \u2014 winner, total runs, who scores first and more. Worth 600 of the night\u2019s 1,000.",
-  step2h:"Answer after the 3rd, 6th and 9th",
-  step2:"Three rounds, not nine \u2014 baseball gives you time to breathe, and a round every eighteen minutes is a notification, not a game. Four questions each about the innings you just watched.",
+  step2h:"Answer at the end of every inning",
+  step2:"One round an inning, nine of them \u2014 something to answer in every break the sport already gives you, about the inning you just watched. Two questions each.",
   step3:"Rounds score themselves the moment the innings close. Most points wins; Speed breaks ties.",
   rulePred:"Six picks before first pitch, 100 points each: winner, total runs, first to score, home runs, which staff strikes out more, and whether it goes past nine. Locked at first pitch.",
-  ruleLive:"Three rounds \u2014 after the 3rd, the 6th and the 9th. Four questions each, worth 30, 50 and 70 points, about the innings that just happened. Twenty seconds each, no lookups.",
+  ruleLive:"Nine rounds \u2014 one at the end of every inning. Two questions each, worth more as the game goes on, about the inning that just happened. Twenty seconds each, no lookups.",
   ruleScore:"Every round settles from the official play-by-play as soon as the inning closes. Nothing for you to tap."
 };
 SPORTS.football={
@@ -7318,15 +7322,7 @@ function featureTonight(){
     gn:       star.gn ? String(star.gn) : '',
     net:      star.net || '',
     homeName: star.home || '', awayName: star.away || '',
-    homeAbbr: star.homeAbbr || '', awayAbbr: star.awayAbbr || '',
-    /* IS IT OVER? The hero cannot ask phaseNow() about the marquee — that
-       describes the ROOM — so without this it can only tell that a game has
-       started, not that it has finished. The 31 Aug fix made a passed tip
-       read "Live now", which is right for three hours and wrong for the
-       three after that: a game that ended at 3pm still said LIVE NOW at
-       6pm, because REST_AFTER_MS is six hours. doneOf() already answers
-       this, four lines up, for the ordering. Carry the answer. */
-    done:     (function(){ try{ return !!doneOf(star); }catch(_){ return false; } })()
+    homeAbbr: star.homeAbbr || '', awayAbbr: star.awayAbbr || ''
   };
   try{ window.TONIGHT = TONIGHT; }catch(_){}
   /* NO CACHE CLEAR HERE ON PURPOSE. The obvious next line is to drop the
@@ -21417,8 +21413,41 @@ function ciChime(){
     });
   }catch(_){}
 }
+/* ============ A WEBFONT SWAP RESIZES EVERYTHING THAT WAS MEASURED =====
+   31 Aug 2026. ciFit() reads the card's offsetHeight and reserves exactly
+   that much page with --cih. That was safe while every face was a system
+   font and present at first paint. With Archivo / Chakra Petch / JetBrains
+   Mono arriving over the network under display:swap, the card is measured
+   in the FALLBACK, the real faces land a moment later, the card grows —
+   and --cih still describes the old height, so the page is under-pushed
+   and the card lands on top of the wordmark.
+
+   Caught by qa/ci-clearance.js on WebKit at 375x667: one element covered,
+   "STATS GAMETIME". Baseline-controlled — the build immediately before the
+   faces went 120/0 and this one went 119/1, so it is the fonts and not the
+   card. It is a REAL phone bug, not a harness artifact: every visitor on a
+   cold cache gets that swap.
+
+   document.fonts.ready settles once, after the swap, so one re-measure
+   closes it. Guarded and idempotent: if the API is missing (or the fonts
+   were already cached) nothing happens and the first measurement stands. */
+var CI_FONTS_HOOKED = false;
+function ciFitAfterFonts(){
+  if(CI_FONTS_HOOKED) return;
+  CI_FONTS_HOOKED = true;
+  try{
+    if(document.fonts && document.fonts.ready && document.fonts.ready.then){
+      document.fonts.ready.then(function(){ try{ ciFit(); }catch(_){} });
+    }
+  }catch(_){}
+}
+try{ ciFitAfterFonts(); }catch(_){}
+
 function ciFit(){
   var c=document.getElementById('ciCard'); if(!c) return;
+  /* Cheap insurance beyond the one-shot hook above: if the faces are still
+     loading when a card opens, book another measure for when they land. */
+  try{ ciFitAfterFonts(); }catch(_){}
   var up = c.style.display!=='none';
   var top = Number(c.dataset.ciTop||10);
   var h = up ? (c.offsetHeight||0) : 0;
@@ -24829,6 +24858,19 @@ function heroTipMs(){
 
 /* phaseNow() stays the one answer to "where are we in this game". This adds
    the one thing it cannot know, which is whether the CONFIG is stale. */
+/* WHAT THE FEED SAYS ABOUT A GAME THIS PAGE IS NOT IN. TICK.by is the
+   per-event poll the rail and the tip line already run on — no extra fetch
+   and no extra Firestore read. Returns 'pre' | 'in' | 'post', or '' when
+   nothing has been heard, which is the honest answer and must stay
+   distinguishable from 'pre'. */
+function heroFeedState(g){
+  try{
+    var tk = TICK.by[String((g && g.espnEvent) || '')] || null;
+    return (tk && tk.state) ? String(tk.state) : '';
+  }catch(_){ return ''; }
+}
+try{ window.heroFeedState = heroFeedState; }catch(_){}
+
 function heroState(){
   var ph = ''; try{ ph = phaseNow(); }catch(_){}
   /* phaseNow() describes the ROOM. If the hero is showing the marquee
@@ -24837,17 +24879,26 @@ function heroState(){
      a slate with two games on it. */
   try{ if(heroGame() !== GAME) ph = ''; }catch(_){}
   if(ph === 'live') return 'live';
-  /* A FINISHED MARQUEE IS FINAL, NOT LIVE. Without this the only thing the
-     hero knows about a game it is not in is that its tip has passed, so it
-     said "Live now" for the whole six hours REST_AFTER_MS allows — three of
-     which are usually after the final whistle. TONIGHT.done comes from the
-     same doneOf() that ordered the slate, so there is one answer to "is it
-     over", not two. */
+  /* A FINISHED MARQUEE IS FINAL, NOT LIVE — AND THE FEED ALREADY KNOWS.
+     The first cut of this put a `done` flag on TONIGHT, taken from
+     doneOf(). That was a second copy of a fact this page already owns:
+     TICK.by[event] is polled every 25s per slate event and tonightTipLine()
+     has been reading it to print "Live now"/"Final" since it was written.
+     doneOf() also degrades to a four-hour clock, because nothing refreshes
+     g.state on the slate rows. So: one reader, and it is the one already
+     on the page. Caught by review — the flag version was also INERT,
+     because the guard in paintHeroRibbon downgrades any live/final the
+     shared feed cannot vouch for, and the shared feed is fetched for the
+     ROOM's event, never the marquee's. */
   try{
     var _hg2 = heroGame();
-    if(_hg2 && _hg2 !== GAME && _hg2.done === true){
-      var _ms2 = heroTipMs();
-      return (isFinite(_ms2) && (-_ms2) > REST_AFTER_MS) ? 'rest' : 'final';
+    if(_hg2 && _hg2 !== GAME){
+      var _fs = heroFeedState(_hg2);
+      if(_fs === 'post'){
+        var _ms2 = heroTipMs();
+        return (isFinite(_ms2) && (-_ms2) > REST_AFTER_MS) ? 'rest' : 'final';
+      }
+      if(_fs === 'in') return 'live';
     }
   }catch(_){}
   var ms = heroTipMs();
@@ -24921,7 +24972,12 @@ async function paintHeroRibbon(){
     /* Same guard as the tip line: a live/final hero is built from GS.teams,
        and GS may still be describing the room the player left. Fall back to
        the countdown rather than print another game's score. */
-    try{ if((st === 'live' || st === 'final') && !gsIsAbout(heroGame())) st = 'pre'; }catch(_){}
+    /* ...unless TICK vouched for it. This guard exists so a live/final
+       built from GS.teams cannot print another room's score. A state
+       that came from the marquee's OWN feed row is not that case, and
+       downgrading it is what made the finished-marquee fix inert. */
+    try{ if((st === 'live' || st === 'final') && !gsIsAbout(heroGame())
+           && !heroFeedState(heroGame())) st = 'pre'; }catch(_){}
     if(st === 'rest'){
       /* No feed has been asked about a next game and none has been
          configured, so this says what is true and stops. Naming a date we
@@ -25036,7 +25092,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-01-innings.256';
+const STATS_BUILD='2026-09-01-faces.260';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

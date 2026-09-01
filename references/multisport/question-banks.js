@@ -28,6 +28,18 @@ const MLB = {
   tags:  ['1st-3rd', '4th-6th', '7th-9th'],
   names: ['Innings 1–3', 'Innings 4–6', 'Innings 7–9'],
   worth: [30, 50, 70],
+  /* WHICH INNING EACH ROUND ASKS ABOUT, DECLARED HERE. qa/host-banks.js
+     carried its own `const PERIODS = { mlb:[3,6,9] }`, a second copy of a
+     fact this bank owns — so when TEMPLATES moved to one round per inning
+     the suite kept feeding period 3 to a bank whose resolvers now read ONE
+     inning, and stayed green while every "through three" question was
+     silently resolving over the 3rd alone. A bank that spans innings has
+     to say which ones; the suite reads it rather than remembering it.
+     NOTE: this reference bank is still the THREE-round shape. The shipped
+     bank is TEMPLATES.baseball in admin.html and it is nine rounds now.
+     Two banks for one sport is a duplicate waiting to drift — retiring
+     this one is the real fix and it is not this commit's job. */
+  periods: [3, 6, 9],
   rounds: [
     [ // after the 3rd
       { t: 'First hit of the game — what was it?',

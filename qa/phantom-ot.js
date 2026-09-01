@@ -69,9 +69,13 @@ function mlbSummary(upTo, says){
    rounds over nine innings, plus ONE authored overtime template. */
 const PLAN = {
   rounds: [
-    { tag:'1st-3rd', name:'Innings 1–3', worth:30, qs:[{t:'q',o:['a','b']}] },
-    { tag:'4th-6th', name:'Innings 4–6', worth:50, qs:[{t:'q',o:['a','b']}] },
-    { tag:'7th-9th', name:'Innings 7–9', worth:70, qs:[{t:'q',o:['a','b']}] }
+    /* Nine rounds now, but this suite is about OT SLOT SUPPRESSION, not the
+       regulation shape — three entries still exercise it and mapping them
+       onto innings 1-3 is honest about what they are. Tags updated so the
+       fixture stops describing a retired structure. */
+    { tag:'1st', name:'1st inning', worth:20, qs:[{t:'q',o:['a','b']}] },
+    { tag:'2nd', name:'2nd inning', worth:20, qs:[{t:'q',o:['a','b']}] },
+    { tag:'3rd', name:'3rd inning', worth:30, qs:[{t:'q',o:['a','b']}] }
   ],
   ot: { worth:70, qs:[{t:'Extra innings q',o:['a','b']}] }
 };

@@ -93,24 +93,33 @@ def main():
     # Appended as its own block at the end of the first stylesheet so the
     # cascade order is explicit and nothing here fights an earlier rule by
     # accident. Sizes, weights-by-number and colours are all left alone.
-    anchor = '  /* hairlines — alpha, never solid */'
-    if s.count(anchor) != 1:
-        sys.exit('ABORT apply: hairline anchor is not unique')
+    # ---- 3b. AND THEY MUST LAND OUTSIDE :root -------------------------
+    # The first version anchored on the hairline comment, which turned out
+    # to live INSIDE the :root declaration block — so all three rulesets
+    # became CSS-nested. `.lab,…{` parses under the original nesting spec
+    # but `h1, h2, h3,…{` needs RELAXED nesting (Safari 17.2+), so iOS
+    # 16.5-17.1 got two of the three faces and no test could see it: the
+    # gate runs one engine version. Every rule also silently gained :root
+    # specificity. Anchor on the CLOSE of the block instead, and assert it.
+    ri = s.index(':root{')
+    close = s.index('\n  }\n', ri) + len('\n  }\n')
     block = """  /* ============ v7.5 FACES, APPLIED ================================
      Headings and the marquee codes take the display face; labels, chips,
      buttons and the nav take the UI face; anything that is a FIGURE takes
      the mono. No font-size is set here — the thirteen-size ramp and the
      12px floor are the shipped design system and this patch does not get
      an opinion about them. */
-  h1, h2, h3, .abig, .mq-code, .mq-cbig, .arc .v{
+  h1, h2, h3, .abig, .mq-code, .arc .v{
     font-family:var(--disp); letter-spacing:-.01em }
   .lab, .alab, .acap, .chip, .btn, .abdg, #botnav, .grLg, .mq-clab{
     font-family:var(--ui) }
-  .num, .ascore, .mq-cbig, .arc .v, [style*="tabular-nums"]{
+  .num, .ascore, .mq-cbig, [style*="tabular-nums"]{
     font-family:var(--mono); font-variant-numeric:tabular-nums }
 
 """
-    s = s.replace(anchor, block + anchor)
+    s = s[:close] + '\n' + block + s[close:]
+    if s.index('v7.5 FACES, APPLIED') < close:
+        sys.exit('ABORT apply: the faces landed inside :root')
     hits.append('apply')
 
     io.open(SRC, 'w', encoding='utf-8').write(s)

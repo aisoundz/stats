@@ -998,7 +998,15 @@ const TEMPLATES = {
     tags:   ['1st','2nd','3rd','4th','5th','6th','7th','8th','9th','OT'],
     names:  ['1st inning','2nd inning','3rd inning','4th inning','5th inning',
              '6th inning','7th inning','8th inning','9th inning','Extra innings'],
-    worth:  [10,10,15,15,15,20,20,20,25,70],
+    /* PER QUESTION, NOT PER ROUND — LIVE_MAX is worth x questions. The
+       first nine-inning cut used [10,10,15..25], which sums to 150 and
+       at two questions a round pays 300: baseball's live ceiling halved
+       from 600 without anybody choosing that. The founder's rule was
+       about CADENCE, not about a night being worth half. Doubled, so
+       nine rounds of two pay exactly what three rounds of four did.
+       OT drops 70 -> 60 because 70 was pinned to the retired 7th-9th
+       round; 60 is what otWorthFor() derives from this progression. */
+    worth:  [20,20,30,30,30,40,40,40,50,60],
     /* The fourth entry is the FIRST extra inning, not a fixed one. The OT
        round is lifted out by splitOtRound before any period is stamped on
        it, and roundSlots derives the real inning per extra frame — so 10 is
@@ -1017,8 +1025,8 @@ const TEMPLATES = {
            kept for the 4th and the 7th, where it has real spread. The first
            hit of the game is the better opening question anyway: it is what
            everybody watching is already waiting for. */
-        { t: 'The first hit of the game — what was it?', o: ['Single','Double','Triple','Home run'], r:'mlbFirstHitKind',
-          t_es: 'El primer hit del partido — ¿qué fue?', o_es: ['Sencillo','Doble','Triple','Jonrón'] }
+        { t: 'The first hit of the game — what was it?', o: ['Single','Double','Triple','No hit yet'], r:'mlbFirstHitKind',
+          t_es: 'El primer hit del partido — ¿qué fue?', o_es: ['Sencillo','Doble','Triple','Sin hits todavía'] }
       ],
       [
         { t: 'Runs in the 2nd, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlbExtraRunsBand',
@@ -7586,7 +7594,16 @@ var AUTO = (function(){
 
   R.mlbFirstHitKind = function(j, p, o){
     var h = mlbUpTo(j,p).find(function(x){ return MLB_HIT.test(mlbType(x)); });
-    if(!h) return null;
+    if(!h){
+      /* NO HIT YET IS A REAL ANSWER once the inning is over — a hitless
+         first inning happens often enough that voiding the opening question
+         of the night on it costs a question roughly one game in five. Only
+         offered when the bank gives the option AND the inning has actually
+         closed; while it is still being played the honest answer is still
+         silence. Same shape as mlbExtraFirstScoringTeam's "Nobody scored". */
+      if(!mlbInningDone(j, p)) return null;
+      return o.find(function(x){ return /no hit|none|nobody/i.test(x); }) || null;
+    }
     var t = mlbType(h).toLowerCase();
     if(/home run/.test(t)) return o.find(function(x){ return /home run|homer|hr/i.test(x); }) || null;
     if(/triple/.test(t))   return o.find(function(x){ return /triple/i.test(x); }) || null;
@@ -7789,6 +7806,15 @@ var AUTO = (function(){
 
   R.mlbBusiestInning = function(j, p, o){
     var s = mlbSpan(p), best = null, bestN = -1, tie = false;
+    /* ONE CANDIDATE IS NOT A QUESTION. With baseball at one round per
+       inning this loop runs once, so `best` is always this inning, no tie
+       is possible, and the resolver became structurally incapable of being
+       wrong — it answers its own period every time. That is worse than a
+       refusal: it resolves perfectly and tells nobody anything, which is
+       the exact shape qa/bank-shadow.js was built to catch. It is not in
+       the shipped bank any more; this stops it quietly answering if
+       somebody picks it in the Control Room. */
+    if(Number(s.lo) === Number(s.hi)) return null;
     for(var n = s.lo; n <= s.hi; n++){
       var c = mlbInInning(j, n).filter(function(x){ return x.pitchType || /^(ball|strike|foul)/i.test(mlbType(x)); }).length;
       if(c > bestN){ bestN = c; best = n; tie = false; }
@@ -8735,10 +8761,25 @@ var AUTO = (function(){
         var s = ['th','st','nd','rd'], v = k % 100;
         return k + (s[(v-20)%10] || s[v] || s[0]);
       };
-      return ord(n - 2) + '-' + ord(n);           // 1st-3rd, 4th-6th, 7th-9th
+      /* ONE INNING, NOT A SPAN. This returned ord(n-2)+'-'+ord(n) and for
+         the nine-round bank that produces "-1th-1st" and "0th-2nd" — this
+         function is documented as the naming authority (see splitOtRound)
+         and it was describing a structure retired in the same commit.
+         Only log lines reach it today, because regulation slots take
+         plan.rounds[i].tag, but a naming authority that lies is how the
+         next reader gets it wrong. */
+      return ord(n);                              // 1st, 2nd, 3rd, ...
     }
     if(fam === 'hockey')  return ['1st','2nd','3rd'][n-1] || ('P' + n);
     return 'Q' + n;                               // basketball, football
+  }
+
+  /* The ordinal, once. roundTagFor built its own suffix table inline and
+     roundNameFor needed the same thing; two copies of "how do you spell
+     3rd" is how they drift. */
+  function ordinalInning(k){
+    var s = ['th','st','nd','rd'], v = k % 100;
+    return k + (s[(v-20)%10] || s[v] || s[0]);
   }
 
   /* The human name, for the round document's `name` field. */
@@ -8747,7 +8788,7 @@ var AUTO = (function(){
     var f = famCfg(j);
     if(fam === 'soccer')  return n === 1 ? '1st half' : 'Full time';
     if(ot > 0)            return ot > 1 ? ('Overtime ' + ot) : 'Overtime';
-    if(fam === 'baseball') return 'Innings ' + (n-2) + '–' + n;
+    if(fam === 'baseball') return ordinalInning(n) + ' inning';
     return ((f && f.Word) || 'Period') + ' ' + n;
   }
 

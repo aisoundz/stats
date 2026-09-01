@@ -77,6 +77,7 @@ function serve(dir) {
 
 (async () => {
   const { chromium } = require('playwright');
+  const { waitReady } = require(path.join(__dirname,'ready.js'));
   const { srv, port } = await serve(T.dir);
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -86,8 +87,17 @@ function serve(dir) {
                               : (fail++, console.log('  FAIL ' + n + (d ? '   ' + d : ''))); };
 
   await page.goto(`http://127.0.0.1:${port}/${T.base}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => typeof window.featureTonight === 'function', { timeout: 25000 })
-    .catch(() => {});
+  /* WAIT ON THE APP'S OWN STATEMENT, NOT ON A SYMBOL EXISTING.
+     This waited for `typeof window.featureTonight === 'function'` and
+     swallowed the timeout with .catch(()=>{}) — both of the exact mistakes
+     qa/ready.js was written to end. A function is defined thousands of
+     lines before boot finishes, so under gate load this suite ran its
+     checks against a half-built page: GREEN standalone, RED in the gate,
+     and failing in 1780ms instead of ~10s because it never waited at all.
+     I then blamed concurrency twice. waitReady() throws rather than
+     continuing, which is the point — a boot failure must not be reported
+     as a defect in the feature under test. */
+  await waitReady(page);
 
   /* ONE game, in a sport that is not the page's default, and a GAME still
      holding a night that is not on it — the exact shape of 31 Aug. */
@@ -119,6 +129,16 @@ function serve(dir) {
       };
       localStorage.setItem('stats_night_cfg_slate-qa-one-game', JSON.stringify(cfg));
     } catch (_) {}
+      /* HOLD THE FIXTURE. loadSlate() may still be in flight from boot, and
+         when it lands it rewrites SLATE.games from the REAL slate — where
+         tonight's game is hours past its tip and correctly reads 'rest'.
+         That is what this suite then reported as a product failure.
+         It only ever passed because it used to run BEFORE the clobber:
+         waiting properly on STATS_READY made the race reliable instead of
+         removing it, which is the honest way round. Same fix qa/i18n.js
+         needed for the rail an hour earlier. */
+      try{ window.loadSlate = async function(){ return; }; }catch(_){}
+      try{ window.__QA_SLATE_FIXTURE = SLATE.games; }catch(_){}
     try { featureTonight(); } catch (_) {}
     try { applySport(); } catch (_) {}
     try { paintSlate(); } catch (_) {}

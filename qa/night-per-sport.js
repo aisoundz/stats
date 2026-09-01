@@ -70,7 +70,7 @@ const LEAGUES = [
      path, and it has its own recorded feed. Running it proves the league
      table and the family lookup do not quietly disagree. */
   { key:'nba',  path:'basketball/nba',  family:'basketball', rounds:4, regulation:4 },
-  { key:'mlb',  path:'baseball/mlb',    family:'baseball',   rounds:3, regulation:9 },
+  { key:'mlb',  path:'baseball/mlb',    family:'baseball',   rounds:9, regulation:9 },  /* one round per inning, 31 Aug */
   { key:'nfl',  path:'football/nfl',    family:'football',   rounds:4, regulation:4 },
   { key:'mls',  path:'soccer/usa.1',    family:'soccer',     rounds:2, regulation:2 },
   { key:'nhl',  path:'hockey/nhl',      family:'hockey',     rounds:3, regulation:3 },
@@ -146,9 +146,12 @@ const only = (() => { const i = process.argv.indexOf('--sport'); return i > 0 ? 
     }
 
     /* ---- 3. DOES A ROUND MAP TO THE RIGHT PERIODS? -----------------
-       THE AUTOPILOT BUG. A round is not always one period. Baseball is
-       three rounds across nine innings, and assuming otherwise pushed
-       questions about innings 1-3 during the 2nd. */
+       THE AUTOPILOT BUG. A round is not always one period — soccer's two
+       halves and the OT frames still prove that, which is why this check
+       stays. Baseball USED to be the headline example (three rounds across
+       nine innings, and assuming otherwise pushed questions about innings
+       1-3 during the 2nd); since 31 Aug it is one round per inning on the
+       founder's rule, so for MLB rounds and periods now coincide. */
     let bounds = null;
     try { bounds = AUTO.roundPeriodsFor(sum, 0); } catch (e) {}
     ok(`${L.key}.rounds-know-their-periods`, Array.isArray(bounds) && bounds.length === L.rounds,

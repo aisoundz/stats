@@ -106,7 +106,12 @@ const tagCases = [
   ['nba.json',  4, 'Q4'], ['nba.json',  5, 'OT'],
   ['nfl.json',  4, 'Q4'], ['nfl.json',  5, 'OT'],
   ['nhl.json',  1, '1st'], ['nhl.json', 3, '3rd'], ['nhl.json', 4, 'OT'], ['nhl.json', 5, 'OT2'],
-  ['mlb.json',  3, '1st-3rd'], ['mlb.json', 6, '4th-6th'], ['mlb.json', 9, '7th-9th'],
+  /* ONE ROUND PER INNING (31 Aug). These read '1st-3rd'/'4th-6th'/'7th-9th'
+     and kept PASSING after the config retired them, because roundTagFor's
+     baseball branch was still span-shaped too — a green check pinning a
+     structure that no longer exists, in the same file whose other cases
+     were updated the same day. Both moved together now. */
+  ['mlb.json',  3, '3rd'], ['mlb.json', 6, '6th'], ['mlb.json', 9, '9th'],
   ['mlb.json', 10, 'OT'], ['mlb.json', 11, 'OT2'],
   ['mls.json',  1, '1H'], ['mls.json', 2, 'FT'],
 ];
