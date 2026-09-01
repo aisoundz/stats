@@ -15,6 +15,23 @@
 # yesterday's next fortnight minus one day, and a daily empty commit would
 # bury the real history.
 set -u
+
+# ============ CRON HAS ALMOST NO PATH ================================
+# The first live run of this script, 03:20 on 1 Sept 2026, failed with
+#
+#     schedule-push.sh: line 22: node: command not found
+#     build-schedule.js failed
+#
+# node lives under nvm here, not in /usr/bin, and cron does not source a
+# profile. The schedule would have silently never updated — the menu would
+# have gone stale a day at a time while every manual run of this script
+# worked perfectly, because a login shell has the PATH and cron does not.
+#
+# host/journal-push.sh has set this line since it was written. Copied
+# verbatim rather than invented differently: one fact, one pattern.
+export PATH="/home/higherthan7/.nvm/versions/node/v20.20.2/bin:/usr/local/bin:/usr/bin:/bin"
+export HOME="/home/higherthan7"
+
 cd "$HOME/stats" || { echo "cannot cd to $HOME/stats"; exit 1; }
 
 FILE="schedule.json"
