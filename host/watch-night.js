@@ -63,15 +63,35 @@ async function sample(r){
   out.errors=er.data().count;
   if(out.errors) out.alerts.push(out.errors+' ERROR DOC(S)');
 
-  let live=0, scored=0, subs=0;
+  let live=0, scored=0, subs=0, newest=0;
   rd.forEach(doc=>{ const v=doc.data()||{};
+    const opened=v.openedAt&&v.openedAt.toMillis?v.openedAt.toMillis():0;
+    if(opened>newest) newest=opened;
     if(v.state==='live'){ live++;
-      const opened=v.openedAt&&v.openedAt.toMillis?v.openedAt.toMillis():0;
       /* A round answers for 150s then scores. Six minutes open is stuck. */
       if(opened && Date.now()-opened>360000) out.alerts.push(v.tag+' OPEN '+Math.round((Date.now()-opened)/60000)+'m');
     }
     if(v.state==='scored') scored++;
   });
+
+  /* ============ ROUNDS THAT STOP ARRIVING ==========================
+     Every alert above catches something BREAKING — a runner that stopped
+     beating, a round stuck open, an error doc. None of them catch rounds
+     that simply stop coming, and that is the whole risk on a nine-inning
+     night: baseball went from three rounds to nine on 31 Aug 2026, so a
+     room that quietly opens four and then nothing looks exactly like a
+     room between innings.
+
+     No feed read. The signal is the gap since the NEWEST round opened,
+     against a runner that is still beating. Innings run about twenty
+     minutes; 45 is long enough to sit through a pitching change, a replay
+     review and a short delay without crying wolf — and a watcher that
+     cries wolf teaches the person to stop reading it, which is the reason
+     the Sunday guards stand down. */
+  if(newest && beat!=null && beat<=150){
+    const since=Math.round((Date.now()-newest)/60000);
+    if(since>=45) out.alerts.push(`NO NEW ROUND IN ${since}m (${rd.size} so far) — rounds may have stalled`);
+  }
   out.rounds=scored+'/'+rd.size+(live?' ('+live+' open)':'');
   /* Seats but no answers once a round has scored is the GN8 failure:
      mechanically perfect, nobody actually playing. */
