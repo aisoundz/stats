@@ -66,7 +66,7 @@ const afi=ARG.indexOf('--admin-file');
 const ADMIN_TARGET=afi>=0 && ARG[afi+1] ? ARG[afi+1] : 'admin-test.html';
 /* Only these accept a positional target; handing one to a suite that does
    not read argv[2] is harmless, but claiming it was targeted would not be. */
-const TARGETABLE=new Set(['voice.js','voice-wiring.js','voice-pick.js','voice-lang.js',
+const TARGETABLE=new Set(['arcade-counter.js','voice.js','voice-wiring.js','voice-pick.js','voice-lang.js',
   'board-order.js','payoff.js','slate.js','acceptance.js','host-sportsreg.js','localise.js','i18n.js','season.js',
   'devices.js','night-config.js','overtime.js','platforms.js','change-it.js','chrome.js','places.js','switch.js','hero.js','listeners.js','practice.js','spanish.js','marquee-order.js',
   /* Reads a positional path (absolute or relative) and defaults to
@@ -174,7 +174,7 @@ const ADMIN_READERS=['host-overtime.js','host-resolvers.js','host-sports.js','ho
    `--file admin.html`, pointing its PLAYER half at the Control Room —
    green for the wrong reason, which is the failure mode this whole file
    exists to stop. So it takes both named flags explicitly. */
-const DUAL_READERS=['lane-persist.js'];
+const DUAL_READERS=['lane-persist.js','night-ceiling.js'];
 
 /* The tier of each suite, stated once. A suite added to the directory and
    not named here is REPORTED, not silently ignored — see the sweep below,

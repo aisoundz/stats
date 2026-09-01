@@ -52,9 +52,18 @@ const path = require('path');
 
 const argv = process.argv.slice(2);
 const arg = (n, d) => { const i = argv.indexOf(n); return i >= 0 && argv[i+1] ? argv[i+1] : d; };
+/* DEFAULT TO THE CANDIDATE, NOT TO LIVE. This suite defaulted to
+   index.html/admin.html, and qa/all.js passes the target only to suites it
+   knows how to address — so a full gate ran this against the LIVE build
+   while claiming to grade the candidate. It reported the pre-fix numbers
+   under a build that had already fixed them. That is precisely the
+   "half the gate graded the promotion candidate and half graded what was
+   already live" disease all.js was written to end, walked into by a suite
+   added to all.js the same night. Registered in DUAL_READERS now, and
+   defaulting to the test files so a bare run is also honest. */
 const R = f => path.join(__dirname, '..', f);
-const IDX   = R(arg('--file', 'index.html'));
-const ADMIN = R(arg('--admin-file', 'admin.html'));
+const IDX   = R(arg('--file', 'index-test.html'));
+const ADMIN = R(arg('--admin-file', 'admin-test.html'));
 
 let pass = 0, fail = 0;
 const ok  = (n, d) => { pass++; console.log('  ok   ' + n + (d ? ('   ' + d) : '')); };

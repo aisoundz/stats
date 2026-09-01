@@ -33,8 +33,15 @@ const fs = require('fs');
 const path = require('path');
 
 const argv = process.argv.slice(2);
+/* TAKES A POSITIONAL PATH, because that is how qa/all.js addresses a
+   TARGETABLE suite (argv.push(TARGET_ABS)) — and a suite all.js cannot
+   address silently grades whatever it defaults to. --file is accepted too
+   so a human can type either. Defaults to the CANDIDATE, never to live. */
 const fi = argv.indexOf('--file');
-const SRC = path.join(__dirname, '..', fi >= 0 && argv[fi + 1] ? argv[fi + 1] : 'index.html');
+let SRC;
+if (fi >= 0 && argv[fi + 1]) SRC = argv[fi + 1];
+else SRC = argv.find(a => !a.startsWith('-')) || 'index-test.html';
+SRC = path.isAbsolute(SRC) ? SRC : path.join(__dirname, '..', SRC);
 
 let pass = 0, fail = 0;
 const ok  = (n, d) => { pass++; console.log('  ok   ' + n + (d ? ('   ' + d) : '')); };

@@ -62,7 +62,7 @@ CSS = """  /* ============ YOUR SCORE, DURING PLAY — the arcade counter ======
   #ayou{display:inline-flex;align-items:baseline;gap:6px;margin-left:auto;
     font-family:var(--ui);font-size:12px;font-weight:700;letter-spacing:.16em;
     text-transform:uppercase;color:var(--dim);white-space:nowrap;position:relative}
-  #ayou b{font-family:var(--mono);font-size:19px;font-weight:700;letter-spacing:-.01em;
+  #ayou b{font-family:var(--mono);font-size:20px;font-weight:700;letter-spacing:-.01em;
     color:var(--teal);font-variant-numeric:tabular-nums;text-transform:none}
   /* THE GAIN. It flies off the number it came from, which is the whole
      point — a +40 that appears somewhere else is a notification, not a
