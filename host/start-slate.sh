@@ -121,9 +121,44 @@ ALL="$LOGDIR/slate-all-$DATE.tsv"
 if [ "$MODE" = "build" ] || [ "$MODE" = "dry" ]; then
   BUILDFLAG=""; [ "$MODE" = "build" ] && BUILDFLAG="--apply"
   BUILD_FAILURES=""
+
+  # ============ ONE BUILD AT A TIME ===================================
+  # slate-all-2026-08-31.tsv was found with 26 rows and 13 distinct
+  # nightIds — every row byte-identical twice. Two builds raced:
+  #
+  #     A: : > $ALL          B: : > $ALL
+  #     A: append 13         B: append 13      -> 26, all doubled
+  #
+  # The self-heal path below took a flock. The BUILD path, which is the
+  # one the 3am cron runs and the one a person runs by hand, took none.
+  # A doubled manifest inflates "N game(s) in tonight's manifest", walks
+  # the start loop over every room twice, and miscounts against MAX_ROOMS.
+  #
+  # -n, not a wait: if a build is already running, the honest answer is
+  # to skip this tick, not to queue a second one behind it. Exit 0,
+  # because "somebody else is already doing it" is not a failure.
+  exec 9>"$LOGDIR/build-$DATE.lock"
+  if ! flock -n 9; then
+    echo "--- a build for $DATE is already running; skipping this one ---"
+    exit 0
+  fi
+
+  # ============ AND A DRY RUN MUST NOT WRITE THE REAL MANIFEST ========
+  # This block truncated and rebuilt $ALL for BOTH modes, and then line
+  # ~178 printed "dry run — nothing written". It had already rewritten
+  # the manifest the launcher reads, plus every per-league file. The
+  # rehearsal damaged the thing it was rehearsing and said it did not —
+  # the same class of lie as the "offer 17 game(s)" line that qa/
+  # slate-offer.js exists to catch. A dry run writes to its own paths.
+  if [ "$MODE" = "dry" ]; then
+    ALL="$LOGDIR/.dry-slate-all-$DATE.tsv"
+    DRYPFX=".dry-"
+  else
+    DRYPFX=""
+  fi
   : > "$ALL"
   for LG in $LEAGUES; do
-    MANIFEST="$LOGDIR/slate-$LG-$DATE.tsv"
+    MANIFEST="$LOGDIR/${DRYPFX}slate-$LG-$DATE.tsv"
     # A league with no games today is NOT a failure — most leagues are out
     # of season most of the time, and a hard exit there would stop every
     # league listed after it.
@@ -175,7 +210,7 @@ if [ "$MODE" = "build" ] || [ "$MODE" = "dry" ]; then
     echo "!!! LEAGUES THAT FAILED TO BUILD:$BUILD_FAILURES"
     echo "!!! every room in those leagues is missing from tonight's manifest."
   fi
-  [ "$MODE" = "dry" ] && { echo "dry run — nothing written, nothing started"; cut -f1 "$ALL" | sed 's/^/    /'; exit 0; }
+  [ "$MODE" = "dry" ] && { echo "dry run — nothing written, nothing started"; cut -f1 "$ALL" | sed 's/^/    /'; rm -f "$LOGDIR"/.dry-*-"$DATE".tsv; exit 0; }
 
   # Publish each bank now, in the morning, so a failure is found in daylight
   # rather than four minutes before a tip nobody is watching.
