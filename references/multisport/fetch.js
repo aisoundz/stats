@@ -42,9 +42,17 @@ const LEAGUES=[
   {key:'nfl',  p:'football/nfl'},
   {key:'nhl',  p:'hockey/nhl'},
   {key:'mls',  p:'soccer/usa.1'},
+  /* PINNED, and pinned for a property rather than for overtime: college
+     football has no two-minute warning, and this is the game that proved
+     it (SJSU @ USC, 29 Aug 2026 — 0 warning rows, 14 plays inside the
+     final 2:00 of Q2, one of them a USC touchdown at 0:30). Any CFB game
+     would show the missing rule; this one also has a scoring play in the
+     window, so the resolver has a real answer to get right rather than
+     just a "Nobody scored" to fall back on. */
+  {key:'cfb',  p:'football/college-football', pin:'401864494'},
 ];
 /* How many periods a completed game has when it did NOT go to overtime. */
-const REG={wnba:4, nba:4, mlb:9, nfl:4, nhl:3, mls:2};
+const REG={wnba:4, nba:4, mlb:9, nfl:4, nhl:3, mls:2, cfb:4};
 
 const ymd=d=>d.toISOString().slice(0,10).replace(/-/g,'');
 async function get(u){

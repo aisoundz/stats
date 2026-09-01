@@ -692,7 +692,7 @@
 /* Build stamp. The QA engine flags a file with no build id, because
    without one there is no way to tell which Control Room is actually open
    on game night — and "is your tab the new one?" is not a diagnosis. */
-window.ADMIN_BUILD='2026-08-25-admin.66-caught-it-window-28s';
+window.ADMIN_BUILD='2026-09-01-admin.67-cfb-two-minute';
 try{ document.addEventListener('DOMContentLoaded', function(){
   var c=document.getElementById('buildChip');
   if(c){ c.textContent='v'+String(window.ADMIN_BUILD).split('.').pop();
@@ -8504,11 +8504,42 @@ var AUTO = (function(){
      the feed, so "after the warning" is an exact index rather than a clock
      comparison. Only the 2nd and 4th quarters have one — asked in the 2nd,
      where somebody scores 86% of the time and the question is WHO. */
+  /* THE TWO-MINUTE WARNING IS AN NFL RULE. College football has none, so
+     the feed publishes no such play and this returned null on every CFB
+     game ever shadow-run — 8 of 8 silent, against 0 of 30 in the NFL.
+     Thursday's slate is 11 college games and each would have carried one
+     guaranteed dead question.
+
+     The QUESTION survives; only its anchor was league-specific. "Who
+     scored late before the half" is exactly the thing you only know if
+     you watched. Where the rule does not exist, the clock says the same
+     thing: plays inside the last 2:00 of the period.
+
+     THE TEST IS THE WHOLE GAME, NOT THIS QUARTER, and that distinction is
+     the entire correctness of this function. An NFL Q1 has no warning
+     row either — because the rule only applies in Q2 and Q4 — and there
+     the right answer is a VOID, not "nobody scored". A first cut of this
+     keyed off "no warning row in THIS period" and duly made NFL Q1 and Q3
+     start answering. Only a game with no warning row ANYWHERE is a game
+     played under rules that have none. */
   R.nflTwoMinuteScore = function(j, p, o){
     var ps = nflPlaysIn(j, p);
     var i = ps.findIndex(function(x){ return /two-minute warning/i.test(nflType(x)); });
-    if(i < 0) return null;
-    var after = ps.slice(i+1).filter(function(x){ return !!x.scoringPlay; });
+    var after;
+    if(i >= 0){
+      after = ps.slice(i + 1).filter(function(x){ return !!x.scoringPlay; });
+    } else {
+      var all = nflPlays(j);
+      var leagueHasRule = all.some(function(x){ return /two-minute warning/i.test(nflType(x)); });
+      if(leagueHasRule) return null;          /* NFL Q1/Q3 — a void, as before */
+      var clocked = ps.filter(function(x){ return ((x.clock || {}).displayValue || '').indexOf(':') > 0; });
+      if(!clocked.length) return null;        /* no clock anywhere: cannot say WHEN */
+      after = clocked.filter(function(x){
+        var mm = ((x.clock || {}).displayValue || '').split(':');
+        var m = Number(mm[0]), sec = Number(mm[1]);
+        return isFinite(m) && isFinite(sec) && (m * 60 + sec) <= 120 && !!x.scoringPlay;
+      });
+    }
     if(!after.length) return nflNoneOpt(o);
     var ids = {}; after.forEach(function(x){ var id = nflOffId(x); if(id) ids[id] = 1; });
     var keys = Object.keys(ids);

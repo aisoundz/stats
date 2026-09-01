@@ -153,7 +153,7 @@ const TARGETABLE=new Set(['arcade-counter.js','schedule-menu.js','invite.js','ta
      journey.js       ARG('url', …/index-test.html)  — no argv[2]     untargeted
      live-smoke.js    drives https://statsgametime.com/               by design */
 const KNOWN_UNTARGETED=['journey.js','live-smoke.js'];
-const ADMIN_READERS=['host-overtime.js','host-resolvers.js','host-sports.js','host-block.js',
+const ADMIN_READERS=['cfb-twomin.js','host-overtime.js','host-resolvers.js','host-sports.js','host-block.js',
                      'host-banks.js','host-publish-ot.js','bank-shadow.js',
                      /* These two already DEFAULT to admin-test.html, so a gate graded them
                         correctly without being listed here. They are listed anyway so that
@@ -183,6 +183,7 @@ const TIER={
   'qa.js':            {tier:'browser', args:QUICK?['--quick']:[]},
   'acceptance.js':    {tier:'static'},
   'tipoff-when.js':   {tier:'static'},
+  'cfb-twomin.js':    {tier:'static'},
   'board-order.js':   {tier:'static'},
   /* 21 Aug: a finished Caught It card came back on every tab change, and
      "usually the same one" — one stale question sat in PCI.pending and
