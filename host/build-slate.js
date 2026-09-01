@@ -995,15 +995,31 @@ function tipLine(iso, net, sport){
      unbroken across nights, which is the whole point of numbering them. */
   {
     let last = 0;
+    /* ============ THE PREVIOUS NIGHT IS NOT ALWAYS YESTERDAY ==========
+       This read slate/{DATE - 1 day} and nothing else. A day whose literal
+       yesterday has no slate fell through to the "fresh machine" branch
+       below, and RESTARTED THE SERIES AT 1.
+
+       That is not hypothetical and it is not rare: future days are built
+       days ahead, so any unbuilt day between them breaks the chain.
+       Measured 1 Sept 2026 — 5 Sept and 9 Sept had BOTH restarted at #1,
+       so #1..#4 each named two different rooms, in a series whose real
+       high-water mark was #52.
+
+       Walk back until a numbered slate is found. 30 days is far past any
+       real gap and still one bounded loop. */
     try{
-      const prev = new Date(Date.parse(DATE + 'T12:00:00Z') - 86400000)
-                     .toISOString().slice(0,10);
-      const ps = await db.doc('slate/' + prev).get();
-      const pg = ps.exists ? ((ps.data() || {}).games || []) : [];
-      last = pg.reduce((m,g) => Math.max(m, Number(g.gn) || 0), 0);
+      for(let back = 1; back <= 30 && !last; back++){
+        const prev = new Date(Date.parse(DATE + 'T12:00:00Z') - back * 86400000)
+                       .toISOString().slice(0,10);
+        const ps = await db.doc('slate/' + prev).get();
+        if(!ps.exists) continue;
+        const pg = (ps.data() || {}).games || [];
+        last = pg.reduce((m,g) => Math.max(m, Number(g.gn) || 0), 0);
+      }
     }catch(_){}
-    /* Nothing yesterday — a Monday, or the first build on a fresh machine.
-       Keep whatever the marquee file said rather than restarting at 1 and
+    /* Nothing in thirty days — the first build on a fresh machine. Keep
+       whatever the marquee file said rather than restarting at 1 and
        claiming a night that has already been played. */
     if(!last) last = merged.reduce((m,g) => Math.max(m, Number(g.gn) || 0), 0) - merged.length;
     if(last < 0) last = 0;
@@ -1011,6 +1027,57 @@ function tipLine(iso, net, sport){
     log('gn', `game nights #${merged[0] ? merged[0].gn : '?'}` +
               (merged.length > 1 ? `–#${merged[merged.length-1].gn}` : '') +
               `, in tip order`);
+
+    /* ============ AND EVERY DAY ALREADY STAMPED AHEAD OF THIS ONE =====
+       A future day's number is correct WHEN WRITTEN and stale the moment a
+       nearer day grows. 2 and 3 Sept 2026 were numbered on 31 Aug, when
+       1 Sept held one room; 1 Sept was rebuilt with three, took #49-#51,
+       and #50 and #51 then named two rooms each.
+
+       Those days self-heal at their own 03:00 build, which is exactly what
+       made this invisible: by the time anyone looked, it was right again.
+       In between, the Control Room and every draft read a number that
+       belonged to another game.
+
+       So the series is repaired forward as soon as it moves. Walking while
+       a slate EXISTS rather than for a fixed window, because the future is
+       only built a few days out and a run of empty days means there is
+       nothing left to fix. Writes only on --apply: a dry run must not
+       touch a document, which is the lesson from the launcher's dry run
+       rewriting the real manifest. */
+    if(APPLY){
+      let carry = last + merged.length, swept = 0, gap = 0;
+      for(let fwd = 1; fwd <= 30 && gap < 7; fwd++){
+        const nd = new Date(Date.parse(DATE + 'T12:00:00Z') + fwd * 86400000)
+                     .toISOString().slice(0,10);
+        let fs2 = null;
+        try{ fs2 = await db.doc('slate/' + nd).get(); }catch(_){ break; }
+        if(!fs2 || !fs2.exists){ gap++; continue; }
+        gap = 0;
+        const fd = fs2.data() || {};
+        const fg = (fd.games || []).slice()
+                     .sort((a,b) => String(a.tipISO).localeCompare(String(b.tipISO)));
+        if(!fg.length) continue;
+        const before = fg.map(g => Number(g.gn) || 0);
+        fg.forEach((g,i) => { g.gn = carry + i + 1; });
+        carry += fg.length;
+        const changed = fg.some((g,i) => g.gn !== before[i]);
+        if(!changed) continue;
+        try{
+          await db.doc('slate/' + nd).set({ games: fg }, { merge: true });
+          swept++;
+          log('gn', `re-stamped slate/${nd} -> #${fg[0].gn}` +
+                    (fg.length > 1 ? `–#${fg[fg.length-1].gn}` : '') +
+                    `  (was #${before[0]}${before.length > 1 ? '–#' + before[before.length-1] : ''})`);
+        }catch(e){
+          /* Loud, and NOT fatal. Tonight's numbering is already correct;
+             failing the whole build over a future day would trade a real
+             slate for a cosmetic one. */
+          log('WARN', `could not re-stamp slate/${nd}: ${(e && e.message) || e}`);
+        }
+      }
+      if(swept) log('gn', `${swept} future day(s) renumbered to keep the series unbroken`);
+    }
   }
 
   const leagues = [...new Set(merged.map(g => g.league).filter(Boolean))];
