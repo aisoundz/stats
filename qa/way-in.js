@@ -92,6 +92,7 @@ const SETUP=`(function(){
   try{ GAME.tipISO=tip; }catch(_){}
   try{
     SLATE.date='2026-08-25'; SLATE.loaded=true;
+    try{ window.loadSlate=async function(){ return; }; }catch(_){}  /* pin the fixture: a late loadSlate() rewrites SLATE.games and the check then grades the live slate. Four suites hit this on 31 Aug. */
     SLATE.games=[
       {nightId:'slate-2026-08-25-lad-atl',league:'mlb',gn:30,gotn:true,away:'Dodgers',home:'Braves',
        awayAbbr:'LAD',homeAbbr:'ATL',awayColor:'#005A9C',homeColor:'#CE1141',tipISO:tip},

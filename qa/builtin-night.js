@@ -80,7 +80,8 @@ const check = (id, c, why) => c ? ok(id) : bad(id, why);
            offering games; `mine` means GAME is one of them. A fixture has
            no slate at all, which is exactly why it must not trip. */
         try {
-          if (c.slate === 'none')  SLATE.games = [];
+          if (c.slate === 'none')  try{ window.loadSlate=async function(){ return; }; }catch(_){}  /* pin the fixture: a late loadSlate() rewrites SLATE.games and the check then grades the live slate. Four suites hit this on 31 Aug. */
+  SLATE.games = [];
           if (c.slate === 'other') SLATE.games = [{ nightId: 'slate-2026-08-27-lad-atl' },
                                                   { nightId: 'slate-2026-08-27-lar-lac' }];
           if (c.slate === 'mine')  SLATE.games = [{ nightId: (GAME && GAME.nightId) || 'x' }];

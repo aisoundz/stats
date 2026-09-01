@@ -152,6 +152,11 @@ WHAT THIS DELIBERATELY LEAVES ALONE
 · celebrate()'s levels are unchanged, and so is the round question's floor
   of 2 — a round question is worth many times a Caught It and still gets
   more than the in-play burst does. Only the INPUT changes.
+NO EMOJI IN THE CHIP. The first cut used a flame. The design system is
+explicit — "No emoji in the interface: they render at a different size on
+every platform, which is most of why the old nav read as homemade" — and
+the same evening this was written, emoji were being stripped OUT of the
+rule headings for qa/palette.js. The number and the words carry it.
 """
 import io, sys
 
@@ -193,7 +198,7 @@ CSS = """  /* ============ THE RUN, WHERE YOU CAN SEE IT =====================
   /* The chip shares .qmeta with "Question 3 of 4" and "Worth 10 pts + ⚡".
      On the narrowest phone the words go and the number stays — the same
      call .cistreak already made for the Caught It run. */
-  @media (max-width:400px){ .cmb i{display:none} }
+  @media (max-width:400px){ .cmb i{font-size:12px;letter-spacing:.04em} }
   @media (prefers-reduced-motion: reduce){ .cmb.up,.cmb.down{animation:none} }
 """
 

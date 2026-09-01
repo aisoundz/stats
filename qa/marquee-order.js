@@ -47,6 +47,7 @@ const ok = (id, cond, why) => {
     const pick = () => { TONIGHT = null; try { featureTonight(); } catch (e) { return 'THREW: ' + e.message; }
                          return TONIGHT && TONIGHT.nightId; };
     const out = {};
+    try{ window.loadSlate=async function(){ return; }; }catch(_){}  /* pin the fixture: a late loadSlate() rewrites SLATE.games and the check then grades the live slate. Four suites hit this on 31 Aug. */
     SLATE.games = [mk('late', 4 * 3600e3, { gotn: true }), mk('soon', 3600e3), mk('mid', 2 * 3600e3)];
     out.earliest = pick();
     SLATE.games = [mk('live', -30 * 60e3), mk('next', 2 * 3600e3, { gotn: true })];

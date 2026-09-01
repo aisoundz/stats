@@ -133,6 +133,17 @@ async function stage(w,h,compact){
        first await, so anything measured across that boundary is a coin
        toss — and this suite measures colour, which the ticker writes. */
     try{ window.loadGameStats=async function(){ return null; }; }catch(_){}
+    /* AND PIN THE SLATE, FOR THE SAME REASON. loadGameStats was stubbed and
+       loadSlate was not, so a boot read still in flight would land after
+       this fixture and rewrite SLATE.games from the live slate — dropping
+       the rail below the two games it needs, hiding it, and leaving the
+       screenshot below to clip a rectangle that does not exist. It crashed
+       the suite rather than failing a check, which is why it read as a
+       flake: Math.round(undefined) is NaN.
+       FOURTH suite tonight with this one cause (i18n, hero-live,
+       one-game-door, this). A fixture is not installed until the thing that
+       overwrites it has been stopped. */
+    try{ window.loadSlate=async function(){ return; }; }catch(_){}
     try{ GS.ok=false; GS.ev=null; }catch(_){}
     SLATE.date='2026-08-25'; SLATE.loaded=true;
     SLATE.games=eval(games);

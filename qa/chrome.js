@@ -174,6 +174,7 @@ function occlusion(ids, screen, sel){
     await p.evaluate(()=>{
       try{
         SLATE.date='2026-08-19'; SLATE.loaded=true;
+        try{ window.loadSlate=async function(){ return; }; }catch(_){}  /* pin the fixture: a late loadSlate() rewrites SLATE.games and the check then grades the live slate. Four suites hit this on 31 Aug. */
         SLATE.games=['tor-wsh','min-gs','lv-ind','sea-atl'].map((k,i)=>({
           nightId:'slate-2026-08-19-'+k, league:'wnba',
           away:k.split('-')[0].toUpperCase(), home:k.split('-')[1].toUpperCase(),

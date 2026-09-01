@@ -706,6 +706,43 @@
   .qmeta{display:flex;justify-content:space-between;align-items:center;margin:6px 2px}
   .qmeta .qn{font-size:12px;color:var(--muted);font-weight:700}
   .worth{font-size:12px;font-weight:800;color:var(--teal2)}
+  /* ============ THE RUN, WHERE YOU CAN SEE IT =====================
+     streakNow() has counted this all night and only the reveal headline
+     and the voice have ever been allowed to say it. This is the same
+     number, held on screen, so a run is a thing you are protecting rather
+     than a thing you are told about after the fact.
+
+     Teal, because a run is YOU and teal means nothing else. Dim on the
+     way down rather than v7.5's red, because red in this product means
+     LIVE. It sits INSIDE .qmeta and beside #revPill, both of which are
+     existing rows with room in them, so a visible run costs zero vertical
+     pixels on a 390px phone. */
+  .cmb{display:none;align-items:center;gap:5px;flex:0 0 auto;margin:0 6px;
+    font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--teal);border:1px solid rgba(40,224,208,.34);
+    background:rgba(40,224,208,.09);border-radius:var(--pill);
+    padding:3px 9px;line-height:1.15;white-space:nowrap}
+  .cmb .cmbN{font-family:var(--mono);font-variant-numeric:tabular-nums;
+    font-size:14px;font-weight:900;letter-spacing:0}
+  .cmb i{font-style:normal;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.1em}
+  .cmb.cold{color:var(--dim);border-color:var(--line2);background:transparent}
+  .cmb.cold .cmbN, .cmb.cold i{color:var(--dim)}
+  .cmb.up{animation:cmbUp .42s cubic-bezier(.16,1,.3,1)}
+  .cmb.down{animation:cmbDown .5s ease}
+  @keyframes cmbUp{0%{transform:scale(1)}38%{transform:scale(1.22)}100%{transform:scale(1)}}
+  @keyframes cmbDown{0%{transform:translateY(-6px);opacity:.35}100%{transform:translateY(0);opacity:1}}
+  /* The chip shares .qmeta with "Question 3 of 4" and "Worth 10 pts + ⚡".
+     On the narrowest phone the words go and the number stays — the same
+     call .cistreak already made for the Caught It run. */
+  /* THE WORDS STAY ON A PHONE. This hid them under 400px, which was fine
+     while a flame carried the meaning — but the flame came out (no emoji
+     in the interface, the rule this build spent the evening enforcing on
+     the rule headings) and a bare "3" beside "Question 4 of 4" and
+     "Worth 10 pts" says nothing at all. Measured at 320px: the row uses
+     219px of 284 with the words in, so there is room. It shortens rather
+     than vanishing. */
+  @media (max-width:400px){ .cmb i{font-size:12px;letter-spacing:.04em} }
+  @media (prefers-reduced-motion: reduce){ .cmb.up,.cmb.down{animation:none} }
 
   .timer{height:6px;border-radius:999px;background:var(--line);overflow:hidden;margin:10px 0 4px}
   .timer > i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--blue2));width:100%;transition:width 1s linear}
@@ -2162,6 +2199,7 @@
       <div id="gtQuestion" style="display:none">
         <div class="qmeta">
           <span class="qn" id="qCount">Question 1 of 3</span>
+          <span class="cmb" id="cmbQ" style="display:none"><b class="cmbN">0</b><i>in a row</i></span>
           <span class="worth" id="qWorth">Worth 1 pt</span>
         </div>
         <div class="timer" id="timerBar"><i id="timerFill"></i></div>
@@ -2184,7 +2222,7 @@
         <div class="center" id="lockNote" style="display:none;font-size:12px;color:var(--dim);margin-top:8px">⚠️ Once you lock it in, you can't change it.</div>
       </div>
       <div id="gtReview" style="display:none">
-    <div class="center" style="margin-top:6px"><span class="pill" id="revPill">Score Q1</span></div>
+    <div class="center" style="margin-top:6px"><span class="pill" id="revPill">Score Q1</span><span class="cmb" id="cmbR" style="display:none"><b class="cmbN">0</b><i>in a row</i></span></div>
     <h1 class="center" style="margin-top:8px" id="revTitle">Score this quarter</h1>
     <p class="sub center" id="revNote">When the host posts the answers in the group chat, tap the correct answer for each question. Your picks are marked 🔵.</p>
     <!-- THE RECEIPT. Not body copy — a status, in its own box, that only
@@ -15762,6 +15800,7 @@ var I18N = {
     "Your points so far":"Tus puntos hasta ahora",
     "Your prediction pts (pending)":"Tus pts de predicción (pendientes)",
     "Streak":"Racha",
+    "in a row":"seguidas",
     "Accuracy":"Precisión",
     "rank":"posición",
     "Rank #–":"Posición #–",
@@ -16335,6 +16374,10 @@ function loadQuestion(){
     }
   }catch(_){}
   document.getElementById('qCount').textContent=`Question ${S.ni+1} of ${nq()}`;
+  /* The run the player is carrying INTO this question. v7.5's note: the
+     anticipation is worth more than the payout, so it is on screen before
+     the answer is locked, not after it is graded. */
+  try{ comboPaint(); }catch(_){}
   document.getElementById('qWorth').textContent=`Worth ${worth} pt${worth>1?'s':''}${S.mode==="live"?' + ⚡':''}`;
   document.getElementById('revealBox').innerHTML='';
   document.getElementById('nextBtn').style.display='none';
@@ -16536,6 +16579,10 @@ function answer(choice,btn){
     else if(b===btn){b.classList.add('wrong');b.querySelector('.mk').textContent='✕';}
   });
   S.results[S.qi].push(correct);
+  /* The run, repainted off the answer that just landed. Before the
+     branch below, so a miss and a time-out drop it the same way a
+     right answer raises it — one writer, three outcomes. */
+  try{ comboPaint(); }catch(_){}
   const rb=document.getElementById('revealBox');
   try{ flashEnergy(correct?'hit':'miss'); }catch(_){}
   if(correct){
@@ -16558,7 +16605,13 @@ function answer(choice,btn){
        in-play burst does — and more again on a run, which is the behaviour
        the whole game is trying to grow. The number counting up and the
        screen celebrating are the same event; they should arrive together. */
-    try{ celebrate((Number(S.streak)||0) >= 3 ? 3 : 2); }catch(_){}
+    /* IT WAS READING NIGHTS PLAYED. S.streak increments once, at the
+       final buzzer, and qa/season.js pins it to nights rather than
+       rooms — so the full payoff fired on a third-night player's FIRST
+       correct answer and never once on a first-night player's eight in
+       a row. Same two levels, same floor of 2; the number handed to it
+       is now the run this sentence has always claimed to describe. */
+    try{ celebrate(comboLevel()); }catch(_){}
   }else{
     const miss=choice?`You picked <b>${choice}</b>.`:`Time's up — no answer locked.`;
     rb.innerHTML=`<div class="reveal bad"><div class="r1">✕ ${choice?'NOT QUITE':'MISSED IT'}</div>
@@ -16996,6 +17049,79 @@ function streakNow(){
   }catch(_){}
   return n;
 }
+/* ============ THE RUN, ON SCREEN ====================================
+   PHASE A: PRESENTATION ONLY. Nothing below writes a point, a lane or a
+   field on S. Live and round points are re-graded server-side by
+   AUTO.tally from the submissions; a multiplier applied on the phone
+   would be overwritten by that re-grade and the two would disagree in
+   front of the player (B37). A multiplier belongs inside AUTO.tally and
+   is a separate change.
+
+   NO NEW COUNTER. streakNow() is the owner of "how many in a row" and it
+   derives from S.results, which save() persists and setMode() clears with
+   the rest of progress. Caching that digit anywhere would be a second
+   store of one fact, which is the failure this file has already paid for
+   with three season totals that disagreed. So this reads the owner every
+   time it paints, and the only thing it remembers is what the chip
+   currently says — read straight off the node, because that is a fact
+   about the DOM and not about the night. */
+function comboPaint(){
+  try{
+    var now = 0; try{ now = Number(streakNow()) || 0; }catch(_){ now = 0; }
+    var reduced = false; try{ reduced = celebReduced(); }catch(_){}
+    clearTimeout(CMB_HIDE_T);
+    var nodes = document.querySelectorAll('.cmb');
+    for(var i=0;i<nodes.length;i++){
+      var el = nodes[i], n = el.querySelector('.cmbN');
+      if(!n) continue;
+      var was = parseInt(String(n.textContent||''), 10);
+      if(!isFinite(was)) was = now;              // first paint: no animation
+      n.textContent = String(now);
+      /* TWO IS A RUN; ONE IS AN ANSWER. A chip that reads "1 in a row"
+         after every single correct answer is wallpaper, and wallpaper is
+         what this file already decided a reward must never become. */
+      el.classList.toggle('cold', now < 2);
+      if(now >= 2){
+        el.style.display = 'inline-flex';
+      } else if(was >= 2){
+        /* AND YOU HAVE TO SEE IT FALL. Hiding a broken run instantly is
+           the same as never having shown it: the upside goes flat without
+           a visible downside. So it stays up, reading what it now is, for
+           long enough to register, and then it goes. */
+        el.style.display = 'inline-flex';
+      } else {
+        el.style.display = 'none';
+      }
+      if(reduced || was === now) continue;
+      el.classList.remove('up','down');
+      void el.offsetWidth;                        // restart the animation
+      el.classList.add(now > was ? 'up' : 'down');
+    }
+    if(now < 2){
+      CMB_HIDE_T = setTimeout(function(){
+        try{
+          var l = document.querySelectorAll('.cmb');
+          for(var j=0;j<l.length;j++){ l[j].style.display='none'; l[j].classList.remove('up','down'); }
+        }catch(_){}
+      }, 1200);
+    }
+  }catch(_){}
+}
+var CMB_HIDE_T = 0;
+/* WHAT THE CELEBRATION SHOULD HAVE BEEN READING ALL ALONG.
+
+   The expression is byte-for-byte the one that shipped — a round question
+   never celebrates below level 2, because it is worth many times a Caught
+   It and there are only a handful a night. What changes is the NUMBER it
+   is handed. It was S.streak, which is nights played, so the full payoff
+   fired on a third-night player's first correct answer and never once on
+   a first-night player's eight-in-a-row. Loyalty was driving the reward
+   the game uses to grow a run. */
+function comboLevel(){
+  var n = 0; try{ n = Number(streakNow()) || 0; }catch(_){}
+  return n >= 3 ? 3 : 2;
+}
+try{ window.comboPaint = comboPaint; window.comboLevel = comboLevel; }catch(_){}
 function praise(){
   var k=streakNow();
   if(k>=5) return k+' STRAIGHT';
@@ -17058,6 +17184,13 @@ function confirmReview(){
      writes the same one line twice instead of paying twice. */
   ledgerSet('r'+S.qi, got, sp, 'live');
   try{ flashEnergy(got>0?'hit':'miss', 2600); }catch(_){}
+  /* THE RUN, ON THE ONLY PATH A REAL NIGHT HAS. The phone is not
+     allowed to know it was right until the host's key lands, so on a
+     live night this is where the run moves — in the reveal, which is
+     the moment this screen already exists to make feel like something.
+     Derived from S.results, so scoring the same round twice repaints
+     the same number instead of advancing a counter twice. */
+  try{ comboPaint(); }catch(_){}
   document.getElementById('revBtn').style.display='none';
   /* THE REVEAL. This is the most addictive half-second of the night — the
      moment a player finds out. So it says the thing they actually want to
@@ -25092,7 +25225,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-01-faces.260';
+const STATS_BUILD='2026-09-01-combo.261';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

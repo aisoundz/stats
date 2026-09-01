@@ -194,6 +194,7 @@ const ROOM_B = {
 
     /* ---- the rail shows every game, with scores ---- */
     SLATE.date = '2026-08-19'; SLATE.loaded = true;
+    try{ window.loadSlate=async function(){ return; }; }catch(_){}  /* pin the fixture: a late loadSlate() rewrites SLATE.games and the check then grades the live slate. Four suites hit this on 31 Aug. */
     SLATE.games = [A, B];
     TICK.by = {
       [A.espnEvent]: { state: 'in',  detail: '2:46 - 1st', as: '16', hs: '9' },

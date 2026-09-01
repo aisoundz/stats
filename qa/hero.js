@@ -163,6 +163,7 @@ const NFL = {
     GAME.tipISO    = STALE_TIP;                // last night, 30h ago
     S.place = '';
     SLATE.date = '2026-08-20'; SLATE.loaded = true;
+    try{ window.loadSlate=async function(){ return; }; }catch(_){}  /* pin the fixture: a late loadSlate() rewrites SLATE.games and the check then grades the live slate. Four suites hit this on 31 Aug. */
     SLATE.games = [MLB, NFL];
     try { localStorage.clear(); } catch (_) {}
 

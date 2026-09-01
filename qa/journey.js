@@ -173,6 +173,9 @@ const FAKE_SLATE=[
         all.push({nightId:built, league:'wnba', sport:'basketball',
                   away:'Home Built', home:'In Night', awayAbbr:'BLT', homeAbbr:'INN',
                   awayColor:'#266092', homeColor:'#b38fcf', tipISO:'2026-08-20T02:00Z'});
+      /* pin the fixture: a late loadSlate() rewrites SLATE.games and the
+         check then grades the live slate. Four suites hit this on 31 Aug. */
+      try{ window.loadSlate=async function(){ return; }; }catch(_){}
       window.SLATE.games=all; window.SLATE.loaded=true;
       window.SLATE.date='2026-08-19'; paintGameRail();
     }, FAKE_SLATE); };
