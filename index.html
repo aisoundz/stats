@@ -110,6 +110,31 @@
     --away:#7fe3c7; --home:#4a86ff; --mile:#ffc54d;
   }
 
+  /* ============ THE TAPE — one question a day ======================
+     Browse content, below the way in, same as the schedule. Gold because
+     it is a thing you KEEP (a streak), and teal already means you. */
+  #tapeCard{margin-top:16px}
+  #tapeCard .tpHd{display:flex;justify-content:space-between;align-items:baseline;
+    gap:12px;margin:0 0 4px}
+  #tapeCard .tpHd h2{font-size:17px;margin:0}
+  #tapeCard .tpStreak{font-family:var(--ui);font-size:12px;font-weight:700;
+    letter-spacing:.1em;color:var(--gold);white-space:nowrap}
+  #tapeCard .tpFrom{font-family:var(--ui);font-size:12px;color:var(--dim);
+    letter-spacing:.02em;margin:0 0 12px}
+  #tapeCard .tpQ{font-size:17px;font-weight:700;color:var(--ink);margin:0 0 12px;
+    line-height:1.35}
+  #tapeCard .tpOpts{display:flex;flex-direction:column;gap:8px}
+  #tapeCard .tpO{display:block;width:100%;text-align:left;padding:12px 14px;
+    border-radius:12px;border:1px solid var(--line2);background:var(--card2);
+    color:var(--body);font-size:15px;font-weight:600;cursor:pointer}
+  #tapeCard .tpO:hover{border-color:var(--line2)}
+  #tapeCard .tpO.right{border-color:rgba(46,230,166,.55);color:var(--green)}
+  #tapeCard .tpO.wrong{border-color:rgba(255,77,94,.5);color:var(--red)}
+  #tapeCard .tpO[disabled]{cursor:default;opacity:.75}
+  #tapeCard .tpO.right[disabled],#tapeCard .tpO.wrong[disabled]{opacity:1}
+  #tapeCard .tpAfter{font-size:14px;color:var(--muted);margin:12px 0 0}
+
+
   /* ============ THE NEXT TWO WEEKS ==================================
      Browse content, below the way in. Rows, not cards: fourteen cards is a
      scroll nobody finishes, and the question a person has here is "what
@@ -1996,6 +2021,22 @@
       <button class="btn ghost" id="schedMore" style="display:none">Show every day</button>
     </div>
 
+    <!-- ============ THE TAPE ========================================
+         One question a day, from a game that finished. The only surface
+         in this product that does not need a live game — see
+         host/tape_card.py. Hidden until tape/{date} actually loads, so a
+         day the picker did not run costs a player nothing. -->
+    <div class="card" id="tapeCard" style="display:none;margin-top:16px">
+      <div class="tpHd">
+        <h2>The Tape</h2>
+        <span class="tpStreak" id="tapeStreak"></span>
+      </div>
+      <p class="tpFrom" id="tapeFrom"></p>
+      <p class="tpQ" id="tapeQ"></p>
+      <div class="tpOpts" id="tapeOpts"></div>
+      <p class="tpAfter" id="tapeAfter" style="display:none"></p>
+    </div>
+
     <div class="card" id="welcomeStrip" style="display:none;margin-top:14px;padding:11px 14px;border-color:rgba(46,230,166,.35)"></div>
     <!-- ONE SET OF DOORS. "Play Game Night" and "Practice" used to sit in
          the game card below the sign-in card, so a signed-out stranger was
@@ -2231,11 +2272,15 @@
         <button onclick="doSignOut()" style="flex:0 0 auto;background:none;border:1px solid var(--line2,var(--line2));color:var(--muted,#93a0bd);border-radius:999px;padding:6px 11px;font-weight:700;font-size:12px;cursor:pointer">Sign out</button>
       </div>
       <label class="fld">Display name</label>
+      <!-- What the SERVER knows about this name: whether it is yours,
+           whether it is taken, whether signing in would keep it. Empty
+           and hidden until there is something true to say. -->
       <input id="playerName" maxlength="16" placeholder="e.g. CourtsideKing" oninput="checkName()">
       <div id="emailFieldWrap">
         <label class="fld" for="gateEmail">Email</label>
         <input id="gateEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" oninput="checkName()">
       </div>
+      <p class="foot" id="handleNote" style="margin:6px 0 0;display:none;color:var(--teal)"></p>
       <p class="foot" style="margin:6px 0 0" id="gateNote">So your card has a name on it when the host settles the night. No password, and we only ask once.</p>
       <!-- The opt-in is a real, separate, unticked box. It is not the email
            field, and it is not required to continue — the button below stays
@@ -4521,6 +4566,80 @@ window.STATS_FIREBASE = {
       SB._husCache[k] = { at: Date.now(), v: n };
       return n;
     } catch (e) { return null; }
+  };
+
+  /* ============ THE TAPE — one document, once a session =============
+     tape/{date} is published each morning by host/tape.js. A missing
+     document is a normal day (the picker had nothing, or has not run) and
+     must leave the card hidden rather than surface an error. */
+  SB.tapeFor = async function (day) {
+    if (!SB.enabled || !F || !db) return null;
+    var d = String(day || '');
+    if (!d) return null;
+    if (SB._tape && SB._tape.d === d) return SB._tape.v;
+    try {
+      var snap = await F.getDoc(F.doc(db, 'tape', d));
+      var v = (snap && snap.exists()) ? (snap.data() || null) : null;
+      SB._tape = { d: d, v: v };
+      return v;
+    } catch (e) { return null; }
+  };
+
+  /* ============ THE @HANDLE — one name, every device ================
+     users/{uid} is yours; handles/{lower} is the reservation. See
+     host/handle.py. Both paths were deployed 1 Sept 2026.
+
+     Firestore refuses a create on an existing document, so the create IS
+     the uniqueness check — no transaction, no race, and a held name can
+     never be taken because nothing but the owner may update one. */
+  SB.handleNorm = function (h) {
+    return String(h || '').toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 16);
+  };
+
+  SB.myProfile = async function () {
+    if (!SB.enabled || !F || !db) return null;
+    var who = ''; try { who = uid() || ''; } catch (_) { who = ''; }
+    if (!who) return null;
+    try {
+      var snap = await F.getDoc(F.doc(db, 'users', who));
+      return (snap && snap.exists()) ? (snap.data() || null) : null;
+    } catch (e) { return null; }
+  };
+
+  /* {ok:true} | {ok:false, why:'taken'|'invalid'|'noacct'|'offline'}
+     NEVER throws, and never blocks play — the caller carries on either
+     way and only the message changes. */
+  SB.claimHandle = async function (typed, extra) {
+    var lower = SB.handleNorm(typed);
+    if (lower.length < 3) return { ok: false, why: 'invalid' };
+    if (!SB.enabled || !F || !db) return { ok: false, why: 'offline' };
+    var who = ''; try { who = uid() || ''; } catch (_) { who = ''; }
+    if (!who) return { ok: false, why: 'noacct' };
+    try {
+      var mine = await SB.myProfile();
+      if (mine && SB.handleNorm(mine.handle) === lower) {
+        /* Already yours. Re-saving the display form is free and lets
+           somebody fix their own capitalisation. */
+        await F.setDoc(F.doc(db, 'users', who),
+          Object.assign({ handle: lower, display: String(typed || '') }, extra || {}), { merge: true });
+        return { ok: true, mine: true };
+      }
+      /* THE RULES ARE THE LOCK, NOT THIS LINE. setDoc on a document that
+         does not exist is a CREATE, which the rules allow. On one that
+         does, it is an UPDATE — and handles/{h} allows no update to
+         anybody but the owner, so it is refused. That refusal IS "taken",
+         and it is why no transaction is needed and no race exists. */
+      await F.setDoc(F.doc(db, 'handles', lower),
+        { uid: who, display: String(typed || ''), at: Date.now() });
+      await F.setDoc(F.doc(db, 'users', who),
+        Object.assign({ handle: lower, display: String(typed || '') }, extra || {}), { merge: true });
+      return { ok: true };
+    } catch (e) {
+      /* A permission error here means the document exists and is not
+         yours — which is exactly what "taken" means. */
+      var code = (e && (e.code || e.message)) || '';
+      return { ok: false, why: /permission|insufficient/i.test(String(code)) ? 'taken' : 'offline' };
+    }
   };
 
   SB.watchCallIt = function (cb) {
@@ -11084,8 +11203,98 @@ function rememberProfile(){
   }catch(e){}
 }
 
+/* ============ PRACTICE ASKS FOR A NAME, AND NOTHING ELSE ==========
+   Founder: "we dont need the email in the practice round. It should be
+   quick to use and test."
+
+   The app already knows: gateNeeded() is S.mode==='live', and the verify
+   row hides itself on that same test. The email field and the mailing-list
+   box never got the same treatment, so the two-minute no-account path —
+   the one this product tells a stranger to try FIRST — rendered as a
+   signup form. B14 was reversed on 18 Aug so practice needs no account;
+   this screen never heard about it.
+
+   Hidden, never removed: both come back the instant the mode is live. A
+   removed id turns its writer into a silent no-op. */
+function practiceGateTrim(){
+  try{
+    var live = gateNeeded();
+    var wrap = document.getElementById('emailFieldWrap');
+    if(wrap) wrap.style.display = live ? '' : 'none';
+    var box = document.getElementById('gateConsent');
+    var lbl = box && box.closest ? box.closest('label') : null;
+    if(lbl) lbl.style.display = live ? '' : 'none';
+    var note = document.getElementById('gateNote');
+    /* Live-night language on a practice run: nobody settles a practice
+       run, so the sentence about the host is simply not true here. */
+    if(note && !live) note.textContent = 'Just a name and a colour. Nothing is saved and nobody is emailed.';
+  }catch(_){}
+}
+
+
+/* ============ THE @HANDLE, ON THE SCREEN =============================
+   Restores the name a signed-in player already owns, on any device, and
+   reserves a new one when they choose it. See host/handle.py.
+
+   Practice never touches this: a handle has to belong to somebody, and
+   practice deliberately needs no account. */
+var HANDLE_MINE = null;
+
+function handleShow(h){ return h ? ('@' + String(h).replace(/^@+/, '')) : ''; }
+
+/* Fill the name field from the SERVER when we know who they are. Runs
+   after boot, and quietly does nothing when signed out. */
+async function handleRestore(){
+  try{
+    if(typeof SB==='undefined' || !SB || typeof SB.myProfile!=='function') return;
+    var p = await SB.myProfile();
+    if(!p || !p.handle) return;
+    HANDLE_MINE = p.handle;
+    var el = document.getElementById('playerName');
+    /* Never overwrite something the player is in the middle of typing. */
+    if(el && !((el.value||'').trim())){
+      el.value = p.display || p.handle;
+      try{ S.name = el.value; }catch(_){}
+    }
+    try{ if(!colorTouched && p.color) S.color = p.color; }catch(_){}
+    var note = document.getElementById('handleNote');
+    if(note){ note.textContent = 'Signed in as ' + handleShow(p.handle) + ' — this follows you to any device.'; note.style.display=''; }
+    try{ checkName(); }catch(_){}
+  }catch(_){}
+}
+
+/* Reserve it on the way into the game. Never blocks: a busy name or a bad
+   connection changes the message, not the outcome. */
+async function handleClaim(){
+  try{
+    if(typeof gateNeeded==='function' && !gateNeeded()) return;   /* practice */
+    if(typeof SB==='undefined' || !SB || typeof SB.claimHandle!=='function') return;
+    var el = document.getElementById('playerName');
+    var typed = el ? (el.value||'').trim() : '';
+    if(!typed) return;
+    if(HANDLE_MINE && SB.handleNorm(typed) === HANDLE_MINE) return;  /* already yours */
+    var r = await SB.claimHandle(typed, { color: (S && S.color) || '' });
+    var note = document.getElementById('handleNote');
+    if(!note) return;
+    note.style.display = '';
+    if(r && r.ok){
+      HANDLE_MINE = SB.handleNorm(typed);
+      note.textContent = handleShow(HANDLE_MINE) + ' is yours. It will follow you to any device.';
+    } else if(r && r.why === 'taken'){
+      note.textContent = handleShow(typed) + ' is taken. You are playing as ' + esc(typed) + ' tonight — pick another to keep it for good.';
+    } else if(r && r.why === 'noacct'){
+      note.textContent = 'Sign in to keep ' + handleShow(typed) + ' for good. You are playing as ' + esc(typed) + ' tonight either way.';
+    } else if(r && r.why === 'invalid'){
+      note.textContent = 'A handle needs three or more letters or numbers.';
+    } else {
+      note.style.display = 'none';
+    }
+  }catch(_){}
+}
+
 function prefillGate(){
   const e=document.getElementById('gateEmail'); if(!e) return;
+  try{ practiceGateTrim(); }catch(_){}
   const saved=savedEmail();
   if(saved && !e.value) e.value=saved;
   // Hand the returning player their own answers back before anything paints.
@@ -11448,6 +11657,10 @@ try{ window.predGateShut=predGateShut; }catch(_){}
 
 function startPredict(){
   try{ trk('card_start'); }catch(_){}
+  /* RESERVE THE HANDLE ON THE WAY IN, and do not wait for it. A busy
+     name or a dead connection changes the message under the field, not
+     whether this player gets to play. */
+  try{ handleClaim(); }catch(_){}
   /* ============ YOU HAVE NOT PICKED A ROOM YET ========================
      Reported three times on 27 Aug, the last of them from a live room
      during a demo, with the rail overhead reading "Dodgers at Braves ·
@@ -16191,6 +16404,11 @@ var I18N = {
        records that the string was CONSIDERED: an entry that maps to itself
        is a decision on the record, an absent entry is an oversight, and
        the suite cannot tell those apart without this line. */
+    /* THE TAPE. Translated, unlike HUSTLE: a currency is a coined unit and
+       keeps its name, but this is a section heading and every other heading
+       on the page is in the reader's language. "La cinta" is the game tape. */
+    "The Tape":"La Cinta",
+    "Right. Come back tomorrow to keep the run going.":"Correcto. Vuelve mañana para mantener la racha.",
     "HUSTLE":"HUSTLE",
     "AT":"VS", "PRACTICE":"PRÁCTICA", "Practice":"Práctica", "LIVE":"EN VIVO",
     "↑ new":"↑ nuevo",
@@ -25619,7 +25837,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-01-tonight.271';
+const STATS_BUILD='2026-09-01-handle.273';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -30397,6 +30615,109 @@ try{
   });
 }catch(_){}
 
+
+/* ============ THE TAPE — one question a day ==========================
+   Reads tape/{date}, a single document published each morning by
+   host/tape.js from the backtest archive. No live game required, which is
+   the whole point: every other surface here needs one.
+
+   IT NEVER PAYS POINTS AND NEVER TOUCHES THE BOARD. The question is about
+   a finished game and can be looked up. The reward is the streak, and the
+   streak counts DAYS PLAYED, not days right. */
+var TAPE = null, TAPE_KEY = 'stats_tape_';
+
+function tapeToday(){
+  try{
+    return new Intl.DateTimeFormat('en-CA', { timeZone:'America/Los_Angeles',
+      year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date());
+  }catch(_){ return new Date().toISOString().slice(0,10); }
+}
+function tapeSaved(d){ try{ return JSON.parse(localStorage.getItem(TAPE_KEY+d)||'null'); }catch(_){ return null; } }
+function tapeSave(d,v){ try{ localStorage.setItem(TAPE_KEY+d, JSON.stringify(v)); }catch(_){} }
+
+/* DAYS PLAYED, NOT DAYS RIGHT. Walks back from today while a day has an
+   answer stored. A wrong answer keeps the streak — showing up is the
+   thing being counted. */
+function tapeStreak(){
+  var n=0;
+  try{
+    var d=new Date();
+    for(var i=0;i<400;i++){
+      var key=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles',
+        year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
+      if(!tapeSaved(key)) break;
+      n++; d=new Date(d.getTime()-86400000);
+    }
+  }catch(_){}
+  return n;
+}
+
+function tapeRender(){
+  try{
+    var card=document.getElementById('tapeCard');
+    if(!card || !TAPE || !TAPE.q || !Array.isArray(TAPE.options) || !TAPE.options.length) return;
+    var day=TAPE.date || tapeToday();
+    var had=tapeSaved(day);
+
+    set('tapeFrom', (TAPE.game ? (TAPE.game + (TAPE.score ? ('  ' + TAPE.score) : '')) : '')
+      + (TAPE.from ? ('  ·  ' + TAPE.from) : '')
+      + (TAPE.tag ? ('  ·  ' + TAPE.tag) : ''));
+    set('tapeQ', TAPE.q);
+
+    var n=tapeStreak();
+    set('tapeStreak', n>0 ? (n + ' day' + (n===1?'':'s') + ' in a row') : '');
+
+    var box=document.getElementById('tapeOpts');
+    if(box){
+      box.innerHTML='';
+      TAPE.options.forEach(function(o){
+        var b=document.createElement('button');
+        b.className='tpO'; b.type='button'; b.textContent=o;
+        if(had){
+          b.disabled=true;
+          if(o===TAPE.answer) b.className='tpO right';
+          else if(o===had.said) b.className='tpO wrong';
+        } else {
+          b.onclick=function(){ tapeAnswer(o); };
+        }
+        box.appendChild(b);
+      });
+    }
+    var after=document.getElementById('tapeAfter');
+    if(after){
+      if(had){
+        after.style.display='';
+        after.textContent = (had.said===TAPE.answer)
+          ? 'Right. Come back tomorrow to keep the run going.'
+          : ('It was “' + TAPE.answer + '”. The run counts days you showed up, not days you were right.');
+      } else { after.style.display='none'; after.textContent=''; }
+    }
+    card.style.display='';
+  }catch(_){}
+}
+
+function tapeAnswer(said){
+  try{
+    if(!TAPE) return;
+    var day=TAPE.date || tapeToday();
+    if(tapeSaved(day)) return;                 /* once a day, and it sticks */
+    tapeSave(day, { said: said, at: Date.now() });
+    try{ trk('tape_answer', { right: said===TAPE.answer ? 1 : 0 }); }catch(_){}
+    tapeRender();
+  }catch(_){}
+}
+
+function tapeLoad(){
+  try{
+    if(TAPE) return;
+    if(typeof SB==='undefined' || !SB || typeof SB.tapeFor!=='function') return;
+    Promise.resolve(SB.tapeFor(tapeToday())).then(function(t){
+      if(!t) return;                           /* no document — stay hidden */
+      TAPE=t; tapeRender();
+    }).catch(function(){});
+  }catch(_){}
+}
+
 function renderGametime(){
   const head=document.getElementById('gtHead');
   if(!head) return;
@@ -30498,6 +30819,8 @@ function renderGametime(){
   return renderGametimeRest();
   try{ paintYou(); }catch(_){}
   try{ paintInvite(); }catch(_){}
+  try{ tapeLoad(); }catch(_){}
+  try{ handleRestore(); }catch(_){}
   try{ if(!SCHED) schedLoad(); }catch(_){}
 }
 /* ---- SHOT ZONES -----------------------------------------------------
