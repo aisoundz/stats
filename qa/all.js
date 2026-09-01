@@ -66,7 +66,7 @@ const afi=ARG.indexOf('--admin-file');
 const ADMIN_TARGET=afi>=0 && ARG[afi+1] ? ARG[afi+1] : 'admin-test.html';
 /* Only these accept a positional target; handing one to a suite that does
    not read argv[2] is harmless, but claiming it was targeted would not be. */
-const TARGETABLE=new Set(['arcade-counter.js','schedule-menu.js','invite.js','voice.js','voice-wiring.js','voice-pick.js','voice-lang.js',
+const TARGETABLE=new Set(['arcade-counter.js','schedule-menu.js','invite.js','tape.js','voice.js','voice-wiring.js','voice-pick.js','voice-lang.js',
   'board-order.js','payoff.js','slate.js','acceptance.js','host-sportsreg.js','localise.js','i18n.js','season.js',
   'devices.js','night-config.js','overtime.js','platforms.js','change-it.js','chrome.js','places.js','switch.js','hero.js','listeners.js','practice.js','spanish.js','marquee-order.js',
   /* Reads a positional path (absolute or relative) and defaults to
@@ -709,6 +709,7 @@ const TIER={
   'schedule-menu.js': {tier:'static'},
   'hustle.js':        {tier:'static'},
   'invite.js':        {tier:'static'},
+  'tape.js':          {tier:'static'},
   'gn-series.js':     {tier:'live'},
   /* A LOG FILE HAS ONE WRITER. Half of welcome-queue.log — 1,830 of 3,735
      timestamped lines — was a copy of the other half, because the script

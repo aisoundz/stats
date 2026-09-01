@@ -122,6 +122,28 @@ service cloud.firestore {
       allow write: if isOwner();
     }
 
+    /* ============ THE TAPE — one question a day ======================
+       Published each morning by host/tape.js from the backtest archive:
+       one question about a game that already finished, its real options
+       out of the bank, and the true answer.
+
+       READ BY EVERYONE, because it is the only surface here that does not
+       need a live game and the whole point is that a person can open it
+       on a Tuesday with nothing on.
+
+       THE ANSWER IS IN THE DOCUMENT, and that is deliberate. The question
+       is about a FINISHED game — anyone can look it up in ten seconds, so
+       hiding the answer would buy nothing and cost a round trip. It pays
+       no Points and never touches the Board for exactly that reason: a
+       lookup must never sit on the same table as somebody watching live.
+       The reward is a streak, counted on the device.
+
+       Written by the picker's service account only. */
+    match /tape/{day} {
+      allow read:  if true;
+      allow write: if isOwner();
+    }
+
     /* ============ HUSTLE — THE PRESENCE LEDGER =======================
        The second currency. Points are earned by being RIGHT; HUSTLE is
        earned by SHOWING UP, and that split is the whole reason this is a
