@@ -122,5 +122,53 @@ t('accuracy is nowhere in the computation', () => {
   return hit.length ? 'computeHustle references ' + hit.join(', ') + ' — HUSTLE must not know whether an answer was right' : true;
 });
 
+/* ============ AND THE DISPLAY ========================================
+   The ledger being right is half of it. These read the player app. */
+const fsx = require('fs');
+const IDX = path.join(__dirname, '..',
+  (() => { const i = process.argv.indexOf('--file'); return i >= 0 && process.argv[i+1] ? process.argv[i+1] : 'index-test.html'; })());
+let app = '';
+try { app = fsx.readFileSync(IDX, 'utf8'); } catch (_) { app = ''; }
+
+if (!app) {
+  console.log('  --   the player app was not readable: the DISPLAY checks did not run.');
+  fail++;
+} else {
+  t('the balance is shown, and labelled HUSTLE', () =>
+    app.includes('id="finalHustle"') && /<div class="k">HUSTLE<\/div>/.test(app)
+      ? true : 'no #finalHustle tile labelled HUSTLE');
+
+  t('an unknown balance shows a dash, never 0', () => {
+    /* Unknown and zero are different facts. The pick sheet already follows
+       this rule for an absent player — NOTHING, never 0.0 — and a rules
+       deploy that has not happened must not read as "you earned nothing". */
+    const i = app.indexOf('id="finalHustle"');
+    const seg = app.slice(i, i + 60);
+    return /">\s*—\s*</.test(seg) ? true : 'the tile defaults to something other than an em-dash: ' + seg.slice(0, 40);
+  });
+
+  t('the app READS the ledger and never writes it', () => {
+    /* A balance a phone can write is a balance a phone can forge. The
+       rules forbid it, but a client that TRIES is a bug worth catching
+       here rather than as a permission error in somebody's console. */
+    const i = app.indexOf('SB.hustleFor');
+    if (i < 0) return 'no SB.hustleFor';
+    const seg = app.slice(i, i + 1400);
+    const bad = ['setDoc', 'updateDoc', 'addDoc', 'deleteDoc', 'writeBatch'];
+    const hit = bad.filter(w => seg.includes(w));
+    return hit.length ? 'SB.hustleFor references ' + hit.join(', ') + ' — it must only read' : true;
+  });
+
+  t('the night balance is not faked into a season total', () => {
+    /* The ledger is per night. A season number needs a server-maintained
+       aggregate; fanning out a read per night to invent one would be both
+       expensive and unauditable. */
+    const i = app.indexOf('SB.hustleFor');
+    const seg = app.slice(i, i + 1400);
+    return /for\s*\(|\.map\(|forEach\(/.test(seg)
+      ? 'SB.hustleFor loops — it must read exactly one night' : true;
+  });
+}
+
 console.log(`\n  ${fail ? 'RED  ' : 'GREEN'}  ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
