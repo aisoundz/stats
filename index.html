@@ -2915,6 +2915,26 @@
   </section>
 
   <!-- SHARE CARD MODAL -->
+
+  <!-- ============ YOUR @HANDLE ====================================
+       Reachable from the ☰ menu so somebody who already plays can claim
+       one — the gate screen only appears at the start of a night and a
+       returning player scrolls straight past it. See host/handle_menu.py. -->
+  <div class="modal" id="handleModal" onclick="if(event.target===this)closeHandle()">
+    <div>
+      <div class="card" style="max-width:340px;text-align:left">
+        <h2 style="font-size:17px;margin:0 0 4px">Your handle</h2>
+        <p class="foot" id="hmState" style="margin:0 0 12px"></p>
+        <label class="fld" for="hmInput">Handle</label>
+        <input id="hmInput" maxlength="16" placeholder="e.g. courtsideking" autocomplete="off"
+               oninput="hmTyped()" onkeydown="if(event.key==='Enter'){event.preventDefault();hmClaim();}">
+        <p class="foot" id="hmNote" style="margin:6px 0 0"></p>
+        <button class="btn" id="hmBtn" style="margin-top:12px" onclick="hmClaim()">Claim it</button>
+        <button class="btn ghost" style="margin-top:8px" onclick="closeHandle()">Close</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal" id="shareModal" onclick="if(event.target===this)closeShare()">
     <div>
       <div class="sharecard" id="shareCard">
@@ -16407,6 +16427,10 @@ var I18N = {
     /* THE TAPE. Translated, unlike HUSTLE: a currency is a coined unit and
        keeps its name, but this is a section heading and every other heading
        on the page is in the reader's language. "La cinta" is the game tape. */
+    /* The menu row and the sheet it opens. "Handle" as a screen name is
+       "nombre de usuario" in Spanish — the @ carries the rest. */
+    "Your handle":"Tu nombre de usuario",
+    "Claim it":"Reservarlo",
     "The Tape":"La Cinta",
     "Right. Come back tomorrow to keep the run going.":"Correcto. Vuelve mañana para mantener la racha.",
     "HUSTLE":"HUSTLE",
@@ -25837,7 +25861,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-01-handle.273';
+const STATS_BUILD='2026-09-01-claim.275';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -26413,6 +26437,9 @@ function menuRows(){
   R.push('<div class="mgrp">The game</div>');
   try{ if(S.mode==='live' && GAME_SCREENS.indexOf(S.place||'')>=0) row('▶','Back to my game','resume'); }catch(_){}
   try{ if(S.screen==='final' || (S.mode==='demo' && S.pts>0)) row('🔁','Play again','restart'); }catch(_){}
+  /* Reachable for somebody who already plays: the gate screen only
+     appears at the start of a night and they scroll past it. */
+  row('@','Your handle','handle');
   row('📖','How to play','rules');
   try{ if(VX && VX.hasOut){ row(VX.on?'🔊':'🔈','Questions read out loud','voice', VX.on?'On':'Off');
        if(VX.on) row('🎙','Microphone check','voicecheck'); } }catch(_){}
@@ -26518,8 +26545,87 @@ function menuRows(){
   }catch(_){}
   return R.join('');
 }
+
+/* ============ CLAIM A HANDLE FROM THE MENU ===========================
+   The gate screen only appears at the start of a night, so a person who
+   already plays never sees it. See host/handle_menu.py. */
+function hmShow(h){ return h ? ('@' + String(h).replace(/^@+/, '')) : ''; }
+
+async function openHandle(){
+  try{
+    var m=document.getElementById('handleModal'); if(!m) return;
+    m.classList.add('open');
+    var inp=document.getElementById('hmInput');
+    var st=document.getElementById('hmState');
+    var btn=document.getElementById('hmBtn');
+    var note=document.getElementById('hmNote'); if(note) note.textContent='';
+
+    var signedIn=false; try{ signedIn = !!(typeof signedInNow==='function' && signedInNow()); }catch(_){}
+    if(!signedIn){
+      /* A handle has to belong to somebody. Say that instead of offering a
+         field that cannot succeed. */
+      if(st) st.textContent='Sign in first — a handle belongs to an account, so it can follow you to another phone.';
+      if(inp){ inp.value=''; inp.disabled=true; }
+      if(btn){ btn.disabled=true; }
+      return;
+    }
+    if(inp){ inp.disabled=false; }
+    if(btn){ btn.disabled=false; }
+    if(st) st.textContent='Yours for good, on any device. Letters, numbers and underscores.';
+    try{
+      var p = (typeof SB!=='undefined' && SB && SB.myProfile) ? await SB.myProfile() : null;
+      if(p && p.handle){
+        HANDLE_MINE = p.handle;
+        if(inp && !inp.value) inp.value = p.display || p.handle;
+        if(st) st.textContent='You hold ' + hmShow(p.handle) + '. Change it here.';
+      } else if(inp && !inp.value){
+        try{ inp.value = (S && S.name) || ''; }catch(_){}
+      }
+    }catch(_){}
+  }catch(_){}
+}
+function closeHandle(){ try{ document.getElementById('handleModal').classList.remove('open'); }catch(_){} }
+
+function hmTyped(){
+  try{
+    var inp=document.getElementById('hmInput'), note=document.getElementById('hmNote');
+    if(!inp||!note) return;
+    var lower=(typeof SB!=='undefined'&&SB&&SB.handleNorm)?SB.handleNorm(inp.value):'';
+    note.textContent = lower ? ('Will be ' + hmShow(lower)) : '';
+  }catch(_){}
+}
+
+async function hmClaim(){
+  try{
+    var inp=document.getElementById('hmInput'), note=document.getElementById('hmNote'),
+        btn=document.getElementById('hmBtn');
+    if(!inp||!note) return;
+    var typed=(inp.value||'').trim();
+    if(!typed){ note.textContent='Type a handle first.'; return; }
+    if(btn){ btn.disabled=true; }
+    note.textContent='Checking…';
+    var r = await SB.claimHandle(typed, { color: (S && S.color) || '' });
+    if(btn){ btn.disabled=false; }
+    if(r && r.ok){
+      HANDLE_MINE = SB.handleNorm(typed);
+      note.textContent = hmShow(HANDLE_MINE) + ' is yours.';
+      try{ S.name = typed; rememberProfile(); }catch(_){}
+    } else if(r && r.why==='taken'){
+      note.textContent = hmShow(typed) + ' is taken — try another.';
+    } else if(r && r.why==='invalid'){
+      note.textContent = 'Three or more letters or numbers.';
+    } else if(r && r.why==='noacct'){
+      note.textContent = 'Sign in first to keep a handle.';
+    } else {
+      note.textContent = 'Could not reach the server. Nothing was changed.';
+    }
+  }catch(_){ }
+}
+try{ window.openHandle=openHandle; window.closeHandle=closeHandle; }catch(_){}
+
 var MENU_GO={
   rules:function(){ go('rules'); },
+  handle:function(){ try{ openHandle(); }catch(_){} },
   /* The menu's alerts row. It does the honest thing in each state rather
      than one action that half-works in three of them. */
   alerts:function(){
