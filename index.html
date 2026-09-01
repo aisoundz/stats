@@ -110,6 +110,86 @@
     --away:#7fe3c7; --home:#4a86ff; --mile:#ffc54d;
   }
 
+  /* ============ THE NEXT TWO WEEKS ==================================
+     Browse content, below the way in. Rows, not cards: fourteen cards is a
+     scroll nobody finishes, and the question a person has here is "what
+     day" and "who", in that order. */
+  #schedCard{margin-top:16px}
+  #schedCard .schHead{display:flex;justify-content:space-between;align-items:baseline;
+    gap:12px;margin:0 0 12px}
+  #schedCard .schHead h2{font-size:17px;margin:0}
+  #schedCard .schSub{font-family:var(--ui);font-size:12px;color:var(--dim);
+    letter-spacing:.02em;white-space:nowrap}
+  .schDay{display:grid;grid-template-columns:78px minmax(0,1fr);gap:12px;
+    padding:10px 0;border-top:1px solid var(--line)}
+  .schDay:first-of-type{border-top:0}
+  .schDay .schWhen{font-family:var(--ui);font-size:12px;font-weight:700;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding-top:2px}
+  .schDay.today .schWhen{color:var(--teal)}
+  .schGames{display:flex;flex-direction:column;gap:7px;min-width:0}
+  .schG{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0}
+  .schG .schT{font-size:14px;color:var(--body);min-width:0;overflow-wrap:anywhere}
+  .schG .schL{font-family:var(--ui);font-size:12px;font-weight:700;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--dim);flex:none}
+  .schG .schTime{font-family:var(--mono);font-size:12px;color:var(--muted);
+    font-variant-numeric:tabular-nums;flex:none}
+  /* The main event is marked, not shouted. One mark, the same teal that
+     means YOU everywhere else would be wrong here -- gold is the points
+     colour and this is the game worth the most attention. */
+  .schG.main .schT{color:var(--ink);font-weight:600}
+  .schG.main .schStar{color:var(--gold);flex:none;font-size:12px}
+  .schNone{font-size:14px;color:var(--dim)}
+  #schedMore{margin-top:12px;width:100%}
+
+
+  /* ============ YOUR SCORE, DURING PLAY — the arcade counter ========
+     One line inside .ascore so the board gains no height while a question
+     is open. Teal is YOU. Mono + tabular-nums so the digits do not shuffle
+     the layout as the number grows from 40 to 400. */
+  #ayou{display:inline-flex;align-items:baseline;gap:6px;margin-left:auto;
+    font-family:var(--ui);font-size:12px;font-weight:700;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--dim);white-space:nowrap;position:relative}
+  #ayou b{font-family:var(--mono);font-size:20px;font-weight:700;letter-spacing:-.01em;
+    color:var(--teal);font-variant-numeric:tabular-nums;text-transform:none}
+  /* THE GAIN. It flies off the number it came from, which is the whole
+     point — a +40 that appears somewhere else is a notification, not a
+     reward. 900ms, then it is gone and the counter holds the new total. */
+  #ayouUp{position:absolute;right:0;top:-2px;font-family:var(--mono);font-size:15px;
+    font-weight:700;color:var(--green);pointer-events:none;opacity:0;
+    text-transform:none;letter-spacing:0}
+  #ayouUp.go{animation:ayouFly .9s cubic-bezier(.22,.9,.3,1) forwards}
+  @keyframes ayouFly{
+    0%{opacity:0;transform:translateY(4px) scale(.9)}
+    18%{opacity:1;transform:translateY(-6px) scale(1.12)}
+    60%{opacity:1;transform:translateY(-16px) scale(1)}
+    100%{opacity:0;transform:translateY(-26px) scale(1)}}
+  #ayou.bump b{animation:ayouBump .5s ease-out}
+  @keyframes ayouBump{0%{transform:scale(1)}30%{transform:scale(1.18)}100%{transform:scale(1)}}
+  /* A PERSON WHO ASKED FOR LESS MOTION GETS THE NUMBER, NOT THE SHOW. */
+  @media (prefers-reduced-motion:reduce){
+    #ayouUp.go{animation:none;opacity:0}
+    #ayou.bump b{animation:none}}
+
+
+  /* ============ WHICH GAME IS THIS — v7.5's role line ==============
+     Ported from v75 hero(). 12px, not its 9.5px: the floor is the shipped
+     rule and uppercase + wide tracking already reads as a label. Teal only
+     when it is YOUR room, because teal means you and nothing else. */
+  .mq-toprow{display:flex;justify-content:space-between;align-items:baseline;
+    gap:12px;flex-wrap:nowrap;min-width:0}
+  .mq-toprow #landingHead{flex:none}
+  #mqRole{display:flex;align-items:baseline;gap:8px;margin:0;min-width:0;
+    font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.19em;
+    text-transform:uppercase;color:var(--muted);white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  /* ON THE NARROWEST PHONES THE STATE CHIP GOES, NOT THE ROLE. Which game
+     this is beats whether it is live -- the live pill already says that,
+     six pixels up, in colour. */
+  @media (max-width:360px){ #mqStateTxt{display:none} #mqRole{letter-spacing:.12em} }
+  #mqRole.mine #mqRoleTxt{color:var(--teal)}
+  #mqRole #mqStateTxt{color:var(--dim);letter-spacing:.15em;font-weight:400}
+
+
   /* ============ v7.5 FACES, APPLIED ================================
      Headings and the marquee codes take the display face; labels, chips,
      buttons and the nav take the UI face; anything that is a FIGURE takes
@@ -1710,7 +1790,19 @@
            3 August and stayed wrong for weeks, which is B6 with a longer fuse:
            one fact (which game is on) with a second copy nobody updates.
            Neutral text cannot go stale. The feed still owns the answer. -->
-      <h2 id="landingHead">Game Night</h2>
+      <!-- THE ROLE SHARES THE HEADING'S ROW AND COSTS NO HEIGHT.
+           As its own line it pushed "Try a practice round" from y=583 to
+           y=605 on a 360x640 Android — below the fold, and qa/way-in.js
+           went red. Measured on .261 first: the control was ABOVE the fold
+           there, so the 22px was this label's and nothing else's.
+           The way in beats every label on this page. A stranger who does
+           not scroll never presses Play, and that is the only number that
+           matters on the landing. Every id survives -- a removed id turns
+           its writer into a silent no-op. -->
+      <div class="mq-toprow">
+        <h2 id="landingHead">Game Night</h2>
+        <p id="mqRole" style="display:none"><span id="mqRoleTxt"></span><span id="mqStateTxt"></span></p>
+      </div>
       <!-- THE MATCHUP IS THE PAGE. Two codes, 52px, in the two colours the
            feed already owns — --away and --home, whose only writer is
            paintTeamColours(), which lifts a near-black team hex and splits
@@ -1882,6 +1974,22 @@
 
       <p class="foot" style="margin:12px 0 0;text-align:center">Free to play · Not gambling · Prizes are sponsor-funded</p>
     </div>
+
+    <!-- ============ THE NEXT TWO WEEKS ==============================
+         Founder, 31 Aug: "We should also have our schedule for the next
+         two weeks in our menu so people know what games are coming."
+         Below the way in on purpose -- see host/schedule_menu.py. Hidden
+         until schedule.json actually loads, so a missing file costs a
+         person nothing. -->
+    <div class="card" id="schedCard" style="display:none;margin-top:16px">
+      <div class="schHead">
+        <h2>What's coming</h2>
+        <span class="schSub" id="schedSub">Next two weeks</span>
+      </div>
+      <div id="schedList"></div>
+      <button class="btn ghost" id="schedMore" style="display:none">Show every day</button>
+    </div>
+
     <div class="card" id="welcomeStrip" style="display:none;margin-top:14px;padding:11px 14px;border-color:rgba(46,230,166,.35)"></div>
     <!-- ONE SET OF DOORS. "Play Game Night" and "Practice" used to sit in
          the game card below the sign-in card, so a signed-out stranger was
@@ -5860,7 +5968,9 @@ const SOCCER_ROUNDS=[
     {t:"How many corners in the first half (both teams)?", o:["0–2","3–4","5–6","7+"], a:"3–4",
      t_es:"¿Cuántos córners en el primer tiempo (entre los dos equipos)?", o_es:["0–2","3–4","5–6","7+"]},
     {t:"How many minutes of added time at the end of the half?", o:["1","2","3","4+"], a:"2",
-     t_es:"¿Cuántos minutos de tiempo añadido al final del primer tiempo?", o_es:["1","2","3","4+"]}
+     t_es:"¿Cuántos minutos de tiempo añadido al final del primer tiempo?", o_es:["1","2","3","4+"]},
+    {t:"Who had more shots in the first half?", o:["Inter Miami","Club América","Level"], a:"Inter Miami",
+     t_es:"¿Quién remató más en el primer tiempo?", o_es:["Inter Miami","Club América","Iguales"]}
   ]},
   {home:2,away:1, q:[
     {t:"Who won the second half on goals?", o:["Inter Miami","Club América","Drawn"], a:"Inter Miami",
@@ -5868,7 +5978,9 @@ const SOCCER_ROUNDS=[
     {t:"How many yellow cards in the whole match?", o:["0–1","2–3","4–5","6+"], a:"2–3",
      t_es:"¿Cuántas tarjetas amarillas en todo el partido?", o_es:["0–1","2–3","4–5","6+"]},
     {t:"How many minutes of added time at the end of the match?", o:["1–2","3–4","5–6","7+"], a:"5–6",
-     t_es:"¿Cuántos minutos de tiempo añadido al final del partido?", o_es:["1–2","3–4","5–6","7+"]}
+     t_es:"¿Cuántos minutos de tiempo añadido al final del partido?", o_es:["1–2","3–4","5–6","7+"]},
+    {t:"Who kept more of the ball over the match?", o:["Inter Miami","Club América","Even split"], a:"Club América",
+     t_es:"¿Quién mantuvo más la pelota en el partido?", o_es:["Inter Miami","Club América","Repartida"]}
   ]}
 ];
 
@@ -6210,7 +6322,7 @@ const SPORTS={
        what anybody is watching. A real matchup beats a tournament window;
        the guard below still refuses to overwrite it with a blank. */
     game:SC_GAME, roster:SC_ROSTER, groups:SC_ROSTER.groups, landingFromGame:true, preds:SC_PREDS, rounds:SOCCER_ROUNDS, catches:SC_CATCHES,
-    worth:[30,50],                                    // halftime=30, full-time=50 → 240 pts
+    worth:[40,60],                                    // halftime=30, full-time=50 → 240 pts
     tags:["1H","FT"],
     names:["1st half","Full time"],
     L:{ start:"kickoff", Start:"Kickoff", starting:"Kicking off",
@@ -6222,9 +6334,9 @@ const SPORTS={
     step1:"Six picks before kickoff — result, goals, first scorer, corners and cards. All of them always resolve. Worth 600 of the night\u2019s 1,000.",
     step2h:"Set your 6-item watchlist, then just watch",
     step2:"First corner, first card, first sub, first offside. You set them before kickoff and they flip themselves as the match happens — no tapping, no phone during a counter-attack. 1 pt each.",
-    step3:"Two question rounds only — halftime (3 pts each) and full time (5 pts each). Most points wins the night; ⚡ Speed breaks ties.",
+    step3:"Two question rounds only — halftime (40 pts each) and full time (60 pts each). Most points wins the night; ⚡ Speed breaks ties.",
     rulePred:"Six picks before kickoff, 100 points each: result, total goals, first goal, both teams to score, who wins more corners and who picks up more cards. Every one of them resolves — there are no dead picks. Locked at kickoff.",
-    ruleLive:"Two rounds only, because soccer only gives you two breaks. At halftime, 3 questions about the first 45 (3 pts each). At the final whistle, 3 questions about the whole match (5 pts each). 20 seconds per question, no lookups.",
+    ruleLive:"Two rounds only, because soccer only gives you two breaks. At halftime, 4 questions about the first 45 (40 pts each). At the final whistle, 4 questions about the whole match (60 pts each). 20 seconds per question, no lookups.",
     ruleScore:"When the host posts the halftime and full-time answers (from the broadcast + official match stats), your half scores itself — nothing for you to tap in. At the final whistle the host settles your pre-match sheet and your watchlist too."
   }
 };
@@ -6239,7 +6351,7 @@ SPORTS.baseball={
   /* NINE ROUNDS, ONE PER INNING (31 Aug 2026, founder's rule). These
      four lists describe the same rounds and must be the same length;
      the totals still come to 150, the same as the old 30/50/70. */
-  worth:[20,20,30,30,30,40,40,40,50], tags:["1st","2nd","3rd","4th","5th","6th","7th","8th","9th"],
+  worth:[10,10,15,15,20,25,30,35,40], tags:["1st","2nd","3rd","4th","5th","6th","7th","8th","9th"],
   names:["1st inning","2nd inning","3rd inning","4th inning","5th inning","6th inning","7th inning","8th inning","9th inning"],
   L:{ start:"first pitch", Start:"First pitch", starting:"Warming up",
       end:"final out", End:"Final out", unit:"game", Unit:"Game",
@@ -6275,7 +6387,7 @@ SPORTS.football={
 SPORTS.hockey={
   key:"hockey", emoji:"\uD83C\uDFD2", word:"hockey",
   game:HO_GAME, roster:HO_ROSTER, groups:HO_ROSTER.groups, landingFromGame:true, preds:HO_PREDS, rounds:HO_ROUNDS, catches:HO_CATCHES,
-  worth:[15,30,45], tags:["1st","2nd","3rd"],
+  worth:[20,30,50], tags:["1st","2nd","3rd"],
   names:["1st period","2nd period","3rd period"],
   L:{ start:"puck drop", Start:"Puck drop", starting:"Dropping the puck",
       end:"final horn", End:"Final horn", unit:"game", Unit:"Game",
@@ -6287,7 +6399,7 @@ SPORTS.hockey={
   step2:"Four questions a period about what you just watched \u2014 not only the goals. Hits, blocks and giveaways all count, because that is most of a hockey game.",
   step3:"Rounds settle from the official play-by-play at the horn. Most points wins; Speed breaks ties.",
   rulePred:"Six picks before puck drop, 100 points each: winner, total goals, first goal, who puts more on net, who plays it heavier, and whether it needs overtime. Locked at puck drop.",
-  ruleLive:"Three rounds, one an intermission, four questions each, worth 15, 30 and 45 points. Twenty seconds a question, no lookups.",
+  ruleLive:"Three rounds, one an intermission, four questions each, worth 20, 30 and 50 points. Twenty seconds a question, no lookups.",
   ruleScore:"Every question settles from the play-by-play at the end of the period. Nothing for you to tap."
 };
 
@@ -15940,6 +16052,24 @@ var I18N = {
     "Your night":"Tu noche",
     "points":"puntos",
     "You (you)":"Tú (tú)",
+    /* THE ROLE LINE, IN BOTH LANGUAGES. The gate caught "Your room" on the
+       landing with no Spanish — one string, and it is the one that tells a
+       player WHICH game they are looking at. A Spanish reader seeing a lone
+       English phrase in the middle of their own page reads it as breakage,
+       which is exactly what qa/spanish.js exists to stop. */
+    "Your room":"Tu sala",
+    "Game of the night":"Juego de la noche",
+    "On tonight\u2019s slate":"En la cartelera de hoy",
+    /* THE SCHEDULE MENU. Every string here is FIXED — no interpolated
+       counts — because the walker matches whole text nodes. */
+    "What\u2019s coming":"Lo que viene",
+    "What's coming":"Lo que viene",
+    "Next two weeks":"Las próximas dos semanas",
+    "Show every day":"Ver todos los días",
+    "Not announced yet":"Aún no anunciado",
+    "No rooms this day":"Sin salas este día",
+    "Today":"Hoy",
+    "Tomorrow":"Mañana",
     "AT":"VS", "PRACTICE":"PRÁCTICA", "Practice":"Práctica", "LIVE":"EN VIVO",
     "↑ new":"↑ nuevo",
     "Set these before kickoff. They score themselves while you watch — no tapping during the match.":
@@ -24469,6 +24599,43 @@ function applySport(){
      read once, and every line on this card comes from it. */
   var _hg = heroGame();
   var _marquee = (_hg !== GAME);
+  /* ============ AND THE HERO SAYS WHICH GAME IT IS =================
+     The one thing 31 Aug proved this card could not do. heroGame() already
+     decides WHICH game is on the hero; this only reports that decision, so
+     there is no second opinion to drift. Reads ACTIVE_ROOM first because
+     that is the room this app decided you are in — GAME.nightId only
+     changes when hydration succeeds, which is exactly the case that failed
+     today. */
+  (function(){
+    var role='', mine=false, st='';
+    try{
+      var here='';
+      try{ here = (typeof ACTIVE_ROOM!=='undefined' && ACTIVE_ROOM) || (GAME&&GAME.nightId) || ''; }catch(_){}
+      var hid = _hg && _hg.nightId;
+      /* THE FLAGS LIVE ON THE SLATE ROW, NOT ON TONIGHT. TONIGHT is a HERO,
+         not a night: it carries the ids, the tip, the league and the four
+         team strings and nothing else. Asking _hg.gotn asked an object that
+         never had the field, so a game of the night reported itself as
+         merely on the slate. */
+      var _row = null;
+      try{ if(hid && typeof slateGame==='function') _row = slateGame(hid); }catch(_){}
+      if(hid && here && hid===here){ role='Your room'; mine=true; }
+      else if(_row && (_row.gotn || _row.marquee || _row.flagship)) role='Game of the night';
+      else if(_row) role='On tonight\u2019s slate';
+      /* The state chip is the phase, in this sport's own words, and it says
+         nothing at all rather than guessing when the clock cannot answer. */
+      try{
+        var hs = (typeof heroState==='function') ? heroState() : '';
+        st = hs==='live' ? 'Live' : hs==='final' ? (L&&L.End ? L.End : 'Final') : '';
+      }catch(_){ st=''; }
+    }catch(_){ role=''; }
+    set('mqRoleTxt', role);
+    set('mqStateTxt', st);
+    try{
+      var _rl=document.getElementById('mqRole');
+      if(_rl){ _rl.classList.toggle('mine', mine); _rl.style.display = role ? 'flex' : 'none'; }
+    }catch(_){}
+  })();
   /* ============ AND THE SAME EXPIRED DEFAULT, ON THE BIG TYPE ========
      tonightHeadLine() refuses a stale baked night, and this branch never
      called it: with no marquee it built the eyebrow straight out of
@@ -25225,7 +25392,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-01-combo.261';
+const STATS_BUILD='2026-09-01-schedule.266';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -29807,6 +29974,171 @@ function practiceShownRound(){
     return Math.min(last, asking ? here-1 : here);
   }catch(_){ return -1; }
 }
+
+/* ============ THE ARCADE COUNTER — YOUR SCORE, WHILE YOU PLAY ========
+   A READER, never a writer. It asks S.pts what the total is and animates
+   the difference from the last value it painted. It is deliberately not
+   wired into the scoring path: see host/arcade_you.py for why nothing new
+   is allowed near ledgerSet/recomputeScore/pushScore.
+
+   Practice is included on purpose. A rehearsal that does not show you a
+   score does not rehearse the thing the game is about — and the practice
+   board already announces itself as PRACTICE, so the number cannot be
+   mistaken for a real one. */
+var AYOU_LAST = null;
+function paintYou(){
+  try{
+    var row = document.querySelector('#gtHead .ascore');
+    if(!row) return;                       /* the pre-game board has none */
+    var el = document.getElementById('ayou');
+    if(!el){
+      el = document.createElement('span');
+      el.id = 'ayou';
+      el.innerHTML = 'You <b id="ayouN">0</b><i id="ayouUp"></i>';
+      row.appendChild(el);
+    }
+    var n = 0;
+    try{ n = Math.max(0, Math.round(Number(S && S.pts) || 0)); }catch(_){ n = 0; }
+    var b = document.getElementById('ayouN');
+    if(!b) return;
+    /* FIRST PAINT IS NOT A GAIN. Joining a room mid-night with 340 points
+       already banked must not fire a +340 celebration — the player did not
+       just earn it, they earned it twenty minutes ago. */
+    var first = (AYOU_LAST === null);
+    var gain  = first ? 0 : (n - AYOU_LAST);
+    b.textContent = String(n);
+    AYOU_LAST = n;
+    if(gain > 0){
+      var up = document.getElementById('ayouUp');
+      if(up){
+        up.textContent = '+' + gain;
+        up.classList.remove('go');
+        void up.offsetWidth;               /* restart the animation */
+        up.classList.add('go');
+      }
+      el.classList.remove('bump');
+      void el.offsetWidth;
+      el.classList.add('bump');
+    }
+  }catch(_){}
+}
+/* The two moments the number can have moved: the board repainted, or
+   recomputeScore() said the total changed. It dispatches stats:score only
+   when the total ACTUALLY moved, so this cannot loop. */
+try{ window.addEventListener('stats:score', function(){ paintYou(); }); }catch(_){}
+
+
+/* ============ THE NEXT TWO WEEKS =====================================
+   Reads schedule.json, a static file on this origin written each morning
+   by host/build-schedule.js. Zero Firestore reads: fourteen days on every
+   page load would spend fourteen reads of a 50,000/day tier on a list that
+   changes once a day.
+
+   Every relative word ("Today", "Tomorrow") is computed from the READER'S
+   clock, never baked into the file. A static asset opened six hours later
+   that still says "tonight" is the stale-tonight bug, and this product has
+   shipped it before. */
+var SCHED = null, SCHED_ALL = false;
+
+function schedDayKeyPT(d){
+  /* The product's day is a Pacific day -- the founder is in Anaheim and
+     every pick file is named for a PT date. Deriving "today" from the
+     device's own timezone would put a player in London a day ahead of the
+     slate. */
+  try{
+    return new Intl.DateTimeFormat('en-CA', { timeZone:'America/Los_Angeles',
+      year:'numeric', month:'2-digit', day:'2-digit' }).format(d);
+  }catch(_){
+    return d.toISOString().slice(0,10);
+  }
+}
+
+function schedRender(){
+  try{
+    var card = document.getElementById('schedCard');
+    var list = document.getElementById('schedList');
+    if(!card || !list || !SCHED || !SCHED.days) return;
+    var todayKey = schedDayKeyPT(new Date());
+
+    /* A day that has already happened is not "coming". Dropped by DATE
+       STRING, not by parsing a tip time -- a game in progress still belongs
+       to today, and comparing timestamps would make the row vanish
+       mid-match. */
+    var days = SCHED.days.filter(function(d){ return String(d.date) >= todayKey; });
+    if(!days.length){ card.style.display='none'; return; }
+
+    var shown = SCHED_ALL ? days : days.slice(0, 5);
+    var html = '';
+    shown.forEach(function(d){
+      var isToday = (String(d.date) === todayKey);
+      var when;
+      if(isToday) when = 'Today';
+      else {
+        /* "Tomorrow" is computed, never stored. */
+        var t = new Date(); t.setDate(t.getDate() + 1);
+        when = (String(d.date) === schedDayKeyPT(t)) ? 'Tomorrow'
+             : String(d.label || d.date).replace(/,.*$/, '') + ' ' + String(d.date).slice(8);
+      }
+      html += '<div class="schDay' + (isToday ? ' today' : '') + '">'
+            +   '<div class="schWhen">' + esc(when) + '</div>'
+            +   '<div class="schGames">';
+      var g = (d.games || []);
+      if(!g.length){
+        /* THREE STATES, NEVER MERGED. "Not announced yet" and "no games"
+           are different facts and a person can act on the difference. */
+        html += '<div class="schNone">'
+              + (d.status === 'unbuilt' ? 'Not announced yet' : 'No rooms this day')
+              + '</div>';
+      } else {
+        g.forEach(function(x){
+          var main = !!(x.mainEvent || x.featured);
+          html += '<div class="schG' + (main ? ' main' : '') + '">'
+                + (x.mainEvent ? '<span class="schStar">★</span>' : '')
+                + '<span class="schL">' + esc(String(x.leagueLabel || x.league || '')) + '</span>'
+                + '<span class="schT">' + esc(String(x.matchup || '')) + '</span>'
+                + '<span class="schTime">' + esc(String(x.tipPT || '')) + '</span>'
+                + '</div>';
+        });
+      }
+      html += '</div></div>';
+    });
+    list.innerHTML = html;
+
+    /* THE LABELS ARE FIXED AND THE COUNTS ARE GONE, ON PURPOSE. The
+       Spanish layer walks text nodes and matches EXACT English strings, so
+       "Show all 14 days" could never be translated — it would read English
+       inside a Spanish page forever, which is the precise thing
+       qa/spanish.js exists to prevent. The counts were decoration. */
+    var more = document.getElementById('schedMore');
+    if(more) more.style.display = (days.length > 5 && !SCHED_ALL) ? '' : 'none';
+    card.style.display = '';
+  }catch(_){}
+}
+
+function schedLoad(){
+  try{
+    /* Cache-busted on the build stamp: a person on yesterday's cached page
+       would otherwise read yesterday's schedule and never know. */
+    var v = '';
+    try{ v = '?v=' + encodeURIComponent(BUILD || ''); }catch(_){}
+    fetch('schedule.json' + v, { cache:'no-cache' })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if(!j || !j.days || !j.days.length) return;   /* stay hidden */
+        SCHED = j;
+        schedRender();
+      })
+      .catch(function(){ /* stay hidden -- the page still works */ });
+  }catch(_){}
+}
+try{
+  document.addEventListener('click', function(e){
+    var b = e.target && e.target.closest && e.target.closest('#schedMore');
+    if(!b) return;
+    SCHED_ALL = true; schedRender();
+  });
+}catch(_){}
+
 function renderGametime(){
   const head=document.getElementById('gtHead');
   if(!head) return;
@@ -29906,6 +30238,8 @@ function renderGametime(){
     + (lean()?'':gtRunBlock(A,H,AC,HC))
     + '</div>';
   return renderGametimeRest();
+  try{ paintYou(); }catch(_){}
+  try{ if(!SCHED) schedLoad(); }catch(_){}
 }
 /* ---- SHOT ZONES -----------------------------------------------------
    THE SHOT CHART IS DELETED, AND THAT IS THE RIGHT CALL.
