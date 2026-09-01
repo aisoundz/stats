@@ -65,13 +65,27 @@ async function rooms() {
   return (f.games.arrayValue.values || []).map((v) => {
     const g = v.mapValue.fields || {};
     const s = (k) => (g[k] && g[k].stringValue) || '';
+    /* THE NUMBER IS HERE, and this is the only place it is complete.
+       build-slate.js stamps g.gn onto every room in the slate document;
+       the marquee FILE records only the FEATURED ones. Reading the file
+       gave the first room #49 and the other two an empty string, so the
+       email rendered "Game Night #" twice on 1 Sept 2026. Firestore
+       returns a number as integerValue and a string as stringValue, and
+       it has been written both ways. */
+    const n = (k) => (g[k] && (g[k].stringValue || g[k].integerValue)) || '';
     return { nightId: s('nightId'), away: s('away'), home: s('home'),
-             tipISO: s('tipISO'), net: s('net'), league: s('league') };
+             tipISO: s('tipISO'), net: s('net'), league: s('league'), gn: n('gn') };
   }).filter((r) => r.nightId).sort((a, b) => new Date(a.tipISO) - new Date(b.tipISO));
 }
 
-/* The number lives on the marquee file, which is where build-slate put it.
-   Deriving it again here would be a second owner for a fact that has one. */
+/* THE SLATE IS THE OWNER, AND THIS COMMENT USED TO SAY THE OPPOSITE.
+   It read "the number lives on the marquee file, which is where
+   build-slate put it" — true once, and false since the number moved onto
+   the slate document. The marquee file is a record of which rooms are
+   FEATURED, and on a night with one featured room it carries one number.
+   That is why two of three rooms printed "Game Night #" with nothing
+   after it. rooms() already holds the complete answer; this is the
+   fallback for a slate written before gn existed. */
 function gnOf(nightId) {
   try {
     const txt = fs.readFileSync(`${LOGDIR}/slate-marquee-${DATE}.txt`, 'utf8');
@@ -120,7 +134,7 @@ const RULE = { wnba:'#ff8a3d', nba:'#ff8a3d', nfl:'#28e0d0', cfb:'#28e0d0',
     const lg = String(r.league || '').toLowerCase();
     const last = i === rs.length - 1;
     return `  <div style="background:#141b2b;border:1px solid #223049;border-left:4px solid ${RULE[lg] || '#28e0d0'};border-radius:0 10px 10px 0;padding:13px 15px;margin:${i === 0 ? '18px 0 8px' : (last ? '0 0 20px' : '0 0 8px')};">
-    <div style="font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:#7d8ba6;font-weight:700;">Game Night #${esc(gnOf(r.nightId))} &middot; ${esc(lg.toUpperCase())}</div>
+    <div style="font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:#7d8ba6;font-weight:700;">Game Night #${esc(r.gn || gnOf(r.nightId))} &middot; ${esc(lg.toUpperCase())}</div>
     <div style="font-size:18px;font-weight:800;color:#fff;margin:3px 0 2px;">${esc(r.away)} at ${esc(r.home)}</div>
     <div style="font-size:13.5px;color:#9fb0cc;">${esc(VERB[lg] || 'Start')} ${esc(t.et)} ET &middot; ${esc(t.pt)} PT on ${esc(r.net)}</div>
   </div>`;
