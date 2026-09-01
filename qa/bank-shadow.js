@@ -68,7 +68,11 @@ function templates(){
 const sub=(v,h,a)=>String(v).replace(/\{HOME\}/g,h).replace(/\{AWAY\}/g,a);
 
 (async()=>{
-  const AUTO=loadShared();
+  /* THE ENGINE FROM THE SAME FILE AS THE BANK. Passing the bank's file
+     and letting the resolvers come from the shipped build grades new
+     questions against old resolvers, which reports every new resolver
+     as silent. See the note on loadShared in host/run.js. */
+  const AUTO=loadShared(ADMIN_FILE);
   const T=templates()[SPORT];
   if(!T){ console.error(`no ${SPORT} template — known: ` + Object.keys(templates()).join(', ')); process.exit(2); }
   const L=LEAGUES[SPORT];

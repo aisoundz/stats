@@ -146,12 +146,14 @@ console.log('\nthe round plan grows with the game');
   }
   const m = load('mlb.json');
   if (m) {
-    /* Baseball's rounds are the 3rd, 6th and 9th — NOT one per inning. Extra
-       innings then get one round each, which is the founder's call applied
-       to a sport whose regulation rounds already span three periods. */
-    same('plan.baseball.regulation',   A.roundPeriodsFor(m, 9),  [3,6,9]);
-    same('plan.baseball.tenth-inning', A.roundPeriodsFor(m, 10), [3,6,9,10]);
-    same('plan.baseball.twelfth',      A.roundPeriodsFor(m, 12), [3,6,9,10,11,12]);
+    /* ONE ROUND PER INNING — reversed 31 Aug 2026 on the founder's rule,
+       which he had given more than once while the opposite sat in the skill
+       file. These three read [3,6,9] and would have gone red on any correct
+       implementation of it. Extra innings still get one round each; that
+       half never changed, it is simply no longer the exception. */
+    same('plan.baseball.regulation',   A.roundPeriodsFor(m, 9),  [1,2,3,4,5,6,7,8,9]);
+    same('plan.baseball.tenth-inning', A.roundPeriodsFor(m, 10), [1,2,3,4,5,6,7,8,9,10]);
+    same('plan.baseball.twelfth',      A.roundPeriodsFor(m, 12), [1,2,3,4,5,6,7,8,9,10,11,12]);
   }
   const h = load('nhl.json');
   if (h) {
@@ -284,9 +286,13 @@ console.log('\nthe runner walks a round list that grows');
      Baseball's rounds are the 3rd, 6th and 9th. */
   const m = load('mlb.json');
   if (m) {
-    const plan3 = { rounds: [ {tag:'1st-3rd',worth:30,qs:[{t:'a',o:['x']}]},
-                              {tag:'4th-6th',worth:50,qs:[{t:'a',o:['x']}]},
-                              {tag:'7th-9th',worth:70,qs:[{t:'a',o:['x']}]} ] };
+    /* NINE ROUNDS IN THE FIXTURE, because the bank has nine. A three-round
+       plan against a nine-round sport maps to the first three innings and
+       tests the fixture rather than the mapping — the exact trap the note
+       below already warns about in the other direction. */
+    const plan3 = { rounds: ['1st','2nd','3rd','4th','5th','6th','7th','8th','9th']
+      .map(function(t, i){ return { tag:t, worth:[10,10,15,15,15,20,20,20,25][i],
+                                    qs:[{t:'a',o:['x']}] }; }) };
     /* CLAMP TO NINE FIRST. This check is about the REGULATION mapping —
        three rounds landing on the 3rd, 6th and 9th — and the fixture is now
        deliberately an extra-innings game (a regulation feed cannot exercise
@@ -302,7 +308,7 @@ console.log('\nthe runner walks a round list that grows');
     reg9.plays = (m.plays || []).filter(p => Number((p.period || {}).number) <= 9);
     reg9.header.competitions[0].status = { period: 9, type: { completed: true } };
     const bs = roundSlots(A, reg9, plan3);
-    same('runner.baseball-rounds-map-to-innings-3-6-9', bs.map(s => s.per), [3,6,9]);
+    same('runner.baseball-rounds-map-to-every-inning', bs.map(s => s.per), [1,2,3,4,5,6,7,8,9]);
     /* And the extra innings the fixture really has DO grow the plan — the
        other half of the same fact, asserted on the unclamped feed. */
     const bx = roundSlots(A, m, Object.assign({ ot: { qs: [{t:'q',o:['x']}] } }, plan3));
@@ -311,8 +317,8 @@ console.log('\nthe runner walks a round list that grows');
     ext.header.competitions[0].status = { period: 11, type: { completed: true } };
     playedThrough(ext, 11, 10);          // two extra innings that were actually played
     const be = roundSlots(A, ext, Object.assign({ ot: { qs: [{t:'q',o:['x']}] } }, plan3));
-    same('runner.eleven-innings-adds-two-rounds', be.map(s => s.per), [3,6,9,10,11]);
-    eq('runner.tenth-inning-tagged-OT', be[3].def.tag, 'OT');
+    same('runner.eleven-innings-adds-two-rounds', be.map(s => s.per), [1,2,3,4,5,6,7,8,9,10,11]);
+    eq('runner.tenth-inning-tagged-OT', be[9].def.tag, 'OT');
   }
 
   /* AUTHORED OVERTIME AND THE TEMPLATE MUST NOT BOTH FIRE.

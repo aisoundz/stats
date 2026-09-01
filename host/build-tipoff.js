@@ -131,7 +131,25 @@ const RULE = { wnba:'#ff8a3d', nba:'#ff8a3d', nfl:'#28e0d0', cfb:'#28e0d0',
      may override it. */
   const first = times(rs[0].tipISO).pt;
   const q = copy.question;
-  const st = copy.settled;
+  /* THE TEMPLATE HAS EXACTLY TWO OPTION CELLS. A three-option question
+     built fine and shipped with the third option silently missing — the
+     email asked "six or fewer / seven to nine / ten or more" and printed
+     only the first two, so a reader who wanted the third had nowhere to
+     put it. Nothing failed; the content just vanished.
+     Refuse instead. Dropping copy without saying so is the same class of
+     bug as a number that counts the wrong thing. */
+  if (q && Array.isArray(q.options) && q.options.length !== 2) {
+    console.error('FATAL: the question has ' + q.options.length + ' options and this '
+      + 'template renders exactly 2. It would drop: '
+      + JSON.stringify(q.options.slice(2)) + '. Rewrite the question as two options, '
+      + 'or widen the template — do not ship a question missing an answer.');
+    process.exit(1);
+  }
+  /* settled and stats are OPTIONAL. Some game nights have nothing settled
+     yet — a first night, or a night after a card that has not resolved.
+     Printing an empty box, or refusing to build at all, both cost the
+     email. The schedule is the part that must always survive. */
+  const st = copy.settled || null;
 
   const optCell = (label, side) => `          <td width="50%" style="padding-${side === 'l' ? 'right' : 'left'}:5px;">
             <a href="https://statsgametime.com/?gt=${esc(q.id)}&amp;pick=${esc(label.toLowerCase().replace(/[^a-z0-9]+/g, '-'))}" style="display:block;text-align:center;background:#16242f;border:1px solid #2f5f68;color:#8ff0e4;text-decoration:none;font-weight:800;font-size:15px;padding:14px 8px;border-radius:10px;">${esc(label)}</a>
@@ -162,7 +180,7 @@ ${(copy.paragraphs || []).map((p) => `  <p style="margin:0 0 14px;">${esc(p)}</p
     <a href="https://statsgametime.com" style="display:inline-block;background:linear-gradient(92deg,#28e0d0,#4d86ff);color:#04121e;text-decoration:none;font-weight:800;font-size:16px;padding:14px 28px;border-radius:999px;">Pick your room</a>
   </div>
 
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:28px 0 0;">
+${copy.stats ? `  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:28px 0 0;">
     <tr><td style="background:#111827;border:1px solid #2b3a52;border-top:3px solid #ffc54d;border-radius:14px;padding:20px 18px 18px;">
       <div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#ffc54d;font-weight:800;margin:0 0 14px;">STATS</div>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px;">
@@ -180,13 +198,13 @@ ${(copy.paragraphs || []).map((p) => `  <p style="margin:0 0 14px;">${esc(p)}</p
       <p style="margin:0 0 10px;color:#e8eef8;font-size:16.5px;line-height:1.45;font-weight:700;">${esc(copy.stats.lead)}</p>
       <p style="margin:0 0 16px;font-size:14.5px;color:#9fb0cc;line-height:1.5;">${esc(copy.stats.detail)}</p>
       </td></tr>
-  </table>
+  </table>` : ``}
 
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:10px 0 0;">
+${(q || st) ? `  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:10px 0 0;">
     <tr><td style="background:#101b24;border:1px solid #2b3a52;border-top:3px solid #28e0d0;border-radius:14px;padding:20px 18px 18px;">
       <div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#28e0d0;font-weight:800;margin:0 0 14px;">Gametime</div>
 
-      <div style="font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#6f8f97;font-weight:700;margin-bottom:8px;">Today&rsquo;s question</div>
+${q ? `      <div style="font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#6f8f97;font-weight:700;margin-bottom:8px;">Today&rsquo;s question</div>
       <p style="margin:0 0 16px;color:#ffffff;font-size:18px;line-height:1.4;font-weight:800;">${esc(q.text)}</p>
 
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
@@ -196,9 +214,10 @@ ${optCell(q.options[1], 'r')}
         </tr>
       </table>
 
-      <p style="margin:14px 0 0;font-size:13.5px;color:#8fa3b8;">${esc(q.note)}</p>      <div style="border-top:1px solid #2b3a52;margin:18px 0 16px;"></div>
+      <p style="margin:14px 0 0;font-size:13.5px;color:#8fa3b8;">${esc(q.note)}</p>` : ``}
+${st ? `      <div style="border-top:1px solid #2b3a52;margin:18px 0 16px;"></div>
 
-      <div style="font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#6f8f97;font-weight:700;margin:0 0 8px;">Last night, settled</div>
+      <div style="font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#6f8f97;font-weight:700;margin:0 0 8px;">${esc(st.heading || 'Last night, settled')}</div>
       <p style="margin:0 0 12px;color:#8fa3b8;font-size:14px;line-height:1.45;">${esc(st.question)}</p>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0;">
         <tr>
@@ -210,9 +229,9 @@ ${optCell(q.options[1], 'r')}
             <div style="font-size:14px;color:#9fb0cc;line-height:1.4;margin-top:3px;">${esc(st.detail)}</div>
           </td>
         </tr>
-      </table>
+      </table>` : ``}
     </td></tr>
-  </table>
+  </table>` : ``}
 
 ${copy.buildNote ? `  <p style="margin:22px 0 6px;font-size:14.5px;color:#9fb0cc;line-height:1.5;">${esc(copy.buildNote)}</p>` : ''}
   <p style="margin:26px 0 6px;">See you at ${esc(copy.signoff || (first + ' PT'))}.</p>

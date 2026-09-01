@@ -429,8 +429,16 @@ const FAKE_SLATE=[
        `asked for a baseball room; the app is in ${cross.sport} holding ${cross.night}`);
     ok('journey.the-sport-swap-does-not-reload', cross.same==='yes',
        'the page reloaded to change sport — the room store made switching games a swap and the sport must move the same way');
-    ok('journey.the-round-count-follows-the-sport', cross.rounds===3,
-       `baseball plays 3 rounds (innings 3/6/9); the app still thinks there are ${cross.rounds}`);
+    /* NINE, NOT THREE. Reversed 31 Aug 2026 on the founder's rule that
+       baseball asks at the END OF EVERY INNING. This check read ===3 and
+       would have gone red on any correct implementation of that rule — the
+       same shape as pretip.the-button-says-so demanding the word "tips".
+       NR is what the overtime guard measures "past regulation" against, so
+       a wrong number here is not cosmetic: at 3, a live night pushing the
+       4th through the 9th has every one of those rounds dropped as an
+       unnamed overtime and no player ever sees them. */
+    ok('journey.the-round-count-follows-the-sport', cross.rounds===9,
+       `baseball plays 9 rounds, one an inning; the app thinks there are ${cross.rounds}`);
     ok('journey.the-card-is-worth-what-it-pays', cross.worth===cross.cardIs,
        `the sheet promises ${cross.worth} over a card that pays ${cross.cardIs} — a total worked out from the sport we LEFT`);
     ok('journey.the-words-follow-the-sport', cross.start==='first pitch',

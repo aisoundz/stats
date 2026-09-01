@@ -127,14 +127,26 @@ const log = (kind, msg) =>
 const die = (msg) => { console.error('FATAL: ' + msg); process.exit(1); };
 
 /* ---- 1. the one copy of the resolver engine ------------------------ */
-function loadShared(){
-  const file = path.join(__dirname, '..', 'admin.html');
-  if(!fs.existsSync(file)) die('admin.html not found at ' + file);
+/* WHICH admin FILE THE ENGINE COMES FROM, and it must be the same one the
+   BANK came from. qa/bank-shadow.js takes `--file admin-test.html` so a gate
+   grades what is about to ship — its own header records that it once
+   hardcoded admin.html and "the gate silently graded the OLD banks". Only
+   half of that was fixed: the bank moved to the argument and the ENGINE
+   stayed hardcoded here, so a resolver added in admin-test.html did not
+   exist when its own questions were graded and every one of them reported
+   `silent`, indistinguishable from a resolver that cannot read the feed.
+   Found 31 Aug 2026 while adding a per-inning strikeout band: 24 of 160
+   answers went missing and the bank looked broken when the engine was
+   simply the wrong file. Defaults to admin.html, so host/run.js is
+   unchanged — a real night still hosts from the shipped engine. */
+function loadShared(adminFile){
+  const file = path.join(__dirname, '..', adminFile || 'admin.html');
+  if(!fs.existsSync(file)) die((adminFile||'admin.html') + ' not found at ' + file);
   const src = fs.readFileSync(file, 'utf8');
   const a = src.indexOf('/* @host-shared:start');
   const b = src.indexOf('/* @host-shared:end */');
   if(a < 0 || b < 0 || b <= a)
-    die('the @host-shared sentinels are missing from admin.html — refusing to run a night with no resolvers');
+    die('the @host-shared sentinels are missing from ' + (adminFile||'admin.html') + ' — refusing to run a night with no resolvers');
   const code = src.slice(a, b);
   const sandbox = { console, fetch, Math, Date, Number, String, Array, Object, JSON, RegExp, isFinite, parseInt, parseFloat };
   sandbox.global = sandbox;
@@ -144,7 +156,7 @@ function loadShared(){
   const AUTO = sandbox.AUTO;
   if(!AUTO || typeof AUTO.resolve !== 'function' || typeof AUTO.periodDone !== 'function')
     die('the shared block evaluated but produced no usable AUTO');
-  log('boot', `resolver engine loaded from admin.html (${Object.keys(AUTO.R || {}).length} resolvers) — sport ${SPORT}`);
+  log('boot', `resolver engine loaded from ${adminFile||'admin.html'} (${Object.keys(AUTO.R || {}).length} resolvers) — sport ${SPORT}`);
   return AUTO;
 }
 

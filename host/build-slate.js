@@ -435,16 +435,48 @@ function tipLine(iso, net, sport){
       ...(c.geoBroadcasts || []).map(b => (b.media || {}).shortName).filter(Boolean),
     ].filter((v, i, a) => v && a.indexOf(v) === i).join(' · ');
 
+    /* ============ COLLEGE TEAMS ARE THE SCHOOL, NOT THE MASCOT ========
+       Founder, 31 Aug 2026: "we can keep the college team names instead of
+       their mascot."
+
+       He is right twice over. Nobody says "Tigers beat Tigers" — they say
+       "Clemson beat LSU" — and the mascot is what makes a college matchup
+       unreadable in the first place: the 5 Sept slate alone reads
+       "Buffaloes @ Yellow Jackets" and "Golden Lions @ Tigers" when it
+       means Colorado at Georgia Tech and Arkansas-Pine Bluff at Missouri.
+
+       AND IT IS NOT COSMETIC, WHICH IS THE PART THAT NEARLY GOT MISSED.
+       Clemson and LSU are both `Tigers`. There is already a guard below
+       that expands both sides to their full display names when the
+       nicknames collide, and it fixes the SCREEN — a player sees two
+       distinct options. It does NOT fix the GRADING: optForTeam() matches
+       a team's names against an option as a substring in BOTH directions,
+       so with options "Clemson Tigers" / "LSU Tigers" the string "tigers"
+       belongs to both teams, every option matches every team, and .find()
+       returns the first one every time. Measured: LSU scores, the resolver
+       answers "Clemson Tigers". Half the room marked wrong on a question
+       the app is certain about — the one direction a resolver may never
+       fail in.
+
+       `location` is clean across the whole college slate (Alabama, Ohio
+       State, East Carolina, Miami (OH)) and it is distinct where `name` is
+       not, so it fixes the display and the grading with one field. Applied
+       to CFB only: for the pro leagues the mascot IS what people say
+       ("Brewers at Cubs"), and location would give "Milwaukee at Chicago",
+       which is worse. The collision guard below stays as a net. */
+    const CFB = (LEAGUE === 'cfb');
+    const nickOf = (t) => (CFB && t.location) ? t.location : t.name;
+
     const g = {
       nightId, espnEvent: String(e.id), tipISO: e.date,
       homeName: H.team.displayName, homeAbbr: H.team.abbreviation,
-      homeNick: H.team.name, homeColor: '#' + String(H.team.color || '666666').replace(/^#/, ''),
+      homeNick: nickOf(H.team), homeColor: '#' + String(H.team.color || '666666').replace(/^#/, ''),
       awayName: A.team.displayName, awayAbbr: A.team.abbreviation,
-      awayNick: A.team.name, awayColor: '#' + String(A.team.color || '666666').replace(/^#/, ''),
+      awayNick: nickOf(A.team), awayColor: '#' + String(A.team.color || '666666').replace(/^#/, ''),
       venue: (c.venue || {}).fullName || '', net,
       date: pd.long, short: pd.short, shareDate: pd.share,
       tip: tipLine(e.date, net, L.sport),
-      night: `${A.team.name} @ ${H.team.name}`,
+      night: `${nickOf(A.team)} @ ${nickOf(H.team)}`,
       /* TWO DIFFERENT WORDS, AND THEY ARE NOT INTERCHANGEABLE.
          `sport` is the FAMILY (basketball) — it picks the question bank and
          the pick sheet. `path` is what ESPN answers to

@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;900&family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0a0e17">
 <meta name="description" content="STATS · Game Time — the game that pays to pay attention.">
 <!-- INSTALLABLE, AND RECOGNISABLE.
@@ -85,13 +88,30 @@
     --page:#05080e; --bg:#070b12; --bg2:#0c1220; --card:#111a2b; --card2:#162034;
     --glass:rgba(255,255,255,.045); --glass2:rgba(255,255,255,.075);
     --chrome:rgba(7,11,18,.84);
-    /* hairlines — alpha, never solid */
+    /* ============ v7.5 FACES, APPLIED ================================
+     Headings and the marquee codes take the display face; labels, chips,
+     buttons and the nav take the UI face; anything that is a FIGURE takes
+     the mono. No font-size is set here — the thirteen-size ramp and the
+     12px floor are the shipped design system and this patch does not get
+     an opinion about them. */
+  h1, h2, h3, .abig, .mq-code, .mq-cbig, .arc .v{
+    font-family:var(--disp); letter-spacing:-.01em }
+  .lab, .alab, .acap, .chip, .btn, .abdg, #botnav, .grLg, .mq-clab{
+    font-family:var(--ui) }
+  .num, .ascore, .mq-cbig, .arc .v, [style*="tabular-nums"]{
+    font-family:var(--mono); font-variant-numeric:tabular-nums }
+
+  /* hairlines — alpha, never solid */
     --line:rgba(255,255,255,.09); --line2:rgba(255,255,255,.14);
     --line3:rgba(255,255,255,.05);
     /* type */
     --ink:#ffffff; --body:#d6ddee; --muted:#93a0bd; --dim:#5d6883;
     --f:-apple-system,system-ui,'Segoe UI',Helvetica,Arial,sans-serif;
-    --mono:ui-monospace,'SF Mono',Menlo,monospace;
+    /* v7.5 faces. --f stays the system stack because body prose is
+       read, not glanced at; the character lives in the chrome. */
+    --disp:'Archivo',Impact,system-ui,sans-serif;
+    --ui:'Chakra Petch',system-ui,-apple-system,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
     /* accents */
     --blue:#2f6bff; --blue2:#4d86ff; --teal:#28e0d0; --teal2:#28e0d0;
     --red:#ff4d5e; --gold:#ffc54d; --green:#2ee6a6;
@@ -5840,36 +5860,72 @@ const BA_GAME={
    offers, so this cannot go quiet again.
    Terms are the ones Spanish-language broadcasts actually use: hit, jonrón,
    ponche, entrada, base robada. */
+/* NINE INNINGS, ONE ROUND EACH — 31 Aug 2026, the founder's rule that
+   baseball asks at the END OF EVERY INNING. This bank is also what sets
+   NR for baseball (NR = rounds.length), and NR is what the overtime
+   guard measures "past regulation" against: at three, a live night
+   pushing the 4th through the 9th would have had every one of those
+   rounds dropped as an unnamed overtime and no player would have seen
+   them. The five lists — these rounds, tags, names, worth and the
+   published template — describe the same nine rounds or the app and
+   the Control Room disagree about what a round is.
+   The simulated game is tied in the 7th and walked off in the 9th,
+   because a practice run that ends 5-0 teaches nobody what the last
+   inning feels like. */
 const BA_ROUNDS=[
   {home:1,away:0, q:[
-    {t:"First hit of the game — what was it?", o:["Single","Double","Triple","Home run"], a:"Single",
-     t_es:"El primer hit del partido — ¿qué fue?", o_es:["Sencillo","Doble","Triple","Jonrón"]},
-    {t:"How many strikeouts through three?", o:["0–2","3–4","5–6","7 or more"], a:"7 or more",
-     t_es:"¿Cuántos ponches en las primeras tres entradas?", o_es:["0–2","3–4","5–6","7 o más"]},
-    {t:"Hardest pitch so far — how fast?", o:["93 or under","94–96","97–98","99 and up"], a:"94–96",
-     t_es:"El lanzamiento más rápido hasta ahora — ¿a cuánto?", o_es:["93 o menos","94–96","97–98","99 o más"]},
-    {t:"Who got on the board first?", o:["Arizona Diamondbacks","Atlanta Braves"], a:"Atlanta Braves",
-     t_es:"¿Quién anotó primero?", o_es:["Arizona Diamondbacks","Atlanta Braves"]}
+    {t:"Runs in the 1st, both teams — how many?", o:["None","One","Two","Three or more"], a:"One",
+     t_es:"Carreras en la 1ra, entre los dos equipos — ¿cuántas?", o_es:["Ninguna","Una","Dos","Tres o más"]},
+    {t:"The first hit of the game — what was it?", o:["Single","Double","Triple","Home run"], a:"Single",
+     t_es:"El primer hit del partido — ¿qué fue?", o_es:["Sencillo","Doble","Triple","Jonrón"]}
   ]},
-  {home:2,away:1, q:[
-    {t:"Runs scored in the fourth, fifth and sixth?", o:["None","1–2","3–4","5 or more"], a:"1–2",
-     t_es:"¿Cuántas carreras en la cuarta, quinta y sexta entrada?", o_es:["Ninguna","1–2","3–4","5 o más"]},
-    {t:"More strikeouts or more hits in those three?", o:["Strikeouts","Hits","Dead even"], a:"Hits",
-     t_es:"En esas tres entradas, ¿más ponches o más hits?", o_es:["Ponches","Hits","Empatados"]},
-    {t:"Any home runs in there?", o:["None","One","Two","Three or more"], a:"One",
-     t_es:"¿Hubo algún jonrón?", o_es:["Ninguno","Uno","Dos","Tres o más"]},
-    {t:"Was there a one-two-three inning?", o:["Yes","No"], a:"Yes",
-     t_es:"¿Hubo una entrada de tres outs seguidos?", o_es:["Sí","No"]}
+  {home:1,away:1, q:[
+    {t:"Runs in the 2nd, both teams — how many?", o:["None","One","Two","Three or more"], a:"One",
+     t_es:"Carreras en la 2da, entre los dos equipos — ¿cuántas?", o_es:["Ninguna","Una","Dos","Tres o más"]},
+    {t:"Strikeouts in the 2nd, both staffs — how many?", o:["None","One","Two","Three or more"], a:"Two",
+     t_es:"Ponches en la 2da, entre los dos cuerpos de pitcheo — ¿cuántos?", o_es:["Ninguno","Uno","Dos","Tres o más"]}
   ]},
-  {home:5,away:3, q:[
-    {t:"Who leads after nine?", o:["Arizona Diamondbacks","Atlanta Braves","Tied"], a:"Atlanta Braves",
-     t_es:"¿Quién gana después de nueve entradas?", o_es:["Arizona Diamondbacks","Atlanta Braves","Empatados"]},
-    {t:"Runs in the last three innings?", o:["None","1–2","3–4","5 or more"], a:"5 or more",
-     t_es:"¿Cuántas carreras en las últimas tres entradas?", o_es:["Ninguna","1–2","3–4","5 o más"]},
-    {t:"Bases stolen late?", o:["None","One","Two","Three or more"], a:"None",
-     t_es:"¿Bases robadas al final del partido?", o_es:["Ninguna","Una","Dos","Tres o más"]},
-    {t:"Strikeouts in the last three?", o:["0–2","3–4","5–6","7 or more"], a:"5–6",
-     t_es:"¿Cuántos ponches en las últimas tres entradas?", o_es:["0–2","3–4","5–6","7 o más"]}
+  {home:1,away:1, q:[
+    {t:"Runs in the 3rd, both teams — how many?", o:["None","One","Two","Three or more"], a:"None",
+     t_es:"Carreras en la 3ra, entre los dos equipos — ¿cuántas?", o_es:["Ninguna","Una","Dos","Tres o más"]},
+    {t:"The fastest pitch of the 3rd — how hard?", o:["93 or under","94 to 96","97 or 98","99 or more"], a:"94 to 96",
+     t_es:"El lanzamiento más rápido de la 3ra — ¿a cuánto?", o_es:["93 o menos","De 94 a 96","97 o 98","99 o más"]}
+  ]},
+  {home:1,away:3, q:[
+    {t:"Runs in the 4th, both teams — how many?", o:["None","One","Two","Three or more"], a:"Two",
+     t_es:"Carreras en la 4ta, entre los dos equipos — ¿cuántas?", o_es:["Ninguna","Una","Dos","Tres o más"]},
+    {t:"Did the 4th go 1-2-3?", o:["Yes","No"], a:"No",
+     t_es:"¿La 4ta fue 1-2-3?", o_es:["Sí","No"]}
+  ]},
+  {home:2,away:3, q:[
+    {t:"Runs in the 5th, both teams — how many?", o:["None","One","Two","Three or more"], a:"One",
+     t_es:"Carreras en la 5ta, entre los dos equipos — ¿cuántas?", o_es:["Ninguna","Una","Dos","Tres o más"]},
+    {t:"Strikeouts in the 5th, both staffs — how many?", o:["None","One","Two","Three or more"], a:"One",
+     t_es:"Ponches en la 5ta, entre los dos cuerpos de pitcheo — ¿cuántos?", o_es:["Ninguno","Uno","Dos","Tres o más"]}
+  ]},
+  {home:2,away:3, q:[
+    {t:"Runs in the 6th, both teams — how many?", o:["None","One","Two","Three or more"], a:"None",
+     t_es:"Carreras en la 6ta, entre los dos equipos — ¿cuántas?", o_es:["Ninguna","Una","Dos","Tres o más"]},
+    {t:"The fastest pitch of the 6th — how hard?", o:["93 or under","94 to 96","97 or 98","99 or more"], a:"97 or 98",
+     t_es:"El lanzamiento más rápido de la 6ta — ¿a cuánto?", o_es:["93 o menos","De 94 a 96","97 o 98","99 o más"]}
+  ]},
+  {home:4,away:4, q:[
+    {t:"Runs in the 7th, both teams — how many?", o:["None","One","Two","Three or more"], a:"Three or more",
+     t_es:"Carreras en la 7ma, entre los dos equipos — ¿cuántas?", o_es:["Ninguna","Una","Dos","Tres o más"]},
+    {t:"Did the 7th go 1-2-3?", o:["Yes","No"], a:"No",
+     t_es:"¿La 7ma fue 1-2-3?", o_es:["Sí","No"]}
+  ]},
+  {home:4,away:4, q:[
+    {t:"Runs in the 8th, both teams — how many?", o:["None","One","Two","Three or more"], a:"None",
+     t_es:"Carreras en la 8va, entre los dos equipos — ¿cuántas?", o_es:["Ninguna","Una","Dos","Tres o más"]},
+    {t:"Strikeouts in the 8th, both staffs — how many?", o:["None","One","Two","Three or more"], a:"Three or more",
+     t_es:"Ponches en la 8va, entre los dos cuerpos de pitcheo — ¿cuántos?", o_es:["Ninguno","Uno","Dos","Tres o más"]}
+  ]},
+  {home:5,away:4, q:[
+    {t:"Runs in the 9th, both teams — how many?", o:["None","One","Two","Three or more"], a:"One",
+     t_es:"Carreras en la 9na, entre los dos equipos — ¿cuántas?", o_es:["Ninguna","Una","Dos","Tres o más"]},
+    {t:"The fastest pitch of the 9th — how hard?", o:["93 or under","94 to 96","97 or 98","99 or more"], a:"99 or more",
+     t_es:"El lanzamiento más rápido de la 9na — ¿a cuánto?", o_es:["93 o menos","De 94 a 96","97 o 98","99 o más"]}
   ]}
 ];
 
@@ -6138,8 +6194,11 @@ const SPORTS={
 SPORTS.baseball={
   key:"baseball", emoji:"\u26BE\uFE0F", word:"baseball",
   game:BA_GAME, roster:BA_ROSTER, groups:BA_ROSTER.groups, landingFromGame:true, preds:BA_PREDS, rounds:BA_ROUNDS, catches:BA_CATCHES,
-  worth:[30,50,70], tags:["1st-3rd","4th-6th","7th-9th"],
-  names:["Innings 1\u20133","Innings 4\u20136","Innings 7\u20139"],
+  /* NINE ROUNDS, ONE PER INNING (31 Aug 2026, founder's rule). These
+     four lists describe the same rounds and must be the same length;
+     the totals still come to 150, the same as the old 30/50/70. */
+  worth:[10,10,15,15,15,20,20,20,25], tags:["1st","2nd","3rd","4th","5th","6th","7th","8th","9th"],
+  names:["1st inning","2nd inning","3rd inning","4th inning","5th inning","6th inning","7th inning","8th inning","9th inning"],
   L:{ start:"first pitch", Start:"First pitch", starting:"Warming up",
       end:"final out", End:"Final out", unit:"game", Unit:"Game",
       period:"stretch", Period:"Stretch", league:"MLB", cadence:"3 rounds" },
@@ -7259,7 +7318,15 @@ function featureTonight(){
     gn:       star.gn ? String(star.gn) : '',
     net:      star.net || '',
     homeName: star.home || '', awayName: star.away || '',
-    homeAbbr: star.homeAbbr || '', awayAbbr: star.awayAbbr || ''
+    homeAbbr: star.homeAbbr || '', awayAbbr: star.awayAbbr || '',
+    /* IS IT OVER? The hero cannot ask phaseNow() about the marquee — that
+       describes the ROOM — so without this it can only tell that a game has
+       started, not that it has finished. The 31 Aug fix made a passed tip
+       read "Live now", which is right for three hours and wrong for the
+       three after that: a game that ended at 3pm still said LIVE NOW at
+       6pm, because REST_AFTER_MS is six hours. doneOf() already answers
+       this, four lines up, for the ordering. Carry the answer. */
+    done:     (function(){ try{ return !!doneOf(star); }catch(_){ return false; } })()
   };
   try{ window.TONIGHT = TONIGHT; }catch(_){}
   /* NO CACHE CLEAR HERE ON PURPOSE. The obvious next line is to drop the
@@ -24770,6 +24837,19 @@ function heroState(){
      a slate with two games on it. */
   try{ if(heroGame() !== GAME) ph = ''; }catch(_){}
   if(ph === 'live') return 'live';
+  /* A FINISHED MARQUEE IS FINAL, NOT LIVE. Without this the only thing the
+     hero knows about a game it is not in is that its tip has passed, so it
+     said "Live now" for the whole six hours REST_AFTER_MS allows — three of
+     which are usually after the final whistle. TONIGHT.done comes from the
+     same doneOf() that ordered the slate, so there is one answer to "is it
+     over", not two. */
+  try{
+    var _hg2 = heroGame();
+    if(_hg2 && _hg2 !== GAME && _hg2.done === true){
+      var _ms2 = heroTipMs();
+      return (isFinite(_ms2) && (-_ms2) > REST_AFTER_MS) ? 'rest' : 'final';
+    }
+  }catch(_){}
   var ms = heroTipMs();
   if(!isFinite(ms)) return (ph === 'final') ? 'final' : 'pre';
   var since = -ms;                                 /* how long since tip */
@@ -24956,7 +25036,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-31-timing.253';
+const STATS_BUILD='2026-09-01-innings.256';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

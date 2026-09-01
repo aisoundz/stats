@@ -995,79 +995,91 @@ const TEMPLATES = {
      mlbLeadAfter and the compare resolvers need a tie word tieOpt() knows.  */
   baseball: {
     league: 'mlb',
-    tags:   ['1st-3rd','4th-6th','7th-9th','OT'],
-    names:  ['Innings 1–3','Innings 4–6','Innings 7–9','Extra innings'],
-    worth:  [30,50,70,70],
+    tags:   ['1st','2nd','3rd','4th','5th','6th','7th','8th','9th','OT'],
+    names:  ['1st inning','2nd inning','3rd inning','4th inning','5th inning',
+             '6th inning','7th inning','8th inning','9th inning','Extra innings'],
+    worth:  [10,10,15,15,15,20,20,20,25,70],
     /* The fourth entry is the FIRST extra inning, not a fixed one. The OT
        round is lifted out by splitOtRound before any period is stamped on
        it, and roundSlots derives the real inning per extra frame — so 10 is
        here to keep the four lists describing the same rounds, which is the
        thing tmpl.four-lists-one-set-of-rounds exists to enforce. It caught
        this within a minute of the round being added. */
-    periods:[3,6,9,10],
+    periods:[1,2,3,4,5,6,7,8,9,10],
     rounds: [
       [
+        { t: 'Runs in the 1st, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlbExtraRunsBand',
+          t_es: 'Carreras en la 1ra, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] },
+        /* NOT mlbOneTwoThreeInning HERE. It counts 'Start Batter/Pitcher'
+           rows to find a three-batter half, and the opening plate appearance
+           of a game does not carry one — so in the 1st it can never see
+           three and answered identically in all eight shadow games. It is
+           kept for the 4th and the 7th, where it has real spread. The first
+           hit of the game is the better opening question anyway: it is what
+           everybody watching is already waiting for. */
         { t: 'The first hit of the game — what was it?', o: ['Single','Double','Triple','Home run'], r:'mlbFirstHitKind',
-          t_es: 'El primer hit del partido — ¿qué fue?', o_es: ['Sencillo','Doble','Triple','Jonrón'] },
-        /* WAS mlbRunsBand (round-1 span) and mlbLeadAfter(p=3) — both read
-           straight off paintLiveScore()'s running total, which by the time
-           this round opens (after the 3rd) IS the score at inning 3. Same
-           free-point shape as the soccer 1H bug: the strip already answers
-           it. Swapped for the round-2/3-proven HR and SB bands, neither of
-           which is painted anywhere on screen. See stats_gametime_free_points. */
-        { t: 'Home runs through three — how many?', o: ['None','One','Two','Three or more'], r:'mlbHomeRunsBand',
-          t_es: 'Jonrones en las primeras tres — ¿cuántos?', o_es: ['Ninguno','Uno','Dos','Tres o más'] },
-        { t: 'Strikeouts through three, both staffs combined — how many?', o: ['Two or fewer','Three or four','Five or six','Seven or more'], r:'mlbStrikeoutsBand',
-          t_es: 'Ponches en las primeras tres, entre los dos cuerpos de pitcheo — ¿cuántos?', o_es: ['Dos o menos','Tres o cuatro','Cinco o seis','Siete o más'] },
-        { t: 'Stolen bases through three — how many?', o: ['None','One','Two','Three or more'], r:'mlbStolenBasesBand',
-          t_es: 'Bases robadas en las primeras tres — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] }
+          t_es: 'El primer hit del partido — ¿qué fue?', o_es: ['Sencillo','Doble','Triple','Jonrón'] }
       ],
       [
-        { t: 'Runs in the middle three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand',
-          t_es: 'Carreras en las tres del medio, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una o dos','Tres o cuatro','Cinco o más'] },
-        { t: 'Home runs in the middle three — how many?', o: ['None','One','Two','Three or more'], r:'mlbHomeRunsBand',
-          t_es: 'Jonrones en las tres del medio — ¿cuántos?', o_es: ['Ninguno','Uno','Dos','Tres o más'] },
-        { t: 'The fastest pitch of the middle three — how hard?', o: ['93 or under','94 to 96','97 or 98','99 or more'], r:'mlbFastestPitchBand',
-          t_es: 'El lanzamiento más rápido de las tres del medio — ¿a cuánto?', o_es: ['93 o menos','De 94 a 96','97 o 98','99 o más'] },
-        { t: 'Which of these was the busiest inning?', o: ['The 4th','The 5th','The 6th'], r:'mlbBusiestInning',
-          t_es: '¿Cuál de estas fue la entrada más movida?', o_es: ['La 4ta','La 5ta','La 6ta'] }
+        { t: 'Runs in the 2nd, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlbExtraRunsBand',
+          t_es: 'Carreras en la 2da, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] },
+        { t: 'Strikeouts in the 2nd, both staffs — how many?', o: ['None','One','Two','Three or more'], r:'mlbInningStrikeoutsBand',
+          t_es: 'Ponches en la 2da, entre los dos cuerpos de pitcheo — ¿cuántos?', o_es: ['Ninguno','Uno','Dos','Tres o más'] }
       ],
       [
-        { t: 'Runs in the last three, both teams combined — how many?', o: ['None','One or two','Three or four','Five or more'], r:'mlbRunsBand',
-          t_es: 'Carreras en las últimas tres, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una o dos','Tres o cuatro','Cinco o más'] },
-        { t: 'Strikeouts in the last three, both staffs combined — how many?', o: ['Two or fewer','Three or four','Five or six','Seven or more'], r:'mlbStrikeoutsBand',
-          t_es: 'Ponches en las últimas tres, entre los dos cuerpos de pitcheo — ¿cuántos?', o_es: ['Dos o menos','Tres o cuatro','Cinco o seis','Siete o más'] },
-        { t: 'Stolen bases in the last three — how many?', o: ['None','One','Two','Three or more'], r:'mlbStolenBasesBand',
-          t_es: 'Bases robadas en las últimas tres — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] },
-        /* WAS mlbMoreKsOrHits, AND THE SHADOW TEST KILLED IT. Eight
-           finished games, eight answers of "Strikeouts" — over three
-           innings of modern baseball, strikeouts beat hits essentially
-           always. It resolved perfectly and it was not a question.
-           mlbOneTwoThreeInning failed the same way: eight "Yes".
-           A resolver being correct is not the same as a question being
-           worth asking, and only a spread check tells you which you have. */
-        { t: 'Home runs in the last three — how many?', o: ['None','One','Two','Three or more'], r:'mlbHomeRunsBand',
-          t_es: 'Jonrones en las últimas tres — ¿cuántos?', o_es: ['Ninguno','Uno','Dos','Tres o más'] }
+        { t: 'Runs in the 3rd, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlbExtraRunsBand',
+          t_es: 'Carreras en la 3ra, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] },
+        { t: 'The fastest pitch of the 3rd — how hard?', o: ['93 or under','94 to 96','97 or 98','99 or more'], r:'mlbFastestPitchBand',
+          t_es: 'El lanzamiento más rápido de la 3ra — ¿a cuánto?', o_es: ['93 o menos','De 94 a 96','97 o 98','99 o más'] }
+      ],
+      [
+        { t: 'Runs in the 4th, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlbExtraRunsBand',
+          t_es: 'Carreras en la 4ta, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] },
+        { t: 'Did the 4th go 1-2-3?', o: ['Yes','No'], r:'mlbOneTwoThreeInning',
+          t_es: '¿La 4ta fue 1-2-3?', o_es: ['Sí','No'] }
+      ],
+      [
+        { t: 'Runs in the 5th, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlbExtraRunsBand',
+          t_es: 'Carreras en la 5ta, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] },
+        { t: 'Strikeouts in the 5th, both staffs — how many?', o: ['None','One','Two','Three or more'], r:'mlbInningStrikeoutsBand',
+          t_es: 'Ponches en la 5ta, entre los dos cuerpos de pitcheo — ¿cuántos?', o_es: ['Ninguno','Uno','Dos','Tres o más'] }
+      ],
+      [
+        { t: 'Runs in the 6th, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlbExtraRunsBand',
+          t_es: 'Carreras en la 6ta, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] },
+        { t: 'The fastest pitch of the 6th — how hard?', o: ['93 or under','94 to 96','97 or 98','99 or more'], r:'mlbFastestPitchBand',
+          t_es: 'El lanzamiento más rápido de la 6ta — ¿a cuánto?', o_es: ['93 o menos','De 94 a 96','97 o 98','99 o más'] }
+      ],
+      [
+        { t: 'Runs in the 7th, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlbExtraRunsBand',
+          t_es: 'Carreras en la 7ma, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] },
+        { t: 'Did the 7th go 1-2-3?', o: ['Yes','No'], r:'mlbOneTwoThreeInning',
+          t_es: '¿La 7ma fue 1-2-3?', o_es: ['Sí','No'] }
+      ],
+      [
+        { t: 'Runs in the 8th, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlbExtraRunsBand',
+          t_es: 'Carreras en la 8va, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] },
+        { t: 'Strikeouts in the 8th, both staffs — how many?', o: ['None','One','Two','Three or more'], r:'mlbInningStrikeoutsBand',
+          t_es: 'Ponches en la 8va, entre los dos cuerpos de pitcheo — ¿cuántos?', o_es: ['Ninguno','Uno','Dos','Tres o más'] }
+      ],
+      [
+        { t: 'Runs in the 9th, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlbExtraRunsBand',
+          t_es: 'Carreras en la 9na, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] },
+        { t: 'The fastest pitch of the 9th — how hard?', o: ['93 or under','94 to 96','97 or 98','99 or more'], r:'mlbFastestPitchBand',
+          t_es: 'El lanzamiento más rápido de la 9na — ¿a cuánto?', o_es: ['93 o menos','De 94 a 96','97 o 98','99 o más'] }
       ],
       [
         { t: 'Who scores first this inning?', o: ['{HOME}','{AWAY}','Nobody scored'], r:'mlbExtraFirstScoringTeam',
           t_es: '¿Quién anota primero en esta entrada?', o_es: ['{HOME}','{AWAY}','Nadie anotó'] },
         { t: 'Runs this inning, both teams — how many?', o: ['None','One','Two','Three or more'], r:'mlbExtraRunsBand',
           t_es: 'Carreras en esta entrada, entre los dos equipos — ¿cuántas?', o_es: ['Ninguna','Una','Dos','Tres o más'] }
-        /* WAS mlbExtraDecides — "Does the game end here?" — and it was free.
-           This round opens when the extra inning ENDS, so if the game ended
-           phaseNow() has already flipped to 'final' and the hero reads
-           "🏁 Final". The label alone answers it, which makes it free under
-           the old narrow rule too; it was simply never looked at. The
-           archive has it silent 64 of 71 anyway.
-           NO SWAP, AND THAT IS DELIBERATE. Every unused mlb* resolver goes
-           through mlbInSpan(), and mlbSpan(p) = {lo:p-2, hi:p} — at period
-           10 that window is innings 8-9-10, a duplicate of the 7th-9th round
-           wearing an extras label. Two honest questions beat three where the
-           third lies about which innings it is reading. */
       ]
     ]
-    /* THE EXTRA-INNINGS ROUND IS THE FOURTH ONE ABOVE. This comment used to
+    /* THE EXTRA-INNINGS ROUND IS THE TENTH ONE ABOVE, and it was the
+       fourth until 31 Aug 2026, when regulation went to nine rounds —
+       one per inning — on the founder's rule.
+       (kept for the reasoning, which still holds:)
+       THE EXTRA-INNINGS ROUND IS THE LAST ONE ABOVE. This comment used to
        say there wasn't one — "NO EXTRA-INNINGS TEMPLATE YET… adding a fourth
        round here would publish it as regulation" — while the fourth round,
        tagged 'OT' and carrying period 10, sat directly above it. The tag
@@ -7492,7 +7504,14 @@ var AUTO = (function(){
   /* Innings covered by round p. Three rounds of three innings is the plan
      (after the 3rd, 6th and 9th) — NOT nine rounds. Nine would be a round
      every ~18 minutes, which is a notification cadence, not a game. */
-  function mlbSpan(p){ var hi = Number(p)||0; return { lo: hi-2, hi: hi }; }
+  /* ONE INNING, NOT THREE. Reversed 31 Aug 2026 on the founder's rule
+     that baseball asks at the END OF EVERY INNING. This is the single
+     owner of the span — every mlb* resolver reaches it through
+     mlbInSpan — so this one line moves all of them together, and that
+     is the only reason the change is safe to make at all.
+     It also retires the old warning that period 10 read innings 8-10:
+     an extras period now reads exactly its own inning. */
+  function mlbSpan(p){ var hi = Number(p)||0; return { lo: hi, hi: hi }; }
 
   function mlbInSpan(j, p){
     var s = mlbSpan(p);
@@ -7540,8 +7559,33 @@ var AUTO = (function(){
     return mlbType(x) === 'Play Result' && /struck out/.test(mlbText(x));
   }
 
+  /* ============ "OF THE GAME" MEANS THE GAME, NOT THE ROUND ==========
+     31 Aug 2026. These two ask about the FIRST thing that happened all
+     night — the first hit, the first team on the board — and both read
+     mlbInSpan(), the window belonging to the round being asked. That was
+     never right; it only looked right because a round-one span covered
+     innings 1-3 and so happened to contain the first inning. Asked of
+     round two or three it would have refused every time, silently, and
+     nobody would have reported a voided question.
+
+     Moving baseball to one round per inning made the accident visible:
+     round one became inning one, and any game whose first hit came in the
+     second inning stopped resolving. host-banks caught it as coverage
+     dropping from 50 to 48.
+
+     So they read from the first pitch up to and including this round's
+     inning, which is what the words on the card promise. A question about
+     the whole game reads the whole game. */
+  function mlbUpTo(j, p){
+    var hi = Number(p) || 0;
+    return plays(j).filter(function(x){
+      var n = Number(((x.period)||{}).number);
+      return isFinite(n) && n >= 1 && n <= hi;
+    });
+  }
+
   R.mlbFirstHitKind = function(j, p, o){
-    var h = mlbInSpan(j,p).find(function(x){ return MLB_HIT.test(mlbType(x)); });
+    var h = mlbUpTo(j,p).find(function(x){ return MLB_HIT.test(mlbType(x)); });
     if(!h) return null;
     var t = mlbType(h).toLowerCase();
     if(/home run/.test(t)) return o.find(function(x){ return /home run|homer|hr/i.test(x); }) || null;
@@ -7551,7 +7595,7 @@ var AUTO = (function(){
   };
 
   R.mlbFirstScoringTeam = function(j, p, o){
-    var s = mlbInSpan(j,p).find(function(x){ return !!x.scoringPlay; });
+    var s = mlbUpTo(j,p).find(function(x){ return !!x.scoringPlay; });
     if(!s) return null;
     return optForTeam(j, String(((s.team)||{}).id||''), o);
   };
@@ -7613,7 +7657,15 @@ var AUTO = (function(){
      which is where an extra inning actually lands. */
   R.mlbExtraRunsBand = function(j, p, o){
     var endA = mlbScoreAt(j, p, 'away'), endH = mlbScoreAt(j, p, 'home');
-    var preA = mlbScoreAt(j, p-1, 'away'), preH = mlbScoreAt(j, p-1, 'home');
+    /* THE SCORE BEFORE THE FIRST INNING IS 0-0, NOT UNKNOWN. mlbScoreAt has
+       no period 0 to read, so this returned null and the 1st-inning runs
+       question went silent in all eight shadow games — the one inning every
+       single game plays. Nothing to look up: before the first pitch nobody
+       has scored. Only inning 1 is special-cased; every other inning still
+       has to find a real previous score or refuse. */
+    var preA, preH;
+    if(Number(p) <= 1){ preA = 0; preH = 0; }
+    else { preA = mlbScoreAt(j, p-1, 'away'); preH = mlbScoreAt(j, p-1, 'home'); }
     if(endA===null || endH===null || preA===null || preH===null) return null;
     var runs = (endA-preA) + (endH-preH);
     if(!isFinite(runs) || runs < 0) return null;
@@ -7644,6 +7696,18 @@ var AUTO = (function(){
   R.mlbStrikeoutsBand = function(j, p, o){
     var n = mlbInSpan(j,p).filter(mlbIsStrikeout).length;
     return band(n, [2,4,6], o);
+  };
+
+
+  /* STRIKEOUTS IN ONE INNING, not three. mlbStrikeoutsBand's [2,4,6] is
+     correct for a three-inning span and wrong for a single inning, where it
+     would answer "two or fewer" nearly every time — a question that resolves
+     perfectly and is not worth asking, which is the exact failure
+     qa/bank-shadow.js was built to catch. [0,1,2] is the single-inning
+     shape, the same one mlbExtraRunsBand already uses. */
+  R.mlbInningStrikeoutsBand = function(j, p, o){
+    var n = mlbInInning(j, p).filter(mlbIsStrikeout).length;
+    return band(n, [0,1,2], o);
   };
 
   R.mlbMoreKsOrHits = function(j, p, o){
@@ -8031,7 +8095,7 @@ var AUTO = (function(){
      inning, so it is written down per sport rather than assumed to be 5. */
   var FAMILY = {
     basketball: { periods:4, otFrom:5,  word:'quarter', Word:'Quarter', plays:rawPlays, done:bballPeriodDone },
-    baseball:   { periods:9, otFrom:10, word:'inning',  Word:'Inning',  plays:rawPlays, done:mlbInningDone, rounds:[3,6,9] },
+    baseball:   { periods:9, otFrom:10, word:'inning',  Word:'Inning',  plays:rawPlays, done:mlbInningDone, rounds:[1,2,3,4,5,6,7,8,9] },
     football:   { periods:4, otFrom:5,  word:'quarter', Word:'Quarter', plays:nflPlays, done:nflPeriodDone },
     hockey:     { periods:3, otFrom:4,  word:'period',  Word:'Period',  plays:rawPlays, done:nhlPeriodDone },
     soccer:     { periods:2, otFrom:0,  word:'half',    Word:'Half',    plays:noPlays,  done:mlsPeriodDone, rounds:[1,2] }
