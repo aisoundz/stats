@@ -95,6 +95,33 @@ async function run(engine, engineName) {
          not the position. Measuring there reported a menu-button collision
          that does not exist once the card lands — and would have sent me
          chasing a layout bug in a keyframe. */
+      /* ============ WAIT FOR THE FONTS, *THEN* FOR THE ANIMATION ===
+         The 500ms below is NOT arbitrary and is not being removed: the
+         card enters on a .34s drop and a rectangle read before it lands is
+         the animation, not the position. That reasoning still holds.
+
+         What the wait never covered is TYPE. WebKit loads this page with
+         `domcontentloaded` on purpose — it never reaches `load` here — so
+         measurement begins while resources are still arriving, and the
+         page pulls three webfonts with display=swap. Every swap reflows
+         the text it touches and moves the wordmark relative to the card.
+         That is the prime suspect for the "card covers no page content"
+         failure that has been red about half the time since before
+         31 Aug 2026.
+
+         So the font wait goes IN FRONT of the animation settle rather than
+         replacing it. The first draft of this patch replaced the 500ms
+         with fonts.ready + 250ms, which on a warm font cache resolves
+         instantly and would have left LESS time than the animation needs —
+         a third wrong diagnosis, and one that would have made the flake
+         worse while looking like a fix.
+
+         Guarded: fonts.ready is absent in older engines and a missing
+         promise must not hang the suite. */
+      await page.evaluate(() => {
+        try { return document.fonts && document.fonts.ready ? document.fonts.ready : null; }
+        catch (_) { return null; }
+      }).catch(() => {});
       await page.waitForTimeout(500);
 
       const r = await page.evaluate(() => {
