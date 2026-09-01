@@ -88,5 +88,7 @@
   "hero-live.js": 7,
   "one-game-door.js": 7,
   "palette.js": 7,
-  "round-timing.js": 17
+  "round-timing.js": 17,
+  "arcade-counter.js": 6,
+  "night-ceiling.js": 5
 }

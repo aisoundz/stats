@@ -440,7 +440,27 @@ function tipLine(iso, net, sport){
        the email arrives and cannot find the game the email was about. */
   const games = [], offered = [], skipped = [];
   for(const e of events){
-    const c = e.competitions[0];
+    /* ============ ONE RAGGED ROW MUST NOT KILL THE LEAGUE ===========
+       12 Sept 2026: ESPN returned one college football event with no
+       `competitions` array. This line was `e.competitions[0]` with no
+       guard, so it threw — and EIGHTY games died with the one bad row.
+       The manifest got zero cfb rows, three of four picked rooms for that
+       Saturday could never be hosted, and the launcher reported it as
+       "nothing to build today".
+
+       The loop already knew how to handle an unreadable row two lines
+       down: skip it with a NAMED reason and carry on. A feed is somebody
+       else's data and will be ragged eventually; CFB, with 80+ games a
+       Saturday across every division, is where that shows up first. */
+    const c = e.competitions && e.competitions[0];
+    if(!c || !Array.isArray(c.competitors)){
+      /* The row that broke 12 Sept had no id EITHER, so `${e.id}` printed
+         "undefined: no competition block" — a skip line that cannot be
+         traced back to anything. Name what we actually have. */
+      skipped.push(`${e.id || ('event #' + (events.indexOf(e) + 1) + ' (no id)')}`
+                   + ': no competition block in the feed');
+      continue;
+    }
     const H = c.competitors.find(x => x.homeAway === 'home');
     const A = c.competitors.find(x => x.homeAway === 'away');
     if(!H || !A){ skipped.push(`${e.id}: no two sides`); continue; }

@@ -110,6 +110,38 @@
     --away:#7fe3c7; --home:#4a86ff; --mile:#ffc54d;
   }
 
+  /* ============ THE NEXT TWO WEEKS ==================================
+     Browse content, below the way in. Rows, not cards: fourteen cards is a
+     scroll nobody finishes, and the question a person has here is "what
+     day" and "who", in that order. */
+  #schedCard{margin-top:16px}
+  #schedCard .schHead{display:flex;justify-content:space-between;align-items:baseline;
+    gap:12px;margin:0 0 12px}
+  #schedCard .schHead h2{font-size:17px;margin:0}
+  #schedCard .schSub{font-family:var(--ui);font-size:12px;color:var(--dim);
+    letter-spacing:.02em;white-space:nowrap}
+  .schDay{display:grid;grid-template-columns:78px minmax(0,1fr);gap:12px;
+    padding:10px 0;border-top:1px solid var(--line)}
+  .schDay:first-of-type{border-top:0}
+  .schDay .schWhen{font-family:var(--ui);font-size:12px;font-weight:700;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding-top:2px}
+  .schDay.today .schWhen{color:var(--teal)}
+  .schGames{display:flex;flex-direction:column;gap:7px;min-width:0}
+  .schG{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0}
+  .schG .schT{font-size:14px;color:var(--body);min-width:0;overflow-wrap:anywhere}
+  .schG .schL{font-family:var(--ui);font-size:12px;font-weight:700;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--dim);flex:none}
+  .schG .schTime{font-family:var(--mono);font-size:12px;color:var(--muted);
+    font-variant-numeric:tabular-nums;flex:none}
+  /* The main event is marked, not shouted. One mark, the same teal that
+     means YOU everywhere else would be wrong here -- gold is the points
+     colour and this is the game worth the most attention. */
+  .schG.main .schT{color:var(--ink);font-weight:600}
+  .schG.main .schStar{color:var(--gold);flex:none;font-size:12px}
+  .schNone{font-size:13.5px;color:var(--dim)}
+  #schedMore{margin-top:12px;width:100%}
+
+
   /* ============ YOUR SCORE, DURING PLAY — the arcade counter ========
      One line inside .ascore so the board gains no height while a question
      is open. Teal is YOU. Mono + tabular-nums so the digits do not shuffle
@@ -1942,6 +1974,22 @@
 
       <p class="foot" style="margin:12px 0 0;text-align:center">Free to play · Not gambling · Prizes are sponsor-funded</p>
     </div>
+
+    <!-- ============ THE NEXT TWO WEEKS ==============================
+         Founder, 31 Aug: "We should also have our schedule for the next
+         two weeks in our menu so people know what games are coming."
+         Below the way in on purpose -- see host/schedule_menu.py. Hidden
+         until schedule.json actually loads, so a missing file costs a
+         person nothing. -->
+    <div class="card" id="schedCard" style="display:none;margin-top:16px">
+      <div class="schHead">
+        <h2>What's coming</h2>
+        <span class="schSub" id="schedSub"></span>
+      </div>
+      <div id="schedList"></div>
+      <button class="btn ghost" id="schedMore" style="display:none">Show all 14 days</button>
+    </div>
+
     <div class="card" id="welcomeStrip" style="display:none;margin-top:14px;padding:11px 14px;border-color:rgba(46,230,166,.35)"></div>
     <!-- ONE SET OF DOORS. "Play Game Night" and "Practice" used to sit in
          the game card below the sign-in card, so a signed-out stranger was
@@ -25334,7 +25382,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-31-arcade.265';
+const STATS_BUILD='2026-09-01-schedule.266';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -29969,6 +30017,121 @@ function paintYou(){
    when the total ACTUALLY moved, so this cannot loop. */
 try{ window.addEventListener('stats:score', function(){ paintYou(); }); }catch(_){}
 
+
+/* ============ THE NEXT TWO WEEKS =====================================
+   Reads schedule.json, a static file on this origin written each morning
+   by host/build-schedule.js. Zero Firestore reads: fourteen days on every
+   page load would spend fourteen reads of a 50,000/day tier on a list that
+   changes once a day.
+
+   Every relative word ("Today", "Tomorrow") is computed from the READER'S
+   clock, never baked into the file. A static asset opened six hours later
+   that still says "tonight" is the stale-tonight bug, and this product has
+   shipped it before. */
+var SCHED = null, SCHED_ALL = false;
+
+function schedDayKeyPT(d){
+  /* The product's day is a Pacific day -- the founder is in Anaheim and
+     every pick file is named for a PT date. Deriving "today" from the
+     device's own timezone would put a player in London a day ahead of the
+     slate. */
+  try{
+    return new Intl.DateTimeFormat('en-CA', { timeZone:'America/Los_Angeles',
+      year:'numeric', month:'2-digit', day:'2-digit' }).format(d);
+  }catch(_){
+    return d.toISOString().slice(0,10);
+  }
+}
+
+function schedRender(){
+  try{
+    var card = document.getElementById('schedCard');
+    var list = document.getElementById('schedList');
+    if(!card || !list || !SCHED || !SCHED.days) return;
+    var todayKey = schedDayKeyPT(new Date());
+
+    /* A day that has already happened is not "coming". Dropped by DATE
+       STRING, not by parsing a tip time -- a game in progress still belongs
+       to today, and comparing timestamps would make the row vanish
+       mid-match. */
+    var days = SCHED.days.filter(function(d){ return String(d.date) >= todayKey; });
+    if(!days.length){ card.style.display='none'; return; }
+
+    var shown = SCHED_ALL ? days : days.slice(0, 5);
+    var html = '';
+    shown.forEach(function(d){
+      var isToday = (String(d.date) === todayKey);
+      var when;
+      if(isToday) when = 'Today';
+      else {
+        /* "Tomorrow" is computed, never stored. */
+        var t = new Date(); t.setDate(t.getDate() + 1);
+        when = (String(d.date) === schedDayKeyPT(t)) ? 'Tomorrow'
+             : String(d.label || d.date).replace(/,.*$/, '') + ' ' + String(d.date).slice(8);
+      }
+      html += '<div class="schDay' + (isToday ? ' today' : '') + '">'
+            +   '<div class="schWhen">' + esc(when) + '</div>'
+            +   '<div class="schGames">';
+      var g = (d.games || []);
+      if(!g.length){
+        /* THREE STATES, NEVER MERGED. "Not announced yet" and "no games"
+           are different facts and a person can act on the difference. */
+        html += '<div class="schNone">'
+              + (d.status === 'unbuilt' ? 'Not announced yet' : 'No rooms this day')
+              + '</div>';
+      } else {
+        g.forEach(function(x){
+          var main = !!(x.mainEvent || x.featured);
+          html += '<div class="schG' + (main ? ' main' : '') + '">'
+                + (x.mainEvent ? '<span class="schStar">★</span>' : '')
+                + '<span class="schL">' + esc(String(x.leagueLabel || x.league || '')) + '</span>'
+                + '<span class="schT">' + esc(String(x.matchup || '')) + '</span>'
+                + '<span class="schTime">' + esc(String(x.tipPT || '')) + '</span>'
+                + '</div>';
+        });
+      }
+      html += '</div></div>';
+    });
+    list.innerHTML = html;
+
+    var sub = document.getElementById('schedSub');
+    if(sub){
+      var n = days.reduce(function(a,d){ return a + ((d.games||[]).length); }, 0);
+      sub.textContent = n ? (n + ' game' + (n===1?'':'s') + ' scheduled') : '';
+    }
+    var more = document.getElementById('schedMore');
+    if(more){
+      more.style.display = (days.length > 5 && !SCHED_ALL) ? '' : 'none';
+      more.textContent = 'Show all ' + days.length + ' days';
+    }
+    card.style.display = '';
+  }catch(_){}
+}
+
+function schedLoad(){
+  try{
+    /* Cache-busted on the build stamp: a person on yesterday's cached page
+       would otherwise read yesterday's schedule and never know. */
+    var v = '';
+    try{ v = '?v=' + encodeURIComponent(BUILD || ''); }catch(_){}
+    fetch('schedule.json' + v, { cache:'no-cache' })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if(!j || !j.days || !j.days.length) return;   /* stay hidden */
+        SCHED = j;
+        schedRender();
+      })
+      .catch(function(){ /* stay hidden -- the page still works */ });
+  }catch(_){}
+}
+try{
+  document.addEventListener('click', function(e){
+    var b = e.target && e.target.closest && e.target.closest('#schedMore');
+    if(!b) return;
+    SCHED_ALL = true; schedRender();
+  });
+}catch(_){}
+
 function renderGametime(){
   const head=document.getElementById('gtHead');
   if(!head) return;
@@ -30069,6 +30232,7 @@ function renderGametime(){
     + '</div>';
   return renderGametimeRest();
   try{ paintYou(); }catch(_){}
+  try{ if(!SCHED) schedLoad(); }catch(_){}
 }
 /* ---- SHOT ZONES -----------------------------------------------------
    THE SHOT CHART IS DELETED, AND THAT IS THE RIGHT CALL.
