@@ -11611,7 +11611,11 @@ function startPredict(){
     PD.i = (_first >= 0) ? _first : 0;
     PD.scrolled = false;
   }catch(_){ PD.i = 0; }
-  buildPred();go('predict');
+  /* ORDER MATTERS: go() sets S.screen, and V.onPickCard() reads it.
+     Built first, the voice bar was parked in a hidden container and the
+     first of six cards was never spoken — measured silent on arrival and
+     working only after a tap. See host/pick_voice_order.py. */
+  go('predict');buildPred();
   try{ loadInactives(); }catch(e){}
 }
 /* ================= THE PICK-SLIP (v2 concept) ======================
@@ -13275,7 +13279,12 @@ var VX=(function(){
   var LANGS={
     en:{
       tag:'en-US', name:'English',
-      NUM:{ 'one':0,'won':0,'first':0,'1':0,'a':0,
+      /* 'a' IS GONE. It was here as the letter A, beside b/c/d — and it
+         is also in STOP, as the article, because STOP means "this word
+         carries no meaning here". A word cannot be meaningless to the
+         word matcher and decisive to the position fallback. Measured:
+         "a run" picked None on [None, One, Two, Three or more]. */
+      NUM:{ 'one':0,'won':0,'first':0,'1':0,
             'two':1,'too':1,'to':1,'second':1,'2':1,'b':1,
             'three':2,'tree':2,'third':2,'3':2,'c':2,
             'four':3,'for':3,'fore':3,'fourth':3,'4':3,'d':3 },
@@ -13327,7 +13336,8 @@ var VX=(function(){
       tag:'es-US', name:'Español',
       /* "uno" and "un" both happen; so do the ordinals, because a person
          answering a numbered list says "el primero" as often as "uno". */
-      NUM:{ 'uno':0,'un':0,'una':0,'primero':0,'primera':0,'primer':0,'1':0,'a':0,
+      /* Same removal, and worse here: in Spanish "a" is a preposition. */
+      NUM:{ 'uno':0,'un':0,'una':0,'primero':0,'primera':0,'primer':0,'1':0,
             'dos':1,'segundo':1,'segunda':1,'2':1,'b':1,
             'tres':2,'tercero':2,'tercera':2,'tercer':2,'3':2,'c':2,
             'cuatro':3,'cuarto':3,'cuarta':3,'4':3,'d':3 },
@@ -14024,8 +14034,32 @@ var VX=(function(){
     var stripped=lead;
     var ntoks=stripped.split(' ');
     var nm=NUMM();
-    if(ntoks.length<=2 && nm[ntoks[0]]!=null){
-      var idx=nm[ntoks[0]];
+    /* ============ A STOP WORD IS NEVER A NUMBER ======================
+       The <=2 guard above was written for exactly this and is too loose:
+       "a run" is two tokens, so 'a' reached the table and picked option
+       one. STOP already lists the words that carry no meaning here, and
+       the word matcher already honours it — this makes the position
+       fallback honour the same list, so the two halves of the matcher can
+       no longer disagree about whether a word means anything.
+
+       The remaining ambiguous homophones resolve on a ONE-token utterance
+       only. "for sure" is not an answer; "for" alone still is, because a
+       recogniser really does return it for "four". 'two'/'too',
+       'three'/'tree', 'four'/'fore' are untouched — none of them is an
+       English function word. */
+    var _stop = V.L().STOP || [];
+    var _amb  = { 'to':1, 'for':1, 'too':1 };
+    var _t0   = ntoks[0];
+    /* THE GUARD APPLIES TO PHRASES, NOT TO SINGLE WORDS. A lone "to" is a
+       recogniser hearing "two" — nobody offers the preposition as a whole
+       answer — so refusing it costs a repeat for nothing. The damage was
+       always in the TWO-token case: "a run", "a few", "for sure". So a
+       one-word utterance keeps the old permissive path, and anything
+       longer must not lead with a stop word or an ambiguous homophone. */
+    var _numOk = nm[_t0] != null
+              && (ntoks.length === 1 || (_stop.indexOf(_t0) < 0 && !_amb[_t0]));
+    if(ntoks.length<=2 && _numOk){
+      var idx=nm[_t0];
       if(idx<opts.length) return {kind:'pick', i:idx};
     }
 
@@ -25585,7 +25619,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-01-invite.270';
+const STATS_BUILD='2026-09-01-tonight.271';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -26663,7 +26697,32 @@ var SPORT_CFG={
   nfl:{ family:'football', path:'football/nfl',   unit:'pts', minutes:15, pre:[], live:[], box:{} },
   mlb:{ family:'baseball', path:'baseball/mlb',   unit:'runs', minutes:0, pre:[], live:[], box:{} },
   nhl:{ family:'hockey',   path:'hockey/nhl',     unit:'goals', minutes:20, pre:[], live:[], box:{} },
-  mls:{ family:'soccer',   path:'soccer/usa.1',   unit:'goals', minutes:45, pre:[], live:[], box:{} }
+  mls:{ family:'soccer',   path:'soccer/usa.1',   unit:'goals', minutes:45, pre:[], live:[], box:{} },
+  /* ============ THE TWO LEAGUES THE APP HOSTED AND COULD NOT READ ===
+     host/leagues.js is the one owner of the league table and has had
+     both of these since it was written. SPORT_CFG never learned them,
+     so sportCfg() fell back by FAMILY: football -> nfl, soccer -> mls.
+
+     For cfb that is fatal. A college event id is not in the NFL feed —
+     event 401856776, Thursday's Colorado at Georgia Tech, returns 404
+     on football/nfl and a full summary on football/college-football.
+     No header means 'no feed', and phaseSync() loses the phase with
+     it, so the room loses its clock and its score ribbon, not just
+     the Stats tab.
+
+     For epl it was luck. Tested on event 401879295 (Arsenal at Aston
+     Villa): soccer/eng.1 and soccer/usa.1 BOTH return 200 with the
+     right two teams, because ESPN's soccer summary resolves an event
+     whatever league is in the path. Premier League rooms have been
+     getting the right answer from the wrong address. Corrected rather
+     than left, because the scoreboard and season endpoints are not
+     necessarily as forgiving.
+
+     pre/live/box stay EMPTY, as they are for every roadmap league:
+     empty hides the block, and inventing a stat CATEGORY is the same
+     sin as inventing a number. This fixes a PATH. */
+  cfb:{ family:'football', path:'football/college-football', unit:'pts',   minutes:15, pre:[], live:[], box:{} },
+  epl:{ family:'soccer',   path:'soccer/eng.1',              unit:'goals', minutes:45, pre:[], live:[], box:{} }
 };
 /* INHERIT ONLY INSIDE A FAMILY — fixed 17 Aug 2026.
    This used to fall back to SPORT_CFG.wnba for ANY league with no rows of
@@ -29176,8 +29235,14 @@ function stTeamBars(){
        became a side-by-side flex item about 29px wide and the labels
        rendered one letter per line. A CSS collision, not a layout mistake:
        the browser was doing exactly what the older rule asked. */
+    /* BEFORE THE GAME THESE ARE SEASON TOTALS. Verified on tonight's
+       DET @ MIN feed: Hits 1093, Games Played 137 — real numbers,
+       rendered identically to in-game ones. Say which they are. */
+    var _pre = false;
+    try{ _pre = (phaseNow() === 'pre'); }catch(_){ _pre = false; }
     return '<div class="card h2h">'
       + '<div class="stHd">Head to head</div>'
+      + (_pre ? '<div class="stHd sub">Season so far \u2014 tonight\u2019s numbers start at first pitch</div>' : '')
       + '<div class="tbWho"><span>'+esc(T.a.ab||T.a.name||'Away')+'</span>'
       +   '<span>'+esc(T.h.ab||T.h.name||'Home')+'</span></div>'
       + rows + '</div>';
@@ -31365,6 +31430,10 @@ body.hasnav{padding-bottom:calc(74px + env(safe-area-inset-bottom,0px))}
 .stScore{font-size:30px;font-weight:900;color:var(--ink);line-height:1.1}
 .stRec{font-size:12px;color:var(--dim);font-weight:700}
 .stHd{font-size:12px;letter-spacing:.14em;color:var(--teal);font-weight:800;margin-bottom:10px}
+/* Said once, under the header, only before the game. A true number under
+   a false timeframe is as wrong as an invented one. */
+.stHd.sub{color:var(--dim);letter-spacing:.06em;font-weight:700;font-size:12px;
+  margin-top:-6px;margin-bottom:10px;text-transform:none}
 .stRow{display:flex;align-items:center;gap:10px;margin-bottom:11px}
 .stV{flex:0 0 54px;text-align:center;font-size:14px;font-weight:800;color:var(--muted)}
 .stV.win{color:var(--ink)}
