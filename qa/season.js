@@ -153,9 +153,49 @@ const row=(night,pts,max,extra)=>Object.assign({night, pts, max, hits:0, total:0
      ceilings.length > 0 && ceilings.every(c => !c.err && c.max === c.parts),
      ceilings.map(c => c.err ? `${c.k} threw ${c.err}` : `${c.k}: MAXPTS=${c.max} but its parts sum to ${c.parts}`)
              .join('; ') || 'no sports walked');
-  ok('season.the-ceiling-is-not-one-number-for-every-sport',
-     new Set(ceilings.filter(c => !c.err).map(c => c.max)).size > 1,
-     `every sport reported the same ceiling (${ceilings[0] && ceilings[0].max}) — MAXPTS is frozen at load again`);
+  /* ---- 4d. THE FROZEN-MAXPTS DETECTOR HAD TO CHANGE SHAPE ------------
+     This used to assert that the five sports report DIFFERENT ceilings,
+     because a frozen MAXPTS shows up as every sport reporting the same
+     number. That detector died on 31 Aug 2026, and not to a bug — to a
+     product decision.
+
+     Founder: "we should find a way to make every game a potential of 1000
+     points." Every sport now pays 600 on the sheet and 400 in live rounds,
+     so every sport's ceiling is legitimately 1100 (the 1000 plus the 100
+     Caught It cap). The old check cannot tell CORRECTLY EQUAL from FROZEN
+     any more, and it went red on the very build that implemented the rule.
+
+     This is worth naming, because it will happen again: MAKING A SET OF
+     VALUES UNIFORM DESTROYS EVERY DETECTOR THAT WORKED BY COMPARING THEM.
+     The uniformity is the feature; the detector has to stop reading values
+     and start reading behaviour.
+
+     So it perturbs and observes. Change a worth that MUST move the
+     ceiling, recompute, and require the ceiling to move. A MAXPTS frozen
+     at load cannot follow, whatever the sports happen to total. The
+     original value is restored and re-derived so nothing downstream in
+     this suite inherits a doctored page. */
+  const reactive = await p.evaluate(() => {
+    try {
+      setSport('basketball'); sportTotals();
+      const before = MAXPTS;
+      const keep = SPORTS.basketball.worth[0];
+      SPORTS.basketball.worth[0] = keep + 500;   // 4 questions x 500 = +2000
+      sportTotals();
+      const after = MAXPTS;
+      SPORTS.basketball.worth[0] = keep;         // put it back
+      sportTotals();
+      const restored = MAXPTS;
+      return { before, after, restored, keep };
+    } catch (e) { return { err: e.message }; }
+  });
+  ok('season.the-ceiling-recomputes-and-is-not-frozen-at-load',
+     !reactive.err && reactive.after !== reactive.before && reactive.restored === reactive.before,
+     reactive.err
+       ? `threw ${reactive.err}`
+       : `MAXPTS was ${reactive.before}, and after raising basketball's Q1 worth by 500 it read `
+         + `${reactive.after} — it must move, or it is frozen at load `
+         + `(restored to ${reactive.restored})`);
 
   /* ---- 5. IT CANNOT EXCEED THE CAP ----------------------------------- */
   const silly = await t([ row('gn13-2026-08-19-min-gs', 5000, 1000) ]);

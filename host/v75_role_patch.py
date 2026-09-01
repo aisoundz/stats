@@ -68,15 +68,21 @@ WRITER = """  /* ============ AND THE HERO SAYS WHICH GAME IT IS ===============
       var here='';
       try{ here = (typeof ACTIVE_ROOM!=='undefined' && ACTIVE_ROOM) || (GAME&&GAME.nightId) || ''; }catch(_){}
       var hid = _hg && _hg.nightId;
+      /* THE FLAGS LIVE ON THE SLATE ROW, NOT ON TONIGHT. TONIGHT is a HERO,
+         not a night: it carries the ids, the tip, the league and the four
+         team strings and nothing else. Asking _hg.gotn asked an object that
+         never had the field, so a game of the night reported itself as
+         merely on the slate. */
+      var _row = null;
+      try{ if(hid && typeof slateGame==='function') _row = slateGame(hid); }catch(_){}
       if(hid && here && hid===here){ role='Your room'; mine=true; }
-      else if(_hg && (_hg.gotn || _hg.marquee || _hg.flagship)) role='Game of the night';
-      else if(hid && typeof slateGame==='function' && slateGame(hid)) role='On tonight\\u2019s slate';
+      else if(_row && (_row.gotn || _row.marquee || _row.flagship)) role='Game of the night';
+      else if(_row) role='On tonight\\u2019s slate';
       /* The state chip is the phase, in this sport's own words, and it says
          nothing at all rather than guessing when the clock cannot answer. */
       try{
         var hs = (typeof heroState==='function') ? heroState() : '';
-        st = hs==='live' ? 'Live' : hs==='final' ? (L&&L.End ? L.End : 'Final')
-           : hs==='pre'  ? (startWordFor(_hg && _hg.sport) || '') : '';
+        st = hs==='live' ? 'Live' : hs==='final' ? (L&&L.End ? L.End : 'Final') : '';
       }catch(_){ st=''; }
     }catch(_){ role=''; }
     set('mqRoleTxt', role);
@@ -103,8 +109,16 @@ def main():
     if 'mqRole' in s:
         sys.exit('ABORT: mqRole already present — patch is already applied')
 
-    # 1. CSS, ahead of the hairline block so the cascade order is explicit
-    sub('  /* hairlines — alpha, never solid */', CSS + '  /* hairlines — alpha, never solid */', 'css')
+    # 1. CSS, AFTER the close of :root. The first version anchored on the
+    #    hairline comment, which lives INSIDE the declaration block — the
+    #    identical mistake v75_type_patch.py made the same evening, and it
+    #    nests the rule and hands it :root specificity for free.
+    ri = s.index(':root{')
+    close = s.index('\n  }\n', ri) + len('\n  }\n')
+    s = s[:close] + '\n' + CSS + s[close:]
+    if s.index('#mqRole{') < close:
+        sys.exit('ABORT css: the role rule landed inside :root')
+    done.append('css')
 
     # 2. markup, immediately above the eyebrow it qualifies
     sub('      <h2 id="landingHead">Game Night</h2>\n',

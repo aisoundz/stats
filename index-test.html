@@ -110,13 +110,50 @@
     --away:#7fe3c7; --home:#4a86ff; --mile:#ffc54d;
   }
 
+  /* ============ YOUR SCORE, DURING PLAY — the arcade counter ========
+     One line inside .ascore so the board gains no height while a question
+     is open. Teal is YOU. Mono + tabular-nums so the digits do not shuffle
+     the layout as the number grows from 40 to 400. */
+  #ayou{display:inline-flex;align-items:baseline;gap:6px;margin-left:auto;
+    font-family:var(--ui);font-size:12px;font-weight:700;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--dim);white-space:nowrap;position:relative}
+  #ayou b{font-family:var(--mono);font-size:19px;font-weight:700;letter-spacing:-.01em;
+    color:var(--teal);font-variant-numeric:tabular-nums;text-transform:none}
+  /* THE GAIN. It flies off the number it came from, which is the whole
+     point — a +40 that appears somewhere else is a notification, not a
+     reward. 900ms, then it is gone and the counter holds the new total. */
+  #ayouUp{position:absolute;right:0;top:-2px;font-family:var(--mono);font-size:15px;
+    font-weight:700;color:var(--green);pointer-events:none;opacity:0;
+    text-transform:none;letter-spacing:0}
+  #ayouUp.go{animation:ayouFly .9s cubic-bezier(.22,.9,.3,1) forwards}
+  @keyframes ayouFly{
+    0%{opacity:0;transform:translateY(4px) scale(.9)}
+    18%{opacity:1;transform:translateY(-6px) scale(1.12)}
+    60%{opacity:1;transform:translateY(-16px) scale(1)}
+    100%{opacity:0;transform:translateY(-26px) scale(1)}}
+  #ayou.bump b{animation:ayouBump .5s ease-out}
+  @keyframes ayouBump{0%{transform:scale(1)}30%{transform:scale(1.18)}100%{transform:scale(1)}}
+  /* A PERSON WHO ASKED FOR LESS MOTION GETS THE NUMBER, NOT THE SHOW. */
+  @media (prefers-reduced-motion:reduce){
+    #ayouUp.go{animation:none;opacity:0}
+    #ayou.bump b{animation:none}}
+
+
   /* ============ WHICH GAME IS THIS — v7.5's role line ==============
      Ported from v75 hero(). 12px, not its 9.5px: the floor is the shipped
      rule and uppercase + wide tracking already reads as a label. Teal only
      when it is YOUR room, because teal means you and nothing else. */
-  #mqRole{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  .mq-toprow{display:flex;justify-content:space-between;align-items:baseline;
+    gap:12px;flex-wrap:nowrap;min-width:0}
+  .mq-toprow #landingHead{flex:none}
+  #mqRole{display:flex;align-items:baseline;gap:8px;margin:0;min-width:0;
     font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.19em;
-    text-transform:uppercase;color:var(--muted);margin:0 0 6px;white-space:nowrap}
+    text-transform:uppercase;color:var(--muted);white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  /* ON THE NARROWEST PHONES THE STATE CHIP GOES, NOT THE ROLE. Which game
+     this is beats whether it is live -- the live pill already says that,
+     six pixels up, in colour. */
+  @media (max-width:360px){ #mqStateTxt{display:none} #mqRole{letter-spacing:.12em} }
   #mqRole.mine #mqRoleTxt{color:var(--teal)}
   #mqRole #mqStateTxt{color:var(--dim);letter-spacing:.15em;font-weight:400}
 
@@ -1721,8 +1758,19 @@
            3 August and stayed wrong for weeks, which is B6 with a longer fuse:
            one fact (which game is on) with a second copy nobody updates.
            Neutral text cannot go stale. The feed still owns the answer. -->
-      <p id="mqRole" style="display:none"><span id="mqRoleTxt"></span><span id="mqStateTxt"></span></p>
-      <h2 id="landingHead">Game Night</h2>
+      <!-- THE ROLE SHARES THE HEADING'S ROW AND COSTS NO HEIGHT.
+           As its own line it pushed "Try a practice round" from y=583 to
+           y=605 on a 360x640 Android — below the fold, and qa/way-in.js
+           went red. Measured on .261 first: the control was ABOVE the fold
+           there, so the 22px was this label's and nothing else's.
+           The way in beats every label on this page. A stranger who does
+           not scroll never presses Play, and that is the only number that
+           matters on the landing. Every id survives -- a removed id turns
+           its writer into a silent no-op. -->
+      <div class="mq-toprow">
+        <h2 id="landingHead">Game Night</h2>
+        <p id="mqRole" style="display:none"><span id="mqRoleTxt"></span><span id="mqStateTxt"></span></p>
+      </div>
       <!-- THE MATCHUP IS THE PAGE. Two codes, 52px, in the two colours the
            feed already owns — --away and --home, whose only writer is
            paintTeamColours(), which lifts a near-black team hex and splits
@@ -15956,6 +16004,14 @@ var I18N = {
     "Your night":"Tu noche",
     "points":"puntos",
     "You (you)":"Tú (tú)",
+    /* THE ROLE LINE, IN BOTH LANGUAGES. The gate caught "Your room" on the
+       landing with no Spanish — one string, and it is the one that tells a
+       player WHICH game they are looking at. A Spanish reader seeing a lone
+       English phrase in the middle of their own page reads it as breakage,
+       which is exactly what qa/spanish.js exists to stop. */
+    "Your room":"Tu sala",
+    "Game of the night":"Juego de la noche",
+    "On tonight\u2019s slate":"En la cartelera de hoy",
     "AT":"VS", "PRACTICE":"PRÁCTICA", "Practice":"Práctica", "LIVE":"EN VIVO",
     "↑ new":"↑ nuevo",
     "Set these before kickoff. They score themselves while you watch — no tapping during the match.":
@@ -25278,7 +25334,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-08-31-thousand.263';
+const STATS_BUILD='2026-08-31-arcade.264';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -29860,6 +29916,59 @@ function practiceShownRound(){
     return Math.min(last, asking ? here-1 : here);
   }catch(_){ return -1; }
 }
+
+/* ============ THE ARCADE COUNTER — YOUR SCORE, WHILE YOU PLAY ========
+   A READER, never a writer. It asks S.pts what the total is and animates
+   the difference from the last value it painted. It is deliberately not
+   wired into the scoring path: see host/arcade_you.py for why nothing new
+   is allowed near ledgerSet/recomputeScore/pushScore.
+
+   Practice is included on purpose. A rehearsal that does not show you a
+   score does not rehearse the thing the game is about — and the practice
+   board already announces itself as PRACTICE, so the number cannot be
+   mistaken for a real one. */
+var AYOU_LAST = null;
+function paintYou(){
+  try{
+    var row = document.querySelector('#gtHead .ascore');
+    if(!row) return;                       /* the pre-game board has none */
+    var el = document.getElementById('ayou');
+    if(!el){
+      el = document.createElement('span');
+      el.id = 'ayou';
+      el.innerHTML = 'You <b id="ayouN">0</b><i id="ayouUp"></i>';
+      row.appendChild(el);
+    }
+    var n = 0;
+    try{ n = Math.max(0, Math.round(Number(S && S.pts) || 0)); }catch(_){ n = 0; }
+    var b = document.getElementById('ayouN');
+    if(!b) return;
+    /* FIRST PAINT IS NOT A GAIN. Joining a room mid-night with 340 points
+       already banked must not fire a +340 celebration — the player did not
+       just earn it, they earned it twenty minutes ago. */
+    var first = (AYOU_LAST === null);
+    var gain  = first ? 0 : (n - AYOU_LAST);
+    b.textContent = String(n);
+    AYOU_LAST = n;
+    if(gain > 0){
+      var up = document.getElementById('ayouUp');
+      if(up){
+        up.textContent = '+' + gain;
+        up.classList.remove('go');
+        void up.offsetWidth;               /* restart the animation */
+        up.classList.add('go');
+      }
+      el.classList.remove('bump');
+      void el.offsetWidth;
+      el.classList.add('bump');
+    }
+  }catch(_){}
+}
+/* The two moments the number can have moved: the board repainted, or
+   recomputeScore() said the total changed. It dispatches stats:score only
+   when the total ACTUALLY moved, so this cannot loop. */
+try{ window.addEventListener('stats:score', function(){ paintYou(); }); }catch(_){}
+
 function renderGametime(){
   const head=document.getElementById('gtHead');
   if(!head) return;
@@ -29959,6 +30068,7 @@ function renderGametime(){
     + (lean()?'':gtRunBlock(A,H,AC,HC))
     + '</div>';
   return renderGametimeRest();
+  try{ paintYou(); }catch(_){}
 }
 /* ---- SHOT ZONES -----------------------------------------------------
    THE SHOT CHART IS DELETED, AND THAT IS THE RIGHT CALL.
