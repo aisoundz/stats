@@ -16148,6 +16148,14 @@ var I18N = {
     "No rooms this day":"Sin salas este día",
     "Today":"Hoy",
     "Tomorrow":"Mañana",
+    /* HUSTLE IS NOT TRANSLATED, AND THAT IS A DECISION RATHER THAN A GAP.
+       It is the name of a currency, the way a brand is a name — "ganaste 4
+       ESFUERZO" would make a Spanish reader hunt for a second currency
+       that does not exist. The identity mapping is here so qa/spanish.js
+       records that the string was CONSIDERED: an entry that maps to itself
+       is a decision on the record, an absent entry is an oversight, and
+       the suite cannot tell those apart without this line. */
+    "HUSTLE":"HUSTLE",
     "AT":"VS", "PRACTICE":"PRÁCTICA", "Practice":"Práctica", "LIVE":"EN VIVO",
     "↑ new":"↑ nuevo",
     "Set these before kickoff. They score themselves while you watch — no tapping during the match.":
@@ -25486,7 +25494,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-01-hustle.268';
+const STATS_BUILD='2026-09-01-hustle.269';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

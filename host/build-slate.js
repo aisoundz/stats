@@ -1017,7 +1017,13 @@ function tipLine(iso, net, sport){
         const pg = (ps.data() || {}).games || [];
         last = pg.reduce((m,g) => Math.max(m, Number(g.gn) || 0), 0);
       }
-    }catch(_){}
+    }catch(e){
+      /* NOT SILENT. If the walk back fails the series restarts from the
+         marquee file, which is the exact condition that let 5 and 9 Sept
+         both begin again at #1. A number that quietly starts over is worse
+         than a build that says why. */
+      log('WARN', `could not read back for the last Game Night number: ${(e && e.message) || e}`);
+    }
     /* Nothing in thirty days — the first build on a fresh machine. Keep
        whatever the marquee file said rather than restarting at 1 and
        claiming a night that has already been played. */
@@ -1051,7 +1057,11 @@ function tipLine(iso, net, sport){
         const nd = new Date(Date.parse(DATE + 'T12:00:00Z') + fwd * 86400000)
                      .toISOString().slice(0,10);
         let fs2 = null;
-        try{ fs2 = await db.doc('slate/' + nd).get(); }catch(_){ break; }
+        try{ fs2 = await db.doc('slate/' + nd).get(); }
+        catch(e){
+          log('WARN', `stopped sweeping forward at ${nd}: ${(e && e.message) || e}`);
+          break;
+        }
         if(!fs2 || !fs2.exists){ gap++; continue; }
         gap = 0;
         const fd = fs2.data() || {};
