@@ -96,5 +96,6 @@
   "invite.js": 8,
   "tape.js": 10,
   "handle.js": 9,
-  "tipoff-when.js": 43
+  "tipoff-when.js": 43,
+  "cfb-twomin.js": 8
 }
