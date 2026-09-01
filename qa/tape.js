@@ -77,8 +77,22 @@ t('no document, no card', () => {
   /* A day the picker did not run must leave the page as it was, not show
      an error. */
   const i = card.indexOf('function tapeLoad');
-  const seg = card.slice(i, i + 600);
-  return /if\(!t\) return/.test(seg) ? true : 'tapeLoad does not hide the card when there is no document';
+  const seg = card.slice(i, i + 1400);
+  /* ASSERTS THE INTENT, NOT THE PUNCTUATION. This used to match the exact
+     string `if(!t) return`, which broke the day tapeLoad learned to retry
+     a null document — `if(!t){ ...; return; }` — while behaving
+     identically. Now it asks the two things that actually matter: there
+     is a guard on a falsy document that returns, and the only path that
+     paints the card is downstream of that guard. Strictly stronger than
+     the literal it replaces: moving tapeRender() above the guard passed
+     the old check and fails this one. */
+  const guard = seg.search(/if\s*\(\s*!t\s*\)/);
+  if (guard < 0) return 'tapeLoad has no guard for a missing document';
+  const guardReturns = /if\s*\(\s*!t\s*\)\s*(\{[^]{0,200}?return[^]{0,80}?\}|return)/.test(seg);
+  if (!guardReturns) return 'tapeLoad does not return when there is no document';
+  const render = seg.indexOf('tapeRender()');
+  if (render >= 0 && render < guard) return 'tapeLoad paints the card before checking the document exists';
+  return true;
 });
 
 t('it sits below the way in', () => {

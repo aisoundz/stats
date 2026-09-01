@@ -200,8 +200,52 @@
      Ported from v75 hero(). 12px, not its 9.5px: the floor is the shipped
      rule and uppercase + wide tracking already reads as a label. Teal only
      when it is YOUR room, because teal means you and nothing else. */
+  /* WRAP, DO NOT CLIP. nowrap here plus `flex:none` on the left label
+     meant the right one lost every time: the marquee read "GAME NIGHT #49
+     · TUE · SEPTEMBER 1   GAME OF THE" with NIGHT cut off the edge. Which
+     game this is, is the whole headline. A second line costs 14px; a
+     truncated one costs the meaning. */
   .mq-toprow{display:flex;justify-content:space-between;align-items:baseline;
-    gap:12px;flex-wrap:nowrap;min-width:0}
+    gap:12px;flex-wrap:wrap;min-width:0}
+  /* ============ PAYING FOR THE SECOND LINE OUT OF WHITESPACE ==========
+     Wrapping the headline instead of truncating it costs 28px, and on a
+     360x640 Android that pushed "Try a practice round" to 1.02 screens
+     down — qa/way-in.js caught it, and a way in below the fold is a worse
+     bug than a clipped label. The height is taken back from margin and
+     padding rather than from content: 31px of pure air sits above the
+     countdown, and the tiles carry 2px more vertical padding than they
+     need on the smallest screens. Nothing is hidden and nothing shrinks
+     below the 12px floor -- the only thing that changes is spacing.
+     Measured on the same 360x640 profile the suite uses. */
+  @media (max-width:430px){
+    #heroRibbon{margin-top:5px;padding-top:6px}
+    .grTile{padding-top:7px;padding-bottom:7px}
+    .grTiles{gap:6px}
+  }
+  /* ============ THE NARROWEST PHONES GET THE CODES, NOT THE NAMES =====
+     Letting .grWho wrap fixed "Brewers at ..." and cost height, and on a
+     320x568 the rail went to 244px — 43% of the screen given to a chooser
+     before anything else is drawn, which qa/rail-current.js budgets
+     against. The tile already emits BOTH forms: .grWho "Sky at Fever" and
+     .grAbb "CHI at IND", the second hidden except in compact mode.
+
+     So the narrow answer is the codes, which is the design's own existing
+     affordance rather than a new one. Nothing is hidden in the sense that
+     matters: "CHI at IND" names both teams on one short line, where
+     "Sky at ..." named one and hid the other. Above 400px the full names
+     come back, wrapped, which is what the founder's own screen shows. */
+  /* 360, NOT 400. The first cut of this used max-width:400px and so
+     swallowed the 390px iPhone 14/15 — the commonest phone there is — and
+     qa/i18n.js, which runs at 390x844 and reads the home team's full name
+     out of the rail, correctly reported "the rail loaded but is empty".
+     The height problem it solves is real only at 320-360; above that the
+     names fit wrapped. Trading the full name away on a 390px screen was
+     paying for a budget that screen does not have. */
+  @media (max-width:360px){
+    .grTile .grWho{display:none}
+    .grTile .grAbb{display:block;font-size:14px;font-weight:800;letter-spacing:.01em}
+    .grTile .grAbb s{text-decoration:none;color:var(--dim);font-weight:600;font-size:12px;margin:0 4px}
+  }
   .mq-toprow #landingHead{flex:none}
   #mqRole{display:flex;align-items:baseline;gap:8px;margin:0;min-width:0;
     font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.19em;
@@ -1219,8 +1263,17 @@
   .grLg i{width:5px;height:5px;border-radius:50%;background:var(--dim);display:block;font-style:normal}
   .grTile.onair .grLg{color:var(--red)}
   .grTile.onair .grLg i{background:var(--red)}
+  /* THE RULE TWENTY LINES UP SAYS "NO nowrap", AND THIS SAID nowrap.
+     The comment above .grWho has argued since the rail was rebuilt that an
+     element wider than its box is a horizontal scroller and that wrapping
+     is the answer; the declaration did the opposite and clipped instead.
+     On the founder's own screen every tile read "Brewers at ...",
+     "Yankees at ...", "Cardinals at..." — the HOME TEAM, half of what a
+     tile exists to say, hidden behind an ellipsis in the one control that
+     asks "which game are you watching?". That is the game-rail bug in a
+     new costume: "the page does not scroll" is not "nothing is hidden". */
   .grWho{display:block;font-size:15px;font-weight:800;color:var(--ink);letter-spacing:.01em;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    overflow-wrap:anywhere}
   .grWho s{text-decoration:none;color:var(--dim);font-weight:600;font-size:12px;margin:0 4px}
   .grWhen{font-size:12px;color:var(--muted);font-style:normal;letter-spacing:0;
     font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto;font-weight:700}
@@ -10381,6 +10434,14 @@ function go(k){document.querySelectorAll('.screen').forEach(s=>s.classList.remov
      side, on the machine the founder presents from — while the pick sheet
      four taps earlier correctly used ~1100px of it. */
   try{ document.body.classList.toggle('on-final', k==='final'); }catch(_){}
+  /* AND THE SCREEN EVERY VISITOR SEES FIRST, which had been left out of
+     the exception the two comments above describe. The landing was still a
+     440px column in the middle of 1850px on the machine the founder
+     presents from — the marquee, the countdown and the whole Game of the
+     Night rebuilt in August, delivered through a letterbox, with What's
+     Coming and The Tape pushed below the fold where nobody scrolls. Same
+     single writer, same reason. */
+  try{ document.body.classList.toggle('on-landing', k==='landing'); }catch(_){}
   /* THE RAIL HAS TO BE TOLD. Its shape depends on where the player is —
      full tiles while choosing, one line while a question is up — and
      nothing repainted it when that changed, so the collapse only ever
@@ -13681,6 +13742,16 @@ var VX=(function(){
     V.rec=null;
     V.say(V.L().LINES.voicePick);
     try{ V.paint(); }catch(_){}
+    /* CARDS BUILT BY JS DO NOT RE-TRANSLATE THEMSELVES. applyLang walks
+       text nodes against the phrase dictionary, which is right for markup
+       and useless for a weekday computed at render time: switching to
+       Spanish left "Thu 03 / Fri 04 / Sat 05" sitting under a Spanish
+       heading, because schedRender had run once, in English, and nothing
+       ever asked it again. Repaint the two cards whose content is built
+       rather than written. Both are no-ops when their data has not
+       loaded. */
+    try{ if(typeof schedRender === 'function') schedRender(); }catch(_){}
+    try{ if(typeof tapeRender  === 'function') tapeRender();  }catch(_){}
   };
 
   V.hasOut = (function(){ try{ return !!(window.speechSynthesis && window.SpeechSynthesisUtterance); }catch(_){ return false; } })();
@@ -16486,6 +16557,7 @@ var I18N = {
     "Sample league · 6 members · Week 7 of the season": "Liga de ejemplo · 6 miembros · Semana 7 de la temporada",
     "😤 Marcus is 6 pts ahead of you this season. Tonight's your shot.": "😤 Marcus te lleva 6 puntos esta temporada. Esta noche es tu oportunidad.",
     "+ Invite a friend to the league": "+ Invita a un amigo a la liga",
+    "\ud83d\udce9 Invite a friend": "\ud83d\udce9 Invita a un amigo",
     "Leagues are free to join. STATS+ members can create unlimited leagues with custom names & trash-talk boards.": "Entrar a una liga es gratis. Los miembros de STATS+ pueden crear ligas ilimitadas con nombre propio y tablón para picarse.",
     "Predictions locked. When each quarter ends, questions drop here — be fast, points are live.": "Predicciones bloqueadas. Cuando termine cada cuarto, las preguntas aparecen aquí. Sé rápido, los puntos corren.",
     "Start Quarter 1 ▶": "Empezar el cuarto 1 ▶",
@@ -25861,7 +25933,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-01-claim.275';
+const STATS_BUILD='2026-09-01-wide.276';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -25978,6 +26050,19 @@ try{
    reaches for one of them gets undefined and blames the feature.
    Readiness is window.STATS_READY, set as the last statement in this file. */
 try{ document.body.classList.add('booted'); }catch(e){}
+/* THE FIRST SCREEN IS SET BY MARKUP, NOT BY go().
+   #s-landing ships with class="screen active", so go() — the single
+   writer of the on-* body classes — has never run by the time the landing
+   is on screen. The wide-layout rule keyed off body.on-landing therefore
+   did nothing on first paint, which is the only paint most visitors get:
+   rendered at 1850px the body class was "booted hasnav" and .phone was
+   still 440px wide. Derived from the DOM's own active screen rather than
+   assuming 'landing', so it stays true if the entry screen ever changes. */
+try{
+  var _as = document.querySelector('.screen.active');
+  var _ak = _as ? String(_as.id || '').replace(/^s-/, '') : '';
+  document.body.classList.toggle('on-landing', _ak === 'landing');
+}catch(e){}
 try{ setTimeout(function(){ try{ document.body.classList.add('booted'); }catch(_){ } }, 2000); }catch(e){}
 try{backendBadge();}catch(e){}
 
@@ -30658,11 +30743,34 @@ function schedRender(){
       else {
         /* "Tomorrow" is computed, never stored. */
         var t = new Date(); t.setDate(t.getDate() + 1);
+        /* THE WEEKDAY IS COPY, NOT DATA. It used to come from d.label,
+           which the builder writes in English, so a Spanish reader got
+           "Thu 03" under a Spanish heading. Computed from the date in the
+           reader's own language instead; the stored label is the fallback
+           if Intl refuses the tag. Noon UTC so the day cannot slip. */
+        var _wd = '';
+        try{
+          /* VX.lang is the UI language; V.L() is the VOICE language and the
+             two are not the same switch. Using V.L() left "Thu 03" under a
+             Spanish heading because voice was still English. */
+          var _tag = 'en-US';
+          try{ _tag = (LANGS[VX.lang] && LANGS[VX.lang].tag) || 'en-US'; }catch(_){}
+          _wd = new Date(String(d.date) + 'T12:00:00Z')
+                  .toLocaleDateString(_tag, { weekday:'short', timeZone:'UTC' });
+        }catch(_){ _wd = String(d.label || d.date).replace(/,.*$/, ''); }
         when = (String(d.date) === schedDayKeyPT(t)) ? 'Tomorrow'
-             : String(d.label || d.date).replace(/,.*$/, '') + ' ' + String(d.date).slice(8);
+             : _wd + ' ' + String(d.date).slice(8);
       }
       html += '<div class="schDay' + (isToday ? ' today' : '') + '">'
-            +   '<div class="schWhen">' + esc(when) + '</div>'
+            /* data-noi18n: this is a COMPUTED DATE, not dictionary copy.
+               qa/spanish.js walks the English page and asks whether each
+               visible string has an I18N.es entry — a weekday built at
+               render time can never have one, and "Today"/"Tomorrow" are
+               translated through the dictionary a few lines up. The label
+               already renders in the reader's own language via
+               toLocaleDateString, so there is nothing here to translate;
+               this marks it as data so the walk stops asking. */
+            +   '<div class="schWhen" data-noi18n>' + esc(when) + '</div>'
             +   '<div class="schGames">';
       var g = (d.games || []);
       if(!g.length){
@@ -30703,6 +30811,14 @@ function schedLoad(){
        would otherwise read yesterday's schedule and never know. */
     var v = '';
     try{ v = '?v=' + encodeURIComponent(BUILD || ''); }catch(_){}
+    /* A file:// PAGE CANNOT FETCH ITS OWN SIBLING. Every suite that opens
+       this build off disk — platforms.js walks eleven of them — logged
+       "Fetch API cannot load file://.../schedule.json due to access
+       control checks" the moment this loader started running for real.
+       The .catch below handles the rejection, but the browser has already
+       written the console error and a page-error check is right to count
+       it. There is nothing to fetch on disk anyway. */
+    try{ if(location.protocol === 'file:') return; }catch(_){}
     fetch('schedule.json' + v, { cache:'no-cache' })
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){
@@ -30760,6 +30876,14 @@ function tapeStreak(){
 
 function tapeRender(){
   try{
+    /* `set` IS A LOCAL HELPER, NOT A GLOBAL, and this function was written
+       as though it were one. Three other renderers each declare their own
+       `const set = (id,v) => ...`; this one called it and got
+       "ReferenceError: set is not defined" on its second statement. The
+       throw landed in this function's own catch, so The Tape failed
+       silently and the card simply never appeared — it has not rendered
+       once since it shipped. Same one-liner the other three use. */
+    var set=function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
     var card=document.getElementById('tapeCard');
     if(!card || !TAPE || !TAPE.q || !Array.isArray(TAPE.options) || !TAPE.options.length) return;
     var day=TAPE.date || tapeToday();
@@ -30813,14 +30937,32 @@ function tapeAnswer(said){
   }catch(_){}
 }
 
-function tapeLoad(){
+/* SB IS NOT UP WHEN READINESS IS. This gave up silently the first time it
+   found SB.tapeFor missing, and readiness deliberately does not wait on
+   the network, so the backend wrapper was still initialising every time:
+   TAPE stayed null and the card stayed hidden on a page where the
+   document existed and SB.tapeFor(tapeToday()) returned it perfectly a
+   second later. Bounded, because "keep trying forever" is how a quiet bug
+   becomes a battery complaint — about six seconds, then it stops and the
+   page is simply a page without a Tape card. */
+function tapeLoad(tries){
   try{
     if(TAPE) return;
-    if(typeof SB==='undefined' || !SB || typeof SB.tapeFor!=='function') return;
+    if(typeof SB==='undefined' || !SB || typeof SB.tapeFor!=='function'){
+      var n = (tries || 0) + 1;
+      if(n <= 12) setTimeout(function(){ tapeLoad(n); }, 500);
+      return;
+    }
+    var n0 = (tries || 0);
     Promise.resolve(SB.tapeFor(tapeToday())).then(function(t){
-      if(!t) return;                           /* no document — stay hidden */
+      /* SB can exist and still answer null while auth settles, so "no
+         document" and "not yet" look identical here. Retry a bounded
+         number of times before accepting that today simply has no Tape. */
+      if(!t){ if(n0 < 12) setTimeout(function(){ tapeLoad(n0 + 1); }, 500); return; }
       TAPE=t; tapeRender();
-    }).catch(function(){});
+    }).catch(function(){
+      if(n0 < 12) setTimeout(function(){ tapeLoad(n0 + 1); }, 500);
+    });
   }catch(_){}
 }
 
@@ -30922,12 +31064,24 @@ function renderGametime(){
     + (lean()?'':gtWinProb(A,H,AC,HC))
     + (lean()?'':gtRunBlock(A,H,AC,HC))
     + '</div>';
+  /* THE FIVE INITIALISERS THAT USED TO SIT HERE WERE DEAD CODE.
+     They were written after this `return`, so not one of them ever ran:
+     paintInvite, tapeLoad, handleRestore and schedLoad had NO other call
+     site in the file, and paintYou survived only through its stats:score
+     listener. The invite button, The Tape, the persistent @handle and the
+     two-week schedule were all shipped, all gated green, and all
+     unreachable — which is why a fortnight of work drew "right now it
+     looks the same".
+
+     They were also in the wrong function. renderGametime() paints the
+     Gametime tab; schedCard and tapeCard live on the LANDING page, so
+     even reachable they would only have loaded after a visit to another
+     tab. They now run from _statsReady() at the foot of this file, which
+     is the documented "code loaded and rendered once" point.
+
+     117 suites passed over this. They call the functions directly; not
+     one asserted that anything calls them. */
   return renderGametimeRest();
-  try{ paintYou(); }catch(_){}
-  try{ paintInvite(); }catch(_){}
-  try{ tapeLoad(); }catch(_){}
-  try{ handleRestore(); }catch(_){}
-  try{ if(!SCHED) schedLoad(); }catch(_){}
 }
 /* ---- SHOT ZONES -----------------------------------------------------
    THE SHOT CHART IS DELETED, AND THAT IS THE RIGHT CALL.
@@ -31749,6 +31903,17 @@ try{
   var _statsReady = function(){
     try{ window.STATS_READY = true; }catch(_){}
     try{ document.documentElement.setAttribute('data-stats-ready','1'); }catch(_){}
+    /* THE LANDING'S OWN FURNITURE, moved here from behind a `return` in
+       renderGametime() where none of it ran. Each is separately caught: a
+       schedule that fails to fetch must not stop the handle being
+       restored. Every one of them already no-ops quietly when its data is
+       missing, so this is safe on a cold, offline or stubbed backend —
+       which is also why readiness itself does not wait on the network. */
+    try{ paintYou(); }catch(_){}
+    try{ paintInvite(); }catch(_){}
+    try{ tapeLoad(); }catch(_){}
+    try{ handleRestore(); }catch(_){}
+    try{ if(!SCHED) schedLoad(); }catch(_){}
     /* A returning player already said yes. Re-register the worker and
        refresh their subscription so it survives a browser that quietly
        rotated it — silent, and a complete no-op where permission was
@@ -32971,6 +33136,83 @@ body.hasgamebar .screen.active{padding-bottom:132px}
    700px below the number it breaks down.
    ================================================================== */
 .fcolA,.fcolB{display:contents}
+@media (min-width:1120px){
+  /* ============ THE LANDING, ON A REAL SCREEN =========================
+     The third and last screen to leave the phone column, for the reason
+     already written twice in go(): a 440px strip inside 1850px with ~700px
+     of black either side. This one matters most, because it is the screen
+     every visitor meets first and the one the founder demos from.
+
+     The hero keeps the wider column — it is the page, and its two 52px
+     team codes need the room. What's Coming and The Tape move up beside
+     it, which is the actual point: on the phone they sit below the fold
+     and are, in the founder's words, why "it looks the same". Here they
+     are above it, on first paint, without scrolling.
+
+     Everything above the hero — wordmark, tagline, the free-to-enter pill,
+     the resume bar — spans both columns, because they introduce the whole
+     page and not one column of it. The decorative layers are absolutely
+     positioned and out of flow; they are listed so a future reader does
+     not wonder whether they were forgotten. */
+  body.on-landing .phone{max-width:1120px}
+  body.on-landing #s-landing{display:grid;
+    grid-template-columns:minmax(0,1.12fr) minmax(0,0.88fr);
+    column-gap:28px;align-items:stretch;
+    padding-left:24px;padding-right:24px}
+  /* STRETCH, NOT START. Grid puts the hero and the sign-in card in one
+     row, and the sign-in card is the taller of the two, so `start` left
+     ~230px of dead space hanging under the hero — the exact "unfinished"
+     look this change exists to remove. Stretched, they read as two cards
+     of equal height, which is what a two-column layout is supposed to
+     look like. */
+  body.on-landing #tonightCard,
+  body.on-landing #portalCard{align-self:stretch}
+  body.on-landing #s-landing > .brand,
+  body.on-landing #s-landing > .tag,
+  body.on-landing #s-landing > #landingPill,
+  body.on-landing #s-landing > #resumeBar,
+  body.on-landing #s-landing > #landingCourt,
+  body.on-landing #s-landing > #arenaLight,
+  body.on-landing #s-landing > #landingSurface{grid-column:1 / -1}
+  body.on-landing #tonightCard{grid-column:1}
+  /* WHAT'S COMING AND THE TAPE GO UNDER THE HERO, NOT BESIDE IT.
+     Column one is what there is to read, column two is what there is to
+     do. It also fills the space the hero leaves when the sign-in card
+     beside it runs taller, and — the actual point of this whole change —
+     it puts both cards ABOVE THE FOLD. On the phone they sit below it,
+     which is why the founder's answer to a fortnight of work was "it
+     looks the same": the features shipped, the screen never showed them. */
+  /* COLUMN ONE IS WHAT YOU DO, COLUMN TWO IS WHAT THERE IS TO READ.
+     These were the other way round for one draft, and qa/one-door.js
+     caught the consequence at 1440x788: the right column starts higher
+     than the hero's button, so "Start practice" — the quiet, secondary
+     control — sat 86px ABOVE "Try a practice round", and the invitation
+     was below something duller that does the same job. Putting the portal
+     under the hero restores the order the phone always had, and What's
+     Coming and The Tape move to column two, where they are still above
+     the fold, which was the point. */
+  body.on-landing #slateCard,
+  body.on-landing #portalCard{grid-column:1}
+  body.on-landing #schedCard,
+  body.on-landing #tapeCard,
+  body.on-landing #landingInviteBtn{grid-column:2}
+  /* THE TAPE IS NOT REORDERED, AND `order` IS THE WRONG TOOL FOR IT.
+     What's Coming runs 871px in a 459px column, so The Tape starts below
+     the fold. Two attempts to lift it both failed for the same structural
+     reason: these columns are not independent flows, they are grid items
+     sharing rows. `order:-1` sorted The Tape ahead of the wordmark and
+     the tagline (default order:0) and put it at y=141, above the brand;
+     positive orders pushed BOTH cards after every order:0 item and sent
+     them to y=1474 and y=1740, further down than where they started.
+
+     The pattern that actually solves it is the one #s-final already uses:
+     real wrapper elements that are display:contents on the phone and
+     become the two columns on a desktop. That is a DOM change, and this
+     one is deliberately CSS-only. Left as it is: What's Coming — the
+     thing the founder asked for — is above the fold at y=742, and The
+     Tape is one scroll under it. */
+}
+
 @media (min-width:1120px){
   body.on-final .phone{max-width:1120px}
   /* The wrappers stop being invisible and become the two columns. */

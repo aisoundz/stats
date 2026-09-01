@@ -119,6 +119,25 @@ function serve() {
     } catch (_) {}
     ['WNBA','NBA','NFL','MLB','MLS','NHL','ESPN','USA Network','ION','Apple TV','Prime Video',
      'FOX','CBS','NBC','Netflix','Peacock','Google'].forEach(x => NEVER.add(x));
+    /* THE TWO-WEEK SCHEDULE IS FULL OF PROPER NOUNS TOO. NEVER was built
+       from SPORTS and SLATE, which know tonight's teams and no others.
+       The schedule card — invisible until 1 Sept, because its loader sat
+       after a `return` and never ran — brings fourteen days of fixtures
+       from six leagues, so "Boise State at Oregon" and "Major League
+       Baseball" arrived on the to-do list the moment it started
+       rendering. Same rule as the line above, same reason: a team is a
+       name and a league is a name. Read from the page's own loaded
+       schedule so a new sport inherits the exemption. */
+    try {
+      const S2 = (typeof SCHED !== 'undefined' && SCHED) ? SCHED : {};
+      (S2.days || []).forEach(d => (d.games || []).forEach(g => {
+        [g.home, g.away, g.homeAbbr, g.awayAbbr, g.leagueLabel, g.league]
+          .filter(Boolean).forEach(x => NEVER.add(String(x)));
+        if (g.home && g.away) NEVER.add(String(g.away) + ' at ' + String(g.home));
+      }));
+    } catch (_) {}
+    ['Major League Baseball','college football','Premier League','major league soccer']
+      .forEach(x => { NEVER.add(x); NEVER.add(x.toUpperCase()); });
     const skip = t => {
       const s = t.trim();
       if (!s) return true;
@@ -127,6 +146,10 @@ function serve() {
       if (!/[a-zA-Z]/.test(s)) return true;
       if (/@[\w.-]+\.\w+/.test(s)) return true;      // email addresses are not copy          // numbers, times, scores
       if (/^[\d\s:.\-–—/·%+]+$/.test(s)) return true;
+      /* A CLOCK IS NOT COPY. "4:40 PM PT" is a time of day: the digits are
+         data and AM/PM/ET/CT/MT/PT are the zone, none of it translatable
+         prose. Anchored so it cannot swallow a real sentence. */
+      if (/^\d{1,2}:\d{2}\s*(AM|PM)?\s*(ET|CT|MT|PT|UTC)?$/i.test(s)) return true;
       return false;
     };
 
