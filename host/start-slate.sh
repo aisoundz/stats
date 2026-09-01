@@ -120,6 +120,7 @@ ALL="$LOGDIR/slate-all-$DATE.tsv"
 
 if [ "$MODE" = "build" ] || [ "$MODE" = "dry" ]; then
   BUILDFLAG=""; [ "$MODE" = "build" ] && BUILDFLAG="--apply"
+  BUILD_FAILURES=""
   : > "$ALL"
   for LG in $LEAGUES; do
     MANIFEST="$LOGDIR/slate-$LG-$DATE.tsv"
@@ -132,18 +133,48 @@ if [ "$MODE" = "build" ] || [ "$MODE" = "dry" ]; then
     # (the backtest reads them) and must NOT go on the player's rail. The
     # builder needs to know which leagues are hosted to make that split,
     # and there must be exactly one answer to that question.
-    if DATE="$DATE" LEAGUE="$LG" RUN_LEAGUES="$RUN_LEAGUES" node host/build-slate.js $BUILDFLAG --manifest > "$MANIFEST"; then
+    DATE="$DATE" LEAGUE="$LG" RUN_LEAGUES="$RUN_LEAGUES" node host/build-slate.js $BUILDFLAG --manifest > "$MANIFEST"
+    RC=$?
+    ROWS=$(wc -l < "$MANIFEST" 2>/dev/null || echo 0)
+    if [ "$RC" -eq 0 ]; then
       # Tag every manifest row with its league so the start pass can tell
       # which switch applies to it.
       sed "s/^/$LG\t/" "$MANIFEST" >> "$ALL"
-      echo "--- $LG: $(wc -l < "$MANIFEST") game(s) built ---"
-    else
+      echo "--- $LG: $ROWS game(s) built ---"
+    elif [ "$RC" -eq 3 ]; then
+      # EXPECTED EMPTINESS. Most leagues are out of season most of the time
+      # and that is not a failure. Exit 3 is the builder saying so on purpose.
       echo "--- $LG: nothing to build today ---"
+      : > "$MANIFEST"
+    else
+      # ============ A CRASH IS NOT AN OFF-SEASON ======================
+      # 12 Sept 2026: college football built EIGHTY games, wrote them to
+      # this manifest, then threw on a later step. This branch used to be
+      # merged with the one above, so the log read "nothing to build today"
+      # -- indistinguishable from a league that simply is not playing --
+      # and `: > "$MANIFEST"` then destroyed the eighty rows that HAD been
+      # written. Three of four picked rooms for that Saturday could never
+      # be hosted and nothing in the log said why.
+      #
+      # The rows are kept now, under .failed, because they are the evidence
+      # of what the builder had managed before it died. They are NOT
+      # appended to $ALL: a partial build must not become a night.
+      echo "!!! $LG: BUILD FAILED (exit $RC) after emitting $ROWS row(s) — NOT a quiet off-season"
+      echo "!!!   this league will have NO ROOMS tonight. Evidence kept at:"
+      echo "!!!   $MANIFEST.failed"
+      [ "$ROWS" -gt 0 ] && cp "$MANIFEST" "$MANIFEST.failed"
+      BUILD_FAILURES="$BUILD_FAILURES $LG"
       : > "$MANIFEST"
     fi
   done
   GAMES=$(wc -l < "$ALL")
   echo "--- $GAMES game(s) built in total ---"
+  # THE SUMMARY LINE A PERSON READS AT 3AM. A failure that only appears
+  # forty lines up, between two healthy leagues, is a failure nobody sees.
+  if [ -n "$BUILD_FAILURES" ]; then
+    echo "!!! LEAGUES THAT FAILED TO BUILD:$BUILD_FAILURES"
+    echo "!!! every room in those leagues is missing from tonight's manifest."
+  fi
   [ "$MODE" = "dry" ] && { echo "dry run — nothing written, nothing started"; cut -f1 "$ALL" | sed 's/^/    /'; exit 0; }
 
   # Publish each bank now, in the morning, so a failure is found in daylight

@@ -51,7 +51,33 @@ const DATE   = (process.env.DATE || '').trim();
 const LEAGUES_TABLE = require('./leagues.js');
 const PATHS = LEAGUES_TABLE.LEAGUES;
 
-const die = (m) => { console.error('FATAL: ' + m); process.exit(1); };
+/* ============ TWO KINDS OF NOT-BUILDING, AND THEY MUST NOT SHARE A CODE
+   Every failure in this file used to exit 1: an unknown league, a thrown
+   exception, and "this league has no games today" — which is not a failure
+   at all, it is most leagues most of the time.
+
+   start-slate.sh reads that one code and prints, for all of them:
+
+       --- cfb: nothing to build today ---
+
+   On 12 Sept 2026 college football built EIGHTY games, emitted them to the
+   manifest, then threw on a later step. The shell saw exit 1, printed
+   "nothing to build today" — the language of an out-of-season league — and
+   `: > "$MANIFEST"` erased the eighty rows that had already been written.
+   Three of four picked rooms for that Saturday could then never be hosted,
+   and the log said everything was normal.
+
+   A failure reported in the language of success is this codebase's oldest
+   disease. So:
+
+       exit 3   NOTHING TO BUILD — expected, quiet, not an error
+       exit 1   SOMETHING BROKE  — loud, and the shell must say so
+
+   nothing() is deliberately not called `die`, so that a future edit cannot
+   reach for the wrong one by muscle memory. */
+const EXIT_NOTHING = 3;
+const die     = (m) => { console.error('FATAL: ' + m); process.exit(1); };
+const nothing = (m) => { console.error('NOTHING: ' + m); process.exit(EXIT_NOTHING); };
 const log = (k, m) => (process.argv.includes('--manifest') ? console.error : console.log)(`  ${String(k).padEnd(7)} ${m}`);
 
 if(!DATE || !/^\d{4}-\d{2}-\d{2}$/.test(DATE)) die('DATE must be set as YYYY-MM-DD');
@@ -401,7 +427,8 @@ function tipLine(iso, net, sport){
 
   const board = await getJSON(`${API}/scoreboard?dates=${YMD}`);
   const events = board.events || [];
-  if(!events.length) die(`the ${LEAGUE.toUpperCase()} scoreboard lists no games on ${DATE}`);
+  /* An empty scoreboard is a normal Tuesday for most leagues — exit 3. */
+  if(!events.length) nothing(`the ${LEAGUE.toUpperCase()} scoreboard lists no games on ${DATE}`);
   log('board', `${events.length} game(s) on the slate`);
 
   /* TWO LISTS, AND THE DIFFERENCE MATTERS.
@@ -604,7 +631,7 @@ function tipLine(iso, net, sport){
   log('cand', `${offered.length} ${LEAGUE.toUpperCase()} game(s) built as candidates` +
                (offered.some(o => o.flagship) ? ', flagship included' : ''));
   if(!games.length && !offered.length)
-    die('nothing to build and nothing to offer on this date');
+    nothing('nothing to build and nothing to offer on this date');
 
   if(JSONOUT){
     /* stderr carries the human log above; stdout carries only the manifest,
@@ -1068,4 +1095,7 @@ function tipLine(iso, net, sport){
              (slate.flagship.length ? ` (flagship ${slate.flagship.join(', ')} runs alongside)` : ''));
   log('next', `publish each plan:  ${games.map(x =>
     `NIGHT_ID=${x.g.nightId} HOME_NICK="${x.g.homeNick}" AWAY_NICK="${x.g.awayNick}" node host/publish.js`).join('\n           ')}`);
-})().catch(e => die(e.message));
+/* A THROWN ERROR IS NEVER "nothing to build". It keeps exit 1 and now
+   carries its stack, because the 12 Sept cfb failure was invisible for a
+   week partly because only e.message survived. */
+})().catch(e => { console.error(e && e.stack ? e.stack : e); die(e && e.message ? e.message : String(e)); });
