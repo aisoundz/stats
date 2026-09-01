@@ -707,6 +707,7 @@ const TIER={
   'night-ceiling.js': {tier:'static'},
   'arcade-counter.js':{tier:'static'},
   'schedule-menu.js': {tier:'static'},
+  'hustle.js':        {tier:'static'},
   /* A LOG FILE HAS ONE WRITER. Half of welcome-queue.log — 1,830 of 3,735
      timestamped lines — was a copy of the other half, because the script
      appended to it AND the cron line redirected its stdout into the same

@@ -369,6 +369,41 @@ async function writeLiveScore(AUTO, db, FieldValue, sum, plan, last){
    client-reported and bounded only by the security rules. Said plainly
    here so nobody reads "the server scores it" and believes more than is
    true. */
+/* ============ computeHustle — PURE, so it can be tested ==============
+   Lifted out of scoreRoom() because a currency nothing can test is a
+   currency that will be wrong quietly. No db, no clock, no network: rounds
+   in, submissions in, a balance per player out. qa/hustle.js reads this
+   function straight out of this file, the way qa/bank-shadow.js reads the
+   engine out of admin.html, so the thing under test is the thing that
+   ships rather than a second copy of it.
+
+   IT COUNTS ANSWERS, NOT CORRECT ANSWERS, and that is the rule rather than
+   a loose reading of it: HUSTLE pays for being present when the question
+   landed. The instant accuracy pays a redeemable currency, the lawyer's
+   answer changes.
+
+   RECOMPUTED FROM SCRATCH, never accumulated — the same property that lets
+   scoreRoom be called after every key without doubling anyone's score. */
+function computeHustle(scored, subs, uids){
+  const hustle = {};
+  (uids || []).forEach(u => { hustle[u] = 0; });
+  const lastRound = (scored && scored.length) ? scored[scored.length - 1].id : null;
+  for(const rd of (scored || [])){
+    const rs = (subs && subs[rd.id]) || {};
+    for(const uid of Object.keys(rs)){
+      const picks = (rs[uid] && rs[uid].picks) || [];
+      let answered = 0;
+      for(const pk of picks){
+        if(pk !== null && pk !== undefined && String(pk) !== '') answered++;
+      }
+      if(!answered) continue;
+      hustle[uid] = (hustle[uid] || 0) + answered;   /* +1 an answer, right or wrong */
+      if(rd.id === lastRound) hustle[uid] += 2;      /* still there at the buzzer */
+    }
+  }
+  return hustle;
+}
+
 async function scoreRoom(db, FieldValue, AUTO){
   const roundsSnap = await db.collection(`nights/${NIGHT}/rounds`).get();
   const scored = [];
@@ -473,6 +508,35 @@ async function scoreRoom(db, FieldValue, AUTO){
 
   const t = AUTO.tally(scored, players, subs);
 
+  /* ============ HUSTLE — THE PRESENCE LEDGER ==========================
+     The second currency. Points are earned by being RIGHT; HUSTLE by
+     SHOWING UP. Computed HERE because this is the one place the server
+     already holds the submissions, and never on a phone: a balance a
+     phone can write is a balance a phone can forge.
+
+     IT COUNTS ANSWERS, NOT CORRECT ANSWERS. `picks` is what the player
+     sent, and every entry in it earns whether it was right or wrong. That
+     is not a loose reading of the rule, it IS the rule — the currency pays
+     for being present when the question landed, and the instant accuracy
+     pays a redeemable currency the lawyer's answer changes.
+
+     ITS OWN COLLECTION, for the reason caughtSrv exists rather than
+     writing caughtPts: a field the client also owns has two writers, and
+     the phone wins the next time it pushes. nights/{id}/hustle/{uid} has
+     exactly one writer, this one.
+
+     RECOMPUTED FROM SCRATCH, never added to — the same property that makes
+     tally() safe to call after every key. Running it twice cannot double
+     anybody's balance.
+
+     TWO OF THE FOUR EARN RULES ARE NOT HERE YET, and are deliberately not
+     faked: "+1 seated before the opening whistle" needs a join timestamp
+     this function does not read, and "+1 daily claim" is not a game-night
+     event at all. They are worth 2 of a possible 5 a night; the two below
+     are the ones the server can honestly derive today. */
+  const hustle = computeHustle(scored, subs, Object.keys(players));
+
+
   /* Recomputed from the submissions every time rather than added to, so
      running it twice cannot double anybody's score. That is the same
      property the Control Room's version has and it is why this is safe to
@@ -533,6 +597,39 @@ async function scoreRoom(db, FieldValue, AUTO){
     n++;
   }
   log('score', `${n} player${n===1?'':'s'} scored from ${scored.length} round${scored.length===1?'':'s'}`);
+
+  /* ---- and the HUSTLE ledger, published --------------------------------
+     READ BEFORE WRITE, and only write a balance that actually MOVED.
+     scoreRoom() runs after every key — nine times a night in baseball, per
+     room — so blindly re-setting every player each pass would spend
+     rounds x players writes a night to say the same number over and over.
+     The free tier is 20,000 writes a day and the standing rule is to
+     conserve it. Recompute always, persist only on change.
+
+     A failure here must NOT take the score down with it. The points are
+     the product; HUSTLE is a loyalty balance, and a currency that cannot
+     be written is worth strictly less than a score that does not publish.
+     So this is caught, logged loudly, and the function still returns the
+     number of players it scored. */
+  try{
+    const hs = await db.collection(`nights/${NIGHT}/hustle`).get();
+    const had = {};
+    hs.forEach(d => { const v = d.data() || {}; had[d.id] = typeof v.h === 'number' ? v.h : null; });
+    let hw = 0;
+    for(const uid of Object.keys(hustle)){
+      const want = hustle[uid];
+      if(had[uid] === want) continue;
+      await db.doc(`nights/${NIGHT}/hustle/${uid}`).set({
+        h: want, by: 'runner', at: FieldValue.serverTimestamp()
+      }, { merge: true });
+      hw++;
+    }
+    if(hw) log('hustle', `${hw} balance${hw===1?'':'s'} moved`);
+  }catch(e){
+    log('warn', 'HUSTLE ledger not published this pass — the score is unaffected: ' +
+                (e && e.message));
+  }
+
   return n;
 }
 
@@ -1513,4 +1610,4 @@ async function main(){
    test that reimplements the thing it is testing is One Fact, Many Copies
    wearing a lab coat. */
 if(require.main === module) main().catch(e => die((e && e.stack) || String(e)));
-else module.exports = { resolveRound, earlyAnswers, loadShared, roundSlots };
+else module.exports = { resolveRound, earlyAnswers, loadShared, roundSlots, computeHustle };
