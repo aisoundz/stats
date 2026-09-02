@@ -26166,7 +26166,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-02-tap.281';
+const STATS_BUILD='2026-09-02-soccer.282';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -27600,6 +27600,75 @@ function gsNum(v){ var n=parseFloat(String(v==null?'':v).replace(/[^0-9.\-]/g,''
    half a second after the poller started would read last minute's game
    state and refuse to settle. Concurrent callers now share the one
    in-flight promise and all wait for the same answer. */
+/* ============ ONE TEAM-STAT KEY WRITER, AND IT IS REACHABLE ==========
+   Extracted 2 Sept. This logic lived inline inside loadGameStats(), behind
+   a fetch, so nothing could invoke it — which is exactly why qa/deep-cuts.js
+   re-implemented it inside page.evaluate and then tested its own copy. That
+   suite was green with the real bug present, twice: once on the CFB parser
+   and once here on soccer. A parser a test cannot call is a parser with no
+   test, however many checks surround it.
+
+   BOTH KEYS. ESPN gives every team stat a machine `name` and a human
+   `label` — name="totalShots" label="SHOTS", name="wonCorners"
+   label="Corner Kicks". The map stored the label only, so cutsSoccer(),
+   which asks by name, got undefined on all four of its lookups and
+   returned nothing. EPL and MLS had a blank Stats tab from the day deep
+   cuts shipped. host/snapshot.js reads the same feed by NAME and was
+   always right: two readers, one feed, different keys, and only the client
+   wrong. Storing both means neither reader has to change and neither can
+   drift again. */
+/* ============ THE PLAYER BOX PARSER, REACHABLE BY A TEST ============
+   Extracted 2 Sept for the same reason as statPut(): this lived inline
+   inside loadGameStats() behind a fetch, so qa/deep-cuts.js copied it into
+   page.evaluate and then graded its own copy. A CTO audit proved the
+   consequence — restoring the real CFB bug (`cols = s.names` only) left
+   that suite 19/19 GREEN, because the harness was still doing it right.
+   A parser a test cannot call has no test, however many checks surround it.
+
+   Every group, and `labels` as well as `names`:
+     WNBA   1 block,  names
+     MLB    2 blocks (type=batting/pitching), names
+     CFB   10 blocks (name=passing/rushing/...), labels — NO names
+   Groups are namespaced because their columns collide — a batter's H is
+   hits and a pitcher's H is hits allowed. The first block is also written
+   flat, so every existing basketball reader is untouched. */
+function parsePlayerBox(players, box){
+  box = box || {};
+  (players||[]).forEach(function(g){
+    var blocks=(g.statistics||[]); if(!blocks.length) return;
+    var teamAb=(g.team&&g.team.abbreviation)||'';
+    blocks.forEach(function(s,bi){
+      var cols=s.names||s.labels||[];
+      if(!cols.length) return;
+      var gk=String(s.name||s.type||('g'+bi)).toLowerCase();
+      (s.athletes||[]).forEach(function(a){
+        var nm=(a.athlete&&a.athlete.displayName)||''; if(!nm) return;
+        var row=box[nm];
+        if(!row){ row={team:teamAb, aid:String((a.athlete&&a.athlete.id)||''), g:{}}; box[nm]=row; }
+        if(!row.g) row.g={};
+        var sub=row.g[gk]||(row.g[gk]={});
+        cols.forEach(function(n,ix){
+          var v=(a.stats||[])[ix];
+          sub[n]=v;
+          if(bi===0 && row[n]===undefined) row[n]=v;
+        });
+      });
+    });
+  });
+  return box;
+}
+try{ window.parsePlayerBox = parsePlayerBox; }catch(_){}
+
+function statPut(m, s){
+  try{
+    var l = s.label || s.displayName || s.name;
+    if(l && m[l]==null) m[l] = s.displayValue;
+    if(s.name && m[s.name]==null) m[s.name] = s.displayValue;
+  }catch(_){}
+  return m;
+}
+try{ window.statPut = statPut; }catch(_){}
+
 async function loadGameStats(force){
   if(GS.loading && GS._p) return GS._p;
   if(GS.loading) return GS;
@@ -27713,8 +27782,22 @@ async function loadGameStats(force){
           });
           return;
         }
-        var l = s.label || s.displayName || s.name;
-        if(l && m[l]==null) m[l] = s.displayValue;
+        /* BOTH KEYS, because this map has two readers that disagree.
+           ESPN gives every team stat a machine `name` and a human `label`:
+           name="totalShots" label="SHOTS", name="wonCorners" label="Corner
+           Kicks", name="possessionPct" label="Possession". This stored the
+           LABEL only, so cutsSoccer() — which asks for totalShots,
+           shotsOnTarget, wonCorners and possessionPct — got undefined on
+           all four and returned an empty list. EPL and MLS have had a
+           blank Stats tab since deep cuts shipped, and both are on today's
+           slate. host/snapshot.js reads the same feed BY NAME and has
+           always been right: two readers of one feed, keyed differently,
+           and only the client was wrong.
+
+           Storing both is the fix rather than picking a side — the label
+           is what the bars render, the name is what the cuts ask for.
+           Neither reader changes and neither can drift again. */
+        statPut(m, s);
       });
       var c=(comp.competitors||[]).find(function(x){ return x.team&&t.team&&x.team.id===t.team.id; })||{};
       return { id:(t.team&&t.team.id)||'', ab:(t.team&&t.team.abbreviation)||'', name:(t.team&&t.team.displayName)||'',
@@ -27751,27 +27834,7 @@ async function loadGameStats(force){
        The FIRST block is still written flat as well, so every existing
        basketball reader — row['PTS'], row['3PT'] — is untouched and a
        single-block sport comes out bit-for-bit as before. */
-    (bs.players||[]).forEach(function(g){
-      var blocks=(g.statistics||[]); if(!blocks.length) return;
-      var teamAb=(g.team&&g.team.abbreviation)||'';
-      blocks.forEach(function(s,bi){
-        var cols=s.names||s.labels||[];
-        if(!cols.length) return;
-        var gk=String(s.name||s.type||('g'+bi)).toLowerCase();
-        (s.athletes||[]).forEach(function(a){
-          var nm=(a.athlete&&a.athlete.displayName)||''; if(!nm) return;
-          var row=box[nm];
-          if(!row){ row={team:teamAb, aid:String((a.athlete&&a.athlete.id)||''), g:{}}; box[nm]=row; }
-          if(!row.g) row.g={};
-          var sub=row.g[gk]||(row.g[gk]={});
-          cols.forEach(function(n,ix){
-            var v=(a.stats||[])[ix];
-            sub[n]=v;
-            if(bi===0 && row[n]===undefined) row[n]=v;
-          });
-        });
-      });
-    });
+    parsePlayerBox(bs.players, box);
     /* NOTHING READS A HALF-WRITTEN GS. This used to assign teams and box
        here, then leaders, then injuries, then plays, then state — five
        separate moments at which any reader could see a box score from this

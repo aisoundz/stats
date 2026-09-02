@@ -69,10 +69,21 @@ const ok=(c,m)=>{ if(c){pass++;console.log('  ok   '+m);} else {fail++;console.l
   const rest=await p.evaluate(()=>({
     uid:(window.SB&&SB.uid)?(SB.uid()||''):'',
     ready: window.STATS_READY===true,
-    rail: document.querySelectorAll('.grTile').length }));
+    rail: document.querySelectorAll('.grTile').length,
+    slateGames: (typeof SLATE!=='undefined' && SLATE.games) ? SLATE.games.length : 0 }));
   ok(rest.uid==='', `no account before a gesture (uid is ${rest.uid?'SET':'empty'})`);
   ok(rest.ready===true, 'the app still reports ready with no account');
-  ok(rest.rail>0 || true, `the rail rendered ${rest.rail} tile(s) with no credential`);
+  /* `|| true` WAS HERE, AND IT PRINTED "the rail rendered 0 tile(s)" AS A
+     PASS. An assertion that cannot fail is worse than no assertion: it
+     occupies the space where a real one would go and reports success. It
+     was the only one in 128 suite files and an audit found it.
+
+     The rail legitimately renders nothing when there is no slate — a dark
+     Monday, or a fixture run — so the honest assertion is not "there are
+     tiles" but "if the slate has games, the rail drew them", which is the
+     thing that would actually break. */
+  ok(rest.slateGames === 0 || rest.rail > 0,
+     `slate has ${rest.slateGames} game(s) and the rail drew ${rest.rail} tile(s) with no credential`);
 
   console.log('--- one tap, and the account exists ---');
   await p.mouse.click(195, 400);

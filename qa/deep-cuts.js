@@ -37,6 +37,16 @@ const CASES=[
   ['football',  'cfb.json'],   /* Thursday's league, and the labels-only shape */
   ['football',  'nfl.json'],
   ['hockey',    'nhl.json'],
+  /* SOCCER, and it was missing for exactly as long as soccer was broken.
+     mls.json has been on disk unused since the fixtures were built, and
+     soccer was asserted only by grepping the source for "soccer: cuts" —
+     which passed happily while cutsSoccer() could not return a single cut
+     for anybody. Its four lookups (totalShots, shotsOnTarget, wonCorners,
+     possessionPct) are ESPN's `name` values, and the client's team map
+     stored the `label` — "SHOTS", "ON GOAL", "Corner Kicks", "Possession".
+     Every lookup was undefined. EPL and MLS had a blank Stats tab from the
+     day deep cuts shipped, and nothing here noticed. */
+  ['soccer',    'mls.json'],
 ];
 
 (async()=>{
@@ -87,26 +97,30 @@ const CASES=[
   for(const [fam,fixture] of CASES){
     const summary=JSON.parse(fs.readFileSync(path.join(ROOT,'references','multisport',fixture),'utf8'));
     const r=await p.evaluate(({fam,j})=>{
-      const box={};
-      ((j.boxscore||{}).players||[]).forEach(function(g){
-        const blocks=(g.statistics||[]); if(!blocks.length) return;
-        const teamAb=(g.team&&g.team.abbreviation)||'';
-        blocks.forEach(function(s,bi){
-          const cols=s.names||s.labels||[]; if(!cols.length) return;
-          const gk=String(s.name||s.type||('g'+bi)).toLowerCase();
-          (s.athletes||[]).forEach(function(a){
-            const nm=(a.athlete&&a.athlete.displayName)||''; if(!nm) return;
-            let row=box[nm]; if(!row){ row={team:teamAb,aid:'',g:{}}; box[nm]=row; }
-            const sub=row.g[gk]||(row.g[gk]={});
-            cols.forEach(function(n,ix){ sub[n]=(a.stats||[])[ix];
-              if(bi===0&&row[n]===undefined) row[n]=(a.stats||[])[ix]; });
-          });
-        });
-      });
+      /* THE APP'S OWN PARSER, not a copy. This block re-implemented it,
+         so the suite graded itself: an audit restored the real CFB bug
+         (`cols = s.names` only) and this stayed 19/19 GREEN, because the
+         harness was still doing it correctly. */
+      const box = parsePlayerBox((j.boxscore||{}).players, {});
       GS.box=box;
+      /* TEAM stats too, keyed the way the shipped parser keys them — by
+         label AND name. Soccer returns ZERO player blocks from this
+         endpoint (measured on both EPL and MLS), so its cuts read the team
+         table and nothing else; a harness that only built GS.box could
+         never have exercised them. */
       try{
-        GS.teams=(j.header.competitions[0].competitors||[])
-          .map(c=>({ab:c.team.abbreviation,nm:c.team.displayName,m:{}}));
+        const comp=j.header.competitions[0];
+        const byId={};
+        ((j.boxscore||{}).teams||[]).forEach(t=>{
+          /* THE APP'S OWN WRITER, not a copy of it. This block used to
+             re-implement the key logic here, so the suite tested itself:
+             it stayed green with the real label-only bug restored. */
+          const m={};
+          (t.statistics||[]).forEach(s=>{ statPut(m, s); });
+          byId[(t.team||{}).id]=m;
+        });
+        GS.teams=(comp.competitors||[])
+          .map(c=>({ab:c.team.abbreviation,nm:c.team.displayName,m:byId[c.team.id]||{}}));
       }catch(_){ GS.teams=[]; }
       /* THROUGH deepCuts(), NOT CUTS[fam] DIRECTLY. The first version of
          this suite called the set directly, so hardcoding the dispatcher
@@ -122,7 +136,16 @@ const CASES=[
                first: out.length? String(out[0].t).replace(/<[^>]+>/g,'').slice(0,64):'' };
     },{fam,j:summary});
     if(r.err){ ok(false, `${fam} (${fixture}): threw — ${r.err}`); continue; }
-    ok(r.rows>0,  `${fam} (${fixture}): the parser produced ${r.rows} player row(s) across ${r.groups} group(s)`);
+    /* SOCCER HAS NO PLAYER BOX. Both EPL and MLS return zero player blocks
+       from this endpoint — measured, not assumed — which is why its cuts
+       read the team table. Asserting player rows there would be asserting
+       something ESPN does not publish, and the honest check is the
+       opposite one: that it has none and still produces cuts. */
+    if (fam === 'soccer') {
+      ok(r.rows === 0, `${fam} (${fixture}): no player box, as expected (${r.rows} row(s))`);
+    } else {
+      ok(r.rows>0,  `${fam} (${fixture}): the parser produced ${r.rows} player row(s) across ${r.groups} group(s)`);
+    }
     ok(r.n>0,     `${fam} (${fixture}): ${r.n} cut(s) — "${r.first}"`);
   }
 
