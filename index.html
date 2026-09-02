@@ -12678,6 +12678,15 @@ function predFocusDeck(){
 }
 function predPick(id,val){
   S.predChoices[id]=val;
+  /* THE 600-POINT CARD WAS THE ONE THING NEVER WRITTEN DOWN.
+     S.catchChoices calls save() on every tap; S.predChoices called it
+     nowhere, so six picks lived in memory alone. iOS evicts a backgrounded
+     tab, and the reload that follows brought the player back to "0 / 6
+     picked" — which is exactly what the founder hit on 2 Sept: "I already
+     filled this out. Why do I have to do it every time."
+     save() is keyed per nightId (LS_KEY) and no-ops unless mode is live, so
+     a card is restored to the room it was filled in and nowhere else. */
+  try{ save(); }catch(_){}
   buildPred();
   // Auto-advance on a plain pick — the deck should feel like it's moving
   // with you. A pick WITH a bonus number stays put; you're not done yet.
@@ -13050,6 +13059,8 @@ function buildPred(){
     requestAnimationFrame(function(){ try{ predFocus(); }catch(_){} }); } }catch(_){}
   const nb=c.querySelector('.pdbonus input');
   if(nb) nb.oninput=function(){ S.predChoices[p.id+'_num']=nb.value;
+    /* The exact-number bonus is worth +50 and was as unsaved as the pick. */
+    try{ save(); }catch(_){}
     const t=c.querySelector('.pdpts'); if(t) t.textContent=predRidingPts()+' pts riding'; };
   /* ============ AND ENTER MEANS NEXT ================================
      26 Aug, first outside feedback session, watched live: "So I put in
@@ -13072,7 +13083,7 @@ function buildPred(){
   if(nb) nb.onkeydown=function(ev){
     if(!ev || (ev.key !== 'Enter' && ev.keyCode !== 13)) return;
     ev.preventDefault();
-    try{ S.predChoices[p.id+'_num']=nb.value; }catch(_){}
+    try{ S.predChoices[p.id+'_num']=nb.value; save(); }catch(_){}
     var last = false;
     try{ last = (PD.i >= L.length-1); }catch(_){}
     if(last){ try{ nb.blur(); }catch(_){} }
