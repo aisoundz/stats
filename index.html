@@ -2165,7 +2165,7 @@
       </div>
       <p id="notifyMsg" class="notifyMsg"></p>
 
-      <p class="foot" style="margin:12px 0 0;text-align:center">Free to play · Not gambling · Prizes are sponsor-funded</p>
+      <p class="foot" style="margin:12px 0 0;text-align:center">Free to play · Not gambling · No purchase necessary</p>
     </div>
 
     <!-- ============ THE NEXT TWO WEEKS ==============================
@@ -2976,7 +2976,17 @@
          "nothing here counts". showFinal() shows it on Game Night and
          hides it in practice; it is not deleted, because on a live night
          the disclosure is required. -->
-<p class="foot" id="finalPrizeNote">Prizes awarded to the sponsor's verified top scorers after the final box score is confirmed. Winning never requires payment.</p>
+      <!-- THE PRIZE PROMISE IS GONE UNTIL THERE IS A PRIZE — 2 Sept 2026.
+           This said "Prizes awarded to the sponsor's verified top scorers
+           after the final box score is confirmed." There is no sponsor and
+           there has never been a prize. It is a claim about money made to
+           strangers on the screen they reach by finishing a night, which
+           is the worst possible place to be wrong.
+
+           PRIZES ARE STILL THE PLAN — founder, 2 Sept: "the eventual plan
+           is to have prizes." The copy comes back when a sponsor exists,
+           not before. Its previous wording is in git and in
+           scratchpad/stats-plus-screen.html alongside the STATS+ screen. -->
     </div><!-- /.fcolB -->
   </section>
 
@@ -2995,39 +3005,23 @@
     <div id="lgSeason"></div>
     <button class="btn teal" onclick="toast('🔗 Invite link copied: statsgametime.com/join/BARBER-7. Anyone who joins plays free.')">+ Invite a friend to the league</button>
     <button class="btn ghost" onclick="go('final')">← Back to my result</button>
-    <p class="foot">Leagues are free to join. STATS+ members can create unlimited leagues with custom names & trash-talk boards.</p>
+    <p class="foot">Leagues are free to join.</p>
   </section>
 
-  <!-- 10. STATS+ -->
-  <section class="screen" id="s-plus">
-    <div class="brand"><span class="logo" style="font-size:17px;letter-spacing:.8px">STATS GAMETIME</span><span class="pill" style="align-self:center">Season pass</span></div>
-    <h1 style="margin-top:12px">Go STATS+</h1>
-    <p class="sub">The game stays free. STATS+ is for the fans who want the full season experience — and it's what funds the prize pool.</p>
+  <!-- 10. STATS+ — REMOVED 2 Sept 2026, AND IT IS COMING BACK.
+       The screen sold a $4.99/mo season pass whose button read
+       toast('⭐ This is where checkout would go — Stripe, $4.99/mo season
+       pass.') and fired no telemetry. A pricing page that cannot take money
+       and does not measure intent is the one thing a pricing page is no
+       good for, and it is the first thing a diligence read finds.
 
-    <div class="tier">
-      <div class="price">Free <small>forever</small></div>
-      <ul>
-        <li>✅ <b>Play every game</b> — full predictions + live questions</li>
-        <li>✅ <b>Win any prize</b> — every player is always prize-eligible</li>
-        <li>✅ Join one league · global leaderboard</li>
-      </ul>
-    </div>
-
-    <div class="tier hot"><span class="bestpill">SEASON PASS</span>
-      <div class="price">$4.99 <small>/ month</small></div>
-      <ul>
-        <li>💈 <b>Create unlimited private leagues</b> + trash-talk board</li>
-        <li>📊 <b>Season stat book</b> — your accuracy by category, streak history, rating graph</li>
-        <li>🎖️ <b>Badge & name flair</b> on every leaderboard</li>
-        <li id="plusClips">🎬 <b>Quarter recap clips</b> + host's picks before tip-off</li>
-        <li>🗳️ <b>Vote on next week's featured game</b></li>
-      </ul>
-      <button class="btn teal" onclick="toast('⭐ This is where checkout would go — Stripe, $4.99/mo season pass.')">Start my season pass</button>
-    </div>
-
-    <div class="legalbox"><b>Why it's built this way:</b> STATS+ buys features, never advantage — subscribers get zero extra points, easier questions, or better prize odds. Contest entry and prize eligibility are 100% free for everyone, always. That separation is what keeps STATS a free skill-and-attention game with prizes, not gambling.</div>
-    <button class="btn ghost" onclick="go('final')">← Back</button>
-  </section>
+       Founder, 2 Sept: "the eventual plan is to ... charge for special
+       features that will be Stats +". So this is a removal, not a
+       cancellation. The whole section is in git and saved verbatim at
+       scratchpad/stats-plus-screen.html — bringing it back is a paste plus
+       a real checkout, not a rebuild. The rule it carried is worth keeping
+       whoever writes it next: STATS+ buys features, never advantage;
+       every player stays eligible for everything. -->
 
   <!-- 8. HOST / AUTOMATION PANEL -->
   <section class="screen hostwrap" id="s-host">
@@ -9459,7 +9453,7 @@ const map={landing:"s-landing",name:"s-name",predict:"s-predict",lobby:"s-gameti
      waiting room. That waiting room was the last seam in the night — the
      loop was Gametime → lobby → answer → Gametime, asked to be one page
      three times, and this is the third of three moves that make it one. */
-  live:"s-gametime",break:"s-break",final:"s-final",host:"s-host",league:"s-league",plus:"s-plus",
+  live:"s-gametime",break:"s-break",final:"s-final",host:"s-host",league:"s-league",
   rules:"s-rules",review:"s-gametime",predreview:"s-predreview",tally:"s-tally",
   join:"s-join"};
 /* THE DOOR IS THE DOOR. You cannot reach the handle screen, the pick sheet, or
@@ -16366,11 +16360,11 @@ var VX=(function(){
         : '';
       var txt = !V.on ? 'Voice off'
               : V.note ? V.note
+              : deafNow ? '🎙 Tap anywhere to talk — I can’t hear you yet'
               : halfLang ? halfLang
               : V.speaking ? 'STATS is reading the question…'
               : V.listening ? (V.onPickCard() ? 'Listening — say a name, then “next”'
                                              : 'Listening — say your answer, then “next”')
-              : deafNow ? '🎙 Tap anywhere to talk — I can’t hear you yet'
               : V.hasEar ? 'Voice on' : 'Voice on — tap your answer';
       var h='<button type="button" class="vxb" onclick="VX.toggle()" aria-pressed="'+(V.on?'true':'false')+'">'
         + (V.on?'🔊':'🔈') + ' <b>Voice</b> <s>'+(V.on?'on':'off')+'</s></button>';
@@ -16464,8 +16458,6 @@ var I18N = {
     /* --- home --- */
     "The game that pays to pay attention":"El juego que premia prestar atención",
     "Play from home • Free to enter":"Juega desde casa • Entrada gratis",
-    "Free to play · Not gambling · Prizes are sponsor-funded":
-      "Gratis · No es apuesta · Los premios los pagan los patrocinadores",
     "Which game are you watching?":"¿Qué partido estás viendo?",
     /* The rail's answer to the line above it. One word, and it has to move
        with the question or the tile answers a Spanish question in English. */
@@ -16601,8 +16593,6 @@ var I18N = {
     "🎁 What would make you play every week?":"🎁 ¿Qué te haría jugar cada semana?",
     "We don't sell your info. We're not texting anyone yet — the number just means you're on the list when we start.":
       "No vendemos tu información. Todavía no enviamos mensajes — el número solo significa que estarás en la lista cuando empecemos.",
-    "Prizes awarded to the sponsor's verified top scorers after the final box score is confirmed. Winning never requires payment.":
-      "Los premios se entregan a los mejores puntajes verificados del patrocinador después de confirmarse el marcador final. Ganar nunca requiere pago.",
 
     /* The countdown label is the sport's own word now, so every form of it
        needs Spanish or a Spanish player gets an English label. Soccer is
@@ -16890,6 +16880,9 @@ var I18N = {
     "+ Invite a friend to the league": "+ Invita a un amigo a la liga",
     "\ud83d\udce9 Invite a friend": "\ud83d\udce9 Invita a un amigo",
     "Pick a game first": "Elige un partido primero",
+    "Free to play · Not gambling · No purchase necessary":
+      "Gratis \u00b7 No es apuesta \u00b7 No hace falta comprar nada",
+    "Leagues are free to join.": "Unirse a una liga es gratis.",
     /* The demoted practice control names its sport, so there is one string
        per sport rather than a generic "Start practice". Composed Spanish
        ("Empezar practica de baloncesto") reads badly; the natural verb
@@ -16910,14 +16903,10 @@ var I18N = {
     "Email me when the next STATS game night is on — one heads-up, nothing else. Not required to play, score, or win. You can delete yourself from the list any time on the end-of-game screen.": "Avísame por correo cuando haya otra noche de juego de STATS. Un aviso y nada más. No hace falta para jugar, puntuar ni ganar. Puedes borrarte de la lista cuando quieras desde la pantalla final.",
     "Sign in to save your handle, your points and your card across phones. One tap with Google — or use your inbox.": "Inicia sesión para guardar tu nombre, tus puntos y tu tarjeta en cualquier teléfono. Un toque con Google, o usa tu correo.",
     "Season pass": "Pase de temporada",
-    "Go STATS+": "Hazte STATS+",
     "The game stays free. STATS+ is for the fans who want the full season experience — and it's what funds the prize pool.": "El juego sigue siendo gratis. STATS+ es para quienes quieren la temporada completa, y es lo que financia el bote de premios.",
     "Free": "Gratis",
     "forever": "para siempre",
     "— full predictions + live questions": "· predicciones completas y preguntas en vivo",
-    "Win any prize": "Gana cualquier premio",
-    "— every player is always prize-eligible": "· todos los jugadores siempre pueden ganar premios",
-    "✅ Join one league · global leaderboard": "✅ Entra a una liga · tabla global",
     "SEASON PASS": "PASE DE TEMPORADA",
     "/ month": "/ mes",
     "Create unlimited private leagues": "Crea ligas privadas ilimitadas",
@@ -16928,7 +16917,6 @@ var I18N = {
     "Quarter recap clips": "Clips de resumen por cuarto",
     "+ host's picks before tip-off": "+ los pronósticos del anfitrión antes del inicio",
     "Vote on next week's featured game": "Vota el partido destacado de la próxima semana",
-    "Start my season pass": "Empezar mi pase de temporada",
     "STATS+ buys features, never advantage — subscribers get zero extra points, easier questions, or better prize odds. Contest entry and prize eligibility are 100% free for everyone, always. That separation is what keeps STATS a free skill-and-attention game with prizes, not gambling.": "STATS+ compra funciones, nunca ventaja. Los suscriptores no reciben puntos extra, ni preguntas más fáciles, ni mejores probabilidades de premio. Participar y optar a los premios es 100% gratis para todos, siempre. Esa separación es lo que mantiene a STATS como un juego gratuito de habilidad y atención con premios, y no como una apuesta.",
     "Enter the official results (host announces from the final box score). Your picks are shown under each.": "Introduce los resultados oficiales (el anfitrión los anuncia desde la hoja final). Tus elecciones aparecen debajo de cada uno.",
     "STATS is a free skill-and-attention game played along with a live basketball broadcast. You score by predicting the game before tip-off and by answering questions about what just happened at each break. No wagers, no entry fee — ever.": "STATS es un juego gratuito de habilidad y atención que se juega junto a una transmisión de baloncesto en vivo. Puntúas prediciendo el partido antes del inicio y respondiendo preguntas sobre lo que acaba de pasar en cada descanso. Sin apuestas y sin cuota de entrada, nunca.",
@@ -26215,7 +26203,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-02-measure.287';
+const STATS_BUILD='2026-09-02-true.288';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -27067,7 +27055,6 @@ var MENU_GO={
   restart:function(){ try{ restart(); }catch(_){} },
   roast:function(){ try{ openRoast(); }catch(_){} },
   league:function(){ try{ openLeague(); }catch(_){ go('league'); } },
-  plus:function(){ go('plus'); },
   /* The Me TAB is retired, so navGo refuses it — and the old fallback
      never fired, because navGo returns quietly rather than throwing. This
      row is now the only way in, which is the whole point of retiring the

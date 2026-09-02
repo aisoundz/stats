@@ -384,7 +384,33 @@ const REC=`function(){ window.__recStarts++; this.start=function(){}; this.stop=
     VX.deaf(); VX.wantEar=true; VX.note='';
     VX.paint();
     const t=(document.getElementById('vxBar')||{}).textContent||'';
-    return /can.t hear you/i.test(t);
+    if(/can.t hear you/i.test(t)) return true;
+    return 'bar said "'+t.slice(0,70)+'" | on='+VX.on+' hasEar='+VX.hasEar
+         + ' listening='+VX.listening+' speaking='+VX.speaking
+         + ' note="'+VX.note+'" lang='+VX.lang
+         + ' contentReady='+(function(){try{return VX.contentReady();}catch(e){return 'threw';}})();
+  });
+  /* A HALF-TRANSLATED LANGUAGE USED TO OUTRANK A DEAD MICROPHONE.
+     paint()'s ladder put the "questions are still in English" notice above
+     the deaf line, so a Spanish-speaking player with a shut mic was told
+     about the translation while their twenty seconds ran out — the exact
+     lie the comment above deafNow says must never be told.
+     Found 2 Sept: the gate went red on the check above while three
+     standalone runs went green. The gate had left the app in a
+     half-translated language, so that check was catching this BY ACCIDENT
+     and only ever would when some earlier suite happened to set the
+     language. This one forces the state, so it fails every time. */
+  R['a-dead-mic-outranks-the-language-notice'] = await p.evaluate(()=>{
+    const real = VX.contentReady;              // VX is V — see index.html
+    try{
+      VX.contentReady = () => false;           // questions still in English
+      VX.deaf(); VX.wantEar=true; VX.note='';
+      VX.paint();
+      const t=(document.getElementById('vxBar')||{}).textContent||'';
+      if(/can.t hear you/i.test(t)) return true;
+      return 'bar said "'+t.slice(0,70)+'" | on='+VX.on+' hasEar='+VX.hasEar
+           + ' listening='+VX.listening+' speaking='+VX.speaking+' note="'+VX.note+'"';
+    } finally { VX.contentReady = real; VX.paint(); }
   });
   /* And the phrase he actually said has to land. */
   R['made-field-goals-lands'] = await p.evaluate(()=>{
