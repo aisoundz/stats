@@ -248,6 +248,15 @@
   /* INVISIBLE UNTIL 1120px. display:contents removes the wrapper from
      layout entirely, so the phone sees the same flat list of cards it
      always has. */
+  /* ============ NOTHING HAS BEEN CHOSEN YET =========================
+     A bare visit boots with mode "demo" and practice FALSE, so GAME is the
+     built-in fixture — Minnesota at Golden State, finished in August — and
+     Gametime rendered it as the game you were in: "This game finished 77
+     to 66", over a rail showing tonight's live baseball. Hidden here
+     rather than by clearing a dozen element ids, which is how the screen
+     would come back half-populated the next time one was added. */
+  body.no-room #s-gametime > *:not(#gtSticky):not(#gtNoRoom){display:none!important}
+  body.no-room #gtNoRoom{display:block!important}
   .lcolA,.lcolB{display:contents}
   .mq-toprow{display:flex;justify-content:space-between;align-items:baseline;
     gap:12px;flex-wrap:wrap;min-width:0}
@@ -2123,20 +2132,6 @@
          until schedule.json actually loads, so a missing file costs a
          person nothing. -->
     </div><div class="lcolB">
-    <div class="card" id="schedCard" style="display:none;margin-top:16px">
-      <div class="schHead">
-        <h2>What's coming</h2>
-        <span class="schSub" id="schedSub">Next two weeks</span>
-      </div>
-      <div id="schedList"></div>
-      <button class="btn ghost" id="schedMore" style="display:none">Show every day</button>
-    </div>
-
-    <!-- ============ THE TAPE ========================================
-         One question a day, from a game that finished. The only surface
-         in this product that does not need a live game — see
-         host/tape_card.py. Hidden until tape/{date} actually loads, so a
-         day the picker did not run costs a player nothing. -->
     <div class="card" id="tapeCard" style="display:none;margin-top:16px">
       <div class="tpHd">
         <h2>The Tape</h2>
@@ -2451,6 +2446,17 @@
        INSIDE here rather than floating over whatever you were doing.
        A live prompt should have an address, not ambush you. -->
   <section class="screen" id="s-gametime">
+    <!-- Shown only when nobody has chosen a room. See noRoomChosen(). The
+         rest of this screen is hidden by CSS rather than by touching a
+         dozen element ids, the same way body.on-predict reshapes the pick
+         sheet. -->
+    <div class="card center" id="gtNoRoom" style="display:none;padding:26px 18px">
+      <div style="font-size:26px">📺</div>
+      <b style="font-size:17px;display:block;margin-top:6px">Pick a game first</b>
+      <p class="sub" style="font-size:14px;margin:8px auto 14px;max-width:34ch">Gametime follows the room you are in. Tonight’s games are in the rail at the top — or run a practice game.</p>
+      <button type="button" class="pdlock" style="max-width:260px;margin:0 auto"
+              onclick="go('landing')">Back to home</button>
+    </div>
     <!-- No 21px "GAMETIME" wordmark here any more. The bottom nav already
          says which tab you are on, in a highlighted colour, permanently —
          a page title repeating it cost ninety vertical pixels on a phone
@@ -16634,6 +16640,9 @@ var I18N = {
     "😤 Marcus is 6 pts ahead of you this season. Tonight's your shot.": "😤 Marcus te lleva 6 puntos esta temporada. Esta noche es tu oportunidad.",
     "+ Invite a friend to the league": "+ Invita a un amigo a la liga",
     "\ud83d\udce9 Invite a friend": "\ud83d\udce9 Invita a un amigo",
+    "Pick a game first": "Elige un partido primero",
+    "Gametime follows the room you are in. Tonight\u2019s games are in the rail at the top \u2014 or run a practice game.": "Gametime sigue la sala en la que est\u00e1s. Los partidos de hoy est\u00e1n en la barra de arriba, o juega una ronda de pr\u00e1ctica.",
+    "Stats follows the room you are in. Tonight\u2019s games are in the rail at the top \u2014 or run a practice game.": "Stats sigue la sala en la que est\u00e1s. Los partidos de hoy est\u00e1n en la barra de arriba, o juega una ronda de pr\u00e1ctica.",
     "Leagues are free to join. STATS+ members can create unlimited leagues with custom names & trash-talk boards.": "Entrar a una liga es gratis. Los miembros de STATS+ pueden crear ligas ilimitadas con nombre propio y tablón para picarse.",
     "Predictions locked. When each quarter ends, questions drop here — be fast, points are live.": "Predicciones bloqueadas. Cuando termine cada cuarto, las preguntas aparecen aquí. Sé rápido, los puntos corren.",
     "Start Quarter 1 ▶": "Empezar el cuarto 1 ▶",
@@ -26019,7 +26028,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-01-cols.277';
+const STATS_BUILD='2026-09-02-cuts.278';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -26941,6 +26950,12 @@ function openMenu(){
   try{ trk('menu_open'); }catch(_){}
   var sh=document.getElementById('menuSheet'); if(!sh) return;
   var body=document.getElementById('menuBody'); if(body) body.innerHTML=menuRows();
+  /* THE SCHEDULE PAINTS WHEN THE SHEET OPENS, not at boot. Fourteen days
+     of fixtures is real work and real height, and somebody who never opens
+     the menu should never pay for it. Loads on first open if the fetch has
+     not happened yet; schedRender() no-ops until SCHED has days. */
+  try{ if(typeof SCHED==='undefined' || !SCHED) { if(typeof schedLoad==='function') schedLoad(); }
+       else if(typeof schedRender==='function') schedRender(); }catch(_){}
   try{ applyLang(sh); }catch(_){}
   try{ var st=document.getElementById('menuStamp'); if(st && typeof buildStampHTML==='function') st.innerHTML=buildStampHTML(); }catch(_){}
   Array.prototype.forEach.call(sh.querySelectorAll('[data-m]'), function(b){
@@ -27577,14 +27592,46 @@ async function loadGameStats(force){
     });
     // Per-player rows, in-game only. Keyed by display name for the card tracker.
     var box={};
+    /* ============ EVERY GROUP, AND `labels` AS WELL AS `names` ========
+       This read `statistics[0]` and `s.names` only, and both halves were
+       wrong outside basketball. Measured against real feeds:
+
+         WNBA    1 block,  names   ..... worked, which is why nobody saw it
+         MLB     2 blocks (type=batting/pitching), names
+         CFB    10 blocks (name=passing/rushing/...), labels — NO names
+
+       So on college football `names` was undefined and every athlete row
+       came back carrying a team and an id and nothing else; on baseball
+       only batting was read and pitching was dropped entirely. Thursday's
+       go-live is eleven college games.
+
+       GROUPS ARE NAMESPACED, because their columns collide: a batter's H
+       is hits and a pitcher's H is hits allowed, and football's YDS means
+       three different things across passing, rushing and receiving.
+       Flattening them lets one silently overwrite another.
+
+       The FIRST block is still written flat as well, so every existing
+       basketball reader — row['PTS'], row['3PT'] — is untouched and a
+       single-block sport comes out bit-for-bit as before. */
     (bs.players||[]).forEach(function(g){
-      var s=(g.statistics||[])[0]; if(!s) return;
-      var names=s.names||[];
-      (s.athletes||[]).forEach(function(a){
-        var nm=(a.athlete&&a.athlete.displayName)||''; if(!nm) return;
-        var row={team:(g.team&&g.team.abbreviation)||'', aid:String((a.athlete&&a.athlete.id)||'')};
-        names.forEach(function(n,ix){ row[n]=(a.stats||[])[ix]; });
-        box[nm]=row;
+      var blocks=(g.statistics||[]); if(!blocks.length) return;
+      var teamAb=(g.team&&g.team.abbreviation)||'';
+      blocks.forEach(function(s,bi){
+        var cols=s.names||s.labels||[];
+        if(!cols.length) return;
+        var gk=String(s.name||s.type||('g'+bi)).toLowerCase();
+        (s.athletes||[]).forEach(function(a){
+          var nm=(a.athlete&&a.athlete.displayName)||''; if(!nm) return;
+          var row=box[nm];
+          if(!row){ row={team:teamAb, aid:String((a.athlete&&a.athlete.id)||''), g:{}}; box[nm]=row; }
+          if(!row.g) row.g={};
+          var sub=row.g[gk]||(row.g[gk]={});
+          cols.forEach(function(n,ix){
+            var v=(a.stats||[])[ix];
+            sub[n]=v;
+            if(bi===0 && row[n]===undefined) row[n]=v;
+          });
+        });
       });
     });
     /* NOTHING READS A HALF-WRITTEN GS. This used to assign teams and box
@@ -28665,7 +28712,208 @@ function whoTag(nm){
     return '<b class="'+cls+'">'+esc(nm)+'</b>';
   }catch(_){ return '<b>'+esc(nm)+'</b>'; }
 }
+/* ============ DEEP CUTS ARE PER-SPORT ==============================
+   Everything below used to be one function that read three-pointers,
+   rebounds, assists, steals, blocks and double-doubles, and said "in the
+   WNBA". On a baseball box score none of those columns exist, so every
+   branch failed and it returned an empty list — silently, no error, no
+   log. Measured on a live game: GS.ok true, 287 plays, 3 scoring plays, a
+   full 19-row box, deepCuts() -> 0.
+
+   The Stats tab's entire editorial layer existed for one of six leagues.
+   The founder saw it as "I dont see the stats news and updates", which is
+   exactly what it was.
+
+   Cuts are a table keyed by SPORT FAMILY now, the way question banks are.
+   Basketball's set moves in UNCHANGED — it was never the problem — and the
+   rest are written against columns confirmed present in the real feeds:
+
+     baseball   batting  H-AB AB R H RBI HR BB K AVG OBP SLG
+                pitching IP H R ER BB K HR ERA PC
+     football   passing C/ATT YDS TD INT · rushing CAR YDS TD LONG
+                receiving REC YDS TD LONG · defensive TOT SOLO SACKS TFL
+     hockey     forwards/defenses G A S SOG HT BS TK +/- · goalies SV SV% GA SA
+     soccer     NO PLAYER BOX AT ALL — 0 blocks on both EPL and MLS, so its
+                cuts come from team statistics instead
+
+   Every cut still returns nothing when it is not true tonight. */
 function deepCuts(){
+  try{
+    var fam = (typeof SPORT!=='undefined' && SPORT && SPORT.key) ? SPORT.key : '';
+    var fn  = CUTS[fam];
+    if(!fn) return [];
+    var out = fn() || [];
+    return out.sort(function(a,b){ return (b.w||0)-(a.w||0); });
+  }catch(_){ return []; }
+}
+
+/* Raw box rows, namespaced by stat group — the shape every non-basketball
+   set reads. stBox() is left exactly as it was, mapping the basketball
+   columns, because the basketball cuts still use it. */
+function gsRows(){
+  try{
+    return Object.keys(GS.box||{}).map(function(nm){
+      var r=GS.box[nm]||{};
+      return { nm:nm, team:r.team||'', g:r.g||{} };
+    });
+  }catch(_){ return []; }
+}
+function cnum(v){
+  if(v==null) return null;
+  var t=String(v).trim(); if(!t||t==='-'||t==='--') return null;
+  var n=parseFloat(t.replace(/[^0-9.\-]/g,''));
+  return isFinite(n)?n:null;
+}
+function gval(row,group,key){
+  try{ return cnum((row.g[group]||{})[key]); }catch(_){ return null; }
+}
+
+/* ---- BASEBALL -----------------------------------------------------
+   The pitcher's line is the story most nights, and it is the one thing a
+   scoreboard never leads with. A no-hit bid is deliberately gated at five
+   innings: naming one in the second is not a fact, it is a jinx. */
+function cutsBaseball(){
+  var cuts=[], R=gsRows();
+  if(!R.length) return cuts;
+  function add(i,t,sub,w){ cuts.push({i:i,t:t,s:sub||'',w:w||0,kind:i}); }
+
+  R.forEach(function(x){
+    var ip=gval(x,'pitching','IP'), k=gval(x,'pitching','K'),
+        ha=gval(x,'pitching','H'), er=gval(x,'pitching','ER');
+    if(ip!=null && ip>=5 && ha===0){
+      add('🚫', whoTag(x.nm)+' has not allowed a hit through '+ip+'.',
+          'A no-hitter is still alive', 260);
+    } else if(k!=null && k>=7){
+      add('🔥', whoTag(x.nm)+' has struck out '+k+'.',
+          (ip!=null?(ip+' innings'):'')+(er===0?' · no earned runs':''), 120+k);
+    } else if(ip!=null && ip>=6 && er===0){
+      add('🧊', whoTag(x.nm)+' has gone '+ip+' without an earned run.','',110);
+    }
+
+    var h=gval(x,'batting','H'), ab=gval(x,'batting','AB'),
+        hr=gval(x,'batting','HR'), rbi=gval(x,'batting','RBI');
+    if(hr!=null && hr>=2){
+      add('💣', whoTag(x.nm)+' has gone deep '+hr+' times.','Multi-homer night',240);
+    } else if(hr===1){
+      add('💣', whoTag(x.nm)+' has gone deep.', (rbi!=null&&rbi>1)?(rbi+' driven in'):'', 150);
+    }
+    if(h!=null && h>=3){
+      add('🎯', whoTag(x.nm)+' is '+h+'-for-'+(ab!=null?ab:'?')+'.','Three hits or better',130+h);
+    }
+    if(rbi!=null && rbi>=3){
+      add('🧨', whoTag(x.nm)+' has driven in '+rbi+'.','',125+rbi);
+    }
+  });
+  return cuts;
+}
+
+/* ---- FOOTBALL, NFL AND COLLEGE ------------------------------------
+   One table for both: the feed shape is identical, and the difference
+   between the leagues is the path, not the columns. */
+function cutsFootball(){
+  var cuts=[], R=gsRows();
+  if(!R.length) return cuts;
+  function add(i,t,sub,w){ cuts.push({i:i,t:t,s:sub||'',w:w||0,kind:i}); }
+
+  R.forEach(function(x){
+    var py=gval(x,'passing','YDS'), ptd=gval(x,'passing','TD'), pint=gval(x,'passing','INT');
+    if(ptd!=null && ptd>=3){
+      add('🎯', whoTag(x.nm)+' has thrown '+ptd+' touchdowns.',
+          (py!=null?(py+' yards'):'')+(pint?(' · '+pint+' picked off'):''), 220+ptd*10);
+    } else if(py!=null && py>=300){
+      add('🎯', whoTag(x.nm)+' is over '+Math.floor(py/50)*50+' yards through the air.',
+          (ptd!=null?(ptd+' touchdowns'):''), 150);
+    }
+    var ry=gval(x,'rushing','YDS'), rtd=gval(x,'rushing','TD'), car=gval(x,'rushing','CAR');
+    if(ry!=null && ry>=100){
+      add('🏃', whoTag(x.nm)+' has run for '+ry+'.',
+          (car!=null?(car+' carries'):'')+(rtd?(' · '+rtd+' TD'):''), 160+Math.floor(ry/10));
+    } else if(rtd!=null && rtd>=2){
+      add('🏃', whoTag(x.nm)+' has '+rtd+' rushing touchdowns.','',170);
+    }
+    var cy=gval(x,'receiving','YDS'), rec=gval(x,'receiving','REC'), ctd=gval(x,'receiving','TD');
+    if(cy!=null && cy>=100){
+      add('🙌', whoTag(x.nm)+' has '+cy+' receiving yards.',
+          (rec!=null?(rec+' catches'):'')+(ctd?(' · '+ctd+' TD'):''), 155+Math.floor(cy/10));
+    }
+    var sk=gval(x,'defensive','SACKS'), tot=gval(x,'defensive','TOT');
+    if(sk!=null && sk>=2){
+      add('💥', whoTag(x.nm)+' has '+sk+' sacks.','',180);
+    } else if(tot!=null && tot>=10){
+      add('🛡️', whoTag(x.nm)+' has '+tot+' tackles.','',115);
+    }
+    var pk=gval(x,'interceptions','INT');
+    if(pk!=null && pk>=1){
+      add('🧤', whoTag(x.nm)+' has picked off '+(pk>1?(pk+' passes'):'a pass')+'.','',175);
+    }
+  });
+  return cuts;
+}
+
+/* ---- HOCKEY -------------------------------------------------------- */
+function cutsHockey(){
+  var cuts=[], R=gsRows();
+  if(!R.length) return cuts;
+  function add(i,t,sub,w){ cuts.push({i:i,t:t,s:sub||'',w:w||0,kind:i}); }
+  R.forEach(function(x){
+    var grp = x.g.forwards ? 'forwards' : (x.g.defenses ? 'defenses' : null);
+    if(grp){
+      var g=gval(x,grp,'G'), a=gval(x,grp,'A'), sog=gval(x,grp,'SOG'), ht=gval(x,grp,'HT');
+      if(g!=null && g>=3) add('🎩', whoTag(x.nm)+' has a HAT TRICK.','Three goals',300);
+      else if(g!=null && g>=2) add('🚨', whoTag(x.nm)+' has scored twice.','',200);
+      else if(g===1 && a!=null && a>=1) add('🚨', whoTag(x.nm)+' has a goal and '+a+'.','',140);
+      else if(a!=null && a>=2) add('🅰️', whoTag(x.nm)+' has '+a+' assists.','',130);
+      if(sog!=null && sog>=6) add('🎯', whoTag(x.nm)+' has '+sog+' shots on goal.','',110);
+      if(ht!=null && ht>=6) add('💥', whoTag(x.nm)+' has thrown '+ht+' hits.','',105);
+    }
+    var sv=gval(x,'goalies','SV'), ga=gval(x,'goalies','GA');
+    if(sv!=null && sv>=30) add('🧱', whoTag(x.nm)+' has made '+sv+' saves.',
+      (ga!=null?(ga+' past him'):''), 190);
+    else if(sv!=null && sv>=15 && ga===0) add('🧱', whoTag(x.nm)+' has turned away all '+sv+'.',
+      'A shutout is alive', 210);
+  });
+  return cuts;
+}
+
+/* ---- SOCCER, FROM TEAM STATS ---------------------------------------
+   Both EPL and MLS return ZERO player blocks from this endpoint —
+   measured, not assumed — so there is no player line to read. The team
+   table is what soccer actually publishes, and it is where the story is
+   anyway: a side with fifteen corners and one goal is the game. */
+function cutsSoccer(){
+  var cuts=[], A=GS.teams&&GS.teams[0], H=GS.teams&&GS.teams[1];
+  if(!A||!H) return cuts;
+  function add(i,t,sub,w){ cuts.push({i:i,t:t,s:sub||'',w:w||0,kind:i}); }
+  function tv(t,label){ try{ return cnum(t.m[label]); }catch(_){ return null; } }
+  function nameOf(t){ return '<b>'+esc(t.nm||t.ab||'')+'</b>'; }
+
+  [[A,H],[H,A]].forEach(function(pair){
+    var t=pair[0], o=pair[1];
+    var sh=tv(t,'totalShots'), sot=tv(t,'shotsOnTarget'),
+        co=tv(t,'wonCorners'), po=tv(t,'possessionPct');
+    if(sot!=null && sh!=null && sh>=12 && sot<=2){
+      add('🧱', nameOf(t)+' has had '+sh+' shots and put '+sot+' on target.','',180);
+    } else if(sot!=null && sot>=7){
+      add('🎯', nameOf(t)+' has '+sot+' shots on target.',(sh!=null?(sh+' attempts'):''),140);
+    }
+    if(co!=null && co>=9) add('🚩', nameOf(t)+' has won '+co+' corners.','',130);
+    if(po!=null && po>=65) add('⏱️', nameOf(t)+' has had the ball '+Math.round(po)+'% of the match.','',120);
+  });
+  return cuts;
+}
+
+/* The table. Keyed by SPORT.key, which is the FAMILY — so college
+   football and the NFL share one set, and MLS and the Premier League
+   share another, exactly as the leagues themselves do. */
+var CUTS = {
+  basketball: cutsBasketball,
+  baseball:   cutsBaseball,
+  football:   cutsFootball,
+  hockey:     cutsHockey,
+  soccer:     cutsSoccer
+};
+
+function cutsBasketball(){
   var cuts=[], B=stBox(), A=GS.teams[0], H=GS.teams[1];
   if(!B.length) return cuts;
   function add(i,t,s,w,kind){ cuts.push({i:i,t:t,s:s||'',w:w||0,kind:kind||i}); }
@@ -29783,6 +30031,20 @@ function renderStats(){
   }
   ST_RUNS.push(_now);
   var el = document.getElementById('stBody'); if(!el) return;
+  /* Ahead of the GS.ok branch on purpose: with no room chosen there is
+     nothing to pull, and "Pulling the numbers…" over a game the person
+     never picked is a second lie on top of the first. */
+  paintNoRoom();
+  if(noRoomChosen()){
+    el.innerHTML = '<div class="card center" style="padding:26px 18px">'
+      + '<div style="font-size:26px">📺</div>'
+      + '<b style="font-size:17px;display:block;margin-top:6px">Pick a game first</b>'
+      + '<p class="sub" style="font-size:14px;margin:8px auto 14px;max-width:34ch">'
+      + 'Stats follows the room you are in. Tonight’s games are in the rail at the top — or run a practice game.</p>'
+      + '<button type="button" class="pdlock" style="max-width:260px;margin:0 auto"'
+      + ' onclick="go(\'landing\')">Back to home</button></div>';
+    return;
+  }
 
   if(!GS.ok){
     var dead = GS.fails >= 2;
@@ -31093,7 +31355,44 @@ function tapeLoad(tries){
   }catch(_){}
 }
 
+/* ============ NOBODY HAS PICKED A GAME YET =========================
+   Measured on the live site and reproduced locally, three sources
+   disagreeing on one screen:
+
+       rail  -> tonight's real slate      correct
+       hero  -> NYY at LAA                correct
+       GAME  -> MIN at GS, mode demo      an expired August fixture
+
+   GAME is what Gametime and Stats read, so a phone that opened the front
+   door got a finished WNBA game and a Stats tab about Veronica Burton.
+
+   THE FIX IS NOT TO ADOPT A SPORT. Boot-time sport adoption was refused
+   before and that rule stands: the sport follows a TAP, never a default.
+   The fix is to stop pretending.
+
+   `S.practice` is the discriminator and it already existed. freshS() sets
+   practice:false; setMode('demo') — reached only through startDemo(), a
+   person pressing Practice — sets it true. So demo AND NOT practice means
+   "arrived, chose nothing", which is this state and nothing else. */
+function noRoomChosen(){
+  try{
+    /* ?fixture=1 IS A CHOSEN GAME. The test bench pins the built-in night
+       deliberately — that is the whole point of the flag — so the state
+       this guard exists to catch (arrived, chose nothing) is not the state
+       a suite is in. Without this, the guard hid the score and the Caught
+       It card underneath it and qa.js failed
+       callit.is-pinned-not-buried on two profiles. LOCK_FIXTURE is already
+       scoped to file:/localhost, so it can never be true for a visitor. */
+    if(typeof LOCK_FIXTURE !== 'undefined' && LOCK_FIXTURE) return false;
+    return S.mode === 'demo' && !S.practice;
+  }catch(_){ return false; }
+}
+function paintNoRoom(){
+  try{ document.body.classList.toggle('no-room', noRoomChosen()); }catch(_){}
+}
+
 function renderGametime(){
+  paintNoRoom();
   /* FIRST, BEFORE ANY RETURN. This function has THREE
      `return renderGametimeRest()` statements, and the first cut of this
      toggle sat after the last one — so it never ran, which is precisely
@@ -32111,6 +32410,31 @@ try{
   <div class="menuin" role="dialog" aria-label="Menu">
     <div class="menuhead"><b>Menu</b><button onclick="closeMenu()" aria-label="Close">✕</button></div>
     <div id="menuBody"></div>
+  <!-- ============ THE NEXT TWO WEEKS LIVES HERE ======================
+       It was asked for in the menu — "our schedule for the next two weeks
+       in our menu so people know what games are coming" — and I put it on
+       the landing instead. On a phone it ran 871px, which is more than a
+       whole screen of browsing content sitting between the way in and
+       everything below it: "the schedule eats up so much space."
+
+       One copy, in the menu, on every screen size. schedRender() paints it
+       when the sheet opens rather than on boot, so a person who never
+       opens the menu never pays for fourteen days of fixtures. -->
+    <div class="card" id="schedCard" style="display:none;margin-top:16px">
+      <div class="schHead">
+        <h2>What's coming</h2>
+        <span class="schSub" id="schedSub">Next two weeks</span>
+      </div>
+      <div id="schedList"></div>
+      <button class="btn ghost" id="schedMore" style="display:none">Show every day</button>
+    </div>
+
+    <!-- ============ THE TAPE ========================================
+         One question a day, from a game that finished. The only surface
+         in this product that does not need a live game — see
+         host/tape_card.py. Hidden until tape/{date} actually loads, so a
+         day the picker did not run costs a player nothing. -->
+
     <div id="menuStamp" class="center" style="margin-top:12px"></div>
   </div>
 </div>

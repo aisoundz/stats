@@ -64,13 +64,27 @@ t('the schedule sits BELOW the way in', () => {
     : 'the schedule renders ABOVE the practice control — browse content must never push the door';
 });
 
-t('it is on Home, not a fifth tab', () => {
-  const land = s.indexOf('id="s-landing"');
+t('it is in the MENU, and still not a fifth tab', () => {
+  /* MOVED 2 SEPT, and this check moved with it rather than being deleted.
+     It used to require the card inside #s-landing, which was where I first
+     put it — and it was asked for in the menu: "our schedule for the next
+     two weeks in our menu so people know what games are coming". On a
+     phone it ran 871px on the landing, more than a whole screen between
+     the way in and everything under it: "the schedule eats up so much
+     space."
+
+     The half of this check that always mattered is the second half. The
+     schedule must never become a fifth tab — Home, Stats, Gametime, Board,
+     and the middle two spell the product. That is unchanged. */
   const c = s.indexOf('id="schedCard"');
   if (c < 0) return 'no #schedCard';
-  const end = s.indexOf('</section>', land);
-  if (!(land < c && c < end)) return 'the schedule is not inside the landing section';
-  /* Home Stats Gametime Board. The middle two spell the product. */
+  const menu = s.indexOf('id="menuSheet"');
+  if (menu < 0) return 'no #menuSheet';
+  const menuEnd = s.indexOf('id="botnav"', menu);
+  if (!(menu < c && c < menuEnd)) return 'the schedule is not inside the menu sheet';
+  const land = s.indexOf('id="s-landing"');
+  const landEnd = s.indexOf('</section>', land);
+  if (land < c && c < landEnd) return 'the schedule is ALSO on the landing — one copy, not two';
   const navs = (s.match(/data-nav="[a-z]+"/g) || []);
   return navs.length === 4 ? true : `${navs.length} nav tabs — there must be exactly 4`;
 });

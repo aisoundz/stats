@@ -128,5 +128,26 @@ ok(!/\.grWho\{[^}]*text-overflow:ellipsis/s.test(src),
 ok(/\.mq-toprow\{[^}]*flex-wrap:wrap/s.test(src),
    '.mq-toprow wraps instead of truncating "GAME OF THE NIGHT"');
 
+console.log('--- a bare visit does not present a dead fixture as the game ---');
+/* freshS() boots mode "demo" with practice FALSE, so GAME is the built-in
+   Minnesota/Golden State night that finished in August. Gametime and Stats
+   read GAME, so a phone that opened the front door was shown "This game
+   finished 77 to 66" over a rail listing tonight's live baseball. */
+ok(/function noRoomChosen\(\)/.test(src),
+   'noRoomChosen() exists');
+ok(/S\.mode === 'demo' && !S\.practice/.test(src),
+   'it keys off practice — the flag that separates "arrived" from "pressed Practice"');
+{
+  const rg = src.indexOf('function renderGametime()');
+  ok(rg > 0 && /paintNoRoom\(\)/.test(src.slice(rg, rg + 400)),
+     'renderGametime() checks it ABOVE its three early returns');
+  const rs = src.indexOf('function renderStats()');
+  ok(rs > 0 && /noRoomChosen\(\)/.test(src.slice(rs, rs + 2200)),
+     'renderStats() checks it before reaching for the feed');
+}
+ok(/body\.no-room #s-gametime > \*:not\(#gtSticky\):not\(#gtNoRoom\)/.test(src),
+   'the fixture-driven screen is hidden by a body class, not by clearing ids');
+ok(/id="gtNoRoom"/.test(src), 'the "pick a game" notice exists in the Gametime screen');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
