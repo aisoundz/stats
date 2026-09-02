@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-02T00:10:23.092Z",
-  "generatedPT": "Tue, Sep 1, 5:10 PM PT",
+  "generated": "2026-09-02T00:12:22.531Z",
+  "generatedPT": "Tue, Sep 1, 5:12 PM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -235,7 +235,7 @@
           "tipPTLong": "Fri, Sep 4, 11:10 AM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "58"
         },
         {
           "nightId": "slate-2026-09-04-liv-ips",
@@ -254,7 +254,7 @@
           "tipPTLong": "Fri, Sep 4, 12:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "56"
         },
         {
           "nightId": "slate-2026-09-04-laa-pit",
@@ -273,7 +273,7 @@
           "tipPTLong": "Fri, Sep 4, 3:40 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "57"
         }
       ]
     },

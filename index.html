@@ -128,10 +128,50 @@
     border-radius:12px;border:1px solid var(--line2);background:var(--card2);
     color:var(--body);font-size:15px;font-weight:600;cursor:pointer}
   #tapeCard .tpO:hover{border-color:var(--line2)}
-  #tapeCard .tpO.right{border-color:rgba(46,230,166,.55);color:var(--green)}
-  #tapeCard .tpO.wrong{border-color:rgba(255,77,94,.5);color:var(--red)}
-  #tapeCard .tpO[disabled]{cursor:default;opacity:.75}
+  /* ============ ANSWERED MUST NOT LOOK LIKE SELECTED =================
+     These were a border tint and a text colour, which is the same visual
+     language as a live, chosen option — so after answering, the card
+     still read as waiting for a tap. Founder: "right now its still
+     highlighted."
+
+     Two changes. The correct row is FILLED, not outlined, because fill is
+     what the rest of this app uses for a settled state. And the result
+     carries a GLYPH — colour alone was the only difference between right
+     and wrong, on a dark ground where this green and the interface teal
+     are nearly the same hue, and it said nothing at all to a colour-blind
+     player. */
+  #tapeCard .tpO.right{border-color:rgba(46,230,166,.55);color:var(--green);
+    background:rgba(46,230,166,.10);font-weight:800}
+  #tapeCard .tpO.wrong{border-color:rgba(255,77,94,.5);color:var(--red);
+    background:rgba(255,77,94,.10);font-weight:800}
+  #tapeCard .tpO.right::after{content:'✓';float:right;font-weight:900}
+  #tapeCard .tpO.wrong::after{content:'✗';float:right;font-weight:900}
+  /* The road not taken. Dimming it is what makes the card read as CLOSED
+     rather than as one option still being offered. */
+  #tapeCard .tpO.past{opacity:.38}
+  #tapeCard .tpO[disabled]{cursor:default}
   #tapeCard .tpO.right[disabled],#tapeCard .tpO.wrong[disabled]{opacity:1}
+  /* ============ THE PAYOFF ==========================================
+     The reward for answering was a 14px grey sentence — the exact bug
+     recorded as fixed in-game on 19 Aug ("the payoff was the smallest
+     thing on screen"), reintroduced on this card.
+
+     The streak is the payoff, and it is the payoff because it is the only
+     thing here that COMPOUNDS: the question itself is about a finished
+     game and can be looked up, which is why The Tape must never pay
+     Points and never touch the Board. It cannot pay HUSTLE either —
+     nights/{id}/hustle/{uid} is written by the runner and by nobody with
+     a phone, deliberately. So what a person earns here is the run. */
+  #tapeCard .tpPay{display:flex;align-items:center;gap:12px;margin:14px 0 0;
+    padding:12px 14px;border-radius:12px;background:var(--card2);
+    border:1px solid var(--line)}
+  #tapeCard .tpPay .n{font-family:var(--mono);font-size:26px;font-weight:900;
+    color:var(--gold);line-height:1;font-variant-numeric:tabular-nums}
+  #tapeCard .tpPay .t{font-size:14px;color:var(--body);font-weight:700}
+  #tapeCard .tpPay .s{font-size:12px;color:var(--muted);display:block;font-weight:400}
+  #tapeCard .tpPay.up .n{animation:tpPop .45s ease-out}
+  @keyframes tpPop{0%{transform:scale(.7);opacity:.4}60%{transform:scale(1.18)}100%{transform:scale(1)}}
+  @media (prefers-reduced-motion:reduce){ #tapeCard .tpPay.up .n{animation:none} }
   #tapeCard .tpAfter{font-size:14px;color:var(--muted);margin:12px 0 0}
 
 
@@ -205,6 +245,10 @@
      · TUE · SEPTEMBER 1   GAME OF THE" with NIGHT cut off the edge. Which
      game this is, is the whole headline. A second line costs 14px; a
      truncated one costs the meaning. */
+  /* INVISIBLE UNTIL 1120px. display:contents removes the wrapper from
+     layout entirely, so the phone sees the same flat list of cards it
+     always has. */
+  .lcolA,.lcolB{display:contents}
   .mq-toprow{display:flex;justify-content:space-between;align-items:baseline;
     gap:12px;flex-wrap:wrap;min-width:0}
   /* ============ PAYING FOR THE SECOND LINE OUT OF WHITESPACE ==========
@@ -1858,6 +1902,19 @@
     <!-- THE MOMENT RIBBON — what's true right now: a countdown before tip,
          the real score while live, the final after. Painted from the ESPN
          feed; hides entirely if the feed can't be reached. -->
+    <!-- ============ THE TWO COLUMNS, AND WHY THEY ARE ELEMENTS =========
+         display:contents on the phone, so these wrappers do not exist in
+         layout at all and the single-column order is byte-for-byte what it
+         always was. At 1120px they become the columns.
+
+         They are ELEMENTS because CSS alone could not do it. The children
+         were grid items sharing rows, so a short hero beside a tall
+         sign-in card left ~1500px of dead black down the left of the
+         founder's screen — "it looks off and not organized", and he was
+         right. grid-column alone cannot fix that; `order` made it worse
+         twice. Two real flex columns each flow independently, which is
+         exactly what #s-final does and for exactly this reason. -->
+    <div class="lcolA">
     <div class="card" id="tonightCard" style="margin-top:14px">
       <!-- These are overwritten from BB_GAME on load; they are here only so
            the first paint is not blank. Keep them in sync with the fixture
@@ -2065,6 +2122,7 @@
          Below the way in on purpose -- see host/schedule_menu.py. Hidden
          until schedule.json actually loads, so a missing file costs a
          person nothing. -->
+    </div><div class="lcolB">
     <div class="card" id="schedCard" style="display:none;margin-top:16px">
       <div class="schHead">
         <h2>What's coming</h2>
@@ -2088,8 +2146,10 @@
       <p class="tpQ" id="tapeQ"></p>
       <div class="tpOpts" id="tapeOpts"></div>
       <p class="tpAfter" id="tapeAfter" style="display:none"></p>
+          <div class="tpPay" id="tapePay" style="display:none"></div>
     </div>
 
+    </div>
     <div class="card" id="welcomeStrip" style="display:none;margin-top:14px;padding:11px 14px;border-color:rgba(46,230,166,.35)"></div>
     <!-- ONE SET OF DOORS. "Play Game Night" and "Practice" used to sit in
          the game card below the sign-in card, so a signed-out stranger was
@@ -2512,6 +2572,16 @@
         <div class="catchgrid" id="catchGrid"></div>
       </div>
       <button class="btn ghost" id="gtTalkBtn" onclick="openTalk()">🔥 Talk trash</button>
+      <!-- THE WAY OUT OF PRACTICE. There were two ways to leave a run —
+           "Leave this and run a practice game" and "This isn't my game —
+           start over" — and BOTH live on the landing's resume bar. Once a
+           person is inside practice on Gametime there was nothing: no
+           back, no reset, no end. The founder found it in one sitting:
+           "there's no way to reset or go back."
+           Shown only in practice, because a live room must not offer a
+           one-tap exit next to a question that is scoring. -->
+      <button class="btn ghost" id="gtEndPractice" style="display:none"
+              onclick="endPractice()">← End practice</button>
     </div>
     <!-- THE FEED. Everything below the Caught It slot is an endless scroll of
          the game itself: every bucket, every run, every deep cut, and your
@@ -9671,6 +9741,12 @@ function freshStart(then){
   try{ sessionStorage.setItem('stats_after_reload', then||'home'); }catch(_){}
   try{ location.reload(); }catch(_){ location.href=location.pathname; }
 }
+/* Reuses freshStart, which is the one reset path this app has: it clears
+   the save, drops the resume data and reloads to the landing. Inventing a
+   second way to reset is how two of them end up disagreeing. */
+function endPractice(){
+  try{ freshStart('home'); }catch(_){ try{ location.href = location.pathname; }catch(__){} }
+}
 function startDemo(){
   /* The sample bank names its own fixture's teams. If this practice run is
      happening inside a real room, translate them first — see
@@ -11727,7 +11803,7 @@ function predGateShut(wantsRoute){
     }catch(_){}
     try{
       toast(made
-        ? 'Your picks are locked in — the pre-game card closed at tip-off. They settle at the final buzzer.'
+        ? ('Your picks are locked in — the pre-game card closed at tip-off. They settle at the ' + endWord() + '.')
         : 'The pre-game card closed at tip-off, so there is nothing left to pick. You are still in for every live round from here.');
     }catch(_){}
     predGoToGame();
@@ -23649,7 +23725,17 @@ function inviteText(){
   var line = 'Play along with me — ' + what
            + (when ? (' at ' + when) : '')
            + (gn ? ('. Game Night #' + gn + '.') : '.')
-           + ' Free, no account needed.';
+           /* "NO ACCOUNT NEEDED" WAS FALSE FOR THE THING IT LINKS TO.
+              This invite points at a LIVE room, and gateNeeded() is
+              `S.mode === 'live'` — a live night has always required an
+              account, because a seat and a score have to belong to
+              somebody. Practice is the half that needs nothing. The line
+              was shipping to other people's phones claiming otherwise,
+              which is the one kind of copy this product cannot get wrong:
+              somebody arrives, is asked to sign in, and the invitation
+              that brought them there said they would not be. Free is
+              still true and is the part worth saying. */
+           + ' Free to play — one quick sign-in for a live room.';
   var url = 'https://statsgametime.com/?game=' + encodeURIComponent(id) + '&src=invite';
   return { title: 'STATS GAMETIME', text: line, url: url, full: line + '\n' + url };
 }
@@ -25933,7 +26019,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-01-wide.276';
+const STATS_BUILD='2026-09-01-cols.277';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -28899,11 +28985,23 @@ function stEmpty(icon,head,sub){
    printing none: it read "0 of 5 leading" and "+0 pts" on EVERY baseball
    card, all night, whether the player's picks were good or not. This is
    the plain, true alternative — what you picked, nothing invented. */
+/* One reader for the sport's settle word, so the next screen that needs
+   it cannot reintroduce a hardcoded "buzzer". */
+function endWord(){
+  try{ return (SPORT && SPORT.L && SPORT.L.end) || 'final whistle'; }
+  catch(_){ return 'final whistle'; }
+}
 function stPlainPickRow(p){
   var who=String(S.predChoices[p.id]||''); if(!who) return '';
   return '<div class="stPickRow2"><div class="stPickCat">'+esc(p.label)+'</div>'
     + '<div class="stPickTop"><span class="stPickMine">'+esc(who)+'</span>'
-    + '<span class="stPickLead2">final buzzer</span></div></div>';
+    /* THE SPORT'S OWN WORD, NOT BASKETBALL'S. Every SPORTS entry already
+       carries L.end — "final out" for baseball, "final whistle" for
+       football and soccer, "final horn" for hockey — and this printed
+       "final buzzer" over a Brewers/Cubs card. A baseball game has no
+       buzzer; the founder spotted it on his own screen. The word existed,
+       nothing reached for it. */
+    + '<span class="stPickLead2">'+esc(endWord())+'</span></div></div>';
 }
 
 /* ---- YOUR CARD, RACING THE REAL BOX SCORE --------------------------
@@ -30907,6 +31005,9 @@ function tapeRender(){
           b.disabled=true;
           if(o===TAPE.answer) b.className='tpO right';
           else if(o===had.said) b.className='tpO wrong';
+          /* Neither the answer nor what you said: dim it, so the card
+             closes instead of still offering something. */
+          else b.className='tpO past';
         } else {
           b.onclick=function(){ tapeAnswer(o); };
         }
@@ -30922,6 +31023,24 @@ function tapeRender(){
           : ('It was “' + TAPE.answer + '”. The run counts days you showed up, not days you were right.');
       } else { after.style.display='none'; after.textContent=''; }
     }
+
+    /* THE RUN, AS THE HEADLINE. Built here rather than in markup because
+       it only exists once a day has been answered. `just` is true only on
+       the render that follows the tap, so the number pops when it moves
+       and sits still on every later visit — an animation that replays on
+       every page load is noise, not feedback. */
+    var pay=document.getElementById('tapePay');
+    if(pay){
+      if(had){
+        var days=tapeStreak();
+        pay.className='tpPay' + (TAPE._just ? ' up' : '');
+        pay.innerHTML='<span class="n" data-noi18n>'+esc(String(days))+'</span>'
+          + '<span class="t">'+(days===1?'day in a row':'days in a row')
+          + '<span class="s">The run counts days you showed up.</span></span>';
+        pay.style.display='';
+      } else { pay.style.display='none'; pay.innerHTML=''; }
+    }
+    TAPE._just=false;
     card.style.display='';
   }catch(_){}
 }
@@ -30933,6 +31052,14 @@ function tapeAnswer(said){
     if(tapeSaved(day)) return;                 /* once a day, and it sticks */
     tapeSave(day, { said: said, at: Date.now() });
     try{ trk('tape_answer', { right: said===TAPE.answer ? 1 : 0 }); }catch(_){}
+    TAPE._just = true;
+    /* LEVEL 1, THE SMALLEST BURST. celebrate() already owns the particles
+       and already stands down under prefers-reduced-motion, so this reuses
+       it rather than inventing a second celebration. Level 1 and not 3
+       because this question is about a game that finished last night and
+       can be looked up — it should not get the same fanfare as catching
+       something live. */
+    if(said===TAPE.answer){ try{ celebrate(1); }catch(_){} }
     tapeRender();
   }catch(_){}
 }
@@ -30967,6 +31094,15 @@ function tapeLoad(tries){
 }
 
 function renderGametime(){
+  /* FIRST, BEFORE ANY RETURN. This function has THREE
+     `return renderGametimeRest()` statements, and the first cut of this
+     toggle sat after the last one — so it never ran, which is precisely
+     the dead-code bug fixed in this same file this morning. Anything that
+     must happen every paint goes above the first exit. */
+  try{
+    var _ep = document.getElementById('gtEndPractice');
+    if(_ep) _ep.style.display = (typeof S !== 'undefined' && S && S.mode === 'demo') ? '' : 'none';
+  }catch(_){}
   const head=document.getElementById('gtHead');
   if(!head) return;
   let H='Home', A='Away', hs=null, as=null;
@@ -33158,7 +33294,7 @@ body.hasgamebar .screen.active{padding-bottom:132px}
   body.on-landing #s-landing{display:grid;
     grid-template-columns:minmax(0,1.12fr) minmax(0,0.88fr);
     column-gap:28px;align-items:stretch;
-    padding-left:24px;padding-right:24px}
+    padding-left:8px;padding-right:8px}
   /* STRETCH, NOT START. Grid puts the hero and the sign-in card in one
      row, and the sign-in card is the taller of the two, so `start` left
      ~230px of dead space hanging under the hero — the exact "unfinished"
@@ -33191,11 +33327,26 @@ body.hasgamebar .screen.active{padding-bottom:132px}
      under the hero restores the order the phone always had, and What's
      Coming and The Tape move to column two, where they are still above
      the fold, which was the point. */
-  body.on-landing #slateCard,
-  body.on-landing #portalCard{grid-column:1}
-  body.on-landing #schedCard,
-  body.on-landing #tapeCard,
-  body.on-landing #landingInviteBtn{grid-column:2}
+  /* THE COLUMNS CARRY THE 16px THE SECTION USED TO. #tonightCard is
+     `margin:0 -16px` — a deliberate full-bleed "past the section's 16px
+     padding" — and inside a 585px column with no such padding it rendered
+     617px, sixteen past each edge. qa/platforms.js caught it on four
+     desktop profiles as content cut off with no way to reach it. Giving
+     each column the padding the section used to provide puts the bleed
+     back on a real edge, and the outer padding drops to match so the page
+     is not inset twice. */
+  body.on-landing .lcolA{grid-column:1;display:flex;flex-direction:column;min-width:0;
+    padding-left:16px;padding-right:16px}
+  body.on-landing .lcolB{grid-column:2;display:flex;flex-direction:column;min-width:0;
+    padding-left:16px;padding-right:16px}
+  /* Everything after the two columns is the full width again. */
+  body.on-landing #welcomeStrip,
+  body.on-landing #landingActions,
+  body.on-landing #howBlock,
+  body.on-landing #matchupCard,
+  body.on-landing .foot,
+  body.on-landing #landStamp{grid-column:1 / -1}
+  body.on-landing #landingActions{max-width:620px;margin-left:auto;margin-right:auto;width:100%}
   /* THE TAPE IS NOT REORDERED, AND `order` IS THE WRONG TOOL FOR IT.
      What's Coming runs 871px in a 459px column, so The Tape starts below
      the fold. Two attempts to lift it both failed for the same structural
