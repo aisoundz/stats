@@ -4198,10 +4198,44 @@ window.STATS_FIREBASE = {
     TRK_M.sessions = sess + 1;
     TRK_M.t0       = Date.now();          // this session's clock starts here
   }
+  /* ============ A LOCKED PHONE IS NOT ATTENTION =====================
+     TRK_M.t0 was set once and never moved, so this counted every minute
+     between opening the tab and reading the number — including the tab
+     being backgrounded, the phone being locked, and the night being over.
+     The archive holds a 1,314-minute "session" (21.9 hours) and a "median
+     evening per human" of 110 minutes because of it.
+
+     Minutes watched with the app open is the CORE metric of this product —
+     the whole positioning is attention, not prediction — so a number that
+     counts a pocket is worse than no number, because it looks solved.
+
+     The clock now freezes on `hidden` and restarts on `visible`: the
+     elapsed span is banked into base at the moment of hiding, and t0 is
+     reset when the tab comes back. Nothing accrues in between. */
+  var TRK_M_HIDDEN = false;
+  try{
+    document.addEventListener('visibilitychange', function(){
+      try{
+        if(document.visibilityState === 'hidden'){
+          if(!TRK_M_HIDDEN){
+            TRK_M.base += Math.max(0, Math.round((Date.now() - TRK_M.t0) / 60000));
+            TRK_M_HIDDEN = true;
+            try{ trkMinsSave(); }catch(_){}
+          }
+        } else if(TRK_M_HIDDEN){
+          TRK_M.t0 = Date.now();
+          TRK_M_HIDDEN = false;
+        }
+      }catch(_){}
+    });
+  }catch(_){}
+
   function trkMins(){
     trkSync();
     if (TRK_M.night === null) return Math.round((Date.now() - TRK.t0) / 60000);
-    return TRK_M.base + Math.round((Date.now() - TRK_M.t0) / 60000);
+    /* Nothing accrues while hidden — base already holds everything up to
+       the moment the tab went away. */
+    return TRK_M.base + (TRK_M_HIDDEN ? 0 : Math.round((Date.now() - TRK_M.t0) / 60000));
   }
   function trkSessionMins(){
     trkSync();
@@ -4334,6 +4368,12 @@ window.STATS_FIREBASE = {
      try/catch: the calls looked fine and collected nothing. The gate caught
      it; a game night would not have. */
   try{
+    /* The minutes clock, reachable. It lives in this closure, so the only
+       way to prove it stops when a phone is pocketed was to reason about
+       it — and reasoning is what produced a 1,314-minute session in the
+       first place. Exposed as a test hook, not an API. */
+    window.__TRK_M = TRK_M; window.trkMins = trkMins;
+    try{ Object.defineProperty(window,'__TRK_HIDDEN',{get:function(){ return TRK_M_HIDDEN; },configurable:true}); }catch(_){}
     window.TRK = TRK; window.trkLoad = trkLoad;
     window.STATS_TRK = trkReport; window.trk = trk; window.trkNow = trkNow; window.trkFlush = trkFlush;
   }catch(_){}
@@ -26161,7 +26201,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-02-trim.285';
+const STATS_BUILD='2026-09-02-mins.286';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
