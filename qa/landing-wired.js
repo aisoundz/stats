@@ -60,7 +60,82 @@ for (const fn of INITS) {
      `${fn}() is called from _statsReady`);
 }
 
-console.log('--- nothing is stranded after a return ---');
+console.log('--- NOTHING is stranded after a return, under any name ---');
+/* THE FIVE-NAME ALLOWLIST BELOW WAS NOT ENOUGH. A CTO audit added
+   paintStreakBadge() after the same `return` in renderGametime() — the
+   identical shape of the original defect, under a name this file does not
+   know — and this suite stayed 25/25 GREEN. An allowlist can only ever
+   catch the bug that has already happened.
+
+   So: a generic reachability scan. Any statement sitting after a complete
+   `return` at the same brace depth, before that block closes.
+
+   Getting it to zero false positives on a 1.9MB file took four passes, and
+   each exclusion is a real JavaScript shape, not a fudge:
+     - a multi-line return expression (its continuation lines are not dead)
+     - `} catch (e) {`, `} else {` — sibling blocks at the same net depth
+     - `if (cond)` with no braces, on the line above the return
+     - the same, with the condition spanning lines and closing on `)`
+   Before those: 92 hits, all noise. After: 0 on a clean build, and 1 on
+   either sabotage — a wrapped call or a bare one. */
+function deadAfterReturn(src){
+  const lines = src.split('\n');
+  const out = [];
+  let depth = 0, deadAt = -1, deadDepth = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const t = raw.trim();
+    const code = t.replace(/\/\*.*?\*\//g, '').replace(/\/\/.*$/, '').trim();
+    if (deadAt >= 0 && depth === deadDepth && code && code !== '}' && !code.startsWith('}')) {
+      out.push({ line: i + 1, ret: deadAt + 1, text: code.slice(0, 72) });
+      deadAt = -1;
+    }
+    /* A line that OPENS by closing a block — `} catch (e) {`, `} else {`,
+       `} finally {` — starts a new sibling block at the same net depth.
+       Code after it is reachable; without this the catch body of every
+       try/return/catch read as dead. */
+    if (/^\}/.test(code)) deadAt = -1;
+    let d = depth;
+    for (const ch of raw) { if (ch === '{') d++; else if (ch === '}') d--; }
+    if (d < depth || (deadAt >= 0 && d !== deadDepth)) deadAt = -1;
+    /* Only a COMPLETE return terminates the block. A `return` whose line
+       does not end in `;` is a multi-line expression, and its continuation
+       lines are not dead code — that mistake produced 92 hits, nearly all
+       of them arithmetic. */
+    /* A BRACE-LESS CONDITIONAL RETURN DOES NOT TERMINATE THE BLOCK:
+           if (cond)
+             return x;
+           next();        <- reachable when cond is false
+       Without this every one of those read as dead code. All five
+       remaining hits on the shipped build were this shape. */
+    let conditional = false;
+    for (let k = i - 1; k >= 0; k--) {
+      const prev = lines[k].replace(/\/\*.*?\*\//g, '').replace(/\/\/.*$/, '').trim();
+      if (!prev) continue;
+      /* Also a condition SPANNING lines, whose closing ) lands on the
+         line above the return:
+             if (a ||
+                 b)
+               return x;
+             next();
+         Such a line ends in ) and not in ; or { . */
+      conditional = /^(if|else if|for|while)\s*\(.*\)\s*$/.test(prev)
+                 || (/\)\s*$/.test(prev) && !/[;{]\s*$/.test(prev));
+      break;
+    }
+    if (/^return\b/.test(code) && d === depth && /;\s*$/.test(code) && !conditional) { deadAt = i; deadDepth = depth; }
+    depth = d;
+  }
+  return out;}
+{
+  const dead = deadAfterReturn(src);
+  ok(dead.length === 0,
+     dead.length
+       ? `${dead.length} unreachable statement(s): L${dead[0].line} "${dead[0].text}" (after the return on L${dead[0].ret})`
+       : 'no statement sits after a return in its own block');
+}
+
+console.log('--- and the five that actually shipped dead ---');
 /* The precise shape of the bug: a call to one of these sitting below a
    `return` in the same block. Scanned line by line rather than by regex —
    the first version of this check used a multiline pattern with nested
