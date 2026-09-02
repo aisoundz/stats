@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-01T13:48:40.803Z",
-  "generatedPT": "Tue, Sep 1, 6:48 AM PT",
+  "generated": "2026-09-02T00:10:23.092Z",
+  "generatedPT": "Tue, Sep 1, 5:10 PM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,14 +10,27 @@
   },
   "counts": {
     "days": 14,
-    "built": 7,
+    "built": 14,
     "off": 0,
-    "unbuilt": 7,
-    "games": 29,
-    "featured": 15,
+    "unbuilt": 0,
+    "games": 43,
+    "featured": 29,
     "unresolvedPicks": 0
   },
-  "_diagnostics": [],
+  "_diagnostics": [
+    {
+      "level": "error",
+      "date": "2026-09-04",
+      "code": "manifest-conflict",
+      "message": "slate-2026-09-04-det-cle appears twice in slate-all-2026-09-04.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "note",
+      "date": "2026-09-04",
+      "code": "manifest-duplicate",
+      "message": "slate-all-2026-09-04.tsv has 26 rows but only 25 distinct nightIds — 1 duplicate row(s), deduped"
+    }
+  ],
   "days": [
     {
       "date": "2026-09-01",
@@ -202,10 +215,67 @@
       "date": "2026-09-04",
       "weekday": "Fri",
       "label": "Fri, Sep 4",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 3,
+      "games": [
+        {
+          "nightId": "slate-2026-09-04-det-cle",
+          "date": "2026-09-04",
+          "league": "mlb",
+          "leagueLabel": "Major League Baseball",
+          "leagueProse": "Major League Baseball",
+          "sport": "baseball",
+          "path": "baseball/mlb",
+          "espnEvent": "401877193",
+          "home": "Guardians",
+          "away": "Tigers",
+          "matchup": "Tigers at Guardians",
+          "tipISO": "2026-09-04T18:10:00.000Z",
+          "tipPT": "11:10 AM PT",
+          "tipPTLong": "Fri, Sep 4, 11:10 AM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-04-liv-ips",
+          "date": "2026-09-04",
+          "league": "epl",
+          "leagueLabel": "Premier League",
+          "leagueProse": "the Premier League",
+          "sport": "soccer",
+          "path": "soccer/eng.1",
+          "espnEvent": "401879288",
+          "home": "Ipswich Town",
+          "away": "Liverpool",
+          "matchup": "Liverpool at Ipswich Town",
+          "tipISO": "2026-09-04T19:00:00.000Z",
+          "tipPT": "12:00 PM PT",
+          "tipPTLong": "Fri, Sep 4, 12:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-04-laa-pit",
+          "date": "2026-09-04",
+          "league": "mlb",
+          "leagueLabel": "Major League Baseball",
+          "leagueProse": "Major League Baseball",
+          "sport": "baseball",
+          "path": "baseball/mlb",
+          "espnEvent": "401816797",
+          "home": "Pirates",
+          "away": "Angels",
+          "matchup": "Angels at Pirates",
+          "tipISO": "2026-09-04T22:40:00.000Z",
+          "tipPT": "3:40 PM PT",
+          "tipPTLong": "Fri, Sep 4, 3:40 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        }
+      ]
     },
     {
       "date": "2026-09-05",
@@ -334,28 +404,142 @@
       "date": "2026-09-06",
       "weekday": "Sun",
       "label": "Sun, Sep 6",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 4,
+      "games": [
+        {
+          "nightId": "slate-2026-09-06-man-eve",
+          "date": "2026-09-06",
+          "league": "epl",
+          "leagueLabel": "Premier League",
+          "leagueProse": "the Premier League",
+          "sport": "soccer",
+          "path": "soccer/eng.1",
+          "espnEvent": "401879291",
+          "home": "Everton",
+          "away": "Manchester United",
+          "matchup": "Manchester United at Everton",
+          "tipISO": "2026-09-06T13:00:00.000Z",
+          "tipPT": "6:00 AM PT",
+          "tipPTLong": "Sun, Sep 6, 6:00 AM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": "65"
+        },
+        {
+          "nightId": "slate-2026-09-06-che-ars",
+          "date": "2026-09-06",
+          "league": "epl",
+          "leagueLabel": "Premier League",
+          "leagueProse": "the Premier League",
+          "sport": "soccer",
+          "path": "soccer/eng.1",
+          "espnEvent": "401879292",
+          "home": "Arsenal",
+          "away": "Chelsea",
+          "matchup": "Chelsea at Arsenal",
+          "tipISO": "2026-09-06T15:30:00.000Z",
+          "tipPT": "8:30 AM PT",
+          "tipPTLong": "Sun, Sep 6, 8:30 AM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": "66"
+        },
+        {
+          "nightId": "slate-2026-09-06-atl-phi",
+          "date": "2026-09-06",
+          "league": "mlb",
+          "leagueLabel": "Major League Baseball",
+          "leagueProse": "Major League Baseball",
+          "sport": "baseball",
+          "path": "baseball/mlb",
+          "espnEvent": "401816828",
+          "home": "Phillies",
+          "away": "Braves",
+          "matchup": "Braves at Phillies",
+          "tipISO": "2026-09-06T17:10:00.000Z",
+          "tipPT": "10:10 AM PT",
+          "tipPTLong": "Sun, Sep 6, 10:10 AM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": "67"
+        },
+        {
+          "nightId": "slate-2026-09-06-min-chw",
+          "date": "2026-09-06",
+          "league": "mlb",
+          "leagueLabel": "Major League Baseball",
+          "leagueProse": "Major League Baseball",
+          "sport": "baseball",
+          "path": "baseball/mlb",
+          "espnEvent": "401816835",
+          "home": "White Sox",
+          "away": "Twins",
+          "matchup": "Twins at White Sox",
+          "tipISO": "2026-09-06T22:20:00.000Z",
+          "tipPT": "3:20 PM PT",
+          "tipPTLong": "Sun, Sep 6, 3:20 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": "68"
+        }
+      ]
     },
     {
       "date": "2026-09-07",
       "weekday": "Mon",
       "label": "Mon, Sep 7",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 1,
+      "games": [
+        {
+          "nightId": "slate-2026-09-07-stl-sf",
+          "date": "2026-09-07",
+          "league": "mlb",
+          "leagueLabel": "Major League Baseball",
+          "leagueProse": "Major League Baseball",
+          "sport": "baseball",
+          "path": "baseball/mlb",
+          "espnEvent": "401816850",
+          "home": "Giants",
+          "away": "Cardinals",
+          "matchup": "Cardinals at Giants",
+          "tipISO": "2026-09-08T00:10:00.000Z",
+          "tipPT": "5:10 PM PT",
+          "tipPTLong": "Mon, Sep 7, 5:10 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": "69"
+        }
+      ]
     },
     {
       "date": "2026-09-08",
       "weekday": "Tue",
       "label": "Tue, Sep 8",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 1,
+      "games": [
+        {
+          "nightId": "slate-2026-09-08-hou-phi",
+          "date": "2026-09-08",
+          "league": "mlb",
+          "leagueLabel": "Major League Baseball",
+          "leagueProse": "Major League Baseball",
+          "sport": "baseball",
+          "path": "baseball/mlb",
+          "espnEvent": "401816856",
+          "home": "Phillies",
+          "away": "Astros",
+          "matchup": "Astros at Phillies",
+          "tipISO": "2026-09-08T22:40:00.000Z",
+          "tipPT": "3:40 PM PT",
+          "tipPTLong": "Tue, Sep 8, 3:40 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": "70"
+        }
+      ]
     },
     {
       "date": "2026-09-09",
@@ -446,19 +630,76 @@
       "date": "2026-09-10",
       "weekday": "Thu",
       "label": "Thu, Sep 10",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 1,
+      "games": [
+        {
+          "nightId": "slate-2026-09-10-sf-lar",
+          "date": "2026-09-10",
+          "league": "nfl",
+          "leagueLabel": "NFL",
+          "leagueProse": "the NFL",
+          "sport": "football",
+          "path": "football/nfl",
+          "espnEvent": "401872657",
+          "home": "Rams",
+          "away": "49ers",
+          "matchup": "49ers at Rams",
+          "tipISO": "2026-09-11T00:35:00.000Z",
+          "tipPT": "5:35 PM PT",
+          "tipPTLong": "Thu, Sep 10, 5:35 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": "75"
+        }
+      ]
     },
     {
       "date": "2026-09-11",
       "weekday": "Fri",
       "label": "Fri, Sep 11",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 2,
+      "games": [
+        {
+          "nightId": "slate-2026-09-11-cin-mil",
+          "date": "2026-09-11",
+          "league": "mlb",
+          "leagueLabel": "Major League Baseball",
+          "leagueProse": "Major League Baseball",
+          "sport": "baseball",
+          "path": "baseball/mlb",
+          "espnEvent": "401816897",
+          "home": "Brewers",
+          "away": "Reds",
+          "matchup": "Reds at Brewers",
+          "tipISO": "2026-09-11T23:40:00.000Z",
+          "tipPT": "4:40 PM PT",
+          "tipPTLong": "Fri, Sep 11, 4:40 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": "76"
+        },
+        {
+          "nightId": "slate-2026-09-11-sd-sf",
+          "date": "2026-09-11",
+          "league": "mlb",
+          "leagueLabel": "Major League Baseball",
+          "leagueProse": "Major League Baseball",
+          "sport": "baseball",
+          "path": "baseball/mlb",
+          "espnEvent": "401816900",
+          "home": "Giants",
+          "away": "Padres",
+          "matchup": "Padres at Giants",
+          "tipISO": "2026-09-12T02:15:00.000Z",
+          "tipPT": "7:15 PM PT",
+          "tipPTLong": "Fri, Sep 11, 7:15 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": "77"
+        }
+      ]
     },
     {
       "date": "2026-09-12",
@@ -691,10 +932,48 @@
       "date": "2026-09-14",
       "weekday": "Mon",
       "label": "Mon, Sep 14",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 2,
+      "games": [
+        {
+          "nightId": "slate-2026-09-14-atl-chc",
+          "date": "2026-09-14",
+          "league": "mlb",
+          "leagueLabel": "Major League Baseball",
+          "leagueProse": "Major League Baseball",
+          "sport": "baseball",
+          "path": "baseball/mlb",
+          "espnEvent": "401816937",
+          "home": "Cubs",
+          "away": "Braves",
+          "matchup": "Braves at Cubs",
+          "tipISO": "2026-09-14T23:40:00.000Z",
+          "tipPT": "4:40 PM PT",
+          "tipPTLong": "Mon, Sep 14, 4:40 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-14-den-kc",
+          "date": "2026-09-14",
+          "league": "nfl",
+          "leagueLabel": "NFL",
+          "leagueProse": "the NFL",
+          "sport": "football",
+          "path": "football/nfl",
+          "espnEvent": "401872931",
+          "home": "Chiefs",
+          "away": "Broncos",
+          "matchup": "Broncos at Chiefs",
+          "tipISO": "2026-09-15T00:15:00.000Z",
+          "tipPT": "5:15 PM PT",
+          "tipPTLong": "Mon, Sep 14, 5:15 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
