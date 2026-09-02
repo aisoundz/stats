@@ -1,20 +1,20 @@
 {
-  "generated": "2026-09-02T00:12:22.531Z",
-  "generatedPT": "Tue, Sep 1, 5:12 PM PT",
+  "generated": "2026-09-02T10:20:01.216Z",
+  "generatedPT": "Wed, Sep 2, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-01",
-    "to": "2026-09-14",
+    "from": "2026-09-02",
+    "to": "2026-09-15",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 43,
-    "featured": 29,
+    "unbuilt": 1,
+    "games": 40,
+    "featured": 28,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -32,72 +32,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-09-01",
-      "weekday": "Tue",
-      "label": "Tue, Sep 1",
-      "status": "built",
-      "gameCount": 3,
-      "games": [
-        {
-          "nightId": "slate-2026-09-01-mil-chc",
-          "date": "2026-09-01",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816768",
-          "home": "Cubs",
-          "away": "Brewers",
-          "matchup": "Brewers at Cubs",
-          "tipISO": "2026-09-01T23:40:00.000Z",
-          "tipPT": "4:40 PM PT",
-          "tipPTLong": "Tue, Sep 1, 4:40 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "49"
-        },
-        {
-          "nightId": "slate-2026-09-01-nyy-laa",
-          "date": "2026-09-01",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816770",
-          "home": "Angels",
-          "away": "Yankees",
-          "matchup": "Yankees at Angels",
-          "tipISO": "2026-09-02T01:38:00.000Z",
-          "tipPT": "6:38 PM PT",
-          "tipPTLong": "Tue, Sep 1, 6:38 PM PT",
-          "featured": false,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-01-stl-lad",
-          "date": "2026-09-01",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816772",
-          "home": "Dodgers",
-          "away": "Cardinals",
-          "matchup": "Cardinals at Dodgers",
-          "tipISO": "2026-09-02T02:10:00.000Z",
-          "tipPT": "7:10 PM PT",
-          "tipPTLong": "Tue, Sep 1, 7:10 PM PT",
-          "featured": false,
-          "mainEvent": false,
-          "gameNight": null
-        }
-      ]
-    },
     {
       "date": "2026-09-02",
       "weekday": "Wed",
@@ -122,7 +56,7 @@
           "tipPTLong": "Wed, Sep 2, 4:40 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": "50"
+          "gameNight": "52"
         },
         {
           "nightId": "slate-2026-09-02-nyy-laa",
@@ -974,6 +908,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-09-15",
+      "weekday": "Tue",
+      "label": "Tue, Sep 15",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
