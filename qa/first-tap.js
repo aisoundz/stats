@@ -107,6 +107,15 @@ const ok=(c,m)=>{ if(c){pass++;console.log('  ok   '+m);} else {fail++;console.l
   {
     const withName = await p.evaluate(async () => {
       try { SB.verified = () => true; } catch (_) {}
+      /* DO NOT WRITE A SEAT INTO THE REAL NIGHT. This suite drives
+         startLive(), which reaches startPredict() and joins — against
+         PRODUCTION Firestore, because only the PAGE is served locally.
+         Twelve "QA Tester" rows were sitting on a live board on 2 Sept,
+         one per gate run, in a room a real player was looking at 90
+         minutes before first pitch. What this block asserts is where the
+         player LANDS and what name they keep; the join is incidental to
+         both, so it is stubbed rather than the assertion weakened. */
+      try { SB.join = async () => true; } catch (_) {}
       localStorage.setItem('stats_profile_v1', JSON.stringify({ name: 'QA Tester', color: '#3b82f6' }));
       try { S.name = ''; } catch (_) {}
       try { startLive(); } catch (e) { return { threw: String(e).slice(0, 80) }; }

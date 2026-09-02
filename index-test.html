@@ -16895,29 +16895,14 @@ var I18N = {
     "Start practice":            "Empezar la pr\u00e1ctica",
     "Gametime follows the room you are in. Tonight\u2019s games are in the rail at the top \u2014 or run a practice game.": "Gametime sigue la sala en la que est\u00e1s. Los partidos de hoy est\u00e1n en la barra de arriba, o juega una ronda de pr\u00e1ctica.",
     "Stats follows the room you are in. Tonight\u2019s games are in the rail at the top \u2014 or run a practice game.": "Stats sigue la sala en la que est\u00e1s. Los partidos de hoy est\u00e1n en la barra de arriba, o juega una ronda de pr\u00e1ctica.",
-    "Leagues are free to join. STATS+ members can create unlimited leagues with custom names & trash-talk boards.": "Entrar a una liga es gratis. Los miembros de STATS+ pueden crear ligas ilimitadas con nombre propio y tablón para picarse.",
     "Predictions locked. When each quarter ends, questions drop here — be fast, points are live.": "Predicciones bloqueadas. Cuando termine cada cuarto, las preguntas aparecen aquí. Sé rápido, los puntos corren.",
     "Start Quarter 1 ▶": "Empezar el cuarto 1 ▶",
     "In a real live run this waits for the game to reach the break. Here you drive it.": "En una noche real esto espera a que el partido llegue al descanso. Aquí lo controlas tú.",
     "So your card has a name on it when the host settles the night. No password, and we only ask once.": "Para que tu tarjeta lleve un nombre cuando el anfitrión cierre la noche. Sin contraseña, y solo te lo pedimos una vez.",
     "Email me when the next STATS game night is on — one heads-up, nothing else. Not required to play, score, or win. You can delete yourself from the list any time on the end-of-game screen.": "Avísame por correo cuando haya otra noche de juego de STATS. Un aviso y nada más. No hace falta para jugar, puntuar ni ganar. Puedes borrarte de la lista cuando quieras desde la pantalla final.",
     "Sign in to save your handle, your points and your card across phones. One tap with Google — or use your inbox.": "Inicia sesión para guardar tu nombre, tus puntos y tu tarjeta en cualquier teléfono. Un toque con Google, o usa tu correo.",
-    "Season pass": "Pase de temporada",
-    "The game stays free. STATS+ is for the fans who want the full season experience — and it's what funds the prize pool.": "El juego sigue siendo gratis. STATS+ es para quienes quieren la temporada completa, y es lo que financia el bote de premios.",
     "Free": "Gratis",
     "forever": "para siempre",
-    "— full predictions + live questions": "· predicciones completas y preguntas en vivo",
-    "SEASON PASS": "PASE DE TEMPORADA",
-    "/ month": "/ mes",
-    "Create unlimited private leagues": "Crea ligas privadas ilimitadas",
-    "+ trash-talk board": "+ tablón para picarse",
-    "— your accuracy by category, streak history, rating graph": "· tu precisión por categoría, historial de rachas, gráfico de nivel",
-    "Badge & name flair": "Insignia y estilo de nombre",
-    "on every leaderboard": "en todas las tablas",
-    "Quarter recap clips": "Clips de resumen por cuarto",
-    "+ host's picks before tip-off": "+ los pronósticos del anfitrión antes del inicio",
-    "Vote on next week's featured game": "Vota el partido destacado de la próxima semana",
-    "STATS+ buys features, never advantage — subscribers get zero extra points, easier questions, or better prize odds. Contest entry and prize eligibility are 100% free for everyone, always. That separation is what keeps STATS a free skill-and-attention game with prizes, not gambling.": "STATS+ compra funciones, nunca ventaja. Los suscriptores no reciben puntos extra, ni preguntas más fáciles, ni mejores probabilidades de premio. Participar y optar a los premios es 100% gratis para todos, siempre. Esa separación es lo que mantiene a STATS como un juego gratuito de habilidad y atención con premios, y no como una apuesta.",
     "Enter the official results (host announces from the final box score). Your picks are shown under each.": "Introduce los resultados oficiales (el anfitrión los anuncia desde la hoja final). Tus elecciones aparecen debajo de cada uno.",
     "STATS is a free skill-and-attention game played along with a live basketball broadcast. You score by predicting the game before tip-off and by answering questions about what just happened at each break. No wagers, no entry fee — ever.": "STATS es un juego gratuito de habilidad y atención que se juega junto a una transmisión de baloncesto en vivo. Puntúas prediciendo el partido antes del inicio y respondiendo preguntas sobre lo que acaba de pasar en cada descanso. Sin apuestas y sin cuota de entrada, nunca.",
     "Lock 6 picks before tip-off: winning team (100 pts) and the leader in points, assists, steals, rebounds & blocks (50 pts each). Nail the leader's exact stat total for a +50 bonus per category — so a category you fully nail is worth 100. Predictions can't be changed after tip-off.": "Fija 6 elecciones antes del inicio: el equipo ganador (100 ptos) y el líder en puntos, asistencias, robos, rebotes y tapones (50 ptos cada uno). Acierta el total exacto del líder y ganas 50 ptos extra por categoría, así que una categoría clavada del todo vale 100. Las predicciones no se pueden cambiar después del inicio.",
@@ -26203,7 +26188,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-02-true.288';
+const STATS_BUILD='2026-09-02-pitch.289';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -31644,6 +31629,7 @@ function renderGametime(){
      one screen we most want you sitting on. A countdown is the same
      information doing an actual job. */
   if(!live){
+    var _startWord=function(){ try{ return (SPORT.L&&SPORT.L.start)||'tip-off'; }catch(_){ return 'tip-off'; } };
     var u=null; try{ u=untilTip(); }catch(_){}
     head.innerHTML='<div class="card" style="padding:22px 16px;text-align:center">'
       + '<div class="alab" style="justify-content:center;margin-bottom:12px">Tonight</div>'
@@ -31653,7 +31639,7 @@ function renderGametime(){
       +   '<div class="atm"><div class="ab" style="color:var(--home)">'+esc(String(H))+'</div></div>'
       + '</div>'
       + '<div class="abig" style="font-size:40px;margin-top:16px;letter-spacing:-1.6px">'+(u?esc(u):'Any minute')+'</div>'
-      + '<div class="acap" style="margin-top:8px">'+(u?'until tip':'')+(GAME.net?((u?' · ':'')+esc(GAME.net)):'')+'</div>'
+      + '<div class="acap" style="margin-top:8px">'+(u?('until '+_startWord()):'')+(GAME.net?((u?' · ':'')+esc(GAME.net)):'')+'</div>'
       + '</div>';
     return renderGametimeRest();
   }
