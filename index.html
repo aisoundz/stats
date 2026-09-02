@@ -6874,7 +6874,11 @@ function sportTotals(){
   try{ NR        = rounds.length; }catch(_){}
   try{ CATCH_PTS = CATCHES.length * 10; }catch(_){}
   try{ PRED_MAX  = preds.reduce(function(a,p){ return a + (p.base||0) + (p.bonus||0); }, 0); }catch(_){}
-  try{ LIVE_MAX  = rounds.reduce(function(a,r,i){ return a + r.q.length * roundWorth(i); }, 0); }catch(_){}
+  /* activeRounds(), not rounds: in practice only three are playable, and a
+     ceiling counting all nine would advertise a maximum no practice run
+     could reach — MAXPTS is the denominator the whole season is expressed
+     in, so a wrong one here is a wrong percentage everywhere. */
+  try{ LIVE_MAX  = activeRounds().reduce(function(a,r,i){ return a + r.q.length * roundWorth(i); }, 0); }catch(_){}
   /* 28 Aug: THE FIFTH ONE. Everything above is recomputed because a value
      worked out once from basketball is a wrong number about baseball —
      and MAXPTS, which is the sum of all four and the denominator the
@@ -8951,7 +8955,37 @@ try{ window.hydrateNight = hydrateNight; window.loadNightConfig = loadNightConfi
    never allocate it and never see it. */
 let NR=rounds.length;                               // REGULATION rounds
 const MAX_OT=3;                                       // OT, OT2, OT3 — beyond that, say nothing
-function liveRounds(){ try{ return rounds.length; }catch(_){ return NR; } }
+/* ============ PRACTICE IS A DEMO, NOT A NIGHT =======================
+   Baseball asks a question EVERY inning — the founder's rule, and right
+   for a hosted night. It is wrong for a rehearsal: pressing "Try a
+   practice round" started a NINE round sit-down, and the founder said
+   twice that practice should be short. Nobody evaluating this product for
+   the first time is going to play nine innings of a simulated game.
+
+   FOUR, and the number matters. Three broke overtime: basketball has
+   exactly four rounds, so a cap of three made round 2 the last one and
+   qa/overtime.js failed regulation-last-round-is-the-last-round, which
+   asserts isLastRound(NR-1) is true and isLastRound(NR-2) is false. Four
+   touches ONLY baseball — basketball 4, football 4, hockey 3, soccer 2 all
+   sit at or under it and are byte-for-byte unchanged — and baseball's nine
+   innings was the actual complaint. Four is also the cadence every other
+   sport already teaches the loop in.
+
+   NR IS DELIBERATELY NOT CAPPED. NR is the REGULATION round count and it
+   is what overtime counts from: otLabelFor() computes `idx - NR + 1` to
+   name OT, OT2, OT3. Cap NR and a practice run would start labelling its
+   third inning as overtime. liveRounds() is "how many rounds are in play",
+   which is the question every caller here is actually asking. */
+var PRACTICE_ROUNDS = 4;
+function activeRounds(){
+  try{
+    if(S && S.mode === 'demo' && rounds.length > PRACTICE_ROUNDS){
+      return rounds.slice(0, PRACTICE_ROUNDS);
+    }
+  }catch(_){}
+  return rounds;
+}
+function liveRounds(){ try{ return activeRounds().length; }catch(_){ return NR; } }
 /* The label a player sees over an overtime question. "Q1" printed over a
    hockey overtime is a screen that lies, and the shared resolver block
    already names them this way, so both sides agree. */
@@ -10224,6 +10258,12 @@ function setMode(mode){
   var was = S.mode;
   S.mode = mode;
   S.practice = (mode === 'demo');
+  /* THE THIRD CALLER of sportTotals(). It already had two — the thing that
+     changes the sport and the thing that hydrates a night — and the mode
+     is now a third input to the same answer, because practice plays three
+     rounds and a live night plays all of them. Recomputed through the one
+     owner rather than by a second copy of the arithmetic here. */
+  try{ sportTotals(); }catch(_){}
   if(was === mode) return;
   try{ ledgerClear(); }catch(_){}
   try{
@@ -26028,7 +26068,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-02-drop.279';
+const STATS_BUILD='2026-09-02-short.280';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

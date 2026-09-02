@@ -250,6 +250,56 @@ const SNAP = () => {
      (fit.cap || []).length > 0 && fit.cap.every(s => s >= 12),
      `caption sizes ${JSON.stringify(fit.cap)} — the ramp's floor is 12px`);
 
+  /* ============ PRACTICE IS SHORT, AND LIVE IS NOT ==================
+     Baseball asks a question every inning — right for a hosted night and
+     wrong for a rehearsal. Practice was a NINE round sit-down; the founder
+     said twice it should be short. Capped at three, which is enough to
+     teach the loop.
+
+     The half that matters most is the LIVE half: the cap must never reach
+     a real night. And NR must stay uncapped, because otLabelFor() names
+     overtime as `idx - NR + 1` — cap NR and a practice run starts calling
+     its third inning OT. */
+  const RD = await page.evaluate(async () => {
+    const out = {};
+    /* ON BASEBALL, NOT THE DEFAULT SPORT. The cap is 4 and basketball has
+       exactly 4 rounds, so on basketball it is a no-op and this whole
+       block would pass no matter what the code did — sabotaging the mode
+       gate so the cap leaks into a LIVE night went green here before this
+       line was added. Baseball is the only sport with more rounds than the
+       cap, which makes it the only one that can prove anything. */
+    try { setSport('baseball'); } catch (_) {}
+    await new Promise(r => setTimeout(r, 350));
+    try { setMode('demo'); } catch (_) {}
+    await new Promise(r => setTimeout(r, 250));
+    out.demo = { live: liveRounds(), NR: NR, max: LIVE_MAX, all: rounds.length,
+                 last: (function(){ for (let i = 0; i < 12; i++) if (isLastRound(i)) return i; return -1; })() };
+    try { setMode('live'); } catch (_) {}
+    await new Promise(r => setTimeout(r, 250));
+    out.live = { live: liveRounds(), NR: NR, max: LIVE_MAX };
+    return out;
+  });
+  /* FOUR is written out here, not read from PRACTICE_ROUNDS. A check that
+     takes its expected value from the thing it is testing cannot fail —
+     that mistake was made twice today already. Four touches only baseball;
+     basketball 4, football 4, hockey 3 and soccer 2 are unchanged, and a
+     cap of THREE broke overtime because basketball has exactly four. */
+  ok('practice-score.practice-is-short',
+     RD.demo.live <= 4 && (RD.demo.all <= 4 ? RD.demo.live === RD.demo.all : RD.demo.live < RD.demo.all),
+     `practice plays ${RD.demo.live} of ${RD.demo.all} round(s) — at most 4, and fewer than all when the sport has more`);
+  ok('practice-score.practice-ends-on-the-last-playable-round',
+     RD.demo.last === RD.demo.live - 1,
+     `isLastRound says ${RD.demo.last}, liveRounds says ${RD.demo.live}`);
+  ok('practice-score.a-live-night-still-plays-them-all',
+     RD.live.live === RD.demo.all,
+     `live plays ${RD.live.live} of ${RD.demo.all} — the practice cap has reached a real night`);
+  ok('practice-score.the-ceiling-follows-the-mode',
+     RD.live.max > RD.demo.max || RD.demo.all <= 4,
+     `LIVE_MAX is ${RD.demo.max} in practice and ${RD.live.max} live — practice must not advertise a maximum it cannot reach`);
+  ok('practice-score.regulation-count-is-not-capped',
+     RD.demo.NR === RD.live.NR && RD.demo.NR === RD.demo.all,
+     `NR is ${RD.demo.NR} in practice and ${RD.live.NR} live — overtime is named from NR`);
+
   ok('practice-score.no-page-errors', errs.length === 0, errs.slice(0, 3).join(' | '));
 
   await browser.close(); srv.close();
