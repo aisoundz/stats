@@ -9456,7 +9456,40 @@ function startLive(){
     if(resumable()){ returnToGame(); return; }
   }catch(_){}
   if(!signedInNow()){ promptSignIn('live'); return; }
-  setMode("live");go('name');prefillGate();
+  setMode("live");
+  /* ============ WE ALREADY KNOW WHO YOU ARE ==========================
+     The line above has just PROVEN this player is signed in, and the next
+     line used to send them to a screen headed "Grab your handle" to
+     confirm a name it had already filled in — every single time they
+     entered a game. Founder: "why give me a handle that says King and then
+     when I go to a new game you ask for another handle. If im signed in
+     why do I need to put in my name again. Its redundant."
+
+     He is right, and it is the second time he has said it. The persistent
+     @handle shipped in August precisely so a name would follow a person
+     across devices; the screen that asks for one was left standing in
+     front of it, so the handle persisted and so did the interruption.
+     Building the feature was not the same as removing the annoyance.
+
+     startPredict() is exactly what "Continue to my picks" invokes —
+     handleClaim(), the room checks, then go('predict') and buildPred() —
+     so this skips a confirmation, never a step.
+
+     BOTH CONDITIONS: signed in (guaranteed above) AND a name we can
+     actually use. With no name we still ask, because a seat with nobody's
+     name on it is the ghost row. The screen stays reachable from the menu
+     for anyone who wants to change theirs. */
+  try{
+    var _pr = (typeof savedProfile === 'function' ? (savedProfile() || {}) : {});
+    var _nm = String((S && S.name) || _pr.name || '').trim();
+    if(_nm){
+      S.name = _nm;
+      if(typeof colorTouched !== 'undefined' && !colorTouched && _pr.color) S.color = _pr.color;
+      startPredict();
+      return;
+    }
+  }catch(_){}
+  go('name');prefillGate();
 }
 /* ---- THE HOME CARD KNOWS WHERE YOU ARE ------------------------------
    "Why every time I go back to home it shows Play Game, if I have already
@@ -26166,7 +26199,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-02-soccer.282';
+const STATS_BUILD='2026-09-02-known.283';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

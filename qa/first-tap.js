@@ -90,6 +90,35 @@ const ok=(c,m)=>{ if(c){pass++;console.log('  ok   '+m);} else {fail++;console.l
   await p.waitForTimeout(4500);
   const tapped=await p.evaluate(()=>({ uid:(window.SB&&SB.uid)?(SB.uid()||''):'' }));
   ok(tapped.uid!=='', 'a tap creates the account, before anything can be joined or scored');
+  console.log('--- a signed-in player is not asked who they are, again ---');
+  /* The founder, twice: "why give me a handle that says King and then when
+     I go to a new game you ask for another handle. If im signed in why do
+     I need to put in my name again. Its redundant."
+
+     startLive() proves the player is signed in on the line above, then
+     used to send them to a screen headed "Grab your handle" with the name
+     already filled in. The persistent @handle shipped in August so a name
+     would follow a person; the screen asking for one stayed in front of
+     it, so the handle persisted and so did the interruption.
+
+     Both halves are asserted, because the second is what stops this being
+     a shortcut that loses people: with NO name we must still ask, or a
+     seat gets written with nobody's name on it. */
+  {
+    const withName = await p.evaluate(async () => {
+      try { SB.verified = () => true; } catch (_) {}
+      localStorage.setItem('stats_profile_v1', JSON.stringify({ name: 'QA Tester', color: '#3b82f6' }));
+      try { S.name = ''; } catch (_) {}
+      try { startLive(); } catch (e) { return { threw: String(e).slice(0, 80) }; }
+      await new Promise(r => setTimeout(r, 1600));
+      return { screen: S.screen, name: S.name };
+    });
+    ok(withName.screen && withName.screen !== 'name',
+       `a signed-in player with a saved name lands on "${withName.screen}", not the handle screen`);
+    ok(withName.name === 'QA Tester',
+       `and keeps the name they already had (${JSON.stringify(withName.name)})`);
+  }
+
   ok(errs.length===0, 'no page errors across the whole sequence: '+errs.slice(0,2).join(' | '));
 
   await b.close(); srv.close();
