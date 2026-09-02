@@ -117,7 +117,12 @@ function serve() {
         [g.home, g.away, g.homeAbbr, g.awayAbbr].filter(Boolean).forEach(x => NEVER.add(String(x)));
       });
     } catch (_) {}
-    ['WNBA','NBA','NFL','MLB','MLS','NHL','ESPN','USA Network','ION','Apple TV','Prime Video',
+    /* CFB and EPL joined this list on 2 Sept, when the schedule card
+       started printing short league codes instead of "MAJOR LEAGUE
+       BASEBALL" — the prose name wrapped to two lines and made every
+       baseball row taller than the rest. A league code is a name, exactly
+       like the six already here. */
+    ['WNBA','NBA','NFL','MLB','MLS','NHL','CFB','EPL','ESPN','USA Network','ION','Apple TV','Prime Video',
      'FOX','CBS','NBC','Netflix','Peacock','Google'].forEach(x => NEVER.add(x));
     /* THE TWO-WEEK SCHEDULE IS FULL OF PROPER NOUNS TOO. NEVER was built
        from SPORTS and SLATE, which know tonight's teams and no others.

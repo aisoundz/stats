@@ -3548,15 +3548,23 @@ async function browserTests(){
     {
       const {pg, es} = await mk();
       const r = await pg.evaluate(async()=>{
-        const R = { state: SB.state, enabled: !!SB.enabled, uid: SB.me && SB.me.uid };
+        /* uid BEFORE and AFTER, because they are now different questions.
+           Since 2 Sept the app does not mint an anonymous account on page
+           load — it waits for a human gesture, or for something that
+           genuinely needs a uid. A suite drives the app with no gesture,
+           so at rest there is legitimately no account; join() demands one.
+           That is the rule, so it is what is asserted. */
+        const R = { state: SB.state, enabled: !!SB.enabled,
+                    uidAtRest: (SB.me && SB.me.uid) || (SB.uid && SB.uid()) || null };
         R.joined = await SB.join({ nightId:'qa-night', name:'QA', color:'#fff' });
+        R.uid = (SB.uid && SB.uid()) || (SB.me && SB.me.uid) || null;
         R.seat = window.__FB.dump('nights/qa-night/players');
         return R;
       });
       const seatPaths = Object.keys(r.seat||{});
       check('backend.sb-boots-against-a-real-sdk',
-        r.state==='on' && r.enabled===true && !!r.uid,
-        `SB.state=${r.state} enabled=${r.enabled} uid=${r.uid}`,
+        r.state==='on' && r.enabled===true && !r.uidAtRest && !!r.uid,
+        `SB.state=${r.state} enabled=${r.enabled} uidAtRest=${r.uidAtRest} uidAfterJoin=${r.uid}`,
         'A7: every check before this one ran against a hand-stubbed SB, so join/submit/outbox/grade were never executed by a test at all');
       check('backend.join-writes-a-seat',
         r.joined===true && seatPaths.length===1 && seatPaths[0].endsWith(r.uid),

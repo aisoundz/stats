@@ -191,12 +191,37 @@
   .schDay .schWhen{font-family:var(--ui);font-size:12px;font-weight:700;
     letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding-top:2px}
   .schDay.today .schWhen{color:var(--teal)}
-  .schGames{display:flex;flex-direction:column;gap:7px;min-width:0}
-  .schG{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0}
-  .schG .schT{font-size:14px;color:var(--body);min-width:0;overflow-wrap:anywhere}
+  .schGames{display:flex;flex-direction:column;gap:11px;min-width:0}
+  /* ============ EVERY ROW THE SAME SHAPE ============================
+     This was a flex line with flex-wrap, so a row broke onto a second line
+     ONLY when its league label plus matchup plus time happened to overflow.
+     "MLS  LAFC at Real Salt Lake  6:30 PM PT" fitted on one line while
+     "PREMIER LEAGUE / Manchester United at Everton / 6:00 AM PT" broke
+     across three — nothing shared a column, so nothing lined up, and the
+     founder read the whole card as misaligned. It was.
+
+     A grid instead, and always two lines:
+
+         ★ COLLEGE FOOTBALL              4:30 PM PT
+         Clemson at LSU
+
+     League and time on the first line, time right-aligned in its own
+     column so the times form a straight edge down the card. The matchup
+     gets the full width on the second line, which is what a long name like
+     "New England Revolution at Chicago Fire FC" actually needs — it was
+     the thing being squeezed before. The star column is `auto`, so it
+     collapses to nothing on the rows that have no star rather than
+     indenting them out of line with the rest. */
+  .schG{display:grid;grid-template-columns:auto 1fr auto;
+    column-gap:8px;row-gap:1px;align-items:baseline;min-width:0}
+  .schG .schStar{grid-row:1;grid-column:1}
+  .schG .schL{grid-row:1;grid-column:2;min-width:0}
+  .schG .schTime{grid-row:1;grid-column:3;justify-self:end;white-space:nowrap}
+  .schG .schT{grid-row:2;grid-column:1/-1;
+    font-size:14px;color:var(--body);min-width:0;overflow-wrap:anywhere}
   .schG .schL{font-family:var(--ui);font-size:12px;font-weight:700;letter-spacing:.09em;
     text-transform:uppercase;color:var(--dim);flex:none}
-  .schG .schTime{font-family:var(--mono);font-size:12px;color:var(--muted);
+  .schG .schTime{font-family:var(--mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;
     font-variant-numeric:tabular-nums;flex:none}
   /* The main event is marked, not shouted. One mark, the same teal that
      means YOU everywhere else would be wrong here -- gold is the points
@@ -270,6 +295,24 @@
      need on the smallest screens. Nothing is hidden and nothing shrinks
      below the 12px floor -- the only thing that changes is spacing.
      Measured on the same 360x640 profile the suite uses. */
+  /* NOTHING SITS UNDER THE MENU BUTTON. #menuBtn is fixed in the
+     top-right at z-index 8700 and the rail's tiles scrolled beneath it —
+     accepted in the comment above as "the tiles below may scroll under
+     it". On a 390px phone that put the button squarely over "6:38 PM" on
+     the second tile: not a label, the TIP TIME, in the one control that
+     asks which game you are watching. The rail was rebuilt around
+     "nothing is hidden"; a fixed button covering a kickoff is the same
+     failure wearing a different hat. 52px is the button plus its margin. */
+  /* The clearance costs 52px of width, and at 320px that squeezed the
+     tiles tall enough to take the rail from 226px to 303px — 53% of the
+     screen, over qa/rail-current.js's budget. Below 361px the rail is
+     already showing team CODES rather than names, so the tiles are short
+     and there is far less under the button to lose. So: clear it where
+     the width can afford it, and let the narrowest phones keep their
+     height. */
+  @media (min-width:361px) and (max-width:430px){
+    #gameRail .grTiles,#gameRail .grHead{padding-right:52px}
+  }
   @media (max-width:430px){
     #heroRibbon{margin-top:5px;padding-top:6px}
     .grTile{padding-top:7px;padding-bottom:7px}
@@ -3828,11 +3871,57 @@ window.STATS_FIREBASE = {
         try { window.dispatchEvent(new CustomEvent('stats-verify', { detail: SB.linkResult })); } catch (_) {}
       }
 
+      /* ============ AN ACCOUNT COSTS A TAP, NOT A PAGE LOAD ===========
+         This block signed in anonymously on EVERY page load. The result:
+         12,058 anonymous accounts, ~1,000 a day, for 13 humans who have
+         ever played. Every crawler, link preview and QA page got a real
+         Firebase account, and on 1 Sept a day of gate runs tripped
+         auth/too-many-requests on this machine for five hours — testing
+         the app degraded the app.
+
+         It also meant no funnel number could mean anything: "accounts" and
+         "people" were different quantities by three orders of magnitude.
+
+         NOW IT WAITS FOR A HUMAN. A crawler never taps; a person taps
+         within seconds and always before they can join a room, fill a card
+         or submit anything. So the account still exists by the time it is
+         needed, and never exists for a robot.
+
+         NOT AWAITED, DELIBERATELY. Boot must not block on a gesture that
+         may never come — the rail, the board, the schedule and The Tape
+         are all `allow read: if true` and need no credential at all, so a
+         reader who never taps still gets a working page. uid() already
+         returns '' when there is no user; it is not a new state.
+
+         The listeners are capture-phase and once-only, and they cover
+         keyboard as well as pointer so a keyboard-only visitor is not
+         locked out of ever having an account. */
       if (!auth.currentUser) {
-        await authMod.signInAnonymously(auth);
-        await new Promise(function (res) {
-          var un = authMod.onAuthStateChanged(auth, function (u) { if (u) { un(); res(u); } });
+        var _signingIn = null;
+        var _wake = function () {
+          /* Returns a promise so a caller that NEEDS a uid can await it.
+             Idempotent: the gesture listener and a write path racing each
+             other must not open two accounts. */
+          if (_signingIn) return _signingIn;
+          _EVT.forEach(function (e) { try { window.removeEventListener(e, _wake, true); } catch (_) {} });
+          _signingIn = (async function () {
+            try {
+              if (auth.currentUser) return auth.currentUser;
+              await authMod.signInAnonymously(auth);
+              await new Promise(function (res) {
+                var un = authMod.onAuthStateChanged(auth, function (u) { if (u) { un(); res(u); } });
+              });
+              return auth.currentUser;
+            } catch (e) { _signingIn = null; return null; }
+          })();
+          return _signingIn;
+        };
+        var _EVT = ['pointerdown', 'keydown', 'touchstart'];
+        _EVT.forEach(function (e) {
+          try { window.addEventListener(e, _wake, true); } catch (_) {}
         });
+        /* Anything that must not wait for a tap can force it. */
+        try { SB.ensureUser = _wake; } catch (_) {}
       }
 
       /* B22 — IDENTITY HAS TO BE ANNOUNCED, AND THIS IS WHY IT WASN'T.
@@ -3904,6 +3993,15 @@ window.STATS_FIREBASE = {
   /* ---- join: claim a seat ------------------------------------------ */
   SB.join = async function (o) {
     if (!SB.enabled || !budgetWrite('join')) return false;
+    /* A SEAT HAS TO BELONG TO SOMEBODY. Sign-in waits for a gesture now,
+       and a human always taps before they can reach this — but "always"
+       is not a thing to rely on when the cost of being wrong is a seat
+       that cannot be written. Anything arriving here without a uid gets
+       one, and ensureUser() is idempotent so this never opens a second
+       account racing the gesture listener. The gate caught this: driving
+       the app programmatically reaches join with no tap, and join
+       returned false with no seat written. */
+    try { if (!uid() && SB.ensureUser) await SB.ensureUser(); } catch (_) {}
     try {
       /* A NEW NIGHT IS A NEW ALLOWANCE. The old counter was per page-load,
          so a phone left open since the morning arrived at tip-off already
@@ -26068,7 +26166,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-02-short.280';
+const STATS_BUILD='2026-09-02-tap.281';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -31184,7 +31282,13 @@ function schedRender(){
           var main = !!(x.mainEvent || x.featured);
           html += '<div class="schG' + (main ? ' main' : '') + '">'
                 + (x.mainEvent ? '<span class="schStar">★</span>' : '')
-                + '<span class="schL">' + esc(String(x.leagueLabel || x.league || '')) + '</span>'
+                /* THE SHORT CODE, NOT THE PROSE NAME. "MAJOR LEAGUE BASEBALL" is
+         ~200px of letter-spaced 12px type in a column with about 180px to
+         give, so it wrapped to two lines and made every baseball row 50px
+         tall against 34px for the rest — the ragged edge left over after
+         the grid fixed the times. The matchup underneath already names the
+         teams, so the label only has to say which competition it is. */
+      + '<span class="schL">' + esc(String(x.league || x.leagueLabel || '').toUpperCase()) + '</span>'
                 + '<span class="schT">' + esc(String(x.matchup || '')) + '</span>'
                 + '<span class="schTime">' + esc(String(x.tipPT || '')) + '</span>'
                 + '</div>';
@@ -33133,6 +33237,10 @@ body.hasrail #menuBtn{top:calc(6px + env(safe-area-inset-top,0px))}
 #menuSheet #schedDrop > summary s{margin-left:auto}
 /* Open, it scrolls inside itself rather than running off the sheet. */
 #menuSheet #schedDrop[open] #schedCard{max-height:52vh;overflow-y:auto;margin-top:10px}
+/* The card carries its own "What's coming / Next two weeks" heading, which
+   is exactly what the summary row above it already says. One of them has to
+   go, and it is the inner one — the summary is the thing you tap. */
+#menuSheet #schedDrop #schedCard .schHead{display:none}
 #menuSheet .mrow:hover{color:var(--ink)}
 #menuSheet .mrow i{font-style:normal;font-size:17px;width:22px;text-align:center;flex:0 0 auto}
 #menuSheet .mrow s{text-decoration:none;margin-left:auto;font-size:12px;color:var(--dim);font-weight:700}
