@@ -10197,7 +10197,6 @@ function ledgerSet(key,pts,speed,kind){
                          k:kind||'live'};
   return recomputeScore();
 }
-function ledgerHas(key){ return Object.prototype.hasOwnProperty.call(ledger(),String(key)); }
 /* A SAVE FROM BEFORE THE LEDGER STILL HAS A SCORE. It is a bare total with
    no history, so it becomes one honest line called `carried` rather than
    being thrown away — which is what recomputing an empty ledger over the
@@ -17521,30 +17520,6 @@ function answer(choice,btn){
      a transition, it is the pass that does the work. */
   try{ revealClearSweep(); }catch(_){}
 }
-function useLifeline(){
-  const half=lifelineKey(S.qi);
-  if(!S[half]||S.answered)return;S[half]=false;
-  if(!S.lifelineAt)S.lifelineAt=roundTag(S.qi);   // roast material
-  try{ var _hb2=document.getElementById('helpBtn'); if(_hb2&&_hb2.tagName==='BUTTON') _hb2.disabled=true; }catch(_){}
-  if(S.mode==="live"){
-    extendTimer(15);
-    document.getElementById('helpNote').textContent='Lifeline: +15 seconds — ask the room!';
-    return;
-  }
-  const q=rounds[S.qi].q[S.ni];
-  // remove wrong options, but always leave a real choice — soccer questions
-  // are often 3-way, and killing two would just hand over the answer
-  /* BY ROW, for the same reason as the marks above — comparing the
-     rendered label made EVERY option "wrong" in Spanish, so the lifeline
-     greyed out the first two rows in DOM order, which can be the correct
-     answer. The player spends their one lifeline and the app removes the
-     right answer. */
-  const rightIx2 = q.o.indexOf(q.a);
-  const wrongs=[...document.querySelectorAll('#qOpts .opt')].filter((b,i)=>i!==rightIx2);
-  const kill=Math.max(1,Math.min(2,wrongs.length-1));
-  wrongs.slice(0,kill).forEach(b=>{b.style.opacity='.25';b.style.pointerEvents='none';});
-  document.getElementById('helpNote').textContent=`Lifeline used — ${kill} option${kill>1?'s':''} removed`;
-}
 function nextQuestion(){
   if(S.mode==="live")commitLive();   // the button IS the lock
   if(S.ni<nq()-1){S.ni++;loadQuestion();}
@@ -18457,38 +18432,6 @@ function predReviewDecide(){
   S.predTruth={}; S.predTruthNum={}; ledgerSet('pred',0,0,'pred');
   S.predAuto=false; S.predUnsettled=true;
   showFinal();
-}
-function predReviewManual(){
-  const c=document.getElementById('prCard');c.innerHTML='';
-  /* Back to the host-announced wording, because this IS that path — and a
-     screen that told you not to enter anything and then hands you a form
-     is the same contradiction pointing the other way. */
-  try{ prSubSay('manual'); }catch(_){}
-  try{ document.getElementById('prBtn').style.display=''; }catch(_){}
-  try{
-    var h=document.querySelector('#s-predreview h1'); if(h) h.textContent='The feed didn’t settle it 📝';
-    var s=document.querySelector('#s-predreview p.sub');
-    if(s) s.textContent='This normally settles itself off the final box score. It couldn’t this time, so the host will read out the official results.';
-  }catch(_){}
-  preds.forEach(p=>{
-    const row=document.createElement('div');row.className='predrow';
-    const myPick=S.predChoices[p.id]||'—';
-    const myNum=p.bonus?(S.predChoices[p.id+'_num']||'—'):null;
-    // Show what this line is worth to THIS player, so the moment of truth
-    // reminds them what their own ranking put on the table.
-    const stake=CONF_ON?` · <b>#${predRank(p.id)} · ${predWorthOf(p)}pt${predWorthOf(p)===1?'':'s'}</b>`:'';
-    row.innerHTML=`<div class="predlabel">${p.label} <span class="predpts">you picked: ${myPick}${myNum!==null?' ('+myNum+')':''}${stake}</span></div>`;
-    const sel=document.createElement('select');sel.id='pr_'+p.id;
-    sel.innerHTML='<option value="">Official result…</option>'+p.opts.map(o=>`<option>${o}</option>`).join('');
-    sel.onchange=validatePredReview;
-    row.appendChild(sel);
-    if(p.bonus){const inp=document.createElement('input');inp.type='number';inp.id='prn_'+p.id;
-      inp.placeholder='Official '+String(p.numLabel||'number').toLowerCase();inp.style.marginTop='8px';row.appendChild(inp);}
-    c.appendChild(row);
-  });
-  document.getElementById('prPill').textContent=L.End;
-  renderCatchReview();
-  go('predreview');
 }
 function validatePredReview(){
   const done=preds.filter(p=>document.getElementById('pr_'+p.id).value).length;
@@ -24359,7 +24302,6 @@ function openTalk(){
     setTimeout(function(){try{inp.focus();}catch(e){}},60);
 }
 function closeTalk(){document.getElementById('talkModal').classList.remove('open');ttRoomStop();}
-function renderTalk(){renderRoom();}
 
 function ttBuildEmoji(){
   const row=document.getElementById('ttEmoji');
@@ -25834,21 +25776,6 @@ function renderPortal(){
 /* The door speaks differently to a stranger than to a returning player.
    Behind the glass it is one Google call either way — Firebase creates or
    signs in as appropriate — so this changes words, never behaviour. */
-function portalSeg(which){
-  const a=document.getElementById('segIn'), b=document.getElementById('segUp');
-  const lbl=document.getElementById('portalLbl'), sub=document.getElementById('portalSub');
-  const gsi=document.getElementById('portalGsi');
-  const on='linear-gradient(92deg,#28e0d0,#4d86ff)';
-  if(!a||!b) return;
-  const up = which==='up';
-  a.style.background = up?'none':on;  a.style.color = up?'var(--muted,#93a0bd)':'#04121e';
-  b.style.background = up?on:'none';  b.style.color = up?'#04121e':'var(--muted,#93a0bd)';
-  if(lbl) lbl.textContent = up ? 'New here — create your card' : 'Welcome back — sign in to build your card';
-  if(sub) sub.textContent = up
-    ? 'One tap. Your card, your points and your streak start tonight.'
-    : 'One tap. Your card and your points follow you to any phone.';
-  if(gsi) gsi.lastChild.textContent = up ? ' Sign up with Google ' : ' Sign in with Google ';
-}
 
 /* ============ TELL ME WHEN A GAME IS ON — WITHOUT AN ACCOUNT =========
    The consent box above only ever fired as a SIDE EFFECT of signing in, so
@@ -26234,7 +26161,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-02-door.284';
+const STATS_BUILD='2026-09-02-trim.285';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -28321,31 +28248,10 @@ function paintTeamColours(){
     GS.awayC=av; GS.homeC=hv;
   }catch(_){}
 }
-function teamC(ab){
-  try{
-    if(!GS.teams||GS.teams.length!==2) return '';
-    if(GS.teams[0].ab===ab) return GS.awayC||'';
-    if(GS.teams[1].ab===ab) return GS.homeC||'';
-  }catch(_){}
-  return '';
-}
 function gsInGame(){ return GS.ok && Object.keys(GS.box).length>0; }
 function gsRows(){ var c=sportCfg(); return (gsInGame()? c.live : c.pre)||[]; }
 /* Two bars, one row, better side lit. `dir` says whether high or low wins,
    which is the only reason a turnover row doesn't read backwards. */
-function gsBar(label,a,b,dir){
-  var na=gsNum(a), nb=gsNum(b);
-  if(na==null||nb==null) return '';
-  var max=Math.max(na,nb)||1;
-  var aw=Math.round((na/max)*100), bw=Math.round((nb/max)*100);
-  var aWin = dir==='lo' ? na<nb : na>nb, bWin = dir==='lo' ? nb<na : nb>na;
-  var C='#28e0d0', D='#33405e';
-  return '<div class="stRow"><div class="stV'+(aWin?' win':'')+'">'+esc(gsFmt(label,a))+'</div>'
-    + '<div class="stMid"><div class="stLbl">'+esc(label)+'</div>'
-    +   '<div class="stBars"><div class="stB l"><i style="width:'+aw+'%;background:'+(aWin?C:D)+'"></i></div>'
-    +     '<div class="stB r"><i style="width:'+bw+'%;background:'+(bWin?C:D)+'"></i></div></div></div>'
-    + '<div class="stV'+(bWin?' win':'')+'">'+esc(gsFmt(label,b))+'</div></div>';
-}
 /* ---- THE BOARD ------------------------------------------------------
    Tonight's standings, plus the season table underneath. The season half
    is the answer to the flattest thing about the product: every game night
@@ -28729,12 +28635,6 @@ async function loadSeason(force){
 }
 /* The line the Stats tab prints about the season table. It is allowed to
    say three things and "loading" is only one of them. */
-function seaNote(){
-  if(SEA.ok) return '';
-  if(SEA.loading || SEA.state==='retrying') return ' · loading the season table…';
-  if(SEA.state==='failed') return ' · season table unavailable';
-  return ' · loading the season table…';
-}
 function seaRetryHTML(){
   if(SEA.ok || SEA.state!=='failed') return '';
   return '<div class="card" style="padding:13px 15px;margin-top:10px">'
@@ -30998,48 +30898,8 @@ try{ window.feedShowNew=feedShowNew; }catch(_){}
    rebuilds the element and kills the animation on the exact score change
    people care about most. */
 var GTLAST={};
-function gtDigits(id, n, sideId){
-  try{
-    var el=document.getElementById(id); if(!el || n==null) return;
-    var str=String(Math.max(0,Math.round(n))).padStart(3,'0').split('');
-    if(el.children.length!==3){
-      el.innerHTML=str.map(function(){ return '<div class="gtDig"><div class="gtStrip">'+
-        '0123456789'.split('').map(function(d){ return '<span>'+d+'</span>'; }).join('')+'</div></div>'; }).join('');
-    }
-    Array.prototype.forEach.call(el.children,function(d,i){
-      d.classList.toggle('hide', i===0 && n<100);
-      var st=d.querySelector('.gtStrip'); if(st) st.style.transform='translateY(-'+(Number(str[i])*52)+'px)';
-    });
-    var changed = GTLAST[id]!=null && GTLAST[id]!==n;
-    GTLAST[id]=n;
-    if(changed && sideId){ var sd=document.getElementById(sideId);
-      if(sd){ sd.classList.add('flash'); setTimeout(function(){ sd.classList.remove('flash'); },560); } }
-  }catch(_){}
-}
 /* THE RUN. Points over a real window, driving the bar and the sentence
    from the same number. */
-function paintRun(){
-  try{
-    var bar=document.getElementById('gtRunBar'), out=document.getElementById('gtRun');
-    if(!out) return;
-    var plays=(GS.plays||[]).filter(function(p){ return p.scoring && p.value>0 && p.ab; }).slice(-14);
-    var A=GS.teams[0], B=GS.teams[1]; if(!A||!B) return;
-    var pa=0, ph=0;
-    plays.forEach(function(p){ if(p.ab===A.ab) pa+=p.value; else if(p.ab===B.ab) ph+=p.value; });
-    var tot=pa+ph;
-    var ea=document.getElementById('gtRunA'), eh=document.getElementById('gtRunH');
-    if(ea&&eh){ var w=tot?Math.round(pa/tot*100):50; ea.style.width=w+'%'; eh.style.width=(100-w)+'%'; }
-    if(plays.length<4){ out.className='gtRun quiet'; out.textContent='reading the play-by-play…'; return; }
-    out.className='gtRun';
-    if(pa===ph){ out.innerHTML='Trading baskets — <b>'+pa+'–'+ph+'</b> over the last few minutes.'; return; }
-    var aw=pa>ph, nm=aw?(A.name||A.ab):(B.name||B.ab), big=aw?pa:ph, small=aw?ph:pa;
-    var col=aw?'tA':'tH';
-    var lead=(A.score!=null&&B.score!=null)?Math.abs(A.score-B.score):0;
-    out.innerHTML = lead>=18
-      ? '<b class="'+col+'">'+esc(nm)+'</b> by '+lead+'. It is <b>'+big+'–'+small+'</b> over the last stretch.'
-      : '<b class="'+col+'">'+esc(nm)+'</b> <b>'+big+'–'+small+'</b> over the last four minutes.';
-  }catch(_){}
-}
 
 /* ====================================================================
    GAMETIME — THE ARENA
