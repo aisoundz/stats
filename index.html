@@ -10013,7 +10013,21 @@ function startDemo(){
      not a gate — it is physics. A seat, a saved score and a room all
      require an identity the rules will accept, and the rules refuse
      anonymous writes. Practice is the part that never needed one.        */
-  setMode("demo");try{Object.keys(demoCiFired).forEach(k=>delete demoCiFired[k]);PCI.muted=false;}catch(e){}go('name');prefillGate();}
+  setMode("demo");
+  /* ============ PRACTICE WAS ENTIRELY UNMEASURED ====================
+     "Try a practice round · Free, no account, about two minutes" is the
+     only door this product offers a stranger, and startDemo() fired no
+     telemetry of any kind. So there is no answer to how many people have
+     ever pressed it, what sport they chose, or whether one of them ever
+     finished — for a product whose funnel dies between taking a seat and
+     answering a first question (ten of ~18 seats never answered anything).
+
+     One event, at the moment of the tap. It carries the sport, because
+     "which sport does a stranger pick when offered five" is a question
+     nobody can currently answer, and whether they were signed in, which
+     separates a returning player rehearsing from a first-time visitor. */
+  try{ trk('practice_start', { sport: (SPORT && SPORT.key) || '', known: signedInNow() ? 1 : 0 }); }catch(_){}
+  try{Object.keys(demoCiFired).forEach(k=>delete demoCiFired[k]);PCI.muted=false;}catch(e){}go('name');prefillGate();}
 
 /* ============ THE HERO'S DOOR IS THE SAME DOOR ======================
    The button under the countdown starts the SAME practice run the card
@@ -26201,7 +26215,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-02-mins.286';
+const STATS_BUILD='2026-09-02-measure.287';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
