@@ -8065,6 +8065,31 @@ function paintTryPick(){
   if(keys.length < 2){ w.style.display='none'; return; }
   w.style.display = 'grid';
   w.innerHTML = '';
+  /* ============ THE SECOND BUTTON SAYS WHICH SPORT ==================
+     Founder: "two practice right under each other... Thats another
+     redundancy." He is reading two buttons 300px apart that both say
+     "practice", and from the outside they are indistinguishable.
+
+     They are not the same door. The hero runs TONIGHT'S sport; this one
+     runs whichever sport was picked from the chips. The button exists
+     deliberately — the comment beside it makes the case, and four checks
+     in qa/one-door.js hold it: somebody reading along five pills to see
+     what is on offer must not be thrown into a game by the act of
+     looking. That principle is right and this does not touch it.
+
+     What was wrong is that the label hid the difference. Naming the sport
+     makes the second control specific rather than duplicate, and
+     no-two-doors-say-the-same-thing gets stronger, not weaker. */
+  try{
+    var _alt = document.getElementById('tryAltBtn');
+    if(_alt){
+      var _w = '';
+      try{ _w = (SPORT && (SPORT.word || SPORT.key)) || ''; }catch(_){}
+      _alt.textContent = _w
+        ? ('Start ' + String(_w).replace(/^./, function(c){ return c.toUpperCase(); }) + ' practice')
+        : 'Start practice';
+    }
+  }catch(_){}
   keys.forEach(function(k){
     var b = document.createElement('button');
     b.type = 'button';
@@ -16812,6 +16837,16 @@ var I18N = {
     "+ Invite a friend to the league": "+ Invita a un amigo a la liga",
     "\ud83d\udce9 Invite a friend": "\ud83d\udce9 Invita a un amigo",
     "Pick a game first": "Elige un partido primero",
+    /* The demoted practice control names its sport, so there is one string
+       per sport rather than a generic "Start practice". Composed Spanish
+       ("Empezar practica de baloncesto") reads badly; the natural verb
+       phrase is "Practicar <sport>", so each is written out. */
+    "Start Basketball practice": "Practicar baloncesto",
+    "Start Soccer practice":     "Practicar f\u00fatbol",
+    "Start Baseball practice":   "Practicar b\u00e9isbol",
+    "Start Football practice":   "Practicar f\u00fatbol americano",
+    "Start Hockey practice":     "Practicar hockey",
+    "Start practice":            "Empezar la pr\u00e1ctica",
     "Gametime follows the room you are in. Tonight\u2019s games are in the rail at the top \u2014 or run a practice game.": "Gametime sigue la sala en la que est\u00e1s. Los partidos de hoy est\u00e1n en la barra de arriba, o juega una ronda de pr\u00e1ctica.",
     "Stats follows the room you are in. Tonight\u2019s games are in the rail at the top \u2014 or run a practice game.": "Stats sigue la sala en la que est\u00e1s. Los partidos de hoy est\u00e1n en la barra de arriba, o juega una ronda de pr\u00e1ctica.",
     "Leagues are free to join. STATS+ members can create unlimited leagues with custom names & trash-talk boards.": "Entrar a una liga es gratis. Los miembros de STATS+ pueden crear ligas ilimitadas con nombre propio y tablón para picarse.",
@@ -26199,7 +26234,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-02-known.283';
+const STATS_BUILD='2026-09-02-door.284';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-02T10:40:40.361Z",
-  "generatedPT": "Wed, Sep 2, 3:40 AM PT",
+  "generated": "2026-09-02T18:18:38.345Z",
+  "generatedPT": "Wed, Sep 2, 11:18 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -13,8 +13,8 @@
     "built": 14,
     "off": 0,
     "unbuilt": 0,
-    "games": 41,
-    "featured": 29,
+    "games": 40,
+    "featured": 28,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -150,27 +150,8 @@
       "weekday": "Fri",
       "label": "Fri, Sep 4",
       "status": "built",
-      "gameCount": 3,
+      "gameCount": 2,
       "games": [
-        {
-          "nightId": "slate-2026-09-04-det-cle",
-          "date": "2026-09-04",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401877193",
-          "home": "Guardians",
-          "away": "Tigers",
-          "matchup": "Tigers at Guardians",
-          "tipISO": "2026-09-04T18:10:00.000Z",
-          "tipPT": "11:10 AM PT",
-          "tipPTLong": "Fri, Sep 4, 11:10 AM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "58"
-        },
         {
           "nightId": "slate-2026-09-04-liv-ips",
           "date": "2026-09-04",
