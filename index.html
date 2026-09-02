@@ -26028,7 +26028,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-02-cuts.278';
+const STATS_BUILD='2026-09-02-drop.279';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -32410,6 +32410,15 @@ try{
   <div class="menuin" role="dialog" aria-label="Menu">
     <div class="menuhead"><b>Menu</b><button onclick="closeMenu()" aria-label="Close">✕</button></div>
     <div id="menuBody"></div>
+  <!-- A DROPDOWN, NOT A WALL. Opened, fourteen days of fixtures ran off
+       the bottom of the sheet under Sign out — "in menu there should be a
+       clean drop down for the schedule". <details> because it is a
+       disclosure and the browser already knows how to do those: keyboard,
+       screen reader and the open/closed state come free, and there is no
+       JS to desync from the arrow. Closed by default, so the menu reads as
+       nine rows again. -->
+  <details id="schedDrop">
+    <summary class="mrow" style="list-style:none"><i>📅</i>What&rsquo;s coming<s>Next two weeks</s></summary>
   <!-- ============ THE NEXT TWO WEEKS LIVES HERE ======================
        It was asked for in the menu — "our schedule for the next two weeks
        in our menu so people know what games are coming" — and I put it on
@@ -32435,7 +32444,8 @@ try{
          host/tape_card.py. Hidden until tape/{date} actually loads, so a
          day the picker did not run costs a player nothing. -->
 
-    <div id="menuStamp" class="center" style="margin-top:12px"></div>
+    </details>
+  <div id="menuStamp" class="center" style="margin-top:12px"></div>
   </div>
 </div>
 <div id="botnav" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:8500;
@@ -33073,6 +33083,16 @@ body.hasrail #menuBtn{top:calc(6px + env(safe-area-inset-top,0px))}
   background:none;border:0;border-bottom:1px solid var(--line);padding:14px 2px;
   font-size:15px;font-weight:700;color:var(--body);font-family:var(--f)}
 #menuSheet .mrow:last-child{border-bottom:0}
+/* The disclosure row wears the same clothes as the buttons above it, and
+   the marker is ours so it can sit on the right where the state notes are. */
+#menuSheet #schedDrop > summary{list-style:none}
+#menuSheet #schedDrop > summary::-webkit-details-marker{display:none}
+#menuSheet #schedDrop > summary::after{content:'\25be';margin-left:8px;color:var(--dim);
+  font-size:12px;transition:transform .15s}
+#menuSheet #schedDrop[open] > summary::after{transform:rotate(180deg)}
+#menuSheet #schedDrop > summary s{margin-left:auto}
+/* Open, it scrolls inside itself rather than running off the sheet. */
+#menuSheet #schedDrop[open] #schedCard{max-height:52vh;overflow-y:auto;margin-top:10px}
 #menuSheet .mrow:hover{color:var(--ink)}
 #menuSheet .mrow i{font-style:normal;font-size:17px;width:22px;text-align:center;flex:0 0 auto}
 #menuSheet .mrow s{text-decoration:none;margin-left:auto;font-size:12px;color:var(--dim);font-weight:700}

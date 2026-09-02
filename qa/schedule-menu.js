@@ -89,6 +89,23 @@ t('it is in the MENU, and still not a fifth tab', () => {
   return navs.length === 4 ? true : `${navs.length} nav tabs — there must be exactly 4`;
 });
 
+t('it is a dropdown, closed until asked for', () => {
+  /* Opened flat, fourteen days of fixtures ran off the bottom of the sheet
+     under Sign out. It is a <details> so the browser owns the disclosure —
+     keyboard, screen reader and the open/closed state come free — and it
+     must ship CLOSED, or the menu is a wall again. */
+  const d = s.indexOf('id="schedDrop"');
+  if (d < 0) return 'no #schedDrop — the schedule is not a dropdown';
+  const tag = s.slice(s.lastIndexOf('<', d), s.indexOf('>', d) + 1);
+  if (!/^<details/.test(tag)) return 'the schedule wrapper is not a <details>';
+  if (/\bopen\b/.test(tag)) return 'the dropdown ships OPEN — the menu is a wall again';
+  const c = s.indexOf('id="schedCard"');
+  if (!(d < c)) return 'the card is not inside the dropdown';
+  /* Open, it must scroll inside itself rather than growing the sheet. */
+  return /#schedDrop\[open\] #schedCard\{[^}]*overflow-y:auto/.test(s)
+    ? true : 'an open dropdown does not scroll inside itself';
+});
+
 t('no Game Night number reaches the screen', () => {
   const a = s.indexOf('function schedRender');
   if (a < 0) return 'no schedRender()';
