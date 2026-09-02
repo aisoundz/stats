@@ -20,9 +20,28 @@
    ================================================================== */
 
 /* ---------------------------------------------------------------- MLB
-   Three rounds: after the 3rd, the 6th and the 9th. Not nine — a round
-   every eighteen minutes is a notification cadence, not a game. The unit
-   is the at-bat, and the questions live in the pitch data nobody else
+   ⚠ THIS CADENCE IS SUPERSEDED AND THIS FILE DOES NOT GOVERN A NIGHT.
+
+   The paragraph below argued for three rounds — "Not nine — a round every
+   eighteen minutes is a notification cadence, not a game." On 31 Aug 2026
+   the founder ruled the other way, repeatedly and explicitly: BASEBALL
+   ASKS A QUESTION EVERY INNING. Nine rounds, worth
+   [10,10,15,15,20,25,30,35,40].
+
+   It is left standing rather than quietly edited because it is the best
+   record of why the rule kept reverting. A hosted night's rounds come from
+   admin.html TEMPLATES, and a practice run from index.html SPORTS; the
+   runner never requires this file, and the only thing that reads it is
+   qa/host-banks.js, which checks that each question's resolver exists and
+   returns a legal option — not how many rounds there are. So nothing here
+   can change live grading. What it CAN do is read as authoritative to the
+   next person who opens it, which is exactly how a settled decision got
+   argued twice.
+
+   THE THREE-ROUND TEXT BELOW IS HISTORY. Do not restore it.
+   ------------------------------------------------------------------
+   Three rounds: after the 3rd, the 6th and the 9th. The unit is the
+   at-bat, and the questions live in the pitch data nobody else
    surfaces. */
 const MLB = {
   tags:  ['1st-3rd', '4th-6th', '7th-9th'],

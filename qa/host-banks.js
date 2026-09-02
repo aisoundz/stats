@@ -43,6 +43,30 @@ const ADMIN_ARGV = (function(){ const a = process.argv.slice(2), i = a.indexOf('
 const DIR = ADMIN_ARGV[0] || path.join(ROOT, 'references', 'multisport');
 const BANKS_FILE = path.join(ROOT, 'references', 'multisport', 'question-banks.js');
 
+/* ============ THIS FILE MUST NOT GOVERN A NIGHT =====================
+   references/multisport/question-banks.js still carries a THREE-round MLB
+   cadence, and the founder's rule since 31 Aug is a question EVERY inning.
+   It cannot change live grading — a hosted night's rounds come from
+   admin.html TEMPLATES and a practice run from index.html SPORTS — but
+   that is only true for as long as nothing in host/ requires it. The day
+   something does, a superseded cadence starts deciding real rounds, which
+   is how this decision came to be argued twice already. */
+(function(){
+  const hostDir = path.join(ROOT, 'host');
+  let readers = [];
+  try {
+    readers = fs.readdirSync(hostDir)
+      .filter(f => f.endsWith('.js'))
+      .filter(f => /require\([^)]*question-banks/.test(fs.readFileSync(path.join(hostDir, f), 'utf8')));
+  } catch (_) {}
+  if (readers.length) {
+    console.log('  FAIL  host/ now requires question-banks.js: ' + readers.join(', '));
+    console.log('        That file carries a superseded three-round MLB cadence.');
+    process.exit(1);
+  }
+  console.log('  ok    nothing in host/ requires question-banks.js — it cannot govern a night');
+})();
+
 if (!fs.existsSync(DIR)) {
   console.log('NO FIXTURES at ' + DIR);
   console.log('  run:  node references/multisport/fetch.js');
