@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-03T10:20:01.695Z",
-  "generatedPT": "Thu, Sep 3, 3:20 AM PT",
+  "generated": "2026-09-03T10:40:41.961Z",
+  "generatedPT": "Thu, Sep 3, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 37,
-    "featured": 27,
+    "unbuilt": 0,
+    "games": 39,
+    "featured": 29,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -856,10 +856,48 @@
       "date": "2026-09-16",
       "weekday": "Wed",
       "label": "Wed, Sep 16",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 2,
+      "games": [
+        {
+          "nightId": "slate-2026-09-16-chw-cle",
+          "date": "2026-09-16",
+          "league": "mlb",
+          "leagueLabel": "Major League Baseball",
+          "leagueProse": "Major League Baseball",
+          "sport": "baseball",
+          "path": "baseball/mlb",
+          "espnEvent": "401816960",
+          "home": "Guardians",
+          "away": "White Sox",
+          "matchup": "White Sox at Guardians",
+          "tipISO": "2026-09-16T17:00:00.000Z",
+          "tipPT": "10:00 AM PT",
+          "tipPTLong": "Wed, Sep 16, 10:00 AM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-16-bal-nym",
+          "date": "2026-09-16",
+          "league": "mlb",
+          "leagueLabel": "Major League Baseball",
+          "leagueProse": "Major League Baseball",
+          "sport": "baseball",
+          "path": "baseball/mlb",
+          "espnEvent": "401816959",
+          "home": "Mets",
+          "away": "Orioles",
+          "matchup": "Orioles at Mets",
+          "tipISO": "2026-09-16T23:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Wed, Sep 16, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
