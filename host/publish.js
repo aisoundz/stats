@@ -380,12 +380,39 @@ async function main(){
     const d = existing.data() || {};
     const who = `${(d.rounds||[]).length} rounds, by ${d.by || 'unknown'}`;
     if(IF_MISSING){
-      log('plan', `already published for ${WRITE_AS} (${who}) — leaving it alone, it wins`);
-      log('done', 'nothing to do');
-      return;
+      /* ============ OUR OWN STALE OUTPUT IS NOT A CONTROL ROOM EDIT ====
+         This guard exists to protect edits a HUMAN made in the Control
+         Room, which this script cannot see. It was also protecting the
+         plan THIS SCRIPT wrote days earlier — and the doc records `by`,
+         so the two were always distinguishable.
+
+         2 Sept 2026: nights are built days ahead, so slate-2026-09-02
+         carried a plan published on 31 Aug — three rounds of three
+         innings, from before the every-inning rule landed. run.js builds
+         nine per-inning rounds correctly and then deferred to that stale
+         plan, every night, forever. The founder got "Innings 7-9 is
+         open" in the FOURTH, asking about innings nobody had played, and
+         the night ran out of rounds by the 3rd. THIS is the mechanism
+         behind the every-inning rule "reverting" repeatedly.
+
+         A human's plan still wins outright. Ours only yields when the
+         SHAPE has changed, so a plan that still matches the bank is left
+         alone and this stays a no-op on a normal night. */
+      const oursAlready = /^publish\.js/.test(String(d.by || ''));
+      const shapeChanged = (d.rounds || []).length !== rounds.length;
+      if(oursAlready && shapeChanged){
+        log('plan', `REFRESHING OUR OWN STALE PLAN for ${WRITE_AS} (${who}) — ` +
+                    `the bank now says ${rounds.length} rounds, not ${(d.rounds||[]).length}`);
+        /* fall through and write it */
+      } else {
+        log('plan', `already published for ${WRITE_AS} (${who}) — leaving it alone, it wins`);
+        log('done', 'nothing to do');
+        return;
+      }
+    } else {
+      die(`a plan is already published for ${WRITE_AS} (${who}). ` +
+          'It may contain Control Room edits this script cannot see. Use --force to overwrite it.');
     }
-    die(`a plan is already published for ${WRITE_AS} (${who}). ` +
-        'It may contain Control Room edits this script cannot see. Use --force to overwrite it.');
   }
 
   const planDoc = {

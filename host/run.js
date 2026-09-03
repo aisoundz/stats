@@ -1378,9 +1378,21 @@ async function main(){
              arriving beside a question the player can already see. If the
              push service is slow or down, the round still opened. */
           try{
+            /* THE NOTIFICATION SAID THE WRONG THING TWICE.
+       
+               "Innings 7-9 is OPEN" reads as an invitation to watch
+               something that is about to happen. A round opens at the END
+               of a period and asks what JUST happened — that is the whole
+               product — so the copy has to say the period is over, or the
+               player looks up at a game that has moved on.
+       
+               And "4 question(s)" is a machine talking. Nobody writes that.
+               Founder, 2 Sept: "the wording of notification when quarters
+               send out or not is messed up." */
+            const _n = R.qs.length;
             const r = await PUSH.send(db, NIGHT, {
-              title: `\u{1F534} ${R.name} is open`,
-              body: `${R.qs.length} question(s). Tap to answer.`,
+              title: `\u{1F534} ${R.name} is done`,
+              body: `${_n} question${_n === 1 ? '' : 's'} about what just happened. Tap to answer.`,
               tag: 'stats-round',
               url: `https://statsgametime.com/?game=${NIGHT}`
             });
