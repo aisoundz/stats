@@ -1,20 +1,20 @@
 {
-  "generated": "2026-09-02T18:18:38.345Z",
-  "generatedPT": "Wed, Sep 2, 11:18 AM PT",
+  "generated": "2026-09-03T10:20:01.695Z",
+  "generatedPT": "Thu, Sep 3, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-02",
-    "to": "2026-09-15",
+    "from": "2026-09-03",
+    "to": "2026-09-16",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 40,
-    "featured": 28,
+    "unbuilt": 1,
+    "games": 37,
+    "featured": 27,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -32,72 +32,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-09-02",
-      "weekday": "Wed",
-      "label": "Wed, Sep 2",
-      "status": "built",
-      "gameCount": 3,
-      "games": [
-        {
-          "nightId": "slate-2026-09-02-mil-chc",
-          "date": "2026-09-02",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816783",
-          "home": "Cubs",
-          "away": "Brewers",
-          "matchup": "Brewers at Cubs",
-          "tipISO": "2026-09-02T23:40:00.000Z",
-          "tipPT": "4:40 PM PT",
-          "tipPTLong": "Wed, Sep 2, 4:40 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "52"
-        },
-        {
-          "nightId": "slate-2026-09-02-nyy-laa",
-          "date": "2026-09-02",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816785",
-          "home": "Angels",
-          "away": "Yankees",
-          "matchup": "Yankees at Angels",
-          "tipISO": "2026-09-03T01:38:00.000Z",
-          "tipPT": "6:38 PM PT",
-          "tipPTLong": "Wed, Sep 2, 6:38 PM PT",
-          "featured": false,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-02-stl-lad",
-          "date": "2026-09-02",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816787",
-          "home": "Dodgers",
-          "away": "Cardinals",
-          "matchup": "Cardinals at Dodgers",
-          "tipISO": "2026-09-03T02:10:00.000Z",
-          "tipPT": "7:10 PM PT",
-          "tipPTLong": "Wed, Sep 2, 7:10 PM PT",
-          "featured": false,
-          "mainEvent": false,
-          "gameNight": null
-        }
-      ]
-    },
     {
       "date": "2026-09-03",
       "weekday": "Thu",
@@ -122,7 +56,7 @@
           "tipPTLong": "Thu, Sep 3, 4:15 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": "57"
+          "gameNight": "55"
         },
         {
           "nightId": "slate-2026-09-03-colo-gt",
@@ -133,15 +67,15 @@
           "sport": "football",
           "path": "football/college-football",
           "espnEvent": "401856776",
-          "home": "Yellow Jackets",
-          "away": "Buffaloes",
-          "matchup": "Buffaloes at Yellow Jackets",
+          "home": "Georgia Tech",
+          "away": "Colorado",
+          "matchup": "Colorado at Georgia Tech",
           "tipISO": "2026-09-04T00:00:00.000Z",
           "tipPT": "5:00 PM PT",
           "tipPTLong": "Thu, Sep 3, 5:00 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": "52"
+          "gameNight": "56"
         }
       ]
     },
@@ -917,6 +851,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-09-16",
+      "weekday": "Wed",
+      "label": "Wed, Sep 16",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
