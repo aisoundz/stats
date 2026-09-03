@@ -172,7 +172,15 @@ async function slate() {
       paragraphs: [
         'The times and channels are below. Your card locks when the game starts — '
         + 'six picks before it, and the watchlist you set alongside them.',
-        'Free to enter, no account needed to play.'
+        /* NOT "no account needed to play". That was false and it went out
+           unread: startLive() gates on signedInNow() -> SB.verified(),
+           which requires u.email, so an anonymous visitor is sent to the
+           sign-in card. PRACTICE needs no account (B14, reversed 18 Aug);
+           a live room does. Free and account-free are different promises
+           and only one of them is true. Caught 3 Sept while previewing the
+           go-live email an hour before it sent. */
+        'Free to enter, always. Practice is open to anyone — a live room asks '
+        + 'you to sign in, so your points follow you from night to night.'
       ],
       buildNote: 'Assembled from tonight’s slate.'
       /* no stats, no question, no settled — nobody wrote them, so this

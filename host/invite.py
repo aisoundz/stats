@@ -91,7 +91,14 @@ function inviteText(){
   var line = 'Play along with me — ' + what
            + (when ? (' at ' + when) : '')
            + (gn ? ('. Game Night #' + gn + '.') : '.')
-           + ' Free, no account needed.';
+           /* KEEP THIS IN STEP WITH index.html. The app fixed this line and
+              this generator did not, so re-applying invite.py would have put
+              the false claim back: the invite points at a LIVE room, which
+              has always required an account, and it was shipping to other
+              people's phones saying otherwise. Practice is the half that
+              needs nothing. Free is still true and is the part worth
+              saying. Divergence found 3 Sept. */
+           + ' Free to play — one quick sign-in for a live room.';
   var url = 'https://statsgametime.com/?game=' + encodeURIComponent(id) + '&src=invite';
   return { title: 'STATS GAMETIME', text: line, url: url, full: line + '\n' + url };
 }
