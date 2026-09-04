@@ -1,20 +1,20 @@
 {
-  "generated": "2026-09-03T10:40:41.961Z",
-  "generatedPT": "Thu, Sep 3, 3:40 AM PT",
+  "generated": "2026-09-04T10:20:01.449Z",
+  "generatedPT": "Fri, Sep 4, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-03",
-    "to": "2026-09-16",
+    "from": "2026-09-04",
+    "to": "2026-09-17",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 39,
-    "featured": 29,
+    "unbuilt": 1,
+    "games": 37,
+    "featured": 27,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -32,53 +32,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-09-03",
-      "weekday": "Thu",
-      "label": "Thu, Sep 3",
-      "status": "built",
-      "gameCount": 2,
-      "games": [
-        {
-          "nightId": "slate-2026-09-03-mil-chc",
-          "date": "2026-09-03",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816793",
-          "home": "Cubs",
-          "away": "Brewers",
-          "matchup": "Brewers at Cubs",
-          "tipISO": "2026-09-03T23:15:00.000Z",
-          "tipPT": "4:15 PM PT",
-          "tipPTLong": "Thu, Sep 3, 4:15 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "55"
-        },
-        {
-          "nightId": "slate-2026-09-03-colo-gt",
-          "date": "2026-09-03",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401856776",
-          "home": "Georgia Tech",
-          "away": "Colorado",
-          "matchup": "Colorado at Georgia Tech",
-          "tipISO": "2026-09-04T00:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Thu, Sep 3, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "56"
-        }
-      ]
-    },
     {
       "date": "2026-09-04",
       "weekday": "Fri",
@@ -103,7 +56,7 @@
           "tipPTLong": "Fri, Sep 4, 12:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": "56"
+          "gameNight": "57"
         },
         {
           "nightId": "slate-2026-09-04-laa-pit",
@@ -121,8 +74,8 @@
           "tipPT": "3:40 PM PT",
           "tipPTLong": "Fri, Sep 4, 3:40 PM PT",
           "featured": true,
-          "mainEvent": false,
-          "gameNight": "57"
+          "mainEvent": true,
+          "gameNight": "58"
         }
       ]
     },
@@ -898,6 +851,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-09-17",
+      "weekday": "Thu",
+      "label": "Thu, Sep 17",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
