@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-04T10:20:01.449Z",
-  "generatedPT": "Fri, Sep 4, 3:20 AM PT",
+  "generated": "2026-09-04T10:41:16.652Z",
+  "generatedPT": "Fri, Sep 4, 3:41 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 37,
-    "featured": 27,
+    "unbuilt": 0,
+    "games": 40,
+    "featured": 30,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -856,10 +856,67 @@
       "date": "2026-09-17",
       "weekday": "Thu",
       "label": "Thu, Sep 17",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 3,
+      "games": [
+        {
+          "nightId": "slate-2026-09-17-phi-nym",
+          "date": "2026-09-17",
+          "league": "mlb",
+          "leagueLabel": "Major League Baseball",
+          "leagueProse": "Major League Baseball",
+          "sport": "baseball",
+          "path": "baseball/mlb",
+          "espnEvent": "401816976",
+          "home": "Mets",
+          "away": "Phillies",
+          "matchup": "Phillies at Mets",
+          "tipISO": "2026-09-17T23:15:00.000Z",
+          "tipPT": "4:15 PM PT",
+          "tipPTLong": "Thu, Sep 17, 4:15 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-17-la-dal",
+          "date": "2026-09-17",
+          "league": "wnba",
+          "leagueLabel": "WNBA",
+          "leagueProse": "the WNBA",
+          "sport": "basketball",
+          "path": "basketball/wnba",
+          "espnEvent": "401857192",
+          "home": "Wings",
+          "away": "Sparks",
+          "matchup": "Sparks at Wings",
+          "tipISO": "2026-09-18T00:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Thu, Sep 17, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-17-lv-sea",
+          "date": "2026-09-17",
+          "league": "wnba",
+          "leagueLabel": "WNBA",
+          "leagueProse": "the WNBA",
+          "sport": "basketball",
+          "path": "basketball/wnba",
+          "espnEvent": "401857194",
+          "home": "Storm",
+          "away": "Aces",
+          "matchup": "Aces at Storm",
+          "tipISO": "2026-09-18T02:00:00.000Z",
+          "tipPT": "7:00 PM PT",
+          "tipPTLong": "Thu, Sep 17, 7:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
