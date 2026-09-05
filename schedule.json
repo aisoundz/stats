@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-05T10:20:01.254Z",
-  "generatedPT": "Sat, Sep 5, 3:20 AM PT",
+  "generated": "2026-09-05T10:41:10.545Z",
+  "generatedPT": "Sat, Sep 5, 3:41 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 38,
-    "featured": 28,
+    "unbuilt": 0,
+    "games": 40,
+    "featured": 30,
     "unresolvedPicks": 0
   },
   "_diagnostics": [],
@@ -862,10 +862,48 @@
       "date": "2026-09-18",
       "weekday": "Fri",
       "label": "Fri, Sep 18",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 2,
+      "games": [
+        {
+          "nightId": "slate-2026-09-18-phi-nym",
+          "date": "2026-09-18",
+          "league": "mlb",
+          "leagueLabel": "Major League Baseball",
+          "leagueProse": "Major League Baseball",
+          "sport": "baseball",
+          "path": "baseball/mlb",
+          "espnEvent": "401816987",
+          "home": "Mets",
+          "away": "Phillies",
+          "matchup": "Phillies at Mets",
+          "tipISO": "2026-09-18T23:10:00.000Z",
+          "tipPT": "4:10 PM PT",
+          "tipPTLong": "Fri, Sep 18, 4:10 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-18-por-gs",
+          "date": "2026-09-18",
+          "league": "wnba",
+          "leagueLabel": "WNBA",
+          "leagueProse": "the WNBA",
+          "sport": "basketball",
+          "path": "basketball/wnba",
+          "espnEvent": "401857197",
+          "home": "Valkyries",
+          "away": "Fire",
+          "matchup": "Fire at Valkyries",
+          "tipISO": "2026-09-19T02:00:00.000Z",
+          "tipPT": "7:00 PM PT",
+          "tipPTLong": "Fri, Sep 18, 7:00 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
