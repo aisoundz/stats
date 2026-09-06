@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-06T10:20:01.887Z",
-  "generatedPT": "Sun, Sep 6, 3:20 AM PT",
+  "generated": "2026-09-06T10:42:53.434Z",
+  "generatedPT": "Sun, Sep 6, 3:42 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,14 +10,27 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 34,
-    "featured": 26,
+    "unbuilt": 0,
+    "games": 38,
+    "featured": 30,
     "unresolvedPicks": 0
   },
-  "_diagnostics": [],
+  "_diagnostics": [
+    {
+      "level": "error",
+      "date": "2026-09-19",
+      "code": "manifest-conflict",
+      "message": "slate-2026-09-19-sea-col appears twice in slate-all-2026-09-19.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "note",
+      "date": "2026-09-19",
+      "code": "manifest-duplicate",
+      "message": "slate-all-2026-09-19.tsv has 107 rows but only 106 distinct nightIds — 1 duplicate row(s), deduped"
+    }
+  ],
   "days": [
     {
       "date": "2026-09-06",
@@ -786,10 +799,86 @@
       "date": "2026-09-19",
       "weekday": "Sat",
       "label": "Sat, Sep 19",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 4,
+      "games": [
+        {
+          "nightId": "slate-2026-09-19-phx-dal",
+          "date": "2026-09-19",
+          "league": "wnba",
+          "leagueLabel": "WNBA",
+          "leagueProse": "the WNBA",
+          "sport": "basketball",
+          "path": "basketball/wnba",
+          "espnEvent": "401857198",
+          "home": "Wings",
+          "away": "Mercury",
+          "matchup": "Mercury at Wings",
+          "tipISO": "2026-09-19T17:00:00.000Z",
+          "tipPT": "10:00 AM PT",
+          "tipPTLong": "Sat, Sep 19, 10:00 AM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-19-clb-mtl",
+          "date": "2026-09-19",
+          "league": "mls",
+          "leagueLabel": "MLS",
+          "leagueProse": "MLS",
+          "sport": "soccer",
+          "path": "soccer/usa.1",
+          "espnEvent": "761818",
+          "home": "CF Montréal",
+          "away": "Columbus Crew",
+          "matchup": "Columbus Crew at CF Montréal",
+          "tipISO": "2026-09-19T23:30:00.000Z",
+          "tipPT": "4:30 PM PT",
+          "tipPTLong": "Sat, Sep 19, 4:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-19-sea-col",
+          "date": "2026-09-19",
+          "league": "mlb",
+          "leagueLabel": "Major League Baseball",
+          "leagueProse": "Major League Baseball",
+          "sport": "baseball",
+          "path": "baseball/mlb",
+          "espnEvent": "401817007",
+          "home": "Rockies",
+          "away": "Mariners",
+          "matchup": "Mariners at Rockies",
+          "tipISO": "2026-09-20T00:10:00.000Z",
+          "tipPT": "5:10 PM PT",
+          "tipPTLong": "Sat, Sep 19, 5:10 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-19-atx-dal",
+          "date": "2026-09-19",
+          "league": "mls",
+          "leagueLabel": "MLS",
+          "leagueProse": "MLS",
+          "sport": "soccer",
+          "path": "soccer/usa.1",
+          "espnEvent": "761822",
+          "home": "FC Dallas",
+          "away": "Austin FC",
+          "matchup": "Austin FC at FC Dallas",
+          "tipISO": "2026-09-20T00:30:00.000Z",
+          "tipPT": "5:30 PM PT",
+          "tipPTLong": "Sat, Sep 19, 5:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
