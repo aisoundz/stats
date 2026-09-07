@@ -1,20 +1,20 @@
 {
-  "generated": "2026-09-06T10:42:53.434Z",
-  "generatedPT": "Sun, Sep 6, 3:42 AM PT",
+  "generated": "2026-09-07T10:20:01.774Z",
+  "generatedPT": "Mon, Sep 7, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-06",
-    "to": "2026-09-19",
+    "from": "2026-09-07",
+    "to": "2026-09-20",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 38,
-    "featured": 30,
+    "unbuilt": 1,
+    "games": 34,
+    "featured": 26,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -32,91 +32,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-09-06",
-      "weekday": "Sun",
-      "label": "Sun, Sep 6",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-09-06-man-eve",
-          "date": "2026-09-06",
-          "league": "epl",
-          "leagueLabel": "Premier League",
-          "leagueProse": "the Premier League",
-          "sport": "soccer",
-          "path": "soccer/eng.1",
-          "espnEvent": "401879291",
-          "home": "Everton",
-          "away": "Manchester United",
-          "matchup": "Manchester United at Everton",
-          "tipISO": "2026-09-06T13:00:00.000Z",
-          "tipPT": "6:00 AM PT",
-          "tipPTLong": "Sun, Sep 6, 6:00 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "65"
-        },
-        {
-          "nightId": "slate-2026-09-06-che-ars",
-          "date": "2026-09-06",
-          "league": "epl",
-          "leagueLabel": "Premier League",
-          "leagueProse": "the Premier League",
-          "sport": "soccer",
-          "path": "soccer/eng.1",
-          "espnEvent": "401879292",
-          "home": "Arsenal",
-          "away": "Chelsea",
-          "matchup": "Chelsea at Arsenal",
-          "tipISO": "2026-09-06T15:30:00.000Z",
-          "tipPT": "8:30 AM PT",
-          "tipPTLong": "Sun, Sep 6, 8:30 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "66"
-        },
-        {
-          "nightId": "slate-2026-09-06-atl-phi",
-          "date": "2026-09-06",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816828",
-          "home": "Phillies",
-          "away": "Braves",
-          "matchup": "Braves at Phillies",
-          "tipISO": "2026-09-06T17:10:00.000Z",
-          "tipPT": "10:10 AM PT",
-          "tipPTLong": "Sun, Sep 6, 10:10 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "67"
-        },
-        {
-          "nightId": "slate-2026-09-06-min-chw",
-          "date": "2026-09-06",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816835",
-          "home": "White Sox",
-          "away": "Twins",
-          "matchup": "Twins at White Sox",
-          "tipISO": "2026-09-06T22:20:00.000Z",
-          "tipPT": "3:20 PM PT",
-          "tipPTLong": "Sun, Sep 6, 3:20 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "68"
-        }
-      ]
-    },
     {
       "date": "2026-09-07",
       "weekday": "Mon",
@@ -879,6 +794,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-09-20",
+      "weekday": "Sun",
+      "label": "Sun, Sep 20",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
