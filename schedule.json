@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-07T10:20:01.774Z",
-  "generatedPT": "Mon, Sep 7, 3:20 AM PT",
+  "generated": "2026-09-07T10:41:36.664Z",
+  "generatedPT": "Mon, Sep 7, 3:41 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 34,
-    "featured": 26,
+    "unbuilt": 0,
+    "games": 38,
+    "featured": 30,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -799,10 +799,86 @@
       "date": "2026-09-20",
       "weekday": "Sun",
       "label": "Sun, Sep 20",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 4,
+      "games": [
+        {
+          "nightId": "slate-2026-09-20-car-atl",
+          "date": "2026-09-20",
+          "league": "nfl",
+          "leagueLabel": "NFL",
+          "leagueProse": "the NFL",
+          "sport": "football",
+          "path": "football/nfl",
+          "espnEvent": "401872933",
+          "home": "Falcons",
+          "away": "Panthers",
+          "matchup": "Panthers at Falcons",
+          "tipISO": "2026-09-20T17:00:00.000Z",
+          "tipPT": "10:00 AM PT",
+          "tipPTLong": "Sun, Sep 20, 10:00 AM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-20-wsh-ind",
+          "date": "2026-09-20",
+          "league": "wnba",
+          "leagueLabel": "WNBA",
+          "leagueProse": "the WNBA",
+          "sport": "basketball",
+          "path": "basketball/wnba",
+          "espnEvent": "401857203",
+          "home": "Fever",
+          "away": "Mystics",
+          "matchup": "Mystics at Fever",
+          "tipISO": "2026-09-20T20:00:00.000Z",
+          "tipPT": "1:00 PM PT",
+          "tipPTLong": "Sun, Sep 20, 1:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-20-sd-mia",
+          "date": "2026-09-20",
+          "league": "mls",
+          "leagueLabel": "MLS",
+          "leagueProse": "MLS",
+          "sport": "soccer",
+          "path": "soccer/usa.1",
+          "espnEvent": "761829",
+          "home": "Inter Miami CF",
+          "away": "San Diego FC",
+          "matchup": "San Diego FC at Inter Miami CF",
+          "tipISO": "2026-09-20T23:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Sun, Sep 20, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-20-ind-kc",
+          "date": "2026-09-20",
+          "league": "nfl",
+          "leagueLabel": "NFL",
+          "leagueProse": "the NFL",
+          "sport": "football",
+          "path": "football/nfl",
+          "espnEvent": "401872945",
+          "home": "Chiefs",
+          "away": "Colts",
+          "matchup": "Colts at Chiefs",
+          "tipISO": "2026-09-21T00:20:00.000Z",
+          "tipPT": "5:20 PM PT",
+          "tipPTLong": "Sun, Sep 20, 5:20 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
