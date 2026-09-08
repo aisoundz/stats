@@ -1,20 +1,20 @@
 {
-  "generated": "2026-09-07T10:41:36.664Z",
-  "generatedPT": "Mon, Sep 7, 3:41 AM PT",
+  "generated": "2026-09-08T10:20:01.100Z",
+  "generatedPT": "Tue, Sep 8, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-07",
-    "to": "2026-09-20",
+    "from": "2026-09-08",
+    "to": "2026-09-21",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 38,
-    "featured": 30,
+    "unbuilt": 1,
+    "games": 37,
+    "featured": 29,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -32,34 +32,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-09-07",
-      "weekday": "Mon",
-      "label": "Mon, Sep 7",
-      "status": "built",
-      "gameCount": 1,
-      "games": [
-        {
-          "nightId": "slate-2026-09-07-stl-sf",
-          "date": "2026-09-07",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816850",
-          "home": "Giants",
-          "away": "Cardinals",
-          "matchup": "Cardinals at Giants",
-          "tipISO": "2026-09-08T00:10:00.000Z",
-          "tipPT": "5:10 PM PT",
-          "tipPTLong": "Mon, Sep 7, 5:10 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "69"
-        }
-      ]
-    },
     {
       "date": "2026-09-08",
       "weekday": "Tue",
@@ -879,6 +851,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-09-21",
+      "weekday": "Mon",
+      "label": "Mon, Sep 21",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
