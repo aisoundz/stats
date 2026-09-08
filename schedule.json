@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-08T10:20:01.100Z",
-  "generatedPT": "Tue, Sep 8, 3:20 AM PT",
+  "generated": "2026-09-08T10:40:38.866Z",
+  "generatedPT": "Tue, Sep 8, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 37,
-    "featured": 29,
+    "unbuilt": 0,
+    "games": 39,
+    "featured": 31,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -856,10 +856,48 @@
       "date": "2026-09-21",
       "weekday": "Mon",
       "label": "Mon, Sep 21",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 2,
+      "games": [
+        {
+          "nightId": "slate-2026-09-21-atl-ny",
+          "date": "2026-09-21",
+          "league": "wnba",
+          "leagueLabel": "WNBA",
+          "leagueProse": "the WNBA",
+          "sport": "basketball",
+          "path": "basketball/wnba",
+          "espnEvent": "401857206",
+          "home": "Liberty",
+          "away": "Dream",
+          "matchup": "Dream at Liberty",
+          "tipISO": "2026-09-22T00:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Mon, Sep 21, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-21-dal-phx",
+          "date": "2026-09-21",
+          "league": "wnba",
+          "leagueLabel": "WNBA",
+          "leagueProse": "the WNBA",
+          "sport": "basketball",
+          "path": "basketball/wnba",
+          "espnEvent": "401857207",
+          "home": "Mercury",
+          "away": "Wings",
+          "matchup": "Wings at Mercury",
+          "tipISO": "2026-09-22T02:00:00.000Z",
+          "tipPT": "7:00 PM PT",
+          "tipPTLong": "Mon, Sep 21, 7:00 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
