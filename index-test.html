@@ -3814,7 +3814,8 @@ window.STATS_FIREBASE = {
           .catch(function(){ return false; })
           .then(function(){ try{ paintSlate(); }catch(_){}
                             return loadNightConfig(db, fsMod); })
-          .then(function(){ try{ paintSlate(); }catch(_){}
+          .then(function(){ try{ dropDeadDefaultNight(); }catch(_){}
+                            try{ paintSlate(); }catch(_){}
                             try{ sweepOldSaves(); }catch(_){} })
           .catch(function(){});
       }catch(_){ try{ loadNightConfig(db, fsMod); }catch(_){} }
@@ -7661,6 +7662,50 @@ function nightHasExpired(g){
 }
 try{ window.nightHasExpired = nightHasExpired; }catch(_){}
 
+/* ============ NOBODY IS PARKED IN A GAME THAT IS OVER ===============
+   3 Sept 2026, college football go-live. The founder opened the app,
+   pressed the prediction card and was told the night was finished. He
+   scored zero in both rooms and answered 2 of 13 rounds. The telemetry:
+
+       card_start -> blocked_finished        (twice, before kickoff)
+       slate_pick { from: "gn13-2026-08-19-min-gs" }
+
+   THE CHAIN, reproduced on the live site on 9 Sept and not guessed at:
+   schedule/current correctly names tonight's featured game. That game is
+   soccer, or football, or anything that is not basketball. The page boots
+   as basketball, so hydrateNight() REFUSES the config on the sport
+   mismatch -- correctly, B39-a, a night must never be half-applied over
+   the wrong league -- and logs 'keeping the built-in night'.
+
+   The built-in night is gn13-2026-08-19-min-gs. It is real, it is
+   published, and it ended on 19 August. So the refusal leaves the visitor
+   sitting in a three-week-old finished game with a finished feed, and
+   every downstream gate then has to defend against it. The card gate did
+   not, and that cost a launch night.
+
+   Refusing to hydrate is right. Keeping a DEAD night after refusing is
+   the bug. There is no room here, so the app must say so and show the
+   rail, which is the one screen that can actually help.
+
+   Only ever the BAKED default: a night the player chose, or one that
+   hydrated, is theirs and is left alone even when it is over -- they may
+   be reading last night's board on purpose. LOCK_FIXTURE is exempt
+   because pinning the built-in night is the whole point of a fixture. */
+function dropDeadDefaultNight(){
+  try{
+    if(typeof LOCK_FIXTURE !== 'undefined' && LOCK_FIXTURE) return false;
+    if(typeof GAME === 'undefined' || !GAME) return false;
+    if(!GAME.__baked) return false;              // hydrated or chosen: not ours to drop
+    if(!nightHasExpired(GAME)) return false;     // the default is still today's
+    try{ if(slatePick() === GAME.nightId) slatePickSet(null); }catch(_){}
+    GAME.__dead = true;
+    try{ trk('default_night_dropped', { night: GAME.nightId || '' }); }catch(_){}
+    try{ console.info('the built-in night ' + GAME.nightId + ' is over — holding no room'); }catch(_){}
+    return true;
+  }catch(_){ return false; }
+}
+try{ window.dropDeadDefaultNight = dropDeadDefaultNight; }catch(_){}
+
 function gnOf(g){
   /* An expired default has no number worth printing. "#13" on a Friday in
      August is worse than no number: it is checkable, and wrong. */
@@ -8789,6 +8834,35 @@ async function chooseGame(db, F, nightId){
   var here = ACTIVE_ROOM;
   if(!here){ try{ here=(GAME&&GAME.nightId)||''; }catch(_){} }
   if(nightId === here){ try{ paintSlate(); }catch(_){} return true; }
+
+  /* ============ THE CLOCK BELONGS TO THE ROOM, NOT TO THE SESSION ====
+     3 Sept 2026, go-live night. The founder was in the baseball room with
+     the score reading MIL 1 CHC 2, correct, above a clock reading
+     "7:19 - 1st". That is the FOOTBALL game, one room over, and the line
+     under it said "6th inning opens when this stretch ends".
+
+     chooseGame() is the one door into a room: it stops the old room's
+     listeners, restores the room, sets ACTIVE_ROOM and moves the network
+     layer with SB.setRoom(). It never touched GS, and GS is where the
+     live clock lives. So the listeners moved and the feed object did not:
+     the score came from the new room's document and the clock came from
+     the room he had left.
+
+     A fresh load of either room is correct, which is why this survived
+     the gate and every suite. It needs a HISTORY to reproduce, and the
+     one configuration guaranteed not to have one is a clean browser.
+
+     Invalidated here rather than inside loadGameStats, because entering a
+     room is what makes the old feed wrong, and this function is the one
+     place that knows it happened. GS.ev is cleared too: it is the cache
+     key, and leaving it set lets a stale entry answer for the new room. */
+  try{
+    if(typeof GS !== 'undefined'){
+      GS.ok = false; GS.ev = ''; GS.at = 0;
+      GS.detail = ''; GS.state = 'pre';
+      GS.fails = 0; GS.failEv = ''; GS.lastTry = 0;   // never inherit a backoff
+    }
+  }catch(_){}
 
   /* ============ SWITCHING ROOMS IS A STATE SWAP, NOT A RELOAD =========
      This used to reload the page, because with one global S there was no
@@ -11805,6 +11879,12 @@ function saveGateEmail(force){
 function nightIsOver(){
   try{
     if(S.mode !== 'live') return false;           // practice replays forever
+    /* NEVER SAY "FINISHED" ABOUT A NIGHT NOBODY CHOSE. dropDeadDefaultNight()
+       marks the built-in default when it has expired and nothing hydrated
+       over it, which happens on every night whose featured game is not
+       basketball. Answering for it told the founder his launch night was
+       over before kickoff. There is no room here to be finished. */
+    try{ if(GAME && GAME.__dead) return false; }catch(_){}
     /* ============ ABOUT THIS ROOM, OR IT PROVES NOTHING ==============
        phaseFromFeed() reads GS with no event guard, and GS is one global
        keyed to ONE event. So "final" means "the feed we happen to be
@@ -26199,7 +26279,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-02-card.290';
+const STATS_BUILD='2026-09-09-alive.291';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
