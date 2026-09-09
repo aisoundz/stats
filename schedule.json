@@ -1,20 +1,20 @@
 {
-  "generated": "2026-09-08T10:40:38.866Z",
-  "generatedPT": "Tue, Sep 8, 3:40 AM PT",
+  "generated": "2026-09-09T10:20:01.696Z",
+  "generatedPT": "Wed, Sep 9, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-08",
-    "to": "2026-09-21",
+    "from": "2026-09-09",
+    "to": "2026-09-22",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 39,
-    "featured": 31,
+    "unbuilt": 1,
+    "games": 38,
+    "featured": 30,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -32,34 +32,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-09-08",
-      "weekday": "Tue",
-      "label": "Tue, Sep 8",
-      "status": "built",
-      "gameCount": 1,
-      "games": [
-        {
-          "nightId": "slate-2026-09-08-hou-phi",
-          "date": "2026-09-08",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816856",
-          "home": "Phillies",
-          "away": "Astros",
-          "matchup": "Astros at Phillies",
-          "tipISO": "2026-09-08T22:40:00.000Z",
-          "tipPT": "3:40 PM PT",
-          "tipPTLong": "Tue, Sep 8, 3:40 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "70"
-        }
-      ]
-    },
     {
       "date": "2026-09-09",
       "weekday": "Wed",
@@ -79,12 +51,12 @@
           "home": "Philadelphia Union",
           "away": "FC Cincinnati",
           "matchup": "FC Cincinnati at Philadelphia Union",
-          "tipISO": "2026-09-09T23:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Wed, Sep 9, 4:30 PM PT",
+          "tipISO": "2026-09-09T23:45:00.000Z",
+          "tipPT": "4:45 PM PT",
+          "tipPTLong": "Wed, Sep 9, 4:45 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "71"
         },
         {
           "nightId": "slate-2026-09-09-ne-sea",
@@ -103,7 +75,7 @@
           "tipPTLong": "Wed, Sep 9, 5:20 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "72"
         },
         {
           "nightId": "slate-2026-09-09-mia-chi",
@@ -898,6 +870,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-09-22",
+      "weekday": "Tue",
+      "label": "Tue, Sep 22",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
