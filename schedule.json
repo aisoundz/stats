@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-09T10:20:01.696Z",
-  "generatedPT": "Wed, Sep 9, 3:20 AM PT",
+  "generated": "2026-09-09T10:41:08.720Z",
+  "generatedPT": "Wed, Sep 9, 3:41 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 38,
-    "featured": 30,
+    "unbuilt": 0,
+    "games": 40,
+    "featured": 32,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -29,6 +29,18 @@
       "date": "2026-09-19",
       "code": "manifest-duplicate",
       "message": "slate-all-2026-09-19.tsv has 107 rows but only 106 distinct nightIds — 1 duplicate row(s), deduped"
+    },
+    {
+      "level": "error",
+      "date": "2026-09-22",
+      "code": "manifest-conflict",
+      "message": "slate-2026-09-22-tb-nyy appears twice in slate-all-2026-09-22.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "note",
+      "date": "2026-09-22",
+      "code": "manifest-duplicate",
+      "message": "slate-all-2026-09-22.tsv has 21 rows but only 20 distinct nightIds — 1 duplicate row(s), deduped"
     }
   ],
   "days": [
@@ -875,10 +887,48 @@
       "date": "2026-09-22",
       "weekday": "Tue",
       "label": "Tue, Sep 22",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 2,
+      "games": [
+        {
+          "nightId": "slate-2026-09-22-min-ind",
+          "date": "2026-09-22",
+          "league": "wnba",
+          "leagueLabel": "WNBA",
+          "leagueProse": "the WNBA",
+          "sport": "basketball",
+          "path": "basketball/wnba",
+          "espnEvent": "401857209",
+          "home": "Fever",
+          "away": "Lynx",
+          "matchup": "Lynx at Fever",
+          "tipISO": "2026-09-23T00:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Tue, Sep 22, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-22-la-lv",
+          "date": "2026-09-22",
+          "league": "wnba",
+          "leagueLabel": "WNBA",
+          "leagueProse": "the WNBA",
+          "sport": "basketball",
+          "path": "basketball/wnba",
+          "espnEvent": "401857211",
+          "home": "Aces",
+          "away": "Sparks",
+          "matchup": "Sparks at Aces",
+          "tipISO": "2026-09-23T02:00:00.000Z",
+          "tipPT": "7:00 PM PT",
+          "tipPTLong": "Tue, Sep 22, 7:00 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
