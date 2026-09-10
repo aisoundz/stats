@@ -1,20 +1,20 @@
 {
-  "generated": "2026-09-09T10:41:08.720Z",
-  "generatedPT": "Wed, Sep 9, 3:41 AM PT",
+  "generated": "2026-09-10T10:20:01.147Z",
+  "generatedPT": "Thu, Sep 10, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-09",
-    "to": "2026-09-22",
+    "from": "2026-09-10",
+    "to": "2026-09-23",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 40,
-    "featured": 32,
+    "unbuilt": 1,
+    "games": 36,
+    "featured": 30,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -44,91 +44,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-09-09",
-      "weekday": "Wed",
-      "label": "Wed, Sep 9",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-09-09-cin-phi",
-          "date": "2026-09-09",
-          "league": "mls",
-          "leagueLabel": "MLS",
-          "leagueProse": "MLS",
-          "sport": "soccer",
-          "path": "soccer/usa.1",
-          "espnEvent": "761786",
-          "home": "Philadelphia Union",
-          "away": "FC Cincinnati",
-          "matchup": "FC Cincinnati at Philadelphia Union",
-          "tipISO": "2026-09-09T23:45:00.000Z",
-          "tipPT": "4:45 PM PT",
-          "tipPTLong": "Wed, Sep 9, 4:45 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "71"
-        },
-        {
-          "nightId": "slate-2026-09-09-ne-sea",
-          "date": "2026-09-09",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872656",
-          "home": "Seahawks",
-          "away": "Patriots",
-          "matchup": "Patriots at Seahawks",
-          "tipISO": "2026-09-10T00:20:00.000Z",
-          "tipPT": "5:20 PM PT",
-          "tipPTLong": "Wed, Sep 9, 5:20 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "72"
-        },
-        {
-          "nightId": "slate-2026-09-09-mia-chi",
-          "date": "2026-09-09",
-          "league": "mls",
-          "leagueLabel": "MLS",
-          "leagueProse": "MLS",
-          "sport": "soccer",
-          "path": "soccer/usa.1",
-          "espnEvent": "761792",
-          "home": "Chicago Fire FC",
-          "away": "Inter Miami CF",
-          "matchup": "Inter Miami CF at Chicago Fire FC",
-          "tipISO": "2026-09-10T00:30:00.000Z",
-          "tipPT": "5:30 PM PT",
-          "tipPTLong": "Wed, Sep 9, 5:30 PM PT",
-          "featured": false,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-09-rbny-lafc",
-          "date": "2026-09-09",
-          "league": "mls",
-          "leagueLabel": "MLS",
-          "leagueProse": "MLS",
-          "sport": "soccer",
-          "path": "soccer/usa.1",
-          "espnEvent": "761795",
-          "home": "LAFC",
-          "away": "Red Bull New York",
-          "matchup": "Red Bull New York at LAFC",
-          "tipISO": "2026-09-10T02:30:00.000Z",
-          "tipPT": "7:30 PM PT",
-          "tipPTLong": "Wed, Sep 9, 7:30 PM PT",
-          "featured": false,
-          "mainEvent": false,
-          "gameNight": null
-        }
-      ]
-    },
     {
       "date": "2026-09-10",
       "weekday": "Thu",
@@ -929,6 +844,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-09-23",
+      "weekday": "Wed",
+      "label": "Wed, Sep 23",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
