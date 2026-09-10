@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-10T10:20:01.147Z",
-  "generatedPT": "Thu, Sep 10, 3:20 AM PT",
+  "generated": "2026-09-10T10:40:58.353Z",
+  "generatedPT": "Thu, Sep 10, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 36,
-    "featured": 30,
+    "unbuilt": 0,
+    "games": 40,
+    "featured": 34,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -849,10 +849,86 @@
       "date": "2026-09-23",
       "weekday": "Wed",
       "label": "Wed, Sep 23",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 4,
+      "games": [
+        {
+          "nightId": "slate-2026-09-23-cle-bos",
+          "date": "2026-09-23",
+          "league": "mlb",
+          "leagueLabel": "Major League Baseball",
+          "leagueProse": "Major League Baseball",
+          "sport": "baseball",
+          "path": "baseball/mlb",
+          "espnEvent": "401817046",
+          "home": "Red Sox",
+          "away": "Guardians",
+          "matchup": "Guardians at Red Sox",
+          "tipISO": "2026-09-23T23:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Wed, Sep 23, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-23-atl-ny",
+          "date": "2026-09-23",
+          "league": "wnba",
+          "leagueLabel": "WNBA",
+          "leagueProse": "the WNBA",
+          "sport": "basketball",
+          "path": "basketball/wnba",
+          "espnEvent": "401857213",
+          "home": "Liberty",
+          "away": "Dream",
+          "matchup": "Dream at Liberty",
+          "tipISO": "2026-09-24T00:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Wed, Sep 23, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-23-rsl-sea",
+          "date": "2026-09-23",
+          "league": "mls",
+          "leagueLabel": "MLS",
+          "leagueProse": "MLS",
+          "sport": "soccer",
+          "path": "soccer/usa.1",
+          "espnEvent": "761543",
+          "home": "Seattle Sounders FC",
+          "away": "Real Salt Lake",
+          "matchup": "Real Salt Lake at Seattle Sounders FC",
+          "tipISO": "2026-09-24T01:30:00.000Z",
+          "tipPT": "6:30 PM PT",
+          "tipPTLong": "Wed, Sep 23, 6:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-23-dal-sea",
+          "date": "2026-09-23",
+          "league": "wnba",
+          "leagueLabel": "WNBA",
+          "leagueProse": "the WNBA",
+          "sport": "basketball",
+          "path": "basketball/wnba",
+          "espnEvent": "401857214",
+          "home": "Storm",
+          "away": "Wings",
+          "matchup": "Wings at Storm",
+          "tipISO": "2026-09-24T02:00:00.000Z",
+          "tipPT": "7:00 PM PT",
+          "tipPTLong": "Wed, Sep 23, 7:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
