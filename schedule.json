@@ -1,20 +1,20 @@
 {
-  "generated": "2026-09-10T10:40:58.353Z",
-  "generatedPT": "Thu, Sep 10, 3:40 AM PT",
+  "generated": "2026-09-11T10:20:01.445Z",
+  "generatedPT": "Fri, Sep 11, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-10",
-    "to": "2026-09-23",
+    "from": "2026-09-11",
+    "to": "2026-09-24",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 40,
-    "featured": 34,
+    "unbuilt": 1,
+    "games": 39,
+    "featured": 33,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -44,34 +44,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-09-10",
-      "weekday": "Thu",
-      "label": "Thu, Sep 10",
-      "status": "built",
-      "gameCount": 1,
-      "games": [
-        {
-          "nightId": "slate-2026-09-10-sf-lar",
-          "date": "2026-09-10",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872657",
-          "home": "Rams",
-          "away": "49ers",
-          "matchup": "49ers at Rams",
-          "tipISO": "2026-09-11T00:35:00.000Z",
-          "tipPT": "5:35 PM PT",
-          "tipPTLong": "Thu, Sep 10, 5:35 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "75"
-        }
-      ]
-    },
     {
       "date": "2026-09-11",
       "weekday": "Fri",
@@ -929,6 +901,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-09-24",
+      "weekday": "Thu",
+      "label": "Thu, Sep 24",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
