@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-11T10:20:01.445Z",
-  "generatedPT": "Fri, Sep 11, 3:20 AM PT",
+  "generated": "2026-09-11T10:41:04.493Z",
+  "generatedPT": "Fri, Sep 11, 3:41 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 39,
-    "featured": 33,
+    "unbuilt": 0,
+    "games": 42,
+    "featured": 36,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -906,10 +906,67 @@
       "date": "2026-09-24",
       "weekday": "Thu",
       "label": "Thu, Sep 24",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 3,
+      "games": [
+        {
+          "nightId": "slate-2026-09-24-tor-con",
+          "date": "2026-09-24",
+          "league": "wnba",
+          "leagueLabel": "WNBA",
+          "leagueProse": "the WNBA",
+          "sport": "basketball",
+          "path": "basketball/wnba",
+          "espnEvent": "401857215",
+          "home": "Sun",
+          "away": "Tempo",
+          "matchup": "Tempo at Sun",
+          "tipISO": "2026-09-24T23:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Thu, Sep 24, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-24-ind-min",
+          "date": "2026-09-24",
+          "league": "wnba",
+          "leagueLabel": "WNBA",
+          "leagueProse": "the WNBA",
+          "sport": "basketball",
+          "path": "basketball/wnba",
+          "espnEvent": "401857217",
+          "home": "Lynx",
+          "away": "Fever",
+          "matchup": "Fever at Lynx",
+          "tipISO": "2026-09-25T00:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Thu, Sep 24, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-24-sd-lad",
+          "date": "2026-09-24",
+          "league": "mlb",
+          "leagueLabel": "Major League Baseball",
+          "leagueProse": "Major League Baseball",
+          "sport": "baseball",
+          "path": "baseball/mlb",
+          "espnEvent": "401817071",
+          "home": "Dodgers",
+          "away": "Padres",
+          "matchup": "Padres at Dodgers",
+          "tipISO": "2026-09-25T02:10:00.000Z",
+          "tipPT": "7:10 PM PT",
+          "tipPTLong": "Thu, Sep 24, 7:10 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
