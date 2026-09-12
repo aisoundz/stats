@@ -74,7 +74,7 @@ const abbr = (c) => String((c.team && (c.team.abbreviation || c.team.shortDispla
 (async () => {
   log('date', DATE + (APPLY ? '' : '   (dry run — add --apply to write)'));
   const ymd = DATE.replace(/-/g,'');
-  const all = [];
+  let all = [];   // reassigned when an ambiguous id is filtered out
 
   for (const lg of LEAGUES) {
     let j = null;
@@ -82,7 +82,7 @@ const abbr = (c) => String((c.team && (c.team.abbreviation || c.team.shortDispla
       j = await fetch(`https://site.api.espn.com/apis/site/v2/sports/${lg.path}/scoreboard?dates=${ymd}`)
             .then(r => r.json());
     } catch (e) { log('warn', `${lg.key}: ${e.message}`); continue; }
-    let nat = 0;
+    let nat = 0, tbd = 0;
     (j.events || []).forEach(e => {
       const c = (e.competitions || [])[0] || {};
       const comps = c.competitors || [];
@@ -96,16 +96,71 @@ const abbr = (c) => String((c.team && (c.team.abbreviation || c.team.shortDispla
       nat++;
       const away = comps.find(x => x.homeAway === 'away') || comps[0];
       const home = comps.find(x => x.homeAway === 'home') || comps[1];
+      /* ============ A PLACEHOLDER IS NOT A FIXTURE ====================
+         11 Sept 2026, extending the horizon to the end of the month. ESPN
+         lists the MLB postseason as TBD at TBD weeks before the field is
+         known, four such rows on 29 Sept and four on 30 Sept. Nothing in
+         this pipeline looked at the team names, so the picker chose one
+         and wrote slate-2026-09-29-tbd-tbd into the pick file: a hosted
+         room, on the rail, for a game between two teams that do not exist
+         yet. A player walking in would find no teams, no colours and a
+         prediction card asking which of TBD and TBD takes it.
+
+         Checked on the NAMES rather than the abbreviation, because abbr()
+         falls back to shortDisplayName and both read TBD anyway — and
+         because a real club could one day abbreviate to something odd
+         while still having a name. Refuse rather than guess: the day this
+         runs again with a real bracket, the fixture picks itself. */
+      const named = (c) => {
+        const t = (c && c.team) || {};
+        const n = String(t.displayName || t.shortDisplayName || t.name || '').trim();
+        return n && !/^tbd$/i.test(n) && !/\btbd\b/i.test(n);
+      };
+      if (!named(away) || !named(home)) { tbd++; return; }
       all.push({
         sport: lg.sport, league: lg.key,
         nightId: `slate-${DATE}-${abbr(away)}-${abbr(home)}`,
         name: e.name, tip: new Date(e.date), nets: on
       });
     });
-    log(lg.key.toLowerCase(), `${nat} nationally televised of ${(j.events||[]).length}`);
+    log(lg.key.toLowerCase(), `${nat} nationally televised of ${(j.events||[]).length}`
+        + (tbd ? ` · ${tbd} refused as TBD placeholders` : ''));
   }
 
   if (!all.length) { log('none', 'no nationally televised games found — nothing written'); process.exit(0); }
+
+  /* ============ AN AMBIGUOUS ROOM IS NOT A ROOM ======================
+     11 Sept 2026. The night id is `slate-{date}-{away}-{home}` and carries
+     NO SPORT, so two different games can claim the same one:
+
+         mlb  slate-2026-09-19-sea-col  Rockies at Mariners
+         mls  slate-2026-09-19-sea-col  Rapids at Sounders
+
+     Seattle and Colorado field a team in both leagues. build-slate.js saw
+     the clash, logged 'keeping the first', and carried on — and the picker
+     put that id on the rail for the 19th. One of those two games was
+     unhostable and which one you got was whichever ESPN happened to list
+     first. A doubleheader does the same thing inside one league: Rays at
+     Yankees twice on the 22nd, 10:05 and 16:05 PT, one id.
+
+     Fixing the id scheme is the real repair and it touches every saved
+     game, every ?game= link and every night document. Until then this
+     refuses to OFFER an id it cannot resolve to one game, which is the
+     half that protects a player. Said out loud, because a room silently
+     missing from a rail is the thing nobody notices. */
+  const byId = {};
+  all.forEach(g => { (byId[g.nightId] = byId[g.nightId] || []).push(g); });
+  const ambiguous = Object.keys(byId).filter(k => byId[k].length > 1);
+  if (ambiguous.length) {
+    ambiguous.forEach(k => {
+      const gs = byId[k];
+      log('CLASH', `${k} matches ${gs.length} games (`
+        + gs.map(g => `${g.league}:${g.name}`).join(' | ')
+        + ') — refusing all of them, the id cannot say which');
+    });
+    all = all.filter(g => byId[g.nightId].length === 1);
+    if (!all.length) { log('none', 'every candidate was ambiguous — nothing written'); process.exit(0); }
+  }
   all.sort((a,b) => a.tip - b.tip);
 
   /* ---- choose: one per sport first, then fill, always keeping the gap.
