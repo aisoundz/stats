@@ -68,7 +68,7 @@ const isNational = (name, league) => LG.isNational(name, league);
    order the day is considered in, so it stays explicit here — but every
    path and sport comes from host/leagues.js, which is why `epl` needed
    adding in exactly one place to become visible to this script. */
-const LEAGUES = ['nfl','wnba','mlb','mls','epl'].map(k => ({
+const LEAGUES = ['nfl','cfb','wnba','mlb','mls','epl'].map(k => ({
   sport: LG.get(k).sport, key: k.toUpperCase(), league: k, path: LG.get(k).path,
 }));
 
