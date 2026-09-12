@@ -1,20 +1,20 @@
 {
-  "generated": "2026-09-12T06:46:55.974Z",
-  "generatedPT": "Fri, Sep 11, 11:46 PM PT",
+  "generated": "2026-09-12T10:20:02.040Z",
+  "generatedPT": "Sat, Sep 12, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-11",
-    "to": "2026-09-24",
+    "from": "2026-09-12",
+    "to": "2026-09-25",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 42,
-    "featured": 36,
+    "unbuilt": 1,
+    "games": 39,
+    "featured": 33,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -32,6 +32,12 @@
     },
     {
       "level": "error",
+      "date": "2026-09-19",
+      "code": "marquee-not-picked",
+      "message": "slate-2026-09-19-sea-col is featured in slate-marquee-2026-09-19.txt but is NOT in slate-pick-2026-09-19.txt — not listed"
+    },
+    {
+      "level": "error",
       "date": "2026-09-22",
       "code": "manifest-conflict",
       "message": "slate-2026-09-22-tb-nyy appears twice in slate-all-2026-09-22.tsv with DIFFERENT values — keeping the first"
@@ -44,53 +50,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-09-11",
-      "weekday": "Fri",
-      "label": "Fri, Sep 11",
-      "status": "built",
-      "gameCount": 2,
-      "games": [
-        {
-          "nightId": "slate-2026-09-11-cin-mil",
-          "date": "2026-09-11",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816897",
-          "home": "Brewers",
-          "away": "Reds",
-          "matchup": "Reds at Brewers",
-          "tipISO": "2026-09-11T23:40:00.000Z",
-          "tipPT": "4:40 PM PT",
-          "tipPTLong": "Fri, Sep 11, 4:40 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "76"
-        },
-        {
-          "nightId": "slate-2026-09-11-sd-sf",
-          "date": "2026-09-11",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816900",
-          "home": "Giants",
-          "away": "Padres",
-          "matchup": "Padres at Giants",
-          "tipISO": "2026-09-12T02:15:00.000Z",
-          "tipPT": "7:15 PM PT",
-          "tipPTLong": "Fri, Sep 11, 7:15 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "77"
-        }
-      ]
-    },
     {
       "date": "2026-09-12",
       "weekday": "Sat",
@@ -210,7 +169,7 @@
           "tipPTLong": "Sat, Sep 12, 7:30 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": "3"
+          "gameNight": "83"
         }
       ]
     },
@@ -558,7 +517,7 @@
       "weekday": "Sat",
       "label": "Sat, Sep 19",
       "status": "built",
-      "gameCount": 4,
+      "gameCount": 3,
       "games": [
         {
           "nightId": "slate-2026-09-19-phx-dal",
@@ -594,25 +553,6 @@
           "tipISO": "2026-09-19T23:30:00.000Z",
           "tipPT": "4:30 PM PT",
           "tipPTLong": "Sat, Sep 19, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-19-sea-col",
-          "date": "2026-09-19",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401817007",
-          "home": "Rockies",
-          "away": "Mariners",
-          "matchup": "Mariners at Rockies",
-          "tipISO": "2026-09-20T00:10:00.000Z",
-          "tipPT": "5:10 PM PT",
-          "tipPTLong": "Sat, Sep 19, 5:10 PM PT",
           "featured": true,
           "mainEvent": false,
           "gameNight": null
@@ -967,6 +907,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-09-25",
+      "weekday": "Fri",
+      "label": "Fri, Sep 25",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
