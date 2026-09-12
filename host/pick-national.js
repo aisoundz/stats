@@ -172,13 +172,46 @@ const abbr = (c) => String((c.team && (c.team.abbreviation || c.team.shortDispla
      construction rather than by luck. */
   const picked = [];
   const fits = (g) => picked.every(p => Math.abs(g.tip - p.tip) >= MINGAP*60000);
-  for (const pass of [1,2]) {
-    for (const g of all) {
+
+  /* ============ ROUND ROBIN, NOT FIRST COME ==========================
+     Founder, 12 Sept, looking at the slate: "Why is it all MLB games.
+     It's not mixed like the last one."
+
+     The old rule was one-per-sport and then GREEDY OVER TIP TIME, which
+     sounds like variety and is not. Baseball plays fifteen national games
+     a day starting mid-morning; everything else plays one or two in the
+     evening. So the fill ran out of slots before the afternoon, every day,
+     and the day read as all baseball. Measured on real slates:
+
+       Thu 17  TNF was the ONLY national NFL game and was not picked;
+               two 9am MLB games took the slots.
+       Sun 13  NFL had THIRTEEN national games. The picker took two EPL
+               and an MLB before reaching the first one, on NFL Sunday.
+
+     Now every sport gets a room before any sport gets a second, and
+     within a sport a game on a broadcast network outranks one on a
+     league streamer — which is the difference between Ohio State at Texas
+     on ABC and a Tuesday afternoon on MLB.TV. Time is the last tiebreak,
+     not the first, and the stagger is still enforced by fits(). */
+  const isBroadcast = (g) => g.nets.some(n =>
+    /^(NBC|FOX|CBS|ABC|ESPN|ESPN2|TNT|TBS|USA|USA Net|USA Network|Peacock|Paramount\+|Netflix|Prime Video|NBA TV|NFL Net|NFL Network)$/i.test(n));
+  const bySport = {};
+  all.forEach(g => { (bySport[g.sport] = bySport[g.sport] || []).push(g); });
+  Object.keys(bySport).forEach(k => bySport[k].sort((a,b) =>
+    (Number(isBroadcast(b)) - Number(isBroadcast(a))) || (a.tip - b.tip)));
+  /* Sports enter in the order their first game does, so a day still reads
+     chronologically rather than alphabetically. */
+  const order = Object.keys(bySport).sort((a,b) =>
+    Math.min(...bySport[a].map(g=>g.tip)) - Math.min(...bySport[b].map(g=>g.tip)));
+  const taken = new Set();
+  let added = true;
+  while (picked.length < WANT && added) {
+    added = false;
+    for (const sp of order) {
       if (picked.length >= WANT) break;
-      if (picked.some(p => p.nightId === g.nightId)) continue;
-      if (pass === 1 && picked.some(p => p.sport === g.sport)) continue;   // variety first
-      if (!fits(g)) continue;
-      picked.push(g);
+      const g = bySport[sp].find(x => !taken.has(x.nightId) && fits(x));
+      if (!g) continue;
+      taken.add(g.nightId); picked.push(g); added = true;
     }
   }
   picked.sort((a,b) => a.tip - b.tip);
