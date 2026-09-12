@@ -154,6 +154,11 @@ const NATIONAL = [
   /* National streamers that come inside the broadcaster's own package
      rather than as a separate purchase. */
   'Peacock','Paramount+','Netflix',
+  /* PRIME VIDEO. Added 12 Sept on the founder's word: "it's ok, you can
+     add it for others." It carries Thursday Night Football exclusively, so
+     excluding it cost every Thursday its football. Still blocked for the
+     WNBA by NOT_NATIONAL_BY_LEAGUE, which is what rule 3 actually said. */
+  'Prime Video','Amazon Prime',
   /* National Spanish-language, both NBCUniversal. Spanish is LIVE in the
      product at ?lang=es, so these reach players we already built for. */
   'Telemundo','Universo',
@@ -165,12 +170,27 @@ const NATIONAL = [
                     marquee's own comment records it proposing a Prime-only
                     game as Game of the Night once already.
      ESPN Unlmtd    a paid add-on, not a channel people have (Rule 7). */
-const NOT_NATIONAL = ['Prime Video','Amazon Prime','ESPN Unlmtd','ESPN Unlimited','ESPN+'];
+const NOT_NATIONAL = ['ESPN Unlmtd','ESPN Unlimited','ESPN+'];
+/* PRIME IS A WNBA RULE, AND IT WAS BEING APPLIED TO EVERY LEAGUE.
+   leagues.env rule 3 quotes the founder exactly: "all national WNBA games
+   except for Prime for right now." WNBA. The list above did not carry a
+   league, so it took Thursday Night Football off the board with it: Lions
+   at Bills on 17 Sept and Falcons at Packers on the 24th are Prime-only,
+   and both days were left with no football at all.
+   Founder, 12 Sept: "there's also football games on Thursday."
+   So the exclusion keeps its scope and loses its reach. */
+const NOT_NATIONAL_BY_LEAGUE = { wnba: ['Prime Video','Amazon Prime'] };
 
 /* THE ONE EXCEPTION. A streamer counts ONLY where the league has no
    linear option at all: every MLS match is Apple TV, and Friday MLB is
    Apple TV exclusive. Refusing streamers there would refuse the sport. */
-const LEAGUE_ONLY_STREAMER = { mls:['Apple TV'], mlb:['Apple TV'] };
+/* MLB.TV BELONGS HERE AND WAS MISSING. On 25 Sept every one of fifteen
+   MLB games was carried by MLB.TV plus a regional, so the picker found
+   nothing national and wrote no rooms for a Friday with fifteen games on.
+   MLB.TV is the league's own nationwide package, the same shape as Apple
+   TV for MLS, and it is what the founder means by "you can find it on
+   YouTube TV or Apple TV". */
+const LEAGUE_ONLY_STREAMER = { mls:['Apple TV'], mlb:['Apple TV','MLB.TV','MLB TV'] };
 
 /* Regionals that read as national. A regional network with a national-
    sounding name is the exact trap Rule 7 exists for, so these are matched
@@ -201,6 +221,8 @@ function isNational(net, league) {
 
   return parts.some(name => {
     if (NOT_NATIONAL.some(b => name.toLowerCase() === b.toLowerCase())) return false;
+    const blocked = NOT_NATIONAL_BY_LEAGUE[String(league || '').toLowerCase()] || [];
+    if (blocked.some(b => name.toLowerCase() === b.toLowerCase())) return false;
     if (REGIONAL.some(rx => rx.test(name))) return false;
     if (ok.some(s => name.toLowerCase() === s.toLowerCase())) return true;
     /* EXACT MATCH, DELIBERATELY. The version of this in pick-national.js
@@ -222,5 +244,5 @@ function isNational(net, league) {
 
 module.exports = {
   LEAGUES, get, known, segments,
-  NATIONAL, NOT_NATIONAL, LEAGUE_ONLY_STREAMER, isNational,
+  NATIONAL, NOT_NATIONAL, NOT_NATIONAL_BY_LEAGUE, LEAGUE_ONLY_STREAMER, isNational,
 };

@@ -39,6 +39,10 @@
 const fs = require('fs'), path = require('path');
 
 const APPLY  = process.argv.includes('--apply');
+const FORCE  = process.argv.includes('--force');
+/* AT LEAST THIS MANY ROOMS, EVERY DAY. Founder, 12 Sept: "We need at
+   least 2 games everyday. No days off." */
+const MIN    = Number(process.env.MIN_ROOMS || 2);
 const DATE   = (process.env.DATE || new Date().toLocaleDateString('en-CA', {timeZone:'America/Los_Angeles'})).trim();
 const WANT   = Number(process.env.ROOMS || 4);
 const MINGAP = Number(process.env.MIN_GAP_MIN || 30);      // minutes between tips
@@ -203,10 +207,29 @@ const abbr = (c) => String((c.team && (c.team.abbreviation || c.team.shortDispla
 
   const PICKF = path.join(LOGDIR, 'slate-pick-' + DATE + '.txt');
   const MARQF = path.join(LOGDIR, 'slate-marquee-' + DATE + '.txt');
-  if (fs.existsSync(PICKF)) {
-    log('keep', `${path.basename(PICKF)} already exists — a choice already made, leaving it alone`);
-    process.exit(0);
+  if (fs.existsSync(PICKF) && !FORCE) {
+    /* ============ A SHORT DAY IS NOT A CHOICE ========================
+       This guard protects a pick somebody made on purpose. It was also
+       protecting ITS OWN short answers: a day that found one room, or
+       none, kept that answer for ever, because the file existed and the
+       picker never looked inside it. 25 Sept sat at zero rooms with
+       fifteen MLB games on, and re-running changed nothing.
+       Same shape as publish.js deferring to its own stale plan.
+       So: a FULL file is left alone, a SHORT one is re-picked. The daily
+       cron then fills a day as soon as the carriage is announced, which
+       is what makes "no days off" hold for the 29th and 30th once MLB
+       names the postseason field. */
+    const have = fs.readFileSync(PICKF,'utf8').split('\n').map(x=>x.trim()).filter(Boolean).length;
+    if (have >= MIN) {
+      log('keep', `${path.basename(PICKF)} already has ${have} room(s) — a choice already made, leaving it alone`);
+      process.exit(0);
+    }
+    log('short', `${path.basename(PICKF)} has only ${have} room(s), under the floor of ${MIN} — re-picking`);
   }
+  if (picked.length < MIN)
+    log('FLOOR', `only ${picked.length} room(s) for ${DATE}, under the floor of ${MIN}. `
+      + 'Everything else was regional, a paid add-on, or a TBD placeholder. '
+      + 'This day will be re-picked on every run until it fills.');
   fs.writeFileSync(PICKF, picked.map(g => g.nightId).join('\n') + '\n');
   /* NO NUMBERS. build-slate.js owns them. */
   fs.writeFileSync(MARQF, picked.map(g => g.nightId + (g === star ? ' *' : '')).join('\n') + '\n');
