@@ -18245,6 +18245,80 @@ function sameName(a,b){
    returned null, and six hundred points settled as zero for every player
    in the room. A category we cannot read is now one unsettled LINE, not an
    unsettled night. */
+/* ============ THE LINES A FINAL SCORE CAN SETTLE BY ITSELF ==========
+   11 Sept 2026. Measured across the five decks, same harness, same minute:
+
+       basketball  6 of 6 lines gradable
+       baseball    1 of 6        football 1 of 6
+       hockey      1 of 6        soccer   0 of 6
+
+   settleFromFeed() grades the winner and five STAT-LEADER lines out of
+   sportCfg().box, and that box is populated for basketball alone. Every
+   other deck asks about totals, first scores and counts, so five of six
+   lines landed in predMissing and paid nothing. FIVE HUNDRED of the six
+   hundred points on the card, every night, for every player.
+
+   Found from the founder's own card on the 3 Sept go-live: he picked
+   "Extra innings: No", the game ended 2-1 in nine, and nothing in the
+   app was capable of paying him the 100 he had won.
+
+   These are the lines a FINAL SCORE alone can settle, with no box score
+   and no play-by-play: the totals line in all four, regulation-or-not in
+   baseball and hockey, and both-teams-to-score in soccer. The rest
+   (first to score, home runs, strikeouts, rush yards, corners, cards)
+   need the box or the plays and are still honestly unsettled.
+
+   The threshold is read from THE DECK'S OWN OPTIONS, never a constant
+   here: move BA_PREDS to Under 9.5 and this follows it. One fact, one
+   owner, and the owner is the question the player was actually asked. */
+function predOverUnder(id){
+  try{
+    var p=(preds||[]).filter(function(x){ return x.id===id; })[0];
+    if(!p || !p.opts) return null;
+    var under='', over='', n=null;
+    p.opts.forEach(function(o){
+      var t=String(o);
+      if(/under/i.test(t)) under=t;
+      if(/over/i.test(t))  over=t;
+      var m=t.match(/(\d+(?:\.\d+)?)/);
+      if(m && n==null) n=Number(m[1]);
+    });
+    if(!under || !over || n==null || !isFinite(n)) return null;
+    return { n:n, under:under, over:over };
+  }catch(_){ return null; }
+}
+/* How many innings or periods were actually played. The linescore is the
+   honest source: one column per period that happened. status.period is the
+   fallback, and 0 means "do not guess" rather than "regulation". */
+function periodsPlayed(){
+  try{
+    var L=(GS.lines||[]);
+    if(L.length && L[0] && L[0].vals && L[0].vals.length) return L[0].vals.length;
+  }catch(_){}
+  try{ return Number(GS.raw.header.competitions[0].status.period)||0; }catch(_){}
+  return 0;
+}
+function settleFinalDerived(truth, tied, A, B){
+  var fam=''; try{ fam=SPORT.key; }catch(_){}
+  var tot=Number(A.score)+Number(B.score);
+  var put=function(id,val){
+    if(val==null || val==='') return;
+    if(!(preds||[]).some(function(x){ return x.id===id; })) return;  // not on this deck
+    truth[id]=String(val); tied[id]=[String(val)];
+  };
+  var TOTAL={baseball:'runs', football:'points', hockey:'goals', soccer:'goals'};
+  if(TOTAL[fam]){
+    var L=predOverUnder(TOTAL[fam]);
+    /* A half-point line cannot push, which is why every deck uses one. */
+    if(L) put(TOTAL[fam], tot>L.n ? L.over : L.under);
+  }
+  var REG={baseball:9, hockey:3}, EXTRA={baseball:'extras', hockey:'ot'};
+  if(REG[fam] && EXTRA[fam]){
+    var per=periodsPlayed();
+    if(per>0) put(EXTRA[fam], per>REG[fam] ? 'Yes' : 'No');
+  }
+  if(fam==='soccer') put('btts', (Number(A.score)>0 && Number(B.score)>0) ? 'Yes' : 'No');
+}
 function settleFromFeed(){
   try{
     if(!GS.ok || !GS.teams || GS.teams.length!==2) return null;
@@ -18252,9 +18326,27 @@ function settleFromFeed(){
     var A=GS.teams[0], B=GS.teams[1];
     if(A.score==null || B.score==null) return null;
     if(String(GS.state||'')!=='post') return null;   // never settle a game still being played
-    if(Number(A.score)===Number(B.score)) return null;
-    var win=(Number(A.score)>Number(B.score))?A:B;
     var truth={}, num={}, tied={}, missing=[];
+    /* A DRAW IS A RESULT, NOT A BROKEN FEED. This used to return null on
+       level scores, which voided EVERY line on the card — and soccer, the
+       one sport where a draw is ordinary, is also the one whose deck has a
+       "Draw" option to win on. Other families do not end level, so a tie
+       there really is a feed we should not settle against. */
+    var level = Number(A.score)===Number(B.score);
+    var fam0=''; try{ fam0=SPORT.key; }catch(_){}
+    if(level && fam0!=='soccer') return null;
+    /* THE DECK NAMES THIS LINE, WE DO NOT. Basketball/baseball/football/
+       hockey call it `winner`; soccer calls it `result`. Writing truth.winner
+       unconditionally meant soccer's result line matched nothing and graded
+       0 of 6 — the winner included. */
+    var RESULT_ID = (preds||[]).some(function(x){ return x.id==='result'; }) ? 'result' : 'winner';
+    if(level){
+      truth[RESULT_ID]='Draw'; tied[RESULT_ID]=['Draw'];
+      try{ settleFinalDerived(truth, tied, A, B); }catch(_){}
+      return {truth:truth, num:num, tied:tied, missing:missing,
+              final:{home:(A.home?A:B), away:(A.home?B:A)}};
+    }
+    var win=(Number(A.score)>Number(B.score))?A:B;
     /* The winner, named three ways, because the pick deck, the feed and
        the GAME constant do not have to agree on which one they use. */
     var winNames=[win.name, win.ab];
@@ -18268,14 +18360,14 @@ function settleFromFeed(){
        change or one typo in a night config was all it would have taken.
        Match either side explicitly; if neither matches, the feed is the one
        that watched the game, so use its name rather than guessing. */
-    truth.winner = (function(){
+    truth[RESULT_ID] = (function(){
       try{
         if(win.ab===GAME.homeAbbr) return GAME.homeName;
         if(win.ab===GAME.awayAbbr) return GAME.awayName;
         return win.name;
       }catch(_){ return win.name; }
     })();
-    tied.winner  = winNames.filter(Boolean).map(String);
+    tied[RESULT_ID]  = winNames.filter(Boolean).map(String);
     var cfg=sportCfg().box, KEY={pts:cfg.pts,reb:cfg.reb,ast:cfg.ast,stl:cfg.stl,blk:cfg.blk};
     Object.keys(KEY).forEach(function(id){
       var k=KEY[id], bv=-1, who=[];
@@ -18285,6 +18377,7 @@ function settleFromFeed(){
       if(!who.length || bv<0){ missing.push(id); return; }
       truth[id]=who[0]; tied[id]=who; num[id]=bv;
     });
+    try{ settleFinalDerived(truth, tied, A, B); }catch(_){}
     return {truth:truth, num:num, tied:tied, missing:missing,
             final:{home:(A.home?A:B), away:(A.home?B:A)}};
   }catch(_){ return null; }
@@ -26279,7 +26372,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-09-alive.291';
+const STATS_BUILD='2026-09-11-sixhundred.292';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
