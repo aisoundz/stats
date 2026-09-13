@@ -156,7 +156,14 @@ function isSundayPT() {
    leagues "Last night, settled" can check a claim against — so a league
    missing here means the email cannot verify its own recap of that sport
    and silently checks nothing. epl added with the rest of the wiring. */
-const RECAP_LEAGUES = ['wnba','nfl','mlb','mls','epl']
+/* cfb and nhl added 13 Sept. The list is what this verifier will search
+   for a claimed final score, and it had neither — so a settled line about
+   Ohio State at Texas, a real game this product hosted the day before,
+   was refused as unverifiable and the Sunday email did not go out. Third
+   league list found missing college football in two days; the other two
+   were pick-national.js and leagues.env. A league we host must be in
+   every list that asks 'is this real'. */
+const RECAP_LEAGUES = ['wnba','nfl','cfb','nhl','mlb','mls','epl']
   .map(k => [k, require('./leagues.js').get(k).path]);
 
 // ESPN's edge rejects a bare Node https.request with no User-Agent (a
@@ -237,7 +244,7 @@ async function verifyRecapClaims(html) {
     }
   }
   if (!matchedEvent) {
-    return { ok: false, reason: `the draft claims a final score of ${scoreMatch[1]}–${scoreMatch[2]}, but no completed game in the last 3 days across wnba/nfl/mlb/mls actually ended with that score` };
+    return { ok: false, reason: `the draft claims a final score of ${scoreMatch[1]}–${scoreMatch[2]}, but no completed game in the last 3 days across ${RECAP_LEAGUES.join('/')} actually ended with that score` };
   }
 
   // Player-stat, best-effort. Only refuse if the shape DID match and the
@@ -277,7 +284,7 @@ async function verifyRecapClaims(html) {
 async function main() {
   log('=== send-tipoff-auto starting ===');
 
-  if (isSundayPT()) {
+  if (isSundayPT() && require('fs').existsSync(require('path').join(process.env.HOME, 'gamenight-logs', 'weekly-sent-' + todayISO() + '.txt'))) {
     log('SKIP: today is Sunday PT. The tip-off routine never runs on a Sunday — the weekly note owns it (EMAIL-VOICE.md section 8). Nothing to do.');
     return;
   }
@@ -412,7 +419,18 @@ async function main() {
 
   const missing = [];
   for (const g of games) {
-    const nameOk = (n) => n && html.includes(n);
+    /* COMPARE DECODED TEXT, NOT RAW HTML. build-tipoff escapes every team
+       name, so "Brighton & Hove Albion" is stored as
+       "Brighton &amp; Hove Albion" and a literal includes() never matched
+       it. On 13 Sept this refused a CORRECT email whose schedule block
+       listed that exact fixture, and it would refuse any club with an
+       ampersand for ever. The check is right to be strict; it was reading
+       the wrong string. */
+    const plain = html
+      .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&rsquo;/g, "\u2019")
+      .replace(/&nbsp;/g, ' ');
+    const nameOk = (n) => n && (html.includes(n) || plain.includes(n));
     if (g.home && !nameOk(g.home)) missing.push(`${g.id}: home team "${g.home}" not found in draft`);
     if (g.away && !nameOk(g.away)) missing.push(`${g.id}: away team "${g.away}" not found in draft`);
     // 24 Aug — g.net is Firestore's FULL list for the game ("MLB.TV ·

@@ -146,7 +146,7 @@ function isSundayPT() {
 
 (async () => {
   log('=== check-draft starting ===');
-  if (isSundayPT()) {
+  if (isSundayPT() && require('fs').existsSync(require('path').join(process.env.HOME, 'gamenight-logs', 'weekly-sent-' + todayPT() + '.txt'))) {
     log('SKIP: Sunday belongs to the weekly note, not the tip-off (EMAIL-VOICE.md section 8). Nothing to check.');
     process.exit(0);
   }

@@ -91,10 +91,35 @@ log('today (PT) = ' + DATE + ' · ' + DAY);
 
 /* Sunday belongs to the weekly note. Same rule send-tipoff-auto.js and
    check-draft.js already keep — three jobs must not disagree about it. */
-if (DAY === 'Sunday') {
-  log('SKIP: Sunday belongs to the weekly note, not the tip-off (EMAIL-VOICE.md section 8).');
+/* ============ SUNDAY IS NO LONGER SILENT =============================
+   Founder, 13 Sept: "the email hasn't gone out... let the tip off run on
+   Sundays."
+
+   EMAIL-VOICE section 8 gave Sunday to the weekly note so a reader would
+   never get two emails in one day. The weekly note is a cloud routine
+   that DRAFTS and never sends. So the rule handed Sunday to something
+   that does not post, and Sunday got nothing at all.
+
+   Measured on 13 Sept: tip-offs sent on the 8th, 9th, 10th, 11th and
+   12th. Nothing on the 13th — six rooms across three sports, the biggest
+   slate of the week, and nobody was told.
+
+   The intent survives: ONE email a day. So the stand-down is now
+   conditional on the weekly note having ACTUALLY gone out this morning,
+   which is a fact on disk rather than an assumption in a comment. If it
+   did, the tip-off stands down exactly as before. If it did not, Sunday
+   is a game night like any other. */
+function weeklyWentOutToday(logdir, dateStr) {
+  try {
+    const path = require('path');
+    return require('fs').existsSync(path.join(logdir, 'weekly-sent-' + dateStr + '.txt'));
+  } catch (_) { return false; }
+}
+if (DAY === 'Sunday' && weeklyWentOutToday(LOGDIR, DATE)) {
+  log('SKIP: Sunday, and the weekly note already went out today. One email a day.');
   process.exit(0);
 }
+if (DAY === 'Sunday') log('sunday', 'no weekly note went out today, so the tip-off covers the slate.');
 
 /* ---- is there a game at all? ------------------------------------- */
 const PROJECT = 'stats-gametime';
