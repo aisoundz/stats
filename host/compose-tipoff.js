@@ -70,25 +70,62 @@ async function espn(spath, event){
   }catch(_){ return null; }
 }
 
+/* NOT EVERY LEADER IS A STAT WORTH PRINTING. The first version took the
+   first two categories ESPN returned and produced
+
+       4   Dominic Calvert-Lewin's total shots for LEE.
+       2   Harvey Barnes's total shots for NEW.
+
+   which passes the shape check and is noise. A season ERA, a home run
+   count or a strikeout total carries a whole season in one figure; a shot
+   count carries an afternoon. The cards written by hand that read well
+   used 1.97, 38, 3.03 — all from this list. Anything not on it is used
+   only when nothing better exists on the whole slate, and a game that can
+   offer a ranked category is preferred to one that cannot. */
+const STAT_RANK = [
+  'earned run average','home runs','runs batted in','strikeouts','batting average','wins','saves',
+  'passing yards','rushing yards','receiving yards','touchdowns','tackles','sacks',
+  'points','rebounds','assists','goals','points per game','goals against average','save percentage'
+];
+const rankOf = (name) => {
+  const n = String(name || '').toLowerCase();
+  const i = STAT_RANK.findIndex(k => n === k);
+  return i < 0 ? STAT_RANK.length : i;
+};
+
 /* ---- the STATS card: two real numbers, attributed ------------------ */
+/* SCAN THE WHOLE SLATE, THEN CHOOSE. The first version stopped at the
+   first game offering ANY ranked category, and on 14 Sept that was an EPL
+   fixture whose goalkeeper had 4 saves — 'saves' is on the list for
+   baseball and hockey, where it means a season. Two MLB games on the same
+   slate were carrying a 2.51 ERA and 228 strikeouts. Collect every
+   candidate first and pick the best two globally; a shot count is only
+   ever used when the whole slate has nothing better. */
 async function statsCard(gs){
+  const all = [];
   for(const g of gs){
     const j = await espn(g.spath, g.event); if(!j) continue;
-    const out = [];
     (j.leaders || []).forEach(t => (t.leaders || []).forEach(cat => {
       const a = (cat.leaders || [])[0];
       if(!a || !a.athlete) return;
-      out.push({ value:String(a.displayValue), who:`${a.athlete.displayName}'s ${String(cat.displayName).toLowerCase()}`,
-                 team:(t.team && t.team.abbreviation) || '' });
+      all.push({
+        value: String(a.displayValue),
+        who:   `${a.athlete.displayName}'s ${String(cat.displayName).toLowerCase()}`,
+        team:  (t.team && t.team.abbreviation) || '',
+        rank:  rankOf(cat.displayName)
+      });
     }));
-    if(out.length >= 2){
-      const a = out[0], b = out.find(x => x.team !== a.team) || out[1];
-      return { lead:'Both from ESPN season leaders, read this morning.',
-               a:{ value:a.value, who:clean(a.who) + ' for ' + a.team + '.' },
-               b:{ value:b.value, who:clean(b.who) + ' for ' + b.team + '.' } };
-    }
   }
-  return null;
+  if(all.length < 2) return null;
+  all.sort((x, y) => x.rank - y.rank);
+  const a = all[0];
+  /* two different people, so the card is not one player twice */
+  const b = all.find(x => x.who !== a.who && x.team !== a.team) || all[1];
+  return {
+    lead: 'Both from ESPN season leaders, read this morning.',
+    a: { value:a.value, who: clean(a.who) + ' for ' + a.team + '.' },
+    b: { value:b.value, who: clean(b.who) + ' for ' + b.team + '.' }
+  };
 }
 
 /* ---- the GAMETIME card: a real two-option question ----------------- */
