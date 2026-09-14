@@ -509,7 +509,31 @@ async function main() {
     return;
   }
   const payload = JSON.stringify({ delivery: 'instant' });
-  const sendRes = await req(`https://connect.mailerlite.com/api/campaigns/${draft.id}/schedule`, {
+  /* ============ A TIMEOUT IS NOT A FAILURE EITHER ====================
+     14 Sept 2026. This died with
+
+         (ETIMEDOUT on attempt 1/3 - retrying in 1s)
+         (ETIMEDOUT on attempt 2/3 - retrying in 2s)
+         FATAL: AggregateError [ETIMEDOUT]
+
+     and the letter HAD BEEN SENT: MailerLite had it at 10:32, nine
+     recipients, six opens. The request arrived and the response did not
+     come back. The marker written above did its job and nobody got it
+     twice, which is exactly what that comment promised - but every run
+     afterwards then said "a tip-off already went out today" while the
+     log three lines up said FATAL, and only MailerLite knew which was
+     true. The founder asked why the email had not gone out. It had.
+
+     Same lesson as the 2xx below, from the other side: the POST's
+     outcome is not the send's outcome. So a transport failure is caught
+     here and ANSWERED by reading the campaign back, rather than thrown.
+     Nothing is re-sent on this path: it only decides what to write down.
+     If the read-back cannot answer either, the day is recorded as
+     UNCONFIRMED and a human is told to look, because sending zero times
+     and needing a human still beats sending twice. */
+  let sendRes;
+  try {
+    sendRes = await req(`https://connect.mailerlite.com/api/campaigns/${draft.id}/schedule`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -518,7 +542,43 @@ async function main() {
       'Content-Length': Buffer.byteLength(payload),
     },
     _payload: payload,
-  });
+    });
+  } catch (e) {
+    log(`the send request did not come back (${(e && e.message) || e}). `
+      + 'Asking MailerLite what actually happened before believing it failed.');
+    let truth = null;
+    try {
+      const back = await reqRetry(`https://connect.mailerlite.com/api/campaigns/${draft.id}`, {
+        headers: { Authorization: `Bearer ${apiKey}`, Accept: 'application/json' },
+      });
+      truth = (back.body && back.body.data) || null;
+    } catch (e2) {
+      log(`and the read-back failed too (${(e2 && e2.message) || e2}).`);
+    }
+    const st = truth && String(truth.status || '');
+    if (st === 'sent') {
+      try {
+        fs.writeFileSync(sentMarkPath(),
+          `${new Date().toISOString()} campaign ${draft.id} — SENT AND CONFIRMED BY READ-BACK `
+          + `after the response was lost (status=sent, finished_at=${truth.finished_at || '?'})\n`);
+      } catch (_) {}
+      log(`SENT. The response was lost but the campaign is away: status=sent, `
+        + `finished_at=${truth.finished_at || '?'}. The marker now says so.`);
+      process.exitCode = 0;
+      return;
+    }
+    try {
+      fs.writeFileSync(sentMarkPath(),
+        `${new Date().toISOString()} campaign ${draft.id} — UNCONFIRMED: the request timed out `
+        + `and the read-back said ${st ? ('status=' + st) : 'nothing'}. A HUMAN MUST CHECK MAILERLITE `
+        + `before this day is retried.\n`);
+    } catch (_) {}
+    log(`UNCONFIRMED: the request timed out and the campaign reads `
+      + `${st ? ('status=' + st) : 'unavailable'}. NOT retrying: it may already be away. `
+      + `Check campaign ${draft.id} in MailerLite.`);
+    process.exitCode = 2;
+    return;
+  }
 
   if (!(sendRes.status >= 200 && sendRes.status < 300)) {
     log(`SEND FAILED: MailerLite returned status ${sendRes.status}. ${JSON.stringify(sendRes.body).slice(0, 300)}`);

@@ -178,13 +178,27 @@ async function slate() {
   /* ---- the approved edition, if a person wrote one ---------------- */
   const copyPath = path.join(LOGDIR, 'tipoff-copy-' + DATE + '.json');
   const htmlPath = path.join(LOGDIR, 'tipoff-' + DATE + '.html');
+  /* Decided BEFORE the branch, because the first version of this set
+     approved=false INSIDE the `if (approved)` arm — the else had already
+     been skipped, so nothing was rebuilt and the log said "Rewriting it"
+     anyway. A message claiming an action it did not take is worse than
+     the bug it was written to fix. */
   let approved = fs.existsSync(copyPath);
+  let isAuto = false;
+  if (approved) {
+    try { isAuto = !!JSON.parse(fs.readFileSync(copyPath, 'utf8')).autofallback; } catch (_) {}
+    if (isAuto) approved = false;   // ours, not a person's
+  }
 
   if (approved) {
     log('copy: found an approved edition at ' + path.basename(copyPath));
   } else {
+    if (isAuto) log('copy: the file at ' + path.basename(copyPath) + ' is OUR OWN'
+      + ' schedule-only fallback from an earlier run today, NOT an approved edition.'
+      + ' Rebuilding it from the current slate. It still carries no stats, no question'
+      + ' and no settled line, because nobody has written one.');
     /* ---- the fallback: the slate, and nothing else ---------------- */
-    log('copy: NONE for today. Writing a schedule-only note — it repeats the '
+    if (!isAuto) log('copy: NONE for today. Writing a schedule-only note — it repeats the '
       + 'slate and claims nothing, because nobody has written an edition.');
     const n = games.length;
     const fallback = {
@@ -211,6 +225,15 @@ async function slate() {
       /* no stats, no question, no settled — nobody wrote them, so this
          note does not pretend to have them. */
     };
+    /* STAMPED, SO THE NEXT RUN CANNOT MISTAKE IT FOR A PERSON'S WORK.
+       Without this the fallback is written to the same path an approved
+       edition uses, and fifteen minutes later this script reads it back
+       and logs "found an approved edition". That is how a schedule-only
+       note with no stats, no question and no settled line went out three
+       times, most recently on 14 Sept with its own shape warnings
+       attached: NO STATS CARD, NO GAMETIME CARD, sending anyway.
+       Exactly the self-deference that cost a go-live in publish.js. */
+    fallback.autofallback = true;
     fs.writeFileSync(copyPath, JSON.stringify(fallback, null, 2));
   }
 
