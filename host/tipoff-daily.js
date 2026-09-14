@@ -197,6 +197,41 @@ async function slate() {
       + ' schedule-only fallback from an earlier run today, NOT an approved edition.'
       + ' Rebuilding it from the current slate. It still carries no stats, no question'
       + ' and no settled line, because nobody has written one.');
+    /* ---- COMPOSE ONE FIRST ------------------------------------------
+       The schedule-only note below is the LAST resort, not the default.
+       host/compose-tipoff.js builds a real edition from the same sources
+       a person uses — ESPN season leaders, a two-option question out of
+       tonight's own plan, and last night's scored answer beside its real
+       final — and refuses to invent any card it cannot source. If it
+       produces at least one, that is the edition. If it produces none,
+       we are no better off than the fallback and we take the fallback.
+
+       Written because the founder's inbox on 14 Sept had three of these
+       delivered, none opened and one in the trash: the fallback repeats
+       the fixture list and claims nothing, and that is a letter you
+       learn to stop opening. */
+    try {
+      const composed = execFileSync(NODE, [path.join(HOST, 'compose-tipoff.js'),
+                                           '--date', DATE, '--apply'],
+                                    { encoding: 'utf8', timeout: 180000 });
+      String(composed).trim().split('\n').forEach(l => { if (l.trim()) log('  ' + l.trim()); });
+      const made = JSON.parse(fs.readFileSync(copyPath, 'utf8'));
+      const cards = ['stats', 'question', 'settled'].filter(k => made[k]);
+      if (cards.length) {
+        log('copy: COMPOSED an edition carrying ' + cards.join(', ')
+          + '. Not the schedule-only fallback.');
+        approved = true;
+      } else {
+        log('copy: the composer found nothing real to say, so the'
+          + ' schedule-only note stands.');
+      }
+    } catch (e) {
+      log('copy: could not compose (' + String((e && e.message) || e).slice(0, 120)
+        + '), falling back to the slate.');
+    }
+  }
+
+  if (!approved) {
     /* ---- the fallback: the slate, and nothing else ---------------- */
     if (!isAuto) log('copy: NONE for today. Writing a schedule-only note — it repeats the '
       + 'slate and claims nothing, because nobody has written an edition.');
