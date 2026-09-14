@@ -103,5 +103,6 @@
   "first-tap.js": 12,
   "dead-default-night.js": 6,
   "pred-persist.js": 6,
-  "pred-settle.js": 9
+  "pred-settle.js": 9,
+  "ping-ask.js": 10
 }
