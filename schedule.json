@@ -1,11 +1,11 @@
 {
-  "generated": "2026-09-14T10:40:18.047Z",
-  "generatedPT": "Mon, Sep 14, 3:40 AM PT",
+  "generated": "2026-09-15T10:20:01.522Z",
+  "generatedPT": "Tue, Sep 15, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-14",
-    "to": "2026-09-27",
+    "from": "2026-09-15",
+    "to": "2026-09-28",
     "days": 14
   },
   "counts": {
@@ -13,8 +13,8 @@
     "built": 14,
     "off": 0,
     "unbuilt": 0,
-    "games": 62,
-    "featured": 62,
+    "games": 59,
+    "featured": 59,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -45,91 +45,6 @@
   ],
   "days": [
     {
-      "date": "2026-09-14",
-      "weekday": "Mon",
-      "label": "Mon, Sep 14",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-09-14-new-lee",
-          "date": "2026-09-14",
-          "league": "epl",
-          "leagueLabel": "Premier League",
-          "leagueProse": "the Premier League",
-          "sport": "soccer",
-          "path": "soccer/eng.1",
-          "espnEvent": "401879280",
-          "home": "Leeds United",
-          "away": "Newcastle United",
-          "matchup": "Newcastle United at Leeds United",
-          "tipISO": "2026-09-14T19:00:00.000Z",
-          "tipPT": "12:00 PM PT",
-          "tipPTLong": "Mon, Sep 14, 12:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-14-chw-cle",
-          "date": "2026-09-14",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816934",
-          "home": "Guardians",
-          "away": "White Sox",
-          "matchup": "White Sox at Guardians",
-          "tipISO": "2026-09-14T22:40:00.000Z",
-          "tipPT": "3:40 PM PT",
-          "tipPTLong": "Mon, Sep 14, 3:40 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-14-bal-nym",
-          "date": "2026-09-14",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816933",
-          "home": "Mets",
-          "away": "Orioles",
-          "matchup": "Orioles at Mets",
-          "tipISO": "2026-09-14T23:10:00.000Z",
-          "tipPT": "4:10 PM PT",
-          "tipPTLong": "Mon, Sep 14, 4:10 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-14-den-kc",
-          "date": "2026-09-14",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872931",
-          "home": "Chiefs",
-          "away": "Broncos",
-          "matchup": "Broncos at Chiefs",
-          "tipISO": "2026-09-15T00:15:00.000Z",
-          "tipPT": "5:15 PM PT",
-          "tipPTLong": "Mon, Sep 14, 5:15 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": null
-        }
-      ]
-    },
-    {
       "date": "2026-09-15",
       "weekday": "Tue",
       "label": "Tue, Sep 15",
@@ -153,7 +68,7 @@
           "tipPTLong": "Tue, Sep 15, 3:40 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "94"
         },
         {
           "nightId": "slate-2026-09-15-bal-nym",
@@ -172,7 +87,7 @@
           "tipPTLong": "Tue, Sep 15, 4:10 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "95"
         },
         {
           "nightId": "slate-2026-09-15-atl-chc",
@@ -191,7 +106,7 @@
           "tipPTLong": "Tue, Sep 15, 4:40 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "96"
         },
         {
           "nightId": "slate-2026-09-15-kc-hou",
@@ -210,7 +125,7 @@
           "tipPTLong": "Tue, Sep 15, 5:10 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "97"
         }
       ]
     },
@@ -1342,6 +1257,34 @@
           "tipISO": "2026-09-28T00:20:00.000Z",
           "tipPT": "5:20 PM PT",
           "tipPTLong": "Sun, Sep 27, 5:20 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
+    },
+    {
+      "date": "2026-09-28",
+      "weekday": "Mon",
+      "label": "Mon, Sep 28",
+      "status": "built",
+      "gameCount": 1,
+      "games": [
+        {
+          "nightId": "slate-2026-09-28-phi-chi",
+          "date": "2026-09-28",
+          "league": "nfl",
+          "leagueLabel": "NFL",
+          "leagueProse": "the NFL",
+          "sport": "football",
+          "path": "football/nfl",
+          "espnEvent": "401872963",
+          "home": "Bears",
+          "away": "Eagles",
+          "matchup": "Eagles at Bears",
+          "tipISO": "2026-09-29T00:15:00.000Z",
+          "tipPT": "5:15 PM PT",
+          "tipPTLong": "Mon, Sep 28, 5:15 PM PT",
           "featured": true,
           "mainEvent": true,
           "gameNight": null
