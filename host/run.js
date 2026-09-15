@@ -79,6 +79,10 @@ const GRACE_MS  = Number(process.env.GRACE_MS  || 20000);
    no host for it is a room where `callit:true` tells every phone to watch
    for questions that will never come, which is the state that produced a
    silent green ARMED badge all last night. */
+/* Once per run. A restarted runner may send a second kickoff push; that is
+   the right trade against never sending one, and a restart mid-game is rare
+   and visible in the log. */
+let KICKOFF_PUSHED = false;
 const CALLIT      = String(process.env.CALLIT || '1') !== '0';
 const CALLIT_PACE = String(process.env.CALLIT_PACE || 'normal');
 const TICK_MS   = Number(process.env.TICK_MS   || 20000);
@@ -251,6 +255,24 @@ async function claimLease(db, FieldValue){
    A try/catch that swallows a ReferenceError turns a fix into decoration.
    The catch stays, because a feed in an unreadable shape must not kill the
    score, but AUTO is now passed in so the good path can actually be taken. */
+/* 'quarter', 'inning', 'period', 'half' — the shared block already carries
+   it per sport and this is the only thing here that needs it. */
+function periodWord(AUTO){
+  /* ONE catch, and it says so. qa/silence.js counts a catch that says
+     nothing as a way for this file to fail quietly, and it is right: a
+     lookup that throws and returns 'period' hides a broken shared block
+     behind a word that reads fine in a notification. */
+  try{
+    const fam = AUTO.familyOf ? AUTO.familyOf(SPORT) : '';
+    const cfg = (AUTO.SPORTS && AUTO.SPORTS[fam]) || null;
+    if(cfg && cfg.word) return cfg.word;
+    if(AUTO.periodWord) return AUTO.periodWord(SPORT);
+  }catch(e){
+    log('note', `could not read the period word for ${SPORT} `
+      + `(${(e && e.message) || e}) — saying "period"`);
+  }
+  return 'period';
+}
 function periodLabel(AUTO, sum, plan){
   try{
     const st = sum.header.competitions[0].status;
@@ -321,7 +343,7 @@ async function writeLiveScore(AUTO, db, FieldValue, sum, plan, last){
      score document alone rather than overwrite it with a guess. */
   if(!label) return last;
 
-  let away = null, home = null;
+  let away = null, home = null, homeNick = '', awayNick = '';
   try{
     const cs = sum.header.competitions[0].competitors || [];
     const h = cs.find(c => c.homeAway === 'home') || {};
@@ -332,6 +354,9 @@ async function writeLiveScore(AUTO, db, FieldValue, sum, plan, last){
     const digits = v => /^\d+$/.test(String(v == null ? '' : v).trim());
     if(!digits(h.score) || !digits(a.score)) return last;
     home = Number(h.score); away = Number(a.score);
+    /* the same block already has the names; the kickoff push needs them */
+    homeNick = ((h.team || {}).shortDisplayName) || ((h.team || {}).displayName) || '';
+    awayNick = ((a.team || {}).shortDisplayName) || ((a.team || {}).displayName) || '';
   }catch(_){ return last; }
   if(!isFinite(home) || !isFinite(away)) return last;
 
@@ -346,6 +371,43 @@ async function writeLiveScore(AUTO, db, FieldValue, sum, plan, last){
     score: { away, home, period: label, note: '', at: FieldValue.serverTimestamp() }
   }, { merge: true });
   log('score', `${away} — ${home}  ${label}`);
+
+  /* ============ SAY SOMETHING WHEN THE GAME ACTUALLY STARTS =========
+     14 Sept 2026, from one real returning player's telemetry:
+
+         16:50  card_lock {picks:6, of:6}   a full card in 33 seconds
+         16:51  hide                        gone four seconds later
+         17:15  KICKOFF                     nothing sent
+         17:54  push 'Q1 is live'           sixty-four minutes after he left
+
+     He had granted push on 12 Sept, four pushes went out, and he never
+     came back. So the ping is not the problem and permission is not the
+     problem: the FIRST thing that called him arrived an hour after he put
+     the phone down, forty minutes into a game he had chosen to care about.
+
+     This room pushes when a ROUND opens and never when the GAME starts,
+     and the gap between locking a card and the first round is a median of
+     nineteen minutes — an hour here. Kickoff is the natural moment to
+     come back and it was the one moment nobody used.
+
+     Sent once, on the pre-to-live edge, which this function already sees
+     because `label` is '' until the ball is up. No new clock, no new
+     state: the transition IS the trigger. */
+  try{
+    if(!KICKOFF_PUSHED && label && String(last || '').split('|')[1] === ''){
+      KICKOFF_PUSHED = true;
+      const r = await PUSH.send(db, NIGHT, {
+        title: `\u{1F3C8} ${awayNick || 'The away side'} at ${homeNick || 'the home side'} is under way`,
+        body:  `Your card is locked. First questions at the end of this ${periodWord(AUTO)}.`,
+        tag:   'stats-kickoff',
+        url:   `https://statsgametime.com/?game=${NIGHT}`
+      });
+      if(r.skipped) log('alert', `no kickoff push — ${r.skipped}`);
+      else log('alert', `pushed KICKOFF to ${r.sent} device(s)`
+                      + (r.failed ? ` · ${r.failed} failed` : ''));
+    }
+  }catch(e){ log('alert', `kickoff push threw and was ignored — ${(e && e.message) || e}`); }
+
   return sig;
 }
 
