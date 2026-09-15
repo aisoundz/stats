@@ -58,7 +58,17 @@ const PLAYER_FILE = arg('--file', 'index.html');
 const ADMIN_FILE  = arg('--admin-file', 'admin.html');
 
 const player = fs.readFileSync(path.join(ROOT, PLAYER_FILE), 'utf8');
-const runner = fs.readFileSync(path.join(ROOT, 'host/run.js'), 'utf8');
+/* THE RUNNER IS MORE THAN ONE FILE NOW. run.js grades the caught lane
+   itself, but the prediction card is graded by host/settle-preds.js,
+   which run.js calls at the final buzzer. Reading only run.js reported
+   predSrv as "summed by the board, written by nobody" — the exact
+   failure this file exists to catch, and a false one: it IS written, one
+   require() away. Any module the runner delegates a lane to belongs in
+   this string, or this check quietly stops covering it. */
+const runner = ['host/run.js', 'host/settle-preds.js']
+  .map(f => { try { return fs.readFileSync(path.join(ROOT, f), 'utf8'); }
+              catch (e) { console.log('  note: could not read ' + f + ' — ' + e.message); return ''; } })
+  .join('\n');
 const admin  = fs.readFileSync(path.join(ROOT, ADMIN_FILE), 'utf8');
 
 /* ============ MEASURE CODE, NOT PROSE ===============================
@@ -120,9 +130,24 @@ check('client.found-more-than-one-lane', LANES.length >= 2,
    2. THE FIELDS THE RUNNER ACTUALLY PERSISTS.
    Sliced to the players/{uid} .set() call, for the same anchoring reason.
    ------------------------------------------------------------------ */
-const si = runner.indexOf('nights/${NIGHT}/players/${uid}');
-const sEnd = runner.indexOf('{ merge: true }', si);
-const setBody = decomment((si > 0 && sEnd > si) ? runner.slice(si, sEnd) : '');
+/* ANCHOR ON THE PATH SHAPE, NOT ON ONE SPELLING OF IT. This matched the
+   literal 'nights/${NIGHT}/players/${uid}', so it only ever saw writes
+   whose variables happened to be called NIGHT and uid. host/settle-preds.js
+   writes the same document with nightId and d.id and was invisible: the
+   suite reported predSrv as summed-by-the-board-and-written-by-nobody,
+   which is a false alarm of exactly the kind it exists to prevent.
+   Every write to a player doc is collected, not just the first one. */
+const PLAYER_DOC = /nights\/\$\{[A-Za-z_$][\w$]*\}\/players\/\$\{[^}]+\}/g;
+let setBody = '';
+{
+  let m;
+  while ((m = PLAYER_DOC.exec(runner)) !== null) {
+    const from = m.index;
+    const to = runner.indexOf('{ merge: true }', from);
+    if (to > from) setBody += '\n' + decomment(runner.slice(from, to));
+  }
+}
+const si = setBody.length ? 1 : -1;   // kept: the check below reads it
 check('runner.player-write-found', setBody.length > 0,
   'could not locate the players/{uid} .set() in host/run.js');
 

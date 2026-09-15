@@ -257,6 +257,10 @@ async function claimLease(db, FieldValue){
    score, but AUTO is now passed in so the good path can actually be taken. */
 /* 'quarter', 'inning', 'period', 'half' — the shared block already carries
    it per sport and this is the only thing here that needs it. */
+/* 'baseball/mlb' -> 'baseball'. SPORT is the ESPN path this runner was
+   given; settle-preds wants the family, because regulation length is a
+   property of the sport and not of the league. */
+function familyOfSport(){ return String(SPORT || '').split('/')[0] || ''; }
 function periodWord(AUTO){
   /* ONE catch, and it says so. qa/silence.js counts a catch that says
      nothing as a way for this file to fail quietly, and it is right: a
@@ -1649,6 +1653,16 @@ async function main(){
              happens to this night afterwards is somebody's choice rather
              than somebody's mistake. Archived AFTER the settle pass, so the
              archive records the totals players actually finished on. */
+          /* The card also settles on the SERVER, because applySettlement()
+             runs on the phone and a player who locks six picks and walks
+             away collects nothing. Why, and the night it cost somebody a
+             hundred points, is in host/settle-preds.js. Before the archive,
+             so the archive records what players finished on. */
+          try{
+            const { settlePreds } = require('./settle-preds.js');
+            await settlePreds(db, NIGHT, sum, familyOfSport(), log);
+          }catch(e){ log('err', 'server-side card settle failed: ' + ((e && e.message) || e)); }
+
           try{ await archiveNight(db, FieldValue, 'final-buzzer'); }
           catch(e){ log('err', 'archive at the buzzer failed: ' + ((e && e.message) || e)); }
           if(CALLIT){

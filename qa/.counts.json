@@ -104,5 +104,7 @@
   "dead-default-night.js": 6,
   "pred-persist.js": 6,
   "pred-settle.js": 9,
-  "ping-ask.js": 10
+  "ping-ask.js": 10,
+  "settle-preds.js": 14,
+  "round-name.js": 16
 }

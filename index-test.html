@@ -4624,7 +4624,25 @@ window.STATS_FIREBASE = {
     var caught = (typeof v.caughtSrv === 'number' && isFinite(v.caughtSrv))
                    ? v.caughtSrv
                    : (Number(v.caughtPts) || 0);
-    return live + (Number(v.predPts) || 0)
+    /* ============ AND THE SAME FOR THE PREDICTION CARD ===============
+       The card settles on the PHONE, so a player who locks six picks and
+       puts the phone down before the buzzer collects nothing however well
+       they picked. 14 Sept, den-kc, KC 31 DEN 10, total 41: a returning
+       player picked Under 44.5, was right, and his stored predPts was 0.
+
+       host/settle-preds.js now grades the locked card from the server at
+       the final buzzer and writes predSrv. Like caughtSrv above, it is
+       the runner's own lane, written by nothing else, and it is the
+       better number when present because it does not depend on anyone
+       still holding a phone.
+
+       The MAX, not the server figure outright: the phone can settle lines
+       the server cannot (first scorer, home runs, rush yards) and those
+       are real points somebody earned. Taking predSrv unconditionally
+       would delete them. */
+    var pred = Math.max(Number(v.predPts) || 0,
+                        (typeof v.predSrv === 'number' && isFinite(v.predSrv)) ? v.predSrv : 0);
+    return live + pred
                 + (Number(v.catchPts) || 0) + caught;
   }
   SB.nightTotal = nightTotal;
@@ -9286,8 +9304,36 @@ function ensureRound(idx, tag, name, worth){
 // with no dashboard running this is exactly SPORT.worth[i] and nothing else.
 let HOSTW={};
 function roundWorth(i){return (HOSTW[i]!=null?HOSTW[i]:SPORT.worth[i]);}
-function roundTag(i){return SPORT.tags[i];}
-function roundName(i){return SPORT.names[i];}
+/* ============ PAST THE END OF THE PLAN IS OVERTIME, NOT undefined ====
+   Both of these were a bare array index. roundTag survives it because it
+   is only ever interpolated into a string; roundName does not, because
+   five call sites do .toLowerCase() on the result:
+
+       'Back to the ' + L.unit + ' — ' + roundName(idx+1).toLowerCase()
+
+   and `idx+1` at the last round is off the end. On 13 Sept a real
+   returning player's session logged
+
+       TypeError: can't access property "toLowerCase",
+                  roundName(...) is undefined        x4
+
+   into nights/{id}/errors — the FIRST four error documents this product
+   has ever captured in 312 nights, and they were all this. It had been
+   failing qa/first-tap.js on every build for weeks and was read as a test
+   problem because nothing had proved it reached anybody.
+
+   otLabelFor() already names overtime the way the shared resolver block
+   does, so an index past the plan gets the right word instead of a crash.
+   No try/catch: it is arithmetic and a concat, and swallowing an error
+   here is how this became invisible in the first place. */
+function roundTag(i){
+  var t = SPORT.tags[i];
+  return t ? t : otLabelFor(i).tag;
+}
+function roundName(i){
+  var n = SPORT.names[i];
+  return n ? n : otLabelFor(i).name;
+}
 function startLabel(i){return (SPORT.startLbl||"Start {n} ▶").replace("{n}",roundName(i));}
 /* ============ ONE SCREEN, ONE INSTRUCTION ===========================
    30 Aug 2026, founder's phone, straight after the Lynx buzzer:
@@ -26451,7 +26497,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-13-ping.293';
+const STATS_BUILD='2026-09-15-settle.295';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"

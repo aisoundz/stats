@@ -149,8 +149,21 @@ async function questionCard(db, gs){
 }
 
 /* ---- settled: last night's real answer, with a verifiable score ----- */
+/* THE SETTLED SCORE HAS TO BE ONE THE SENDER CAN FIND. send-tipoff-auto
+   verifies a claimed final by sweeping the last three days of each
+   league's ESPN scoreboard. A cup tie does not appear in its league's
+   scoreboard: Brighton at Coventry on 13 Sept was carried in our manifest
+   as `epl` and is a Carabao fixture, so a true 5-0 was unverifiable and
+   the send was refused. Correctly — a score nothing can confirm has no
+   business in a letter.
+   So the leagues whose scoreboards are dependable go first, and soccer
+   is tried only when nothing else on the night was scored. */
+const SETTLE_ORDER = { baseball:0, football:1, basketball:2, hockey:3, soccer:9 };
 async function settledCard(db, date){
-  for(const g of rooms(date)){
+  const ordered = rooms(date).slice().sort((a, b) =>
+    (SETTLE_ORDER[a.sport] == null ? 5 : SETTLE_ORDER[a.sport]) -
+    (SETTLE_ORDER[b.sport] == null ? 5 : SETTLE_ORDER[b.sport]));
+  for(const g of ordered){
     let rs = null;
     try{ rs = await db.collection('nights').doc(g.nightId).collection('rounds').get(); }catch(_){ continue; }
     for(const d of rs.docs){
@@ -181,8 +194,21 @@ async function settledCard(db, date){
   if(!gs.length){ log('none', `no rooms picked for ${DATE} — nothing to compose`); process.exit(0); }
   log('slate', `${gs.length} room(s): ` + gs.map(g => `${g.away} at ${g.home}`).join(' · '));
 
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if(!raw){ log('FATAL', 'FIREBASE_SERVICE_ACCOUNT is not set'); process.exit(1); }
+  /* THE CRON HAS NO ENVIRONMENT. tipoff-daily.js runs from crontab with
+     no env setup and does not need a service account itself, so the child
+     it spawns inherited nothing and died on the line below. On 15 Sept
+     that meant the very first unattended run of this composer failed and
+     the schedule-only fallback shipped again — the exact thing it was
+     written to stop. It worked every time by hand because a hand has an
+     exported key in it.
+     Read the key file directly, the same one start-slate.sh reads, and
+     take the env var only when it is already there. */
+  let raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if(!raw){
+    const keyfile = path.join(process.env.HOME || '/home/higherthan7', '.secrets', 'stats-firebase-admin.json');
+    try{ raw = fs.readFileSync(keyfile, 'utf8'); }
+    catch(e){ log('FATAL', `no service account: ${keyfile} unreadable (${(e && e.message) || e})`); process.exit(1); }
+  }
   const admin = require('firebase-admin');
   if(!admin.apps.length) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(raw)) });
   const db = admin.firestore();

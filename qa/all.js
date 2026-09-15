@@ -66,7 +66,7 @@ const afi=ARG.indexOf('--admin-file');
 const ADMIN_TARGET=afi>=0 && ARG[afi+1] ? ARG[afi+1] : 'admin-test.html';
 /* Only these accept a positional target; handing one to a suite that does
    not read argv[2] is harmless, but claiming it was targeted would not be. */
-const TARGETABLE=new Set(['ping-ask.js','pred-settle.js','dead-default-night.js','pred-persist.js','landing-wired.js','deep-cuts.js','first-tap.js','arcade-counter.js','schedule-menu.js','invite.js','tape.js','handle.js','voice.js','voice-wiring.js','voice-pick.js','voice-lang.js',
+const TARGETABLE=new Set(['round-name.js','ping-ask.js','pred-settle.js','dead-default-night.js','pred-persist.js','landing-wired.js','deep-cuts.js','first-tap.js','arcade-counter.js','schedule-menu.js','invite.js','tape.js','handle.js','voice.js','voice-wiring.js','voice-pick.js','voice-lang.js',
   'board-order.js','payoff.js','slate.js','acceptance.js','host-sportsreg.js','localise.js','i18n.js','season.js',
   'devices.js','night-config.js','overtime.js','platforms.js','change-it.js','chrome.js','places.js','switch.js','hero.js','listeners.js','practice.js','spanish.js','marquee-order.js',
   /* Reads a positional path (absolute or relative) and defaults to
@@ -182,6 +182,7 @@ const DUAL_READERS=['lane-persist.js','night-ceiling.js'];
 const TIER={
   'qa.js':            {tier:'browser', args:QUICK?['--quick']:[]},
   'acceptance.js':    {tier:'static'},
+  'settle-preds.js': {tier:'static'},
   'tipoff-when.js':   {tier:'static'},
   'landing-wired.js': {tier:'static'},
   'deep-cuts.js':     {tier:'browser'},
@@ -569,6 +570,7 @@ const TIER={
   'dead-default-night.js': {tier:'browser'},
   'pred-settle.js': {tier:'browser'},
   'ping-ask.js': {tier:'browser'},
+  'round-name.js': {tier:'browser'},
   'payoff.js':        {tier:'browser'},
   /* THE LAST SCREEN OF THE NIGHT. 25 Aug: a stranger played practice end
      to end and the final buzzer told them, at once, that they scored 380,
