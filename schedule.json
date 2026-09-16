@@ -1,11 +1,11 @@
 {
-  "generated": "2026-09-15T10:40:21.046Z",
-  "generatedPT": "Tue, Sep 15, 3:40 AM PT",
+  "generated": "2026-09-16T10:20:01.272Z",
+  "generatedPT": "Wed, Sep 16, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-15",
-    "to": "2026-09-28",
+    "from": "2026-09-16",
+    "to": "2026-09-29",
     "days": 14
   },
   "counts": {
@@ -13,8 +13,8 @@
     "built": 14,
     "off": 0,
     "unbuilt": 0,
-    "games": 59,
-    "featured": 59,
+    "games": 58,
+    "featured": 58,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -41,94 +41,33 @@
       "date": "2026-09-22",
       "code": "manifest-duplicate",
       "message": "slate-all-2026-09-22.tsv has 21 rows but only 20 distinct nightIds — 1 duplicate row(s), deduped"
+    },
+    {
+      "level": "error",
+      "date": "2026-09-29",
+      "code": "manifest-conflict",
+      "message": "slate-2026-09-29-tbd-tbd appears twice in slate-all-2026-09-29.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "error",
+      "date": "2026-09-29",
+      "code": "manifest-conflict",
+      "message": "slate-2026-09-29-tbd-tbd appears twice in slate-all-2026-09-29.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "error",
+      "date": "2026-09-29",
+      "code": "manifest-conflict",
+      "message": "slate-2026-09-29-tbd-tbd appears twice in slate-all-2026-09-29.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "note",
+      "date": "2026-09-29",
+      "code": "manifest-duplicate",
+      "message": "slate-all-2026-09-29.tsv has 9 rows but only 6 distinct nightIds — 3 duplicate row(s), deduped"
     }
   ],
   "days": [
-    {
-      "date": "2026-09-15",
-      "weekday": "Tue",
-      "label": "Tue, Sep 15",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-09-15-ath-tb",
-          "date": "2026-09-15",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816943",
-          "home": "Rays",
-          "away": "Athletics",
-          "matchup": "Athletics at Rays",
-          "tipISO": "2026-09-15T22:40:00.000Z",
-          "tipPT": "3:40 PM PT",
-          "tipPTLong": "Tue, Sep 15, 3:40 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "94"
-        },
-        {
-          "nightId": "slate-2026-09-15-bal-nym",
-          "date": "2026-09-15",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816944",
-          "home": "Mets",
-          "away": "Orioles",
-          "matchup": "Orioles at Mets",
-          "tipISO": "2026-09-15T23:10:00.000Z",
-          "tipPT": "4:10 PM PT",
-          "tipPTLong": "Tue, Sep 15, 4:10 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "95"
-        },
-        {
-          "nightId": "slate-2026-09-15-atl-chc",
-          "date": "2026-09-15",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816950",
-          "home": "Cubs",
-          "away": "Braves",
-          "matchup": "Braves at Cubs",
-          "tipISO": "2026-09-15T23:40:00.000Z",
-          "tipPT": "4:40 PM PT",
-          "tipPTLong": "Tue, Sep 15, 4:40 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "96"
-        },
-        {
-          "nightId": "slate-2026-09-15-kc-hou",
-          "date": "2026-09-15",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816952",
-          "home": "Astros",
-          "away": "Royals",
-          "matchup": "Royals at Astros",
-          "tipISO": "2026-09-16T00:10:00.000Z",
-          "tipPT": "5:10 PM PT",
-          "tipPTLong": "Tue, Sep 15, 5:10 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "97"
-        }
-      ]
-    },
     {
       "date": "2026-09-16",
       "weekday": "Wed",
@@ -153,7 +92,7 @@
           "tipPTLong": "Wed, Sep 16, 10:00 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "98"
         },
         {
           "nightId": "slate-2026-09-16-nyy-min",
@@ -172,7 +111,7 @@
           "tipPTLong": "Wed, Sep 16, 10:40 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "99"
         },
         {
           "nightId": "slate-2026-09-16-det-tor",
@@ -191,7 +130,7 @@
           "tipPTLong": "Wed, Sep 16, 12:07 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "100"
         },
         {
           "nightId": "slate-2026-09-16-bal-nym",
@@ -210,7 +149,7 @@
           "tipPTLong": "Wed, Sep 16, 4:00 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "101"
         }
       ]
     },
@@ -1285,6 +1224,72 @@
           "tipISO": "2026-09-29T00:15:00.000Z",
           "tipPT": "5:15 PM PT",
           "tipPTLong": "Mon, Sep 28, 5:15 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
+    },
+    {
+      "date": "2026-09-29",
+      "weekday": "Tue",
+      "label": "Tue, Sep 29",
+      "status": "built",
+      "gameCount": 3,
+      "games": [
+        {
+          "nightId": "slate-2026-09-29-fla-car",
+          "date": "2026-09-29",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401891773",
+          "home": "Hurricanes",
+          "away": "Panthers",
+          "matchup": "Panthers at Hurricanes",
+          "tipISO": "2026-09-29T21:00:00.000Z",
+          "tipPT": "2:00 PM PT",
+          "tipPTLong": "Tue, Sep 29, 2:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-29-nyr-bos",
+          "date": "2026-09-29",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401891774",
+          "home": "Bruins",
+          "away": "Rangers",
+          "matchup": "Rangers at Bruins",
+          "tipISO": "2026-09-30T00:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Tue, Sep 29, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-09-29-chi-vgk",
+          "date": "2026-09-29",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401891775",
+          "home": "Golden Knights",
+          "away": "Blackhawks",
+          "matchup": "Blackhawks at Golden Knights",
+          "tipISO": "2026-09-30T02:30:00.000Z",
+          "tipPT": "7:30 PM PT",
+          "tipPTLong": "Tue, Sep 29, 7:30 PM PT",
           "featured": true,
           "mainEvent": true,
           "gameNight": null
