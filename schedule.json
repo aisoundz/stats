@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-19T10:20:01.955Z",
-  "generatedPT": "Sat, Sep 19, 3:20 AM PT",
+  "generated": "2026-09-19T10:40:41.462Z",
+  "generatedPT": "Sat, Sep 19, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 51,
-    "featured": 51,
+    "unbuilt": 0,
+    "games": 55,
+    "featured": 55,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -1206,10 +1206,86 @@
       "date": "2026-10-02",
       "weekday": "Fri",
       "label": "Fri, Oct 2",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 4,
+      "games": [
+        {
+          "nightId": "slate-2026-10-02-nyr-det",
+          "date": "2026-10-02",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401891803",
+          "home": "Red Wings",
+          "away": "Rangers",
+          "matchup": "Rangers at Red Wings",
+          "tipISO": "2026-10-02T22:30:00.000Z",
+          "tipPT": "3:30 PM PT",
+          "tipPTLong": "Fri, Oct 2, 3:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-02-pitt-vt",
+          "date": "2026-10-02",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401858245",
+          "home": "Virginia Tech",
+          "away": "Pittsburgh",
+          "matchup": "Pittsburgh at Virginia Tech",
+          "tipISO": "2026-10-02T23:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Fri, Oct 2, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-02-psu-nu",
+          "date": "2026-10-02",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401858476",
+          "home": "Northwestern",
+          "away": "Penn State",
+          "matchup": "Penn State at Northwestern",
+          "tipISO": "2026-10-03T00:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Fri, Oct 2, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-02-stl-dal",
+          "date": "2026-10-02",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401891782",
+          "home": "Stars",
+          "away": "Blues",
+          "matchup": "Blues at Stars",
+          "tipISO": "2026-10-03T01:00:00.000Z",
+          "tipPT": "6:00 PM PT",
+          "tipPTLong": "Fri, Oct 2, 6:00 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
