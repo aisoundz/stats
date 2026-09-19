@@ -1,20 +1,20 @@
 {
-  "generated": "2026-09-18T10:41:00.170Z",
-  "generatedPT": "Fri, Sep 18, 3:41 AM PT",
+  "generated": "2026-09-19T10:20:01.955Z",
+  "generatedPT": "Sat, Sep 19, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-18",
-    "to": "2026-10-01",
+    "from": "2026-09-19",
+    "to": "2026-10-02",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 55,
-    "featured": 55,
+    "unbuilt": 1,
+    "games": 51,
+    "featured": 51,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -28,7 +28,7 @@
       "level": "note",
       "date": "2026-09-19",
       "code": "manifest-duplicate",
-      "message": "slate-all-2026-09-19.tsv has 107 rows but only 106 distinct nightIds — 1 duplicate row(s), deduped"
+      "message": "slate-all-2026-09-19.tsv has 114 rows but only 113 distinct nightIds — 1 duplicate row(s), deduped"
     },
     {
       "level": "error",
@@ -117,91 +117,6 @@
   ],
   "days": [
     {
-      "date": "2026-09-18",
-      "weekday": "Fri",
-      "label": "Fri, Sep 18",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-09-18-chc-cin",
-          "date": "2026-09-18",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816984",
-          "home": "Reds",
-          "away": "Cubs",
-          "matchup": "Cubs at Reds",
-          "tipISO": "2026-09-18T22:40:00.000Z",
-          "tipPT": "3:40 PM PT",
-          "tipPTLong": "Fri, Sep 18, 3:40 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-18-mia-wake",
-          "date": "2026-09-18",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401858226",
-          "home": "Wake Forest",
-          "away": "Miami",
-          "matchup": "Miami at Wake Forest",
-          "tipISO": "2026-09-18T23:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Fri, Sep 18, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-18-tor-tex",
-          "date": "2026-09-18",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816990",
-          "home": "Rangers",
-          "away": "Blue Jays",
-          "matchup": "Blue Jays at Rangers",
-          "tipISO": "2026-09-19T00:05:00.000Z",
-          "tipPT": "5:05 PM PT",
-          "tipPTLong": "Fri, Sep 18, 5:05 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-18-por-gs",
-          "date": "2026-09-18",
-          "league": "wnba",
-          "leagueLabel": "WNBA",
-          "leagueProse": "the WNBA",
-          "sport": "basketball",
-          "path": "basketball/wnba",
-          "espnEvent": "401857197",
-          "home": "Valkyries",
-          "away": "Fire",
-          "matchup": "Fire at Valkyries",
-          "tipISO": "2026-09-19T02:00:00.000Z",
-          "tipPT": "7:00 PM PT",
-          "tipPTLong": "Fri, Sep 18, 7:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        }
-      ]
-    },
-    {
       "date": "2026-09-19",
       "weekday": "Sat",
       "label": "Sat, Sep 19",
@@ -225,7 +140,7 @@
           "tipPTLong": "Sat, Sep 19, 9:00 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "110"
         },
         {
           "nightId": "slate-2026-09-19-emu-wis",
@@ -244,7 +159,7 @@
           "tipPTLong": "Sat, Sep 19, 9:30 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "111"
         },
         {
           "nightId": "slate-2026-09-19-phx-dal",
@@ -263,7 +178,7 @@
           "tipPTLong": "Sat, Sep 19, 10:00 AM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "129"
         },
         {
           "nightId": "slate-2026-09-19-mil-bal",
@@ -282,7 +197,7 @@
           "tipPTLong": "Sat, Sep 19, 1:05 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "148"
         },
         {
           "nightId": "slate-2026-09-19-ath-cle",
@@ -301,7 +216,7 @@
           "tipPTLong": "Sat, Sep 19, 3:10 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "154"
         },
         {
           "nightId": "slate-2026-09-19-clb-mtl",
@@ -320,7 +235,7 @@
           "tipPTLong": "Sat, Sep 19, 4:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "177"
         }
       ]
     },
@@ -1286,6 +1201,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-02",
+      "weekday": "Fri",
+      "label": "Fri, Oct 2",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
