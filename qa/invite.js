@@ -69,10 +69,23 @@ t('a cancelled share is not reported as a failure', () => {
   /* navigator.share REJECTS when the user backs out. Toasting "could not
      share" at somebody who simply changed their mind is worse than
      silence. */
+  /* ASSERT THE BEHAVIOUR, NOT THE COMMENT. This matched
+     `.catch(function(){ /*` — the presence of an EXPLANATION. On 20 Sept
+     the shipped file began going out with comments stripped (1.8MB to
+     926KB, because a 6-second cold load reads as "the site is down"), and
+     this failed on an artifact whose CODE was byte-for-byte correct. A
+     check that breaks when a comment is removed is testing the wrong
+     thing: what matters is that the catch is EMPTY, i.e. says nothing to
+     a person who simply changed their mind. */
   const i = body.indexOf('navigator.share');
   const seg = body.slice(i, i + 500);
-  return /\.catch\(function\(\)\{\s*\/\*/.test(seg) || /cancelled/.test(seg)
-    ? true : 'the navigator.share catch does not distinguish a cancel from an error';
+  /* an empty catch, with or without a comment inside it */
+  const emptyCatch = /\.catch\(\s*function\s*\(\s*\)\s*\{\s*(?:\/\*[\s\S]*?\*\/\s*)?\}\s*\)/.test(seg)
+                  || /\.catch\(\s*\(\s*\)\s*=>\s*\{\s*(?:\/\*[\s\S]*?\*\/\s*)?\}\s*\)/.test(seg);
+  /* and nothing that would shout at them */
+  const shouts = /\.catch\([^)]{0,200}(toast|alert|console\.(error|warn))/.test(seg);
+  return (emptyCatch && !shouts)
+    ? true : 'the navigator.share catch does not silently absorb a cancel';
 });
 
 t('it degrades all the way down', () => {
