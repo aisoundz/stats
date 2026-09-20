@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-20T10:20:01.654Z",
-  "generatedPT": "Sun, Sep 20, 3:20 AM PT",
+  "generated": "2026-09-20T10:42:00.279Z",
+  "generatedPT": "Sun, Sep 20, 3:42 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 49,
-    "featured": 49,
+    "unbuilt": 0,
+    "games": 53,
+    "featured": 53,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -101,6 +101,30 @@
       "date": "2026-10-01",
       "code": "manifest-duplicate",
       "message": "slate-all-2026-10-01.tsv has 16 rows but only 13 distinct nightIds — 3 duplicate row(s), deduped"
+    },
+    {
+      "level": "error",
+      "date": "2026-10-03",
+      "code": "manifest-conflict",
+      "message": "slate-2026-10-03-tbd-tbd appears twice in slate-all-2026-10-03.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "error",
+      "date": "2026-10-03",
+      "code": "manifest-conflict",
+      "message": "slate-2026-10-03-tbd-tbd appears twice in slate-all-2026-10-03.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "error",
+      "date": "2026-10-03",
+      "code": "manifest-conflict",
+      "message": "slate-2026-10-03-tbd-tbd appears twice in slate-all-2026-10-03.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "note",
+      "date": "2026-10-03",
+      "code": "manifest-duplicate",
+      "message": "slate-all-2026-10-03.tsv has 71 rows but only 68 distinct nightIds — 3 duplicate row(s), deduped"
     }
   ],
   "days": [
@@ -1156,10 +1180,86 @@
       "date": "2026-10-03",
       "weekday": "Sat",
       "label": "Sat, Oct 3",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 4,
+      "games": [
+        {
+          "nightId": "slate-2026-10-03-navy-afa",
+          "date": "2026-10-03",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401862791",
+          "home": "Air Force",
+          "away": "Navy",
+          "matchup": "Navy at Air Force",
+          "tipISO": "2026-10-03T16:00:00.000Z",
+          "tipPT": "9:00 AM PT",
+          "tipPTLong": "Sat, Oct 3, 9:00 AM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-03-cal-unlv",
+          "date": "2026-10-03",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401858247",
+          "home": "UNLV",
+          "away": "California",
+          "matchup": "California at UNLV",
+          "tipISO": "2026-10-03T19:30:00.000Z",
+          "tipPT": "12:30 PM PT",
+          "tipPTLong": "Sat, Oct 3, 12:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-03-orst-csu",
+          "date": "2026-10-03",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401860899",
+          "home": "Colorado State",
+          "away": "Oregon State",
+          "matchup": "Oregon State at Colorado State",
+          "tipISO": "2026-10-03T22:00:00.000Z",
+          "tipPT": "3:00 PM PT",
+          "tipPTLong": "Sat, Oct 3, 3:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-03-fres-wsu",
+          "date": "2026-10-03",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401860921",
+          "home": "Washington State",
+          "away": "Fresno State",
+          "matchup": "Fresno State at Washington State",
+          "tipISO": "2026-10-04T01:30:00.000Z",
+          "tipPT": "6:30 PM PT",
+          "tipPTLong": "Sat, Oct 3, 6:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
