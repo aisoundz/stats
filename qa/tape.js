@@ -67,9 +67,17 @@ t('the streak counts days PLAYED, not days right', () => {
 t('a day can only be answered once', () => {
   /* Otherwise a refresh farms the streak, and re-asks a question the
      player has already seen. Same reason recordStatLine dedupes by night. */
+  /* SLICE THE FUNCTION, NOT A FIXED NUMBER OF CHARACTERS. This took the
+     500 characters after `function tapeAnswer` and went red the day a
+     helper was declared between that marker and the guard — the guard was
+     untouched and still correct. A window measured in bytes fails on
+     edits that change nothing it is testing, which is the same defect
+     'no document, no card' below already fixed for itself. */
   const i = card.indexOf('function tapeAnswer');
-  const seg = card.slice(i, i + 500);
-  return /if\(tapeSaved\(day\)\) return/.test(seg)
+  if (i < 0) return 'there is no tapeAnswer at all';
+  const next = card.indexOf('\nfunction ', i + 10);
+  const seg = card.slice(i, next > i ? next : card.length);
+  return /if\s*\(\s*tapeSaved\(\s*day\s*\)\s*\)\s*return/.test(seg)
     ? true : 'tapeAnswer does not refuse a second answer for the same day';
 });
 

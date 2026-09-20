@@ -26533,7 +26533,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-20-lean.296';
+const STATS_BUILD='2026-09-20-streak.297';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
@@ -31721,15 +31721,32 @@ function tapeToday(){
   }catch(_){ return new Date().toISOString().slice(0,10); }
 }
 function tapeSaved(d){ try{ return JSON.parse(localStorage.getItem(TAPE_KEY+d)||'null'); }catch(_){ return null; } }
+/* Is today's question answered? Lives with the storage helpers and NOT
+   between tapeStreak and tapeRender: qa/tape.js asserts that nothing in
+   that span mentions an answer, because the streak must count showing up
+   and never being right. A helper whose NAME contains "answered" sitting
+   there is indistinguishable, to that check, from the streak reading
+   correctness — and the check is right to be blunt about it. */
+function tapeHasTodaysPick(){ try{ return !!tapeSaved(tapeToday()); }catch(_){ return false; } }
 function tapeSave(d,v){ try{ localStorage.setItem(TAPE_KEY+d, JSON.stringify(v)); }catch(_){} }
 
 /* DAYS PLAYED, NOT DAYS RIGHT. Walks back from today while a day has an
    answer stored. A wrong answer keeps the streak — showing up is the
    thing being counted. */
+/* ============ A RUN IS NOT BROKEN UNTIL A DAY IS MISSED =============
+   This walked back from TODAY and stopped at the first unanswered day,
+   so a nineteen day run read as 0 every morning until the question was
+   answered — and The Tape publishes at 06:30, so anybody opening the app
+   before then was told their streak was nothing.
+   Today is still IN PLAY: it is only a broken run once the day is over.
+   So start at today if today is answered, and at yesterday if it is not,
+   which is the same number in both cases and never a scary zero. */
 function tapeStreak(){
   var n=0;
   try{
     var d=new Date();
+    var todayKey=tapeToday();
+    if(!tapeSaved(todayKey)) d=new Date(d.getTime()-86400000);   // today is not missed yet
     for(var i=0;i<400;i++){
       var key=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles',
         year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
@@ -31751,7 +31768,30 @@ function tapeRender(){
        once since it shipped. Same one-liner the other three use. */
     var set=function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
     var card=document.getElementById('tapeCard');
-    if(!card || !TAPE || !TAPE.q || !Array.isArray(TAPE.options) || !TAPE.options.length) return;
+    if(!card) return;
+    /* ============ AN EMPTY CARD IS STILL A REASON TO COME BACK =======
+       This returned silently when there was no question, leaving the card
+       hidden. The Tape publishes at 06:30 PT, so a player opening the app
+       in the morning saw nothing at all and nothing explaining why — on
+       the one surface whose entire job is a daily habit.
+       The founder, 20 Sept: "I thought we get like a question everyday to
+       see how many days in a row." He does. It was invisible before
+       06:30 and silent about it. */
+    if(!TAPE || !TAPE.q || !Array.isArray(TAPE.options) || !TAPE.options.length){
+      var sN=0; try{ sN=tapeStreak(); }catch(_){}
+      try{
+        set('tapeQ', sN>0
+          ? ('Today\u2019s question lands at 6:30am. Your run is safe \u2014 '
+             + sN + ' day' + (sN===1?'':'s') + ' so far.')
+          : 'Today\u2019s question lands at 6:30am PT. One a day, from a game that has already finished.');
+        set('tapeStreak', sN>0 ? (sN + ' day' + (sN===1?'':'s') + ' in a row') : '');
+        set('tapeFrom', '');
+        var _b=document.getElementById('tapeOpts'); if(_b) _b.innerHTML='';
+        var _a=document.getElementById('tapeAfter'); if(_a){ _a.style.display='none'; _a.textContent=''; }
+      }catch(_){}
+      card.style.display='';
+      return;
+    }
     var day=TAPE.date || tapeToday();
     var had=tapeSaved(day);
 

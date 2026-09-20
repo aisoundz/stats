@@ -17931,7 +17931,7 @@ if(!document.getElementById('ribCss')){
 
 
 
-const STATS_BUILD='2026-09-20-lean.296';
+const STATS_BUILD='2026-09-20-streak.297';
 
 
 try{ window.STATS_BUILD = STATS_BUILD; }catch(e){}
@@ -21643,7 +21643,12 @@ function tapeToday(){
   }catch(_){ return new Date().toISOString().slice(0,10); }
 }
 function tapeSaved(d){ try{ return JSON.parse(localStorage.getItem(TAPE_KEY+d)||'null'); }catch(_){ return null; } }
+
+
+function tapeHasTodaysPick(){ try{ return !!tapeSaved(tapeToday()); }catch(_){ return false; } }
 function tapeSave(d,v){ try{ localStorage.setItem(TAPE_KEY+d, JSON.stringify(v)); }catch(_){} }
+
+
 
 
 
@@ -21651,6 +21656,8 @@ function tapeStreak(){
   var n=0;
   try{
     var d=new Date();
+    var todayKey=tapeToday();
+    if(!tapeSaved(todayKey)) d=new Date(d.getTime()-86400000);   
     for(var i=0;i<400;i++){
       var key=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles',
         year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
@@ -21667,7 +21674,24 @@ function tapeRender(){
 
     var set=function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
     var card=document.getElementById('tapeCard');
-    if(!card || !TAPE || !TAPE.q || !Array.isArray(TAPE.options) || !TAPE.options.length) return;
+    if(!card) return;
+    
+
+    if(!TAPE || !TAPE.q || !Array.isArray(TAPE.options) || !TAPE.options.length){
+      var sN=0; try{ sN=tapeStreak(); }catch(_){}
+      try{
+        set('tapeQ', sN>0
+          ? ('Today\u2019s question lands at 6:30am. Your run is safe \u2014 '
+             + sN + ' day' + (sN===1?'':'s') + ' so far.')
+          : 'Today\u2019s question lands at 6:30am PT. One a day, from a game that has already finished.');
+        set('tapeStreak', sN>0 ? (sN + ' day' + (sN===1?'':'s') + ' in a row') : '');
+        set('tapeFrom', '');
+        var _b=document.getElementById('tapeOpts'); if(_b) _b.innerHTML='';
+        var _a=document.getElementById('tapeAfter'); if(_a){ _a.style.display='none'; _a.textContent=''; }
+      }catch(_){}
+      card.style.display='';
+      return;
+    }
     var day=TAPE.date || tapeToday();
     var had=tapeSaved(day);
 
