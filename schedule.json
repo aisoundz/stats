@@ -1,35 +1,23 @@
 {
-  "generated": "2026-09-19T10:40:41.462Z",
-  "generatedPT": "Sat, Sep 19, 3:40 AM PT",
+  "generated": "2026-09-20T10:20:01.654Z",
+  "generatedPT": "Sun, Sep 20, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-19",
-    "to": "2026-10-02",
+    "from": "2026-09-20",
+    "to": "2026-10-03",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 55,
-    "featured": 55,
+    "unbuilt": 1,
+    "games": 49,
+    "featured": 49,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
-    {
-      "level": "error",
-      "date": "2026-09-19",
-      "code": "manifest-conflict",
-      "message": "slate-2026-09-19-sea-col appears twice in slate-all-2026-09-19.tsv with DIFFERENT values — keeping the first"
-    },
-    {
-      "level": "note",
-      "date": "2026-09-19",
-      "code": "manifest-duplicate",
-      "message": "slate-all-2026-09-19.tsv has 114 rows but only 113 distinct nightIds — 1 duplicate row(s), deduped"
-    },
     {
       "level": "error",
       "date": "2026-09-22",
@@ -116,129 +104,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-09-19",
-      "weekday": "Sat",
-      "label": "Sat, Sep 19",
-      "status": "built",
-      "gameCount": 6,
-      "games": [
-        {
-          "nightId": "slate-2026-09-19-kent-osu",
-          "date": "2026-09-19",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401858454",
-          "home": "Ohio State",
-          "away": "Kent State",
-          "matchup": "Kent State at Ohio State",
-          "tipISO": "2026-09-19T16:00:00.000Z",
-          "tipPT": "9:00 AM PT",
-          "tipPTLong": "Sat, Sep 19, 9:00 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "110"
-        },
-        {
-          "nightId": "slate-2026-09-19-emu-wis",
-          "date": "2026-09-19",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401858460",
-          "home": "Wisconsin",
-          "away": "Eastern Michigan",
-          "matchup": "Eastern Michigan at Wisconsin",
-          "tipISO": "2026-09-19T16:30:00.000Z",
-          "tipPT": "9:30 AM PT",
-          "tipPTLong": "Sat, Sep 19, 9:30 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "111"
-        },
-        {
-          "nightId": "slate-2026-09-19-phx-dal",
-          "date": "2026-09-19",
-          "league": "wnba",
-          "leagueLabel": "WNBA",
-          "leagueProse": "the WNBA",
-          "sport": "basketball",
-          "path": "basketball/wnba",
-          "espnEvent": "401857198",
-          "home": "Wings",
-          "away": "Mercury",
-          "matchup": "Mercury at Wings",
-          "tipISO": "2026-09-19T17:00:00.000Z",
-          "tipPT": "10:00 AM PT",
-          "tipPTLong": "Sat, Sep 19, 10:00 AM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "129"
-        },
-        {
-          "nightId": "slate-2026-09-19-mil-bal",
-          "date": "2026-09-19",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401817001",
-          "home": "Orioles",
-          "away": "Brewers",
-          "matchup": "Brewers at Orioles",
-          "tipISO": "2026-09-19T20:05:00.000Z",
-          "tipPT": "1:05 PM PT",
-          "tipPTLong": "Sat, Sep 19, 1:05 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "148"
-        },
-        {
-          "nightId": "slate-2026-09-19-ath-cle",
-          "date": "2026-09-19",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401816997",
-          "home": "Guardians",
-          "away": "Athletics",
-          "matchup": "Athletics at Guardians",
-          "tipISO": "2026-09-19T22:10:00.000Z",
-          "tipPT": "3:10 PM PT",
-          "tipPTLong": "Sat, Sep 19, 3:10 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "154"
-        },
-        {
-          "nightId": "slate-2026-09-19-clb-mtl",
-          "date": "2026-09-19",
-          "league": "mls",
-          "leagueLabel": "MLS",
-          "leagueProse": "MLS",
-          "sport": "soccer",
-          "path": "soccer/usa.1",
-          "espnEvent": "761818",
-          "home": "CF Montréal",
-          "away": "Columbus Crew",
-          "matchup": "Columbus Crew at CF Montréal",
-          "tipISO": "2026-09-19T23:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Sat, Sep 19, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "177"
-        }
-      ]
-    },
     {
       "date": "2026-09-20",
       "weekday": "Sun",
@@ -1286,6 +1151,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-03",
+      "weekday": "Sat",
+      "label": "Sat, Oct 3",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
