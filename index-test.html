@@ -9975,9 +9975,27 @@ function paintContinueCard(){
            is room-guarded and already the authority everywhere else that
            refuses to act after the buzzer, so it is the authority here. */
         var done=false; try{ done=nightIsOver(); }catch(_){}
+        /* ============ A BREAK IS BETWEEN PERIODS ======================
+           20 Sept 2026, the founder's phone at 4am, hours before a 10:00
+           kickoff. The biggest button on Home read
+
+               Continue tonight's game \u00b7 Q1 opens at the break
+
+           There has been no break. Q1 opens when the FIRST QUARTER ENDS,
+           which is the rule this project has now got wrong on a fourth
+           screen. The Gametime screen already says it correctly and
+           builds the sentence from roundEndsAfter(), which carries
+           baseball's ranged tags ("the 3rd") and names the period for
+           everything else. One owner for that sentence, so Home and
+           Gametime cannot disagree about when a round opens. */
+        var after = ''; try{ after = roundEndsAfter(nq); }catch(_){}
+        var per = 'quarter'; try{ per = (L && L.period) || 'quarter'; }catch(_){}
+        var opensWhen = after
+              ? (roundTag(nq) + ' opens after ' + after)
+              : (roundTag(nq) + ' opens when the ' + (nq === 0 ? 'first ' : '') + per + ' ends');
         where = done ? 'see how the night finished'
               : open ? (roundTag(nq)+' is open \u2014 answer now')
-                     : (roundTag(nq)+' opens at the break');
+                     : opensWhen;
       }
       else if(S.place==='review'||S.place==='break') where='between quarters';
       else where='in progress';
@@ -19809,6 +19827,15 @@ function recordStatLine(got){
               pts:S.pts||0, max:MAXPTS, speed:S.speed||0,
               hits:got.ctx.graded.hits, total:got.ctx.graded.total,
               rank:(got.ctx.rank===undefined?null:got.ctx.rank),
+              /* THE CAUGHT IT RUN, BANKED WITH THE NIGHT. The Home card
+                 printed BEST CAUGHT IT from PCI.best, which is live
+                 in-room state: on Home, before entering a room, it is
+                 always 0 and the card showed an em dash beside two real
+                 season numbers. It was never a display bug. No season row
+                 has ever carried this, so there was nothing to show.
+                 Banked from tonight on; rows written before today have no
+                 cib and the card says so rather than printing a zero. */
+              cib:(function(){ try{ return Math.max(0, (typeof PCI==='object' && PCI && PCI.best) || 0); }catch(_){ return 0; } })(),
               awards:got.all.map(a=>a.id) };
   const at=line.games.findIndex(g=>g && g.night===key);
   if(at>=0) line.games[at]=row; else line.games.push(row);
@@ -26086,7 +26113,16 @@ function renderPortal(){
        played and banked. It reads the one season store now. */
     let season=0, nights=0, ciBest=0;
     try{ var _ss=seasonStats(); season=Math.max(0,Math.round(_ss.total||0)); nights=Math.max(0,_ss.played||0); }catch(_){}
-    try{ ciBest=Math.max(0,(typeof PCI!=='undefined'&&PCI&&PCI.best)||0); }catch(_){}
+    /* Across BANKED nights, and the live room if one is open, so the
+       number means the same thing as the two beside it. */
+    var ciKnown=false;
+    try{
+      (seasonRows()||[]).forEach(function(g){
+        if(g && g.cib != null){ ciKnown=true; ciBest=Math.max(ciBest, Number(g.cib)||0); }
+      });
+    }catch(_){}
+    try{ var live=(typeof PCI!=='undefined'&&PCI&&PCI.best)||0;
+         if(live>0){ ciKnown=true; ciBest=Math.max(ciBest, live); } }catch(_){}
     const initial=esc((nm||'S').slice(0,1).toUpperCase());
     const stat=function(v2,k){ return '<div style="flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 8px;text-align:center">'
       +'<div style="font-size:17px;font-weight:900;color:#eef2fb">'+v2+'</div>'
@@ -26103,7 +26139,7 @@ function renderPortal(){
       +'<div style="display:flex;gap:8px">'
       +  stat(season.toLocaleString(),'Season pts')
       +  stat(nights,'Game nights')
-      +  stat(ciBest?('🔥'+ciBest):'—','Best Caught It')
+      +  stat(ciBest?('🔥'+ciBest):(ciKnown?'0':'—'),'Best Caught It')
       +'</div>'
       +'<p class="sub" style="font-size:12px;margin:10px 0 0">Your handle, card and points follow you to any phone.</p>';
     w.style.display='block';
