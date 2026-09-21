@@ -1,20 +1,20 @@
 {
-  "generated": "2026-09-20T10:42:00.279Z",
-  "generatedPT": "Sun, Sep 20, 3:42 AM PT",
+  "generated": "2026-09-21T10:20:01.646Z",
+  "generatedPT": "Mon, Sep 21, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-20",
-    "to": "2026-10-03",
+    "from": "2026-09-21",
+    "to": "2026-10-04",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 53,
-    "featured": 53,
+    "unbuilt": 1,
+    "games": 47,
+    "featured": 47,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -128,129 +128,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-09-20",
-      "weekday": "Sun",
-      "label": "Sun, Sep 20",
-      "status": "built",
-      "gameCount": 6,
-      "games": [
-        {
-          "nightId": "slate-2026-09-20-car-atl",
-          "date": "2026-09-20",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872933",
-          "home": "Falcons",
-          "away": "Panthers",
-          "matchup": "Panthers at Falcons",
-          "tipISO": "2026-09-20T17:00:00.000Z",
-          "tipPT": "10:00 AM PT",
-          "tipPTLong": "Sun, Sep 20, 10:00 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-20-kc-pit",
-          "date": "2026-09-20",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401817015",
-          "home": "Pirates",
-          "away": "Royals",
-          "matchup": "Royals at Pirates",
-          "tipISO": "2026-09-20T17:35:00.000Z",
-          "tipPT": "10:35 AM PT",
-          "tipPTLong": "Sun, Sep 20, 10:35 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-20-wsh-ind",
-          "date": "2026-09-20",
-          "league": "wnba",
-          "leagueLabel": "WNBA",
-          "leagueProse": "the WNBA",
-          "sport": "basketball",
-          "path": "basketball/wnba",
-          "espnEvent": "401857203",
-          "home": "Fever",
-          "away": "Mystics",
-          "matchup": "Mystics at Fever",
-          "tipISO": "2026-09-20T20:00:00.000Z",
-          "tipPT": "1:00 PM PT",
-          "tipPTLong": "Sun, Sep 20, 1:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-20-mil-bal",
-          "date": "2026-09-20",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401817016",
-          "home": "Orioles",
-          "away": "Brewers",
-          "matchup": "Brewers at Orioles",
-          "tipISO": "2026-09-20T23:20:00.000Z",
-          "tipPT": "4:20 PM PT",
-          "tipPTLong": "Sun, Sep 20, 4:20 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-20-ind-kc",
-          "date": "2026-09-20",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872945",
-          "home": "Chiefs",
-          "away": "Colts",
-          "matchup": "Colts at Chiefs",
-          "tipISO": "2026-09-21T00:20:00.000Z",
-          "tipPT": "5:20 PM PT",
-          "tipPTLong": "Sun, Sep 20, 5:20 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-20-sea-lv",
-          "date": "2026-09-20",
-          "league": "wnba",
-          "leagueLabel": "WNBA",
-          "leagueProse": "the WNBA",
-          "sport": "basketball",
-          "path": "basketball/wnba",
-          "espnEvent": "401857205",
-          "home": "Aces",
-          "away": "Storm",
-          "matchup": "Storm at Aces",
-          "tipISO": "2026-09-21T01:00:00.000Z",
-          "tipPT": "6:00 PM PT",
-          "tipPTLong": "Sun, Sep 20, 6:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        }
-      ]
-    },
     {
       "date": "2026-09-21",
       "weekday": "Mon",
@@ -1260,6 +1137,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-04",
+      "weekday": "Sun",
+      "label": "Sun, Oct 4",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
