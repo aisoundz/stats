@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-22T10:20:01.454Z",
-  "generatedPT": "Tue, Sep 22, 3:20 AM PT",
+  "generated": "2026-09-22T10:40:38.151Z",
+  "generatedPT": "Tue, Sep 22, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 48,
-    "featured": 48,
+    "unbuilt": 0,
+    "games": 49,
+    "featured": 49,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -137,6 +137,18 @@
       "date": "2026-10-04",
       "code": "manifest-duplicate",
       "message": "slate-all-2026-10-04.tsv has 21 rows but only 20 distinct nightIds — 1 duplicate row(s), deduped"
+    },
+    {
+      "level": "error",
+      "date": "2026-10-05",
+      "code": "manifest-conflict",
+      "message": "slate-2026-10-05-tbd-tbd appears twice in slate-all-2026-10-05.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "note",
+      "date": "2026-10-05",
+      "code": "manifest-duplicate",
+      "message": "slate-all-2026-10-05.tsv has 7 rows but only 6 distinct nightIds — 1 duplicate row(s), deduped"
     }
   ],
   "days": [
@@ -1173,10 +1185,29 @@
       "date": "2026-10-05",
       "weekday": "Mon",
       "label": "Mon, Oct 5",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 1,
+      "games": [
+        {
+          "nightId": "slate-2026-10-05-atl-no",
+          "date": "2026-10-05",
+          "league": "nfl",
+          "leagueLabel": "NFL",
+          "leagueProse": "the NFL",
+          "sport": "football",
+          "path": "football/nfl",
+          "espnEvent": "401872979",
+          "home": "Saints",
+          "away": "Falcons",
+          "matchup": "Falcons at Saints",
+          "tipISO": "2026-10-06T00:15:00.000Z",
+          "tipPT": "5:15 PM PT",
+          "tipPTLong": "Mon, Oct 5, 5:15 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
