@@ -1,20 +1,20 @@
 {
-  "generated": "2026-09-21T10:40:59.280Z",
-  "generatedPT": "Mon, Sep 21, 3:40 AM PT",
+  "generated": "2026-09-22T10:20:01.454Z",
+  "generatedPT": "Tue, Sep 22, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-21",
-    "to": "2026-10-04",
+    "from": "2026-09-22",
+    "to": "2026-10-05",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 51,
-    "featured": 51,
+    "unbuilt": 1,
+    "games": 48,
+    "featured": 48,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -28,7 +28,7 @@
       "level": "note",
       "date": "2026-09-22",
       "code": "manifest-duplicate",
-      "message": "slate-all-2026-09-22.tsv has 21 rows but only 20 distinct nightIds — 1 duplicate row(s), deduped"
+      "message": "slate-all-2026-09-22.tsv has 31 rows but only 30 distinct nightIds — 1 duplicate row(s), deduped"
     },
     {
       "level": "error",
@@ -141,72 +141,6 @@
   ],
   "days": [
     {
-      "date": "2026-09-21",
-      "weekday": "Mon",
-      "label": "Mon, Sep 21",
-      "status": "built",
-      "gameCount": 3,
-      "games": [
-        {
-          "nightId": "slate-2026-09-21-tor-bal",
-          "date": "2026-09-21",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401817027",
-          "home": "Orioles",
-          "away": "Blue Jays",
-          "matchup": "Blue Jays at Orioles",
-          "tipISO": "2026-09-21T22:35:00.000Z",
-          "tipPT": "3:35 PM PT",
-          "tipPTLong": "Mon, Sep 21, 3:35 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-21-atl-ny",
-          "date": "2026-09-21",
-          "league": "wnba",
-          "leagueLabel": "WNBA",
-          "leagueProse": "the WNBA",
-          "sport": "basketball",
-          "path": "basketball/wnba",
-          "espnEvent": "401857206",
-          "home": "Liberty",
-          "away": "Dream",
-          "matchup": "Dream at Liberty",
-          "tipISO": "2026-09-22T00:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Mon, Sep 21, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-21-min-sf",
-          "date": "2026-09-21",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401817029",
-          "home": "Giants",
-          "away": "Twins",
-          "matchup": "Twins at Giants",
-          "tipISO": "2026-09-22T01:45:00.000Z",
-          "tipPT": "6:45 PM PT",
-          "tipPTLong": "Mon, Sep 21, 6:45 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": null
-        }
-      ]
-    },
-    {
       "date": "2026-09-22",
       "weekday": "Tue",
       "label": "Tue, Sep 22",
@@ -230,7 +164,7 @@
           "tipPTLong": "Tue, Sep 22, 3:35 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "125"
         },
         {
           "nightId": "slate-2026-09-22-cin-atl",
@@ -249,7 +183,7 @@
           "tipPTLong": "Tue, Sep 22, 4:15 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "126"
         },
         {
           "nightId": "slate-2026-09-22-min-ind",
@@ -268,7 +202,7 @@
           "tipPTLong": "Tue, Sep 22, 5:00 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "135"
         },
         {
           "nightId": "slate-2026-09-22-sd-lad",
@@ -287,7 +221,7 @@
           "tipPTLong": "Tue, Sep 22, 7:10 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "128"
         }
       ]
     },
@@ -1234,6 +1168,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-05",
+      "weekday": "Mon",
+      "label": "Mon, Oct 5",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
