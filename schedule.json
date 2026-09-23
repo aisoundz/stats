@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-23T10:20:01.451Z",
-  "generatedPT": "Wed, Sep 23, 3:20 AM PT",
+  "generated": "2026-09-23T10:40:53.704Z",
+  "generatedPT": "Wed, Sep 23, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 45,
-    "featured": 45,
+    "unbuilt": 0,
+    "games": 49,
+    "featured": 49,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -149,6 +149,18 @@
       "date": "2026-10-05",
       "code": "manifest-duplicate",
       "message": "slate-all-2026-10-05.tsv has 7 rows but only 6 distinct nightIds — 1 duplicate row(s), deduped"
+    },
+    {
+      "level": "error",
+      "date": "2026-10-06",
+      "code": "manifest-conflict",
+      "message": "slate-2026-10-06-tbd-tbd appears twice in slate-all-2026-10-06.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "note",
+      "date": "2026-10-06",
+      "code": "manifest-duplicate",
+      "message": "slate-all-2026-10-06.tsv has 13 rows but only 12 distinct nightIds — 1 duplicate row(s), deduped"
     }
   ],
   "days": [
@@ -1128,10 +1140,86 @@
       "date": "2026-10-06",
       "weekday": "Tue",
       "label": "Tue, Oct 6",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 4,
+      "games": [
+        {
+          "nightId": "slate-2026-10-06-nyi-nyr",
+          "date": "2026-10-06",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401892452",
+          "home": "Rangers",
+          "away": "Islanders",
+          "matchup": "Islanders at Rangers",
+          "tipISO": "2026-10-06T23:30:00.000Z",
+          "tipPT": "4:30 PM PT",
+          "tipPTLong": "Tue, Oct 6, 4:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-06-usm-troy",
+          "date": "2026-10-06",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401871090",
+          "home": "Troy",
+          "away": "Southern Miss",
+          "matchup": "Southern Miss at Troy",
+          "tipISO": "2026-10-07T00:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Tue, Oct 6, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-06-van-chi",
+          "date": "2026-10-06",
+          "league": "mls",
+          "leagueLabel": "MLS",
+          "leagueProse": "MLS",
+          "sport": "soccer",
+          "path": "soccer/usa.1",
+          "espnEvent": "761660",
+          "home": "Chicago Fire FC",
+          "away": "Vancouver Whitecaps",
+          "matchup": "Vancouver Whitecaps at Chicago Fire FC",
+          "tipISO": "2026-10-07T00:30:00.000Z",
+          "tipPT": "5:30 PM PT",
+          "tipPTLong": "Tue, Oct 6, 5:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-06-fla-la",
+          "date": "2026-10-06",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401891806",
+          "home": "Kings",
+          "away": "Panthers",
+          "matchup": "Panthers at Kings",
+          "tipISO": "2026-10-07T02:00:00.000Z",
+          "tipPT": "7:00 PM PT",
+          "tipPTLong": "Tue, Oct 6, 7:00 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
