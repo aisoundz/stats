@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-25T10:20:01.819Z",
-  "generatedPT": "Fri, Sep 25, 3:20 AM PT",
+  "generated": "2026-09-25T10:40:53.688Z",
+  "generatedPT": "Fri, Sep 25, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 44,
-    "featured": 44,
+    "unbuilt": 0,
+    "games": 46,
+    "featured": 46,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -1145,10 +1145,48 @@
       "date": "2026-10-08",
       "weekday": "Thu",
       "label": "Thu, Oct 8",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 2,
+      "games": [
+        {
+          "nightId": "slate-2026-10-08-shsu-lib",
+          "date": "2026-10-08",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401870766",
+          "home": "Liberty",
+          "away": "Sam Houston",
+          "matchup": "Sam Houston at Liberty",
+          "tipISO": "2026-10-08T23:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Thu, Oct 8, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-08-tb-dal",
+          "date": "2026-10-08",
+          "league": "nfl",
+          "leagueLabel": "NFL",
+          "leagueProse": "the NFL",
+          "sport": "football",
+          "path": "football/nfl",
+          "espnEvent": "401872980",
+          "home": "Cowboys",
+          "away": "Buccaneers",
+          "matchup": "Buccaneers at Cowboys",
+          "tipISO": "2026-10-09T00:15:00.000Z",
+          "tipPT": "5:15 PM PT",
+          "tipPTLong": "Thu, Oct 8, 5:15 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
