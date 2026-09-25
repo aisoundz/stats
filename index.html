@@ -4997,6 +4997,17 @@ try{
     if(!raw) return;
     var c=null; try{ c=JSON.parse(raw); }catch(_){ return; }
     if(!c || !Array.isArray(c.games) || !c.games.length) return;
+    
+
+    var _today = '';
+    try{ _today = new Intl.DateTimeFormat('en-CA',{ timeZone:'America/Los_Angeles',
+           year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date()); }catch(_){}
+    if(!c.date || (_today && c.date !== _today)){
+      
+
+      try{ localStorage.removeItem('stats_slate_cache_v1'); }catch(_){}
+      return;
+    }
     SLATE.date  = c.date || null;
     SLATE.games = c.games;
     
@@ -5690,7 +5701,18 @@ async function loadSlate(db, F){
     var date = null, snap = null;
     try{ date = new Date().toLocaleDateString('en-CA', { timeZone:'America/Los_Angeles' }); }catch(_){ date = null; }
     if(date){
-      try{ snap = await F.getDoc(F.doc(db,'slate',date)); }catch(_){ snap = null; }
+      
+
+      var _err = null;
+      for(var _try = 0; _try < 2; _try++){
+        try{ snap = await F.getDoc(F.doc(db,'slate',date)); _err = null; break; }
+        catch(e){ snap = null; _err = e;
+          if(_try === 0){ await new Promise(function(r){ setTimeout(r, 1000); }); } }
+      }
+      if(_err){
+        try{ console.warn('slate read failed twice for ' + date + ' — ' + ((_err && _err.message) || _err)); }catch(_){}
+        try{ trk('slate_read_failed', { date: date, why: String((_err && _err.code) || _err).slice(0, 40) }); }catch(_){}
+      }
       if(!snap || !snap.exists()) snap = null;
     }
     if(!snap){
@@ -17931,7 +17953,7 @@ if(!document.getElementById('ribCss')){
 
 
 
-const STATS_BUILD='2026-09-20-streak.297';
+const STATS_BUILD='2026-09-24-today.298';
 
 
 try{ window.STATS_BUILD = STATS_BUILD; }catch(e){}

@@ -107,5 +107,6 @@
   "ping-ask.js": 10,
   "settle-preds.js": 14,
   "round-name.js": 16,
-  "tape-streak.js": 8
+  "tape-streak.js": 8,
+  "stale-rail.js": 5
 }

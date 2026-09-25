@@ -7523,6 +7523,30 @@ try{
     if(!raw) return;
     var c=null; try{ c=JSON.parse(raw); }catch(_){ return; }
     if(!c || !Array.isArray(c.games) || !c.games.length) return;
+    /* ============ THE COMMENT ABOVE PROMISED THIS AND IT WAS NEVER HERE
+       "ignored entirely if it is for another day" — there was no date
+       comparison at all. The cache painted whatever it last held.
+
+       24 Sept 2026, the founder's phone at 7:20pm: game nights #129 to
+       #132, Guardians at Red Sox and Dream at Liberty, every one of them
+       FINAL. Those were the 23rd. The 24th was #133 to #136 and the
+       network read never replaced them on his device, so he was looking
+       at yesterday's four rooms all evening while four live ones sat one
+       read away. A clean browser never showed it, because a clean browser
+       has no cache to be stale.
+
+       A rail is a list of rooms a person can walk into. Offering
+       yesterday's is worse than offering none: every tile is a dead end
+       and nothing says so. So the date is checked, in Pacific, against
+       the same clock slatePick and tapeToday use. */
+    var _today = '';
+    try{ _today = new Intl.DateTimeFormat('en-CA',{ timeZone:'America/Los_Angeles',
+           year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date()); }catch(_){}
+    if(!c.date || (_today && c.date !== _today)){
+      /* Not ours to show. Drop it so a slow network cannot resurrect it. */
+      try{ localStorage.removeItem('stats_slate_cache_v1'); }catch(_){}
+      return;
+    }
     SLATE.date  = c.date || null;
     SLATE.games = c.games;
     /* NOT `loaded`. That flag means "the network has spoken", and things
@@ -8755,7 +8779,31 @@ async function loadSlate(db, F){
     var date = null, snap = null;
     try{ date = new Date().toLocaleDateString('en-CA', { timeZone:'America/Los_Angeles' }); }catch(_){ date = null; }
     if(date){
-      try{ snap = await F.getDoc(F.doc(db,'slate',date)); }catch(_){ snap = null; }
+      /* ============ A FAILED READ IS NOT AN EMPTY DAY =================
+         This swallowed the error and set snap = null, which is the same
+         value a genuinely missing slate produces. So a dropped read on a
+         phone looked exactly like "no games today", loadSlate returned
+         false, SLATE.loaded stayed false, and the cached rail from
+         YESTERDAY stayed on screen with nothing to replace it and nothing
+         retrying. That is what the founder saw on 24 Sept at 7:20pm: four
+         rooms from the 23rd, all Final, while four live ones sat one read
+         away.
+
+         Two reads, a second apart, before giving up. A phone that drops
+         one request rarely drops two, and the cost of trying again is one
+         read against a budget that exists for exactly this. The failure
+         is also SAID now, because a swallowed error is how this stayed
+         invisible for a month. */
+      var _err = null;
+      for(var _try = 0; _try < 2; _try++){
+        try{ snap = await F.getDoc(F.doc(db,'slate',date)); _err = null; break; }
+        catch(e){ snap = null; _err = e;
+          if(_try === 0){ await new Promise(function(r){ setTimeout(r, 1000); }); } }
+      }
+      if(_err){
+        try{ console.warn('slate read failed twice for ' + date + ' — ' + ((_err && _err.message) || _err)); }catch(_){}
+        try{ trk('slate_read_failed', { date: date, why: String((_err && _err.code) || _err).slice(0, 40) }); }catch(_){}
+      }
       if(!snap || !snap.exists()) snap = null;
     }
     if(!snap){
@@ -26533,7 +26581,7 @@ if(!document.getElementById('ribCss')){
    one-tap refresh if it is behind. It never reloads anything on its own:
    yanking the page out from under someone mid-quarter would be worse than
    the staleness. */
-const STATS_BUILD='2026-09-20-streak.297';
+const STATS_BUILD='2026-09-24-today.298';
 /* VISIBLE VERSION. I kept telling the host to "confirm you're on .31" when
    there was no way to see it without opening devtools on a phone. A build
    you cannot read is a build you cannot verify, and "did the fix land?"
