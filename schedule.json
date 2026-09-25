@@ -1,23 +1,41 @@
 {
-  "generated": "2026-09-24T10:40:40.985Z",
-  "generatedPT": "Thu, Sep 24, 3:40 AM PT",
+  "generated": "2026-09-25T10:20:01.819Z",
+  "generatedPT": "Fri, Sep 25, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-24",
-    "to": "2026-10-07",
+    "from": "2026-09-25",
+    "to": "2026-10-08",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 48,
-    "featured": 48,
+    "unbuilt": 1,
+    "games": 44,
+    "featured": 44,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
+    {
+      "level": "error",
+      "date": "2026-09-25",
+      "code": "manifest-conflict",
+      "message": "slate-2026-09-25-chc-bos appears twice in slate-all-2026-09-25.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "error",
+      "date": "2026-09-25",
+      "code": "manifest-conflict",
+      "message": "slate-2026-09-25-bal-nyy appears twice in slate-all-2026-09-25.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "note",
+      "date": "2026-09-25",
+      "code": "manifest-duplicate",
+      "message": "slate-all-2026-09-25.tsv has 26 rows but only 24 distinct nightIds — 2 duplicate row(s), deduped"
+    },
     {
       "level": "error",
       "date": "2026-09-29",
@@ -171,91 +189,6 @@
   ],
   "days": [
     {
-      "date": "2026-09-24",
-      "weekday": "Thu",
-      "label": "Thu, Sep 24",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-09-24-stl-pit",
-          "date": "2026-09-24",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401817063",
-          "home": "Pirates",
-          "away": "Cardinals",
-          "matchup": "Cardinals at Pirates",
-          "tipISO": "2026-09-24T16:35:00.000Z",
-          "tipPT": "9:35 AM PT",
-          "tipPTLong": "Thu, Sep 24, 9:35 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "133"
-        },
-        {
-          "nightId": "slate-2026-09-24-chw-kc",
-          "date": "2026-09-24",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401817065",
-          "home": "Royals",
-          "away": "White Sox",
-          "matchup": "White Sox at Royals",
-          "tipISO": "2026-09-24T18:10:00.000Z",
-          "tipPT": "11:10 AM PT",
-          "tipPTLong": "Thu, Sep 24, 11:10 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "134"
-        },
-        {
-          "nightId": "slate-2026-09-24-tor-con",
-          "date": "2026-09-24",
-          "league": "wnba",
-          "leagueLabel": "WNBA",
-          "leagueProse": "the WNBA",
-          "sport": "basketball",
-          "path": "basketball/wnba",
-          "espnEvent": "401857215",
-          "home": "Sun",
-          "away": "Tempo",
-          "matchup": "Tempo at Sun",
-          "tipISO": "2026-09-24T23:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Thu, Sep 24, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "140"
-        },
-        {
-          "nightId": "slate-2026-09-24-lib-ccu",
-          "date": "2026-09-24",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401869941",
-          "home": "Coastal Carolina",
-          "away": "Liberty",
-          "matchup": "Liberty at Coastal Carolina",
-          "tipISO": "2026-09-24T23:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Thu, Sep 24, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "136"
-        }
-      ]
-    },
-    {
       "date": "2026-09-25",
       "weekday": "Fri",
       "label": "Fri, Sep 25",
@@ -279,7 +212,7 @@
           "tipPTLong": "Fri, Sep 25, 1:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "137"
         },
         {
           "nightId": "slate-2026-09-25-pit-det",
@@ -298,7 +231,7 @@
           "tipPTLong": "Fri, Sep 25, 3:40 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "138"
         },
         {
           "nightId": "slate-2026-09-25-atl-mia",
@@ -317,7 +250,7 @@
           "tipPTLong": "Fri, Sep 25, 4:10 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "141"
         },
         {
           "nightId": "slate-2026-09-25-nu-iu",
@@ -336,7 +269,7 @@
           "tipPTLong": "Fri, Sep 25, 5:00 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "140"
         }
       ]
     },
@@ -1207,6 +1140,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-08",
+      "weekday": "Thu",
+      "label": "Thu, Oct 8",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
