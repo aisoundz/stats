@@ -1,40 +1,28 @@
 {
-  "generated": "2026-09-25T10:40:53.688Z",
-  "generatedPT": "Fri, Sep 25, 3:40 AM PT",
+  "generated": "2026-09-26T10:20:01.886Z",
+  "generatedPT": "Sat, Sep 26, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-25",
-    "to": "2026-10-08",
+    "from": "2026-09-26",
+    "to": "2026-10-09",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 46,
-    "featured": 46,
-    "unresolvedPicks": 0
+    "unbuilt": 1,
+    "games": 41,
+    "featured": 41,
+    "unresolvedPicks": 1
   },
   "_diagnostics": [
     {
       "level": "error",
-      "date": "2026-09-25",
-      "code": "manifest-conflict",
-      "message": "slate-2026-09-25-chc-bos appears twice in slate-all-2026-09-25.tsv with DIFFERENT values — keeping the first"
-    },
-    {
-      "level": "error",
-      "date": "2026-09-25",
-      "code": "manifest-conflict",
-      "message": "slate-2026-09-25-bal-nyy appears twice in slate-all-2026-09-25.tsv with DIFFERENT values — keeping the first"
-    },
-    {
-      "level": "note",
-      "date": "2026-09-25",
-      "code": "manifest-duplicate",
-      "message": "slate-all-2026-09-25.tsv has 26 rows but only 24 distinct nightIds — 2 duplicate row(s), deduped"
+      "date": "2026-09-26",
+      "code": "pick-not-in-manifest",
+      "message": "slate-2026-09-26-bal-nyy is picked in slate-pick-2026-09-26.txt but is NOT in slate-all-2026-09-26.tsv — it CANNOT be listed. Rebuild the manifest for 2026-09-26 or drop the pick."
     },
     {
       "level": "error",
@@ -189,96 +177,11 @@
   ],
   "days": [
     {
-      "date": "2026-09-25",
-      "weekday": "Fri",
-      "label": "Fri, Sep 25",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-09-25-army-tem",
-          "date": "2026-09-25",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401862779",
-          "home": "Temple",
-          "away": "Army",
-          "matchup": "Army at Temple",
-          "tipISO": "2026-09-25T20:00:00.000Z",
-          "tipPT": "1:00 PM PT",
-          "tipPTLong": "Fri, Sep 25, 1:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "137"
-        },
-        {
-          "nightId": "slate-2026-09-25-pit-det",
-          "date": "2026-09-25",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401817077",
-          "home": "Tigers",
-          "away": "Pirates",
-          "matchup": "Pirates at Tigers",
-          "tipISO": "2026-09-25T22:40:00.000Z",
-          "tipPT": "3:40 PM PT",
-          "tipPTLong": "Fri, Sep 25, 3:40 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "138"
-        },
-        {
-          "nightId": "slate-2026-09-25-atl-mia",
-          "date": "2026-09-25",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401817072",
-          "home": "Marlins",
-          "away": "Braves",
-          "matchup": "Braves at Marlins",
-          "tipISO": "2026-09-25T23:10:00.000Z",
-          "tipPT": "4:10 PM PT",
-          "tipPTLong": "Fri, Sep 25, 4:10 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "141"
-        },
-        {
-          "nightId": "slate-2026-09-25-nu-iu",
-          "date": "2026-09-25",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401858461",
-          "home": "Indiana",
-          "away": "Northwestern",
-          "matchup": "Northwestern at Indiana",
-          "tipISO": "2026-09-26T00:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Fri, Sep 25, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "140"
-        }
-      ]
-    },
-    {
       "date": "2026-09-26",
       "weekday": "Sat",
       "label": "Sat, Sep 26",
       "status": "built",
-      "gameCount": 6,
+      "gameCount": 5,
       "games": [
         {
           "nightId": "slate-2026-09-26-pit-det",
@@ -297,7 +200,7 @@
           "tipPTLong": "Sat, Sep 26, 10:10 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "186"
         },
         {
           "nightId": "slate-2026-09-26-uiw-txst",
@@ -316,26 +219,7 @@
           "tipPTLong": "Sat, Sep 26, 3:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-26-bal-nyy",
-          "date": "2026-09-26",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401817088",
-          "home": "Yankees",
-          "away": "Orioles",
-          "matchup": "Orioles at Yankees",
-          "tipISO": "2026-09-26T23:15:00.000Z",
-          "tipPT": "4:15 PM PT",
-          "tipPTLong": "Sat, Sep 26, 4:15 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
+          "gameNight": "142"
         },
         {
           "nightId": "slate-2026-09-26-sd-atx",
@@ -354,7 +238,7 @@
           "tipPTLong": "Sat, Sep 26, 5:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "204"
         },
         {
           "nightId": "slate-2026-09-26-ne-rsl",
@@ -373,7 +257,7 @@
           "tipPTLong": "Sat, Sep 26, 6:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "206"
         },
         {
           "nightId": "slate-2026-09-26-gt-stan",
@@ -392,8 +276,11 @@
           "tipPTLong": "Sat, Sep 26, 7:30 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "145"
         }
+      ],
+      "unresolved": [
+        "slate-2026-09-26-bal-nyy"
       ]
     },
     {
@@ -1187,6 +1074,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-09",
+      "weekday": "Fri",
+      "label": "Fri, Oct 9",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
