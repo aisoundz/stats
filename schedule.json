@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-27T10:20:01.504Z",
-  "generatedPT": "Sun, Sep 27, 3:20 AM PT",
+  "generated": "2026-09-27T10:42:21.135Z",
+  "generatedPT": "Sun, Sep 27, 3:42 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 40,
-    "featured": 40,
+    "unbuilt": 0,
+    "games": 44,
+    "featured": 44,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -1051,10 +1051,86 @@
       "date": "2026-10-10",
       "weekday": "Sat",
       "label": "Sat, Oct 10",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 4,
+      "games": [
+        {
+          "nightId": "slate-2026-10-10-mtl-tor",
+          "date": "2026-10-10",
+          "league": "mls",
+          "leagueLabel": "MLS",
+          "leagueProse": "MLS",
+          "sport": "soccer",
+          "path": "soccer/usa.1",
+          "espnEvent": "761845",
+          "home": "Toronto FC",
+          "away": "CF Montréal",
+          "matchup": "CF Montréal at Toronto FC",
+          "tipISO": "2026-10-10T17:00:00.000Z",
+          "tipPT": "10:00 AM PT",
+          "tipPTLong": "Sat, Oct 10, 10:00 AM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-10-stan-nd",
+          "date": "2026-10-10",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401858257",
+          "home": "Notre Dame",
+          "away": "Stanford",
+          "matchup": "Stanford at Notre Dame",
+          "tipISO": "2026-10-10T19:30:00.000Z",
+          "tipPT": "12:30 PM PT",
+          "tipPTLong": "Sat, Oct 10, 12:30 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-10-sdsu-orst",
+          "date": "2026-10-10",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401860902",
+          "home": "Oregon State",
+          "away": "San Diego State",
+          "matchup": "San Diego State at Oregon State",
+          "tipISO": "2026-10-10T22:00:00.000Z",
+          "tipPT": "3:00 PM PT",
+          "tipPTLong": "Sat, Oct 10, 3:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-10-dal-pit",
+          "date": "2026-10-10",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401892475",
+          "home": "Penguins",
+          "away": "Stars",
+          "matchup": "Stars at Penguins",
+          "tipISO": "2026-10-10T23:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Sat, Oct 10, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
