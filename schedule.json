@@ -1,20 +1,20 @@
 {
-  "generated": "2026-09-27T10:42:21.135Z",
-  "generatedPT": "Sun, Sep 27, 3:42 AM PT",
+  "generated": "2026-09-28T10:20:01.428Z",
+  "generatedPT": "Mon, Sep 28, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-27",
-    "to": "2026-10-10",
+    "from": "2026-09-28",
+    "to": "2026-10-11",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 44,
-    "featured": 44,
+    "unbuilt": 1,
+    "games": 39,
+    "featured": 39,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -171,110 +171,6 @@
   ],
   "days": [
     {
-      "date": "2026-09-27",
-      "weekday": "Sun",
-      "label": "Sun, Sep 27",
-      "status": "built",
-      "gameCount": 5,
-      "games": [
-        {
-          "nightId": "slate-2026-09-27-lac-buf",
-          "date": "2026-09-27",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872953",
-          "home": "Bills",
-          "away": "Chargers",
-          "matchup": "Chargers at Bills",
-          "tipISO": "2026-09-27T17:00:00.000Z",
-          "tipPT": "10:00 AM PT",
-          "tipPTLong": "Sun, Sep 27, 10:00 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "146"
-        },
-        {
-          "nightId": "slate-2026-09-27-chc-bos",
-          "date": "2026-09-27",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401817089",
-          "home": "Red Sox",
-          "away": "Cubs",
-          "matchup": "Cubs at Red Sox",
-          "tipISO": "2026-09-27T19:05:00.000Z",
-          "tipPT": "12:05 PM PT",
-          "tipPTLong": "Sun, Sep 27, 12:05 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "147"
-        },
-        {
-          "nightId": "slate-2026-09-27-ari-sf",
-          "date": "2026-09-27",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872958",
-          "home": "49ers",
-          "away": "Cardinals",
-          "matchup": "Cardinals at 49ers",
-          "tipISO": "2026-09-27T20:05:00.000Z",
-          "tipPT": "1:05 PM PT",
-          "tipPTLong": "Sun, Sep 27, 1:05 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "162"
-        },
-        {
-          "nightId": "slate-2026-09-27-mia-clb",
-          "date": "2026-09-27",
-          "league": "mls",
-          "leagueLabel": "MLS",
-          "leagueProse": "MLS",
-          "sport": "soccer",
-          "path": "soccer/usa.1",
-          "espnEvent": "761844",
-          "home": "Columbus Crew",
-          "away": "Inter Miami CF",
-          "matchup": "Inter Miami CF at Columbus Crew",
-          "tipISO": "2026-09-27T23:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Sun, Sep 27, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "149"
-        },
-        {
-          "nightId": "slate-2026-09-27-lar-den",
-          "date": "2026-09-27",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872962",
-          "home": "Broncos",
-          "away": "Rams",
-          "matchup": "Rams at Broncos",
-          "tipISO": "2026-09-28T00:20:00.000Z",
-          "tipPT": "5:20 PM PT",
-          "tipPTLong": "Sun, Sep 27, 5:20 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "164"
-        }
-      ]
-    },
-    {
       "date": "2026-09-28",
       "weekday": "Mon",
       "label": "Mon, Sep 28",
@@ -298,7 +194,7 @@
           "tipPTLong": "Mon, Sep 28, 5:15 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "151"
         }
       ]
     },
@@ -1131,6 +1027,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-11",
+      "weekday": "Sun",
+      "label": "Sun, Oct 11",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
