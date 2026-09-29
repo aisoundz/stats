@@ -1,47 +1,23 @@
 {
-  "generated": "2026-09-28T10:41:03.251Z",
-  "generatedPT": "Mon, Sep 28, 3:41 AM PT",
+  "generated": "2026-09-29T10:20:01.354Z",
+  "generatedPT": "Tue, Sep 29, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-28",
-    "to": "2026-10-11",
+    "from": "2026-09-29",
+    "to": "2026-10-12",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 43,
-    "featured": 43,
+    "unbuilt": 1,
+    "games": 42,
+    "featured": 42,
     "unresolvedPicks": 1
   },
   "_diagnostics": [
-    {
-      "level": "error",
-      "date": "2026-09-29",
-      "code": "manifest-conflict",
-      "message": "slate-2026-09-29-tbd-tbd appears twice in slate-all-2026-09-29.tsv with DIFFERENT values — keeping the first"
-    },
-    {
-      "level": "error",
-      "date": "2026-09-29",
-      "code": "manifest-conflict",
-      "message": "slate-2026-09-29-tbd-tbd appears twice in slate-all-2026-09-29.tsv with DIFFERENT values — keeping the first"
-    },
-    {
-      "level": "error",
-      "date": "2026-09-29",
-      "code": "manifest-conflict",
-      "message": "slate-2026-09-29-tbd-tbd appears twice in slate-all-2026-09-29.tsv with DIFFERENT values — keeping the first"
-    },
-    {
-      "level": "note",
-      "date": "2026-09-29",
-      "code": "manifest-duplicate",
-      "message": "slate-all-2026-09-29.tsv has 9 rows but only 6 distinct nightIds — 3 duplicate row(s), deduped"
-    },
     {
       "level": "error",
       "date": "2026-09-30",
@@ -177,34 +153,6 @@
   ],
   "days": [
     {
-      "date": "2026-09-28",
-      "weekday": "Mon",
-      "label": "Mon, Sep 28",
-      "status": "built",
-      "gameCount": 1,
-      "games": [
-        {
-          "nightId": "slate-2026-09-28-phi-chi",
-          "date": "2026-09-28",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872963",
-          "home": "Bears",
-          "away": "Eagles",
-          "matchup": "Eagles at Bears",
-          "tipISO": "2026-09-29T00:15:00.000Z",
-          "tipPT": "5:15 PM PT",
-          "tipPTLong": "Mon, Sep 28, 5:15 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": null
-        }
-      ]
-    },
-    {
       "date": "2026-09-29",
       "weekday": "Tue",
       "label": "Tue, Sep 29",
@@ -228,7 +176,7 @@
           "tipPTLong": "Tue, Sep 29, 2:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "152"
         },
         {
           "nightId": "slate-2026-09-29-nyr-bos",
@@ -247,7 +195,7 @@
           "tipPTLong": "Tue, Sep 29, 5:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "153"
         },
         {
           "nightId": "slate-2026-09-29-chi-vgk",
@@ -266,7 +214,7 @@
           "tipPTLong": "Tue, Sep 29, 7:30 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "154"
         }
       ]
     },
@@ -1121,6 +1069,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-12",
+      "weekday": "Mon",
+      "label": "Mon, Oct 12",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
