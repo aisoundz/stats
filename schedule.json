@@ -1,46 +1,34 @@
 {
-  "generated": "2026-09-29T10:40:42.921Z",
-  "generatedPT": "Tue, Sep 29, 3:40 AM PT",
+  "generated": "2026-09-30T10:20:01.229Z",
+  "generatedPT": "Wed, Sep 30, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-09-29",
-    "to": "2026-10-12",
+    "from": "2026-09-30",
+    "to": "2026-10-13",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 43,
-    "featured": 43,
-    "unresolvedPicks": 1
+    "unbuilt": 1,
+    "games": 38,
+    "featured": 38,
+    "unresolvedPicks": 3
   },
   "_diagnostics": [
     {
       "level": "error",
       "date": "2026-09-30",
-      "code": "manifest-conflict",
-      "message": "slate-2026-09-30-tbd-tbd appears twice in slate-all-2026-09-30.tsv with DIFFERENT values — keeping the first"
+      "code": "pick-not-in-manifest",
+      "message": "slate-2026-09-30-pit-phi is picked in slate-pick-2026-09-30.txt but is NOT in slate-all-2026-09-30.tsv — it CANNOT be listed. Rebuild the manifest for 2026-09-30 or drop the pick."
     },
     {
       "level": "error",
       "date": "2026-09-30",
-      "code": "manifest-conflict",
-      "message": "slate-2026-09-30-tbd-tbd appears twice in slate-all-2026-09-30.tsv with DIFFERENT values — keeping the first"
-    },
-    {
-      "level": "error",
-      "date": "2026-09-30",
-      "code": "manifest-conflict",
-      "message": "slate-2026-09-30-tbd-tbd appears twice in slate-all-2026-09-30.tsv with DIFFERENT values — keeping the first"
-    },
-    {
-      "level": "note",
-      "date": "2026-09-30",
-      "code": "manifest-duplicate",
-      "message": "slate-all-2026-09-30.tsv has 7 rows but only 4 distinct nightIds — 3 duplicate row(s), deduped"
+      "code": "pick-not-in-manifest",
+      "message": "slate-2026-09-30-la-col is picked in slate-pick-2026-09-30.txt but is NOT in slate-all-2026-09-30.tsv — it CANNOT be listed. Rebuild the manifest for 2026-09-30 or drop the pick."
     },
     {
       "level": "error",
@@ -165,117 +153,17 @@
   ],
   "days": [
     {
-      "date": "2026-09-29",
-      "weekday": "Tue",
-      "label": "Tue, Sep 29",
-      "status": "built",
-      "gameCount": 3,
-      "games": [
-        {
-          "nightId": "slate-2026-09-29-fla-car",
-          "date": "2026-09-29",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401891773",
-          "home": "Hurricanes",
-          "away": "Panthers",
-          "matchup": "Panthers at Hurricanes",
-          "tipISO": "2026-09-29T21:00:00.000Z",
-          "tipPT": "2:00 PM PT",
-          "tipPTLong": "Tue, Sep 29, 2:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "152"
-        },
-        {
-          "nightId": "slate-2026-09-29-nyr-bos",
-          "date": "2026-09-29",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401891774",
-          "home": "Bruins",
-          "away": "Rangers",
-          "matchup": "Rangers at Bruins",
-          "tipISO": "2026-09-30T00:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Tue, Sep 29, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "153"
-        },
-        {
-          "nightId": "slate-2026-09-29-chi-vgk",
-          "date": "2026-09-29",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401891775",
-          "home": "Golden Knights",
-          "away": "Blackhawks",
-          "matchup": "Blackhawks at Golden Knights",
-          "tipISO": "2026-09-30T02:30:00.000Z",
-          "tipPT": "7:30 PM PT",
-          "tipPTLong": "Tue, Sep 29, 7:30 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "154"
-        }
-      ]
-    },
-    {
       "date": "2026-09-30",
       "weekday": "Wed",
       "label": "Wed, Sep 30",
       "status": "built",
-      "gameCount": 2,
-      "games": [
-        {
-          "nightId": "slate-2026-09-30-pit-phi",
-          "date": "2026-09-30",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401891821",
-          "home": "Flyers",
-          "away": "Penguins",
-          "matchup": "Penguins at Flyers",
-          "tipISO": "2026-09-30T23:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Wed, Sep 30, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-09-30-la-col",
-          "date": "2026-09-30",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401891780",
-          "home": "Avalanche",
-          "away": "Kings",
-          "matchup": "Kings at Avalanche",
-          "tipISO": "2026-10-01T02:00:00.000Z",
-          "tipPT": "7:00 PM PT",
-          "tipPTLong": "Wed, Sep 30, 7:00 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": null
-        }
-      ]
+      "gameCount": 0,
+      "games": [],
+      "unresolved": [
+        "slate-2026-09-30-pit-phi",
+        "slate-2026-09-30-la-col"
+      ],
+      "note": "Rooms are picked for this night but their details are not built yet."
     },
     {
       "date": "2026-10-01",
@@ -1109,6 +997,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-13",
+      "weekday": "Tue",
+      "label": "Tue, Oct 13",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
