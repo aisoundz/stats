@@ -203,6 +203,7 @@ if [ "$MODE" = "build" ] || [ "$MODE" = "dry" ]; then
     fi
   done
   GAMES=$(wc -l < "$ALL")
+[ "$GAMES" -gt 0 ] || echo "  WARNING: $ALL is readable but has no rows — nothing will be hosted for $DATE"
   echo "--- $GAMES game(s) built in total ---"
   # THE SUMMARY LINE A PERSON READS AT 3AM. A failure that only appears
   # forty lines up, between two healthy leagues, is a failure nobody sees.
@@ -257,7 +258,25 @@ fi
 # its absence. The flock makes the half-hourly cron safe against itself: a
 # build takes minutes, the ticks are 30 apart, but a slow feed must not start
 # a second builder on top of the first.
-if [ ! -f "$ALL" ]; then
+# ============ AN EMPTY MANIFEST IS A MISSING MANIFEST ================
+# 3 Oct 2026. slate-all-2026-10-03.tsv existed and was ZERO BYTES. Every
+# check here asked "does the file exist", which it did, so the self-heal
+# never fired, GAMES came out 0, and the log said
+#
+#     --- 0 game(s) in tonight's manifest ---
+#
+# on a Saturday with 71 college football and NHL games on. No runner
+# started, the rail was never narrowed from the 71 built rows, and
+# schedule/current stayed pointed at 29 September for four days.
+#
+# THREE DAYS OF GAMES WERE LOST THIS WAY: 1, 2 and 3 October, plus four
+# days ahead. September is intact, so it began on the 1st.
+#
+# -s is the whole fix: exists AND is not empty. A truncated write is the
+# normal way a file ends up zero bytes, and it is indistinguishable from
+# a healthy one to -f.
+if [ ! -s "$ALL" ]; then
+  [ -f "$ALL" ] && echo "  manifest for $DATE exists but is EMPTY — treating it as missing and rebuilding"
   echo "no manifest for $DATE — building one now (self-heal)"
   if flock -n 8; then
     LEAGUES="$LEAGUES" "$0" --build || echo "  self-heal build failed; see above"
@@ -266,7 +285,7 @@ if [ ! -f "$ALL" ]; then
     exit 0
   fi 8>"$LOGDIR/heal-$DATE.lock"
 fi
-[ -f "$ALL" ] || { echo "still no manifest for $DATE after the self-heal — giving up this tick"; exit 0; }
+[ -s "$ALL" ] || { echo "still no USABLE manifest for $DATE after the self-heal (missing or empty) — giving up this tick"; exit 0; }
 GAMES=$(wc -l < "$ALL")
 echo "--- $GAMES game(s) in tonight's manifest ---"
 [ "$GAMES" -gt 0 ] || exit 0
