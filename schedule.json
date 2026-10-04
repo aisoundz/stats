@@ -1,59 +1,23 @@
 {
-  "generated": "2026-10-03T10:43:52.143Z",
-  "generatedPT": "Sat, Oct 3, 3:43 AM PT",
+  "generated": "2026-10-04T10:20:01.940Z",
+  "generatedPT": "Sun, Oct 4, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-03",
-    "to": "2026-10-16",
+    "from": "2026-10-04",
+    "to": "2026-10-17",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 10,
+    "built": 9,
     "off": 0,
-    "unbuilt": 4,
+    "unbuilt": 5,
     "games": 27,
     "featured": 27,
-    "unresolvedPicks": 5
+    "unresolvedPicks": 1
   },
   "_diagnostics": [
-    {
-      "level": "error",
-      "date": "2026-10-03",
-      "code": "pick-not-in-manifest",
-      "message": "slate-2026-10-03-navy-afa is picked in slate-pick-2026-10-03.txt but is NOT in slate-all-2026-10-03.tsv — it CANNOT be listed. Rebuild the manifest for 2026-10-03 or drop the pick."
-    },
-    {
-      "level": "error",
-      "date": "2026-10-03",
-      "code": "pick-not-in-manifest",
-      "message": "slate-2026-10-03-cal-unlv is picked in slate-pick-2026-10-03.txt but is NOT in slate-all-2026-10-03.tsv — it CANNOT be listed. Rebuild the manifest for 2026-10-03 or drop the pick."
-    },
-    {
-      "level": "error",
-      "date": "2026-10-03",
-      "code": "pick-not-in-manifest",
-      "message": "slate-2026-10-03-orst-csu is picked in slate-pick-2026-10-03.txt but is NOT in slate-all-2026-10-03.tsv — it CANNOT be listed. Rebuild the manifest for 2026-10-03 or drop the pick."
-    },
-    {
-      "level": "error",
-      "date": "2026-10-03",
-      "code": "pick-not-in-manifest",
-      "message": "slate-2026-10-03-fres-wsu is picked in slate-pick-2026-10-03.txt but is NOT in slate-all-2026-10-03.tsv — it CANNOT be listed. Rebuild the manifest for 2026-10-03 or drop the pick."
-    },
-    {
-      "level": "error",
-      "date": "2026-10-04",
-      "code": "manifest-conflict",
-      "message": "slate-2026-10-04-tbd-tbd appears twice in slate-all-2026-10-04.tsv with DIFFERENT values — keeping the first"
-    },
-    {
-      "level": "note",
-      "date": "2026-10-04",
-      "code": "manifest-duplicate",
-      "message": "slate-all-2026-10-04.tsv has 21 rows but only 20 distinct nightIds — 1 duplicate row(s), deduped"
-    },
     {
       "level": "error",
       "date": "2026-10-05",
@@ -117,21 +81,6 @@
   ],
   "days": [
     {
-      "date": "2026-10-03",
-      "weekday": "Sat",
-      "label": "Sat, Oct 3",
-      "status": "built",
-      "gameCount": 0,
-      "games": [],
-      "unresolved": [
-        "slate-2026-10-03-navy-afa",
-        "slate-2026-10-03-cal-unlv",
-        "slate-2026-10-03-orst-csu",
-        "slate-2026-10-03-fres-wsu"
-      ],
-      "note": "Rooms are picked for this night but their details are not built yet."
-    },
-    {
       "date": "2026-10-04",
       "weekday": "Sun",
       "label": "Sun, Oct 4",
@@ -155,7 +104,7 @@
           "tipPTLong": "Sun, Oct 4, 6:30 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "192"
         },
         {
           "nightId": "slate-2026-10-04-ne-buf",
@@ -174,7 +123,7 @@
           "tipPTLong": "Sun, Oct 4, 10:00 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "194"
         },
         {
           "nightId": "slate-2026-10-04-mia-min",
@@ -193,7 +142,7 @@
           "tipPTLong": "Sun, Oct 4, 1:05 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "195"
         },
         {
           "nightId": "slate-2026-10-04-det-car",
@@ -212,7 +161,7 @@
           "tipPTLong": "Sun, Oct 4, 5:20 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "199"
         }
       ]
     },
@@ -639,7 +588,7 @@
           "tipPTLong": "Sun, Oct 11, 6:30 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "353"
         },
         {
           "nightId": "slate-2026-10-11-hou-ten",
@@ -658,7 +607,7 @@
           "tipPTLong": "Sun, Oct 11, 10:00 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "355"
         },
         {
           "nightId": "slate-2026-10-11-den-lac",
@@ -677,7 +626,7 @@
           "tipPTLong": "Sun, Oct 11, 1:05 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "356"
         },
         {
           "nightId": "slate-2026-10-11-la-stl",
@@ -696,7 +645,7 @@
           "tipPTLong": "Sun, Oct 11, 4:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "359"
         }
       ]
     },
@@ -759,6 +708,15 @@
       "date": "2026-10-16",
       "weekday": "Fri",
       "label": "Fri, Oct 16",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
+    },
+    {
+      "date": "2026-10-17",
+      "weekday": "Sat",
+      "label": "Sat, Oct 17",
       "status": "unbuilt",
       "gameCount": null,
       "games": [],
