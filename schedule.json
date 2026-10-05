@@ -1,35 +1,23 @@
 {
-  "generated": "2026-10-04T10:42:22.484Z",
-  "generatedPT": "Sun, Oct 4, 3:42 AM PT",
+  "generated": "2026-10-05T10:20:01.386Z",
+  "generatedPT": "Mon, Oct 5, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-04",
-    "to": "2026-10-17",
+    "from": "2026-10-05",
+    "to": "2026-10-18",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 42,
-    "featured": 42,
+    "unbuilt": 1,
+    "games": 38,
+    "featured": 38,
     "unresolvedPicks": 1
   },
   "_diagnostics": [
-    {
-      "level": "error",
-      "date": "2026-10-05",
-      "code": "manifest-conflict",
-      "message": "slate-2026-10-05-tbd-tbd appears twice in slate-all-2026-10-05.tsv with DIFFERENT values — keeping the first"
-    },
-    {
-      "level": "note",
-      "date": "2026-10-05",
-      "code": "manifest-duplicate",
-      "message": "slate-all-2026-10-05.tsv has 7 rows but only 6 distinct nightIds — 1 duplicate row(s), deduped"
-    },
     {
       "level": "error",
       "date": "2026-10-05",
@@ -111,91 +99,6 @@
   ],
   "days": [
     {
-      "date": "2026-10-04",
-      "weekday": "Sun",
-      "label": "Sun, Oct 4",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-10-04-ind-wsh",
-          "date": "2026-10-04",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872965",
-          "home": "Commanders",
-          "away": "Colts",
-          "matchup": "Colts at Commanders",
-          "tipISO": "2026-10-04T13:30:00.000Z",
-          "tipPT": "6:30 AM PT",
-          "tipPTLong": "Sun, Oct 4, 6:30 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "192"
-        },
-        {
-          "nightId": "slate-2026-10-04-ne-buf",
-          "date": "2026-10-04",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872971",
-          "home": "Bills",
-          "away": "Patriots",
-          "matchup": "Patriots at Bills",
-          "tipISO": "2026-10-04T17:00:00.000Z",
-          "tipPT": "10:00 AM PT",
-          "tipPTLong": "Sun, Oct 4, 10:00 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "194"
-        },
-        {
-          "nightId": "slate-2026-10-04-mia-min",
-          "date": "2026-10-04",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872974",
-          "home": "Vikings",
-          "away": "Dolphins",
-          "matchup": "Dolphins at Vikings",
-          "tipISO": "2026-10-04T20:05:00.000Z",
-          "tipPT": "1:05 PM PT",
-          "tipPTLong": "Sun, Oct 4, 1:05 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "195"
-        },
-        {
-          "nightId": "slate-2026-10-04-det-car",
-          "date": "2026-10-04",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872978",
-          "home": "Panthers",
-          "away": "Lions",
-          "matchup": "Lions at Panthers",
-          "tipISO": "2026-10-05T00:20:00.000Z",
-          "tipPT": "5:20 PM PT",
-          "tipPTLong": "Sun, Oct 4, 5:20 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "199"
-        }
-      ]
-    },
-    {
       "date": "2026-10-05",
       "weekday": "Mon",
       "label": "Mon, Oct 5",
@@ -219,7 +122,7 @@
           "tipPTLong": "Mon, Oct 5, 5:15 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "200"
         }
       ],
       "unresolved": [
@@ -1036,6 +939,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-18",
+      "weekday": "Sun",
+      "label": "Sun, Oct 18",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
