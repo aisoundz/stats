@@ -1,41 +1,23 @@
 {
-  "generated": "2026-10-05T10:40:59.047Z",
-  "generatedPT": "Mon, Oct 5, 3:40 AM PT",
+  "generated": "2026-10-06T10:20:01.817Z",
+  "generatedPT": "Tue, Oct 6, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-05",
-    "to": "2026-10-18",
+    "from": "2026-10-06",
+    "to": "2026-10-19",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 42,
-    "featured": 42,
-    "unresolvedPicks": 1
+    "unbuilt": 1,
+    "games": 41,
+    "featured": 41,
+    "unresolvedPicks": 0
   },
   "_diagnostics": [
-    {
-      "level": "error",
-      "date": "2026-10-05",
-      "code": "pick-not-in-manifest",
-      "message": "slate-2026-10-05-yankeesredsox-tb is picked in slate-pick-2026-10-05.txt but is NOT in slate-all-2026-10-05.tsv — it CANNOT be listed. Rebuild the manifest for 2026-10-05 or drop the pick."
-    },
-    {
-      "level": "error",
-      "date": "2026-10-06",
-      "code": "manifest-conflict",
-      "message": "slate-2026-10-06-tbd-tbd appears twice in slate-all-2026-10-06.tsv with DIFFERENT values — keeping the first"
-    },
-    {
-      "level": "note",
-      "date": "2026-10-06",
-      "code": "manifest-duplicate",
-      "message": "slate-all-2026-10-06.tsv has 13 rows but only 12 distinct nightIds — 1 duplicate row(s), deduped"
-    },
     {
       "level": "error",
       "date": "2026-10-07",
@@ -99,37 +81,6 @@
   ],
   "days": [
     {
-      "date": "2026-10-05",
-      "weekday": "Mon",
-      "label": "Mon, Oct 5",
-      "status": "built",
-      "gameCount": 1,
-      "games": [
-        {
-          "nightId": "slate-2026-10-05-atl-no",
-          "date": "2026-10-05",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872979",
-          "home": "Saints",
-          "away": "Falcons",
-          "matchup": "Falcons at Saints",
-          "tipISO": "2026-10-06T00:15:00.000Z",
-          "tipPT": "5:15 PM PT",
-          "tipPTLong": "Mon, Oct 5, 5:15 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "200"
-        }
-      ],
-      "unresolved": [
-        "slate-2026-10-05-yankeesredsox-tb"
-      ]
-    },
-    {
       "date": "2026-10-06",
       "weekday": "Tue",
       "label": "Tue, Oct 6",
@@ -153,7 +104,7 @@
           "tipPTLong": "Tue, Oct 6, 4:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "195"
         },
         {
           "nightId": "slate-2026-10-06-usm-troy",
@@ -172,7 +123,7 @@
           "tipPTLong": "Tue, Oct 6, 5:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "202"
         },
         {
           "nightId": "slate-2026-10-06-van-chi",
@@ -191,7 +142,7 @@
           "tipPTLong": "Tue, Oct 6, 5:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "203"
         },
         {
           "nightId": "slate-2026-10-06-fla-la",
@@ -210,7 +161,7 @@
           "tipPTLong": "Tue, Oct 6, 7:00 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "198"
         }
       ]
     },
@@ -1024,6 +975,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-19",
+      "weekday": "Mon",
+      "label": "Mon, Oct 19",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
