@@ -1,20 +1,20 @@
 {
-  "generated": "2026-10-07T10:40:45.457Z",
-  "generatedPT": "Wed, Oct 7, 3:40 AM PT",
+  "generated": "2026-10-08T10:20:01.355Z",
+  "generatedPT": "Thu, Oct 8, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-07",
-    "to": "2026-10-20",
+    "from": "2026-10-08",
+    "to": "2026-10-21",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 44,
-    "featured": 44,
+    "unbuilt": 1,
+    "games": 41,
+    "featured": 41,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -75,72 +75,6 @@
   ],
   "days": [
     {
-      "date": "2026-10-07",
-      "weekday": "Wed",
-      "label": "Wed, Oct 7",
-      "status": "built",
-      "gameCount": 3,
-      "games": [
-        {
-          "nightId": "slate-2026-10-07-jxst-kenn",
-          "date": "2026-10-07",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401871051",
-          "home": "Kennesaw State",
-          "away": "Jacksonville State",
-          "matchup": "Jacksonville State at Kennesaw State",
-          "tipISO": "2026-10-07T23:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Wed, Oct 7, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "199"
-        },
-        {
-          "nightId": "slate-2026-10-07-nmsu-fiu",
-          "date": "2026-10-07",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401871066",
-          "home": "Florida International",
-          "away": "New Mexico State",
-          "matchup": "New Mexico State at Florida International",
-          "tipISO": "2026-10-07T23:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Wed, Oct 7, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "202"
-        },
-        {
-          "nightId": "slate-2026-10-07-edm-ana",
-          "date": "2026-10-07",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401892456",
-          "home": "Ducks",
-          "away": "Oilers",
-          "matchup": "Oilers at Ducks",
-          "tipISO": "2026-10-08T02:00:00.000Z",
-          "tipPT": "7:00 PM PT",
-          "tipPTLong": "Wed, Oct 7, 7:00 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "201"
-        }
-      ]
-    },
-    {
       "date": "2026-10-08",
       "weekday": "Thu",
       "label": "Thu, Oct 8",
@@ -164,7 +98,7 @@
           "tipPTLong": "Thu, Oct 8, 4:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "208"
         },
         {
           "nightId": "slate-2026-10-08-tb-dal",
@@ -183,7 +117,7 @@
           "tipPTLong": "Thu, Oct 8, 5:15 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "216"
         }
       ]
     },
@@ -1035,6 +969,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-21",
+      "weekday": "Wed",
+      "label": "Wed, Oct 21",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
