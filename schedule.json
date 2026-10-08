@@ -1,6 +1,6 @@
 {
-  "generated": "2026-10-08T10:20:01.355Z",
-  "generatedPT": "Thu, Oct 8, 3:20 AM PT",
+  "generated": "2026-10-08T10:40:32.411Z",
+  "generatedPT": "Thu, Oct 8, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,12 +10,12 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 41,
-    "featured": 41,
-    "unresolvedPicks": 0
+    "unbuilt": 0,
+    "games": 44,
+    "featured": 44,
+    "unresolvedPicks": 1
   },
   "_diagnostics": [
     {
@@ -71,6 +71,12 @@
       "date": "2026-10-19",
       "code": "manifest-duplicate",
       "message": "slate-all-2026-10-19.tsv has 8 rows but only 7 distinct nightIds — 1 duplicate row(s), deduped"
+    },
+    {
+      "level": "error",
+      "date": "2026-10-19",
+      "code": "pick-not-in-manifest",
+      "message": "slate-2026-10-19-clechw-tb is picked in slate-pick-2026-10-19.txt but is NOT in slate-all-2026-10-19.tsv — it CANNOT be listed. Rebuild the manifest for 2026-10-19 or drop the pick."
     }
   ],
   "days": [
@@ -883,6 +889,9 @@
           "mainEvent": true,
           "gameNight": null
         }
+      ],
+      "unresolved": [
+        "slate-2026-10-19-clechw-tb"
       ]
     },
     {
@@ -974,10 +983,67 @@
       "date": "2026-10-21",
       "weekday": "Wed",
       "label": "Wed, Oct 21",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 3,
+      "games": [
+        {
+          "nightId": "slate-2026-10-21-dc-cin",
+          "date": "2026-10-21",
+          "league": "mls",
+          "leagueLabel": "MLS",
+          "leagueProse": "MLS",
+          "sport": "soccer",
+          "path": "soccer/usa.1",
+          "espnEvent": "761773",
+          "home": "FC Cincinnati",
+          "away": "D.C. United",
+          "matchup": "D.C. United at FC Cincinnati",
+          "tipISO": "2026-10-21T23:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Wed, Oct 21, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-21-phi-buf",
+          "date": "2026-10-21",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401892550",
+          "home": "Sabres",
+          "away": "Flyers",
+          "matchup": "Flyers at Sabres",
+          "tipISO": "2026-10-21T23:30:00.000Z",
+          "tipPT": "4:30 PM PT",
+          "tipPTLong": "Wed, Oct 21, 4:30 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-21-nmsu-shsu",
+          "date": "2026-10-21",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401871070",
+          "home": "Sam Houston",
+          "away": "New Mexico State",
+          "matchup": "New Mexico State at Sam Houston",
+          "tipISO": "2026-10-22T00:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Wed, Oct 21, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
