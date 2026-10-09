@@ -1,6 +1,6 @@
 {
-  "generated": "2026-10-09T10:20:01.799Z",
-  "generatedPT": "Fri, Oct 9, 3:20 AM PT",
+  "generated": "2026-10-09T10:40:48.511Z",
+  "generatedPT": "Fri, Oct 9, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 42,
-    "featured": 42,
+    "unbuilt": 0,
+    "games": 45,
+    "featured": 45,
     "unresolvedPicks": 1
   },
   "_diagnostics": [
@@ -1002,10 +1002,67 @@
       "date": "2026-10-22",
       "weekday": "Thu",
       "label": "Thu, Oct 22",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 3,
+      "games": [
+        {
+          "nightId": "slate-2026-10-22-jmu-app",
+          "date": "2026-10-22",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401869845",
+          "home": "App State",
+          "away": "James Madison",
+          "matchup": "James Madison at App State",
+          "tipISO": "2026-10-22T23:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Thu, Oct 22, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-22-ecu-mem",
+          "date": "2026-10-22",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401862807",
+          "home": "Memphis",
+          "away": "East Carolina",
+          "matchup": "East Carolina at Memphis",
+          "tipISO": "2026-10-22T23:30:00.000Z",
+          "tipPT": "4:30 PM PT",
+          "tipPTLong": "Thu, Oct 22, 4:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-22-ne-chi",
+          "date": "2026-10-22",
+          "league": "nfl",
+          "leagueLabel": "NFL",
+          "leagueProse": "the NFL",
+          "sport": "football",
+          "path": "football/nfl",
+          "espnEvent": "401873010",
+          "home": "Bears",
+          "away": "Patriots",
+          "matchup": "Patriots at Bears",
+          "tipISO": "2026-10-23T00:15:00.000Z",
+          "tipPT": "5:15 PM PT",
+          "tipPTLong": "Thu, Oct 22, 5:15 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
