@@ -1,20 +1,20 @@
 {
-  "generated": "2026-10-08T10:40:32.411Z",
-  "generatedPT": "Thu, Oct 8, 3:40 AM PT",
+  "generated": "2026-10-09T10:20:01.799Z",
+  "generatedPT": "Fri, Oct 9, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-08",
-    "to": "2026-10-21",
+    "from": "2026-10-09",
+    "to": "2026-10-22",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 44,
-    "featured": 44,
+    "unbuilt": 1,
+    "games": 42,
+    "featured": 42,
     "unresolvedPicks": 1
   },
   "_diagnostics": [
@@ -81,53 +81,6 @@
   ],
   "days": [
     {
-      "date": "2026-10-08",
-      "weekday": "Thu",
-      "label": "Thu, Oct 8",
-      "status": "built",
-      "gameCount": 2,
-      "games": [
-        {
-          "nightId": "slate-2026-10-08-shsu-lib",
-          "date": "2026-10-08",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401870766",
-          "home": "Liberty",
-          "away": "Sam Houston",
-          "matchup": "Sam Houston at Liberty",
-          "tipISO": "2026-10-08T23:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Thu, Oct 8, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "208"
-        },
-        {
-          "nightId": "slate-2026-10-08-tb-dal",
-          "date": "2026-10-08",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872980",
-          "home": "Cowboys",
-          "away": "Buccaneers",
-          "matchup": "Buccaneers at Cowboys",
-          "tipISO": "2026-10-09T00:15:00.000Z",
-          "tipPT": "5:15 PM PT",
-          "tipPTLong": "Thu, Oct 8, 5:15 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "216"
-        }
-      ]
-    },
-    {
       "date": "2026-10-09",
       "weekday": "Fri",
       "label": "Fri, Oct 9",
@@ -151,7 +104,7 @@
           "tipPTLong": "Fri, Oct 9, 4:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "209"
         },
         {
           "nightId": "slate-2026-10-09-ana-wpg",
@@ -170,7 +123,7 @@
           "tipPTLong": "Fri, Oct 9, 5:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "207"
         },
         {
           "nightId": "slate-2026-10-09-wsu-usu",
@@ -189,7 +142,7 @@
           "tipPTLong": "Fri, Oct 9, 6:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "211"
         },
         {
           "nightId": "slate-2026-10-09-isu-byu",
@@ -208,7 +161,7 @@
           "tipPTLong": "Fri, Oct 9, 7:15 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "212"
         }
       ]
     },
@@ -1044,6 +997,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-22",
+      "weekday": "Thu",
+      "label": "Thu, Oct 22",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
