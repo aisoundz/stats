@@ -1,6 +1,6 @@
 {
-  "generated": "2026-10-10T10:20:01.867Z",
-  "generatedPT": "Sat, Oct 10, 3:20 AM PT",
+  "generated": "2026-10-10T10:40:41.775Z",
+  "generatedPT": "Sat, Oct 10, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 41,
-    "featured": 41,
+    "unbuilt": 0,
+    "games": 45,
+    "featured": 45,
     "unresolvedPicks": 1
   },
   "_diagnostics": [
@@ -983,10 +983,86 @@
       "date": "2026-10-23",
       "weekday": "Fri",
       "label": "Fri, Oct 23",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 4,
+      "games": [
+        {
+          "nightId": "slate-2026-10-23-duke-uva",
+          "date": "2026-10-23",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401858271",
+          "home": "Virginia",
+          "away": "Duke",
+          "matchup": "Duke at Virginia",
+          "tipISO": "2026-10-23T23:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Fri, Oct 23, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-23-army-tlsa",
+          "date": "2026-10-23",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401862808",
+          "home": "Tulsa",
+          "away": "Army",
+          "matchup": "Army at Tulsa",
+          "tipISO": "2026-10-24T00:30:00.000Z",
+          "tipPT": "5:30 PM PT",
+          "tipPTLong": "Fri, Oct 23, 5:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-23-afa-wyo",
+          "date": "2026-10-23",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401864525",
+          "home": "Wyoming",
+          "away": "Air Force",
+          "matchup": "Air Force at Wyoming",
+          "tipISO": "2026-10-24T01:00:00.000Z",
+          "tipPT": "6:00 PM PT",
+          "tipPTLong": "Fri, Oct 23, 6:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-23-ncsu-stan",
+          "date": "2026-10-23",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401858272",
+          "home": "Stanford",
+          "away": "NC State",
+          "matchup": "NC State at Stanford",
+          "tipISO": "2026-10-24T02:30:00.000Z",
+          "tipPT": "7:30 PM PT",
+          "tipPTLong": "Fri, Oct 23, 7:30 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
