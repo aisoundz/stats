@@ -1,35 +1,23 @@
 {
-  "generated": "2026-10-11T10:42:15.777Z",
-  "generatedPT": "Sun, Oct 11, 3:42 AM PT",
+  "generated": "2026-10-12T10:20:01.727Z",
+  "generatedPT": "Mon, Oct 12, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-11",
-    "to": "2026-10-24",
+    "from": "2026-10-12",
+    "to": "2026-10-25",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 45,
-    "featured": 45,
+    "unbuilt": 1,
+    "games": 41,
+    "featured": 41,
     "unresolvedPicks": 1
   },
   "_diagnostics": [
-    {
-      "level": "error",
-      "date": "2026-10-12",
-      "code": "manifest-conflict",
-      "message": "slate-2026-10-12-tbd-tbd appears twice in slate-all-2026-10-12.tsv with DIFFERENT values — keeping the first"
-    },
-    {
-      "level": "note",
-      "date": "2026-10-12",
-      "code": "manifest-duplicate",
-      "message": "slate-all-2026-10-12.tsv has 7 rows but only 6 distinct nightIds — 1 duplicate row(s), deduped"
-    },
     {
       "level": "note",
       "date": "2026-10-14",
@@ -81,91 +69,6 @@
   ],
   "days": [
     {
-      "date": "2026-10-11",
-      "weekday": "Sun",
-      "label": "Sun, Oct 11",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-10-11-phi-jax",
-          "date": "2026-10-11",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872981",
-          "home": "Jaguars",
-          "away": "Eagles",
-          "matchup": "Eagles at Jaguars",
-          "tipISO": "2026-10-11T13:30:00.000Z",
-          "tipPT": "6:30 AM PT",
-          "tipPTLong": "Sun, Oct 11, 6:30 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "214"
-        },
-        {
-          "nightId": "slate-2026-10-11-hou-ten",
-          "date": "2026-10-11",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872984",
-          "home": "Titans",
-          "away": "Texans",
-          "matchup": "Texans at Titans",
-          "tipISO": "2026-10-11T17:00:00.000Z",
-          "tipPT": "10:00 AM PT",
-          "tipPTLong": "Sun, Oct 11, 10:00 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "215"
-        },
-        {
-          "nightId": "slate-2026-10-11-den-lac",
-          "date": "2026-10-11",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872989",
-          "home": "Chargers",
-          "away": "Broncos",
-          "matchup": "Broncos at Chargers",
-          "tipISO": "2026-10-11T20:05:00.000Z",
-          "tipPT": "1:05 PM PT",
-          "tipPTLong": "Sun, Oct 11, 1:05 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "216"
-        },
-        {
-          "nightId": "slate-2026-10-11-la-stl",
-          "date": "2026-10-11",
-          "league": "mls",
-          "leagueLabel": "MLS",
-          "leagueProse": "MLS",
-          "sport": "soccer",
-          "path": "soccer/usa.1",
-          "espnEvent": "761859",
-          "home": "St. Louis CITY SC",
-          "away": "LA Galaxy",
-          "matchup": "LA Galaxy at St. Louis CITY SC",
-          "tipISO": "2026-10-11T23:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Sun, Oct 11, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "217"
-        }
-      ]
-    },
-    {
       "date": "2026-10-12",
       "weekday": "Mon",
       "label": "Mon, Oct 12",
@@ -189,7 +92,7 @@
           "tipPTLong": "Mon, Oct 12, 12:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "219"
         },
         {
           "nightId": "slate-2026-10-12-buf-lar",
@@ -208,7 +111,7 @@
           "tipPTLong": "Mon, Oct 12, 5:15 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "224"
         }
       ]
     },
@@ -1063,6 +966,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-25",
+      "weekday": "Sun",
+      "label": "Sun, Oct 25",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
