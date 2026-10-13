@@ -1,0 +1,21 @@
+# STATS GAMETIME
+# https://statsgametime.com
+#
+# If you have found a security problem with this site, please write to the
+# address below. A plain description and a way to reproduce it is more useful
+# than a formal report.
+#
+# Worth knowing before you report it: the Firebase browser API key in the page
+# is not a secret. Firebase web keys identify the project, they do not
+# authorise anything, and access is controlled by the project's security rules
+# rather than by hiding the key. This one was additionally restricted on
+# 2026-09-16 to specific referrers and Firebase APIs.
+#
+# Please do not run automated scanners against the live site, and please do
+# not write to the game database. Game nights run on it live, and a scanner
+# mid-game is indistinguishable from an outage to the people playing.
+
+Contact: mailto:aisoundz9@gmail.com
+Expires: 2027-09-01T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://statsgametime.com/.well-known/security.txt

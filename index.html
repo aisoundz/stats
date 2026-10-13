@@ -2,6 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- Referrer policy. Safe to set here: it only limits what this page leaks
+     to other sites in the Referer header, and cannot block a request.
+     A Content-Security-Policy is NOT set yet, deliberately. See
+     SECURITY-HEADERS.md for the drafted policy and why it needs one
+     game night of verification before it goes live. -->
+<meta name="referrer" content="strict-origin-when-cross-origin">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;900&family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap">
