@@ -1,28 +1,28 @@
 {
-  "generated": "2026-10-13T10:40:41.210Z",
-  "generatedPT": "Tue, Oct 13, 3:40 AM PT",
+  "generated": "2026-10-14T10:20:01.443Z",
+  "generatedPT": "Wed, Oct 14, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-13",
-    "to": "2026-10-26",
+    "from": "2026-10-14",
+    "to": "2026-10-27",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 44,
-    "featured": 44,
-    "unresolvedPicks": 1
+    "unbuilt": 1,
+    "games": 39,
+    "featured": 39,
+    "unresolvedPicks": 2
   },
   "_diagnostics": [
     {
-      "level": "note",
+      "level": "error",
       "date": "2026-10-14",
-      "code": "tip-date-drift",
-      "message": "slate-2026-10-14-ny-atl tips on 2026-10-13 PT but is filed under 2026-10-14 — grouped under 2026-10-14"
+      "code": "pick-not-in-manifest",
+      "message": "slate-2026-10-14-ny-atl is picked in slate-pick-2026-10-14.txt but is NOT in slate-all-2026-10-14.tsv — it CANNOT be listed. Rebuild the manifest for 2026-10-14 or drop the pick."
     },
     {
       "level": "error",
@@ -69,116 +69,12 @@
   ],
   "days": [
     {
-      "date": "2026-10-13",
-      "weekday": "Tue",
-      "label": "Tue, Oct 13",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-10-13-nj-det",
-          "date": "2026-10-13",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401892488",
-          "home": "Red Wings",
-          "away": "Devils",
-          "matchup": "Devils at Red Wings",
-          "tipISO": "2026-10-13T22:00:00.000Z",
-          "tipPT": "3:00 PM PT",
-          "tipPTLong": "Tue, Oct 13, 3:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "220"
-        },
-        {
-          "nightId": "slate-2026-10-13-del-mtsu",
-          "date": "2026-10-13",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401871067",
-          "home": "Middle Tennessee",
-          "away": "Delaware",
-          "matchup": "Delaware at Middle Tennessee",
-          "tipISO": "2026-10-13T23:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Tue, Oct 13, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "225"
-        },
-        {
-          "nightId": "slate-2026-10-13-fiu-jxst",
-          "date": "2026-10-13",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401871053",
-          "home": "Jacksonville State",
-          "away": "Florida International",
-          "matchup": "Florida International at Jacksonville State",
-          "tipISO": "2026-10-14T00:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Tue, Oct 13, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "230"
-        },
-        {
-          "nightId": "slate-2026-10-13-col-dal",
-          "date": "2026-10-13",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401892498",
-          "home": "Stars",
-          "away": "Avalanche",
-          "matchup": "Avalanche at Stars",
-          "tipISO": "2026-10-14T00:30:00.000Z",
-          "tipPT": "5:30 PM PT",
-          "tipPTLong": "Tue, Oct 13, 5:30 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "223"
-        }
-      ]
-    },
-    {
       "date": "2026-10-14",
       "weekday": "Wed",
       "label": "Wed, Oct 14",
       "status": "built",
-      "gameCount": 4,
+      "gameCount": 3,
       "games": [
-        {
-          "nightId": "slate-2026-10-14-ny-atl",
-          "date": "2026-10-14",
-          "league": "wnba",
-          "leagueLabel": "WNBA",
-          "leagueProse": "the WNBA",
-          "sport": "basketball",
-          "path": "basketball/wnba",
-          "espnEvent": "401918303",
-          "home": "Dream",
-          "away": "Liberty",
-          "matchup": "Liberty at Dream",
-          "tipISO": "2026-10-14T04:00:00.000Z",
-          "tipPT": "9:00 PM PT",
-          "tipPTLong": "Tue, Oct 13, 9:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
         {
           "nightId": "slate-2026-10-14-atl-mtl",
           "date": "2026-10-14",
@@ -236,6 +132,9 @@
           "mainEvent": true,
           "gameNight": null
         }
+      ],
+      "unresolved": [
+        "slate-2026-10-14-ny-atl"
       ]
     },
     {
@@ -1032,6 +931,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-27",
+      "weekday": "Tue",
+      "label": "Tue, Oct 27",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
