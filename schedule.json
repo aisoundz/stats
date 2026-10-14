@@ -1,6 +1,6 @@
 {
-  "generated": "2026-10-14T10:20:01.443Z",
-  "generatedPT": "Wed, Oct 14, 3:20 AM PT",
+  "generated": "2026-10-14T10:40:47.030Z",
+  "generatedPT": "Wed, Oct 14, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 39,
-    "featured": 39,
+    "unbuilt": 0,
+    "games": 42,
+    "featured": 42,
     "unresolvedPicks": 2
   },
   "_diagnostics": [
@@ -936,10 +936,67 @@
       "date": "2026-10-27",
       "weekday": "Tue",
       "label": "Tue, Oct 27",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 3,
+      "games": [
+        {
+          "nightId": "slate-2026-10-27-del-wku",
+          "date": "2026-10-27",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401871071",
+          "home": "Western Kentucky",
+          "away": "Delaware",
+          "matchup": "Delaware at Western Kentucky",
+          "tipISO": "2026-10-27T23:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Tue, Oct 27, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-27-shsu-most",
+          "date": "2026-10-27",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401871072",
+          "home": "Missouri State",
+          "away": "Sam Houston",
+          "matchup": "Sam Houston at Missouri State",
+          "tipISO": "2026-10-28T00:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Tue, Oct 27, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-27-buf-sj",
+          "date": "2026-10-27",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401892595",
+          "home": "Sharks",
+          "away": "Sabres",
+          "matchup": "Sabres at Sharks",
+          "tipISO": "2026-10-28T02:30:00.000Z",
+          "tipPT": "7:30 PM PT",
+          "tipPTLong": "Tue, Oct 27, 7:30 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
