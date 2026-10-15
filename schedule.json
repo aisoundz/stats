@@ -1,6 +1,6 @@
 {
-  "generated": "2026-10-15T10:20:02.030Z",
-  "generatedPT": "Thu, Oct 15, 3:20 AM PT",
+  "generated": "2026-10-15T10:40:55.925Z",
+  "generatedPT": "Thu, Oct 15, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 39,
-    "featured": 39,
+    "unbuilt": 0,
+    "games": 43,
+    "featured": 43,
     "unresolvedPicks": 1
   },
   "_diagnostics": [
@@ -915,10 +915,86 @@
       "date": "2026-10-28",
       "weekday": "Wed",
       "label": "Wed, Oct 28",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 4,
+      "games": [
+        {
+          "nightId": "slate-2026-10-28-kenn-mtsu",
+          "date": "2026-10-28",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401871058",
+          "home": "Middle Tennessee",
+          "away": "Kennesaw State",
+          "matchup": "Kennesaw State at Middle Tennessee",
+          "tipISO": "2026-10-28T23:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Wed, Oct 28, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-28-phi-wsh",
+          "date": "2026-10-28",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401892596",
+          "home": "Capitals",
+          "away": "Flyers",
+          "matchup": "Flyers at Capitals",
+          "tipISO": "2026-10-28T23:30:00.000Z",
+          "tipPT": "4:30 PM PT",
+          "tipPTLong": "Wed, Oct 28, 4:30 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-28-jxst-nmsu",
+          "date": "2026-10-28",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401871057",
+          "home": "New Mexico State",
+          "away": "Jacksonville State",
+          "matchup": "Jacksonville State at New Mexico State",
+          "tipISO": "2026-10-29T00:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Wed, Oct 28, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-28-rsl-atx",
+          "date": "2026-10-28",
+          "league": "mls",
+          "leagueLabel": "MLS",
+          "leagueProse": "MLS",
+          "sport": "soccer",
+          "path": "soccer/usa.1",
+          "espnEvent": "761910",
+          "home": "Austin FC",
+          "away": "Real Salt Lake",
+          "matchup": "Real Salt Lake at Austin FC",
+          "tipISO": "2026-10-29T00:30:00.000Z",
+          "tipPT": "5:30 PM PT",
+          "tipPTLong": "Wed, Oct 28, 5:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
