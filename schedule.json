@@ -1,41 +1,23 @@
 {
-  "generated": "2026-10-14T10:40:47.030Z",
-  "generatedPT": "Wed, Oct 14, 3:40 AM PT",
+  "generated": "2026-10-15T10:20:02.030Z",
+  "generatedPT": "Thu, Oct 15, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-14",
-    "to": "2026-10-27",
+    "from": "2026-10-15",
+    "to": "2026-10-28",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 42,
-    "featured": 42,
-    "unresolvedPicks": 2
+    "unbuilt": 1,
+    "games": 39,
+    "featured": 39,
+    "unresolvedPicks": 1
   },
   "_diagnostics": [
-    {
-      "level": "error",
-      "date": "2026-10-14",
-      "code": "pick-not-in-manifest",
-      "message": "slate-2026-10-14-ny-atl is picked in slate-pick-2026-10-14.txt but is NOT in slate-all-2026-10-14.tsv — it CANNOT be listed. Rebuild the manifest for 2026-10-14 or drop the pick."
-    },
-    {
-      "level": "error",
-      "date": "2026-10-15",
-      "code": "manifest-conflict",
-      "message": "slate-2026-10-15-tbd-tbd appears twice in slate-all-2026-10-15.tsv with DIFFERENT values — keeping the first"
-    },
-    {
-      "level": "note",
-      "date": "2026-10-15",
-      "code": "manifest-duplicate",
-      "message": "slate-all-2026-10-15.tsv has 17 rows but only 16 distinct nightIds — 1 duplicate row(s), deduped"
-    },
     {
       "level": "error",
       "date": "2026-10-16",
@@ -69,75 +51,6 @@
   ],
   "days": [
     {
-      "date": "2026-10-14",
-      "weekday": "Wed",
-      "label": "Wed, Oct 14",
-      "status": "built",
-      "gameCount": 3,
-      "games": [
-        {
-          "nightId": "slate-2026-10-14-atl-mtl",
-          "date": "2026-10-14",
-          "league": "mls",
-          "leagueLabel": "MLS",
-          "leagueProse": "MLS",
-          "sport": "soccer",
-          "path": "soccer/usa.1",
-          "espnEvent": "761864",
-          "home": "CF Montréal",
-          "away": "Atlanta United FC",
-          "matchup": "Atlanta United FC at CF Montréal",
-          "tipISO": "2026-10-14T23:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Wed, Oct 14, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-10-14-wku-shsu",
-          "date": "2026-10-14",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401871068",
-          "home": "Sam Houston",
-          "away": "Western Kentucky",
-          "matchup": "Western Kentucky at Sam Houston",
-          "tipISO": "2026-10-15T00:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Wed, Oct 14, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-10-14-dal-col",
-          "date": "2026-10-14",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401892505",
-          "home": "Avalanche",
-          "away": "Stars",
-          "matchup": "Stars at Avalanche",
-          "tipISO": "2026-10-15T00:30:00.000Z",
-          "tipPT": "5:30 PM PT",
-          "tipPTLong": "Wed, Oct 14, 5:30 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": null
-        }
-      ],
-      "unresolved": [
-        "slate-2026-10-14-ny-atl"
-      ]
-    },
-    {
       "date": "2026-10-15",
       "weekday": "Thu",
       "label": "Thu, Oct 15",
@@ -161,7 +74,7 @@
           "tipPTLong": "Thu, Oct 15, 4:30 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "235"
         },
         {
           "nightId": "slate-2026-10-15-sea-den",
@@ -180,7 +93,7 @@
           "tipPTLong": "Thu, Oct 15, 5:15 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "243"
         }
       ]
     },
@@ -997,6 +910,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-28",
+      "weekday": "Wed",
+      "label": "Wed, Oct 28",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
