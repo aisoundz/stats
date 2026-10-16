@@ -1,35 +1,23 @@
 {
-  "generated": "2026-10-16T03:35:43.983Z",
-  "generatedPT": "Thu, Oct 15, 8:35 PM PT",
+  "generated": "2026-10-16T10:20:01.979Z",
+  "generatedPT": "Fri, Oct 16, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-15",
-    "to": "2026-10-28",
+    "from": "2026-10-16",
+    "to": "2026-10-29",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 44,
-    "featured": 43,
+    "unbuilt": 1,
+    "games": 42,
+    "featured": 41,
     "unresolvedPicks": 1
   },
   "_diagnostics": [
-    {
-      "level": "error",
-      "date": "2026-10-16",
-      "code": "manifest-conflict",
-      "message": "slate-2026-10-16-tbd-tbd appears twice in slate-all-2026-10-16.tsv with DIFFERENT values — keeping the first"
-    },
-    {
-      "level": "note",
-      "date": "2026-10-16",
-      "code": "manifest-duplicate",
-      "message": "slate-all-2026-10-16.tsv has 7 rows but only 6 distinct nightIds — 1 duplicate row(s), deduped"
-    },
     {
       "level": "error",
       "date": "2026-10-26",
@@ -38,53 +26,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-10-15",
-      "weekday": "Thu",
-      "label": "Thu, Oct 15",
-      "status": "built",
-      "gameCount": 2,
-      "games": [
-        {
-          "nightId": "slate-2026-10-15-ecu-uab",
-          "date": "2026-10-15",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401862800",
-          "home": "UAB",
-          "away": "East Carolina",
-          "matchup": "East Carolina at UAB",
-          "tipISO": "2026-10-15T23:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Thu, Oct 15, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "235"
-        },
-        {
-          "nightId": "slate-2026-10-15-sea-den",
-          "date": "2026-10-15",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401872995",
-          "home": "Broncos",
-          "away": "Seahawks",
-          "matchup": "Seahawks at Broncos",
-          "tipISO": "2026-10-16T00:15:00.000Z",
-          "tipPT": "5:15 PM PT",
-          "tipPTLong": "Thu, Oct 15, 5:15 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "243"
-        }
-      ]
-    },
     {
       "date": "2026-10-16",
       "weekday": "Fri",
@@ -109,7 +50,7 @@
           "tipPTLong": "Fri, Oct 16, 4:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "231"
         },
         {
           "nightId": "slate-2026-10-16-wash-pur",
@@ -128,7 +69,7 @@
           "tipPTLong": "Fri, Oct 16, 5:00 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "232"
         }
       ]
     },
@@ -1002,6 +943,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-29",
+      "weekday": "Thu",
+      "label": "Thu, Oct 29",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
