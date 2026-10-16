@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-16T03:31:21.934Z",
+  "generated": "2026-10-16T03:31:40.896Z",
   "generatedPT": "Thu, Oct 15, 8:31 PM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
@@ -15,7 +15,7 @@
     "unbuilt": 0,
     "games": 43,
     "featured": 43,
-    "unresolvedPicks": 1
+    "unresolvedPicks": 2
   },
   "_diagnostics": [
     {
@@ -47,6 +47,12 @@
       "date": "2026-10-19",
       "code": "pick-not-in-manifest",
       "message": "slate-2026-10-19-clechw-tb is picked in slate-pick-2026-10-19.txt but is NOT in slate-all-2026-10-19.tsv — it CANNOT be listed. Rebuild the manifest for 2026-10-19 or drop the pick."
+    },
+    {
+      "level": "error",
+      "date": "2026-10-26",
+      "code": "pick-not-in-manifest",
+      "message": "slate-2026-10-26-mil-raysguardians is picked in slate-pick-2026-10-26.txt but is NOT in slate-all-2026-10-26.tsv — it CANNOT be listed. Rebuild the manifest for 2026-10-26 or drop the pick."
     }
   ],
   "days": [
@@ -840,9 +846,12 @@
           "tipPT": "5:00 PM PT",
           "tipPTLong": "Mon, Oct 26, 5:00 PM PT",
           "featured": true,
-          "mainEvent": true,
+          "mainEvent": false,
           "gameNight": null
         }
+      ],
+      "unresolved": [
+        "slate-2026-10-26-mil-raysguardians"
       ]
     },
     {
