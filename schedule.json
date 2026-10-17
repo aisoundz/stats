@@ -1,6 +1,6 @@
 {
-  "generated": "2026-10-17T10:20:01.571Z",
-  "generatedPT": "Sat, Oct 17, 3:20 AM PT",
+  "generated": "2026-10-17T10:40:37.383Z",
+  "generatedPT": "Sat, Oct 17, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 41,
-    "featured": 40,
+    "unbuilt": 0,
+    "games": 45,
+    "featured": 44,
     "unresolvedPicks": 1
   },
   "_diagnostics": [
@@ -929,10 +929,86 @@
       "date": "2026-10-30",
       "weekday": "Fri",
       "label": "Fri, Oct 30",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 4,
+      "games": [
+        {
+          "nightId": "slate-2026-10-30-tuln-clt",
+          "date": "2026-10-30",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401862813",
+          "home": "Charlotte",
+          "away": "Tulane",
+          "matchup": "Tulane at Charlotte",
+          "tipISO": "2026-10-30T23:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Fri, Oct 30, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-30-bay-ucf",
+          "date": "2026-10-30",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401856844",
+          "home": "UCF",
+          "away": "Baylor",
+          "matchup": "Baylor at UCF",
+          "tipISO": "2026-10-30T23:30:00.000Z",
+          "tipPT": "4:30 PM PT",
+          "tipPTLong": "Fri, Oct 30, 4:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-30-raysguardians-mil",
+          "date": "2026-10-30",
+          "league": "mlb",
+          "leagueLabel": "Major League Baseball",
+          "leagueProse": "Major League Baseball",
+          "sport": "baseball",
+          "path": "baseball/mlb",
+          "espnEvent": "401908047",
+          "home": "Brewers",
+          "away": "Rays/Guardians",
+          "matchup": "Rays/Guardians at Brewers",
+          "tipISO": "2026-10-31T00:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Fri, Oct 30, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-30-kent-sac",
+          "date": "2026-10-30",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401866451",
+          "home": "Sacramento State",
+          "away": "Kent State",
+          "matchup": "Kent State at Sacramento State",
+          "tipISO": "2026-10-31T02:30:00.000Z",
+          "tipPT": "7:30 PM PT",
+          "tipPTLong": "Fri, Oct 30, 7:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
