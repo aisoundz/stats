@@ -1,20 +1,20 @@
 {
-  "generated": "2026-10-16T10:40:55.069Z",
-  "generatedPT": "Fri, Oct 16, 3:40 AM PT",
+  "generated": "2026-10-17T10:20:01.571Z",
+  "generatedPT": "Sat, Oct 17, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-16",
-    "to": "2026-10-29",
+    "from": "2026-10-17",
+    "to": "2026-10-30",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 43,
-    "featured": 42,
+    "unbuilt": 1,
+    "games": 41,
+    "featured": 40,
     "unresolvedPicks": 1
   },
   "_diagnostics": [
@@ -26,53 +26,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-10-16",
-      "weekday": "Fri",
-      "label": "Fri, Oct 16",
-      "status": "built",
-      "gameCount": 2,
-      "games": [
-        {
-          "nightId": "slate-2026-10-16-mem-tuln",
-          "date": "2026-10-16",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401862801",
-          "home": "Tulane",
-          "away": "Memphis",
-          "matchup": "Memphis at Tulane",
-          "tipISO": "2026-10-16T23:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Fri, Oct 16, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "231"
-        },
-        {
-          "nightId": "slate-2026-10-16-wash-pur",
-          "date": "2026-10-16",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401858493",
-          "home": "Purdue",
-          "away": "Washington",
-          "matchup": "Washington at Purdue",
-          "tipISO": "2026-10-17T00:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Fri, Oct 16, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "232"
-        }
-      ]
-    },
     {
       "date": "2026-10-17",
       "weekday": "Sat",
@@ -97,7 +50,7 @@
           "tipPTLong": "Sat, Oct 17, 9:00 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "233"
         },
         {
           "nightId": "slate-2026-10-17-clt-phi",
@@ -116,7 +69,7 @@
           "tipPTLong": "Sat, Oct 17, 11:30 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "284"
         },
         {
           "nightId": "slate-2026-10-17-stl-min",
@@ -135,7 +88,7 @@
           "tipPTLong": "Sat, Oct 17, 1:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "289"
         },
         {
           "nightId": "slate-2026-10-17-wsu-orst",
@@ -154,7 +107,7 @@
           "tipPTLong": "Sat, Oct 17, 3:00 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "240"
         }
       ]
     },
@@ -971,6 +924,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-30",
+      "weekday": "Fri",
+      "label": "Fri, Oct 30",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
