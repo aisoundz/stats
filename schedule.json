@@ -1,6 +1,6 @@
 {
-  "generated": "2026-10-18T10:20:01.458Z",
-  "generatedPT": "Sun, Oct 18, 3:20 AM PT",
+  "generated": "2026-10-18T10:42:13.065Z",
+  "generatedPT": "Sun, Oct 18, 3:42 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 41,
-    "featured": 40,
+    "unbuilt": 0,
+    "games": 45,
+    "featured": 44,
     "unresolvedPicks": 1
   },
   "_diagnostics": [
@@ -23,6 +23,12 @@
       "date": "2026-10-26",
       "code": "pick-not-in-manifest",
       "message": "slate-2026-10-26-mil-raysguardians is picked in slate-pick-2026-10-26.txt but is NOT in slate-all-2026-10-26.tsv — it CANNOT be listed. Rebuild the manifest for 2026-10-26 or drop the pick."
+    },
+    {
+      "level": "note",
+      "date": "2026-10-31",
+      "code": "tip-date-drift",
+      "message": "slate-2026-10-31-orst-fres tips on 2026-10-30 PT but is filed under 2026-10-31 — grouped under 2026-10-31"
     }
   ],
   "days": [
@@ -929,10 +935,86 @@
       "date": "2026-10-31",
       "weekday": "Sat",
       "label": "Sat, Oct 31",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 4,
+      "games": [
+        {
+          "nightId": "slate-2026-10-31-orst-fres",
+          "date": "2026-10-31",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401860924",
+          "home": "Fresno State",
+          "away": "Oregon State",
+          "matchup": "Oregon State at Fresno State",
+          "tipISO": "2026-10-31T04:00:00.000Z",
+          "tipPT": "9:00 PM PT",
+          "tipPTLong": "Fri, Oct 30, 9:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-31-orl-clt",
+          "date": "2026-10-31",
+          "league": "mls",
+          "leagueLabel": "MLS",
+          "leagueProse": "MLS",
+          "sport": "soccer",
+          "path": "soccer/usa.1",
+          "espnEvent": "761922",
+          "home": "Charlotte FC",
+          "away": "Orlando City SC",
+          "matchup": "Orlando City SC at Charlotte FC",
+          "tipISO": "2026-10-31T17:00:00.000Z",
+          "tipPT": "10:00 AM PT",
+          "tipPTLong": "Sat, Oct 31, 10:00 AM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-31-fla-uga",
+          "date": "2026-10-31",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401856734",
+          "home": "Georgia",
+          "away": "Florida",
+          "matchup": "Florida at Georgia",
+          "tipISO": "2026-10-31T19:30:00.000Z",
+          "tipPT": "12:30 PM PT",
+          "tipPTLong": "Sat, Oct 31, 12:30 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-10-31-atl-gs",
+          "date": "2026-10-31",
+          "league": "wnba",
+          "leagueLabel": "WNBA",
+          "leagueProse": "the WNBA",
+          "sport": "basketball",
+          "path": "basketball/wnba",
+          "espnEvent": "401918311",
+          "home": "Valkyries",
+          "away": "Dream",
+          "matchup": "Dream at Valkyries",
+          "tipISO": "2026-11-01T00:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Sat, Oct 31, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
