@@ -1,20 +1,20 @@
 {
-  "generated": "2026-10-17T10:40:37.383Z",
-  "generatedPT": "Sat, Oct 17, 3:40 AM PT",
+  "generated": "2026-10-18T10:20:01.458Z",
+  "generatedPT": "Sun, Oct 18, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-17",
-    "to": "2026-10-30",
+    "from": "2026-10-18",
+    "to": "2026-10-31",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 45,
-    "featured": 44,
+    "unbuilt": 1,
+    "games": 41,
+    "featured": 40,
     "unresolvedPicks": 1
   },
   "_diagnostics": [
@@ -26,91 +26,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-10-17",
-      "weekday": "Sat",
-      "label": "Sat, Oct 17",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-10-17-fau-army",
-          "date": "2026-10-17",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401862802",
-          "home": "Army",
-          "away": "Florida Atlantic",
-          "matchup": "Florida Atlantic at Army",
-          "tipISO": "2026-10-17T16:00:00.000Z",
-          "tipPT": "9:00 AM PT",
-          "tipPTLong": "Sat, Oct 17, 9:00 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "233"
-        },
-        {
-          "nightId": "slate-2026-10-17-clt-phi",
-          "date": "2026-10-17",
-          "league": "mls",
-          "leagueLabel": "MLS",
-          "leagueProse": "MLS",
-          "sport": "soccer",
-          "path": "soccer/usa.1",
-          "espnEvent": "761875",
-          "home": "Philadelphia Union",
-          "away": "Charlotte FC",
-          "matchup": "Charlotte FC at Philadelphia Union",
-          "tipISO": "2026-10-17T18:30:00.000Z",
-          "tipPT": "11:30 AM PT",
-          "tipPTLong": "Sat, Oct 17, 11:30 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "284"
-        },
-        {
-          "nightId": "slate-2026-10-17-stl-min",
-          "date": "2026-10-17",
-          "league": "mls",
-          "leagueLabel": "MLS",
-          "leagueProse": "MLS",
-          "sport": "soccer",
-          "path": "soccer/usa.1",
-          "espnEvent": "761876",
-          "home": "Minnesota United FC",
-          "away": "St. Louis CITY SC",
-          "matchup": "St. Louis CITY SC at Minnesota United FC",
-          "tipISO": "2026-10-17T20:30:00.000Z",
-          "tipPT": "1:30 PM PT",
-          "tipPTLong": "Sat, Oct 17, 1:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "289"
-        },
-        {
-          "nightId": "slate-2026-10-17-wsu-orst",
-          "date": "2026-10-17",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401860903",
-          "home": "Oregon State",
-          "away": "Washington State",
-          "matchup": "Washington State at Oregon State",
-          "tipISO": "2026-10-17T22:00:00.000Z",
-          "tipPT": "3:00 PM PT",
-          "tipPTLong": "Sat, Oct 17, 3:00 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "240"
-        }
-      ]
-    },
     {
       "date": "2026-10-18",
       "weekday": "Sun",
@@ -1009,6 +924,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-10-31",
+      "weekday": "Sat",
+      "label": "Sat, Oct 31",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
