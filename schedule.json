@@ -1,20 +1,20 @@
 {
-  "generated": "2026-10-20T03:20:11.588Z",
-  "generatedPT": "Mon, Oct 19, 8:20 PM PT",
+  "generated": "2026-10-20T10:20:02.002Z",
+  "generatedPT": "Tue, Oct 20, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-19",
-    "to": "2026-11-01",
+    "from": "2026-10-20",
+    "to": "2026-11-02",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 46,
-    "featured": 44,
+    "unbuilt": 1,
+    "games": 44,
+    "featured": 43,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -26,53 +26,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-10-19",
-      "weekday": "Mon",
-      "label": "Mon, Oct 19",
-      "status": "built",
-      "gameCount": 2,
-      "games": [
-        {
-          "nightId": "slate-2026-10-19-cle-tb",
-          "date": "2026-10-19",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401908028",
-          "home": "Rays",
-          "away": "Guardians",
-          "matchup": "Guardians at Rays",
-          "tipISO": "2026-10-20T00:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Mon, Oct 19, 5:00 PM PT",
-          "featured": false,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-10-19-wsh-sf",
-          "date": "2026-10-19",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401873008",
-          "home": "49ers",
-          "away": "Commanders",
-          "matchup": "Commanders at 49ers",
-          "tipISO": "2026-10-20T00:15:00.000Z",
-          "tipPT": "5:15 PM PT",
-          "tipPTLong": "Mon, Oct 19, 5:15 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "241"
-        }
-      ]
-    },
     {
       "date": "2026-10-20",
       "weekday": "Tue",
@@ -97,7 +50,7 @@
           "tipPTLong": "Tue, Oct 20, 4:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "249"
         },
         {
           "nightId": "slate-2026-10-20-usa-mrsh",
@@ -116,7 +69,7 @@
           "tipPTLong": "Tue, Oct 20, 4:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "250"
         },
         {
           "nightId": "slate-2026-10-20-bos-dal",
@@ -135,7 +88,7 @@
           "tipPTLong": "Tue, Oct 20, 5:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "246"
         },
         {
           "nightId": "slate-2026-10-20-tb-vgk",
@@ -154,7 +107,7 @@
           "tipPTLong": "Tue, Oct 20, 7:30 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "247"
         }
       ]
     },
@@ -1025,6 +978,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-02",
+      "weekday": "Mon",
+      "label": "Mon, Nov 2",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
