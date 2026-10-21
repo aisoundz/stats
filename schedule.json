@@ -1,20 +1,20 @@
 {
-  "generated": "2026-10-20T10:40:42.432Z",
-  "generatedPT": "Tue, Oct 20, 3:40 AM PT",
+  "generated": "2026-10-21T10:20:01.450Z",
+  "generatedPT": "Wed, Oct 21, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-20",
-    "to": "2026-11-02",
+    "from": "2026-10-21",
+    "to": "2026-11-03",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 45,
-    "featured": 44,
+    "unbuilt": 1,
+    "games": 41,
+    "featured": 40,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -26,91 +26,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-10-20",
-      "weekday": "Tue",
-      "label": "Tue, Oct 20",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-10-20-mtsu-fiu",
-          "date": "2026-10-20",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401871055",
-          "home": "Florida International",
-          "away": "Middle Tennessee",
-          "matchup": "Middle Tennessee at Florida International",
-          "tipISO": "2026-10-20T23:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Tue, Oct 20, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "249"
-        },
-        {
-          "nightId": "slate-2026-10-20-usa-mrsh",
-          "date": "2026-10-20",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401871092",
-          "home": "Marshall",
-          "away": "South Alabama",
-          "matchup": "South Alabama at Marshall",
-          "tipISO": "2026-10-20T23:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Tue, Oct 20, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "250"
-        },
-        {
-          "nightId": "slate-2026-10-20-bos-dal",
-          "date": "2026-10-20",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401892545",
-          "home": "Stars",
-          "away": "Bruins",
-          "matchup": "Bruins at Stars",
-          "tipISO": "2026-10-21T00:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Tue, Oct 20, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "246"
-        },
-        {
-          "nightId": "slate-2026-10-20-tb-vgk",
-          "date": "2026-10-20",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401892549",
-          "home": "Golden Knights",
-          "away": "Lightning",
-          "matchup": "Lightning at Golden Knights",
-          "tipISO": "2026-10-21T02:30:00.000Z",
-          "tipPT": "7:30 PM PT",
-          "tipPTLong": "Tue, Oct 20, 7:30 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "247"
-        }
-      ]
-    },
     {
       "date": "2026-10-21",
       "weekday": "Wed",
@@ -135,7 +50,7 @@
           "tipPTLong": "Wed, Oct 21, 4:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "248"
         },
         {
           "nightId": "slate-2026-10-21-phi-buf",
@@ -154,7 +69,7 @@
           "tipPTLong": "Wed, Oct 21, 4:30 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "249"
         },
         {
           "nightId": "slate-2026-10-21-nmsu-shsu",
@@ -173,7 +88,7 @@
           "tipPTLong": "Wed, Oct 21, 5:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "251"
         }
       ]
     },
@@ -1006,6 +921,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-03",
+      "weekday": "Tue",
+      "label": "Tue, Nov 3",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
