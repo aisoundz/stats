@@ -1,6 +1,6 @@
 {
-  "generated": "2026-10-22T10:20:01.730Z",
-  "generatedPT": "Thu, Oct 22, 3:20 AM PT",
+  "generated": "2026-10-22T10:40:36.263Z",
+  "generatedPT": "Thu, Oct 22, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 12,
+    "built": 13,
     "off": 0,
-    "unbuilt": 2,
-    "games": 38,
-    "featured": 37,
+    "unbuilt": 1,
+    "games": 40,
+    "featured": 39,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -869,10 +869,48 @@
       "date": "2026-11-04",
       "weekday": "Wed",
       "label": "Wed, Nov 4",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 2,
+      "games": [
+        {
+          "nightId": "slate-2026-11-04-chi-fla",
+          "date": "2026-11-04",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401892645",
+          "home": "Panthers",
+          "away": "Blackhawks",
+          "matchup": "Blackhawks at Panthers",
+          "tipISO": "2026-11-05T00:30:00.000Z",
+          "tipPT": "4:30 PM PT",
+          "tipPTLong": "Wed, Nov 4, 4:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-04-sj-la",
+          "date": "2026-11-04",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401892646",
+          "home": "Kings",
+          "away": "Sharks",
+          "matchup": "Sharks at Kings",
+          "tipISO": "2026-11-05T03:00:00.000Z",
+          "tipPT": "7:00 PM PT",
+          "tipPTLong": "Wed, Nov 4, 7:00 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
