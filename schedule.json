@@ -1,20 +1,20 @@
 {
-  "generated": "2026-10-21T10:40:43.927Z",
-  "generatedPT": "Wed, Oct 21, 3:40 AM PT",
+  "generated": "2026-10-22T10:20:01.730Z",
+  "generatedPT": "Thu, Oct 22, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-21",
-    "to": "2026-11-03",
+    "from": "2026-10-22",
+    "to": "2026-11-04",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 12,
     "off": 0,
-    "unbuilt": 1,
-    "games": 41,
-    "featured": 40,
+    "unbuilt": 2,
+    "games": 38,
+    "featured": 37,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -26,72 +26,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-10-21",
-      "weekday": "Wed",
-      "label": "Wed, Oct 21",
-      "status": "built",
-      "gameCount": 3,
-      "games": [
-        {
-          "nightId": "slate-2026-10-21-dc-cin",
-          "date": "2026-10-21",
-          "league": "mls",
-          "leagueLabel": "MLS",
-          "leagueProse": "MLS",
-          "sport": "soccer",
-          "path": "soccer/usa.1",
-          "espnEvent": "761773",
-          "home": "FC Cincinnati",
-          "away": "D.C. United",
-          "matchup": "D.C. United at FC Cincinnati",
-          "tipISO": "2026-10-21T23:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Wed, Oct 21, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "248"
-        },
-        {
-          "nightId": "slate-2026-10-21-phi-buf",
-          "date": "2026-10-21",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401892550",
-          "home": "Sabres",
-          "away": "Flyers",
-          "matchup": "Flyers at Sabres",
-          "tipISO": "2026-10-21T23:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Wed, Oct 21, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "249"
-        },
-        {
-          "nightId": "slate-2026-10-21-nmsu-shsu",
-          "date": "2026-10-21",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401871070",
-          "home": "Sam Houston",
-          "away": "New Mexico State",
-          "matchup": "New Mexico State at Sam Houston",
-          "tipISO": "2026-10-22T00:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Wed, Oct 21, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "251"
-        }
-      ]
-    },
     {
       "date": "2026-10-22",
       "weekday": "Thu",
@@ -116,7 +50,7 @@
           "tipPTLong": "Thu, Oct 22, 4:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "256"
         },
         {
           "nightId": "slate-2026-10-22-ecu-mem",
@@ -135,7 +69,7 @@
           "tipPTLong": "Thu, Oct 22, 4:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "258"
         },
         {
           "nightId": "slate-2026-10-22-ne-chi",
@@ -154,7 +88,7 @@
           "tipPTLong": "Thu, Oct 22, 5:15 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "262"
         }
       ]
     },
@@ -926,6 +860,15 @@
       "date": "2026-11-03",
       "weekday": "Tue",
       "label": "Tue, Nov 3",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
+    },
+    {
+      "date": "2026-11-04",
+      "weekday": "Wed",
+      "label": "Wed, Nov 4",
       "status": "unbuilt",
       "gameCount": null,
       "games": [],
