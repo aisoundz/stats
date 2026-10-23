@@ -1,20 +1,20 @@
 {
-  "generated": "2026-10-22T10:40:36.263Z",
-  "generatedPT": "Thu, Oct 22, 3:40 AM PT",
+  "generated": "2026-10-23T10:20:01.738Z",
+  "generatedPT": "Fri, Oct 23, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-22",
-    "to": "2026-11-04",
+    "from": "2026-10-23",
+    "to": "2026-11-05",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 12,
     "off": 0,
-    "unbuilt": 1,
-    "games": 40,
-    "featured": 39,
+    "unbuilt": 2,
+    "games": 37,
+    "featured": 36,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -26,72 +26,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-10-22",
-      "weekday": "Thu",
-      "label": "Thu, Oct 22",
-      "status": "built",
-      "gameCount": 3,
-      "games": [
-        {
-          "nightId": "slate-2026-10-22-jmu-app",
-          "date": "2026-10-22",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401869845",
-          "home": "App State",
-          "away": "James Madison",
-          "matchup": "James Madison at App State",
-          "tipISO": "2026-10-22T23:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Thu, Oct 22, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "256"
-        },
-        {
-          "nightId": "slate-2026-10-22-ecu-mem",
-          "date": "2026-10-22",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401862807",
-          "home": "Memphis",
-          "away": "East Carolina",
-          "matchup": "East Carolina at Memphis",
-          "tipISO": "2026-10-22T23:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Thu, Oct 22, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "258"
-        },
-        {
-          "nightId": "slate-2026-10-22-ne-chi",
-          "date": "2026-10-22",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401873010",
-          "home": "Bears",
-          "away": "Patriots",
-          "matchup": "Patriots at Bears",
-          "tipISO": "2026-10-23T00:15:00.000Z",
-          "tipPT": "5:15 PM PT",
-          "tipPTLong": "Thu, Oct 22, 5:15 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "262"
-        }
-      ]
-    },
     {
       "date": "2026-10-23",
       "weekday": "Fri",
@@ -116,7 +50,7 @@
           "tipPTLong": "Fri, Oct 23, 4:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "254"
         },
         {
           "nightId": "slate-2026-10-23-army-tlsa",
@@ -135,7 +69,7 @@
           "tipPTLong": "Fri, Oct 23, 5:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "256"
         },
         {
           "nightId": "slate-2026-10-23-afa-wyo",
@@ -154,7 +88,7 @@
           "tipPTLong": "Fri, Oct 23, 6:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "258"
         },
         {
           "nightId": "slate-2026-10-23-ncsu-stan",
@@ -173,7 +107,7 @@
           "tipPTLong": "Fri, Oct 23, 7:30 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "259"
         }
       ]
     },
@@ -911,6 +845,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-05",
+      "weekday": "Thu",
+      "label": "Thu, Nov 5",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
