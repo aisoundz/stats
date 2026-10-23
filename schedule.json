@@ -1,6 +1,6 @@
 {
-  "generated": "2026-10-23T10:20:01.738Z",
-  "generatedPT": "Fri, Oct 23, 3:20 AM PT",
+  "generated": "2026-10-23T10:40:46.729Z",
+  "generatedPT": "Fri, Oct 23, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 12,
+    "built": 13,
     "off": 0,
-    "unbuilt": 2,
-    "games": 37,
-    "featured": 36,
+    "unbuilt": 1,
+    "games": 38,
+    "featured": 37,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -850,10 +850,29 @@
       "date": "2026-11-05",
       "weekday": "Thu",
       "label": "Thu, Nov 5",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 1,
+      "games": [
+        {
+          "nightId": "slate-2026-11-05-jax-bal",
+          "date": "2026-11-05",
+          "league": "nfl",
+          "leagueLabel": "NFL",
+          "leagueProse": "the NFL",
+          "sport": "football",
+          "path": "football/nfl",
+          "espnEvent": "401873037",
+          "home": "Ravens",
+          "away": "Jaguars",
+          "matchup": "Jaguars at Ravens",
+          "tipISO": "2026-11-06T01:15:00.000Z",
+          "tipPT": "5:15 PM PT",
+          "tipPTLong": "Thu, Nov 5, 5:15 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
