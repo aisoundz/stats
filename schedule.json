@@ -1,20 +1,20 @@
 {
-  "generated": "2026-10-23T10:40:46.729Z",
-  "generatedPT": "Fri, Oct 23, 3:40 AM PT",
+  "generated": "2026-10-24T10:20:01.231Z",
+  "generatedPT": "Sat, Oct 24, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-23",
-    "to": "2026-11-05",
+    "from": "2026-10-24",
+    "to": "2026-11-06",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 12,
     "off": 0,
-    "unbuilt": 1,
-    "games": 38,
-    "featured": 37,
+    "unbuilt": 2,
+    "games": 34,
+    "featured": 33,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -27,97 +27,31 @@
   ],
   "days": [
     {
-      "date": "2026-10-23",
-      "weekday": "Fri",
-      "label": "Fri, Oct 23",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-10-23-duke-uva",
-          "date": "2026-10-23",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401858271",
-          "home": "Virginia",
-          "away": "Duke",
-          "matchup": "Duke at Virginia",
-          "tipISO": "2026-10-23T23:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Fri, Oct 23, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "254"
-        },
-        {
-          "nightId": "slate-2026-10-23-army-tlsa",
-          "date": "2026-10-23",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401862808",
-          "home": "Tulsa",
-          "away": "Army",
-          "matchup": "Army at Tulsa",
-          "tipISO": "2026-10-24T00:30:00.000Z",
-          "tipPT": "5:30 PM PT",
-          "tipPTLong": "Fri, Oct 23, 5:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "256"
-        },
-        {
-          "nightId": "slate-2026-10-23-afa-wyo",
-          "date": "2026-10-23",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401864525",
-          "home": "Wyoming",
-          "away": "Air Force",
-          "matchup": "Air Force at Wyoming",
-          "tipISO": "2026-10-24T01:00:00.000Z",
-          "tipPT": "6:00 PM PT",
-          "tipPTLong": "Fri, Oct 23, 6:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "258"
-        },
-        {
-          "nightId": "slate-2026-10-23-ncsu-stan",
-          "date": "2026-10-23",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401858272",
-          "home": "Stanford",
-          "away": "NC State",
-          "matchup": "NC State at Stanford",
-          "tipISO": "2026-10-24T02:30:00.000Z",
-          "tipPT": "7:30 PM PT",
-          "tipPTLong": "Fri, Oct 23, 7:30 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "259"
-        }
-      ]
-    },
-    {
       "date": "2026-10-24",
       "weekday": "Sat",
       "label": "Sat, Oct 24",
       "status": "built",
       "gameCount": 4,
       "games": [
+        {
+          "nightId": "slate-2026-10-24-gs-atl",
+          "date": "2026-10-24",
+          "league": "wnba",
+          "leagueLabel": "WNBA",
+          "leagueProse": "the WNBA",
+          "sport": "basketball",
+          "path": "basketball/wnba",
+          "espnEvent": "401918308",
+          "home": "Dream",
+          "away": "Valkyries",
+          "matchup": "Valkyries at Dream",
+          "tipISO": "2026-10-24T17:00:00.000Z",
+          "tipPT": "10:00 AM PT",
+          "tipPTLong": "Sat, Oct 24, 10:00 AM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        },
         {
           "nightId": "slate-2026-10-24-nsh-mtl",
           "date": "2026-10-24",
@@ -135,25 +69,6 @@
           "tipPTLong": "Sat, Oct 24, 10:30 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-10-24-gs-atl",
-          "date": "2026-10-24",
-          "league": "wnba",
-          "leagueLabel": "WNBA",
-          "leagueProse": "the WNBA",
-          "sport": "basketball",
-          "path": "basketball/wnba",
-          "espnEvent": "401918308",
-          "home": "Dream",
-          "away": "Valkyries",
-          "matchup": "Valkyries at Dream",
-          "tipISO": "2026-10-24T19:30:00.000Z",
-          "tipPT": "12:30 PM PT",
-          "tipPTLong": "Sat, Oct 24, 12:30 PM PT",
-          "featured": true,
-          "mainEvent": true,
           "gameNight": null
         },
         {
@@ -873,6 +788,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-06",
+      "weekday": "Fri",
+      "label": "Fri, Nov 6",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
