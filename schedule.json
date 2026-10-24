@@ -1,6 +1,6 @@
 {
-  "generated": "2026-10-24T10:20:01.231Z",
-  "generatedPT": "Sat, Oct 24, 3:20 AM PT",
+  "generated": "2026-10-24T10:40:38.166Z",
+  "generatedPT": "Sat, Oct 24, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 12,
+    "built": 13,
     "off": 0,
-    "unbuilt": 2,
-    "games": 34,
-    "featured": 33,
+    "unbuilt": 1,
+    "games": 39,
+    "featured": 38,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -399,8 +399,27 @@
       "weekday": "Thu",
       "label": "Thu, Oct 29",
       "status": "built",
-      "gameCount": 1,
+      "gameCount": 2,
       "games": [
+        {
+          "nightId": "slate-2026-10-29-fau-unt",
+          "date": "2026-10-29",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401862812",
+          "home": "North Texas",
+          "away": "Florida Atlantic",
+          "matchup": "Florida Atlantic at North Texas",
+          "tipISO": "2026-10-29T23:30:00.000Z",
+          "tipPT": "4:30 PM PT",
+          "tipPTLong": "Thu, Oct 29, 4:30 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        },
         {
           "nightId": "slate-2026-10-29-gs-atl",
           "date": "2026-10-29",
@@ -417,7 +436,7 @@
           "tipPT": "5:00 PM PT",
           "tipPTLong": "Thu, Oct 29, 5:00 PM PT",
           "featured": true,
-          "mainEvent": true,
+          "mainEvent": false,
           "gameNight": null
         }
       ]
@@ -793,10 +812,86 @@
       "date": "2026-11-06",
       "weekday": "Fri",
       "label": "Fri, Nov 6",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 4,
+      "games": [
+        {
+          "nightId": "slate-2026-11-06-vt-smu",
+          "date": "2026-11-06",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401858288",
+          "home": "SMU",
+          "away": "Virginia Tech",
+          "matchup": "Virginia Tech at SMU",
+          "tipISO": "2026-11-07T00:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Fri, Nov 6, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-06-usf-ecu",
+          "date": "2026-11-06",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401862818",
+          "home": "East Carolina",
+          "away": "South Florida",
+          "matchup": "South Florida at East Carolina",
+          "tipISO": "2026-11-07T00:30:00.000Z",
+          "tipPT": "4:30 PM PT",
+          "tipPTLong": "Fri, Nov 6, 4:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-06-neb-ill",
+          "date": "2026-11-06",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401858510",
+          "home": "Illinois",
+          "away": "Nebraska",
+          "matchup": "Nebraska at Illinois",
+          "tipISO": "2026-11-07T01:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Fri, Nov 6, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-06-tcu-ariz",
+          "date": "2026-11-06",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401856855",
+          "home": "Arizona",
+          "away": "TCU",
+          "matchup": "TCU at Arizona",
+          "tipISO": "2026-11-07T03:15:00.000Z",
+          "tipPT": "7:15 PM PT",
+          "tipPTLong": "Fri, Nov 6, 7:15 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
