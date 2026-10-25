@@ -1,20 +1,20 @@
 {
-  "generated": "2026-10-24T10:40:38.166Z",
-  "generatedPT": "Sat, Oct 24, 3:40 AM PT",
+  "generated": "2026-10-25T10:20:01.813Z",
+  "generatedPT": "Sun, Oct 25, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-24",
-    "to": "2026-11-06",
+    "from": "2026-10-25",
+    "to": "2026-11-07",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 12,
     "off": 0,
-    "unbuilt": 1,
-    "games": 39,
-    "featured": 38,
+    "unbuilt": 2,
+    "games": 35,
+    "featured": 34,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -26,91 +26,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-10-24",
-      "weekday": "Sat",
-      "label": "Sat, Oct 24",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-10-24-gs-atl",
-          "date": "2026-10-24",
-          "league": "wnba",
-          "leagueLabel": "WNBA",
-          "leagueProse": "the WNBA",
-          "sport": "basketball",
-          "path": "basketball/wnba",
-          "espnEvent": "401918308",
-          "home": "Dream",
-          "away": "Valkyries",
-          "matchup": "Valkyries at Dream",
-          "tipISO": "2026-10-24T17:00:00.000Z",
-          "tipPT": "10:00 AM PT",
-          "tipPTLong": "Sat, Oct 24, 10:00 AM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-10-24-nsh-mtl",
-          "date": "2026-10-24",
-          "league": "mls",
-          "leagueLabel": "MLS",
-          "leagueProse": "MLS",
-          "sport": "soccer",
-          "path": "soccer/usa.1",
-          "espnEvent": "761903",
-          "home": "CF Montréal",
-          "away": "Nashville SC",
-          "matchup": "Nashville SC at CF Montréal",
-          "tipISO": "2026-10-24T17:30:00.000Z",
-          "tipPT": "10:30 AM PT",
-          "tipPTLong": "Sat, Oct 24, 10:30 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-10-24-mia-rbny",
-          "date": "2026-10-24",
-          "league": "mls",
-          "leagueLabel": "MLS",
-          "leagueProse": "MLS",
-          "sport": "soccer",
-          "path": "soccer/usa.1",
-          "espnEvent": "761891",
-          "home": "Red Bull New York",
-          "away": "Inter Miami CF",
-          "matchup": "Inter Miami CF at Red Bull New York",
-          "tipISO": "2026-10-24T21:30:00.000Z",
-          "tipPT": "2:30 PM PT",
-          "tipPTLong": "Sat, Oct 24, 2:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-10-24-bois-wsu",
-          "date": "2026-10-24",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401860907",
-          "home": "Washington State",
-          "away": "Boise State",
-          "matchup": "Boise State at Washington State",
-          "tipISO": "2026-10-24T22:00:00.000Z",
-          "tipPT": "3:00 PM PT",
-          "tipPTLong": "Sat, Oct 24, 3:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        }
-      ]
-    },
     {
       "date": "2026-10-25",
       "weekday": "Sun",
@@ -135,7 +50,7 @@
           "tipPTLong": "Sun, Oct 25, 6:30 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "262"
         },
         {
           "nightId": "slate-2026-10-25-sf-atl",
@@ -154,7 +69,7 @@
           "tipPTLong": "Sun, Oct 25, 10:00 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "268"
         },
         {
           "nightId": "slate-2026-10-25-mtl-wpg",
@@ -173,7 +88,7 @@
           "tipPTLong": "Sun, Oct 25, 4:00 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "264"
         },
         {
           "nightId": "slate-2026-10-25-la-lafc",
@@ -192,7 +107,7 @@
           "tipPTLong": "Sun, Oct 25, 6:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "273"
         }
       ]
     },
@@ -892,6 +807,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-07",
+      "weekday": "Sat",
+      "label": "Sat, Nov 7",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
