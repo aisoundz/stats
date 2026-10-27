@@ -1,6 +1,6 @@
 {
-  "generated": "2026-10-27T10:20:01.626Z",
-  "generatedPT": "Tue, Oct 27, 3:20 AM PT",
+  "generated": "2026-10-27T10:40:33.419Z",
+  "generatedPT": "Tue, Oct 27, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 12,
+    "built": 14,
     "off": 0,
-    "unbuilt": 2,
-    "games": 37,
-    "featured": 37,
+    "unbuilt": 0,
+    "games": 41,
+    "featured": 41,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -511,10 +511,48 @@
       "date": "2026-11-03",
       "weekday": "Tue",
       "label": "Tue, Nov 3",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 2,
+      "games": [
+        {
+          "nightId": "slate-2026-11-03-buff-moh",
+          "date": "2026-11-03",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401866454",
+          "home": "Miami (OH)",
+          "away": "Buffalo",
+          "matchup": "Buffalo at Miami (OH)",
+          "tipISO": "2026-11-04T00:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Tue, Nov 3, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-03-ohio-akr",
+          "date": "2026-11-03",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401866453",
+          "home": "Akron",
+          "away": "Ohio",
+          "matchup": "Ohio at Akron",
+          "tipISO": "2026-11-04T00:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Tue, Nov 3, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        }
+      ]
     },
     {
       "date": "2026-11-04",
@@ -568,23 +606,42 @@
       "weekday": "Thu",
       "label": "Thu, Nov 5",
       "status": "built",
-      "gameCount": 1,
+      "gameCount": 2,
       "games": [
         {
-          "nightId": "slate-2026-11-05-jax-bal",
+          "nightId": "slate-2026-11-05-jmu-usm",
           "date": "2026-11-05",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
           "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401873037",
-          "home": "Ravens",
-          "away": "Jaguars",
-          "matchup": "Jaguars at Ravens",
-          "tipISO": "2026-11-06T01:15:00.000Z",
-          "tipPT": "5:15 PM PT",
-          "tipPTLong": "Thu, Nov 5, 5:15 PM PT",
+          "path": "football/college-football",
+          "espnEvent": "401869964",
+          "home": "Southern Miss",
+          "away": "James Madison",
+          "matchup": "James Madison at Southern Miss",
+          "tipISO": "2026-11-06T01:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Thu, Nov 5, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-05-utsa-fau",
+          "date": "2026-11-05",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401862817",
+          "home": "Florida Atlantic",
+          "away": "UTSA",
+          "matchup": "UTSA at Florida Atlantic",
+          "tipISO": "2026-11-06T01:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Thu, Nov 5, 5:00 PM PT",
           "featured": true,
           "mainEvent": true,
           "gameNight": null
@@ -850,10 +907,29 @@
       "date": "2026-11-09",
       "weekday": "Mon",
       "label": "Mon, Nov 9",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 1,
+      "games": [
+        {
+          "nightId": "slate-2026-11-09-buf-min",
+          "date": "2026-11-09",
+          "league": "nfl",
+          "leagueLabel": "NFL",
+          "leagueProse": "the NFL",
+          "sport": "football",
+          "path": "football/nfl",
+          "espnEvent": "401873051",
+          "home": "Vikings",
+          "away": "Bills",
+          "matchup": "Bills at Vikings",
+          "tipISO": "2026-11-10T01:15:00.000Z",
+          "tipPT": "5:15 PM PT",
+          "tipPTLong": "Mon, Nov 9, 5:15 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
