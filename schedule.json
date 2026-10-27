@@ -1,20 +1,20 @@
 {
-  "generated": "2026-10-26T10:40:59.562Z",
-  "generatedPT": "Mon, Oct 26, 3:40 AM PT",
+  "generated": "2026-10-27T10:20:01.626Z",
+  "generatedPT": "Tue, Oct 27, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-26",
-    "to": "2026-11-08",
+    "from": "2026-10-27",
+    "to": "2026-11-09",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 12,
     "off": 0,
-    "unbuilt": 1,
-    "games": 39,
-    "featured": 38,
+    "unbuilt": 2,
+    "games": 37,
+    "featured": 37,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -26,53 +26,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-10-26",
-      "weekday": "Mon",
-      "label": "Mon, Oct 26",
-      "status": "built",
-      "gameCount": 2,
-      "games": [
-        {
-          "nightId": "slate-2026-10-26-atl-gs",
-          "date": "2026-10-26",
-          "league": "wnba",
-          "leagueLabel": "WNBA",
-          "leagueProse": "the WNBA",
-          "sport": "basketball",
-          "path": "basketball/wnba",
-          "espnEvent": "401918309",
-          "home": "Valkyries",
-          "away": "Dream",
-          "matchup": "Dream at Valkyries",
-          "tipISO": "2026-10-27T00:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Mon, Oct 26, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "266"
-        },
-        {
-          "nightId": "slate-2026-10-26-mil-tb",
-          "date": "2026-10-26",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401908044",
-          "home": "Rays",
-          "away": "Brewers",
-          "matchup": "Brewers at Rays",
-          "tipISO": "2026-10-27T00:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Mon, Oct 26, 5:00 PM PT",
-          "featured": false,
-          "mainEvent": false,
-          "gameNight": null
-        }
-      ]
-    },
     {
       "date": "2026-10-27",
       "weekday": "Tue",
@@ -97,7 +50,7 @@
           "tipPTLong": "Tue, Oct 27, 4:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "269"
         },
         {
           "nightId": "slate-2026-10-27-shsu-most",
@@ -116,7 +69,7 @@
           "tipPTLong": "Tue, Oct 27, 5:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "276"
         },
         {
           "nightId": "slate-2026-10-27-buf-sj",
@@ -135,7 +88,7 @@
           "tipPTLong": "Tue, Oct 27, 7:30 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "270"
         }
       ]
     },
@@ -892,6 +845,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-09",
+      "weekday": "Mon",
+      "label": "Mon, Nov 9",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
