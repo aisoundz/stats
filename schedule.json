@@ -1,6 +1,6 @@
 {
-  "generated": "2026-10-28T10:20:01.769Z",
-  "generatedPT": "Wed, Oct 28, 3:20 AM PT",
+  "generated": "2026-10-28T10:40:39.251Z",
+  "generatedPT": "Wed, Oct 28, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 38,
-    "featured": 38,
+    "unbuilt": 0,
+    "games": 40,
+    "featured": 40,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -418,8 +418,27 @@
       "weekday": "Mon",
       "label": "Mon, Nov 2",
       "status": "built",
-      "gameCount": 1,
+      "gameCount": 2,
       "games": [
+        {
+          "nightId": "slate-2026-11-02-eve-new",
+          "date": "2026-11-02",
+          "league": "epl",
+          "leagueLabel": "Premier League",
+          "leagueProse": "the Premier League",
+          "sport": "soccer",
+          "path": "soccer/eng.1",
+          "espnEvent": "401878762",
+          "home": "Newcastle United",
+          "away": "Everton",
+          "matchup": "Everton at Newcastle United",
+          "tipISO": "2026-11-02T20:00:00.000Z",
+          "tipPT": "12:00 PM PT",
+          "tipPTLong": "Mon, Nov 2, 12:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
         {
           "nightId": "slate-2026-11-02-chi-sea",
           "date": "2026-11-02",
@@ -869,10 +888,29 @@
       "date": "2026-11-10",
       "weekday": "Tue",
       "label": "Tue, Nov 10",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 1,
+      "games": [
+        {
+          "nightId": "slate-2026-11-10-det-stl",
+          "date": "2026-11-10",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401892687",
+          "home": "Blues",
+          "away": "Red Wings",
+          "matchup": "Red Wings at Blues",
+          "tipISO": "2026-11-11T01:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Tue, Nov 10, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
