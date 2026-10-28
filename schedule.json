@@ -1,20 +1,20 @@
 {
-  "generated": "2026-10-27T10:40:33.419Z",
-  "generatedPT": "Tue, Oct 27, 3:40 AM PT",
+  "generated": "2026-10-28T10:20:01.769Z",
+  "generatedPT": "Wed, Oct 28, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-27",
-    "to": "2026-11-09",
+    "from": "2026-10-28",
+    "to": "2026-11-10",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 41,
-    "featured": 41,
+    "unbuilt": 1,
+    "games": 38,
+    "featured": 38,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -26,72 +26,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-10-27",
-      "weekday": "Tue",
-      "label": "Tue, Oct 27",
-      "status": "built",
-      "gameCount": 3,
-      "games": [
-        {
-          "nightId": "slate-2026-10-27-del-wku",
-          "date": "2026-10-27",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401871071",
-          "home": "Western Kentucky",
-          "away": "Delaware",
-          "matchup": "Delaware at Western Kentucky",
-          "tipISO": "2026-10-27T23:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Tue, Oct 27, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "269"
-        },
-        {
-          "nightId": "slate-2026-10-27-shsu-most",
-          "date": "2026-10-27",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401871072",
-          "home": "Missouri State",
-          "away": "Sam Houston",
-          "matchup": "Sam Houston at Missouri State",
-          "tipISO": "2026-10-28T00:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Tue, Oct 27, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "276"
-        },
-        {
-          "nightId": "slate-2026-10-27-buf-sj",
-          "date": "2026-10-27",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401892595",
-          "home": "Sharks",
-          "away": "Sabres",
-          "matchup": "Sabres at Sharks",
-          "tipISO": "2026-10-28T02:30:00.000Z",
-          "tipPT": "7:30 PM PT",
-          "tipPTLong": "Tue, Oct 27, 7:30 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "270"
-        }
-      ]
-    },
     {
       "date": "2026-10-28",
       "weekday": "Wed",
@@ -116,7 +50,7 @@
           "tipPTLong": "Wed, Oct 28, 4:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "272"
         },
         {
           "nightId": "slate-2026-10-28-phi-wsh",
@@ -135,7 +69,7 @@
           "tipPTLong": "Wed, Oct 28, 4:30 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "273"
         },
         {
           "nightId": "slate-2026-10-28-jxst-nmsu",
@@ -154,7 +88,7 @@
           "tipPTLong": "Wed, Oct 28, 5:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "274"
         },
         {
           "nightId": "slate-2026-10-28-rsl-atx",
@@ -173,7 +107,7 @@
           "tipPTLong": "Wed, Oct 28, 5:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "276"
         }
       ]
     },
@@ -930,6 +864,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-10",
+      "weekday": "Tue",
+      "label": "Tue, Nov 10",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
