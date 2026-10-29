@@ -1,6 +1,6 @@
 {
-  "generated": "2026-10-29T10:20:02.024Z",
-  "generatedPT": "Thu, Oct 29, 3:20 AM PT",
+  "generated": "2026-10-29T10:41:19.453Z",
+  "generatedPT": "Thu, Oct 29, 3:41 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 36,
-    "featured": 36,
+    "unbuilt": 0,
+    "games": 38,
+    "featured": 38,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -831,10 +831,48 @@
       "date": "2026-11-11",
       "weekday": "Wed",
       "label": "Wed, Nov 11",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 2,
+      "games": [
+        {
+          "nightId": "slate-2026-11-11-tb-buf",
+          "date": "2026-11-11",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401892690",
+          "home": "Sabres",
+          "away": "Lightning",
+          "matchup": "Lightning at Sabres",
+          "tipISO": "2026-11-12T00:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Wed, Nov 11, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-11-uta-vgk",
+          "date": "2026-11-11",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401892693",
+          "home": "Golden Knights",
+          "away": "Mammoth",
+          "matchup": "Mammoth at Golden Knights",
+          "tipISO": "2026-11-12T02:30:00.000Z",
+          "tipPT": "6:30 PM PT",
+          "tipPTLong": "Wed, Nov 11, 6:30 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
