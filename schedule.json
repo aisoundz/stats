@@ -1,20 +1,20 @@
 {
-  "generated": "2026-10-28T10:40:39.251Z",
-  "generatedPT": "Wed, Oct 28, 3:40 AM PT",
+  "generated": "2026-10-29T10:20:02.024Z",
+  "generatedPT": "Thu, Oct 29, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-28",
-    "to": "2026-11-10",
+    "from": "2026-10-29",
+    "to": "2026-11-11",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 40,
-    "featured": 40,
+    "unbuilt": 1,
+    "games": 36,
+    "featured": 36,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -27,97 +27,31 @@
   ],
   "days": [
     {
-      "date": "2026-10-28",
-      "weekday": "Wed",
-      "label": "Wed, Oct 28",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-10-28-kenn-mtsu",
-          "date": "2026-10-28",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401871058",
-          "home": "Middle Tennessee",
-          "away": "Kennesaw State",
-          "matchup": "Kennesaw State at Middle Tennessee",
-          "tipISO": "2026-10-28T23:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Wed, Oct 28, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "272"
-        },
-        {
-          "nightId": "slate-2026-10-28-phi-wsh",
-          "date": "2026-10-28",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401892596",
-          "home": "Capitals",
-          "away": "Flyers",
-          "matchup": "Flyers at Capitals",
-          "tipISO": "2026-10-28T23:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Wed, Oct 28, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "273"
-        },
-        {
-          "nightId": "slate-2026-10-28-jxst-nmsu",
-          "date": "2026-10-28",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401871057",
-          "home": "New Mexico State",
-          "away": "Jacksonville State",
-          "matchup": "Jacksonville State at New Mexico State",
-          "tipISO": "2026-10-29T00:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Wed, Oct 28, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "274"
-        },
-        {
-          "nightId": "slate-2026-10-28-rsl-atx",
-          "date": "2026-10-28",
-          "league": "mls",
-          "leagueLabel": "MLS",
-          "leagueProse": "MLS",
-          "sport": "soccer",
-          "path": "soccer/usa.1",
-          "espnEvent": "761910",
-          "home": "Austin FC",
-          "away": "Real Salt Lake",
-          "matchup": "Real Salt Lake at Austin FC",
-          "tipISO": "2026-10-29T00:30:00.000Z",
-          "tipPT": "5:30 PM PT",
-          "tipPTLong": "Wed, Oct 28, 5:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "276"
-        }
-      ]
-    },
-    {
       "date": "2026-10-29",
       "weekday": "Thu",
       "label": "Thu, Oct 29",
       "status": "built",
       "gameCount": 2,
       "games": [
+        {
+          "nightId": "slate-2026-10-29-gs-atl",
+          "date": "2026-10-29",
+          "league": "wnba",
+          "leagueLabel": "WNBA",
+          "leagueProse": "the WNBA",
+          "sport": "basketball",
+          "path": "basketball/wnba",
+          "espnEvent": "401918310",
+          "home": "Dream",
+          "away": "Valkyries",
+          "matchup": "Valkyries at Dream",
+          "tipISO": "2026-10-29T16:30:00.000Z",
+          "tipPT": "9:30 AM PT",
+          "tipPTLong": "Thu, Oct 29, 9:30 AM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": "278"
+        },
         {
           "nightId": "slate-2026-10-29-fau-unt",
           "date": "2026-10-29",
@@ -135,26 +69,7 @@
           "tipPTLong": "Thu, Oct 29, 4:30 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-10-29-gs-atl",
-          "date": "2026-10-29",
-          "league": "wnba",
-          "leagueLabel": "WNBA",
-          "leagueProse": "the WNBA",
-          "sport": "basketball",
-          "path": "basketball/wnba",
-          "espnEvent": "401918310",
-          "home": "Dream",
-          "away": "Valkyries",
-          "matchup": "Valkyries at Dream",
-          "tipISO": "2026-10-30T00:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Thu, Oct 29, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
+          "gameNight": "283"
         }
       ]
     },
@@ -911,6 +826,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-11",
+      "weekday": "Wed",
+      "label": "Wed, Nov 11",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
