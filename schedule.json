@@ -1,23 +1,29 @@
 {
-  "generated": "2026-10-29T10:41:19.453Z",
-  "generatedPT": "Thu, Oct 29, 3:41 AM PT",
+  "generated": "2026-10-30T10:20:01.125Z",
+  "generatedPT": "Fri, Oct 30, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-29",
-    "to": "2026-11-11",
+    "from": "2026-10-30",
+    "to": "2026-11-12",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 38,
-    "featured": 38,
-    "unresolvedPicks": 0
+    "unbuilt": 1,
+    "games": 35,
+    "featured": 35,
+    "unresolvedPicks": 1
   },
   "_diagnostics": [
+    {
+      "level": "error",
+      "date": "2026-10-30",
+      "code": "pick-not-in-manifest",
+      "message": "slate-2026-10-30-raysguardians-mil is picked in slate-pick-2026-10-30.txt but is NOT in slate-all-2026-10-30.tsv — it CANNOT be listed. Rebuild the manifest for 2026-10-30 or drop the pick."
+    },
     {
       "level": "note",
       "date": "2026-10-31",
@@ -27,58 +33,11 @@
   ],
   "days": [
     {
-      "date": "2026-10-29",
-      "weekday": "Thu",
-      "label": "Thu, Oct 29",
-      "status": "built",
-      "gameCount": 2,
-      "games": [
-        {
-          "nightId": "slate-2026-10-29-gs-atl",
-          "date": "2026-10-29",
-          "league": "wnba",
-          "leagueLabel": "WNBA",
-          "leagueProse": "the WNBA",
-          "sport": "basketball",
-          "path": "basketball/wnba",
-          "espnEvent": "401918310",
-          "home": "Dream",
-          "away": "Valkyries",
-          "matchup": "Valkyries at Dream",
-          "tipISO": "2026-10-29T16:30:00.000Z",
-          "tipPT": "9:30 AM PT",
-          "tipPTLong": "Thu, Oct 29, 9:30 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "278"
-        },
-        {
-          "nightId": "slate-2026-10-29-fau-unt",
-          "date": "2026-10-29",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401862812",
-          "home": "North Texas",
-          "away": "Florida Atlantic",
-          "matchup": "Florida Atlantic at North Texas",
-          "tipISO": "2026-10-29T23:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Thu, Oct 29, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "283"
-        }
-      ]
-    },
-    {
       "date": "2026-10-30",
       "weekday": "Fri",
       "label": "Fri, Oct 30",
       "status": "built",
-      "gameCount": 4,
+      "gameCount": 3,
       "games": [
         {
           "nightId": "slate-2026-10-30-tuln-clt",
@@ -97,7 +56,7 @@
           "tipPTLong": "Fri, Oct 30, 4:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "282"
         },
         {
           "nightId": "slate-2026-10-30-bay-ucf",
@@ -116,26 +75,7 @@
           "tipPTLong": "Fri, Oct 30, 4:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-10-30-raysguardians-mil",
-          "date": "2026-10-30",
-          "league": "mlb",
-          "leagueLabel": "Major League Baseball",
-          "leagueProse": "Major League Baseball",
-          "sport": "baseball",
-          "path": "baseball/mlb",
-          "espnEvent": "401908047",
-          "home": "Brewers",
-          "away": "Rays/Guardians",
-          "matchup": "Rays/Guardians at Brewers",
-          "tipISO": "2026-10-31T00:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Fri, Oct 30, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": null
+          "gameNight": "283"
         },
         {
           "nightId": "slate-2026-10-30-kent-sac",
@@ -154,8 +94,11 @@
           "tipPTLong": "Fri, Oct 30, 7:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "286"
         }
+      ],
+      "unresolved": [
+        "slate-2026-10-30-raysguardians-mil"
       ]
     },
     {
@@ -873,6 +816,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-12",
+      "weekday": "Thu",
+      "label": "Thu, Nov 12",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
