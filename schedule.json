@@ -1,106 +1,24 @@
 {
-  "generated": "2026-10-30T10:41:06.518Z",
-  "generatedPT": "Fri, Oct 30, 3:41 AM PT",
+  "generated": "2026-10-31T10:20:01.419Z",
+  "generatedPT": "Sat, Oct 31, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-10-30",
-    "to": "2026-11-12",
+    "from": "2026-10-31",
+    "to": "2026-11-13",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 37,
-    "featured": 37,
-    "unresolvedPicks": 1
+    "unbuilt": 1,
+    "games": 34,
+    "featured": 34,
+    "unresolvedPicks": 0
   },
-  "_diagnostics": [
-    {
-      "level": "error",
-      "date": "2026-10-30",
-      "code": "pick-not-in-manifest",
-      "message": "slate-2026-10-30-raysguardians-mil is picked in slate-pick-2026-10-30.txt but is NOT in slate-all-2026-10-30.tsv — it CANNOT be listed. Rebuild the manifest for 2026-10-30 or drop the pick."
-    },
-    {
-      "level": "note",
-      "date": "2026-10-31",
-      "code": "tip-date-drift",
-      "message": "slate-2026-10-31-orst-fres tips on 2026-10-30 PT but is filed under 2026-10-31 — grouped under 2026-10-31"
-    }
-  ],
+  "_diagnostics": [],
   "days": [
-    {
-      "date": "2026-10-30",
-      "weekday": "Fri",
-      "label": "Fri, Oct 30",
-      "status": "built",
-      "gameCount": 3,
-      "games": [
-        {
-          "nightId": "slate-2026-10-30-tuln-clt",
-          "date": "2026-10-30",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401862813",
-          "home": "Charlotte",
-          "away": "Tulane",
-          "matchup": "Tulane at Charlotte",
-          "tipISO": "2026-10-30T23:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Fri, Oct 30, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "282"
-        },
-        {
-          "nightId": "slate-2026-10-30-bay-ucf",
-          "date": "2026-10-30",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401856844",
-          "home": "UCF",
-          "away": "Baylor",
-          "matchup": "Baylor at UCF",
-          "tipISO": "2026-10-30T23:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Fri, Oct 30, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "283"
-        },
-        {
-          "nightId": "slate-2026-10-30-kent-sac",
-          "date": "2026-10-30",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401866451",
-          "home": "Sacramento State",
-          "away": "Kent State",
-          "matchup": "Kent State at Sacramento State",
-          "tipISO": "2026-10-31T02:30:00.000Z",
-          "tipPT": "7:30 PM PT",
-          "tipPTLong": "Fri, Oct 30, 7:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "286"
-        }
-      ],
-      "unresolved": [
-        "slate-2026-10-30-raysguardians-mil"
-      ]
-    },
     {
       "date": "2026-10-31",
       "weekday": "Sat",
@@ -108,25 +26,6 @@
       "status": "built",
       "gameCount": 4,
       "games": [
-        {
-          "nightId": "slate-2026-10-31-orst-fres",
-          "date": "2026-10-31",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401860924",
-          "home": "Fresno State",
-          "away": "Oregon State",
-          "matchup": "Oregon State at Fresno State",
-          "tipISO": "2026-10-31T04:00:00.000Z",
-          "tipPT": "9:00 PM PT",
-          "tipPTLong": "Fri, Oct 30, 9:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": null
-        },
         {
           "nightId": "slate-2026-10-31-orl-clt",
           "date": "2026-10-31",
@@ -144,7 +43,7 @@
           "tipPTLong": "Sat, Oct 31, 10:00 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "331"
         },
         {
           "nightId": "slate-2026-10-31-fla-uga",
@@ -163,7 +62,7 @@
           "tipPTLong": "Sat, Oct 31, 12:30 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "289"
         },
         {
           "nightId": "slate-2026-10-31-atl-gs",
@@ -182,7 +81,26 @@
           "tipPTLong": "Sat, Oct 31, 5:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "355"
+        },
+        {
+          "nightId": "slate-2026-10-31-orst-fres",
+          "date": "2026-10-31",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401860924",
+          "home": "Fresno State",
+          "away": "Oregon State",
+          "matchup": "Oregon State at Fresno State",
+          "tipISO": "2026-11-01T03:00:00.000Z",
+          "tipPT": "8:00 PM PT",
+          "tipPTLong": "Sat, Oct 31, 8:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": "298"
         }
       ]
     },
@@ -863,6 +781,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-13",
+      "weekday": "Fri",
+      "label": "Fri, Nov 13",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
