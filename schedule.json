@@ -1,109 +1,24 @@
 {
-  "generated": "2026-11-01T11:42:19.990Z",
-  "generatedPT": "Sun, Nov 1, 3:42 AM PT",
+  "generated": "2026-11-02T11:20:01.587Z",
+  "generatedPT": "Mon, Nov 2, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-11-01",
-    "to": "2026-11-14",
+    "from": "2026-11-02",
+    "to": "2026-11-15",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 38,
-    "featured": 38,
+    "unbuilt": 1,
+    "games": 34,
+    "featured": 34,
     "unresolvedPicks": 0
   },
   "_diagnostics": [],
   "days": [
-    {
-      "date": "2026-11-01",
-      "weekday": "Sun",
-      "label": "Sun, Nov 1",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-11-01-bal-buf",
-          "date": "2026-11-01",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401873026",
-          "home": "Bills",
-          "away": "Ravens",
-          "matchup": "Ravens at Bills",
-          "tipISO": "2026-11-01T18:00:00.000Z",
-          "tipPT": "10:00 AM PT",
-          "tipPTLong": "Sun, Nov 1, 10:00 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "291"
-        },
-        {
-          "nightId": "slate-2026-11-01-tor-atl",
-          "date": "2026-11-01",
-          "league": "mls",
-          "leagueLabel": "MLS",
-          "leagueProse": "MLS",
-          "sport": "soccer",
-          "path": "soccer/usa.1",
-          "espnEvent": "761931",
-          "home": "Atlanta United FC",
-          "away": "Toronto FC",
-          "matchup": "Toronto FC at Atlanta United FC",
-          "tipISO": "2026-11-01T21:30:00.000Z",
-          "tipPT": "1:30 PM PT",
-          "tipPTLong": "Sun, Nov 1, 1:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "294"
-        },
-        {
-          "nightId": "slate-2026-11-01-mia-ne",
-          "date": "2026-11-01",
-          "league": "mls",
-          "leagueLabel": "MLS",
-          "leagueProse": "MLS",
-          "sport": "soccer",
-          "path": "soccer/usa.1",
-          "espnEvent": "761932",
-          "home": "New England Revolution",
-          "away": "Inter Miami CF",
-          "matchup": "Inter Miami CF at New England Revolution",
-          "tipISO": "2026-11-02T00:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Sun, Nov 1, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "296"
-        },
-        {
-          "nightId": "slate-2026-11-01-phi-wsh",
-          "date": "2026-11-01",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401873035",
-          "home": "Commanders",
-          "away": "Eagles",
-          "matchup": "Eagles at Commanders",
-          "tipISO": "2026-11-02T01:20:00.000Z",
-          "tipPT": "5:20 PM PT",
-          "tipPTLong": "Sun, Nov 1, 5:20 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "300"
-        }
-      ]
-    },
     {
       "date": "2026-11-02",
       "weekday": "Mon",
@@ -128,7 +43,7 @@
           "tipPTLong": "Mon, Nov 2, 12:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "293"
         },
         {
           "nightId": "slate-2026-11-02-chi-sea",
@@ -147,7 +62,7 @@
           "tipPTLong": "Mon, Nov 2, 5:15 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "297"
         }
       ]
     },
@@ -866,6 +781,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-15",
+      "weekday": "Sun",
+      "label": "Sun, Nov 15",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
