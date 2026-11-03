@@ -1,71 +1,24 @@
 {
-  "generated": "2026-11-02T11:41:35.966Z",
-  "generatedPT": "Mon, Nov 2, 3:41 AM PT",
+  "generated": "2026-11-03T11:20:01.151Z",
+  "generatedPT": "Tue, Nov 3, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-11-02",
-    "to": "2026-11-15",
+    "from": "2026-11-03",
+    "to": "2026-11-16",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 38,
-    "featured": 38,
+    "unbuilt": 1,
+    "games": 36,
+    "featured": 36,
     "unresolvedPicks": 0
   },
   "_diagnostics": [],
   "days": [
-    {
-      "date": "2026-11-02",
-      "weekday": "Mon",
-      "label": "Mon, Nov 2",
-      "status": "built",
-      "gameCount": 2,
-      "games": [
-        {
-          "nightId": "slate-2026-11-02-eve-new",
-          "date": "2026-11-02",
-          "league": "epl",
-          "leagueLabel": "Premier League",
-          "leagueProse": "the Premier League",
-          "sport": "soccer",
-          "path": "soccer/eng.1",
-          "espnEvent": "401878762",
-          "home": "Newcastle United",
-          "away": "Everton",
-          "matchup": "Everton at Newcastle United",
-          "tipISO": "2026-11-02T20:00:00.000Z",
-          "tipPT": "12:00 PM PT",
-          "tipPTLong": "Mon, Nov 2, 12:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "293"
-        },
-        {
-          "nightId": "slate-2026-11-02-chi-sea",
-          "date": "2026-11-02",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401873036",
-          "home": "Seahawks",
-          "away": "Bears",
-          "matchup": "Bears at Seahawks",
-          "tipISO": "2026-11-03T01:15:00.000Z",
-          "tipPT": "5:15 PM PT",
-          "tipPTLong": "Mon, Nov 2, 5:15 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "297"
-        }
-      ]
-    },
     {
       "date": "2026-11-03",
       "weekday": "Tue",
@@ -73,25 +26,6 @@
       "status": "built",
       "gameCount": 2,
       "games": [
-        {
-          "nightId": "slate-2026-11-03-buff-moh",
-          "date": "2026-11-03",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401866454",
-          "home": "Miami (OH)",
-          "away": "Buffalo",
-          "matchup": "Buffalo at Miami (OH)",
-          "tipISO": "2026-11-04T00:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Tue, Nov 3, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": null
-        },
         {
           "nightId": "slate-2026-11-03-ohio-akr",
           "date": "2026-11-03",
@@ -109,7 +43,26 @@
           "tipPTLong": "Tue, Nov 3, 4:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "303"
+        },
+        {
+          "nightId": "slate-2026-11-03-buff-moh",
+          "date": "2026-11-03",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401866454",
+          "home": "Miami (OH)",
+          "away": "Buffalo",
+          "matchup": "Buffalo at Miami (OH)",
+          "tipISO": "2026-11-04T01:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Tue, Nov 3, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": "306"
         }
       ]
     },
@@ -866,6 +819,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-16",
+      "weekday": "Mon",
+      "label": "Mon, Nov 16",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
