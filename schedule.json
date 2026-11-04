@@ -1,71 +1,24 @@
 {
-  "generated": "2026-11-03T11:41:18.114Z",
-  "generatedPT": "Tue, Nov 3, 3:41 AM PT",
+  "generated": "2026-11-04T11:20:01.271Z",
+  "generatedPT": "Wed, Nov 4, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-11-03",
-    "to": "2026-11-16",
+    "from": "2026-11-04",
+    "to": "2026-11-17",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 38,
-    "featured": 38,
+    "unbuilt": 1,
+    "games": 36,
+    "featured": 36,
     "unresolvedPicks": 0
   },
   "_diagnostics": [],
   "days": [
-    {
-      "date": "2026-11-03",
-      "weekday": "Tue",
-      "label": "Tue, Nov 3",
-      "status": "built",
-      "gameCount": 2,
-      "games": [
-        {
-          "nightId": "slate-2026-11-03-ohio-akr",
-          "date": "2026-11-03",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401866453",
-          "home": "Akron",
-          "away": "Ohio",
-          "matchup": "Ohio at Akron",
-          "tipISO": "2026-11-04T00:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Tue, Nov 3, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "303"
-        },
-        {
-          "nightId": "slate-2026-11-03-buff-moh",
-          "date": "2026-11-03",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401866454",
-          "home": "Miami (OH)",
-          "away": "Buffalo",
-          "matchup": "Buffalo at Miami (OH)",
-          "tipISO": "2026-11-04T01:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Tue, Nov 3, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "306"
-        }
-      ]
-    },
     {
       "date": "2026-11-04",
       "weekday": "Wed",
@@ -90,7 +43,7 @@
           "tipPTLong": "Wed, Nov 4, 4:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "297"
         },
         {
           "nightId": "slate-2026-11-04-sj-la",
@@ -109,7 +62,7 @@
           "tipPTLong": "Wed, Nov 4, 7:00 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "298"
         }
       ]
     },
@@ -866,6 +819,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-17",
+      "weekday": "Tue",
+      "label": "Tue, Nov 17",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
