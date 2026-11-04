@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-04T11:20:01.271Z",
-  "generatedPT": "Wed, Nov 4, 3:20 AM PT",
+  "generated": "2026-11-04T11:41:05.197Z",
+  "generatedPT": "Wed, Nov 4, 3:41 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 36,
-    "featured": 36,
+    "unbuilt": 0,
+    "games": 38,
+    "featured": 38,
     "unresolvedPicks": 0
   },
   "_diagnostics": [],
@@ -824,10 +824,48 @@
       "date": "2026-11-17",
       "weekday": "Tue",
       "label": "Tue, Nov 17",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 2,
+      "games": [
+        {
+          "nightId": "slate-2026-11-17-tor-chi",
+          "date": "2026-11-17",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401892733",
+          "home": "Blackhawks",
+          "away": "Maple Leafs",
+          "matchup": "Maple Leafs at Blackhawks",
+          "tipISO": "2026-11-18T00:30:00.000Z",
+          "tipPT": "4:30 PM PT",
+          "tipPTLong": "Tue, Nov 17, 4:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-17-dal-vgk",
+          "date": "2026-11-17",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401892737",
+          "home": "Golden Knights",
+          "away": "Stars",
+          "matchup": "Stars at Golden Knights",
+          "tipISO": "2026-11-18T03:00:00.000Z",
+          "tipPT": "7:00 PM PT",
+          "tipPTLong": "Tue, Nov 17, 7:00 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
