@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-05T11:20:01.281Z",
-  "generatedPT": "Thu, Nov 5, 3:20 AM PT",
+  "generated": "2026-11-05T11:41:55.538Z",
+  "generatedPT": "Thu, Nov 5, 3:41 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 36,
-    "featured": 36,
+    "unbuilt": 0,
+    "games": 37,
+    "featured": 37,
     "unresolvedPicks": 0
   },
   "_diagnostics": [],
@@ -824,10 +824,29 @@
       "date": "2026-11-18",
       "weekday": "Wed",
       "label": "Wed, Nov 18",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 1,
+      "games": [
+        {
+          "nightId": "slate-2026-11-18-bos-det",
+          "date": "2026-11-18",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401892739",
+          "home": "Red Wings",
+          "away": "Bruins",
+          "matchup": "Bruins at Red Wings",
+          "tipISO": "2026-11-19T00:30:00.000Z",
+          "tipPT": "4:30 PM PT",
+          "tipPTLong": "Wed, Nov 18, 4:30 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
