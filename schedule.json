@@ -1,71 +1,24 @@
 {
-  "generated": "2026-11-04T11:41:05.197Z",
-  "generatedPT": "Wed, Nov 4, 3:41 AM PT",
+  "generated": "2026-11-05T11:20:01.281Z",
+  "generatedPT": "Thu, Nov 5, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-11-04",
-    "to": "2026-11-17",
+    "from": "2026-11-05",
+    "to": "2026-11-18",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 38,
-    "featured": 38,
+    "unbuilt": 1,
+    "games": 36,
+    "featured": 36,
     "unresolvedPicks": 0
   },
   "_diagnostics": [],
   "days": [
-    {
-      "date": "2026-11-04",
-      "weekday": "Wed",
-      "label": "Wed, Nov 4",
-      "status": "built",
-      "gameCount": 2,
-      "games": [
-        {
-          "nightId": "slate-2026-11-04-chi-fla",
-          "date": "2026-11-04",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401892645",
-          "home": "Panthers",
-          "away": "Blackhawks",
-          "matchup": "Blackhawks at Panthers",
-          "tipISO": "2026-11-05T00:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Wed, Nov 4, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "297"
-        },
-        {
-          "nightId": "slate-2026-11-04-sj-la",
-          "date": "2026-11-04",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401892646",
-          "home": "Kings",
-          "away": "Sharks",
-          "matchup": "Sharks at Kings",
-          "tipISO": "2026-11-05T03:00:00.000Z",
-          "tipPT": "7:00 PM PT",
-          "tipPTLong": "Wed, Nov 4, 7:00 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "298"
-        }
-      ]
-    },
     {
       "date": "2026-11-05",
       "weekday": "Thu",
@@ -73,6 +26,25 @@
       "status": "built",
       "gameCount": 2,
       "games": [
+        {
+          "nightId": "slate-2026-11-05-utsa-fau",
+          "date": "2026-11-05",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401862817",
+          "home": "Florida Atlantic",
+          "away": "UTSA",
+          "matchup": "UTSA at Florida Atlantic",
+          "tipISO": "2026-11-06T00:30:00.000Z",
+          "tipPT": "4:30 PM PT",
+          "tipPTLong": "Thu, Nov 5, 4:30 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": "307"
+        },
         {
           "nightId": "slate-2026-11-05-jmu-usm",
           "date": "2026-11-05",
@@ -90,26 +62,7 @@
           "tipPTLong": "Thu, Nov 5, 5:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-11-05-utsa-fau",
-          "date": "2026-11-05",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401862817",
-          "home": "Florida Atlantic",
-          "away": "UTSA",
-          "matchup": "UTSA at Florida Atlantic",
-          "tipISO": "2026-11-06T01:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Thu, Nov 5, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": null
+          "gameNight": "310"
         }
       ]
     },
@@ -866,6 +819,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-18",
+      "weekday": "Wed",
+      "label": "Wed, Nov 18",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
