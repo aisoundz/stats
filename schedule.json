@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-06T11:20:01.478Z",
-  "generatedPT": "Fri, Nov 6, 3:20 AM PT",
+  "generated": "2026-11-06T11:41:21.343Z",
+  "generatedPT": "Fri, Nov 6, 3:41 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 35,
-    "featured": 35,
+    "unbuilt": 0,
+    "games": 38,
+    "featured": 38,
     "unresolvedPicks": 0
   },
   "_diagnostics": [],
@@ -778,7 +778,7 @@
       "weekday": "Wed",
       "label": "Wed, Nov 18",
       "status": "built",
-      "gameCount": 1,
+      "gameCount": 2,
       "games": [
         {
           "nightId": "slate-2026-11-18-bos-det",
@@ -796,6 +796,25 @@
           "tipPT": "4:30 PM PT",
           "tipPTLong": "Wed, Nov 18, 4:30 PM PT",
           "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-18-col-uta",
+          "date": "2026-11-18",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401892741",
+          "home": "Mammoth",
+          "away": "Avalanche",
+          "matchup": "Avalanche at Mammoth",
+          "tipISO": "2026-11-19T02:00:00.000Z",
+          "tipPT": "6:00 PM PT",
+          "tipPTLong": "Wed, Nov 18, 6:00 PM PT",
+          "featured": true,
           "mainEvent": true,
           "gameNight": null
         }
@@ -805,10 +824,48 @@
       "date": "2026-11-19",
       "weekday": "Thu",
       "label": "Thu, Nov 19",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 2,
+      "games": [
+        {
+          "nightId": "slate-2026-11-19-rice-tem",
+          "date": "2026-11-19",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401862830",
+          "home": "Temple",
+          "away": "Rice",
+          "matchup": "Rice at Temple",
+          "tipISO": "2026-11-20T00:30:00.000Z",
+          "tipPT": "4:30 PM PT",
+          "tipPTLong": "Thu, Nov 19, 4:30 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-19-ind-hou",
+          "date": "2026-11-19",
+          "league": "nfl",
+          "leagueLabel": "NFL",
+          "leagueProse": "the NFL",
+          "sport": "football",
+          "path": "football/nfl",
+          "espnEvent": "401873066",
+          "home": "Texans",
+          "away": "Colts",
+          "matchup": "Colts at Texans",
+          "tipISO": "2026-11-20T01:15:00.000Z",
+          "tipPT": "5:15 PM PT",
+          "tipPTLong": "Thu, Nov 19, 5:15 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
