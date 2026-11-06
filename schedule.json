@@ -1,71 +1,24 @@
 {
-  "generated": "2026-11-05T11:41:55.538Z",
-  "generatedPT": "Thu, Nov 5, 3:41 AM PT",
+  "generated": "2026-11-06T11:20:01.478Z",
+  "generatedPT": "Fri, Nov 6, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-11-05",
-    "to": "2026-11-18",
+    "from": "2026-11-06",
+    "to": "2026-11-19",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 37,
-    "featured": 37,
+    "unbuilt": 1,
+    "games": 35,
+    "featured": 35,
     "unresolvedPicks": 0
   },
   "_diagnostics": [],
   "days": [
-    {
-      "date": "2026-11-05",
-      "weekday": "Thu",
-      "label": "Thu, Nov 5",
-      "status": "built",
-      "gameCount": 2,
-      "games": [
-        {
-          "nightId": "slate-2026-11-05-utsa-fau",
-          "date": "2026-11-05",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401862817",
-          "home": "Florida Atlantic",
-          "away": "UTSA",
-          "matchup": "UTSA at Florida Atlantic",
-          "tipISO": "2026-11-06T00:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Thu, Nov 5, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "307"
-        },
-        {
-          "nightId": "slate-2026-11-05-jmu-usm",
-          "date": "2026-11-05",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401869964",
-          "home": "Southern Miss",
-          "away": "James Madison",
-          "matchup": "James Madison at Southern Miss",
-          "tipISO": "2026-11-06T01:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Thu, Nov 5, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "310"
-        }
-      ]
-    },
     {
       "date": "2026-11-06",
       "weekday": "Fri",
@@ -90,7 +43,7 @@
           "tipPTLong": "Fri, Nov 6, 4:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "302"
         },
         {
           "nightId": "slate-2026-11-06-usf-ecu",
@@ -109,7 +62,7 @@
           "tipPTLong": "Fri, Nov 6, 4:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "303"
         },
         {
           "nightId": "slate-2026-11-06-neb-ill",
@@ -128,7 +81,7 @@
           "tipPTLong": "Fri, Nov 6, 5:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "306"
         },
         {
           "nightId": "slate-2026-11-06-tcu-ariz",
@@ -147,7 +100,7 @@
           "tipPTLong": "Fri, Nov 6, 7:15 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "307"
         }
       ]
     },
@@ -847,6 +800,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-19",
+      "weekday": "Thu",
+      "label": "Thu, Nov 19",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
