@@ -1,109 +1,24 @@
 {
-  "generated": "2026-11-06T11:41:21.343Z",
-  "generatedPT": "Fri, Nov 6, 3:41 AM PT",
+  "generated": "2026-11-07T11:20:01.246Z",
+  "generatedPT": "Sat, Nov 7, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-11-06",
-    "to": "2026-11-19",
+    "from": "2026-11-07",
+    "to": "2026-11-20",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 38,
-    "featured": 38,
+    "unbuilt": 1,
+    "games": 34,
+    "featured": 34,
     "unresolvedPicks": 0
   },
   "_diagnostics": [],
   "days": [
-    {
-      "date": "2026-11-06",
-      "weekday": "Fri",
-      "label": "Fri, Nov 6",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-11-06-vt-smu",
-          "date": "2026-11-06",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401858288",
-          "home": "SMU",
-          "away": "Virginia Tech",
-          "matchup": "Virginia Tech at SMU",
-          "tipISO": "2026-11-07T00:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Fri, Nov 6, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "302"
-        },
-        {
-          "nightId": "slate-2026-11-06-usf-ecu",
-          "date": "2026-11-06",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401862818",
-          "home": "East Carolina",
-          "away": "South Florida",
-          "matchup": "South Florida at East Carolina",
-          "tipISO": "2026-11-07T00:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Fri, Nov 6, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "303"
-        },
-        {
-          "nightId": "slate-2026-11-06-neb-ill",
-          "date": "2026-11-06",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401858510",
-          "home": "Illinois",
-          "away": "Nebraska",
-          "matchup": "Nebraska at Illinois",
-          "tipISO": "2026-11-07T01:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Fri, Nov 6, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "306"
-        },
-        {
-          "nightId": "slate-2026-11-06-tcu-ariz",
-          "date": "2026-11-06",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401856855",
-          "home": "Arizona",
-          "away": "TCU",
-          "matchup": "TCU at Arizona",
-          "tipISO": "2026-11-07T03:15:00.000Z",
-          "tipPT": "7:15 PM PT",
-          "tipPTLong": "Fri, Nov 6, 7:15 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "307"
-        }
-      ]
-    },
     {
       "date": "2026-11-07",
       "weekday": "Sat",
@@ -128,7 +43,7 @@
           "tipPTLong": "Sat, Nov 7, 1:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "354"
         },
         {
           "nightId": "slate-2026-11-07-bois-csu",
@@ -147,7 +62,7 @@
           "tipPTLong": "Sat, Nov 7, 3:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "309"
         },
         {
           "nightId": "slate-2026-11-07-por-atx",
@@ -166,7 +81,7 @@
           "tipPTLong": "Sat, Nov 7, 4:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "362"
         },
         {
           "nightId": "slate-2026-11-07-mia-nd",
@@ -185,7 +100,7 @@
           "tipPTLong": "Sat, Nov 7, 4:30 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "314"
         }
       ]
     },
@@ -866,6 +781,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-20",
+      "weekday": "Fri",
+      "label": "Fri, Nov 20",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
