@@ -1,109 +1,24 @@
 {
-  "generated": "2026-11-08T11:43:09.913Z",
-  "generatedPT": "Sun, Nov 8, 3:43 AM PT",
+  "generated": "2026-11-09T11:20:01.489Z",
+  "generatedPT": "Mon, Nov 9, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-11-08",
-    "to": "2026-11-21",
+    "from": "2026-11-09",
+    "to": "2026-11-22",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 38,
-    "featured": 38,
+    "unbuilt": 1,
+    "games": 34,
+    "featured": 34,
     "unresolvedPicks": 0
   },
   "_diagnostics": [],
   "days": [
-    {
-      "date": "2026-11-08",
-      "weekday": "Sun",
-      "label": "Sun, Nov 8",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-11-08-cin-atl",
-          "date": "2026-11-08",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401873038",
-          "home": "Falcons",
-          "away": "Bengals",
-          "matchup": "Bengals at Falcons",
-          "tipISO": "2026-11-08T14:30:00.000Z",
-          "tipPT": "6:30 AM PT",
-          "tipPTLong": "Sun, Nov 8, 6:30 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "313"
-        },
-        {
-          "nightId": "slate-2026-11-08-dal-ind",
-          "date": "2026-11-08",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401873040",
-          "home": "Colts",
-          "away": "Cowboys",
-          "matchup": "Cowboys at Colts",
-          "tipISO": "2026-11-08T18:00:00.000Z",
-          "tipPT": "10:00 AM PT",
-          "tipPTLong": "Sun, Nov 8, 10:00 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "316"
-        },
-        {
-          "nightId": "slate-2026-11-08-hou-lac",
-          "date": "2026-11-08",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401873046",
-          "home": "Chargers",
-          "away": "Texans",
-          "matchup": "Texans at Chargers",
-          "tipISO": "2026-11-08T21:05:00.000Z",
-          "tipPT": "1:05 PM PT",
-          "tipPTLong": "Sun, Nov 8, 1:05 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "318"
-        },
-        {
-          "nightId": "slate-2026-11-08-tb-chi",
-          "date": "2026-11-08",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401873050",
-          "home": "Bears",
-          "away": "Buccaneers",
-          "matchup": "Buccaneers at Bears",
-          "tipISO": "2026-11-09T01:20:00.000Z",
-          "tipPT": "5:20 PM PT",
-          "tipPTLong": "Sun, Nov 8, 5:20 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "323"
-        }
-      ]
-    },
     {
       "date": "2026-11-09",
       "weekday": "Mon",
@@ -128,7 +43,7 @@
           "tipPTLong": "Mon, Nov 9, 5:15 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "314"
         }
       ]
     },
@@ -866,6 +781,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-22",
+      "weekday": "Sun",
+      "label": "Sun, Nov 22",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
