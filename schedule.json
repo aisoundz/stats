@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-10T11:20:01.964Z",
-  "generatedPT": "Tue, Nov 10, 3:20 AM PT",
+  "generated": "2026-11-10T11:41:35.429Z",
+  "generatedPT": "Tue, Nov 10, 3:41 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 37,
-    "featured": 37,
+    "unbuilt": 0,
+    "games": 38,
+    "featured": 38,
     "unresolvedPicks": 0
   },
   "_diagnostics": [],
@@ -843,10 +843,29 @@
       "date": "2026-11-23",
       "weekday": "Mon",
       "label": "Mon, Nov 23",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 1,
+      "games": [
+        {
+          "nightId": "slate-2026-11-23-lafc-stl",
+          "date": "2026-11-23",
+          "league": "mls",
+          "leagueLabel": "MLS",
+          "leagueProse": "MLS",
+          "sport": "soccer",
+          "path": "soccer/usa.1",
+          "espnEvent": "401933728",
+          "home": "St. Louis CITY SC",
+          "away": "LAFC",
+          "matchup": "LAFC at St. Louis CITY SC",
+          "tipISO": "2026-11-24T01:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Mon, Nov 23, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
