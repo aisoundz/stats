@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-11T11:20:01.196Z",
-  "generatedPT": "Wed, Nov 11, 3:20 AM PT",
+  "generated": "2026-11-11T11:40:48.266Z",
+  "generatedPT": "Wed, Nov 11, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 44,
-    "featured": 44,
+    "unbuilt": 0,
+    "games": 46,
+    "featured": 46,
     "unresolvedPicks": 0
   },
   "_diagnostics": [],
@@ -976,10 +976,48 @@
       "date": "2026-11-24",
       "weekday": "Tue",
       "label": "Tue, Nov 24",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 2,
+      "games": [
+        {
+          "nightId": "slate-2026-11-24-bos-wsh",
+          "date": "2026-11-24",
+          "league": "nba",
+          "leagueLabel": "NBA",
+          "leagueProse": "the NBA",
+          "sport": "basketball",
+          "path": "basketball/nba",
+          "espnEvent": "401909315",
+          "home": "Wizards",
+          "away": "Celtics",
+          "matchup": "Celtics at Wizards",
+          "tipISO": "2026-11-25T01:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Tue, Nov 24, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-24-hou-sj",
+          "date": "2026-11-24",
+          "league": "mls",
+          "leagueLabel": "MLS",
+          "leagueProse": "MLS",
+          "sport": "soccer",
+          "path": "soccer/usa.1",
+          "espnEvent": "401933738",
+          "home": "San Jose Earthquakes",
+          "away": "Houston Dynamo FC",
+          "matchup": "Houston Dynamo FC at San Jose Earthquakes",
+          "tipISO": "2026-11-25T03:00:00.000Z",
+          "tipPT": "7:00 PM PT",
+          "tipPTLong": "Tue, Nov 24, 7:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
