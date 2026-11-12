@@ -1,90 +1,24 @@
 {
-  "generated": "2026-11-11T11:40:48.266Z",
-  "generatedPT": "Wed, Nov 11, 3:40 AM PT",
+  "generated": "2026-11-12T11:20:01.668Z",
+  "generatedPT": "Thu, Nov 12, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-11-11",
-    "to": "2026-11-24",
+    "from": "2026-11-12",
+    "to": "2026-11-25",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 46,
-    "featured": 46,
+    "unbuilt": 1,
+    "games": 43,
+    "featured": 43,
     "unresolvedPicks": 0
   },
   "_diagnostics": [],
   "days": [
-    {
-      "date": "2026-11-11",
-      "weekday": "Wed",
-      "label": "Wed, Nov 11",
-      "status": "built",
-      "gameCount": 3,
-      "games": [
-        {
-          "nightId": "slate-2026-11-11-cle-ny",
-          "date": "2026-11-11",
-          "league": "nba",
-          "leagueLabel": "NBA",
-          "leagueProse": "the NBA",
-          "sport": "basketball",
-          "path": "basketball/nba",
-          "espnEvent": "401909967",
-          "home": "Knicks",
-          "away": "Cavaliers",
-          "matchup": "Cavaliers at Knicks",
-          "tipISO": "2026-11-12T00:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Wed, Nov 11, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "322"
-        },
-        {
-          "nightId": "slate-2026-11-11-tb-buf",
-          "date": "2026-11-11",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401892690",
-          "home": "Sabres",
-          "away": "Lightning",
-          "matchup": "Lightning at Sabres",
-          "tipISO": "2026-11-12T00:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Wed, Nov 11, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "319"
-        },
-        {
-          "nightId": "slate-2026-11-11-uta-vgk",
-          "date": "2026-11-11",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401892693",
-          "home": "Golden Knights",
-          "away": "Mammoth",
-          "matchup": "Mammoth at Golden Knights",
-          "tipISO": "2026-11-12T02:30:00.000Z",
-          "tipPT": "6:30 PM PT",
-          "tipPTLong": "Wed, Nov 11, 6:30 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "320"
-        }
-      ]
-    },
     {
       "date": "2026-11-12",
       "weekday": "Thu",
@@ -109,7 +43,7 @@
           "tipPTLong": "Thu, Nov 12, 5:00 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "330"
         },
         {
           "nightId": "slate-2026-11-12-ul-ulm",
@@ -128,7 +62,7 @@
           "tipPTLong": "Thu, Nov 12, 6:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "332"
         }
       ]
     },
@@ -1018,6 +952,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-25",
+      "weekday": "Wed",
+      "label": "Wed, Nov 25",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
