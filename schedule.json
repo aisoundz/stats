@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-13T11:20:01.668Z",
-  "generatedPT": "Fri, Nov 13, 3:20 AM PT",
+  "generated": "2026-11-13T11:40:30.371Z",
+  "generatedPT": "Fri, Nov 13, 3:40 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 45,
-    "featured": 45,
+    "unbuilt": 0,
+    "games": 48,
+    "featured": 48,
     "unresolvedPicks": 0
   },
   "_diagnostics": [],
@@ -995,10 +995,67 @@
       "date": "2026-11-26",
       "weekday": "Thu",
       "label": "Thu, Nov 26",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 3,
+      "games": [
+        {
+          "nightId": "slate-2026-11-26-chi-det",
+          "date": "2026-11-26",
+          "league": "nfl",
+          "leagueLabel": "NFL",
+          "leagueProse": "the NFL",
+          "sport": "football",
+          "path": "football/nfl",
+          "espnEvent": "401873081",
+          "home": "Lions",
+          "away": "Bears",
+          "matchup": "Bears at Lions",
+          "tipISO": "2026-11-26T18:00:00.000Z",
+          "tipPT": "10:00 AM PT",
+          "tipPTLong": "Thu, Nov 26, 10:00 AM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-26-phi-dal",
+          "date": "2026-11-26",
+          "league": "nfl",
+          "leagueLabel": "NFL",
+          "leagueProse": "the NFL",
+          "sport": "football",
+          "path": "football/nfl",
+          "espnEvent": "401873080",
+          "home": "Cowboys",
+          "away": "Eagles",
+          "matchup": "Eagles at Cowboys",
+          "tipISO": "2026-11-26T21:30:00.000Z",
+          "tipPT": "1:30 PM PT",
+          "tipPTLong": "Thu, Nov 26, 1:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-26-tcu-ttu",
+          "date": "2026-11-26",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401856879",
+          "home": "Texas Tech",
+          "away": "TCU",
+          "matchup": "TCU at Texas Tech",
+          "tipISO": "2026-11-27T01:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Thu, Nov 26, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
