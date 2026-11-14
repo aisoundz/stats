@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-14T11:20:01.809Z",
-  "generatedPT": "Sat, Nov 14, 3:20 AM PT",
+  "generated": "2026-11-14T11:41:58.467Z",
+  "generatedPT": "Sat, Nov 14, 3:41 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,14 +10,21 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 45,
-    "featured": 45,
+    "unbuilt": 0,
+    "games": 49,
+    "featured": 49,
     "unresolvedPicks": 0
   },
-  "_diagnostics": [],
+  "_diagnostics": [
+    {
+      "level": "note",
+      "date": "2026-11-27",
+      "code": "tip-date-drift",
+      "message": "slate-2026-11-27-tem-mem tips on 2026-11-26 PT but is filed under 2026-11-27 — grouped under 2026-11-27"
+    }
+  ],
   "days": [
     {
       "date": "2026-11-14",
@@ -995,10 +1002,86 @@
       "date": "2026-11-27",
       "weekday": "Fri",
       "label": "Fri, Nov 27",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 4,
+      "games": [
+        {
+          "nightId": "slate-2026-11-27-tem-mem",
+          "date": "2026-11-27",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401862838",
+          "home": "Memphis",
+          "away": "Temple",
+          "matchup": "Temple at Memphis",
+          "tipISO": "2026-11-27T05:00:00.000Z",
+          "tipPT": "9:00 PM PT",
+          "tipPTLong": "Thu, Nov 26, 9:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-27-nyr-chi",
+          "date": "2026-11-27",
+          "league": "nhl",
+          "leagueLabel": "NHL",
+          "leagueProse": "the NHL",
+          "sport": "hockey",
+          "path": "hockey/nhl",
+          "espnEvent": "401892806",
+          "home": "Blackhawks",
+          "away": "Rangers",
+          "matchup": "Rangers at Blackhawks",
+          "tipISO": "2026-11-27T22:30:00.000Z",
+          "tipPT": "2:30 PM PT",
+          "tipPTLong": "Fri, Nov 27, 2:30 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-27-mia-ny",
+          "date": "2026-11-27",
+          "league": "nba",
+          "leagueLabel": "NBA",
+          "leagueProse": "the NBA",
+          "sport": "basketball",
+          "path": "basketball/nba",
+          "espnEvent": "401909326",
+          "home": "Knicks",
+          "away": "Heat",
+          "matchup": "Heat at Knicks",
+          "tipISO": "2026-11-28T00:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Fri, Nov 27, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-27-mia-clb",
+          "date": "2026-11-27",
+          "league": "mls",
+          "leagueLabel": "MLS",
+          "leagueProse": "MLS",
+          "sport": "soccer",
+          "path": "soccer/usa.1",
+          "espnEvent": "401933727",
+          "home": "Columbus Crew",
+          "away": "Inter Miami CF",
+          "matchup": "Inter Miami CF at Columbus Crew",
+          "tipISO": "2026-11-28T01:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Fri, Nov 27, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
