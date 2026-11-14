@@ -1,90 +1,24 @@
 {
-  "generated": "2026-11-13T11:40:30.371Z",
-  "generatedPT": "Fri, Nov 13, 3:40 AM PT",
+  "generated": "2026-11-14T11:20:01.809Z",
+  "generatedPT": "Sat, Nov 14, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-11-13",
-    "to": "2026-11-26",
+    "from": "2026-11-14",
+    "to": "2026-11-27",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 48,
-    "featured": 48,
+    "unbuilt": 1,
+    "games": 45,
+    "featured": 45,
     "unresolvedPicks": 0
   },
   "_diagnostics": [],
   "days": [
-    {
-      "date": "2026-11-13",
-      "weekday": "Fri",
-      "label": "Fri, Nov 13",
-      "status": "built",
-      "gameCount": 3,
-      "games": [
-        {
-          "nightId": "slate-2026-11-13-fsu-pitt",
-          "date": "2026-11-13",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401858293",
-          "home": "Pittsburgh",
-          "away": "Florida State",
-          "matchup": "Florida State at Pittsburgh",
-          "tipISO": "2026-11-14T00:00:00.000Z",
-          "tipPT": "4:00 PM PT",
-          "tipPTLong": "Fri, Nov 13, 4:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "323"
-        },
-        {
-          "nightId": "slate-2026-11-13-ill-ucla",
-          "date": "2026-11-13",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401858526",
-          "home": "UCLA",
-          "away": "Illinois",
-          "matchup": "Illinois at UCLA",
-          "tipISO": "2026-11-14T02:00:00.000Z",
-          "tipPT": "6:00 PM PT",
-          "tipPTLong": "Fri, Nov 13, 6:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "325"
-        },
-        {
-          "nightId": "slate-2026-11-13-hou-colo",
-          "date": "2026-11-13",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401856860",
-          "home": "Colorado",
-          "away": "Houston",
-          "matchup": "Houston at Colorado",
-          "tipISO": "2026-11-14T03:15:00.000Z",
-          "tipPT": "7:15 PM PT",
-          "tipPTLong": "Fri, Nov 13, 7:15 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "327"
-        }
-      ]
-    },
     {
       "date": "2026-11-14",
       "weekday": "Sat",
@@ -109,7 +43,7 @@
           "tipPTLong": "Sat, Nov 14, 9:00 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "326"
         },
         {
           "nightId": "slate-2026-11-14-bc-nd",
@@ -128,7 +62,7 @@
           "tipPTLong": "Sat, Nov 14, 12:30 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "329"
         },
         {
           "nightId": "slate-2026-11-14-orst-bois",
@@ -147,7 +81,7 @@
           "tipPTLong": "Sat, Nov 14, 3:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "330"
         },
         {
           "nightId": "slate-2026-11-14-det-mia",
@@ -166,7 +100,7 @@
           "tipPTLong": "Sat, Nov 14, 5:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "390"
         },
         {
           "nightId": "slate-2026-11-14-usu-sdsu",
@@ -185,7 +119,7 @@
           "tipPTLong": "Sat, Nov 14, 6:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "342"
         }
       ]
     },
@@ -1056,6 +990,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-27",
+      "weekday": "Fri",
+      "label": "Fri, Nov 27",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
