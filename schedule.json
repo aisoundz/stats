@@ -1,20 +1,20 @@
 {
-  "generated": "2026-11-14T11:41:58.467Z",
-  "generatedPT": "Sat, Nov 14, 3:41 AM PT",
+  "generated": "2026-11-15T11:20:01.634Z",
+  "generatedPT": "Sun, Nov 15, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-11-14",
-    "to": "2026-11-27",
+    "from": "2026-11-15",
+    "to": "2026-11-28",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 49,
-    "featured": 49,
+    "unbuilt": 1,
+    "games": 44,
+    "featured": 44,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -26,110 +26,6 @@
     }
   ],
   "days": [
-    {
-      "date": "2026-11-14",
-      "weekday": "Sat",
-      "label": "Sat, Nov 14",
-      "status": "built",
-      "gameCount": 5,
-      "games": [
-        {
-          "nightId": "slate-2026-11-14-jmu-conn",
-          "date": "2026-11-14",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401861967",
-          "home": "UConn",
-          "away": "James Madison",
-          "matchup": "James Madison at UConn",
-          "tipISO": "2026-11-14T17:00:00.000Z",
-          "tipPT": "9:00 AM PT",
-          "tipPTLong": "Sat, Nov 14, 9:00 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "326"
-        },
-        {
-          "nightId": "slate-2026-11-14-bc-nd",
-          "date": "2026-11-14",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401858294",
-          "home": "Notre Dame",
-          "away": "Boston College",
-          "matchup": "Boston College at Notre Dame",
-          "tipISO": "2026-11-14T20:30:00.000Z",
-          "tipPT": "12:30 PM PT",
-          "tipPTLong": "Sat, Nov 14, 12:30 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "329"
-        },
-        {
-          "nightId": "slate-2026-11-14-orst-bois",
-          "date": "2026-11-14",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401860914",
-          "home": "Boise State",
-          "away": "Oregon State",
-          "matchup": "Oregon State at Boise State",
-          "tipISO": "2026-11-14T23:00:00.000Z",
-          "tipPT": "3:00 PM PT",
-          "tipPTLong": "Sat, Nov 14, 3:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "330"
-        },
-        {
-          "nightId": "slate-2026-11-14-det-mia",
-          "date": "2026-11-14",
-          "league": "nba",
-          "leagueLabel": "NBA",
-          "leagueProse": "the NBA",
-          "sport": "basketball",
-          "path": "basketball/nba",
-          "espnEvent": "401909982",
-          "home": "Heat",
-          "away": "Pistons",
-          "matchup": "Pistons at Heat",
-          "tipISO": "2026-11-15T01:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Sat, Nov 14, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "390"
-        },
-        {
-          "nightId": "slate-2026-11-14-usu-sdsu",
-          "date": "2026-11-14",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401860915",
-          "home": "San Diego State",
-          "away": "Utah State",
-          "matchup": "Utah State at San Diego State",
-          "tipISO": "2026-11-15T02:30:00.000Z",
-          "tipPT": "6:30 PM PT",
-          "tipPTLong": "Sat, Nov 14, 6:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "342"
-        }
-      ]
-    },
     {
       "date": "2026-11-15",
       "weekday": "Sun",
@@ -154,7 +50,7 @@
           "tipPTLong": "Sun, Nov 15, 6:30 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "331"
         },
         {
           "nightId": "slate-2026-11-15-kc-atl",
@@ -173,7 +69,7 @@
           "tipPTLong": "Sun, Nov 15, 10:00 AM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "332"
         },
         {
           "nightId": "slate-2026-11-15-sea-lv",
@@ -192,7 +88,7 @@
           "tipPTLong": "Sun, Nov 15, 1:05 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "333"
         },
         {
           "nightId": "slate-2026-11-15-pit-cin",
@@ -211,7 +107,7 @@
           "tipPTLong": "Sun, Nov 15, 5:20 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "337"
         }
       ]
     },
@@ -1082,6 +978,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-28",
+      "weekday": "Sat",
+      "label": "Sat, Nov 28",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
