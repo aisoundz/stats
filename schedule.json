@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-15T11:20:01.634Z",
-  "generatedPT": "Sun, Nov 15, 3:20 AM PT",
+  "generated": "2026-11-15T11:42:35.015Z",
+  "generatedPT": "Sun, Nov 15, 3:42 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 44,
-    "featured": 44,
+    "unbuilt": 0,
+    "games": 48,
+    "featured": 48,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -23,6 +23,54 @@
       "date": "2026-11-27",
       "code": "tip-date-drift",
       "message": "slate-2026-11-27-tem-mem tips on 2026-11-26 PT but is filed under 2026-11-27 — grouped under 2026-11-27"
+    },
+    {
+      "level": "error",
+      "date": "2026-11-28",
+      "code": "manifest-conflict",
+      "message": "slate-2026-11-28-tbd-tbd appears twice in slate-all-2026-11-28.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "error",
+      "date": "2026-11-28",
+      "code": "manifest-conflict",
+      "message": "slate-2026-11-28-tbd-tbd appears twice in slate-all-2026-11-28.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "error",
+      "date": "2026-11-28",
+      "code": "manifest-conflict",
+      "message": "slate-2026-11-28-tbd-tbd appears twice in slate-all-2026-11-28.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "error",
+      "date": "2026-11-28",
+      "code": "manifest-conflict",
+      "message": "slate-2026-11-28-tbd-tbd appears twice in slate-all-2026-11-28.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "error",
+      "date": "2026-11-28",
+      "code": "manifest-conflict",
+      "message": "slate-2026-11-28-tbd-tbd appears twice in slate-all-2026-11-28.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "error",
+      "date": "2026-11-28",
+      "code": "manifest-conflict",
+      "message": "slate-2026-11-28-tbd-tbd appears twice in slate-all-2026-11-28.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "error",
+      "date": "2026-11-28",
+      "code": "manifest-conflict",
+      "message": "slate-2026-11-28-tbd-tbd appears twice in slate-all-2026-11-28.tsv with DIFFERENT values — keeping the first"
+    },
+    {
+      "level": "note",
+      "date": "2026-11-28",
+      "code": "manifest-duplicate",
+      "message": "slate-all-2026-11-28.tsv has 88 rows but only 81 distinct nightIds — 7 duplicate row(s), deduped"
     }
   ],
   "days": [
@@ -983,10 +1031,86 @@
       "date": "2026-11-28",
       "weekday": "Sat",
       "label": "Sat, Nov 28",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 4,
+      "games": [
+        {
+          "nightId": "slate-2026-11-28-mich-osu",
+          "date": "2026-11-28",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401858540",
+          "home": "Ohio State",
+          "away": "Michigan",
+          "matchup": "Michigan at Ohio State",
+          "tipISO": "2026-11-28T17:00:00.000Z",
+          "tipPT": "9:00 AM PT",
+          "tipPTLong": "Sat, Nov 28, 9:00 AM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-28-chi-clt",
+          "date": "2026-11-28",
+          "league": "mls",
+          "leagueLabel": "MLS",
+          "leagueProse": "MLS",
+          "sport": "soccer",
+          "path": "soccer/usa.1",
+          "espnEvent": "401933737",
+          "home": "Charlotte FC",
+          "away": "Chicago Fire FC",
+          "matchup": "Chicago Fire FC at Charlotte FC",
+          "tipISO": "2026-11-28T17:30:00.000Z",
+          "tipPT": "9:30 AM PT",
+          "tipPTLong": "Sat, Nov 28, 9:30 AM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-28-jxst-del",
+          "date": "2026-11-28",
+          "league": "cfb",
+          "leagueLabel": "college football",
+          "leagueProse": "college football",
+          "sport": "football",
+          "path": "football/college-football",
+          "espnEvent": "401871062",
+          "home": "Delaware",
+          "away": "Jacksonville State",
+          "matchup": "Jacksonville State at Delaware",
+          "tipISO": "2026-11-28T20:30:00.000Z",
+          "tipPT": "12:30 PM PT",
+          "tipPTLong": "Sat, Nov 28, 12:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-28-phi-hou",
+          "date": "2026-11-28",
+          "league": "nba",
+          "leagueLabel": "NBA",
+          "leagueProse": "the NBA",
+          "sport": "basketball",
+          "path": "basketball/nba",
+          "espnEvent": "401910050",
+          "home": "Rockets",
+          "away": "76ers",
+          "matchup": "76ers at Rockets",
+          "tipISO": "2026-11-29T01:30:00.000Z",
+          "tipPT": "5:30 PM PT",
+          "tipPTLong": "Sat, Nov 28, 5:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
