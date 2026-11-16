@@ -1,20 +1,20 @@
 {
-  "generated": "2026-11-15T11:42:35.015Z",
-  "generatedPT": "Sun, Nov 15, 3:42 AM PT",
+  "generated": "2026-11-16T11:20:01.159Z",
+  "generatedPT": "Mon, Nov 16, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-11-15",
-    "to": "2026-11-28",
+    "from": "2026-11-16",
+    "to": "2026-11-29",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 48,
-    "featured": 48,
+    "unbuilt": 1,
+    "games": 44,
+    "featured": 44,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -75,91 +75,6 @@
   ],
   "days": [
     {
-      "date": "2026-11-15",
-      "weekday": "Sun",
-      "label": "Sun, Nov 15",
-      "status": "built",
-      "gameCount": 4,
-      "games": [
-        {
-          "nightId": "slate-2026-11-15-ne-det",
-          "date": "2026-11-15",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401873053",
-          "home": "Lions",
-          "away": "Patriots",
-          "matchup": "Patriots at Lions",
-          "tipISO": "2026-11-15T14:30:00.000Z",
-          "tipPT": "6:30 AM PT",
-          "tipPTLong": "Sun, Nov 15, 6:30 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "331"
-        },
-        {
-          "nightId": "slate-2026-11-15-kc-atl",
-          "date": "2026-11-15",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401873058",
-          "home": "Falcons",
-          "away": "Chiefs",
-          "matchup": "Chiefs at Falcons",
-          "tipISO": "2026-11-15T18:00:00.000Z",
-          "tipPT": "10:00 AM PT",
-          "tipPTLong": "Sun, Nov 15, 10:00 AM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "332"
-        },
-        {
-          "nightId": "slate-2026-11-15-sea-lv",
-          "date": "2026-11-15",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401873062",
-          "home": "Raiders",
-          "away": "Seahawks",
-          "matchup": "Seahawks at Raiders",
-          "tipISO": "2026-11-15T21:05:00.000Z",
-          "tipPT": "1:05 PM PT",
-          "tipPTLong": "Sun, Nov 15, 1:05 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "333"
-        },
-        {
-          "nightId": "slate-2026-11-15-pit-cin",
-          "date": "2026-11-15",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401873064",
-          "home": "Bengals",
-          "away": "Steelers",
-          "matchup": "Steelers at Bengals",
-          "tipISO": "2026-11-16T01:20:00.000Z",
-          "tipPT": "5:20 PM PT",
-          "tipPTLong": "Sun, Nov 15, 5:20 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "337"
-        }
-      ]
-    },
-    {
       "date": "2026-11-16",
       "weekday": "Mon",
       "label": "Mon, Nov 16",
@@ -183,7 +98,7 @@
           "tipPTLong": "Mon, Nov 16, 4:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "335"
         },
         {
           "nightId": "slate-2026-11-16-lac-bal",
@@ -202,7 +117,7 @@
           "tipPTLong": "Mon, Nov 16, 5:15 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "336"
         }
       ]
     },
@@ -1111,6 +1026,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-29",
+      "weekday": "Sun",
+      "label": "Sun, Nov 29",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
