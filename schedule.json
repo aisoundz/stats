@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-16T11:20:01.159Z",
-  "generatedPT": "Mon, Nov 16, 3:20 AM PT",
+  "generated": "2026-11-16T11:41:34.229Z",
+  "generatedPT": "Mon, Nov 16, 3:41 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 44,
-    "featured": 44,
+    "unbuilt": 0,
+    "games": 47,
+    "featured": 47,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -1031,10 +1031,67 @@
       "date": "2026-11-29",
       "weekday": "Sun",
       "label": "Sun, Nov 29",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 3,
+      "games": [
+        {
+          "nightId": "slate-2026-11-29-no-cin",
+          "date": "2026-11-29",
+          "league": "nfl",
+          "leagueLabel": "NFL",
+          "leagueProse": "the NFL",
+          "sport": "football",
+          "path": "football/nfl",
+          "espnEvent": "401873087",
+          "home": "Bengals",
+          "away": "Saints",
+          "matchup": "Saints at Bengals",
+          "tipISO": "2026-11-29T18:00:00.000Z",
+          "tipPT": "10:00 AM PT",
+          "tipPTLong": "Sun, Nov 29, 10:00 AM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-29-bos-sa",
+          "date": "2026-11-29",
+          "league": "nba",
+          "leagueLabel": "NBA",
+          "leagueProse": "the NBA",
+          "sport": "basketball",
+          "path": "basketball/nba",
+          "espnEvent": "401910052",
+          "home": "Spurs",
+          "away": "Celtics",
+          "matchup": "Celtics at Spurs",
+          "tipISO": "2026-11-29T21:00:00.000Z",
+          "tipPT": "1:00 PM PT",
+          "tipPTLong": "Sun, Nov 29, 1:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-11-29-ne-lac",
+          "date": "2026-11-29",
+          "league": "nfl",
+          "leagueLabel": "NFL",
+          "leagueProse": "the NFL",
+          "sport": "football",
+          "path": "football/nfl",
+          "espnEvent": "401873093",
+          "home": "Chargers",
+          "away": "Patriots",
+          "matchup": "Patriots at Chargers",
+          "tipISO": "2026-11-30T01:20:00.000Z",
+          "tipPT": "5:20 PM PT",
+          "tipPTLong": "Sun, Nov 29, 5:20 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
