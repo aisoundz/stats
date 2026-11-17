@@ -1,20 +1,20 @@
 {
-  "generated": "2026-11-16T11:41:34.229Z",
-  "generatedPT": "Mon, Nov 16, 3:41 AM PT",
+  "generated": "2026-11-17T11:20:01.837Z",
+  "generatedPT": "Tue, Nov 17, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-11-16",
-    "to": "2026-11-29",
+    "from": "2026-11-17",
+    "to": "2026-11-30",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 47,
-    "featured": 47,
+    "unbuilt": 1,
+    "games": 45,
+    "featured": 45,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -75,53 +75,6 @@
   ],
   "days": [
     {
-      "date": "2026-11-16",
-      "weekday": "Mon",
-      "label": "Mon, Nov 16",
-      "status": "built",
-      "gameCount": 2,
-      "games": [
-        {
-          "nightId": "slate-2026-11-16-mtl-nyr",
-          "date": "2026-11-16",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401892726",
-          "home": "Rangers",
-          "away": "Canadiens",
-          "matchup": "Canadiens at Rangers",
-          "tipISO": "2026-11-17T00:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Mon, Nov 16, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "335"
-        },
-        {
-          "nightId": "slate-2026-11-16-lac-bal",
-          "date": "2026-11-16",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401873065",
-          "home": "Ravens",
-          "away": "Chargers",
-          "matchup": "Chargers at Ravens",
-          "tipISO": "2026-11-17T01:15:00.000Z",
-          "tipPT": "5:15 PM PT",
-          "tipPTLong": "Mon, Nov 16, 5:15 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "336"
-        }
-      ]
-    },
-    {
       "date": "2026-11-17",
       "weekday": "Tue",
       "label": "Tue, Nov 17",
@@ -145,7 +98,7 @@
           "tipPTLong": "Tue, Nov 17, 4:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "337"
         },
         {
           "nightId": "slate-2026-11-17-det-sa",
@@ -164,26 +117,7 @@
           "tipPTLong": "Tue, Nov 17, 5:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
-        },
-        {
-          "nightId": "slate-2026-11-17-cha-lal",
-          "date": "2026-11-17",
-          "league": "nba",
-          "leagueLabel": "NBA",
-          "leagueProse": "the NBA",
-          "sport": "basketball",
-          "path": "basketball/nba",
-          "espnEvent": "401910005",
-          "home": "Lakers",
-          "away": "Hornets",
-          "matchup": "Hornets at Lakers",
-          "tipISO": "2026-11-18T03:00:00.000Z",
-          "tipPT": "7:00 PM PT",
-          "tipPTLong": "Tue, Nov 17, 7:00 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": null
+          "gameNight": "349"
         },
         {
           "nightId": "slate-2026-11-17-dal-vgk",
@@ -202,7 +136,26 @@
           "tipPTLong": "Tue, Nov 17, 7:00 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "339"
+        },
+        {
+          "nightId": "slate-2026-11-17-cha-lal",
+          "date": "2026-11-17",
+          "league": "nba",
+          "leagueLabel": "NBA",
+          "leagueProse": "the NBA",
+          "sport": "basketball",
+          "path": "basketball/nba",
+          "espnEvent": "401910005",
+          "home": "Lakers",
+          "away": "Hornets",
+          "matchup": "Hornets at Lakers",
+          "tipISO": "2026-11-18T04:00:00.000Z",
+          "tipPT": "8:00 PM PT",
+          "tipPTLong": "Tue, Nov 17, 8:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": "352"
         }
       ]
     },
@@ -1092,6 +1045,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-11-30",
+      "weekday": "Mon",
+      "label": "Mon, Nov 30",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
