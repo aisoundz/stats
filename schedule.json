@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-19T11:20:01.483Z",
-  "generatedPT": "Thu, Nov 19, 3:20 AM PT",
+  "generated": "2026-11-19T11:41:33.722Z",
+  "generatedPT": "Thu, Nov 19, 3:41 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 41,
-    "featured": 41,
+    "unbuilt": 0,
+    "games": 45,
+    "featured": 45,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -974,10 +974,86 @@
       "date": "2026-12-02",
       "weekday": "Wed",
       "label": "Wed, Dec 2",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 4,
+      "games": [
+        {
+          "nightId": "slate-2026-12-02-den-phi",
+          "date": "2026-12-02",
+          "league": "nba",
+          "leagueLabel": "NBA",
+          "leagueProse": "the NBA",
+          "sport": "basketball",
+          "path": "basketball/nba",
+          "espnEvent": "401910077",
+          "home": "76ers",
+          "away": "Nuggets",
+          "matchup": "Nuggets at 76ers",
+          "tipISO": "2026-12-03T00:00:00.000Z",
+          "tipPT": "4:00 PM PT",
+          "tipPTLong": "Wed, Dec 2, 4:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-12-02-clb-mia",
+          "date": "2026-12-02",
+          "league": "mls",
+          "leagueLabel": "MLS",
+          "leagueProse": "MLS",
+          "sport": "soccer",
+          "path": "soccer/usa.1",
+          "espnEvent": "401933720",
+          "home": "Inter Miami CF",
+          "away": "Columbus Crew",
+          "matchup": "Columbus Crew at Inter Miami CF",
+          "tipISO": "2026-12-03T00:30:00.000Z",
+          "tipPT": "4:30 PM PT",
+          "tipPTLong": "Wed, Dec 2, 4:30 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-12-02-clt-chi",
+          "date": "2026-12-02",
+          "league": "mls",
+          "leagueLabel": "MLS",
+          "leagueProse": "MLS",
+          "sport": "soccer",
+          "path": "soccer/usa.1",
+          "espnEvent": "401933718",
+          "home": "Chicago Fire FC",
+          "away": "Charlotte FC",
+          "matchup": "Charlotte FC at Chicago Fire FC",
+          "tipISO": "2026-12-03T01:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Wed, Dec 2, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": false,
+          "gameNight": null
+        },
+        {
+          "nightId": "slate-2026-12-02-min-lac",
+          "date": "2026-12-02",
+          "league": "nba",
+          "leagueLabel": "NBA",
+          "leagueProse": "the NBA",
+          "sport": "basketball",
+          "path": "basketball/nba",
+          "espnEvent": "401910084",
+          "home": "Clippers",
+          "away": "Timberwolves",
+          "matchup": "Timberwolves at Clippers",
+          "tipISO": "2026-12-03T03:30:00.000Z",
+          "tipPT": "7:30 PM PT",
+          "tipPTLong": "Wed, Dec 2, 7:30 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
