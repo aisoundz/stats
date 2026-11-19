@@ -1,20 +1,20 @@
 {
-  "generated": "2026-11-18T11:41:12.885Z",
-  "generatedPT": "Wed, Nov 18, 3:41 AM PT",
+  "generated": "2026-11-19T11:20:01.483Z",
+  "generatedPT": "Thu, Nov 19, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-11-18",
-    "to": "2026-12-01",
+    "from": "2026-11-19",
+    "to": "2026-12-02",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 44,
-    "featured": 44,
+    "unbuilt": 1,
+    "games": 41,
+    "featured": 41,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -75,72 +75,6 @@
   ],
   "days": [
     {
-      "date": "2026-11-18",
-      "weekday": "Wed",
-      "label": "Wed, Nov 18",
-      "status": "built",
-      "gameCount": 3,
-      "games": [
-        {
-          "nightId": "slate-2026-11-18-bos-det",
-          "date": "2026-11-18",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401892739",
-          "home": "Red Wings",
-          "away": "Bruins",
-          "matchup": "Bruins at Red Wings",
-          "tipISO": "2026-11-19T00:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Wed, Nov 18, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "341"
-        },
-        {
-          "nightId": "slate-2026-11-18-gs-dal",
-          "date": "2026-11-18",
-          "league": "nba",
-          "leagueLabel": "NBA",
-          "leagueProse": "the NBA",
-          "sport": "basketball",
-          "path": "basketball/nba",
-          "espnEvent": "401910016",
-          "home": "Mavericks",
-          "away": "Warriors",
-          "matchup": "Warriors at Mavericks",
-          "tipISO": "2026-11-19T01:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Wed, Nov 18, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "345"
-        },
-        {
-          "nightId": "slate-2026-11-18-col-uta",
-          "date": "2026-11-18",
-          "league": "nhl",
-          "leagueLabel": "NHL",
-          "leagueProse": "the NHL",
-          "sport": "hockey",
-          "path": "hockey/nhl",
-          "espnEvent": "401892741",
-          "home": "Mammoth",
-          "away": "Avalanche",
-          "matchup": "Avalanche at Mammoth",
-          "tipISO": "2026-11-19T03:00:00.000Z",
-          "tipPT": "7:00 PM PT",
-          "tipPTLong": "Wed, Nov 18, 7:00 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "343"
-        }
-      ]
-    },
-    {
       "date": "2026-11-19",
       "weekday": "Thu",
       "label": "Thu, Nov 19",
@@ -164,7 +98,7 @@
           "tipPTLong": "Thu, Nov 19, 4:30 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "351"
         },
         {
           "nightId": "slate-2026-11-19-ny-min",
@@ -183,7 +117,7 @@
           "tipPTLong": "Thu, Nov 19, 5:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "354"
         },
         {
           "nightId": "slate-2026-11-19-ind-hou",
@@ -202,7 +136,7 @@
           "tipPTLong": "Thu, Nov 19, 5:15 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "355"
         }
       ]
     },
@@ -1035,6 +969,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-12-02",
+      "weekday": "Wed",
+      "label": "Wed, Dec 2",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
