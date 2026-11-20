@@ -1,20 +1,20 @@
 {
-  "generated": "2026-11-19T11:41:33.722Z",
-  "generatedPT": "Thu, Nov 19, 3:41 AM PT",
+  "generated": "2026-11-20T11:20:01.968Z",
+  "generatedPT": "Fri, Nov 20, 3:20 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
-    "from": "2026-11-19",
-    "to": "2026-12-02",
+    "from": "2026-11-20",
+    "to": "2026-12-03",
     "days": 14
   },
   "counts": {
     "days": 14,
-    "built": 14,
+    "built": 13,
     "off": 0,
-    "unbuilt": 0,
-    "games": 45,
-    "featured": 45,
+    "unbuilt": 1,
+    "games": 42,
+    "featured": 42,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -75,72 +75,6 @@
   ],
   "days": [
     {
-      "date": "2026-11-19",
-      "weekday": "Thu",
-      "label": "Thu, Nov 19",
-      "status": "built",
-      "gameCount": 3,
-      "games": [
-        {
-          "nightId": "slate-2026-11-19-rice-tem",
-          "date": "2026-11-19",
-          "league": "cfb",
-          "leagueLabel": "college football",
-          "leagueProse": "college football",
-          "sport": "football",
-          "path": "football/college-football",
-          "espnEvent": "401862830",
-          "home": "Temple",
-          "away": "Rice",
-          "matchup": "Rice at Temple",
-          "tipISO": "2026-11-20T00:30:00.000Z",
-          "tipPT": "4:30 PM PT",
-          "tipPTLong": "Thu, Nov 19, 4:30 PM PT",
-          "featured": true,
-          "mainEvent": true,
-          "gameNight": "351"
-        },
-        {
-          "nightId": "slate-2026-11-19-ny-min",
-          "date": "2026-11-19",
-          "league": "nba",
-          "leagueLabel": "NBA",
-          "leagueProse": "the NBA",
-          "sport": "basketball",
-          "path": "basketball/nba",
-          "espnEvent": "401910021",
-          "home": "Timberwolves",
-          "away": "Knicks",
-          "matchup": "Knicks at Timberwolves",
-          "tipISO": "2026-11-20T01:00:00.000Z",
-          "tipPT": "5:00 PM PT",
-          "tipPTLong": "Thu, Nov 19, 5:00 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "354"
-        },
-        {
-          "nightId": "slate-2026-11-19-ind-hou",
-          "date": "2026-11-19",
-          "league": "nfl",
-          "leagueLabel": "NFL",
-          "leagueProse": "the NFL",
-          "sport": "football",
-          "path": "football/nfl",
-          "espnEvent": "401873066",
-          "home": "Texans",
-          "away": "Colts",
-          "matchup": "Colts at Texans",
-          "tipISO": "2026-11-20T01:15:00.000Z",
-          "tipPT": "5:15 PM PT",
-          "tipPTLong": "Thu, Nov 19, 5:15 PM PT",
-          "featured": true,
-          "mainEvent": false,
-          "gameNight": "355"
-        }
-      ]
-    },
-    {
       "date": "2026-11-20",
       "weekday": "Fri",
       "label": "Fri, Nov 20",
@@ -164,7 +98,7 @@
           "tipPTLong": "Fri, Nov 20, 3:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "347"
         },
         {
           "nightId": "slate-2026-11-20-clem-duke",
@@ -183,7 +117,7 @@
           "tipPTLong": "Fri, Nov 20, 4:30 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "348"
         },
         {
           "nightId": "slate-2026-11-20-ore-msu",
@@ -202,7 +136,7 @@
           "tipPTLong": "Fri, Nov 20, 5:00 PM PT",
           "featured": true,
           "mainEvent": true,
-          "gameNight": null
+          "gameNight": "349"
         },
         {
           "nightId": "slate-2026-11-20-unm-wyo",
@@ -221,7 +155,7 @@
           "tipPTLong": "Fri, Nov 20, 6:00 PM PT",
           "featured": true,
           "mainEvent": false,
-          "gameNight": null
+          "gameNight": "350"
         }
       ]
     },
@@ -1054,6 +988,15 @@
           "gameNight": null
         }
       ]
+    },
+    {
+      "date": "2026-12-03",
+      "weekday": "Thu",
+      "label": "Thu, Dec 3",
+      "status": "unbuilt",
+      "gameCount": null,
+      "games": [],
+      "note": "Rooms for this night have not been chosen yet."
     }
   ]
 }
