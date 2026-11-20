@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-20T11:20:01.968Z",
-  "generatedPT": "Fri, Nov 20, 3:20 AM PT",
+  "generated": "2026-11-20T11:41:14.401Z",
+  "generatedPT": "Fri, Nov 20, 3:41 AM PT",
   "timezone": "America/Los_Angeles",
   "source": "host/build-schedule.js",
   "window": {
@@ -10,11 +10,11 @@
   },
   "counts": {
     "days": 14,
-    "built": 13,
+    "built": 14,
     "off": 0,
-    "unbuilt": 1,
-    "games": 42,
-    "featured": 42,
+    "unbuilt": 0,
+    "games": 43,
+    "featured": 43,
     "unresolvedPicks": 0
   },
   "_diagnostics": [
@@ -993,10 +993,29 @@
       "date": "2026-12-03",
       "weekday": "Thu",
       "label": "Thu, Dec 3",
-      "status": "unbuilt",
-      "gameCount": null,
-      "games": [],
-      "note": "Rooms for this night have not been chosen yet."
+      "status": "built",
+      "gameCount": 1,
+      "games": [
+        {
+          "nightId": "slate-2026-12-03-cle-chi",
+          "date": "2026-12-03",
+          "league": "nba",
+          "leagueLabel": "NBA",
+          "leagueProse": "the NBA",
+          "sport": "basketball",
+          "path": "basketball/nba",
+          "espnEvent": "401910087",
+          "home": "Bulls",
+          "away": "Cavaliers",
+          "matchup": "Cavaliers at Bulls",
+          "tipISO": "2026-12-04T01:00:00.000Z",
+          "tipPT": "5:00 PM PT",
+          "tipPTLong": "Thu, Dec 3, 5:00 PM PT",
+          "featured": true,
+          "mainEvent": true,
+          "gameNight": null
+        }
+      ]
     }
   ]
 }
